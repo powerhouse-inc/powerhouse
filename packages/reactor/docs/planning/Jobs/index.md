@@ -76,27 +76,27 @@ The executor emits a set of structured events so that clients can react to job p
 
 ### Error Propagation
 
-The `IJobExecutor` does not handle errors, it propagates them outward for other systems to handle. Errors are only propagated for jobs that either cannot be retried or are not recoverable.
+The `IJobExecutor` does not handle errors, it propagates them outward for other systems to handle. Only unrecoverable errors are propagated. These are for jobs that either cannot be retried or are not recoverable even after retry / reshuffle.
 
-Job errors are defined by error codes on the `JobResult` object. The error message may be used to provide more context about the error, and is not guaranteed to be consistent for all errors of a specific code.
+Job errors are defined by the `error: JobError` property on the `JobResult` object. The error message of the error object may be used to provide more context about the error, and is not guaranteed to be consistent for all errors of a specific code.
 
-This is the exhaustive list of possible job error codes, each defined on the [JobErrorCodes](interface.md) object:
+This is the exhaustive list of possible unrecoverable job error codes, each defined on the [JobErrorCodes](interface.md) object:
 
 ##### `SIGNATURE_MISMATCH`
 
-One or more `Action` signatures did not match the expected signature. This is a fatal error and the job will not be retried.
+One or more `Action` signatures did not match the expected signature.
 
 ##### `HASH_MISMATCH`
 
-One or more `Operation` hashes did not match the expected hash. This is a fatal error and the job will not be retried.
+One or more `Operation` hashes did not match the expected hash, even after retry logic and reshuffling was tried.
 
 ##### `LIBRARY_ERROR`
 
-An exception was thrown in the related document model library. This is a fatal error and the job will not be retried.
+An exception was thrown in the related document model library, even after retry logic was applied.
 
 ##### `GRACEFUL_ABORT`
 
-This is used when a shutdown of the job executor is requested. This error code will be attached to all incomplete `JobResult` objects in all queues. These jobs will not be retried.
+This is used when a shutdown of the job executor is requested. This error code will be attached to all incomplete `JobResult` objects in all queues.
 
 #### Retry Logic
 

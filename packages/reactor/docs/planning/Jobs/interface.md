@@ -185,6 +185,26 @@ export const JobErrorCodes = {
   GRACEFUL_ABORT: 90010,
 } as const;
 
+export class JobError extends Error {
+  /**
+   * The error code of the job error.
+   */
+  errorCode: number;
+
+  /**
+   * The error message of the job error.
+   */
+  errorMessage: string;
+
+  constructor(errorCode: number, errorMessage: string) {
+    super(errorMessage);
+
+    this.errorCode = errorCode;
+    this.errorMessage = errorMessage;
+  }
+}
+
+
 /** Event payload when a job begins execution */
 export type JobStartedEvent = {
   job: Job;
@@ -200,15 +220,14 @@ export type JobCompletedEvent = {
 /** Event payload when a job is retried */
 export type JobRetryEvent = {
   job: Job;
-  error: string;
+  error: JobError;
   retryCount: number;
 };
 
 /** Event payload when a job fails */
 export type JobFailedEvent = {
   job: Job;
-  errorCode: number;
-  errorMessage: string;
+  error: JobError;
   willRetry: boolean;
   retryCount: number;
 };

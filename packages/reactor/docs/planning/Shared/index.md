@@ -1,84 +1,15 @@
-# Supporting Types
+# Shared
 
-### Summary
+## Summary
 
-Various types used throughout.
+Various types and strategies used throughout.
 
-### Interface
+## Network Retries
 
-```tsx
-/**
- * Enum that determines deletion propagation.
- */
-enum PropagationMode {
-  None = "none",
-  Cascade = "cascade"
-}
+Retry logic over a network should generally be implemented with both exponential backoff and jitter.
 
-/**
- * Enum that describes the type of relationship change.
- */
-enum RelationshipChangeType {
-  Added = "added",
-  Removed = "removed"
-}
+See the [AWS Study](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) for more details.
 
-/**
- * Describes the current state of a job.
- */
-type JobInfo = {
-  id: string;
-  status: JobStatus;
-  error?: string;
-}
+## Links
 
-/**
- * The status of a job.
- */
-enum JobStatus {
-  Success = "success",
-  Error = "error",
-  Pending = "pending",
-}
-
-/**
- * Describe the view of a set of documents. That is, what pieces of the
- * documents are populated.
- */
-type ViewFilter = {
-  branch?: string;
-  scopes?: string[];
-  revision?: number;
-  headerOnly?: boolean;
-}
-
-/**
- * Describes filter options for searching documents.
- */
-type SearchFilter = {
-  type?: string;
-  parentId?: string;
-  ids?: string[];
-  slugs?: string[];
-}
-
-/**
- * Describes the options for paging.
- */
-type PagingOptions = {
-  cursor: string;
-  limit: number;
-}
-
-/**
- * The paged result.
- */
-type PagedResults<T> = {
-  results: T[];
-  options: PagingOptions;
-
-  next?: () => Promise<PagedResults<T>>;
-  nextCursor?: string;
-}
-
-```
+* [Interface](interface.md)

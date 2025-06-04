@@ -195,6 +195,35 @@ enum JobStatus {
     Error,
 }
 
+enum ChannelErrorSource {
+    Channel = "channel",
+    Inbox = "inbox",
+    Outbox = "outbox",
+}
+
+class InternalChannelError extends Error {
+    // ...
+}
+
+class ChannelError extends Error {
+    /**
+     * The source of the error.
+     */
+    source: ChannelErrorSource;
+
+    /**
+     * The error that occurred.
+     */
+    error: Error;
+
+    constructor(source: ChannelErrorSource, error: Error) {
+        super(message);
+
+        this.source = source;
+        this.error = error;
+    }
+}
+
 class JobHandle {
     /** The unique id of the job */
     id: string;
@@ -215,7 +244,7 @@ class JobHandle {
     status: JobStatus = JobStatus.Unknown;
 
     /** The error that occurred, if any */
-    error?: Error;
+    error?: ChannelError;
 
     /**
      * Subscribes to changes in the job status.
@@ -223,7 +252,7 @@ class JobHandle {
     on(callback: (job: JobHandle, prev: JobStatus, next: JobStatus) => void): void;
 }
 
-class PullJobHandle extends JobHandle {
+class MutableJobHandle extends JobHandle {
     /**
      * Moves job from Unknown to TransportPending.
      */
@@ -259,17 +288,22 @@ class Mailbox<T> {
     /**
      * Subscribes to new items being added to the mailbox.
      */
-    added(callback: (item: T) => void): void;
+    onAdded(callback: (item: T) => void): void;
 
     /**
      * Subscribes to items being removed from the mailbox.
      */
-    removed(callback: (item: T) => void): void;
+    onRemoved(callback: (item: T) => void): void;
+}
 
+/**
+ * This is the implementation used internally, but is not part of the public API.
+ */
+class MutableMailbox<T> extends Mailbox<T> {
     /**
-     * Pushes an item to the mailbox.
+     * Adds an item to the mailbox.
      */
-    push(item: T): void;
+    add(item: T): void;
 
     /**
      * Removes an item from the mailbox.
@@ -279,19 +313,25 @@ class Mailbox<T> {
 
 interface IChannel {
     /**
-     * Subscribes to unrecoverable channel errors.
-     */
-    onChannelError(callback: (error: Error) => void): void;
-
-    /**
      * The incoming queue of operations that need to be applied to the local reactor.
+     * 
+     * These are of type `PullJobHandle` to expose mutable functions to the consumer.
      */
-    inbox: Mailbox<PullJobHandle>;
+    inbox: Mailbox<MutableJobHandle>;
 
     /**
      * The outgoing queue of operations being applied to the remote reactor.
+     * 
+     * These are of type `JobHandle`, as the consumer does not mutate the job.
      */
     outbox: Mailbox<JobHandle>;
+
+    /**
+     * The dead letter queue of operations that have failed for any reason.
+     * 
+     * These are of type `JobHandle`, as they can no longer be mutated.
+     */
+    deadLetter: Mailbox<JobHandle>;
 
     /**
      * Sends operations to the remote reactor.
@@ -342,6 +382,11 @@ channel.outbox.removed(job => {
     // eg - update progress indicator or status bar
 });
 
+// when a job has permanently failed to be applied...
+channel.deadLetter.added(job => {
+    console.log(`Job ${job.id} has failed to be applied...`);
+});
+
 // listen for local job completion
 events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
     // is this a job in our inbox?
@@ -362,7 +407,9 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
 
 #### Retries
 
-The `IChannel` implementation is responsible for retrying failed push and pull operations due to network conditions. Implementations should use exponential backoff with jitter when applicable, according to a retry policy. Network errors should not be bubble up from the `IChannel` unless the retry policy is exhausted.
+The `IChannel` implementation is responsible for retrying failed push and pull operations due to network conditions. Implementations should use exponential backoff with jitter when applicable, according to a retry policy.
+
+Network errors should not bubble up from the `IChannel` unless the retry policy is exhausted.
 
 #### Optimization
 
@@ -370,35 +417,105 @@ The `IChannel` implementation is free to optimize in a number of ways. For insta
 
 ### Error Handling
 
-All errors must be explicitly defined here with a clear description of the error, the conditions under which it occurs, and recovery strategies.
+The synchronization system must have a robust error handling strategy. All possible errors must be explicitly defined here with a clear description of the error, the conditions under which it occurs, and recovery strategies.
 
 #### `IChannel`
 
-`IChannel` implementations communicate errors in one of two ways:
+`IChannel` implementations communicate errors in one single way: the `error` object on `JobHandle` objects in the `deadLetter` mailbox. Every error that can occur in a channel is communicated to the consumer of the channel through this mailbox.
 
-- Job errors are reported via the `JobHandle` object.
-- Other unrecoverable errors are reported via the `onChannelError` callback.
-
-##### Job Errors
-
-All possible job errors are defined in the [JobErrorCodes](../Jobs/interface.md) object of the Jobs document.
-
-##### Unrecoverable Errors
-
-All possible unrecoverable channel errors are defined below.
+For example:
 
 ```tsx
-/**
- * Thrown when a pull operation fails, after all retries have been exhausted.
- */
-class ChannelPullExhaustedError extends Error {
-    // ...
-}
+const channel = new WebSocketChannel();
 
-/**
- * Thrown when a push operation fails, after all retries have been exhausted.
- */
-class ChannelPushExhaustedError extends Error {
-    // ...
-}
+channel.deadLetter.added(job => {
+    // inspect error
+    const error = job.error;
+    const source = error.source;
+
+    // handle ...
+});
 ```
+
+The `ChannelError` object has a `source` property that indicates the source of the error (could be inbox, outbox, or channel).
+
+The `error` property can be one of two types:
+
+- **JobError** - these are propagated job execution errors, documented in the [Jobs interface](../Jobs/interface.md).
+- **InternalChannelError** - these are errors from the channel itself, not the job.
+
+#### Job Errors
+
+##### `SIGNATURE_MISMATCH`
+
+**ChannelErrorSource.None**
+
+This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
+
+* The job will be discarded.
+
+**ChannelErrorSource.Inbox**
+
+This indicates that a remote operation could not be applied to the local reactor because of a signature mismatch. This should never happen _except in the case of a malicious actor_, as remote reactors are already validating signatures. However, in the case that this does happen:
+
+* >>>>> The error will be pushed to the remote reactor. <<-- how?
+* The job will be discarded.
+
+**ChannelErrorSource.Outbox**
+
+This indicates that a local operation could not be applied to the remote reactor because of a signature mismatch. This means that we were able to verify a signature, but the remote was not. In this case, there is an unrecoverable error with a remote reactor itself:
+
+* The remote will be marked as invalid and no further operations will be sent to it.
+* The job will be removed from the outbox queue.
+
+##### `HASH_MISMATCH`
+
+**ChannelErrorSource.None**
+
+This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
+
+* The job will be discarded.
+
+**ChannelErrorSource.Inbox**
+
+This indicates that a remote operation could not be applied to the local reactor because of an unrecoverable hash mismatch (note that reshuffling was already attempted). In this case:
+
+* Re-attempt to apply the operation after all other inbox operations have been applied.
+* >>>>>> If the operation still fails, the error will be pushed to the remote reactor. <<--- how?
+
+**ChannelErrorSource.Outbox**
+
+This indicates that a local operation could not be applied to the remote reactor because of a hash mismatch. In this case:
+
+* The remote will be marked as invalid and no further operations will be sent to it.
+* The job will be removed from the outbox queue.
+
+##### `LIBRARY_ERROR`
+
+**ChannelErrorSource.None**
+
+This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
+
+* The job will be discarded.
+
+**ChannelErrorSource.Inbox**
+
+This indicates that an error occurred in job execution locally, but not remotely. In this case:
+
+* >>>>> The error will be pushed to the remote reactor. <<--- how?
+* The job will be discarded.
+
+**ChannelErrorSource.Outbox**
+
+This indicates that an error occurred in job execution remotely, but not locally. In this case:
+
+* The remote will be marked as invalid and no further operations will be sent to it.
+* The job will be removed from the outbox queue.
+
+##### `GRACEFUL_ABORT`
+
+For all sources, the `ISyncManager` will either write the mailboxes to disk (for processing later) or simply ignore and discard.
+
+#### Channel Errors
+
+...?
