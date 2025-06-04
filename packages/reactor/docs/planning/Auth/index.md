@@ -57,7 +57,7 @@ The composition of `AuthScope` objects themselves create a new `AuthScope` objec
 
 ### Resolving Authorization
 
-Since `AuthScope` objects are composable, we have to resolve the chain of `AuthScope` objects to get the final `AuthScope` object. We can do this via the `IDocumentIndexer` object.
+Since `AuthScope` objects are composable, we have to resolve the chain of `AuthScope` objects to get the final `AuthScope` object. We can do this via the [`IDocumentIndexer`](../Storage/IDocumentIndexer.md) object.
 
 ```tsx
 const graph = await indexer.findAncestors(documentId);
