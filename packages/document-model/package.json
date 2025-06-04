@@ -6,6 +6,10 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",

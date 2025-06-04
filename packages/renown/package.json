@@ -7,6 +7,10 @@
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.browser.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },

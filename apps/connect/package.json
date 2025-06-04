@@ -18,12 +18,12 @@
     "author": "acaldas@powerhouse.inc",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+        "url": "https://github.com/powerhouse-inc/powerhouse"
     },
     "bugs": {
-        "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+        "url": "https://github.com/powerhouse-inc/powerhouse/issues"
     },
-    "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
+    "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
     "scripts": {
         "build:tsc": "tsc --build",
         "start": "electron-forge start",

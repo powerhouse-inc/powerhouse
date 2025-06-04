@@ -6,6 +6,10 @@
     "/dist"
   ],
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -52,10 +56,6 @@
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/powerhouse-inc/design-system.git"
   },
   "author": {
     "name": "https://www.powerhouse.inc/"
