@@ -11,8 +11,7 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 **Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
 The reducers provide the actual implementation of what happens when those operations are performed.
 
-To import the document model specification into your Powerhouse project, you can either:
- 
+To import the document model specification into your Powerhouse project, you can either: 
 - Copy and paste the file directly into the root of your Powerhouse project.
 - Or drag and drop the file into the Powerhouse project directory in the VSCode editor as seen in the image below:
 

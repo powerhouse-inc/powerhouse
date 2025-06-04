@@ -6,67 +6,36 @@ Powerhouse is a powerful platform that helps you manage and deploy your applicat
 ## Prerequisites
 Before you begin, ensure you have a Linux-based system (Ubuntu or Debian recommended), sudo privileges, and a stable internet connection. These are essential for the installation and configuration process. The system should have at least 1GB of RAM and 10GB of free disk space for optimal performance. While these are minimum requirements, more resources will provide better performance, especially when running multiple services.
 
-## 1. Installing Powerhouse CLI
+## 1. Setting up a new cloud environment
 
-The `install-tools.sh` script provides a streamlined way to install the Powerhouse CLI tool and all its necessary dependencies. This script handles the installation of node.js 22, pnpm, and the Powerhouse CLI itself. It's designed to work across different Linux distributions, though it's optimized for Ubuntu and Debian-based systems.
+The `install` script provides a streamlined way to install the Powerhouse CLI tool and all its necessary dependencies. This script handles the installation of node.js 22, pnpm, Powerhouse CLI itself and the services. It's designed to work across different Linux distributions, though it's optimized for Ubuntu and Debian-based systems. It also prepares your machine for running Powerhouse services. It handles everything from package installation to service configuration, making the setup process straightforward and automated. This script is particularly useful for setting up new servers or reconfiguring existing ones.
+
 
 ### Installation Steps:
-1. Download the setup script:
+1. Run the setup script:
 ```bash
-curl -O https://raw.githubusercontent.com/powerhouse-inc/powerhouse/refs/heads/main/scripts/install-tools.sh
+curl -fsSL https://apps.powerhouse.io/install | bash # for macOS, Linux, and WSL
 ```
 
-2. Make the script executable:
-```bash
-chmod +x install-tools.sh
-```
-
-3. Run the script:
-```bash
-./install-tools.sh
-```
-
-4. Choose a version when prompted:
-   - `dev`: Development version - Use this for testing new features or development work
-   - `staging`: Staging version - Use this for pre-production testing
-   - RECOMMENDED: `latest`: Latest stable version - Recommended for production environments
-   - Press Enter to go ahead with the latest version
-
-5. After installation, source your shell configuration:
+2. After installation, source your shell configuration:
 ```bash
 source ~/.bashrc  # or source ~/.zshrc if using zsh
 ```
 
-6. Verify the installation:
+3. Verify the installation:
 ```bash
 ph --version
 ```
 
-## 2. Configuring Your Machine
+4. You will see ph-cli is not yet installed. But it will get installed automatically in the next step. 
+If you are a builder that wants to make use of the dev releases use `ph use dev` before going to the next step. 
+   - `ph use dev`: Development version - Use this for testing new features or development work
+   - `ph use staging`: Staging version - Use this for pre-production testing
 
-Download the setup script:
-```bash
-curl -O  https://raw.githubusercontent.com/powerhouse-inc/powerhouse/refs/heads/main/scripts/setup-environment.sh
-```
-
-The `setup-environment.sh` script is a comprehensive tool that prepares your machine for running Powerhouse services. It handles everything from package installation to service configuration, making the setup process straightforward and automated. This script is particularly useful for setting up new servers or reconfiguring existing ones.
-
-### Configuration Steps:
-
-1. Make the script executable:
-```bash
-chmod +x setup-environment.sh
-```
-
-2. Run the script:
-```bash
-./setup-environment.sh
-```
-
-3. Follow the interactive prompts:
+5. Follow the interactive prompts:
 
 ### Step 1: Package Installation
-During the package installation phase, you'll be prompted to enter package names that you want to install. For example, you might want to install `@sky-ph/atlas` or other Powerhouse packages. This step is crucial for adding the specific functionality you need to your Powerhouse installation. You can press Enter to skip this step if you don't need to install any packages immediately, but you can always install packages later using the `ph install` command.
+During the package installation phase, you'll be prompted to enter package names that you want to install. For example, you might want to install `@powerhousedao/todo-demo-package` or other Powerhouse packages. This step is crucial for adding the specific functionality you need to your Powerhouse installation. You can press Enter to skip this step if you don't need to install any packages immediately, but you can always install packages later using the `ph install` command.
 
 ### Step 2: Database Configuration
 The script offers two options for database configuration. 
@@ -138,7 +107,7 @@ It will take a minute or two for your Droplet to be provisioned. Once it's ready
 
 To log in via SSH:
 
-1. Open a terminal (on macOS/Linux) or an SSH client like PuTTY (on Windows).
+1. Open a terminal (on macOS/Linux) or an SSH client like PuTTY (on Windows). You can also use Digital Ocean's web 'Console'. 
 2. Use one of these commands:
    ```bash
    # If using password authentication
@@ -154,7 +123,7 @@ To log in via SSH:
 3. If you used a password, you'll be prompted to enter it.
 4. If it's your first time logging in, you might be asked to change the root password.
 
-Now your Droplet is running! You'll likely want to install and configure a web server (like Nginx or Apache) and your application or website files. This part is beyond the scope of just creating the Droplet but is crucial for it to do anything useful.
+Now your Droplet is running! Now you can continue with the Powerhouse tutorial or any next steps.
 
 ### DNS Configuration
 
@@ -165,7 +134,7 @@ Now your Droplet is running! You'll likely want to install and configure a web s
    - Enter your domain name (e.g., `yourdomain.com`)
    - Click "Add Domain"
 
-2. **Update Nameservers at Your Domain Registrar:**
+2. **Start with Updating Nameservers at Your Domain Registrar:**
    - Log in to your domain registrar
    - Update nameservers to:
      ```
@@ -187,9 +156,9 @@ Now your Droplet is running! You'll likely want to install and configure a web s
      - **WILL DIRECT TO:** Your Droplet's IP
      - **TTL:** 3600
 
-#### Option B: Using Your Existing Nameservers
+#### Option B: Using Your Existing Nameservers (NS locked)
 
-1. **Create DNS Records at Your Registrar:**
+1. **Just Create DNS Records at Your Registrar:**
    - **Root Domain (A Record):**
      - **TYPE:** A
      - **HOSTNAME:** @
@@ -324,10 +293,16 @@ Security is a top priority in the setup process. The script implements automatic
 
 After the installation is complete, it's important to verify that everything is working correctly. You can check the status of your services using PM2, verify the Nginx configuration, and ensure your SSL certificates are properly installed. This step is crucial for identifying any potential issues before they affect your users.
 
-1. Check service status:
+1. Check service status of switchboard & connect:
 ```bash
-pm2 status
+ph service status
 ```
+You can also use
+
+```bash
+ph service start | stop | restart 
+```
+- to start | stop | restart switchboard and connect
 
 2. View Nginx configuration:
 ```bash
@@ -390,12 +365,12 @@ ph update <package-name>
 
 ### Restarting Services:
 ```bash
-pm2 restart all
+ph service restart
 ```
 
 ### Viewing Logs:
 ```bash
-pm2 logs
+ph service status
 ```
 
 ## 7. Security Notes
