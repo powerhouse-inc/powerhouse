@@ -34,17 +34,17 @@ const jobStatus = await reactor.create(doc);
 
 3. Internally, the `IReactor` will:
 
-- Create an `Action` of type `ACTION_CREATE`.
-- Create an `Action` of type `ACTION_UPGRADE`.
+- Create an `Action` of type `CREATE_DOCUMENT`.
+- Create an `Action` of type `UPGRADE_DOCUMENT`.
 - Submit both actions in a single `Job` to the `IQueue`.
 
 4. The `IJobExecutor` will pull the `Job` from the `IQueue` and execute it.
 
 5. The `Job` will be executed by the `IReactor`, which will:
 
-- Create an `Operation` for the `ACTION_CREATE`. This will result in the creation of a new document with a filled out `header` scope but an empty, `{}`, default scope (`global`).
+- Create an `Operation` for the `CREATE_DOCUMENT` action. This will result in the creation of a new document with a filled out `header` scope but an empty, `{}`, default scope (`global`).
 
-- Create an `Operation` of type `OPERATION_UPGRADE`. This will result in a document with a state object of `{ title: "My Todo List" }`, in the default scope (`global`).
+- Create an `Operation` for the `UPGRADE_DOCUMENT` action. This will result in a document with a state object of `{ title: "My Todo List" }`, in the default scope (`global`).
 
 ### Document Model Upgrade Flow
 
