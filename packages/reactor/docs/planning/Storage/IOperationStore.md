@@ -90,6 +90,8 @@ The database schema, in prisma format, will look something like:
 model Operation {
   id              String       @id @default(uuid())
   opId            String       @unique
+  // serves as a causation id
+  prevOpId        String
   timestampUtcMs  DateTime
   documentId      String
   scope           String
