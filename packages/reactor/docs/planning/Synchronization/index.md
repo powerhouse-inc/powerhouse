@@ -279,6 +279,11 @@ class Mailbox<T> {
 
 interface IChannel {
     /**
+     * Subscribes to unrecoverable channel errors.
+     */
+    onChannelError(callback: (error: Error) => void): void;
+
+    /**
      * The incoming queue of operations that need to be applied to the local reactor.
      */
     inbox: Mailbox<PullJobHandle>;
@@ -367,17 +372,33 @@ The `IChannel` implementation is free to optimize in a number of ways. For insta
 
 All errors must be explicitly defined here with a clear description of the error, the conditions under which it occurs, and recovery strategies.
 
-#### Push
+#### `IChannel`
 
-The following errors may happen on push:
+`IChannel` implementations communicate errors in one of two ways:
+
+- Job errors are reported via the `JobHandle` object.
+- Other unrecoverable errors are reported via the `onChannelError` callback.
+
+##### Job Errors
+
+All possible job errors are defined in the [JobErrorCodes](../Jobs/interface.md) object of the Jobs document.
+
+##### Unrecoverable Errors
+
+All possible unrecoverable channel errors are defined below.
 
 ```tsx
 /**
- * An un-recoverable network error has occurred.
+ * Thrown when a pull operation fails, after all retries have been exhausted.
  */
-class ChannelNetworkError extends Error {
+class ChannelPullExhaustedError extends Error {
+    // ...
+}
+
+/**
+ * Thrown when a push operation fails, after all retries have been exhausted.
+ */
+class ChannelPushExhaustedError extends Error {
     // ...
 }
 ```
-
-#### Internal

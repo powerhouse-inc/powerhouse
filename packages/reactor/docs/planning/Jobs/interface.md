@@ -37,9 +37,6 @@ export type JobResult = {
   /** Whether the job executed successfully */
   success: boolean;
   
-  /** Error message if the job failed */
-  error?: string;
-  
   /** Timestamp when the job execution completed */
   completedAt: string;
   
@@ -51,6 +48,12 @@ export type JobResult = {
   
   /** Any additional metadata from the execution */
   metadata?: Record<string, any>;
+
+  /** The error code if the job failed */
+  errorCode?: number;
+  
+  /** Error message if the job failed */
+  errorMessage?: string;
 };
 
 /**
@@ -98,7 +101,7 @@ export interface IJobExecutor {
    * Execute a single job immediately.
    * @param job - The job to execute
    * @param config - Configuration options for the job execution
-   * @param signal - Optional abort signal to cancel the request
+   * @param signal - Optional abort signal to cancel the promise. This does NOT cancel the job execution.
    * @returns Promise that resolves to the job result
    */
   executeJob(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
@@ -172,6 +175,16 @@ export const JobExecutorEventTypes = {
   EXECUTOR_STOPPED: 20006,
 } as const;
 
+/**
+ * Error codes for job execution
+ */
+export const JobErrorCodes = {
+  SIGNATURE_MISMATCH: 90001,
+  HASH_MISMATCH: 90002,
+  LIBRARY_ERROR: 90003,
+  GRACEFUL_ABORT: 90010,
+} as const;
+
 /** Event payload when a job begins execution */
 export type JobStartedEvent = {
   job: Job;
@@ -194,7 +207,8 @@ export type JobRetryEvent = {
 /** Event payload when a job fails */
 export type JobFailedEvent = {
   job: Job;
-  error: string;
+  errorCode: number;
+  errorMessage: string;
   willRetry: boolean;
   retryCount: number;
 };

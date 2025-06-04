@@ -65,7 +65,7 @@ Optionally, a `Job` may contain information about expected `Operation` data. In 
 
 This is useful for the synchronization flow, where we receive `operation` objects over a network and need to apply them locally.
 
-### Error Handling
+### Events
 
 The executor emits a set of structured events so that clients can react to job progress and failures:
 
@@ -73,6 +73,30 @@ The executor emits a set of structured events so that clients can react to job p
 - **`jobCompleted`** - issued after a job finishes successfully.
 - **`jobRetry`** - issued when execution throws an error and the executor will retry the job.
 - **`jobFailed`** - issued when execution throws an error and will not be retried.
+
+### Error Propagation
+
+The `IJobExecutor` does not handle errors, it propagates them outward for other systems to handle. Errors are only propagated for jobs that either cannot be retried or are not recoverable.
+
+Job errors are defined by error codes on the `JobResult` object. The error message may be used to provide more context about the error, and is not guaranteed to be consistent for all errors of a specific code.
+
+This is the exhaustive list of possible job error codes, each defined on the [JobErrorCodes](interface.md) object:
+
+##### `SIGNATURE_MISMATCH`
+
+One or more `Action` signatures did not match the expected signature. This is a fatal error and the job will not be retried.
+
+##### `HASH_MISMATCH`
+
+One or more `Operation` hashes did not match the expected hash. This is a fatal error and the job will not be retried.
+
+##### `LIBRARY_ERROR`
+
+An exception was thrown in the related document model library. This is a fatal error and the job will not be retried.
+
+##### `GRACEFUL_ABORT`
+
+This is used when a shutdown of the job executor is requested. This error code will be attached to all incomplete `JobResult` objects in all queues. These jobs will not be retried.
 
 #### Retry Logic
 

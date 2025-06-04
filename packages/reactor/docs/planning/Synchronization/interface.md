@@ -10,42 +10,72 @@ type RemoteFilter = {
 
   /** Array of operation scopes to include, use ["*"] for all */
   scope?: string[];
-  
+
   /** Array of branches to include, use ["*"] for all */
   branch?: string[];
 };
 
 type RemoteOptions = {
-  fetch?: boolean;
-  push?: boolean;
-  mirror?: boolean;
-  tags?: boolean;
+  //
 };
 
 type Remote = {
+  /** The name of the remote. Must be unique. */
   name: string;
+
+  /** The channel to use for this remote */
   channel: IChannel;
 
   /** Filter to specify which documents this remote should receive updates for */
-  filter?: RemoteFilter;
-  options?: RemoteOptions;
+  filter: RemoteFilter;
+
+  /** Options for the remote */
+  options: RemoteOptions;
 };
 
 interface ISynchronizationManager {
-  addRemote(name: string, channel: IChannel, filter?: RemoteFilter, options?: RemoteOptions): Promise<void>;
+  /**
+   * Get details of a specific remote
+   * 
+   * @param name - The name of the remote
+   * @returns The remote
+   */
+  get(name: string): Promise<Remote | null>;
   
-  // Remove an existing remote by name
-  removeRemote(name: string): Promise<void>;
+  /**
+   * Add a new remote
+   * 
+   * @param name - The name of the remote
+   * @param channel - The channel to use for this remote
+   * @param filter - The filter to use for this remote
+   * @param options - The options for this remote
+   * @returns The remote
+   */
+  add(name: string, channel: IChannel, filter?: RemoteFilter, options?: RemoteOptions): Promise<Remote>;
+
+  /**
+   * Remove an existing remote
+   * 
+   * @param name - The name of the remote
+   * @returns The remote
+   */
+  remove(name: string): Promise<void>;
   
-  // List all configured remotes
-  listRemotes(): Promise<Remote[]>;
+  /**
+   * List all configured remotes
+   * 
+   * @returns The remotes
+   */
+  list(): Remote[];
   
-  // Get details of a specific remote
-  getRemote(name: string): Promise<Remote | null>;
-  
-  // Update the filter of an existing remote
-  setRemoteFilter(name: string, filter: RemoteFilter): Promise<void>;
-  
-  // Rename an existing remote
-  renameRemote(oldName: string, newName: string): Promise<void>;
+  /**
+   * Update the filter of an existing remote
+   * 
+   * @param name - The name of the remote
+   * @param filter - The filter to use for this remote
+   * 
+   * @returns The remote
+   */
+  setFilter(name: string, filter: RemoteFilter): Promise<void>;
 }
+```
