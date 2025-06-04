@@ -42,9 +42,9 @@ const jobStatus = await reactor.create(doc);
 
 5. The `Job` will be executed by the `IReactor`, which will:
 
-- Create an `Operation` for the `CREATE_DOCUMENT` action. This will result in the creation of a new document with a filled out `header` scope but an empty, `{}`, default scope (`global`).
+- Create an `Operation` for the `CREATE_DOCUMENT` action. This will result in the creation of a new document with a filled out `header` scope but an empty, `{}`, default scope (`document`).
 
-- Create an `Operation` for the `UPGRADE_DOCUMENT` action. This will result in a document with a state object of `{ title: "My Todo List" }`, in the default scope (`global`).
+- Create an `Operation` for the `UPGRADE_DOCUMENT` action. This will result in a document with a state object of `{ title: "My Todo List" }`, in the default scope (`document`).
 
 ### Document Model Upgrade Flow
 
