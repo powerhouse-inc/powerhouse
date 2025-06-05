@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
+import semver from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -70,7 +71,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
 
   result.isUsingOlderVersion = Object.values(projectsVersionData).some((project) => {
     if (!project.newVersion) return false;
-    return project.newVersion < connectVersion;
+    return semver.lt(project.newVersion, connectVersion)
   });
 
   const version = workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData);
