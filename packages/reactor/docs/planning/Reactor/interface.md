@@ -3,6 +3,11 @@
 ```tsx
 interface IReactor {
   /**
+   * Signals that the reactor should shutdown.
+   */
+  kill(): ShutdownStatus;
+
+  /**
    * Retrieves a list of document model specifications
    *
    * @param namespace - Optional namespace like "powerhouse" or "sky", defaults to ""

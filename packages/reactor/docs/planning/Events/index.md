@@ -11,6 +11,10 @@ The `IEventBus` is an async pub/sub mechanism. We can use an event bus to de-dup
 - Does NOT require idempotent subscribers.
 - Does NOT retry.
 
+### Persistence
+
+// 
+
 ### Dependencies
 
 - None.

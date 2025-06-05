@@ -12,6 +12,10 @@ All jobs submitted to the queue should already have valid signatures on the `Act
 
 Signature validation is left to the `IJobExecutor`, as it may be considered a high-CPU operation.
 
+### Blocking
+
+Consumers must be able to handle the `QueueBlockedError` when attempting to enqueue a job while the queue is blocked.
+
 ### Dependencies
 
 - [IEventBus](../Events/index.md)

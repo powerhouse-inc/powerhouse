@@ -14,6 +14,10 @@ TLDR: Think of this as a smart, materialized view of the operations store.
 - The cache is invalidated when it receives a `DocumentChangeEvent` from the `IEventBus` that affects a related `(document id, ViewFilter)` tuple.
 - Snapshots are then re-computed and stored in the cache.
 
+### Eventual Consistency
+
+
+
 ### Dependencies
 
 - [IOperationStore](../Reactor/Interfaces/IOperationStore.md)

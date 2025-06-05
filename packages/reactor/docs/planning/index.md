@@ -3,6 +3,8 @@
 * [Reactor](Reactor/index.md)
 * [ReactorClient](ReactorClient/index.md)
 * [Auth](Auth/index.md)
+* [Graceful Shutdown](GracefulShutdown/index.md)
+* [Scaling](Scaling/index.md)
 
 ### Components
 
@@ -12,8 +14,8 @@
 * [Queue](Queue/index.md)
 * [Events](Events/index.md)
 * [Jobs](Jobs/index.md)
+* [Processors](Processors/index.md)
 * [Subscriptions](Subscriptions/index.md)
-* [Interfaces](Reactor/Interfaces.md)
 * [Storage](Storage/index.md)
 * [Synchronization](Synchronization/index.md)
 * [GraphQL](GraphQL/index.md)

@@ -2,6 +2,22 @@
 
 ```tsx
 /**
+ * Describes the status of a.
+ */
+type ShutdownStatus = {
+  /**
+   * True if and only if the system has been shutdown.
+   * 
+   * This value is meant to be polled to determine if the system has been shutdown.
+   * 
+   * In the case of a browser process, the `kill` method should be able to synchronously set this to true.
+   * 
+   * In the case of a server process, a graceful shutdown period should be allowed for the system to finish its work.
+   */
+  get isShutdown(): boolean;
+}
+
+/**
  * Enum that determines deletion propagation.
  */
 enum PropagationMode {

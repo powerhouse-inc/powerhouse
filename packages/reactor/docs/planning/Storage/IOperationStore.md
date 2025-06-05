@@ -89,6 +89,7 @@ The database schema, in prisma format, will look something like:
 ```prisma
 model Operation {
   id              String       @id @default(uuid())
+  jobId           String       @unique
   opId            String       @unique
   // serves as a causation id
   prevOpId        String

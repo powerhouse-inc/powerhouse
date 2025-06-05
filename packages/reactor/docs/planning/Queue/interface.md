@@ -3,6 +3,13 @@
 See the [Jobs](../Jobs/index.md) doc for a detailed specification on `Job`s.
 
 ```tsx
+
+class QueueBlockedError extends Error {
+  constructor() {
+    super("Queue is blocked");
+  }
+}
+
 /**
  * Interface for a job queue that manages write operations.
  * Internally organizes jobs by documentId, scope, and branch to ensure proper ordering.
@@ -10,11 +17,23 @@ See the [Jobs](../Jobs/index.md) doc for a detailed specification on `Job`s.
  */
 export interface IQueue {
   /**
+   * Blocks the queue from accepting new jobs.
+   */
+  block(): void;
+
+  /**
+   * Unblocks the queue from accepting new jobs.
+   */
+  unblock(): void;
+  
+  /**
    * Add a new job to the queue.
    * 
    * Jobs are automatically organized by documentId, scope, and branch internally.
    * 
    * Emits a 'jobAvailable' event to the event bus when the job is queued.
+   * 
+   * If the queue is currently blocked, this will throw a `QueueBlockedError`.
    * 
    * @param job - The job to add to the queue
    * @param config - Configuration options for the job execution

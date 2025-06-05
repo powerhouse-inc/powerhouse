@@ -3,16 +3,16 @@
 ```tsx
 type RemoteFilter = {
   /** Array of document types to include, use ["*"] for all */
-  documentType?: string[];
+  documentType: string[];
 
   /** Array of document IDs to include, use ["*"] for all */
-  documentId?: string[];
+  documentId: string[];
 
   /** Array of operation scopes to include, use ["*"] for all */
-  scope?: string[];
+  scope: string[];
 
   /** Array of branches to include, use ["*"] for all */
-  branch?: string[];
+  branch: string[];
 };
 
 type RemoteOptions = {
