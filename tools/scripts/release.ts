@@ -182,6 +182,10 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     
     preid = validProductionBranches.includes(branchTag) ? undefined : branchTag;
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
+
+    if (specifier === connectVersion) {
+      specifier = semver.inc(specifier, "prerelease", preid) || undefined;
+    }
   }
 
   const preReleaseResult = await getPreReleaseResults(specifier, preid);
