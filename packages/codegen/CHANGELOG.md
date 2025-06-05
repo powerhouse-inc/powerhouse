@@ -1,3 +1,7 @@
+## 2.5.0-dev.1 (2025-06-05)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.0 (2025-06-04)
 
 ### 🚀 Features

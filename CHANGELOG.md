@@ -1,3 +1,13 @@
+## 2.5.0-dev.1 (2025-06-05)
+
+### 🚀 Features
+
+- **ph-cli:** added brotli and gzip compression to nginx ([f631747d3](https://github.com/powerhouse-inc/powerhouse/commit/f631747d3))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.0 (2025-06-04)
 
 ### 🚀 Features
