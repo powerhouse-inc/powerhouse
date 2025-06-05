@@ -1,3 +1,13 @@
+## 2.5.0-dev.6 (2025-06-05)
+
+### 🩹 Fixes
+
+- set node 22 in release branch workflow ([b33681938](https://github.com/powerhouse-inc/powerhouse/commit/b33681938))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.5 (2025-06-05)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
