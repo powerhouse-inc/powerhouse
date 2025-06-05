@@ -1,3 +1,13 @@
+## 2.5.0-dev.8 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** brotli compression on 2nd project ([9fde76a1c](https://github.com/powerhouse-inc/powerhouse/commit/9fde76a1c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.7 (2025-06-05)
 
 ### 🩹 Fixes
