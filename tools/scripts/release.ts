@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
-import semver from "semver";
+import semver, { ReleaseType } from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -23,6 +23,10 @@ type PreReleaseResult = {
   currentTag: string | undefined;
   isUsingOlderVersion: boolean;
 };
+
+// Read connect package.json version
+const connectPackageJson = JSON.parse(fs.readFileSync('apps/connect/package.json', 'utf8'));
+const connectVersion = connectPackageJson.version;
 
 function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionData) {
   let version: null | string = null;
@@ -64,10 +68,6 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     console.warn("You're using the current version, no changes will be released");
     result.isUsingCurrentVersion = true;
   }
-
-  // Read connect package.json version
-  const connectPackageJson = JSON.parse(fs.readFileSync('apps/connect/package.json', 'utf8'));
-  const connectVersion = connectPackageJson.version;
 
   result.isUsingOlderVersion = Object.values(projectsVersionData).some((project) => {
     if (!project.newVersion) return false;
@@ -154,6 +154,19 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
    */
   if (version && tag && /^\d+\.\d+\.\d+$/.test(version)) {
     specifier = `${version}-${tag}.0`;
+  }
+
+  if (version && ['patch', 'minor', 'major'].includes(version) && !tag) {
+    const semverObject = semver.parse(connectVersion);
+  
+    if (semverObject && semverObject.prerelease.length > 0) {
+      const currentVersion = `${semverObject.major}.${semverObject.minor}.${semverObject.patch}`;
+      const prerelease = semverObject.prerelease[0] as string;
+      const newVersion = semver.inc(currentVersion, version as ReleaseType) as string;
+
+      specifier = `${newVersion}-${prerelease}.0`;
+      preid = prerelease;
+    }
   }
   
   const isBranchRelease = branchRelease && branchRelease !== "";
