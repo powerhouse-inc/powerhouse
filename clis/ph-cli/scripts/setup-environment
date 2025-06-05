@@ -20,7 +20,8 @@ else
     # =============================================================================
     # Package Installation
     # =============================================================================
-    sudo apt install -y postgresql postgresql-contrib nginx
+    sudo apt install -y postgresql postgresql-contrib nginx nginx-module-brotli
+    sudo ln -sf /usr/share/nginx/modules-available/mod-brotli.conf /etc/nginx/modules-enabled/50-mod-brotli.conf
 
     # =============================================================================
     # Interactive Package Installation
@@ -159,6 +160,20 @@ add_header X-Frame-Options DENY;
 add_header X-Content-Type-Options nosniff;
 add_header X-XSS-Protection "1; mode=block";
 
+# Compression settings
+brotli on;
+brotli_comp_level 6;
+brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+brotli_static on;
+
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+gzip_min_length 1000;
+gzip_buffers 16 8k;
+
 server {
     listen 80;
     server_name $connect_domain $switchboard_domain;
@@ -226,6 +241,20 @@ add_header Strict-Transport-Security "max-age=63072000" always;
 add_header X-Frame-Options DENY;
 add_header X-Content-Type-Options nosniff;
 add_header X-XSS-Protection "1; mode=block";
+
+# Compression settings
+brotli on;
+brotli_comp_level 6;
+brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+brotli_static on;
+
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+gzip_min_length 1000;
+gzip_buffers 16 8k;
 
 server {
     listen 80;
@@ -320,6 +349,20 @@ add_header Strict-Transport-Security "max-age=63072000" always;
 add_header X-Frame-Options DENY;
 add_header X-Content-Type-Options nosniff;
 add_header X-XSS-Protection "1; mode=block";
+
+# Compression settings
+brotli on;
+brotli_comp_level 6;
+brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+brotli_static on;
+
+gzip on;
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
+gzip_min_length 1000;
+gzip_buffers 16 8k;
 
 server {
     listen 80;
