@@ -1,3 +1,13 @@
+## 2.5.0-dev.5 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** duplicate brotli configurations ([32865bf99](https://github.com/powerhouse-inc/powerhouse/commit/32865bf99))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.4 (2025-06-05)
 
 ### 🩹 Fixes

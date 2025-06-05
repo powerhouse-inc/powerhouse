@@ -1,3 +1,7 @@
+## 2.5.0-dev.5 (2025-06-05)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.4 (2025-06-05)
 
 ### 🩹 Fixes
