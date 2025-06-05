@@ -20,8 +20,7 @@ else
     # =============================================================================
     # Package Installation
     # =============================================================================
-    sudo apt install -y postgresql postgresql-contrib nginx nginx-module-brotli
-    sudo ln -sf /usr/share/nginx/modules-available/mod-brotli.conf /etc/nginx/modules-enabled/50-mod-brotli.conf
+    sudo apt install -y postgresql postgresql-contrib nginx libnginx-mod-http-brotli-static libnginx-mod-http-brotli-filter
 
     # =============================================================================
     # Interactive Package Installation
