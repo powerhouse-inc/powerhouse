@@ -41,7 +41,6 @@
     "@storybook/types": "^8.5.2",
     "@types/react": "^18.3.18",
     "@types/validator": "^13.12.2",
-    "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -89,6 +88,7 @@
     "dspot-powerhouse-components": "^1.1.0",
     "es-toolkit": "^1.37.2",
     "esbuild": "^0.24.2",
+    "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "fast-glob": "^3.3.3",
     "graphql": "^16.11.0",
     "magic-string": "^0.30.17",
