@@ -12,7 +12,7 @@ export type BreadcrumbsProps<T extends boolean = boolean> = {
   onBreadcrumbSelected: (node: BreadcrumbNode) => void;
   createEnabled?: T;
   onCreate: T extends true
-    ? (name: string, parentFolder: string | undefined) => void
+    ? (name: string, parentFolder: string) => void
     : never;
 };
 
@@ -28,7 +28,9 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
   const onSubmit = useCallback(
     (name: string) => {
       if (!createEnabled || !onCreate) return;
-      onCreate(name, breadcrumbs.at(-1)?.id);
+      const parentFolder = breadcrumbs.at(-1)?.id;
+      if (!parentFolder) return;
+      onCreate(name, parentFolder);
       setIsCreating(false);
     },
     [breadcrumbs, createEnabled, onCreate],

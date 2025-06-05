@@ -17,30 +17,16 @@ import {
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
-import { type UiNode } from "../uiNodes/types.js";
-import { type IDriveContext } from "./useDriveContext.js";
+import { makeNodeMap } from "./atoms.js";
+import { type TDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();
-
-/**
- * Retrieves a node from the drive by its ID
- * @param id - The ID of the node to find
- * @param drive - The document drive to search in
- * @returns The found node or undefined
- */
-function getNode(id: string, drive: DocumentDriveDocument) {
-  return drive.state.global.nodes.find((node) => node.id === id);
-}
-
 /**
  * Actions for managing a document drive
  */
 export interface IDriveActions {
   /** The drive context provided by the host application */
-  context: IDriveContext;
-
-  /** Selects a node in the drive */
-  selectNode: (node: UiNode | null) => void;
+  context: TDriveContext;
 
   /**
    * Creates a new folder in the drive
@@ -122,14 +108,17 @@ export interface IDriveActions {
  * @param context - The drive context provided by the host application
  */
 function createDriveActions(
-  document: DocumentDriveDocument,
+  drive: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
-  context: IDriveContext,
 ): IDriveActions {
-  const drive = document;
   const driveId = drive.id;
-
-  const { selectedNode } = context;
+  const nodeMap = makeNodeMap(drive);
+  const getNode = (id: string | null | undefined) =>
+    id ? drive.state.global.nodes.find((node) => node.id === id) : null;
+  const getParentNode = (id: string | null | undefined) => {
+    const node = getNode(id);
+    return node?.parentFolder ? getNode(node.parentFolder) : null;
+  };
 
   const handleAddFolder = async (
     name: string,
@@ -209,7 +198,7 @@ function createDriveActions(
     sourceId: string,
     targetFolderId: string | undefined,
   ) => {
-    const target = targetFolderId ? getNode(targetFolderId, drive) : undefined;
+    const target = getNode(targetFolderId);
     if (targetFolderId && !target && targetFolderId !== driveId) {
       throw new Error(`Target node with id "${targetFolderId}" not found`);
     }
@@ -285,7 +274,7 @@ function createDriveActions(
 export function useDriveActions(
   document: DocumentDriveDocument,
   dispatch: EditorDispatch<DocumentDriveAction>,
-  context: IDriveContext,
+  context: TDriveContext,
 ): IDriveActions {
   return useMemo(
     () => createDriveActions(document, dispatch, context),

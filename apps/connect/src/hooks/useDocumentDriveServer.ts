@@ -313,6 +313,8 @@ export function useDocumentDriveServer() {
             ).catch(error => {
                 throw error;
             });
+
+            return fileNode;
         },
         [
             addDocument,

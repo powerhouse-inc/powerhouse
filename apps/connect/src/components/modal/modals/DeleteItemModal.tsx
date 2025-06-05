@@ -1,13 +1,10 @@
-import {
-    ConnectDeleteItemModal,
-    type UiFileNode,
-    type UiFolderNode,
-} from '@powerhousedao/design-system';
+import { ConnectDeleteItemModal } from '@powerhousedao/design-system';
+import { useNodeKind } from '@powerhousedao/reactor-browser';
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface DeleteItemModalProps {
-    uiNode: UiFileNode | UiFolderNode;
+    nodeId: string | null;
     open: boolean;
     onDelete: (closeModal: () => void) => void;
     onClose: () => void;
@@ -15,18 +12,18 @@ export interface DeleteItemModalProps {
 
 export const DeleteItemModal: React.FC<DeleteItemModalProps> = props => {
     const { t } = useTranslation();
-    const { uiNode, open, onClose, onDelete } = props;
-    const { kind, name } = uiNode;
+    const { nodeId, open, onClose, onDelete } = props;
+    const kind = useNodeKind(nodeId);
 
     return (
         <ConnectDeleteItemModal
             open={open}
             onDelete={() => onDelete(onClose)}
             onCancel={() => onClose()}
-            header={t(`modals.deleteItem.${kind.toLowerCase()}.header`, {
+            header={t(`modals.deleteItem.${kind!.toLowerCase()}.header`, {
                 item: name,
             })}
-            body={t(`modals.deleteItem.${kind.toLowerCase()}.body`)}
+            body={t(`modals.deleteItem.${kind!.toLowerCase()}.body`)}
             cancelLabel={t('common.cancel')}
             deleteLabel={t('common.delete')}
         />

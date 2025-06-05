@@ -5,7 +5,6 @@ import {
   type UiDriveNode,
   type UiNode,
 } from "#connect";
-import { useUiNodesContext } from "@powerhousedao/reactor-browser";
 import { useEffect } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
@@ -30,14 +29,6 @@ const user = {
 } as const;
 
 const Wrapper = (args: Args) => {
-  const uiNodesContext = useUiNodesContext();
-  const { driveNodes, setDriveNodes, setSelectedNode } = uiNodesContext;
-
-  useEffect(() => {
-    setDriveNodes(args.driveNodes ?? []);
-    setSelectedNode(args.driveNodes?.[0] ?? null);
-  }, []);
-
   const nodeHandlers = {
     onAddFolder: (name: string, uiNode: UiNode) => {},
     onAddFile: (file: File, parentNode: UiNode | null) => {

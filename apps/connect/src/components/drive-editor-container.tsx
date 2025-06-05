@@ -17,14 +17,14 @@ import {
     useGetEditor,
 } from '#store';
 import { useDocumentDispatch } from '#utils';
-import { GenericDriveExplorer } from '@powerhousedao/common';
 import {
+    GenericDriveExplorer,
+    type TDriveContext,
     useSelectedDriveId,
     useSelectedNodeId,
-    type DriveEditorContext,
-} from '@powerhousedao/reactor-browser';
+} from '@powerhousedao/common';
+import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
-import { type IDriveContext } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
 import {
     driveDocumentModelModule,
     type GetDocumentOptions,
@@ -108,7 +108,7 @@ export function DriveEditorContainer() {
             [getDocument, selectedDriveId],
         );
 
-    const driveContext: IDriveContext = useMemo(
+    const driveContext: TDriveContext = useMemo(
         () => ({
             showSearchBar: false,
             isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,

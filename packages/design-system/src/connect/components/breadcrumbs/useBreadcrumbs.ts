@@ -1,13 +1,12 @@
 import { type BreadcrumbNode } from "#connect";
-import {
-  useSelectedNodePath,
-  useSetSelectedNodeId,
-} from "@powerhousedao/reactor-browser";
+import { type SetSelectedNodeId } from "@powerhousedao/reactor-browser/uiNodes/types";
+import { type Node } from "document-drive";
 import { useCallback, useMemo } from "react";
 
-export function useBreadcrumbs() {
-  const selectedNodePath = useSelectedNodePath();
-  const setSelectedNodeId = useSetSelectedNodeId();
+export function useBreadcrumbs(
+  selectedNodePath: Node[],
+  setSelectedNodeId: SetSelectedNodeId,
+) {
   const breadcrumbs = useMemo(
     () =>
       selectedNodePath.map((node) => ({

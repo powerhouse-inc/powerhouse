@@ -7,13 +7,13 @@ import {
 import deepEqual from "fast-deep-equal";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { atomFamily } from "jotai/utils";
-import { useMemo } from "react";
-import { DRIVE, LOCAL, PUBLIC } from "./uiNodes/constants.js";
-import { type SharingType } from "./uiNodes/types.js";
+import { useCallback, useMemo } from "react";
+import { DRIVE, FILE, FOLDER, LOCAL, PUBLIC } from "./constants.js";
+import { type NodeKind, type SharingType } from "./types.js";
 
 const selectedNodeIdAtom = atom<string | null>(null);
 
-const nodeMapAtom = atom<Record<string, Node>>({});
+const nodeMapAtom = atom<Record<string, Node | undefined>>({});
 
 const nodeAtomFamily = atomFamily(
   (id: string | null) =>
@@ -29,9 +29,12 @@ const nodeAtomFamily = atomFamily(
   deepEqual,
 );
 
-function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
-  console.log("making node map", documentDrives);
+export function makeNodeMap(
+  input: DocumentDriveDocument[] | DocumentDriveDocument,
+) {
+  console.log("making node map", input);
   const nodeMap: Record<string, Node> = {};
+  const documentDrives = Array.isArray(input) ? input : [input];
 
   for (const documentDrive of documentDrives) {
     const driveNode: Node = {
@@ -60,9 +63,9 @@ function makeNodeMap(documentDrives: DocumentDriveDocument[]) {
 
 const bulkUpdateNodeMapAtom = atom(
   null,
-  (get, set, updatedNodes: Record<string, Node>) => {
+  (get, set, updatedNodes: Record<string, Node | undefined>) => {
     const currentMap = get(nodeMapAtom);
-    const newMap: Record<string, Node> = {};
+    const newMap: Record<string, Node | undefined> = {};
     const updatedIds = new Set(Object.keys(updatedNodes));
 
     let changed = false;
@@ -116,7 +119,7 @@ export function useUpdateNodeMap() {
 }
 
 export function useNodeById(id: string | null): Node | null {
-  return useAtomValue(nodeAtomFamily(id));
+  return useAtomValue(nodeAtomFamily(id)) ?? null;
 }
 
 function makeNodeSlugFromNodeName(name: string) {
@@ -128,6 +131,7 @@ export function useNodeBySlug(slug: string | null): Node | null {
   if (!slug) return null;
   const nodes = Object.values(nodeMap);
   const node = nodes.find((node) => {
+    if (node === undefined) return false;
     const slugFromName = makeNodeSlugFromNodeName(node.name);
     return slugFromName === slug;
   });
@@ -145,6 +149,15 @@ export function useParentNode(id: string | null): Node | null {
 export function useParentNodeId(id: string | null): string | null {
   const parentNode = useParentNode(id);
   return parentNode?.id ?? null;
+}
+
+export function useSelectParentNodeId(id: string | null) {
+  const parentNodeId = useParentNodeId(id);
+  const setSelectedNodeId = useSetSelectedNodeId();
+
+  return useCallback(() => {
+    setSelectedNodeId(parentNodeId);
+  }, [parentNodeId, setSelectedNodeId]);
 }
 
 export function useDriveNodeForNode(id: string | null): Node | null {
@@ -175,6 +188,11 @@ export function useSelectedNodeDocumentType() {
   return useNodeDocumentType(selectedNodeId);
 }
 
+export function useSelectedNodeKind() {
+  const selectedNode = useSelectedNode();
+  return getNodeKind(selectedNode);
+}
+
 export function useNodePath(id: string | null): Node[] {
   const nodeMap = useAtomValue(nodeMapAtom);
   if (!id) return [];
@@ -188,11 +206,6 @@ export function useNodePath(id: string | null): Node[] {
   }
 
   return path;
-}
-
-export function useNodePathIds(id: string | null): string[] {
-  const nodePath = useNodePath(id);
-  return nodePath.map((n) => n.id);
 }
 
 export function useSelectedNode(): Node | null {
@@ -239,11 +252,14 @@ export function useSelectedParentNodeId() {
 
 export function useNodeChildrenIds(id: string | null): string[] {
   const nodeMap = useAtomValue(nodeMapAtom);
-  if (!id || isFileNodeKind(nodeMap[id])) return [];
+  if (!id) return [];
+  const node = nodeMap[id];
+  if (!node || isFileNodeKind(node)) return [];
   const nodes = Object.values(nodeMap);
   const childrenIds = nodes
-    .filter((n) => n.parentFolder === id)
-    .map((n) => n.id);
+    .filter((n) => n?.parentFolder === id)
+    .map((n) => n?.id)
+    .filter((id) => id !== undefined);
   // memoize the childrenIds because this is used to render a list of react nodes
   return useMemo(() => childrenIds, [childrenIds]);
 }
@@ -251,62 +267,56 @@ export function useNodeChildrenIds(id: string | null): string[] {
 export function useNodeChildren(id: string | null): Node[] {
   const nodeMap = useAtomValue(nodeMapAtom);
   const childrenIds = useNodeChildrenIds(id);
-  const children = childrenIds.map((id) => nodeMap[id]);
-  return children;
+  return useMemo(
+    () => childrenIds.map((id) => nodeMap[id]).filter((n) => n !== undefined),
+    [childrenIds, nodeMap],
+  );
 }
 
-export function useNodeFileChildren(id: string | null): Node[] {
+export function useNodeFileChildren(id: string | null): FileNode[] {
   const nodeChildren = useNodeChildren(id);
-  return nodeChildren.filter((n) => isFileNodeKind(n));
+  return useMemo(
+    () => nodeChildren.filter((n) => isFileNodeKind(n)),
+    [nodeChildren],
+  );
 }
 
-export function useNodeFolderChildren(id: string | null): Node[] {
+export function useNodeFolderChildren(id: string | null): FolderNode[] {
   const nodeChildren = useNodeChildren(id);
-  return nodeChildren.filter((n) => isFolderNodeKind(n));
+  return useMemo(
+    () => nodeChildren.filter((n) => isFolderNodeKind(n)),
+    [nodeChildren],
+  );
 }
 
 export function sortNodesByName(nodes: Node[]): Node[] {
   return nodes.sort((a, b) => a.name.localeCompare(b.name));
 }
-
-export function useNodeFileChildrenIds(id: string | null): string[] {
-  const nodeFileChildren = useNodeFileChildren(id);
-  // memoize the childrenIds because this is used to render a list of react nodes
-  return useMemo(
-    () => sortNodesByName(nodeFileChildren).map((n) => n.id),
-    [nodeFileChildren],
-  );
-}
-
-export function useNodeFolderChildrenIds(id: string | null): string[] {
-  const nodeFolderChildren = useNodeFolderChildren(id);
-  // memoize the childrenIds because this is used to render a list of react nodes
-  return useMemo(
-    () => sortNodesByName(nodeFolderChildren).map((n) => n.id),
-    [nodeFolderChildren],
-  );
-}
-
-export function isFileNodeKind(node: Node | null): node is FileNode {
+export function isFileNodeKind(
+  node: Node | null | undefined,
+): node is FileNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === "FILE";
+  return node.kind.toUpperCase() === FILE;
 }
 
-export function isFolderNodeKind(node: Node | null): node is FolderNode {
+export function isFolderNodeKind(
+  node: Node | null | undefined,
+): node is FolderNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === "FOLDER";
+  return node.kind.toUpperCase() === FOLDER;
 }
 
-export function isDriveNodeKind(node: Node | null): node is FolderNode {
+export function isDriveNodeKind(
+  node: Node | null | undefined,
+): node is FolderNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === "DRIVE";
+  return node.kind.toUpperCase() === DRIVE;
 }
 
-type NodeKind = "FILE" | "FOLDER" | "DRIVE";
 export function getNodeKind(node: Node | null): NodeKind | null {
-  if (isDriveNodeKind(node)) return "DRIVE";
-  if (isFolderNodeKind(node)) return "FOLDER";
-  if (isFileNodeKind(node)) return "FILE";
+  if (isDriveNodeKind(node)) return DRIVE;
+  if (isFolderNodeKind(node)) return FOLDER;
+  if (isFileNodeKind(node)) return FILE;
   return null;
 }
 
@@ -334,27 +344,12 @@ export function getDriveSharingType(
   return (__sharingType === "PRIVATE" ? LOCAL : __sharingType) as SharingType;
 }
 
-export function useNodeNameForId(id: string | null): string | null {
-  const node = useNodeById(id);
-  return node?.name ?? null;
-}
-
 export function useNodeKind(id: string | null): NodeKind | null {
   const node = useNodeById(id);
   return getNodeKind(node);
 }
 
-export function useSelectedNodeKind() {
-  const selectedNodeId = useSelectedNodeId();
-  return useNodeKind(selectedNodeId);
-}
-
 export function useDriveNodes() {
   const nodeMap = useAtomValue(nodeMapAtom);
   return Object.values(nodeMap).filter((n) => isDriveNodeKind(n));
-}
-
-export function useDriveIds() {
-  const driveNodes = useDriveNodes();
-  return useMemo(() => driveNodes.map((n) => n.id), [driveNodes]);
 }

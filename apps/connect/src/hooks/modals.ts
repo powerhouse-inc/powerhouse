@@ -7,12 +7,11 @@ import {
 } from '@powerhousedao/design-system';
 import {
     FOLDER,
-    useSelectedParentNodeId,
+    useDriveIdForNode,
+    useNodeKind,
+    useSelectParentNodeId,
     useSetSelectedNodeId,
     type SharingType,
-    type UiDriveNode,
-    type UiFileNode,
-    type UiFolderNode,
 } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { t } from 'i18next';
@@ -109,7 +108,7 @@ export function useShowAddDriveModal() {
     return showAddDriveModal;
 }
 
-export function useShowDriveSettingsModal() {
+export function useShowDriveSettingsModal(driveId: string | null) {
     const { showModal } = useModal();
     const {
         renameDrive,
@@ -119,91 +118,92 @@ export function useShowDriveSettingsModal() {
     } = useDocumentDriveServer();
     const setSelectedNodeId = useSetSelectedNodeId();
     const onRenameDrive = useCallback(
-        async (uiDriveNode: UiDriveNode, newName: string) => {
-            await renameDrive(uiDriveNode.id, newName);
+        async (newName: string) => {
+            if (!driveId) return;
+            await renameDrive(driveId, newName);
         },
         [renameDrive],
     );
 
     const onChangeSharingType = useCallback(
-        async (uiDriveNode: UiDriveNode, newSharingType: SharingType) => {
-            await setDriveSharingType(uiDriveNode.id, newSharingType);
+        async (newSharingType: SharingType) => {
+            if (!driveId) return;
+            await setDriveSharingType(driveId, newSharingType);
         },
         [setDriveSharingType],
     );
 
     const onChangeAvailableOffline = useCallback(
-        async (uiDriveNode: UiDriveNode, newAvailableOffline: boolean) => {
-            await setDriveAvailableOffline(uiDriveNode.id, newAvailableOffline);
+        async (newAvailableOffline: boolean) => {
+            if (!driveId) return;
+            await setDriveAvailableOffline(driveId, newAvailableOffline);
         },
         [setDriveAvailableOffline],
     );
-    const onDeleteDrive = useCallback(
-        (uiDriveNode: UiDriveNode) => {
-            showModal('deleteDriveModal', {
-                uiDriveNode,
-                onDelete: async closeModal => {
-                    closeModal();
-                    await deleteDrive(uiDriveNode.id);
+    const onDeleteDrive = useCallback(() => {
+        if (!driveId) return;
+        showModal('deleteDriveModal', {
+            driveId,
+            onDelete: async closeModal => {
+                closeModal();
+                await deleteDrive(driveId);
 
-                    setSelectedNodeId(null);
+                setSelectedNodeId(null);
 
-                    toast(t('notifications.deleteDriveSuccess'), {
-                        type: 'connect-deleted',
-                    });
-                },
-            });
-        },
-        [deleteDrive, setSelectedNodeId, showModal, t],
-    );
-    const showDriveSettingsModal = useCallback(
-        (uiDriveNode: UiDriveNode) => {
-            showModal('driveSettings', {
-                uiDriveNode,
-                onRenameDrive,
-                onDeleteDrive,
-                onChangeSharingType,
-                onChangeAvailableOffline,
-            });
-        },
-        [
-            onChangeAvailableOffline,
-            onChangeSharingType,
-            onDeleteDrive,
+                toast(t('notifications.deleteDriveSuccess'), {
+                    type: 'connect-deleted',
+                });
+            },
+        });
+    }, [deleteDrive, setSelectedNodeId, showModal, t]);
+    const showDriveSettingsModal = useCallback(() => {
+        if (!driveId) return;
+        showModal('driveSettings', {
+            driveId,
             onRenameDrive,
-            showModal,
-        ],
-    );
+            onDeleteDrive,
+            onChangeSharingType,
+            onChangeAvailableOffline,
+        });
+    }, [
+        onChangeAvailableOffline,
+        onChangeSharingType,
+        onDeleteDrive,
+        onRenameDrive,
+        showModal,
+    ]);
 
     return showDriveSettingsModal;
 }
 
-export function useShowDeleteNodeModal() {
+export function useShowDeleteNodeModal(nodeId: string | null) {
     const { showModal } = useModal();
     const { deleteNode } = useDocumentDriveServer();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const selectedParentNodeId = useSelectedParentNodeId();
+    const nodeKind = useNodeKind(nodeId);
+    const driveId = useDriveIdForNode(nodeId);
+    const selectParentNodeId = useSelectParentNodeId(nodeId);
     const showDeleteNodeModal = useCallback(
-        (uiNode: UiFileNode | UiFolderNode) => {
+        (nodeId: string) => {
+            if (!nodeId || !driveId) return;
             showModal('deleteItem', {
-                uiNode,
+                nodeId,
                 onDelete: async closeModal => {
                     closeModal();
 
                     const i18nKey =
-                        uiNode.kind === FOLDER
+                        nodeKind === FOLDER
                             ? 'notifications.deleteFolderSuccess'
                             : 'notifications.fileDeleteSuccess';
 
-                    await deleteNode(uiNode.driveId, uiNode.id);
+                    await deleteNode(driveId, nodeId);
 
-                    setSelectedNodeId(selectedParentNodeId);
+                    selectParentNodeId();
 
                     toast(t(i18nKey), { type: 'connect-deleted' });
                 },
             });
         },
-        [deleteNode, setSelectedNodeId, selectedParentNodeId, showModal, t],
+        [deleteNode, selectParentNodeId, showModal, t],
     );
 
     return showDeleteNodeModal;

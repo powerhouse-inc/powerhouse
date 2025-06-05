@@ -111,7 +111,7 @@ export function useEditorDispatch(
 
 export function useEditorProps(
     document: PHDocument | undefined,
-    nodeId: string | null,
+    nodeId: string | null, 
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {

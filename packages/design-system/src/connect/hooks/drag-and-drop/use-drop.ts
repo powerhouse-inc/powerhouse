@@ -1,33 +1,22 @@
+import { type NodeKind } from "@powerhousedao/reactor-browser";
 import {
-  FILE,
-  isFileNodeKind,
-  useNodeKindForId,
-} from "@powerhousedao/reactor-browser";
-import { type Node } from "document-drive";
-import { type DragEvent, useCallback, useMemo, useState } from "react";
-import { UI_NODE_ID } from "../../constants/nodes.js";
+  type OnAddFile,
+  type OnCopyNode,
+  type OnMoveNode,
+} from "@powerhousedao/reactor-browser/uiNodes/types";
+import { useCallback, useMemo, useState, type DragEvent } from "react";
+import { FILE, UI_NODE_ID } from "../../constants/nodes.js";
 type Props = {
   nodeId: string | null;
   driveId: string | null;
-  onAddFile: (
-    file: File,
-    parentNodeId: string | null,
-    driveId: string | null,
-  ) => Promise<void>;
-  onMoveNode: (
-    nodeId: string,
-    targetNodeId: string,
-    driveId: string,
-  ) => Promise<void>;
-  onCopyNode: (
-    nodeId: string,
-    targetNodeId: string,
-    driveId: string,
-  ) => Promise<void>;
+  nodeKind: NodeKind | null;
+  onAddFile: OnAddFile;
+  onMoveNode: OnMoveNode;
+  onCopyNode: OnCopyNode;
 };
 export function useDrop(props: Props) {
-  const { nodeId, driveId, onAddFile, onCopyNode, onMoveNode } = props;
-  const nodeKind = useNodeKindForId(nodeId);
+  const { nodeId, driveId, nodeKind, onAddFile, onCopyNode, onMoveNode } =
+    props;
   const [isDropTarget, setIsDropTarget] = useState(false);
   const allowedToBeDropTarget = !!nodeKind && nodeKind !== FILE;
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
@@ -40,7 +29,7 @@ export function useDrop(props: Props) {
   }, []);
 
   const onDrop = useCallback(
-    async (event: DragEvent<HTMLDivElement>) => {
+    (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
       if (!nodeId || !driveId) return;
@@ -51,7 +40,7 @@ export function useDrop(props: Props) {
       if (droppedFiles.length) {
         for (const file of droppedFiles) {
           if (file) {
-            await onAddFile(file, nodeId, driveId);
+            onAddFile(file, driveId, nodeId, nodeId);
           }
         }
       } else {
@@ -59,9 +48,9 @@ export function useDrop(props: Props) {
         const droppedNodeId = event.dataTransfer.getData(UI_NODE_ID);
 
         if (altOrOptionKeyPressed) {
-          await onCopyNode(droppedNodeId, nodeId, driveId);
+          onCopyNode(droppedNodeId, nodeId, driveId);
         } else {
-          await onMoveNode(droppedNodeId, nodeId, driveId);
+          onMoveNode(droppedNodeId, nodeId, driveId);
         }
       }
 

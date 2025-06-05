@@ -1,88 +1,65 @@
 import type { BaseProps } from "#editors/utils/index";
 import {
-  FILE,
-  FOLDER,
   FolderItem,
-  type BaseUiFileNode,
-  type BaseUiFolderNode,
-  type BaseUiNode,
-  type UiDriveNode,
-  type UiFileNode,
-  type UiFolderNode,
-  type UiNode,
+  useDrop,
+  type SharingType,
 } from "@powerhousedao/design-system";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
-import { sortUiNodesByName } from "../../utils/uiNodes.js";
+import { useNodeFileChildren, useNodeFolderChildren } from "../atoms.js";
+import {
+  type GetSyncStatusSync,
+  type OnAddFile,
+  type OnCopyNode,
+  type OnDeleteNode,
+  type OnMoveNode,
+  type OnRenameNode,
+  type SetSelectedNodeId,
+} from "../types.js";
 import FileContentView from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 
 interface IFolderViewProps extends BaseProps {
-  node: UiDriveNode | UiFolderNode;
-  isDropTarget: boolean;
-  onSelectNode: (uiNode: UiNode) => void;
-  onRenameNode: (name: string, uiNode: UiNode) => void;
-  onDuplicateNode: (uiNode: UiNode) => void;
-  onDeleteNode: (uiNode: UiNode) => void;
-  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
-  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  nodeId: string;
+  driveId: string;
+  sharingType: SharingType;
   isAllowedToCreateDocuments: boolean;
+  setSelectedNodeId: SetSelectedNodeId;
+  getSyncStatusSync: GetSyncStatusSync;
+  onRenameNode: OnRenameNode;
+  onDeleteNode: OnDeleteNode;
+  onAddFile: OnAddFile;
+  onCopyNode: OnCopyNode;
+  onMoveNode: OnMoveNode;
 }
 
 export function FolderView(props: IFolderViewProps) {
-  const { node, className, isDropTarget, containerProps, ...nodeProps } = props;
+  const {
+    nodeId,
+    className,
+    isAllowedToCreateDocuments,
+    containerProps,
+    sharingType,
+    driveId,
+    setSelectedNodeId,
+    getSyncStatusSync,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+    onRenameNode,
+    onDeleteNode,
+  } = props;
   const { t } = useTranslation();
-
-  // Remove after ts reset is fixed
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  const folderNodes = node.children
-    .filter((node) => node.kind === FOLDER)
-    .sort(sortUiNodesByName) as UiFolderNode[];
-
-  // Remove after ts reset is fixed
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  const fileNodes: UiFileNode[] = node.children
-    .filter((node) => node.kind === FILE)
-    .sort(sortUiNodesByName) as UiFileNode[];
-
-  // Convert UiNode callbacks to BaseUiFolderNode callbacks
-  const folderCallbacks = {
-    onSelectNode: (node: BaseUiFolderNode) =>
-      nodeProps.onSelectNode(node as UiNode),
-    onRenameNode: (name: string, node: BaseUiFolderNode) =>
-      nodeProps.onRenameNode(name, node as UiNode),
-    onDuplicateNode: (node: BaseUiFolderNode) =>
-      nodeProps.onDuplicateNode(node as UiNode),
-    onDeleteNode: (node: BaseUiFolderNode) =>
-      nodeProps.onDeleteNode(node as UiNode),
-  };
-
-  // Convert UiNode callbacks to BaseUiFileNode callbacks
-  const fileCallbacks = {
-    onSelectNode: (node: BaseUiFileNode) =>
-      nodeProps.onSelectNode(node as UiNode),
-    onRenameNode: (name: string, node: BaseUiFileNode) =>
-      nodeProps.onRenameNode(name, node as UiNode),
-    onDuplicateNode: (node: BaseUiFileNode) =>
-      nodeProps.onDuplicateNode(node as UiNode),
-    onDeleteNode: (node: BaseUiFileNode) =>
-      nodeProps.onDeleteNode(node as UiNode),
-  };
-
-  // Convert UiNode callbacks to BaseUiNode callbacks
-  const baseNodeCallbacks = {
-    onAddFile: async (file: File, parentNode: BaseUiNode | null) => {
-      await nodeProps.onAddFile(file, parentNode as UiNode | null);
-    },
-    onCopyNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
-      await nodeProps.onCopyNode(uiNode as UiNode, targetNode as UiNode);
-    },
-    onMoveNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
-      await nodeProps.onMoveNode(uiNode as UiNode, targetNode as UiNode);
-    },
-  };
-
+  const { isDropTarget } = useDrop({
+    nodeId,
+    driveId,
+    nodeKind: "FOLDER",
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+  });
+  const folderNodes = useNodeFolderChildren(nodeId);
+  const fileNodes = useNodeFileChildren(nodeId);
   return (
     <div
       className={twMerge(
@@ -102,10 +79,17 @@ export function FolderView(props: IFolderViewProps) {
           folderNodes.map((folderNode) => (
             <FolderItem
               key={folderNode.id}
-              uiNode={folderNode}
-              {...baseNodeCallbacks}
-              {...folderCallbacks}
-              isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
+              node={folderNode}
+              isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+              sharingType={sharingType}
+              driveId={driveId}
+              setSelectedNodeId={setSelectedNodeId}
+              getSyncStatusSync={getSyncStatusSync}
+              onAddFile={onAddFile}
+              onMoveNode={onMoveNode}
+              onCopyNode={onCopyNode}
+              onRenameNode={onRenameNode}
+              onDeleteNode={onDeleteNode}
             />
           ))
         ) : (
@@ -129,8 +113,16 @@ export function FolderView(props: IFolderViewProps) {
         >
           <FileContentView
             fileNodes={fileNodes}
-            {...fileCallbacks}
-            isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
+            driveId={driveId}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            sharingType={sharingType}
+            setSelectedNodeId={setSelectedNodeId}
+            getSyncStatusSync={getSyncStatusSync}
+            onAddFile={onAddFile}
+            onMoveNode={onMoveNode}
+            onCopyNode={onCopyNode}
+            onRenameNode={onRenameNode}
+            onDeleteNode={onDeleteNode}
           />
         </div>
       </DriveLayout.ContentSection>

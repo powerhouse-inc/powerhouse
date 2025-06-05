@@ -3,6 +3,7 @@ import {
   defaultFolderOptions,
   DELETE,
   DUPLICATE,
+  FOLDER,
   NodeInput,
   type NodeOption,
   nodeOptionsMap,
@@ -16,70 +17,58 @@ import {
 } from "#connect";
 import { Icon } from "#powerhouse";
 import {
-  useDriveIdForNode,
-  useNodeNameForId,
-  useSetSelectedNodeId,
-} from "@powerhousedao/reactor-browser";
-import type { Node, SyncStatus } from "document-drive";
+  type GetSyncStatusSync,
+  type OnAddFile,
+  type OnCopyNode,
+  type OnDeleteNode,
+  type OnMoveNode,
+  type OnRenameNode,
+  type SetSelectedNodeId,
+} from "@powerhousedao/reactor-browser/uiNodes/types";
+import type { FolderNode } from "document-drive";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 export type FolderItemProps = {
-  nodeId: string;
+  node: FolderNode;
+  driveId: string;
   isAllowedToCreateDocuments: boolean;
   sharingType: SharingType;
   className?: string;
-  getSyncStatusSync: (
-    syncId: string,
-    sharingType: SharingType,
-  ) => SyncStatus | undefined;
-  onAddFile: (
-    file: File,
-    parentNodeId: string | null,
-    driveId: string | null,
-  ) => Promise<void>;
-  onMoveNode: (
-    nodeId: string,
-    targetNodeId: string,
-    driveId: string,
-  ) => Promise<void>;
-  onCopyNode: (
-    nodeId: string,
-    targetNodeId: string,
-    driveId: string,
-  ) => Promise<void>;
-  onRenameNode: (
-    name: string,
-    nodeId: string,
-    driveId: string,
-  ) => Promise<Node>;
-  onDuplicateNode: (nodeId: string, driveId: string) => Promise<void>;
-  showDeleteNodeModal: (nodeId: string) => void;
+  setSelectedNodeId: SetSelectedNodeId;
+  getSyncStatusSync: GetSyncStatusSync;
+  onRenameNode: OnRenameNode;
+  onDeleteNode: OnDeleteNode;
+  onAddFile: OnAddFile;
+  onCopyNode: OnCopyNode;
+  onMoveNode: OnMoveNode;
 };
 
 export function FolderItem(props: FolderItemProps) {
   const {
-    nodeId,
+    node,
     sharingType,
     isAllowedToCreateDocuments,
     className,
+    driveId,
+    setSelectedNodeId,
     getSyncStatusSync,
     onRenameNode,
-    onDuplicateNode,
     onAddFile,
     onCopyNode,
     onMoveNode,
-    showDeleteNodeModal,
+    onDeleteNode,
   } = props;
-  const driveId = useDriveIdForNode(nodeId);
-  const nodeName = useNodeNameForId(nodeId);
+  const nodeId = node.id;
+  const parentNodeId = node.parentFolder ?? null;
+  const nodeName = node.name;
   const syncStatus = getSyncStatusSync(nodeId, sharingType);
-  const setSelectedNodeId = useSetSelectedNodeId();
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag({ nodeId });
   const { isDropTarget, dropProps } = useDrop({
     nodeId,
     driveId,
+    nodeKind: FOLDER,
     onAddFile,
     onCopyNode,
     onMoveNode,
@@ -96,13 +85,8 @@ export function FolderItem(props: FolderItemProps) {
       if (!driveId) {
         throw new Error("Drive id is required");
       }
-      onRenameNode(name, nodeId, driveId)
-        .then(() => {
-          setMode(READ);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      onRenameNode(name, nodeId, driveId);
+      setMode(READ);
     },
     [driveId, nodeId, onRenameNode],
   );
@@ -116,10 +100,13 @@ export function FolderItem(props: FolderItemProps) {
       if (!driveId) {
         throw new Error("Drive id is required");
       }
-      onDuplicateNode(nodeId, driveId);
+      if (!parentNodeId) {
+        throw new Error("Parent node id is required");
+      }
+      onCopyNode(nodeId, parentNodeId, driveId);
     },
     [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => showDeleteNodeModal(nodeId),
+    [DELETE]: () => onDeleteNode(nodeId, driveId),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)

@@ -7,7 +7,7 @@ import {
     useSelectedNodeKind,
     useSelectedParentNodeId,
     useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+} from '@powerhousedao/common';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';

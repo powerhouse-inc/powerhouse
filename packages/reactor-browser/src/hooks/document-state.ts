@@ -1,8 +1,15 @@
 import {
   type GetDocumentOptions,
   type IDocumentDriveServer,
+  type SyncStatus,
 } from "document-drive";
-import { type PHDocument } from "document-model";
+import {
+  type Action,
+  type ActionErrorCallback,
+  type DocumentModelModule,
+  type PHDocument,
+  type User,
+} from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type HookState = PHDocument["state"] &
@@ -134,3 +141,54 @@ export function useDocumentState(args: {
 
   return useMemo(() => state[documentId], [state, documentId]);
 }
+
+export type DocumentStateHooks = {
+  /**
+   * Retrieves the sync status of a document or drive
+   * @param driveId - ID of the drive to check sync status for
+   * @param documentId - ID of the document to check sync status for
+   * @returns SyncStatus object containing sync information
+   */
+  useSyncStatus: (
+    driveId: string,
+    documentId?: string,
+  ) => SyncStatus | undefined;
+
+  useDocumentEditorProps: (props: {
+    driveId: string;
+    documentId: string;
+    documentType: string;
+    documentModelModule: DocumentModelModule<PHDocument>;
+    user?: User;
+  }) => {
+    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
+    document: PHDocument | undefined;
+    error: unknown;
+  };
+
+  /**
+   * Retrieves the states of all documents in a drive
+   * @param driveId - ID of the drive to retrieve document states for
+   * @param documentIds - IDs of the documents to retrieve states for (all if not provided)
+   * @returns Record of document IDs to their states
+   */
+  useDriveDocumentStates: (props: {
+    driveId: string;
+    documentIds?: string[];
+  }) => readonly [
+    Record<string, HookState>,
+    (_driveId: string, _documentIds?: string[]) => Promise<void>,
+  ];
+
+  /**
+   * Retrieves the state of a document in a drive
+   * @param driveId - ID of the drive to retrieve document state for
+   * @param documentId - ID of the document to retrieve state for
+   * @type TDocument - Type of the document to retrieve state for if known
+   * @returns State of the document
+   */
+  useDriveDocumentState: (props: {
+    driveId: string;
+    documentId: string;
+  }) => PHDocument["state"] | undefined;
+};

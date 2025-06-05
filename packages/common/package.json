@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "build:css": "pnpm dlx @tailwindcss/cli -i ./editors/styles.css -o ./dist/editors/styles.css",
-    "build:tsc": "tsc --build",
+    "build:tsc": "tsc",
     "lint": "eslint",
     "build": "npm run build:css && npm run build:tsc",
     "prebuild": "npm run clean",
@@ -40,6 +40,8 @@
     "@tanstack/react-virtual": "^3.8.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "fast-deep-equal": "^3.1.3",
+    "jotai": "^2.12.5",
     "react-i18next": "^13.5.0"
   },
   "devDependencies": {
