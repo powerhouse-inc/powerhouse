@@ -1,3 +1,13 @@
+## 2.5.0-dev.3 (2025-06-05)
+
+### 🚀 Features
+
+- **builder-tools:** add node polyfills esbuild plugin for connect build ([43dd16b4d](https://github.com/powerhouse-inc/powerhouse/commit/43dd16b4d))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 2.5.0-dev.2 (2025-06-05)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

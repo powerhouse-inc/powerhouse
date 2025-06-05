@@ -1,3 +1,18 @@
+## 2.5.0-dev.3 (2025-06-05)
+
+### 🚀 Features
+
+- **builder-tools:** add node polyfills esbuild plugin for connect build ([43dd16b4d](https://github.com/powerhouse-inc/powerhouse/commit/43dd16b4d))
+
+### 🩹 Fixes
+
+- **ph-cli:** gzip compression ([d0d56f851](https://github.com/powerhouse-inc/powerhouse/commit/d0d56f851))
+
+### ❤️ Thank You
+
+- Frank
+- ryanwolhuter
+
 ## 2.5.0-dev.2 (2025-06-05)
 
 ### 🩹 Fixes
