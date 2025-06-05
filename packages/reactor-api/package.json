@@ -1,9 +1,13 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "1.29.28-dev.1",
+  "version": "2.5.0-dev.4",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "exports": {
     ".": "./dist/index.js"
   },

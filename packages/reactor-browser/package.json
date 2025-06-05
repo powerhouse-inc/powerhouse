@@ -1,8 +1,12 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.22.41-dev.1",
+  "version": "2.5.0-dev.4",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },

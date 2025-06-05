@@ -1,3 +1,7 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/powerhouse-inc/powerhouse)
+
+---
+
 # Powerhouse Monorepo 
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.

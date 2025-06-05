@@ -1,10 +1,14 @@
 {
   "name": "@powerhousedao/config",
-  "version": "1.27.0-dev.18",
+  "version": "2.5.0-dev.4",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "module": "./dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",

@@ -1,9 +1,13 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "0.40.84-dev.0",
+  "version": "2.5.0-dev.4",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -17,6 +21,8 @@
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
     "prebuild": "npm run clean && npm run generate-commands-md && npm run generate-version",
+    "postbuild": "npm run copy-scripts",
+    "copy-scripts": "copyfiles scripts/* dist/",
     "build": "tsc --build",
     "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "prepublishOnly": "npm run build",
@@ -32,6 +38,7 @@
   "devDependencies": {
     "@types/node": "^22.15.17",
     "concurrently": "^9.1.2",
+    "copyfiles": "^2.4.1",
     "nodemon": "^3.1.9",
     "vitest": "^3.1.2"
   },

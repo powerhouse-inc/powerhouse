@@ -59,3 +59,11 @@ export function versionOption(program: Command): Command {
     customVersionHandler,
   );
 }
+
+export function versionArgument(program: Command): Command {
+  return program.argument(
+    "version",
+    "Display version information",
+    customVersionHandler,
+  );
+}

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+# Files to monitor for changes
+MONITORED_FILES="clis/ph-cmd/COMMANDS.md clis/ph-cli/COMMANDS.md"
+
+# Documentation file to update and stage
+ACADEMY_DOCS_DIR="apps/academy"
+ACADEMY_DOC_FILE_RELATIVE_TO_ACADEMY_DIR="docs/academy/04-APIReferences/00-PowerhouseCLI.md"
+ACADEMY_DOC_FILE_FULL_PATH="$ACADEMY_DOCS_DIR/$ACADEMY_DOC_FILE_RELATIVE_TO_ACADEMY_DIR"
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+should_run_docs_generation=false
+for monitored_file in $MONITORED_FILES; do
+  if echo "$STAGED_FILES" | grep -q "^$monitored_file$"; then
+    should_run_docs_generation=true
+    break
+  fi
+done
+
+if [ "$should_run_docs_generation" = true ]; then
+  echo "Relevant CLI COMMANDS.md file changed. Generating Academy documentation..."
+  
+  original_dir=$(pwd)
+  cd "$ACADEMY_DOCS_DIR" || exit 1 # cd into apps/academy from monorepo root
+  
+  echo "Running 'pnpm generate:cli-docs' in $(pwd)..."
+  pnpm generate:cli-docs
+  
+  cd "$original_dir" || exit 1 # cd back to monorepo root
+  
+  # Check if the documentation file was modified by the script
+  git_status_output_doc=$(git status --porcelain "$ACADEMY_DOC_FILE_FULL_PATH")
+
+  if [ -n "$git_status_output_doc" ]; then
+    echo "Academy CLI documentation ($ACADEMY_DOC_FILE_FULL_PATH) was updated. Staging changes..."
+    git add "$ACADEMY_DOC_FILE_FULL_PATH"
+  else
+    echo "Academy CLI documentation ($ACADEMY_DOC_FILE_FULL_PATH) is already up-to-date or script failed to update it."
+  fi
+else
+  echo "No relevant CLI COMMANDS.md changes detected. Skipping Academy documentation generation."
+fi
+
+# Add any other root-level pre-commit checks below if needed
+
+exit 0 

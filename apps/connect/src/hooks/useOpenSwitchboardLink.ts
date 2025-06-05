@@ -1,5 +1,7 @@
-import { getSwitchboardUrl, openUrl } from '#utils';
+import { useUnwrappedReactor } from '#store';
+import { openUrl } from '#utils';
 import { useNodeDocumentType } from '@powerhousedao/reactor-browser';
+import { useSwitchboard } from '@powerhousedao/reactor-browser';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 
 export const useOpenSwitchboardLink = (
@@ -7,6 +9,9 @@ export const useOpenSwitchboardLink = (
     nodeId: string | null,
 ) => {
     const { isRemoteDrive, remoteUrl } = useDocumentDriveById(driveId);
+    const reactor = useUnwrappedReactor();
+    const { getDocumentGraphqlQuery, getSwitchboardGatewayUrl } =
+        useSwitchboard(reactor!);
     const documentType = useNodeDocumentType(nodeId);
 
     return async () => {
@@ -15,12 +20,11 @@ export const useOpenSwitchboardLink = (
         const url = new URL(remoteUrl);
         const baseUrl = url.origin;
 
-        const switchboardUrl = getSwitchboardUrl(
-            remoteUrl,
-            documentType,
-            nodeId,
-        );
+        const switchboardUrl = getSwitchboardGatewayUrl(remoteUrl);
+        const query = await getDocumentGraphqlQuery(driveId!, uiNode.id);
 
-        await openUrl(switchboardUrl);
+        const encodedQuery = encodeURIComponent(query);
+
+        await openUrl(`${switchboardUrl}?query=${encodedQuery}`);
     };
 };

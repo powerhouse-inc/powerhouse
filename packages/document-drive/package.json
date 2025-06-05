@@ -1,9 +1,13 @@
 {
   "name": "document-drive",
-  "version": "1.29.14-dev.1",
+  "version": "2.5.0-dev.4",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./storage/prisma": "./dist/src/storage/prisma/prisma.js",

@@ -22,7 +22,6 @@ export * from './useNodeNavigation.js';
 export * from './useOpenFile.js';
 export * from './useOpenSwitchboardLink.js';
 export * from './useRenown.js';
-export * from './useSwitchboard.js';
 export * from './useSyncStatus.js';
 export * from './useUiNodes.js';
 export * from './useUndoRedoShortcuts.js';
