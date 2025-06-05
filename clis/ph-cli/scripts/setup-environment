@@ -128,6 +128,8 @@ EOF
         echo "Compression settings already present in nginx.conf"
     fi
 
+    
+
     echo "Choose SSL configuration:"
     echo "1) Let's Encrypt certificates for domains"
     echo "2) Self-signed certificate for machine hostname"
