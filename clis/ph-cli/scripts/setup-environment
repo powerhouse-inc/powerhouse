@@ -168,6 +168,16 @@ EOF
         echo "Obtaining SSL certificates..."
         sudo certbot --nginx -d $connect_domain -d $switchboard_domain --non-interactive --agree-tos --email $admin_email --redirect
 
+        # Wait for certbot to finish and certificates to be installed
+        sleep 5
+
+        # Check if certificates were installed
+        if [ ! -f "/etc/letsencrypt/live/$connect_domain/fullchain.pem" ]; then
+            echo "Error: SSL certificates were not installed properly"
+            echo "Please check the certbot logs at /var/log/letsencrypt/letsencrypt.log"
+            exit 1
+        fi
+
         # Update Nginx configuration with proper SSL settings
         echo "Updating Nginx configuration with SSL settings..."
         sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
@@ -181,6 +191,9 @@ server {
     listen 443 ssl;
     http2 on;
     server_name $connect_domain;
+    
+    ssl_certificate /etc/letsencrypt/live/$connect_domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$connect_domain/privkey.pem;
     
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -216,6 +229,9 @@ server {
     listen 443 ssl;
     http2 on;
     server_name $switchboard_domain;
+    
+    ssl_certificate /etc/letsencrypt/live/$connect_domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$connect_domain/privkey.pem;
     
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -323,8 +339,10 @@ EOF
     # =============================================================================
     pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
 
-    # Add global security headers and compression settings to main nginx.conf
-    sudo tee -a /etc/nginx/nginx.conf > /dev/null << EOF
+    # Check if security headers and compression settings are already present
+    if ! grep -q "Strict-Transport-Security" /etc/nginx/nginx.conf; then
+        # Add global security headers and compression settings to main nginx.conf
+        sudo tee -a /etc/nginx/nginx.conf > /dev/null << EOF
 
 # Global security headers
 add_header Strict-Transport-Security "max-age=63072000" always;
@@ -337,6 +355,9 @@ brotli_comp_level 6;
 brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
 brotli_static on;
 EOF
+    else
+        echo "Security headers and compression settings already present in nginx.conf"
+    fi
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  Environment setup complete!"
