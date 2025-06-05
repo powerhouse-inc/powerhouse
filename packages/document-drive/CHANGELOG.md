@@ -1,3 +1,13 @@
+## 2.5.0-dev.4 (2025-06-05)
+
+### 🩹 Fixes
+
+- **builder-tools:** move esbuild dev dep to deps ([baa22be6f](https://github.com/powerhouse-inc/powerhouse/commit/baa22be6f))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 2.5.0-dev.3 (2025-06-05)
 
 ### 🚀 Features
