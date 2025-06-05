@@ -1,3 +1,14 @@
+## 2.5.0-staging.0 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** broken ci? ([bff9ca494](https://github.com/powerhouse-inc/powerhouse/commit/bff9ca494))
+- **ph-cli:** duplicate gzip ([f74631ca8](https://github.com/powerhouse-inc/powerhouse/commit/f74631ca8))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.9 (2025-06-05)
 
 ### 🩹 Fixes
