@@ -1,3 +1,13 @@
+## 2.5.0-dev.7 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** added acme challenge ([38a20179d](https://github.com/powerhouse-inc/powerhouse/commit/38a20179d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.6 (2025-06-05)
 
 ### 🩹 Fixes
