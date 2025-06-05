@@ -1,5 +1,6 @@
 import tailwindPostcssPlugin from "@tailwindcss/postcss";
 import { build } from "esbuild";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import { existsSync } from "fs";
 import { cp, mkdir, readFile, writeFile } from "fs/promises";
 import postcss from "postcss";
@@ -25,6 +26,7 @@ export async function bundleExternalPackages(
       ".gif": "dataurl",
       ".webp": "dataurl",
     },
+    plugins: [nodeModulesPolyfillPlugin()],
   });
   return result;
 }
