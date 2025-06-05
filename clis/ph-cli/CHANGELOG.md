@@ -1,3 +1,13 @@
+## 2.5.0-dev.2 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** brotli packages ([ede2fe16d](https://github.com/powerhouse-inc/powerhouse/commit/ede2fe16d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.1 (2025-06-05)
 
 ### 🚀 Features
