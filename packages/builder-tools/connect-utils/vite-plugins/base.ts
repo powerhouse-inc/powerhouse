@@ -11,7 +11,11 @@ import {
 } from "vite";
 
 // matches @powerhousedao/connect, react, react-dom and all their sub-imports like react-dom/client
-export const externalIds = [/^react(-dom)?(\/.*)?$/, /^node:.*$/];
+export const externalIds = [
+  /^react(-dom)?(\/.*)?$/,
+  /^node:.*$/,
+  /^@electric-sql\/pglite.*$/,
+];
 
 // https://github.com/vitejs/vite/issues/6393#issuecomment-1006819717
 // vite dev server doesn't support setting dependencies as external

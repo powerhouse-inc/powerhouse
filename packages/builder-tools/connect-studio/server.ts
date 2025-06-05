@@ -86,6 +86,9 @@ export async function startServer(
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],
     },
+    worker: {
+      format: "es",
+    },
     resolve: {
       alias: [
         { find: "jszip", replacement: "jszip/dist/jszip.min.js" },

@@ -45,6 +45,7 @@ const externalAndExclude = [
     'vite-envs',
     'node:crypto',
     '@electric-sql/pglite',
+    '@electric-sql/pglite/worker',
 ];
 
 export default defineConfig(({ mode }) => {
@@ -181,12 +182,19 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: [...externalAndExclude, ...externalIds],
+                external: [
+                    ...externalAndExclude,
+                    ...externalIds,
+                    /^@electric-sql\/pglite.*$/,
+                ],
             },
         },
         optimizeDeps: {
             include: ['did-key-creator'],
             exclude: externalAndExclude,
+        },
+        worker: {
+            format: 'es',
         },
         resolve: {
             alias: {

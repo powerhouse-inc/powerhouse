@@ -64,7 +64,6 @@ export const useTimelineItems = (
     lod: {
       changes: 2,
     },
-    currency: AnalyticsPath.fromString(""),
   });
 
   // memoize the mapped result to avoid recalculation on rerenders
