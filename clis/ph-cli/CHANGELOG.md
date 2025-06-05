@@ -1,3 +1,13 @@
+## 2.5.0-dev.9 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** compression with multiple server blocks ([32728ad03](https://github.com/powerhouse-inc/powerhouse/commit/32728ad03))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.8 (2025-06-05)
 
 ### 🩹 Fixes
