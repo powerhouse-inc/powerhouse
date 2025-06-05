@@ -115,10 +115,15 @@ EOF
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     # Add compression settings to nginx.conf if not exists
-    if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf; then
+    if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf || ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
         echo "Adding compression settings to nginx.conf..."
         # Find the http block in nginx.conf
-        sudo sed -i '/http {/a \    # Compression settings\n    # Brotli compression\n    brotli on;\n    brotli_comp_level 6;\n    brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;\n    brotli_static on;\n\n    # Gzip compression\n    gzip on;\n    gzip_vary on;\n    gzip_proxied any;\n    gzip_comp_level 6;\n    gzip_buffers 16 8k;\n    gzip_http_version 1.1;\n    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;' /etc/nginx/nginx.conf
+        if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf; then
+            sudo sed -i '/http {/a \    # Brotli compression\n    brotli on;\n    brotli_comp_level 6;\n    brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;\n    brotli_static on;' /etc/nginx/nginx.conf
+        fi
+        if ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
+            sudo sed -i '/http {/a \    # Gzip compression\n    gzip on;\n    gzip_vary on;\n    gzip_proxied any;\n    gzip_comp_level 6;\n    gzip_buffers 16 8k;\n    gzip_http_version 1.1;\n    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;' /etc/nginx/nginx.conf
+        fi
     else
         echo "Compression settings already present in nginx.conf"
     fi
