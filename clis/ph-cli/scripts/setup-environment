@@ -21,6 +21,7 @@ else
     # Package Installation
     # =============================================================================
     sudo apt install -y postgresql postgresql-contrib nginx libnginx-mod-http-brotli-static libnginx-mod-http-brotli-filter
+    sudo sed -i 's/# gzip_vary/gzip_vary/; s/# gzip_proxied/gzip_proxied/; s/# gzip_comp_level/gzip_comp_level/; s/# gzip_buffers/gzip_buffers/; s/# gzip_http_version/gzip_http_version/; s/# gzip_types/gzip_types/' /etc/nginx/nginx.conf
 
     # =============================================================================
     # Interactive Package Installation
@@ -165,14 +166,6 @@ brotli_comp_level 6;
 brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
 brotli_static on;
 
-gzip on;
-gzip_vary on;
-gzip_proxied any;
-gzip_comp_level 6;
-gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
-gzip_min_length 1000;
-gzip_buffers 16 8k;
-
 server {
     listen 80;
     server_name $connect_domain $switchboard_domain;
@@ -246,14 +239,6 @@ brotli on;
 brotli_comp_level 6;
 brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
 brotli_static on;
-
-gzip on;
-gzip_vary on;
-gzip_proxied any;
-gzip_comp_level 6;
-gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
-gzip_min_length 1000;
-gzip_buffers 16 8k;
 
 server {
     listen 80;
@@ -354,14 +339,6 @@ brotli on;
 brotli_comp_level 6;
 brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
 brotli_static on;
-
-gzip on;
-gzip_vary on;
-gzip_proxied any;
-gzip_comp_level 6;
-gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
-gzip_min_length 1000;
-gzip_buffers 16 8k;
 
 server {
     listen 80;
