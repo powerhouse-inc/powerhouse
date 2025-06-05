@@ -113,6 +113,16 @@ EOF
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  SSL Configuration"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Add compression settings to nginx.conf if not exists
+    if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf; then
+        echo "Adding compression settings to nginx.conf..."
+        # Find the http block in nginx.conf
+        sudo sed -i '/http {/a \    # Compression settings\n    # Brotli compression\n    brotli on;\n    brotli_comp_level 6;\n    brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;\n    brotli_static on;\n\n    # Gzip compression\n    gzip on;\n    gzip_vary on;\n    gzip_proxied any;\n    gzip_comp_level 6;\n    gzip_buffers 16 8k;\n    gzip_http_version 1.1;\n    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;' /etc/nginx/nginx.conf
+    else
+        echo "Compression settings already present in nginx.conf"
+    fi
+
     echo "Choose SSL configuration:"
     echo "1) Let's Encrypt certificates for domains"
     echo "2) Self-signed certificate for machine hostname"
@@ -166,13 +176,14 @@ EOF
 
         # Obtain SSL certificates
         echo "Obtaining SSL certificates..."
-        sudo certbot --nginx -d $connect_domain -d $switchboard_domain --non-interactive --agree-tos --email $admin_email --redirect
+        sudo certbot --nginx -d $connect_domain --non-interactive --agree-tos --email $admin_email --redirect
+        sudo certbot --nginx -d $switchboard_domain --non-interactive --agree-tos --email $admin_email --redirect
 
         # Wait for certbot to finish and certificates to be installed
         sleep 5
 
         # Check if certificates were installed
-        if [ ! -f "/etc/letsencrypt/live/$connect_domain/fullchain.pem" ]; then
+        if [ ! -f "/etc/letsencrypt/live/$connect_domain/fullchain.pem" ] || [ ! -f "/etc/letsencrypt/live/$switchboard_domain/fullchain.pem" ]; then
             echo "Error: SSL certificates were not installed properly"
             echo "Please check the certbot logs at /var/log/letsencrypt/letsencrypt.log"
             exit 1
@@ -207,6 +218,12 @@ server {
     resolver 8.8.8.8 8.8.4.4 valid=300s;
     resolver_timeout 5s;
 
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
     if (\$http_x_forwarded_proto = "http") {
         return 301 https://\$server_name\$request_uri;
     }
@@ -230,8 +247,8 @@ server {
     http2 on;
     server_name $switchboard_domain;
     
-    ssl_certificate /etc/letsencrypt/live/$connect_domain/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$connect_domain/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/$switchboard_domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$switchboard_domain/privkey.pem;
     
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -244,6 +261,12 @@ server {
     ssl_stapling_verify on;
     resolver 8.8.8.8 8.8.4.4 valid=300s;
     resolver_timeout 5s;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
     
     location / {
         proxy_pass http://localhost:4001;
@@ -338,26 +361,6 @@ EOF
     # Database Schema Setup
     # =============================================================================
     pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
-
-    # Check if security headers and compression settings are already present
-    if ! grep -q "Strict-Transport-Security" /etc/nginx/nginx.conf; then
-        # Add global security headers and compression settings to main nginx.conf
-        sudo tee -a /etc/nginx/nginx.conf > /dev/null << EOF
-
-# Global security headers
-add_header Strict-Transport-Security "max-age=63072000" always;
-add_header X-Frame-Options DENY;
-add_header X-Content-Type-Options nosniff;
-add_header X-XSS-Protection "1; mode=block";
-
-# Global compression settings
-brotli_comp_level 6;
-brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;
-brotli_static on;
-EOF
-    else
-        echo "Security headers and compression settings already present in nginx.conf"
-    fi
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  Environment setup complete!"
