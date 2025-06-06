@@ -1,5 +1,6 @@
 import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
+import { useRenown } from '#hooks';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
@@ -15,6 +16,7 @@ const Router = React.lazy(async () => {
 });
 
 const Preloader = () => {
+    useRenown();
     for (const atom of Object.values(atoms)) {
         useAtomValue(atom);
     }
