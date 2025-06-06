@@ -16,7 +16,33 @@ TLDR: Think of this as a smart, materialized view of the operations store.
 
 ### Eventual Consistency
 
+The `IDocumentView` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentView` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
 
+The view stores the last operation id it has processed synchronously in memory and also lazily updates the `ViewState` table.
+
+#### Case 1: At Runtime
+
+If the document view receives an event for an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+
+```tsx
+const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+
+for (const operation of operations) {
+  this.indexOperation(operation);
+}
+```
+
+#### Case 2: At Startup
+
+Before any operation events have fired, the document view must ensure that it has the latest operation information. This can be done by querying the `IOperationStore`for all operations with an id greater than the last operation it knows about.
+
+```tsx
+const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+
+for (const operation of operations) {
+  this.indexOperation(operation);
+}
+```
 
 ### Dependencies
 
@@ -128,6 +154,11 @@ interface IDocumentView {
 The `IDocumentView` is a smart, materialized view of the operations store.
 
 ```prisma
+model ViewState {
+  lastOperationId Int @id
+  lastOperationTimestamp DateTime @default(now())
+}
+
 model DocumentSnapshot {
   id                String   @id @default(cuid())
   

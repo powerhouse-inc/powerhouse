@@ -6,6 +6,37 @@
 - Indexes relationships between documents.
 - Forms a graph of documents and relationships.
 
+### Eventual Consistency
+
+The `IDocumentIndexer` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentIndexer` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
+
+The indexer stores the last operation id it has processed synchronously in memory and also lazily updates the `IndexerState` table.
+
+#### Case 1: At Runtime
+
+If the document indexer receives an event for an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+
+```tsx
+const lastOperationId = await this.operationStore.getLastOperationId();
+const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+
+for (const operation of operations) {
+  this.indexOperation(operation);
+}
+```
+
+#### Case 2: At Startup
+
+Before any operation events have fired, the document indexer must ensure that it has the latest operation information. This can be done by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+
+```tsx
+const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+
+for (const operation of operations) {
+  this.indexOperation(operation);
+}
+```
+
 ### Dependencies
 
 - [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
@@ -146,6 +177,11 @@ interface IDocumentIndexer {
 ### Schema
 
 ```prisma
+model IndexerState {
+  lastOperationId Int @id
+  lastOperationTimestamp DateTime @default(now())
+}
+
 model Document {
   id           String @id
 

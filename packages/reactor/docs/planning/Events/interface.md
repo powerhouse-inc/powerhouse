@@ -6,10 +6,12 @@
  */
 export type Unsubscribe = () => void;
 
-/**
- * Interface for a typed event bus where all subscribers are treated equally.
- */
 export interface IEventBus {
+  /**
+   * Returns true if the event bus is drained.
+   */
+  isDrained(): boolean;
+
   /**
    * Subscribe to an event.
    * @param type - The event type to subscribe to

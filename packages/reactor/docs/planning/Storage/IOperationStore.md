@@ -44,7 +44,7 @@ interface IOperationStore {
     branch: string,
     index: number,
     signal?: AbortSignal): Promise<Operation>;
-
+  
   getSince(
     documentId: string,
     scope: string,
@@ -58,6 +58,11 @@ interface IOperationStore {
     branch: string,
     timestampUtcMs: number,
     signal?: AbortSignal): Promise<Operation[]>;
+
+  getSinceId(
+    id: number,
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
 }
 
 interface AtomicTxn {
@@ -94,12 +99,25 @@ await operations.apply(
 The database schema, in prisma format, will look something like:
 
 ```prisma
+model OperationStoreState {
+  lastOperationId Int @id
+  lastOperationTimestamp DateTime @default(now())
+}
+
 model Operation {
-  id              String       @id @default(uuid())
+  // this is the primary key for the operation store, serving as a global sequence number and a pivot
+  id              Int          @id @default(autoincrement())
+
+  // id of the job that created the operation
   jobId           String       @unique
+
+  // stable id of the operation, to guarantee idempotency
   opId            String       @unique
+
   // serves as a causation id
   prevOpId        String
+
+  // timestamp of the operation
   timestampUtcMs  DateTime
   documentId      String
   scope           String

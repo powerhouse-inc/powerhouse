@@ -13,7 +13,9 @@ The `IEventBus` is an async pub/sub mechanism. We can use an event bus to de-dup
 
 ### Persistence
 
-// 
+The `IEventBus` is an in-memory implementation that does not persist events. Instead, the `IQueue` provides durability guarantees at the `Job` level.
+
+This means that there are some edge cases in which, on crash or shutdown, the `IEventBus` may lose events and not guarantee delivery. The [Graceful Shutdown](../GracefulShutdown/index.md) document examines how systems can ensure eventual consistency.
 
 ### Dependencies
 

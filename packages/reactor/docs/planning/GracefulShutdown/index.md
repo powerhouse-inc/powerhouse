@@ -95,15 +95,73 @@ kill(): ShutdownStatus {
 }
 ```
 
+The `isDrained` property will be `true` if and only if all jobs have been resolved. An optional callback can be provided to the `block` method to be called when the queue is drained. This is useful for the host application to know when the queue is drained and can exit the process.
+
+```tsx
+this.queue.block(() => {
+  console.log("Queue is drained");
+});
+```
+
+Since the queue is durable, the queue will requeue jobs that it couldn't finish. This is especially relevant in the browser, where page close allows only a short, synchronous operation.
+
 ### Jobs
 
-The queue is no longer accepting new jobs, but the executor is still trying to drain the queue.
+The queue may no longer accepting new jobs, but the executor is still trying to drain the queue.
 
 In the case of a server process, the `IJobExecutor` should be allowed to continue working for some time.
 
+However, the `IReactor` only needs to check that the queue is drained. This ensures that jobs are finnished processing.s
+
 ### IOperationStore
 
+The `IOperationStore` needs no special handling for graceful shutdown or crash.
 
+On the case of shutdown, there are limited cases:
+
+```mermaid
+flowchart TD
+    A[Shutdown] --> B{Did IOperationStore write all operations for job?}
+    
+    B -->|Yes| C{Was job written to journal?}
+    B -->|No| D[Queue will requeue job on next startup]
+    
+    C -->|Yes| E[Job successfully processed and written to journal]
+    C -->|No| F[Job not written to journal<br/>Replay on startup will be noop<br/>due to Operation idempotency]
+    
+    style E fill:#70AA70
+    style F fill:#70AA70
+    style D fill:#70AA70
+```
+
+### IDocumentView / IDocumentIndexer
+
+These two projections must ensure eventual consistency with the `IOperationStore`. During shutdown or crash scenarios, there may be operations that were applied to the store but not yet processed by the document view.
+
+We maintain eventual consistency through two primary scenarios:
+
+#### Runtime
+
+In this scenario, a projection receives an event over the event bus with a sequential id greater than the last operation id it knows about.
+
+```mermaid
+flowchart TD
+    A[Operation Event] --> B{Is the operation id what we expect?}
+    
+    B -->|Yes| C[Index Operation]
+    B -->|No| E[Query IOperationStore for operations between last known id and event id]
+    E --> C
+```
+
+#### Startup
+
+In this scenario, the startup process makes sure the projection is up to date at startup.
+
+```mermaid
+flowchart TD
+    A[Startup] --> B[Query IOperationStore for operations between last known id and event id]
+    B --> C[Index Operations]
+```
 
 ### Sync Manager
 
@@ -111,8 +169,26 @@ In the case of a server process, the `IJobExecutor` should be allowed to continu
 
 ### Events
 
+The event system is completely in-memory. This means that there are some edge cases in which, on crash or shutdown, the `IEventBus` may lose events and not guarantee delivery. External systems need to handle their own eventual consistency.
 
+We do provide an `isDrained` method on the `IEventBus` to help external systems determine if the event bus is drained.
 
-### External Systems (like Processors)
+```tsx
+if (eventBus.isDrained()) {
+  console.log("Event bus is drained");
+}
+```
+
+This is implemented as a simple boolean flag that must be polled.
+
+```tsx
+setInterval(() => {
+  if (eventBus.isDrained()) {
+    console.log("Event bus is drained");
+  }
+}, 100);
+```
+
+### IProcessorManager
 
 
