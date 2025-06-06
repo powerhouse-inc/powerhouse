@@ -1,19 +1,22 @@
 import connectConfig from '#connect-config';
-import { type PGlite } from '@electric-sql/pglite';
-import { PGliteWorker } from '@electric-sql/pglite/worker';
-import { type IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
+import type { PGlite } from '@electric-sql/pglite';
+import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
     useAnalyticsStore,
 } from '@powerhousedao/reactor-browser/analytics/context';
 import { logger } from 'document-drive';
-import { type ProcessorManager } from 'document-drive/processors/processor-manager';
+import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { useUnwrappedProcessorManager } from '../store/processors';
-import PGWorker from '../workers/pglite-worker.js?worker';
 
 function createPgLiteFactoryWorker(databaseName: string) {
-    return () => {
+    return async () => {
+        const PGWorker = (await import('../workers/pglite-worker.js?worker'))
+            .default;
+
+        const { PGliteWorker } = await import('@electric-sql/pglite/worker');
+
         const worker = new PGWorker({
             name: 'pglite-worker',
         });
@@ -28,7 +31,7 @@ function createPgLiteFactoryWorker(databaseName: string) {
             },
         });
 
-        return Promise.resolve(pgLiteWorker as unknown as PGlite);
+        return pgLiteWorker as unknown as PGlite;
     };
 }
 

@@ -1,4 +1,7 @@
-import { type BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import {
+  BrowserAnalyticsStore,
+  type BrowserAnalyticsStoreOptions,
+} from "@powerhousedao/analytics-engine-browser";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
@@ -42,7 +45,6 @@ export async function createOrGetAnalyticsStore(
     return globalAnalytics.store;
   }
 
-  const { BrowserAnalyticsStore } = await import("./store/browser.js");
   const store = new BrowserAnalyticsStore(options);
   await store.init();
   const engine = new AnalyticsQueryEngine(store);

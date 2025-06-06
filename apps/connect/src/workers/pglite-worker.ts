@@ -1,4 +1,4 @@
-import { IdbFs, PGlite } from '@electric-sql/pglite';
+import type { IdbFs } from '@electric-sql/pglite';
 import { type PGliteWorkerOptions, worker } from '@electric-sql/pglite/worker';
 
 interface PGLiteWorkerOptions extends PGliteWorkerOptions {
@@ -8,11 +8,13 @@ interface PGLiteWorkerOptions extends PGliteWorkerOptions {
 }
 
 worker({
-    init(options) {
+    async init(options) {
         const databaseName = (options as PGLiteWorkerOptions).meta.databaseName;
         if (!databaseName) {
             throw new Error('Database name not provided');
         }
+
+        const { IdbFs, PGlite } = await import('@electric-sql/pglite');
 
         const idbFs: IdbFs = new IdbFs(databaseName);
         // Create and return a PGlite instance
@@ -21,7 +23,7 @@ worker({
             relaxedDurability: true,
         });
 
-        return Promise.resolve(db);
+        return db;
     },
 }).catch((error: unknown) => {
     console.error('Error initializing PGlite worker:', error);

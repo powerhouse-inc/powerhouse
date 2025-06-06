@@ -40,13 +40,7 @@ const staticInputs = staticFiles.reduce(
         }),
     {},
 );
-const externalAndExclude = [
-    'vite',
-    'vite-envs',
-    'node:crypto',
-    '@electric-sql/pglite',
-    '@electric-sql/pglite/worker',
-];
+const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -182,16 +176,12 @@ export default defineConfig(({ mode }) => {
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
                 },
-                external: [
-                    ...externalAndExclude,
-                    ...externalIds,
-                    /^@electric-sql\/pglite.*$/,
-                ],
+                external: [...externalAndExclude, ...externalIds],
             },
         },
         optimizeDeps: {
             include: ['did-key-creator'],
-            exclude: externalAndExclude,
+            exclude: [...externalAndExclude, '@electric-sql/pglite'],
         },
         worker: {
             format: 'es',

@@ -78,11 +78,6 @@ export async function startServer(
       open: options.open ?? OPEN_BROWSER,
       host: HOST,
     },
-    build: {
-      rollupOptions: {
-        external: ["@electric-sql/pglite"],
-      },
-    },
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],
     },
