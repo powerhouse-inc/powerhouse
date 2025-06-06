@@ -55,9 +55,16 @@ interface IJobExecutionHandle {
 
 export interface IQueue {
   /**
-   * Blocks the queue from accepting new jobs.
+   * Returns true if and only if all jobs have been resolved.
    */
-  block(): void;
+  get isDrained(): boolean;
+
+  /**
+   * Blocks the queue from accepting new jobs.
+   * 
+   * @param onDrained - Optional callback to call when the queue is drained
+   */
+  block(onDrained?: () => void): void;
 
   /**
    * Unblocks the queue from accepting new jobs.

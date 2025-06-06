@@ -76,9 +76,20 @@ graph TD
 
 ```
 
-### Edge Cases
+#### Startup
 
-In the case that a job did resolve but the journal could not be updated, the Job is safe to execute again. The resulting `Operation`s will be rejected from the `IOperationStore` because of the `opId` uniqueness constraint (see the [Idempotency](../Operations/index.md#idempotency) section of the Operations doc).
+On startup, the queue will read the journal and recreate the dependency graphs.
+
+```tsx
+const jobs = await journal.findUnresolvedJobs();
+
+// enqueue all jobs, in order
+for (const job of jobs) {
+  this.enqueue(job);
+}
+```
+
+The flow of the startup process is as follows:
 
 ```mermaid
 flowchart TD
@@ -87,6 +98,10 @@ flowchart TD
   B --> C{"if jobs.length > 0"}
   C --> D["enqueue()"]
 ```
+
+#### Edge Cases
+
+In the case that a job did resolve but the journal could not be updated, the Job is safe to execute again. The resulting `Operation`s will be rejected from the `IOperationStore` because of the `opId` uniqueness constraint (see the [Idempotency](../Operations/index.md#idempotency) section of the Operations doc).
 
 ### Blocking
 
