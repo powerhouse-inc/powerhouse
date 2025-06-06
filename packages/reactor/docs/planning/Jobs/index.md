@@ -2,13 +2,15 @@
 
 ### Summary
 
-The `IJobExecutor` listens for `jobAvailable` events from the event bus and pulls jobs from the queue when capacity allows. It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities. The executor ensures jobs are processed in the correct order per document/scope/branch combination.
-
-Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
-
-Jobs may be persisted in the `IQueue` for later execution, but the `IJobExecutor` does not worry about this. It will pull jobs from the queue and execute them.
-
-The `IJobExecutor` is responsible for verifying signatures on `Action` objects before executing them.
+- The `IJobExecutor` listens for `jobAvailable` events from the event bus and pulls jobs from the queue when capacity allows.
+- It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities.
+- Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
+- Jobs may be persisted in the `IQueue` for later execution, but the `IJobExecutor` does not worry about this. It simply pulls jobs from the queue and executes them.
+- The `IJobExecutor` is responsible for verifying signatures on `Action` objects before executing them.
+- The `IJobExecutor` is responsible for verifying authorization on `Action` objects before executing them.
+- The `IJobExecutor` is responsible for verifying that the resulting `Operation` hash matches the expected hash.
+- The `IJobExecutor` is responsible for writing `Operation`s to the `IOperationStore`.
+- The `IJobExecutor` is responsible for propagating errors to the `IEventBus`.
 
 ### Reshuffle Logic
 

@@ -4,17 +4,55 @@ See the [Jobs](../Jobs/index.md) doc for a detailed specification on `Job`s.
 
 ```tsx
 
+class QueueCycleError extends Error {
+  constructor() {
+    super("Cycle detected in job dependencies");
+  }
+}
+
 class QueueBlockedError extends Error {
   constructor() {
     super("Queue is blocked");
   }
 }
 
-/**
- * Interface for a job queue that manages write operations.
- * Internally organizes jobs by documentId, scope, and branch to ensure proper ordering.
- * Emits events to the event bus when new jobs are available for consumption.
- */
+enum JobQueueState {
+  UNKNOWN = -1,
+  PREPROCESSING,
+  PENDING,
+  READY,
+  RUNNING,
+  RESOLVED,
+}
+
+type QueueParameters = {
+  /** The document id that the job is operating on */
+  documentId: string;
+
+  /** The scopes affected by the actions */
+  scopes: string[];
+
+  /** The branch that the job is operating on */
+  branch: string;
+
+  /** The list of actions to apply */
+  actions: Action[];
+
+  /** The optional expected hash of the resulting state */
+  resultingHash?: string;
+
+  /** The list of job ids that this job depends on */
+  dependsOn?: string[]
+}
+
+interface IJobExecutionHandle {
+  get job(): Job;
+
+  start(): void;
+  complete(): void;
+  fail(reason: string): void;
+}
+
 export interface IQueue {
   /**
    * Blocks the queue from accepting new jobs.
@@ -27,100 +65,24 @@ export interface IQueue {
   unblock(): void;
   
   /**
-   * Add a new job to the queue.
+   * Adds a new set of actions to the queue, and returns a job id.
    * 
-   * Jobs are automatically organized by documentId, scope, and branch internally.
+   * @param params - The parameters for the job to add to the queue
+   * @param dependsOn - The list of job ids that this job depends on
    * 
-   * Emits a 'jobAvailable' event to the event bus when the job is queued.
-   * 
-   * If the queue is currently blocked, this will throw a `QueueBlockedError`.
-   * 
-   * @param job - The job to add to the queue
-   * @param config - Configuration options for the job execution
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves when the job is queued
+   * @returns The job id
    */
-  enqueue(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<void>;
-  
-  /**
-   * Get the next job to execute for a specific document/scope/branch combination.
-   * 
-   * @param documentId - The document ID to get jobs for
-   * @param scope - The scope to get jobs for
-   * @param branch - The branch to get jobs for
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves to the next job or null if no jobs available
-   */
-  dequeue(
-    documentId: string,
-    scope: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<Job | null>;
+  enqueue(params: QueueParameters): string;
   
   /**
    * Get the next available job from any queue.
    * 
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves to the next job or null if no jobs available
-   */
-  dequeueNext(signal?: AbortSignal): Promise<Job | null>;
-  
-  /**
-   * Get the current size of the queue for a specific document/scope/branch.
-   * 
-   * @param documentId - The document ID
-   * @param scope - The scope
-   * @param branch - The branch
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves to the number of jobs in the queue
-   */
-  size(
-    documentId: string,
-    scope: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<number>;
-  
-  /**
-   * Get the total size of all queues.
+   * Note that if the execution handle is not marked as started, `getNext` will continue to return the same handle until it is started.
    * 
    * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves to the total number of jobs across all queues
-   */
-  totalSize(signal?: AbortSignal): Promise<number>;
-  
-  /**
-   * Remove a specific job from the queue.
    * 
-   * @param jobId - The ID of the job to remove
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves to true if job was removed, false if not found
+   * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
-  remove(jobId: string, signal?: AbortSignal): Promise<boolean>;
-  
-  /**
-   * Clear all jobs for a specific document/scope/branch combination.
-   * 
-   * @param documentId - The document ID
-   * @param scope - The scope
-   * @param branch - The branch
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves when the queue is cleared
-   */
-  clear(
-    documentId: string,
-    scope: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<void>;
-  
-  /**
-   * Clear all jobs from all queues.
-   * 
-   * @param signal - Optional abort signal to cancel the request
-   * @returns Promise that resolves when all queues are cleared
-   */
-  clearAll(signal?: AbortSignal): Promise<void>;
+  getNext(signal?: AbortSignal): IJobExecutionHandle | null;
 }
 ```

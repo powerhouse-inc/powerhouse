@@ -2,19 +2,52 @@
 
 ### Summary
 
-The `IQueue` provides a durable API to queue new write jobs.
+The `IQueue` provides a durable API to queue new write jobs and to pull jobs from the queue to write them.
 
-- Queues are keyed by `(documentId, scope, branch)` to ensure proper ordering of jobs within each document context.
-- Jobs in each queue are processed in FIFO order to maintain consistency.
-- When a job is enqueued, the queue emits a `JOB_AVAILABLE` event through the `IEventBus` to notify job executors.
-- When there is heavy contention (say many jobs enqueued on the same `(documentId, scope, branch)` queue), reshuffle logic is applied by the job executor to proactively prevent as many retries and requeues as possible.
-- Retry and requeue logic is handled by the `IJobExecutor`.
+- The queue keeps and updates a journal for recovery and graceful shutdown purposes.
+- All jobs are enqueued with `(documentId, scope, branch)` information.
+- Jobs can also include dependency relationships, through the `dependsOn` property.
+- Dependency information cannot be changed after a job is enqueued.
+- Internally, a list of directed graphs is maintained in memory to track the dependency relationships between jobs.
+- If a cycle is detected when enqueuing a job, the job will be rejected with a `QueueCycleError`.
+- On enqueue and on job completion, the queue scans the dependency graph to determine if any jobs are now ready to be executed.
+- If there is are jobs ready to be executed, the queue emits a `JOB_AVAILABLE` event through the `IEventBus`.
 
-### Relationships
+- When there is heavy contention, reshuffle logic will be applied by the `IJobExecutor`, not the queue.
+- Retry and requeue logic is handled by the `IJobExecutor`, not the queue.
 
-`IQueue` supports parent/child relationships between jobs. The basic idea is that a parent job will not be moved to the available status (i.e. where it could be picked up by the `IJobExecutor`) until all its children jobs have been processed successfully.
+### Job Queue Status
 
-This functionality enables the creation of flows where jobs are the node of trees of arbitrary depth.
+- `JobStatus` and `JobQueueState` are separate concepts. See the [Jobs](../Jobs/index.md) doc for information on `JobStatus`.
+- `JobQueueState` is an enum that moves between the following states:
+  - `PREPROCESSING` - The job has not been added to a dependency graph.
+  - `PENDING` - The job has been added to a dependency graph, but is not ready to be executed.
+  - `READY` - The job is ready to be executed.
+  - `RUNNING` - The job is currently being executed.
+  - `RESOLVED` - The job has been resolved (either successfully or unsuccessfully).
+
+### `IJobExecutionHandle`
+
+The API will synchronously return a `IJobExecutionHandle` object. This object is used to track the status of the job execution.
+
+```tsx
+const handle = queue.getNext();
+handle.start();
+{
+  const job = handle.job;
+
+  // perform job logic
+}
+handle.complete();
+```
+
+Or in case of job failure, the handle can be used to mark the job as failed:
+
+```tsx
+handle.fail("reason");
+```
+
+The `getNext` method will continue to return the same handle until the handle returned is started. Therefore, it is best practice to synchronously call `start()` on the returned handle.
 
 ### Signing
 
@@ -26,16 +59,16 @@ This functionality enables the creation of flows where jobs are the node of tree
 
 - The queue keeps a journal of all jobs that have been enqueued.
 - Each job is assigned a unique job id, which gives us a unique record of the job.
-- When a job is enqueued, the queue creates a new record in the journal. When a job is completed, the queue updates the record in the journal.
-- While the `IQueue` implementation holds reactor-specific business logic and state, an `IQueueDriver` provides a durable queue implementation.
+- The journal holds enough information to be able to recreate all dependency graphs of all unresolved jobs.
+- The journal is updated only when a job is moved to `PENDING` or `RESOLVED` states.
+- While the `IQueue` implementation holds reactor-specific business logic and the in-memory dependency graphs, the `IQueueJournal` provides the storage implementation.
 
 ```mermaid
 graph TD
 
   ES["External System"] -->|"Enqueue()"|AQueue
   ASub -->|"JobComplete"| AQueue["IQueue"]
-  AQueue -->|"(A) On Queue: Create with JobId"| Journal
-  AQueue -->|"(B) On Event: Update with JobId"| Journal
+  AQueue -->|"On State Update: Write"| Journal["IQueueJournal"]
 
   subgraph AEvents["IEventBus"]
       ASub["on()"]
@@ -43,11 +76,9 @@ graph TD
 
 ```
 
-#### IQueueDriver
+### Edge Cases
 
-The `IQueueDriver` is responsible for implementing the durable journal. Additionally, it is responsible for requeueing jobs on startup.
-
-In the edge case that a job did finish successfully but didn't have time to write to the journal, the resulting `Operation`s will be rejected from the `IOperationStore` because of the `opId` uniqueness constraint (see the [Idempotency](../Operations/index.md#idempotency) section of the Operations doc).
+In the case that a job did resolve but the journal could not be updated, the Job is safe to execute again. The resulting `Operation`s will be rejected from the `IOperationStore` because of the `opId` uniqueness constraint (see the [Idempotency](../Operations/index.md#idempotency) section of the Operations doc).
 
 ```mermaid
 flowchart TD
@@ -65,10 +96,10 @@ flowchart TD
 ### Dependencies
 
 - [IEventBus](../Events/index.md)
-- [IQueueDriver](queue-driver.md)
+- [IQueueJournal](journal.md)
 
 ### Links
 
 * [Interface](interface.md)
-* [IQueueDriver](queue-driver.md)
+* [IQueueJournal](journal.md)
 * [Usage](usage.md)
