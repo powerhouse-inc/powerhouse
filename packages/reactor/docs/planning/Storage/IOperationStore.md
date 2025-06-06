@@ -99,10 +99,6 @@ await operations.apply(
 The database schema, in prisma format, will look something like:
 
 ```prisma
-model OperationStoreState {
-  lastOperationId Int @id
-  lastOperationTimestamp DateTime @default(now())
-}
 
 model Operation {
   // this is the primary key for the operation store, serving as a global sequence number and a pivot

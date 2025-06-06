@@ -177,10 +177,6 @@ interface IDocumentIndexer {
 ### Schema
 
 ```prisma
-model IndexerState {
-  lastOperationId Int @id
-  lastOperationTimestamp DateTime @default(now())
-}
 
 model Document {
   id           String @id

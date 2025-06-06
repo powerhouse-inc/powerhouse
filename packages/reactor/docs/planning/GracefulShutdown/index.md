@@ -163,9 +163,15 @@ flowchart TD
     B --> C[Index Operations]
 ```
 
-### Sync Manager
+### IProcessorManager
 
 
+
+### ISyncManager
+
+The `ISyncManager` needs no special draining logic. It can be shutdown immediately and is not affected by graceful shutdowns or crashes.
+
+This is because the `pull` and `push` mechanisms already include all the information necessary to catch an `IReactor` up to the latest state.
 
 ### Events
 
@@ -179,7 +185,7 @@ if (eventBus.isDrained()) {
 }
 ```
 
-This is implemented as a simple boolean flag that must be polled.
+We don't want to block events from being processed, so this implemented as a simple boolean flag that must be polled.
 
 ```tsx
 setInterval(() => {
@@ -189,6 +195,4 @@ setInterval(() => {
 }, 100);
 ```
 
-### IProcessorManager
-
-
+This means that `IReactor` will turn block the queue, wait for the queue to be drained, then wait for the event bus to be drained.
