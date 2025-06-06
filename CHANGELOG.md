@@ -1,3 +1,20 @@
+## 2.5.0-dev.10 (2025-06-06)
+
+### 🚀 Features
+
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### 🩹 Fixes
+
+- **document-drive:** build internal transmitter updates without blocking the event loop ([01ec364b7](https://github.com/powerhouse-inc/powerhouse/commit/01ec364b7))
+- **ph-cli:** duplicate gzip ([f74631ca8](https://github.com/powerhouse-inc/powerhouse/commit/f74631ca8))
+- **ph-cli:** broken ci? ([bff9ca494](https://github.com/powerhouse-inc/powerhouse/commit/bff9ca494))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 2.5.0-dev.9 (2025-06-05)
 
 ### 🩹 Fixes

@@ -1,3 +1,19 @@
+## 2.5.0-dev.10 (2025-06-06)
+
+### 🚀 Features
+
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### 🩹 Fixes
+
+- **ph-cli:** broken ci? ([bff9ca494](https://github.com/powerhouse-inc/powerhouse/commit/bff9ca494))
+- **ph-cli:** duplicate gzip ([f74631ca8](https://github.com/powerhouse-inc/powerhouse/commit/f74631ca8))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 2.5.0-dev.9 (2025-06-05)
 
 ### 🩹 Fixes

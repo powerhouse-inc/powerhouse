@@ -1,3 +1,13 @@
+## 2.5.0-dev.10 (2025-06-06)
+
+### 🚀 Features
+
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 2.5.0-dev.9 (2025-06-05)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
