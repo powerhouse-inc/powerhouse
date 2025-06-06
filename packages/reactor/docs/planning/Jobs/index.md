@@ -108,7 +108,9 @@ This is used when a shutdown of the job executor is requested. This error code w
 
 #### Retry Logic
 
-Retries will only be attempted if the job failed for a reason that is likely to be resolved by retrying. For example, if the job failed because the operation was already applied or because the operation was invalid, it will not be retried.
+Retries will only be attempted if the job failed for a reason that is likely to be resolved by retrying.
+
+If the job failed because the operation was already applied (a `DuplicateOperationError` was thrown) or because the operation was invalid, it will not be retried.
 
 In some cases, a retry might result in a requeue instead, where the job is added back to the queue to wait for some other job to be processed.
 

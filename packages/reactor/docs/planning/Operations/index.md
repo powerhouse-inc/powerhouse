@@ -209,13 +209,17 @@ graph TD
 
 ### Idempotency
 
-Reducers are not guaranteed to be idempotent. That is, if a reducer is called with the same input twice, it may produce different results. This is intended behavior.
+Reducers are not guaranteed to be idempotent. If a reducer is called with the same input twice, it may produce different results. This is intended behavior.
 
-However, we do guarantee idempotency at the `Operation` level, with deterministic identifiers. Each operation has an `opId` derived from stable properties such as: document id, scope, branch, type, action id.
+However, we do guarantee idempotency at the `Operation` level, with deterministic identifiers.
 
-Submitting the same action twice results in the same `opId`, so the store can safely ignore duplicates.
+Each operation has an `opId` derived from stable properties such as: document id, scope, branch, type, job id, and action id.
 
-The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution and compare it to this value to detect divergence. Along with the unique `(documentId, scope, branch, index)` constraint in the storage schema, these identifiers ensure that replaying operations cannot introduce inconsistent state.
+Submitting the same action twice results in the same `opId`, which will be rejected by the `IOperationStore`.
+
+The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution and compare it to this value to detect divergence.
+
+Along with the unique `(documentId, scope, branch, index)` constraint in the storage schema, these identifiers ensure that replaying operations cannot introduce inconsistent state.
 
 ### Attachments
 

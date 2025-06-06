@@ -7,10 +7,17 @@
 - No dependencies on `Attachment`.
 - All writes are atomic.
 - Deterministic hashing.
+- Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
 
 ### Interface
 
 ```tsx
+class DuplicateOperationError extends Error {
+  constructor(opId: string) {
+    super(`Operation with opId ${opId} already exists`);
+  }
+}
+
 interface IOperationStore {
   // this function throws named exceptions when it can't
   // acquire a lock, there are revision mismatches, or 
