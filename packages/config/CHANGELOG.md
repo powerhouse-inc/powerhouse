@@ -1,3 +1,13 @@
+## 2.5.0-dev.11 (2025-06-07)
+
+### 🚀 Features
+
+- **connect:** updated diff-analyzer processor ([ce5d1219f](https://github.com/powerhouse-inc/powerhouse/commit/ce5d1219f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.10 (2025-06-06)
 
 ### 🚀 Features
