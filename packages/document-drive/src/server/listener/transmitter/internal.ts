@@ -40,6 +40,7 @@ export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
   protected processor: IProcessor;
   protected taskQueueMethod: RunAsap.RunAsap<unknown> | null;
+  protected transmitQueue: Promise<ListenerRevision[]> | undefined;
 
   constructor(
     drive: IDocumentDriveServer,
@@ -112,33 +113,38 @@ export class InternalTransmitter implements ITransmitter {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _source: StrandUpdateSource,
   ): Promise<ListenerRevision[]> {
-    const updates = [];
-    for (const strand of strands) {
-      const operations = await this.#buildInternalOperationUpdate(strand);
-      const state = operations.at(-1)?.state ?? {};
-      updates.push({
-        ...strand,
-        operations,
-        state,
-      });
-    }
+    const task = async (): Promise<ListenerRevision[]> => {
+      const updates = [];
+      for (const strand of strands) {
+        const operations = await this.#buildInternalOperationUpdate(strand);
+        const state = operations.at(-1)?.state ?? {};
+        updates.push({
+          ...strand,
+          operations,
+          state,
+        });
+      }
 
-    try {
-      await this.processor.onStrands(updates);
-      return strands.map(({ operations, ...s }) => ({
-        ...s,
-        status: "SUCCESS",
-        revision: operations.at(operations.length - 1)?.index ?? -1,
-      }));
-    } catch (error) {
-      logger.error(error);
-      // TODO check which strand caused an error
-      return strands.map(({ operations, ...s }) => ({
-        ...s,
-        status: "ERROR",
-        revision: (operations.at(0)?.index ?? 0) - 1,
-      }));
-    }
+      try {
+        await this.processor.onStrands(updates);
+        return strands.map(({ operations, ...s }) => ({
+          ...s,
+          status: "SUCCESS",
+          revision: operations.at(operations.length - 1)?.index ?? -1,
+        }));
+      } catch (error) {
+        logger.error(error);
+        return strands.map(({ operations, ...s }) => ({
+          ...s,
+          status: "ERROR",
+          revision: (operations.at(0)?.index ?? 0) - 1,
+        }));
+      }
+    };
+
+    // adds to queue so that each `transmit` is processed at a time to avoid concurrency issues
+    this.transmitQueue = this.transmitQueue?.then(() => task()) ?? task();
+    return this.transmitQueue;
   }
 
   async disconnect(): Promise<void> {
