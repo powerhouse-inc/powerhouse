@@ -1,6 +1,5 @@
 import IconConnect from '#assets/icons/connect.svg?react';
 import IconLogo from '#assets/icons/logo.svg?react';
-import { ModalManager } from '#components';
 import {
     isElectron,
     isMac,
@@ -11,6 +10,7 @@ import {
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
+import { ModalsContainer } from './modal/modals-container.js';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
@@ -45,33 +45,32 @@ export default function Root() {
     }, [navigate]);
 
     return (
-        <ModalManager>
-            <div className="h-screen">
-                {isElectron && (
-                    <div
-                        className={`h-8 w-full
+        <div className="h-screen">
+            <ModalsContainer />
+            {isElectron && (
+                <div
+                    className={`h-8 w-full
                     ${isMac && 'justify-center'}
                     flex items-center bg-gray-50`}
-                    >
-                        <IconLogo className="ml-1 mr-0.5 p-1.5" />
-                        <IconConnect className="h-3 w-fit" />
-                    </div>
-                )}
-                <div
-                    className={`flex items-stretch overflow-auto
+                >
+                    <IconLogo className="ml-1 mr-0.5 p-1.5" />
+                    <IconConnect className="h-3 w-fit" />
+                </div>
+            )}
+            <div
+                className={`flex items-stretch overflow-auto
                         ${isElectron ? 'h-app-height' : 'h-screen'}
                     `}
-                    role="presentation"
-                    tabIndex={0}
-                >
-                    <Suspense>
-                        <Sidebar />
-                        <div className="relative flex-1 overflow-auto">
-                            <Outlet />
-                        </div>
-                    </Suspense>
-                </div>
+                role="presentation"
+                tabIndex={0}
+            >
+                <Suspense>
+                    <Sidebar />
+                    <div className="relative flex-1 overflow-auto">
+                        <Outlet />
+                    </div>
+                </Suspense>
             </div>
-        </ModalManager>
+        </div>
     );
 }

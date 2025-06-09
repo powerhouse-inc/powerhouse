@@ -14,7 +14,7 @@ export type DriveEditorProps = EditorProps<DocumentDriveDocument> & {
 };
 export type DriveEditorModule = {
   Component: FC<DriveEditorProps>;
-  documentTypes: ["powerhouse/document-drive"];
+  documentTypes: string[];
   config: {
     id: string;
     disableExternalControls?: boolean;

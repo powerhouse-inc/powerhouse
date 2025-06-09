@@ -11,7 +11,7 @@ import {
     useSelectedNodeName,
     useSelectedParentNodeId,
     useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+} from '@powerhousedao/common';
 import { type GetDocumentOptions } from 'document-drive';
 import {
     type EditorContext,

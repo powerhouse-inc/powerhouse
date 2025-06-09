@@ -1,5 +1,6 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
-import { atomStore, reactorAtom, useUser } from '#store';
+import { reactorAtom, useUser } from '#store';
+import { atomStore } from '@powerhousedao/common';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';

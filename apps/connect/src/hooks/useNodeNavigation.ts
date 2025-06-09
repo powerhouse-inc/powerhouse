@@ -6,7 +6,7 @@ import {
     useSelectedNodeId,
     useSelectedNodePath,
     useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+} from '@powerhousedao/common';
 import { type DocumentDriveDocument, type Node } from 'document-drive';
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';

@@ -1,4 +1,4 @@
-import { atomStore } from '#store';
+import { atomStore } from '@powerhousedao/common';
 import { type DocumentDriveDocument } from 'document-drive';
 import { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useAtomValue } from 'jotai';

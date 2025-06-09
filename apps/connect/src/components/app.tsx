@@ -1,8 +1,9 @@
 import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
-import { atoms, atomStore } from '#store';
+import { atoms } from '#store';
+import { AtomStoreProvider } from '@powerhousedao/common';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
-import { Provider, useAtomValue } from 'jotai';
+import { useAtomValue } from 'jotai';
 import React, { lazy, Suspense } from 'react';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
@@ -28,7 +29,7 @@ const ReactorAnalyticsProvider = lazy(
 const App = () => (
     <React.StrictMode>
         <Suspense fallback={<>{/* TODO loading */}</>}>
-            <Provider store={atomStore}>
+            <AtomStoreProvider atomValues={[]}>
                 <Preloader />
                 <WagmiContext>
                     <RootProvider>
@@ -45,7 +46,7 @@ const App = () => (
                         </ReadModeContextProvider>
                     </RootProvider>
                 </WagmiContext>
-            </Provider>
+            </AtomStoreProvider>
         </Suspense>
     </React.StrictMode>
 );

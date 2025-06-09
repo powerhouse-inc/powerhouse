@@ -10,5 +10,4 @@ export * from './reactor.js';
 export * from './registerServiceWorker.js';
 export * from './signature.js';
 export * from './slug.js';
-export * from './tree-items.js';
 export * from './validate-document.js';

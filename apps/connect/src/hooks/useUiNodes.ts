@@ -1,7 +1,7 @@
 import {
     useSelectedParentNodeId,
     useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+} from '@powerhousedao/common';
 import { useCallback, useMemo } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
@@ -61,8 +61,15 @@ export function useDebugHandlers() {
 export function useUiNodes() {
     const selectedParentNodeId = useSelectedParentNodeId();
     const setSelectedNodeId = useSetSelectedNodeId();
-    const { addFolder, addFile, renameNode, copyNode, moveNode, deleteNode, getSyncStatusSync } =
-        useDocumentDriveServer();
+    const {
+        addFolder,
+        addFile,
+        renameNode,
+        copyNode,
+        moveNode,
+        deleteNode,
+        getSyncStatusSync,
+    } = useDocumentDriveServer();
 
     const onAddFile = useCallback(
         async (

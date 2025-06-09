@@ -1,6 +1,4 @@
 import { AddDriveModal } from './modals/AddDriveModal';
-import { AddLocalDriveModal } from './modals/AddLocalDriveModal';
-import { AddRemoteDriveModal } from './modals/AddRemoteDriveModal';
 import { ConfirmationModal } from './modals/ConfirmationModal';
 import { CookiesPolicyModal } from './modals/CookiesPolicyModal';
 import { CreateDocumentModal } from './modals/CreateDocumentModal';

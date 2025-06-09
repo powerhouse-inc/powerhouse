@@ -11,7 +11,7 @@ import {
     useSelectedNodeId,
     useSelectedNodeKind,
     useSelectedNodeName,
-} from '@powerhousedao/reactor-browser/atoms';
+} from '@powerhousedao/common';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,

@@ -2,7 +2,7 @@ import { ReloadConnectToast } from '#components';
 import { useReadModeContext } from '#context';
 import { useDocumentDriveServer } from '#hooks';
 import { useAsyncReactor } from '#store';
-import { useUpdateNodeMap } from '@powerhousedao/reactor-browser';
+import { useUpdateNodeMap } from '@powerhousedao/common';
 import { logger, type DocumentDriveDocument } from 'document-drive';
 import { useEffect } from 'react';
 import { toast } from '../services/toast.js';

@@ -1,4 +1,5 @@
 import { useFeatureFlag } from '#hooks';
+import { atomStore } from '@powerhousedao/common';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
@@ -10,7 +11,6 @@ import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
-import { atomStore } from './index.js';
 
 export const baseDocumentModels = [
     driveDocumentModelModule,

@@ -1,6 +1,6 @@
 import { useUnwrappedReactor } from '#store';
 import { openUrl } from '#utils';
-import { useNodeDocumentType } from '@powerhousedao/reactor-browser';
+import { useNodeDocumentType } from '@powerhousedao/common';
 import { useSwitchboard } from '@powerhousedao/reactor-browser';
 import { useDocumentDriveById } from './useDocumentDriveById.js';
 
@@ -21,7 +21,7 @@ export const useOpenSwitchboardLink = (
         const baseUrl = url.origin;
 
         const switchboardUrl = getSwitchboardGatewayUrl(remoteUrl);
-        const query = await getDocumentGraphqlQuery(driveId!, uiNode.id);
+        const query = await getDocumentGraphqlQuery(driveId!, nodeId);
 
         const encodedQuery = encodeURIComponent(query);
 

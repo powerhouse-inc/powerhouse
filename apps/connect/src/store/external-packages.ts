@@ -1,5 +1,5 @@
 import { getHMRModule, subscribeExternalPackages } from '#services';
-import { type DriveEditorModule } from '@powerhousedao/reactor-browser';
+import { type DriveEditorModule } from '@powerhousedao/common';
 import { type App, type DocumentModelLib } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy } from 'jotai/utils';

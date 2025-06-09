@@ -5,15 +5,16 @@ import {
 } from '#hooks';
 import { useGetAppNameForEditorId } from '#store';
 import {
+    getDriveSharingType,
+    useSetSelectedNodeId,
+} from '@powerhousedao/common';
+import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
     Icon,
 } from '@powerhousedao/design-system';
-import {
-    getDriveSharingType,
-    useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+
 import { type DocumentDriveDocument } from 'document-drive';
 import { useCallback } from 'react';
 

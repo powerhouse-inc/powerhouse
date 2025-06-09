@@ -2,11 +2,9 @@ import connectConfig from '#connect-config';
 import {
     useDocumentDriveById,
     useDocumentDriveServer,
-    useDocumentEditor,
     useEditorProps,
     useGetDocument,
     useShowCreateDocumentModal,
-    useSyncStatus,
 } from '#hooks';
 import {
     useAsyncReactor,
@@ -19,20 +17,17 @@ import {
 import { useDocumentDispatch } from '#utils';
 import {
     GenericDriveExplorer,
-    type TDriveContext,
     useSelectedDriveId,
     useSelectedNodeId,
 } from '@powerhousedao/common';
-import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
     driveDocumentModelModule,
     type GetDocumentOptions,
 } from 'document-drive';
 import { type Operation } from 'document-model';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -92,41 +87,19 @@ export function DriveEditorContainer() {
     const getDocumentModelModule = useGetDocumentModelModule();
     const getEditor = useGetEditor();
 
-    const onGetDocumentRevision: DriveEditorContext['getDocumentRevision'] =
-        useCallback(
-            (documentId: string, options?: GetDocumentOptions) => {
-                if (!selectedNodeId) {
-                    console.error('No selected node');
-                    return Promise.reject(new Error('No selected node'));
-                }
-                if (!selectedDriveId) {
-                    console.error('No selected drive');
-                    return Promise.reject(new Error('No selected drive'));
-                }
-                return getDocument(selectedDriveId, documentId, options);
-            },
-            [getDocument, selectedDriveId],
-        );
-
-    const driveContext: TDriveContext = useMemo(
-        () => ({
-            showSearchBar: false,
-            isAllowedToCreateDocuments: editorProps.isAllowedToCreateDocuments,
-            documentModels: documentModels ?? [],
-            addFile,
-            useSyncStatus,
-            useDocumentEditorProps: useDocumentEditor,
-            useDriveDocumentStates: useGetDriveDocuments,
-            useDriveDocumentState,
-            addDocument,
-        }),
-        [
-            reactor,
-            editorProps.isAllowedToCreateDocuments,
-            documentModels,
-            addFile,
-            addDocument,
-        ],
+    const onGetDocumentRevision = useCallback(
+        (documentId: string, options?: GetDocumentOptions) => {
+            if (!selectedNodeId) {
+                console.error('No selected node');
+                return Promise.reject(new Error('No selected node'));
+            }
+            if (!selectedDriveId) {
+                console.error('No selected drive');
+                return Promise.reject(new Error('No selected drive'));
+            }
+            return getDocument(selectedDriveId, documentId, options);
+        },
+        [getDocument, selectedDriveId],
     );
 
     const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
@@ -146,7 +119,6 @@ export function DriveEditorContainer() {
                 {...editorProps}
                 context={{
                     ...editorProps.context,
-                    ...driveContext,
                     analyticsDatabaseName: connectConfig.analyticsDatabaseName,
                     getDocumentRevision: onGetDocumentRevision,
                     getDocumentModelModule,

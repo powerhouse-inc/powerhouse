@@ -1,5 +1,6 @@
 import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
+import { atomStore } from '@powerhousedao/common';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -17,7 +18,6 @@ import {
     documentModelsAtom,
     subscribeDocumentModels,
 } from './document-model.js';
-import { atomStore } from './index.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     await initJwtHandler(reactor);
