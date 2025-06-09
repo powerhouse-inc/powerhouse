@@ -5,6 +5,7 @@
 - Append only: read/append access to raw operations.
 - No dependencies on `PHDocument`.
 - No dependencies on `Attachment`.
+- Optimistic locking via the `opId`, `index`, and `skip` fields.
 - All writes are atomic.
 - Deterministic hashing.
 - Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
@@ -113,7 +114,10 @@ model Operation {
   // serves as a causation id
   prevOpId        String
 
-  // timestamp of the operation
+  // write timestamp of the operation (this is supplied by the db)
+  writeTimestampUtcMs DateTime @default(now())
+
+  // signed timestamp of the operation (this was submitted by the client)
   timestampUtcMs  DateTime
   documentId      String
   scope           String
@@ -124,6 +128,61 @@ model Operation {
   resultingState  Json
   hash            String
   
-  @@unique([documentId, scope, branch, index(sort: Asc)], name: "unique_operation")
+  @@unique([documentId, scope, branch, (index + skip) ASC], name: "unique_operation")
+
+  @@index([documentId, scope, branch], name: "streamId")
+  @@index([documentId, scope], name: "branchlessStreamId")
 }
 ```
+
+### Locking
+
+We have two general approaches to locking: optimistic and pessimistic.
+
+Say we use pessimistic locking. In Postgres this would look something like this:
+
+```sql
+BEGIN;
+
+-- Lock all operations for the stream
+SELECT index, skip
+  FROM "Operation" 
+  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3 
+FOR UPDATE;
+```
+
+Now we calculate the index and skip needed to append a new operation. We might need to reshuffle this operation.
+
+Finally, we append the new operation.
+
+```sql
+INSERT INTO "Operation"
+  ("documentId", "scope", "branch", "index", "skip", "action", "resultingState", "hash")
+VALUES
+  ($1, $2, $3, $4, $5, $6, $7, $8);
+
+COMMIT;
+```
+
+An optimistic approach would look like this:
+
+```sql
+SELECT index, skip 
+  FROM "Operation" 
+  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3 
+  ORDER BY "index" DESC 
+LIMIT 1;
+```
+
+Calculate next index and skip. Then submit operation.
+
+```sql
+INSERT INTO "Operation"
+  ("documentId", "scope", "branch", "index", "skip", "action", "resultingState", "hash")
+VALUES
+  ($1, $2, $3, $4, $5, $6, $7, $8);
+```
+
+In the case that a write to the same stream was done in the time between read and write, the DB will bounce the write, as the `unique_operation` will not be unique. However, the only case in which this can happen is if there is a logic error with how the `IQueue` implementation is already queuing actions by stream.
+
+If this same bad logic happened with a pessimistic lock, the second lock would wait on the previous conflicting operation before recalculating and inserting the second operation. This is, surprisingly, a big issue as our initial assumption about how the queue and job execution works is flawed, but the pessimistic lock allows the write anyway.

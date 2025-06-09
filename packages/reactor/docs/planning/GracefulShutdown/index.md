@@ -165,7 +165,33 @@ flowchart TD
 
 ### IProcessorManager
 
+The `IProcessorManager` must ensure eventual consistency with the `IOperationStore`. During shutdown or crash scenarios, there may be operations that were applied to the store but not yet processed by the processor manager.
 
+The `IProcessorManager` is responsible for many processors, and each processor has its own filter, so it must carefully manage this per processor.
+
+We maintain eventual consistency through two primary scenarios:
+
+#### Runtime
+
+In this scenario, the processor manager receives an event over the event bus with a sequential id, and it compares it against the last known sequential id for that specific processor.
+
+```mermaid
+flowchart TD
+    A[Operation Event] --> B{Is the operation id what we expect?}
+    
+    B -->|Yes| C[Index Operation]
+    B -->|No| E[Query IOperationStore for operations between last known id and event id]
+    E --> C
+```
+
+#### Startup
+
+In this scenario, the startup process makes sure the projection is up to date at startup.
+
+```mermaid
+flowchart TD
+    A[Startup] --> B[Query IOperationStore for operations between last known id and event id]
+    B --> C[Index Operations]
 
 ### ISyncManager
 

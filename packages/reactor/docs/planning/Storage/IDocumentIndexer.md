@@ -5,6 +5,7 @@
 - Listens for Operations updates from the event bus.
 - Indexes relationships between documents.
 - Forms a graph of documents and relationships.
+- Generally just needs to listen to the System Stream.
 
 ### Eventual Consistency
 

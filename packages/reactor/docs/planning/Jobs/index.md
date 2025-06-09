@@ -84,6 +84,12 @@ The executor emits a set of structured events so that clients can react to job p
 - **`jobRetry`** - issued when execution throws an error and the executor will retry the job.
 - **`jobFailed`** - issued when execution throws an error and will not be retried.
 
+### System Stream
+
+The [`Operations` documentation](../Operations/index.md#system-stream) describes a special set of actions handled by the Reactor itself. These actions are not passed to reducers, but are handled by the `IJobExecutor`.
+
+> TODO: We should define a system action reducer type that is passed into the `IJobExecutor` constructor, so that the `IJobExecutor` does not need to know about the custom logic for handling these actions.
+
 ### Error Propagation
 
 The `IJobExecutor` does not handle errors, it propagates them outward for other systems to handle. Only unrecoverable errors are propagated. These are for jobs that either cannot be retried or are not recoverable even after retry / reshuffle.
