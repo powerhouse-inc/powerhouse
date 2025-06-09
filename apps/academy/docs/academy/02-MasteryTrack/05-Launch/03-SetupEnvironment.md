@@ -1,7 +1,8 @@
-# Powerhouse Setup Guide (WIP)
+# Powerhouse Setup Guide
 
 ## Introduction
-Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently. This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
+Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.   
+This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
 
 ## Prerequisites
 Before you begin, ensure you have a Linux-based system (Ubuntu or Debian recommended), sudo privileges, and a stable internet connection. These are essential for the installation and configuration process. The system should have at least 1GB of RAM and 10GB of free disk space for optimal performance. While these are minimum requirements, more resources will provide better performance, especially when running multiple services.
@@ -12,6 +13,7 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
 
 ### Installation Steps:
+
 1. Run the setup script:
 ```bash
 curl -fsSL https://apps.powerhouse.io/install | bash # for macOS, Linux, and WSL
@@ -32,10 +34,14 @@ If you are a builder that wants to make use of the dev releases use `ph use dev`
    - `ph use dev`: Development version - Use this for testing new features or development work
    - `ph use staging`: Staging version - Use this for pre-production testing
 
-5. Follow the interactive prompts:
+5. Initialize your project with `ph init <project-name>` 
+
+6. Follow the interactive prompts that are appearing after having installed your first package. 
 
 ### Step 1: Package Installation
-During the package installation phase, you'll be prompted to enter package names that you want to install. For example, you might want to install `@powerhousedao/todo-demo-package` or other Powerhouse packages. This step is crucial for adding the specific functionality you need to your Powerhouse installation. You can press Enter to skip this step if you don't need to install any packages immediately, but you can always install packages later using the `ph install` command.
+During the package installation phase, you'll be prompted to enter package names that you want to install. For example, you might want to `ph install @powerhousedao/todo-demo-package` or other Powerhouse packages. This step is crucial for adding the specific functionality you need to your Powerhouse installation. 
+
+You can also press Enter to skip this step if you don't need to install any packages immediately, but you can always install packages later using the `ph install` command.
 
 ### Step 2: Database Configuration
 The script offers two options for database configuration. 
@@ -302,7 +308,7 @@ You can also use
 ```bash
 ph service start | stop | restart 
 ```
-- to start | stop | restart switchboard and connect
+to start | stop | restart switchboard and connect
 
 2. View Nginx configuration:
 ```bash
