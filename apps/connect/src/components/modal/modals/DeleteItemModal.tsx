@@ -2,18 +2,13 @@ import { ConnectDeleteItemModal } from '@powerhousedao/design-system';
 import { useNodeKind } from '@powerhousedao/reactor-browser';
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useModal} from "@powerhousedao/common"
 
-export interface DeleteItemModalProps {
-    nodeId: string | null;
-    open: boolean;
-    onDelete: (closeModal: () => void) => void;
-    onClose: () => void;
-}
-
-export const DeleteItemModal: React.FC<DeleteItemModalProps> = props => {
+export const DeleteItemModal: React.FC = () => {
     const { t } = useTranslation();
-    const { nodeId, open, onClose, onDelete } = props;
-    const kind = useNodeKind(nodeId);
+    const { isOpen, props, show, hide } = useModal('deleteNode');
+
+    if (!isOpen) return null;
 
     return (
         <ConnectDeleteItemModal

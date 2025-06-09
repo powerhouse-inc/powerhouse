@@ -1,24 +1,33 @@
-import { DriveNameInput, type UiDriveNode } from "#connect";
+import { DriveNameInput } from "#connect";
 import { Button, Icon } from "#powerhouse";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export type DeleteDriveProps = {
-  readonly uiDriveNode: UiDriveNode;
-  readonly handleDeleteDrive: () => void;
-  readonly onCancel: () => void;
+  driveId: string;
+  name: string;
+  onDeleteDrive: (driveId: string) => void;
+  closeModal: () => void;
 };
 
 export function DeleteDrive(props: DeleteDriveProps) {
-  const { uiDriveNode, handleDeleteDrive, onCancel } = props;
+  const { driveId, name, onDeleteDrive, closeModal } = props;
   const [driveNameInput, setDriveNameInput] = useState("");
 
-  const isAllowedToDelete = driveNameInput === uiDriveNode.name;
+  const isAllowedToDelete = driveNameInput === name;
 
-  function deleteDrive() {
+  const deleteDrive = useCallback(() => {
     if (isAllowedToDelete) {
-      handleDeleteDrive();
+      onDeleteDrive(driveId);
+      closeModal();
     }
-  }
+  }, [isAllowedToDelete, onDeleteDrive, driveId, closeModal]);
+
+  const onNameInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setDriveNameInput(event.target.value);
+    },
+    [],
+  );
 
   return (
     <div>
@@ -28,12 +37,12 @@ export function DeleteDrive(props: DeleteDriveProps) {
       </p>
       <DriveNameInput
         icon={<Icon name="Lock" />}
-        onChange={(event) => setDriveNameInput(event.target.value)}
+        onChange={onNameInputChange}
         placeholder="Enter drive name..."
         value={driveNameInput}
       />
       <div className="flex gap-3">
-        <Button className="w-full" color="light" onClick={onCancel}>
+        <Button className="w-full" color="light" onClick={closeModal}>
           Cancel
         </Button>
         <Button

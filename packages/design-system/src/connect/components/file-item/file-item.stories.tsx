@@ -1,5 +1,6 @@
-import { documentTypes, mockUiFileNode } from "#connect";
+import { documentTypes } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type FileNode } from "document-drive";
 import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {
@@ -20,7 +21,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    uiNode: mockUiFileNode,
     isAllowedToCreateDocuments: true,
   },
   render: function Wrapper(args) {
@@ -32,17 +32,24 @@ export const Default: Story = {
         id: `file-${index}`,
         name: `${documentType} document`,
       }),
-    );
+    ) as FileNode[];
     return (
       <div className="flex flex-wrap gap-2">
         {fileNodes.map((node) => (
-          // @ts-expect-error
           <FileItem
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             key={node.id}
             {...args}
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            uiNode={node}
+            node={node}
+            driveId="drive-id"
+            sharingType="LOCAL"
+            isAllowedToCreateDocuments={true}
+            setSelectedNodeId={() => {}}
+            getSyncStatusSync={() => "SYNCING"}
+            onRenameNode={() => {}}
+            onDeleteNode={() => {}}
+            onAddFile={() => {}}
+            onCopyNode={() => {}}
+            onMoveNode={() => {}}
           />
         ))}
       </div>

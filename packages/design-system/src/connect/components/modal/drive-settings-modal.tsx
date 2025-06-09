@@ -3,87 +3,77 @@ import {
   DriveSettingsForm,
   type DriveSettingsFormSubmitHandler,
   type SharingType,
-  type UiDriveNode,
 } from "#connect";
-import { type DivProps, Icon, Modal } from "#powerhouse";
-import { type ComponentPropsWithoutRef } from "react";
-import { twMerge } from "tailwind-merge";
+import { Icon, Modal } from "#powerhouse";
+import { useCallback, type ComponentPropsWithoutRef } from "react";
 
-type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
-
-export type DriveSettingsModalProps = {
-  readonly uiDriveNode: UiDriveNode;
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => void;
-  readonly onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
-  readonly onChangeSharingType: (
-    uiDriveNode: UiDriveNode,
-    newSharingType: SharingType,
+type Props = ComponentPropsWithoutRef<typeof Modal> & {
+  driveId: string;
+  name: string;
+  sharingType: SharingType;
+  availableOffline: boolean;
+  closeModal: () => void;
+  onDeleteDrive: (driveId: string) => void;
+  onRenameDrive: (driveId: string, name: string) => void;
+  onChangeSharingType: (driveId: string, sharingType: SharingType) => void;
+  onChangeAvailableOffline: (
+    driveId: string,
+    availableOffline: boolean,
   ) => void;
-  readonly onChangeAvailableOffline: (
-    uiDriveNode: UiDriveNode,
-    newAvailableOffline: boolean,
-  ) => void;
-  readonly modalProps?: ModalProps;
-  readonly containerProps?: DivProps;
 };
-export function DriveSettingsModal(props: DriveSettingsModalProps) {
+export function DriveSettingsModal(props: Props) {
   const {
-    uiDriveNode,
     open,
+    driveId,
+    name,
+    sharingType,
+    availableOffline,
+    closeModal,
     onOpenChange,
     onDeleteDrive,
     onRenameDrive,
     onChangeSharingType,
     onChangeAvailableOffline,
-    modalProps,
-    containerProps,
   } = props;
 
-  const onSubmit: DriveSettingsFormSubmitHandler = (data) => {
-    if (data.name !== uiDriveNode.name) {
-      onRenameDrive(uiDriveNode, data.name);
-    }
-    if (data.sharingType !== uiDriveNode.sharingType) {
-      onChangeSharingType(uiDriveNode, data.sharingType);
-    }
-    if (data.availableOffline !== uiDriveNode.availableOffline) {
-      onChangeAvailableOffline(uiDriveNode, data.availableOffline);
-    }
-    onOpenChange(false);
-  };
-
-  function handleDeleteDrive() {
-    onDeleteDrive(uiDriveNode);
-    onOpenChange(false);
-  }
-
-  function handleCancel() {
-    onOpenChange(false);
-  }
+  const onSubmit: DriveSettingsFormSubmitHandler = useCallback(
+    (data) => {
+      if (data.name !== name) {
+        onRenameDrive(driveId, data.name);
+      }
+      if (data.sharingType !== sharingType) {
+        onChangeSharingType(driveId, data.sharingType);
+      }
+      if (data.availableOffline !== availableOffline) {
+        onChangeAvailableOffline(driveId, data.availableOffline);
+      }
+      closeModal();
+    },
+    [
+      name,
+      driveId,
+      sharingType,
+      availableOffline,
+      onChangeSharingType,
+      onRenameDrive,
+      closeModal,
+    ],
+  );
 
   return (
     <Modal
-      {...modalProps}
       contentProps={{
         className: "rounded-2xl",
       }}
       onOpenChange={onOpenChange}
       open={open}
     >
-      <div
-        {...containerProps}
-        className={twMerge(
-          "max-w-[408px] rounded-2xl p-6",
-          containerProps?.className,
-        )}
-      >
+      <div className="max-w-[408px] rounded-2xl p-6">
         <div className="flex justify-between">
           <h1 className="text-xl font-bold">Drive settings</h1>
           <button
             className="flex size-8 items-center justify-center rounded-md bg-gray-100 text-gray-500 outline-none hover:text-gray-900"
-            onClick={handleCancel}
+            onClick={closeModal}
             tabIndex={-1}
           >
             <Icon name="XmarkLight" size={24} />
@@ -91,10 +81,13 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
         </div>
         <Divider className="my-4" />
         <DriveSettingsForm
-          handleCancel={handleCancel}
-          handleDeleteDrive={handleDeleteDrive}
+          closeModal={closeModal}
+          driveId={driveId}
+          onDeleteDrive={onDeleteDrive}
           onSubmit={onSubmit}
-          uiDriveNode={uiDriveNode}
+          name={name}
+          sharingType={sharingType}
+          availableOffline={availableOffline}
         />
       </div>
     </Modal>

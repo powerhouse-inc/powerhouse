@@ -1,5 +1,4 @@
 import { useDocumentReducer } from "#editor-utils/reducer";
-import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { type Decorator, type Meta, type StoryObj } from "@storybook/react";
 import {
@@ -37,23 +36,12 @@ export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
 export type EditorStoryProps<TDocument extends PHDocument> =
   EditorProps<TDocument> & EditorStoryArgs<TDocument>;
 
-export type DriveEditorStoryProps<TDocument extends PHDocument> =
-  DriveEditorProps<TDocument> & EditorStoryArgs<TDocument>;
-
 export type EditorStoryComponent<TDocument extends PHDocument> = (
   props: EditorStoryProps<TDocument>,
 ) => React.JSX.Element;
 
-export type DriveEditorStoryComponent<TDocument extends PHDocument> = (
-  props: DriveEditorStoryProps<TDocument>,
-) => React.JSX.Element;
-
 export type DocumentStory<TDocument extends PHDocument> = StoryObj<
   EditorStoryComponent<TDocument>
->;
-
-export type DriveDocumentStory<TDocument extends PHDocument> = StoryObj<
-  DriveEditorStoryComponent<TDocument>
 >;
 
 export function createDocumentStory<TDocument extends PHDocument>(

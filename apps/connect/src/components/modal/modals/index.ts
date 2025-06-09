@@ -1,6 +1,4 @@
 import { AddDriveModal } from './AddDriveModal.js';
-import { AddLocalDriveModal } from './AddLocalDriveModal.js';
-import { AddRemoteDriveModal } from './AddRemoteDriveModal.js';
 import { ConfirmationModal } from './ConfirmationModal.js';
 import { CookiesPolicyModal } from './CookiesPolicyModal.js';
 import { CreateDocumentModal } from './CreateDocumentModal.js';
@@ -17,8 +15,6 @@ export const modals = {
     upgradeDrive: UpgradeDriveModal,
     createDocument: CreateDocumentModal,
     addDriveModal: AddDriveModal,
-    addLocalDrive: AddLocalDriveModal,
-    addRemoteDrive: AddRemoteDriveModal,
     driveSettings: DriveSettingsModal,
     settingsModal: SettingsModal,
     confirmationModal: ConfirmationModal,

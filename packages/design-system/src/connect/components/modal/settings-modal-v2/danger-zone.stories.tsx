@@ -1,9 +1,3 @@
-import {
-  mockCloudDrive,
-  mockLocalDrive,
-  mockPublicDrive,
-  type UiDriveNode,
-} from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { useCallback } from "react";
@@ -20,7 +14,34 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    drives: [mockCloudDrive, mockLocalDrive, mockPublicDrive],
+    drives: [
+      // @ts-expect-error mock
+      {
+        id: "cloud-drive",
+        name: "Cloud Drive",
+        slug: "cloud-drive",
+        revision: {
+          global: 1,
+          local: 1,
+        },
+        documentType: "document-type",
+        created: "2021-01-01",
+        lastModified: "2021-01-01",
+        state: {
+          global: {
+            icon: null,
+            name: "Cloud Drive",
+            nodes: [],
+          },
+          local: {
+            sharingType: "CLOUD",
+            availableOffline: true,
+            listeners: [],
+            triggers: [],
+          },
+        },
+      },
+    ],
     onDeleteDrive: () => {},
     onClearStorage: () => {},
   },
@@ -30,9 +51,9 @@ export const Default: Story = {
       alert("You cleared the storage. Good for you.");
     }, []);
     const onDeleteDrive = useCallback(
-      (drive: UiDriveNode) => {
+      (driveId: string) => {
         setArgs({
-          drives: args.drives.filter((d) => d.id !== drive.id),
+          drives: args.drives.filter((d) => d.id !== driveId),
         });
       },
       [args.drives, setArgs],

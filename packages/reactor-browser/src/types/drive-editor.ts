@@ -1,4 +1,5 @@
 import {
+  type DocumentDriveDocument,
   type FileNode,
   type GetDocumentOptions,
   type SyncStatus,
@@ -147,24 +148,3 @@ export interface DriveEditorContext
    */
   getEditor: (documentType: string) => EditorModule | null | undefined;
 }
-export interface DriveEditorProps<TDocument extends PHDocument>
-  extends Omit<EditorProps<TDocument>, "context"> {
-  context: DriveEditorContext;
-}
-
-export type DriveEditorModule<
-  TDocument extends PHDocument = PHDocument,
-  TCustomProps = unknown,
-  TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  Component: FC<
-    DriveEditorProps<TDocument> & TCustomProps & Record<string, unknown>
-  >;
-  documentTypes: string[];
-  config: TEditorConfig & {
-    id: string;
-    disableExternalControls?: boolean;
-    documentToolbarEnabled?: boolean;
-    showSwitchboardLink?: boolean;
-  };
-};

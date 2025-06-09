@@ -10,7 +10,6 @@ import {
   type SharingType,
   SharingTypeFormInput,
   SWITCHBOARD,
-  type UiDriveNode,
 } from "#connect";
 import { Button, Icon } from "#powerhouse";
 import { useState } from "react";
@@ -22,18 +21,28 @@ type Inputs = {
   availableOffline: boolean;
 };
 
-type DriveSettingsFormProps = {
-  readonly uiDriveNode: UiDriveNode;
-  readonly onSubmit: DriveSettingsFormSubmitHandler;
-  readonly handleCancel: () => void;
-  readonly handleDeleteDrive: () => void;
+type Props = {
+  driveId: string;
+  name: string;
+  sharingType: SharingType;
+  availableOffline: boolean;
+  onSubmit: DriveSettingsFormSubmitHandler;
+  closeModal: () => void;
+  onDeleteDrive: (driveId: string) => void;
 };
 
 export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
 
-export function DriveSettingsForm(props: DriveSettingsFormProps) {
-  const { uiDriveNode, onSubmit } = props;
-  const { name, sharingType, availableOffline } = uiDriveNode;
+export function DriveSettingsForm(props: Props) {
+  const {
+    driveId,
+    name,
+    sharingType,
+    availableOffline,
+    onSubmit,
+    closeModal,
+    onDeleteDrive,
+  } = props;
 
   const [showLocationSettings, setShowLocationSettings] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
@@ -81,7 +90,12 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
         </button>
       </Disclosure>
       {showDeleteDrive && showDangerZone ? (
-        <DeleteDrive {...props} onCancel={() => setShowDeleteDrive(false)} />
+        <DeleteDrive
+          closeModal={closeModal}
+          driveId={driveId}
+          name={name}
+          onDeleteDrive={onDeleteDrive}
+        />
       ) : (
         <>
           <Divider className="my-3" />

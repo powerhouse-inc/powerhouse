@@ -1,6 +1,7 @@
+import { useShouldShowSearchBar } from "#state";
 import {
   ConnectSearchBar,
-  ConnectSearchBarProps,
+  type ConnectSearchBarProps,
   Icon,
 } from "@powerhousedao/design-system";
 import { useState } from "react";
@@ -37,6 +38,11 @@ const defaultFilterItems: ConnectSearchBarProps["filterItems"] = [
 export const SearchBar = () => {
   const { t } = useTranslation();
   const [value, setValue] = useState(""); // TODO
+  const showSearchBar = useShouldShowSearchBar();
+
+  if (!showSearchBar) {
+    return null;
+  }
 
   return (
     <ConnectSearchBar

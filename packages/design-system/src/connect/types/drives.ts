@@ -1,9 +1,5 @@
-import {
-  type driveLocations,
-  type FileNode,
-  type FolderNode,
-  type sharingTypes,
-} from "#connect";
+import { type driveLocations, type sharingTypes } from "#connect";
+import { type FileNode, type FolderNode } from "document-drive";
 
 export type SharingTypes = typeof sharingTypes;
 export type SharingType = SharingTypes[number];

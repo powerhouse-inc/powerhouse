@@ -1,16 +1,14 @@
-import { CLOUD, PUBLIC } from "#connect";
+import { CLOUD, PUBLIC, type SharingType } from "#connect";
 import { Icon } from "#powerhouse";
 import { cn } from "#scalars";
-import {
-  getDriveSharingType,
-  useDocumentDrives,
-} from "@powerhousedao/reactor-browser";
 import { capitalCase } from "change-case";
 import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
+  drives: DocumentDriveDocument[];
+  sharingType: SharingType;
   onDeleteDrive: (driveId: string) => void;
   className?: string;
 };
@@ -43,21 +41,27 @@ function ModifyDrives(props: ModifyDrivesProps) {
   );
 }
 
-function DriveList(props: ModifyDrivesProps) {
-  const { className, ...rest } = props;
-  const [drives] = useDocumentDrives();
+type DriveListProps = ModifyDrivesProps & {};
+
+function DriveList(props: DriveListProps) {
+  const { className, drives, sharingType, onDeleteDrive } = props;
   return (
     <div className={className}>
       {drives.map((drive) => (
-        <Drive key={drive.id} drive={drive} {...rest} />
+        <Drive
+          onDeleteDrive={onDeleteDrive}
+          key={drive.id}
+          drive={drive}
+          drives={drives}
+          sharingType={sharingType}
+        />
       ))}
     </div>
   );
 }
 
 function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
-  const { drive, className, onDeleteDrive } = props;
-  const sharingType = getDriveSharingType(drive);
+  const { drive, className, sharingType, onDeleteDrive } = props;
   const driveName = drive.state.global.name;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const localDriveIcon = <Icon name="Hdd" size={16} className="flex-none" />;

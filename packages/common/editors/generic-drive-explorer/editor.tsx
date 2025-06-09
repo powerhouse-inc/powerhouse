@@ -1,57 +1,118 @@
-import { Breadcrumbs, useBreadcrumbs } from "@powerhousedao/design-system";
-import { type DocumentDriveDocument } from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import {
+  getDriveSharingType,
+  useIsAllowedToCreateDocuments,
+  useSelectedNodePath,
+  useSetSelectedNodeId,
+  type DriveEditorProps,
+} from "#state";
+import { Breadcrumbs } from "@powerhousedao/design-system";
+import {
+  addFolder,
+  copyNode,
+  deleteNode,
+  generateNodesCopy,
+  moveNode,
+  updateNode,
+} from "document-drive";
+import { generateId as _generateId } from "document-model";
 import { useCallback } from "react";
-import { useSelectedNodePath, useSetSelectedNodeId } from "./atoms.js";
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";
 import { SearchBar } from "./components/search-bar.js";
-import { type DriveEditorProps } from "./types.js";
-import { DriveContextProvider, useDriveContext } from "./useDriveContext.js";
 
-export type IGenericDriveExplorerEditorProps = {
-  className?: string;
-  children?: React.ReactNode;
-};
+const generateId = () => _generateId().toString();
 
-export type IProps = DriveEditorProps<DocumentDriveDocument> &
-  React.HTMLProps<HTMLDivElement>;
-
-export function BaseEditor(props: IProps) {
-  const { document, dispatch, className, children } = props;
-
-  const {
-    showSearchBar,
-    isAllowedToCreateDocuments,
-    documentModels,
-    onAddDocument,
-    onAddFile,
-    onAddFolder,
-    onRenameNode,
-    onDeleteNode,
-    onMoveNode,
-    onCopyNode,
-  } = useDriveContext();
+export function Editor(props: DriveEditorProps) {
+  const { document: drive, dispatch, className, children, addFile } = props;
   const setSelectedNodeId = useSetSelectedNodeId();
   const selectedNodePath = useSelectedNodePath();
-  const onCreateDocument = useCallback(
-    async (documentModel: DocumentModelModule) => {
-      const { name } = await showCreateDocumentModal(documentModel);
-      const document = documentModel.utils.createDocument();
-      await addDocument(
-        name,
-        documentModel.documentModel.name,
-        document,
-        selectedNode?.id,
+  const sharingType = getDriveSharingType(drive);
+  const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+
+  const dispatchAddFolder = useCallback(
+    (name: string, parentFolder?: string | null, id = generateId()) => {
+      const parentFolderId =
+        parentFolder === drive.id ? undefined : parentFolder;
+      dispatch(
+        addFolder({
+          id,
+          name,
+          parentFolder: parentFolderId,
+        }),
       );
     },
-    [addDocument, showCreateDocumentModal, selectedNode?.id],
+    [dispatch],
   );
 
-  const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs(
-    selectedNodePath,
-    setSelectedNodeId,
+  const dispatchDeleteNode = useCallback(
+    (id: string) => {
+      dispatch(deleteNode({ id }));
+    },
+    [dispatch],
+  );
+
+  const dispatchRenameNode = useCallback(
+    (id: string, name: string) => {
+      dispatch(updateNode({ id, name }));
+    },
+    [dispatch],
+  );
+
+  const dispatchMoveNode = useCallback(
+    (sourceId: string, targetId: string) => {
+      dispatch(
+        moveNode({
+          srcFolder: sourceId,
+          targetParentFolder: targetId,
+        }),
+      );
+    },
+    [dispatch],
+  );
+
+  const dispatchCopyNode = useCallback(
+    (sourceId: string, targetFolderId: string | undefined) => {
+      const source = drive.state.global.nodes.find(
+        (node) => node.id === sourceId,
+      );
+      if (!source) {
+        throw new Error(`Source node with id "${sourceId}" not found`);
+      }
+
+      const copyNodesInput = generateNodesCopy(
+        {
+          srcId: sourceId,
+          targetParentFolder: targetFolderId,
+          targetName: source.name,
+        },
+        generateId,
+        drive.state.global.nodes,
+      );
+
+      const copyActions = copyNodesInput.map((copyNodeInput) =>
+        copyNode(copyNodeInput),
+      );
+
+      for (const copyAction of copyActions) {
+        dispatch(copyAction); // TODO support batching dispatch
+      }
+    },
+    [dispatch],
+  );
+
+  const onAddFile = useCallback(
+    (
+      file: string | File,
+      driveId: string,
+      name?: string,
+      parentFolder?: string,
+    ) => {
+      const parentFolderId =
+        parentFolder === driveId ? undefined : parentFolder;
+      addFile(file, driveId, name, parentFolderId).catch(console.error);
+    },
+    [addFile],
   );
 
   return (
@@ -59,39 +120,26 @@ export function BaseEditor(props: IProps) {
       {children}
       <DriveLayout.Header>
         <Breadcrumbs
-          breadcrumbs={breadcrumbs}
+          breadcrumbs={selectedNodePath}
           createEnabled={isAllowedToCreateDocuments}
-          onCreate={onAddFolder}
-          onBreadcrumbSelected={onBreadcrumbSelected}
+          onCreate={dispatchAddFolder}
+          onBreadcrumbSelected={setSelectedNodeId}
         />
-        {showSearchBar && <SearchBar />}
+        <SearchBar />
       </DriveLayout.Header>
       <DriveLayout.Content>
         <FolderView
-          onRenameNode={onRenameNode}
-          onDeleteNode={onDeleteNode}
+          sharingType={sharingType}
+          onRenameNode={dispatchRenameNode}
+          onDeleteNode={dispatchDeleteNode}
           onAddFile={onAddFile}
-          onCopyNode={onCopyNode}
-          onMoveNode={onMoveNode}
-          isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+          onCopyNode={dispatchCopyNode}
+          onMoveNode={dispatchMoveNode}
         />
       </DriveLayout.Content>
       <DriveLayout.Footer>
-        {isAllowedToCreateDocuments && (
-          <CreateDocument
-            documentModels={documentModels}
-            createDocument={onCreateDocument}
-          />
-        )}
+        <CreateDocument />
       </DriveLayout.Footer>
     </DriveLayout>
-  );
-}
-
-export default function Editor(props: IProps) {
-  return (
-    <DriveContextProvider value={props.context}>
-      <BaseEditor {...props} />
-    </DriveContextProvider>
   );
 }

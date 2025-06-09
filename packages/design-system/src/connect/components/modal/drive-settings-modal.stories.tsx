@@ -1,4 +1,3 @@
-import { mockLocalDrive } from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { DriveSettingsModal } from "./index.js";
@@ -14,13 +13,17 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    uiDriveNode: mockLocalDrive,
-    onChangeAvailableOffline() {},
-    onRenameDrive() {},
-    onChangeSharingType() {},
-    onDeleteDrive() {},
-    onOpenChange() {},
+    driveId: "drive-id",
+    name: "Drive Name",
+    sharingType: "LOCAL",
+    availableOffline: true,
+    onChangeAvailableOffline: () => {},
+    onRenameDrive: () => {},
+    onChangeSharingType: () => {},
+    onDeleteDrive: () => {},
+    onOpenChange: () => {},
     open: true,
+    closeModal: () => {},
   },
   render: function Wrapper(args) {
     const [, setArgs] = useArgs<typeof args>();
@@ -32,10 +35,7 @@ export const Default: Story = {
           onClick={() => {
             setArgs({
               ...args,
-              modalProps: {
-                ...args.modalProps,
-                open: true,
-              },
+              open: true,
             });
           }}
         >
@@ -43,17 +43,11 @@ export const Default: Story = {
         </button>
         <DriveSettingsModal
           {...args}
-          modalProps={{
-            ...args.modalProps,
-            onOpenChange: (open) => {
-              setArgs({
-                ...args,
-                modalProps: {
-                  ...args.modalProps,
-                  open,
-                },
-              });
-            },
+          onOpenChange={(open) => {
+            setArgs({
+              ...args,
+              open,
+            });
           }}
         />
       </div>

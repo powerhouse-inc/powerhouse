@@ -1,11 +1,11 @@
-import { type NodeKind } from "@powerhousedao/reactor-browser";
+import { useCallback, useMemo, useState, type DragEvent } from "react";
+import { FILE, UI_NODE_ID } from "../../constants/nodes.js";
 import {
+  type NodeKind,
   type OnAddFile,
   type OnCopyNode,
   type OnMoveNode,
-} from "@powerhousedao/reactor-browser/uiNodes/types";
-import { useCallback, useMemo, useState, type DragEvent } from "react";
-import { FILE, UI_NODE_ID } from "../../constants/nodes.js";
+} from "../../types/nodes.js";
 type Props = {
   nodeId: string | null;
   driveId: string | null;

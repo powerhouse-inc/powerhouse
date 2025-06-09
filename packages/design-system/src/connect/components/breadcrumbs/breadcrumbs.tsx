@@ -9,7 +9,7 @@ export type BreadcrumbNode = {
 
 export type BreadcrumbsProps<T extends boolean = boolean> = {
   breadcrumbs: BreadcrumbNode[];
-  onBreadcrumbSelected: (node: BreadcrumbNode) => void;
+  onBreadcrumbSelected: (nodeId: string) => void;
   createEnabled?: T;
   onCreate: T extends true
     ? (name: string, parentFolder: string) => void
@@ -73,7 +73,7 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
 
 export type BreadcrumbProps = {
   node: BreadcrumbNode;
-  onClick: (node: BreadcrumbNode) => void;
+  onClick: (nodeId: string) => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
@@ -82,7 +82,7 @@ export function Breadcrumb(props: BreadcrumbProps) {
   return (
     <div
       className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
-      onClick={() => onClick(node)}
+      onClick={() => onClick(node.id)}
       role="button"
     >
       {node.name}

@@ -7,5 +7,4 @@ export * from "./reactor.js";
 export * from "./renown/types.js";
 export * from "./types/index.js";
 export * from "./utils/export-document.js";
-export * from "./atoms.js";
 export type DocumentDriveServerInterface = IDocumentDriveServer;

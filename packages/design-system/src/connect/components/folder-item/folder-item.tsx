@@ -4,11 +4,18 @@ import {
   DELETE,
   DUPLICATE,
   FOLDER,
+  type GetSyncStatusSync,
   NodeInput,
   type NodeOption,
   nodeOptionsMap,
+  type OnAddFile,
+  type OnCopyNode,
+  type OnDeleteNode,
+  type OnMoveNode,
+  type OnRenameNode,
   READ,
   RENAME,
+  type SetSelectedNodeId,
   type SharingType,
   SyncStatusIcon,
   useDrag,
@@ -16,15 +23,6 @@ import {
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import {
-  type GetSyncStatusSync,
-  type OnAddFile,
-  type OnCopyNode,
-  type OnDeleteNode,
-  type OnMoveNode,
-  type OnRenameNode,
-  type SetSelectedNodeId,
-} from "@powerhousedao/reactor-browser/uiNodes/types";
 import type { FolderNode } from "document-drive";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -64,7 +62,7 @@ export function FolderItem(props: FolderItemProps) {
   const syncStatus = getSyncStatusSync(nodeId, sharingType);
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ nodeId });
+  const { dragProps } = useDrag({ nodeId, nodeKind: "FOLDER" });
   const { isDropTarget, dropProps } = useDrop({
     nodeId,
     driveId,

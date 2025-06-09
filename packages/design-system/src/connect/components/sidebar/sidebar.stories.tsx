@@ -1,20 +1,12 @@
 import connectLogo from "#assets/connect.png";
-import {
-  WagmiContext,
-  type SharingType,
-  type UiDriveNode,
-  type UiNode,
-} from "#connect";
-import { useEffect } from "@storybook/preview-api";
+import { WagmiContext, type SharingType } from "#connect";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { type ComponentPropsWithoutRef } from "react";
 import { ConnectSidebar } from "../index.js";
 import { SidebarItem } from "./sidebar-item.js";
 
-type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
-  driveNodes?: UiDriveNode[];
-};
+type Args = ComponentPropsWithoutRef<typeof ConnectSidebar>;
 
 const meta: Meta<Args> = {
   title: "Connect/Components/Sidebar",
@@ -29,41 +21,6 @@ const user = {
 } as const;
 
 const Wrapper = (args: Args) => {
-  const nodeHandlers = {
-    onAddFolder: (name: string, uiNode: UiNode) => {},
-    onAddFile: (file: File, parentNode: UiNode | null) => {
-      console.log("onAddFile", { file, parentNode });
-      return Promise.resolve();
-    },
-    onCopyNode: (uiNode: UiNode, targetNode: UiNode) => {
-      console.log("onCopyNode", { uiNode, targetNode });
-      return Promise.resolve();
-    },
-    onMoveNode: (uiNode: UiNode, targetNode: UiNode) => {
-      console.log("onMoveNode", { uiNode, targetNode });
-      return Promise.resolve();
-    },
-    onAddAndSelectNewFolder: (name: string) => Promise.resolve(),
-    onRenameNode: (name: string, uiNode: UiNode) => {},
-    onDuplicateNode: (uiNode: UiNode) => {},
-    onDeleteNode: (uiNode: UiNode) => {},
-    onDeleteDrive: (uiNode: UiNode) => {},
-    onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => {},
-    onChangeSharingType: (
-      uiDriveNode: UiDriveNode,
-      newSharingType: SharingType,
-    ) => {},
-    onChangeAvailableOffline: (
-      uiDriveNode: UiDriveNode,
-      newAvailableOffline: boolean,
-    ) => {},
-    showAddDriveModal: () => {},
-    showDriveSettingsModal: (uiDriveNode: UiDriveNode) => {},
-    onAddTrigger: (uiNodeDriveId: string) => {},
-    onRemoveTrigger: (uiNodeDriveId: string) => {},
-    onAddInvalidTrigger: (uiNodeDriveId: string) => {},
-  };
-
   return (
     <WagmiContext>
       <div className="relative h-screen">

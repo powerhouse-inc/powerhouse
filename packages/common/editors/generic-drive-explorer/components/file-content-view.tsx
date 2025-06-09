@@ -1,5 +1,18 @@
 import {
+  useGetSyncStatusSync,
+  useIsAllowedToCreateDocuments,
+  useNodeFileChildren,
+  useSelectedDriveId,
+  useSelectedNodeId,
+  useSetSelectedNodeId,
+} from "#state";
+import {
   FileItem,
+  type OnAddFile,
+  type OnCopyNode,
+  type OnDeleteNode,
+  type OnMoveNode,
+  type OnRenameNode,
   type SharingType,
   useWindowSize,
 } from "@powerhousedao/design-system";
@@ -7,23 +20,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileNode } from "document-drive";
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type GetSyncStatusSync,
-  type OnAddFile,
-  type OnCopyNode,
-  type OnDeleteNode,
-  type OnMoveNode,
-  type OnRenameNode,
-  type SetSelectedNodeId,
-} from "../types.js";
 
 type Props = {
-  driveId: string;
-  fileNodes: FileNode[];
   sharingType: SharingType;
-  isAllowedToCreateDocuments: boolean;
-  setSelectedNodeId: SetSelectedNodeId;
-  getSyncStatusSync: GetSyncStatusSync;
   onRenameNode: OnRenameNode;
   onDeleteNode: OnDeleteNode;
   onAddFile: OnAddFile;
@@ -42,18 +41,19 @@ export function FileContentView(props: Props) {
   const { t } = useTranslation();
   const windowSize = useWindowSize();
   const {
-    driveId,
-    fileNodes,
     sharingType,
-    isAllowedToCreateDocuments,
-    setSelectedNodeId,
-    getSyncStatusSync,
     onRenameNode,
     onDeleteNode,
     onAddFile,
     onCopyNode,
     onMoveNode,
   } = props;
+  const selectedNodeId = useSelectedNodeId();
+  const setSelectedNodeId = useSetSelectedNodeId();
+  const selectedDriveId = useSelectedDriveId();
+  const fileNodes = useNodeFileChildren(selectedNodeId);
+  const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+  const getSyncStatusSync = useGetSyncStatusSync();
   const availableWidth = windowSize.innerWidth - USED_SPACE;
 
   const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
@@ -105,7 +105,7 @@ export function FileContentView(props: Props) {
   const renderItem = (rowIndex: number, columnIndex: number) => {
     const fileNode = getItem(rowIndex, columnIndex);
 
-    if (!fileNode) {
+    if (!fileNode || !selectedDriveId) {
       return null;
     }
 
@@ -120,7 +120,7 @@ export function FileContentView(props: Props) {
           node={fileNode}
           sharingType={sharingType}
           isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-          driveId={driveId}
+          driveId={selectedDriveId}
           onCopyNode={onCopyNode}
           onMoveNode={onMoveNode}
           getSyncStatusSync={getSyncStatusSync}

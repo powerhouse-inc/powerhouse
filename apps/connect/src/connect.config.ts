@@ -55,7 +55,7 @@ const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
 setLogLevel(LOG_LEVEL);
 logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
-export default {
+const connectConfig = {
     appVersion: APP_VERSION,
     studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
     warnOutdatedApp: WARN_OUTDATED_APP === 'true',
@@ -94,3 +94,6 @@ export default {
     gaTrackingId: GA_TRACKING_ID,
     phCliVersion: PH_CONNECT_CLI_VERSION,
 };
+
+export default connectConfig;
+

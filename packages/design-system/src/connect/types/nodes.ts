@@ -1,79 +1,60 @@
-import {
-  type DRIVE,
-  type FILE,
-  type FOLDER,
-  type SharingType,
-  type SyncStatus,
-  type TDocumentType,
-} from "#connect";
-import { type Maybe, type SynchronizationUnitInput } from "document-model";
+import { type FileNode, type SyncStatus } from "document-drive";
+import { type PHDocument } from "document-model";
+import { type SharingType } from "./drives.js";
 
-export type BaseUiFolderNode = {
-  id: string;
-  name: string;
-  driveId: string;
-  kind: typeof FOLDER;
-  parentFolder: string;
-  syncStatus: SyncStatus | undefined;
-};
+export type NodeKind = "DRIVE" | "FILE" | "FOLDER";
 
-export type BaseUiDriveNode = {
-  id: string;
-  name: string;
-  driveId: string;
-  kind: typeof DRIVE;
-  parentFolder: null;
-  syncStatus: SyncStatus | undefined;
-};
+export type AddDocument = (
+  driveId: string,
+  name: string,
+  documentType: string,
+  parentNodeId?: string,
+  document?: PHDocument,
+) => Promise<FileNode>;
 
-export type BaseUiFileNode = {
-  id: string;
-  name: string;
-  driveId: string;
-  kind: typeof FILE;
-  parentFolder: string;
-  documentType: string;
-  syncStatus: SyncStatus | undefined;
-};
+export type AddFolder = (
+  driveId: string,
+  name: string,
+  parentNodeId?: string,
+) => Promise<Node>;
 
-export type BaseUiNode = BaseUiFolderNode | BaseUiFileNode | BaseUiDriveNode;
+export type AddFile = (
+  file: string | File,
+  driveId: string,
+  name?: string,
+  parentNodeId?: string,
+) => Promise<Node>;
 
-export type UiFileNode = BaseUiFileNode & {
-  slug?: string | null;
-  documentType: TDocumentType;
-  synchronizationUnits: SynchronizationUnitInput[];
-  sharingType: SharingType;
-};
+export type RenameNode = (
+  driveId: string,
+  nodeId: string,
+  name: string,
+) => Promise<Node>;
 
-export type UiFolderNode = BaseUiFolderNode & {
-  slug?: string | null;
-  children: UiNode[];
-  sharingType: SharingType;
-};
+export type MoveNode = (
+  srcNodeId: string,
+  targetNodeId: string,
+  driveId: string,
+) => Promise<void>;
 
-export type UiDriveNode = BaseUiDriveNode & {
-  slug: string | null;
-  children: UiNode[];
-  nodeMap: Record<string, UiNode>;
-  sharingType: SharingType;
-  availableOffline: boolean;
-  icon: string | null;
-};
+export type CopyNode = (
+  srcNodeId: string,
+  targetNodeId: string,
+  driveId: string,
+) => Promise<void>;
 
-export type UiNode = UiDriveNode | UiFileNode | UiFolderNode;
+export type DeleteNode = (driveId: string, nodeId: string) => Promise<void>;
 
-export type FileNode = {
-  documentType: string;
-  id: string;
-  kind: string;
-  name: string;
-  parentFolder: Maybe<string>;
-  synchronizationUnits: SynchronizationUnitInput[];
-};
+export type GetSyncStatusSync = (
+  syncId: string,
+  sharingType: SharingType,
+) => SyncStatus | undefined;
 
-export type FolderNode = {
-  id: string;
-  kind: string;
-  name: string;
-  parentFolder: Maybe<string>;
-};
+export type SetSelectedNodeId = (nodeId: string | null) => void;
+export type OnAddDocument = (...args: Parameters<AddDocument>) => void;
+export type OnAddFolder = (...args: Parameters<AddFolder>) => void;
+export type OnAddFile = (...args: Parameters<AddFile>) => void;
+export type OnRenameNode = (...args: Parameters<RenameNode>) => void;
+export type OnMoveNode = (...args: Parameters<MoveNode>) => void;
+export type OnCopyNode = (...args: Parameters<CopyNode>) => void;
+export type OnDeleteNode = (...args: Parameters<DeleteNode>) => void;

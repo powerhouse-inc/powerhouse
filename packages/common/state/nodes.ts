@@ -1,3 +1,4 @@
+import { type NodeKind, type SharingType } from "@powerhousedao/design-system";
 import {
   type DocumentDriveDocument,
   type FileNode,
@@ -8,8 +9,6 @@ import deepEqual from "fast-deep-equal";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { atomFamily } from "jotai/utils";
 import { useCallback, useMemo } from "react";
-import { DRIVE, FILE, FOLDER, LOCAL, PUBLIC } from "./constants.js";
-import { type NodeKind, type SharingType } from "./types.js";
 
 const selectedNodeIdAtom = atom<string | null>(null);
 
@@ -40,7 +39,7 @@ export function makeNodeMap(
     const driveNode: Node = {
       id: documentDrive.id,
       name: documentDrive.state.global.name,
-      kind: DRIVE,
+      kind: "DRIVE",
       parentFolder: null,
     };
 
@@ -138,7 +137,7 @@ export function useNodeBySlug(slug: string | null): Node | null {
   return node ?? null;
 }
 
-export function useParentNode(id: string | null): Node | null {
+export function useNodeParentNode(id: string | null): Node | null {
   const nodeMap = useAtomValue(nodeMapAtom);
   if (!id) return null;
   const node = nodeMap[id];
@@ -146,13 +145,13 @@ export function useParentNode(id: string | null): Node | null {
   return parentId ? (nodeMap[parentId] ?? null) : null;
 }
 
-export function useParentNodeId(id: string | null): string | null {
-  const parentNode = useParentNode(id);
+export function useNodeParentId(id: string | null): string | null {
+  const parentNode = useNodeParentNode(id);
   return parentNode?.id ?? null;
 }
 
 export function useSelectParentNodeId(id: string | null) {
-  const parentNodeId = useParentNodeId(id);
+  const parentNodeId = useNodeParentId(id);
   const setSelectedNodeId = useSetSelectedNodeId();
 
   return useCallback(() => {
@@ -160,7 +159,7 @@ export function useSelectParentNodeId(id: string | null) {
   }, [parentNodeId, setSelectedNodeId]);
 }
 
-export function useDriveNodeForNode(id: string | null): Node | null {
+export function useNodeDriveNode(id: string | null): Node | null {
   const nodeMap = useAtomValue(nodeMapAtom);
   let current = id ? nodeMap[id] : null;
   while (current?.parentFolder) {
@@ -170,8 +169,8 @@ export function useDriveNodeForNode(id: string | null): Node | null {
   return current ?? null;
 }
 
-export function useDriveIdForNode(id: string | null): string | null {
-  const driveNode = useDriveNodeForNode(id);
+export function useNodeDriveId(id: string | null): string | null {
+  const driveNode = useNodeDriveNode(id);
   return driveNode?.id ?? null;
 }
 
@@ -215,7 +214,7 @@ export function useSelectedNode(): Node | null {
 
 export function useSelectedDriveId() {
   const selectedNode = useSelectedNode();
-  const driveNode = useDriveNodeForNode(selectedNode?.id ?? null);
+  const driveNode = useNodeDriveNode(selectedNode?.id ?? null);
   return driveNode?.id ?? null;
 }
 
@@ -242,7 +241,7 @@ export function useIsSelected(id: string | null) {
 
 export function useSelectedParentNode() {
   const selectedNodeId = useSelectedNodeId();
-  return useParentNode(selectedNodeId);
+  return useNodeParentNode(selectedNodeId);
 }
 
 export function useSelectedParentNodeId() {
@@ -289,6 +288,24 @@ export function useNodeFolderChildren(id: string | null): FolderNode[] {
   );
 }
 
+export function useNodeHasFolderChildren(id: string | null): boolean {
+  const nodeFolderChildren = useNodeFolderChildren(id);
+  return nodeFolderChildren.length > 0;
+}
+
+export function useNodeHasFileChildren(id: string | null): boolean {
+  const nodeChildren = useNodeChildren(id);
+  return useMemo(
+    () => nodeChildren.some((n) => isFileNodeKind(n)),
+    [nodeChildren],
+  );
+}
+
+export function nodeHasFileChildren(id: string | null): boolean {
+  const nodeFileChildren = useNodeFileChildren(id);
+  return nodeFileChildren.length > 0;
+}
+
 export function sortNodesByName(nodes: Node[]): Node[] {
   return nodes.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -296,27 +313,27 @@ export function isFileNodeKind(
   node: Node | null | undefined,
 ): node is FileNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === FILE;
+  return node.kind.toUpperCase() === "FILE";
 }
 
 export function isFolderNodeKind(
   node: Node | null | undefined,
 ): node is FolderNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === FOLDER;
+  return node.kind.toUpperCase() === "FOLDER";
 }
 
 export function isDriveNodeKind(
   node: Node | null | undefined,
 ): node is FolderNode {
   if (!node) return false;
-  return node.kind.toUpperCase() === DRIVE;
+  return node.kind.toUpperCase() === "DRIVE";
 }
 
 export function getNodeKind(node: Node | null): NodeKind | null {
-  if (isDriveNodeKind(node)) return DRIVE;
-  if (isFolderNodeKind(node)) return FOLDER;
-  if (isFileNodeKind(node)) return FILE;
+  if (isDriveNodeKind(node)) return "DRIVE";
+  if (isFolderNodeKind(node)) return "FOLDER";
+  if (isFileNodeKind(node)) return "FILE";
   return null;
 }
 
@@ -335,13 +352,13 @@ export function getDriveSharingType(
     | undefined
     | null,
 ) {
-  if (!drive) return PUBLIC;
+  if (!drive) return "PUBLIC";
   const isReadDrive = "readContext" in drive;
   const { sharingType: _sharingType } = !isReadDrive
     ? drive.state.local
-    : { sharingType: PUBLIC };
+    : { sharingType: "PUBLIC" };
   const __sharingType = _sharingType?.toUpperCase();
-  return (__sharingType === "PRIVATE" ? LOCAL : __sharingType) as SharingType;
+  return (__sharingType === "PRIVATE" ? "LOCAL" : __sharingType) as SharingType;
 }
 
 export function useNodeKind(id: string | null): NodeKind | null {

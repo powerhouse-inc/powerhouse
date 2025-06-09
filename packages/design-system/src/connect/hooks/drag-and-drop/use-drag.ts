@@ -1,13 +1,12 @@
-import { DRIVE, UI_NODE_ID } from "#connect";
-import { useNodeKindForId } from "@powerhousedao/reactor-browser";
+import { DRIVE, type NodeKind, UI_NODE_ID } from "#connect";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
 type Props = {
   nodeId: string | null;
+  nodeKind: NodeKind | null;
 };
 export function useDrag(props: Props) {
-  const { nodeId } = props;
+  const { nodeId, nodeKind } = props;
   const [isDragging, setIsDragging] = useState(false);
-  const nodeKind = useNodeKindForId(nodeId);
   const allowedToDragNode = !!nodeKind && nodeKind !== DRIVE;
   const onDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>) => {

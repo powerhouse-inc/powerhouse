@@ -4,29 +4,28 @@ import {
   DELETE,
   DUPLICATE,
   getDocumentIconSrc,
+  type GetSyncStatusSync,
   NodeInput,
   type NodeOption,
   nodeOptionsMap,
-  READ,
-  RENAME,
-  type SharingType,
-  useDrag,
-  WRITE,
-} from "#connect";
-import { Icon } from "#powerhouse";
-import {
-  type GetSyncStatusSync,
   type OnAddFile,
   type OnCopyNode,
   type OnDeleteNode,
   type OnMoveNode,
   type OnRenameNode,
+  READ,
+  RENAME,
   type SetSelectedNodeId,
-} from "@powerhousedao/reactor-browser/uiNodes/types";
+  type SharingType,
+  useDrag,
+  WRITE,
+} from "#connect";
+import { Icon } from "#powerhouse";
 import type { FileNode } from "document-drive";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon/index.js";
+
 export type FileItemProps = {
   node: FileNode;
   driveId: string;
@@ -64,7 +63,7 @@ export function FileItem(props: FileItemProps) {
   const syncStatus = getSyncStatusSync(nodeId, sharingType);
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ nodeId });
+  const { dragProps } = useDrag({ nodeId, nodeKind: "FILE" });
 
   const isReadMode = mode === READ;
 

@@ -1,31 +1,30 @@
-import type { BaseProps } from "#editors/utils/index";
+import { type BaseProps } from "#editors/utils/index";
+import {
+  useGetSyncStatusSync,
+  useIsAllowedToCreateDocuments,
+  useNodeFolderChildren,
+  useNodeHasFileChildren,
+  useSelectedDriveId,
+  useSelectedNodeId,
+  useSetSelectedNodeId,
+} from "#state";
 import {
   FolderItem,
   useDrop,
-  type SharingType,
-} from "@powerhousedao/design-system";
-import { useTranslation } from "react-i18next";
-import { twMerge } from "tailwind-merge";
-import { useNodeFileChildren, useNodeFolderChildren } from "../atoms.js";
-import {
-  type GetSyncStatusSync,
   type OnAddFile,
   type OnCopyNode,
   type OnDeleteNode,
   type OnMoveNode,
   type OnRenameNode,
-  type SetSelectedNodeId,
-} from "../types.js";
+  type SharingType,
+} from "@powerhousedao/design-system";
+import { useTranslation } from "react-i18next";
+import { twMerge } from "tailwind-merge";
 import FileContentView from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 
 interface IFolderViewProps extends BaseProps {
-  nodeId: string;
-  driveId: string;
   sharingType: SharingType;
-  isAllowedToCreateDocuments: boolean;
-  setSelectedNodeId: SetSelectedNodeId;
-  getSyncStatusSync: GetSyncStatusSync;
   onRenameNode: OnRenameNode;
   onDeleteNode: OnDeleteNode;
   onAddFile: OnAddFile;
@@ -35,14 +34,9 @@ interface IFolderViewProps extends BaseProps {
 
 export function FolderView(props: IFolderViewProps) {
   const {
-    nodeId,
     className,
-    isAllowedToCreateDocuments,
     containerProps,
     sharingType,
-    driveId,
-    setSelectedNodeId,
-    getSyncStatusSync,
     onAddFile,
     onCopyNode,
     onMoveNode,
@@ -50,16 +44,26 @@ export function FolderView(props: IFolderViewProps) {
     onDeleteNode,
   } = props;
   const { t } = useTranslation();
+  const selectedNodeId = useSelectedNodeId();
+  const setSelectedNodeId = useSetSelectedNodeId();
+  const selectedDriveId = useSelectedDriveId();
   const { isDropTarget } = useDrop({
-    nodeId,
-    driveId,
+    nodeId: selectedNodeId,
+    driveId: selectedDriveId,
     nodeKind: "FOLDER",
     onAddFile,
     onCopyNode,
     onMoveNode,
   });
-  const folderNodes = useNodeFolderChildren(nodeId);
-  const fileNodes = useNodeFileChildren(nodeId);
+  const folderNodes = useNodeFolderChildren(selectedNodeId);
+  const hasFileChildren = useNodeHasFileChildren(selectedNodeId);
+  const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
+  const getSyncStatusSync = useGetSyncStatusSync();
+
+  if (!selectedNodeId || !selectedDriveId) {
+    return null;
+  }
+
   return (
     <div
       className={twMerge(
@@ -82,7 +86,7 @@ export function FolderView(props: IFolderViewProps) {
               node={folderNode}
               isAllowedToCreateDocuments={isAllowedToCreateDocuments}
               sharingType={sharingType}
-              driveId={driveId}
+              driveId={selectedDriveId}
               setSelectedNodeId={setSelectedNodeId}
               getSyncStatusSync={getSyncStatusSync}
               onAddFile={onAddFile}
@@ -108,16 +112,11 @@ export function FolderView(props: IFolderViewProps) {
         <div
           className={twMerge(
             "w-full",
-            fileNodes.length > 0 ? "min-h-[400px]" : "min-h-14",
+            hasFileChildren ? "min-h-[400px]" : "min-h-14",
           )}
         >
           <FileContentView
-            fileNodes={fileNodes}
-            driveId={driveId}
-            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
             sharingType={sharingType}
-            setSelectedNodeId={setSelectedNodeId}
-            getSyncStatusSync={getSyncStatusSync}
             onAddFile={onAddFile}
             onMoveNode={onMoveNode}
             onCopyNode={onCopyNode}

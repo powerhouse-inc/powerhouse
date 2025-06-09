@@ -1,61 +1,24 @@
+import { type DriveEditorProps } from "#state";
 import {
   createDocumentStory,
   type DocumentStory,
-  type DriveDocumentStory,
-  type DriveEditorStoryComponent,
   type EditorStoryArgs,
   type EditorStoryComponent,
   type EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
-import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { type Decorator, type Meta } from "@storybook/react";
 import {
+  driveDocumentModelModule,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
   type DocumentDriveState,
-  driveDocumentModelModule,
+  type FileNode,
 } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type ExtendedState,
-  type PartialState,
-} from "document-model";
-
-const DriveContextDecorator: Decorator<
-  EditorStoryProps<DocumentDriveDocument>
-> = (Story, context) => {
-  return (
-    <DriveContextProvider
-      value={{
-        useDocumentEditorProps: () => ({
-          dispatch: () => {},
-          document: context.args.document,
-          error: undefined,
-        }),
-        showSearchBar: false,
-        isAllowedToCreateDocuments: true,
-        documentModels: [
-          documentModelDocumentModelModule as DocumentModelModule,
-        ],
-        useSyncStatus: () => "SUCCESS",
-        useDriveDocumentState: () => undefined,
-        useDriveDocumentStates: () => [{}, () => Promise.resolve()],
-        addFile() {
-          throw new Error("addFile not implemented");
-        },
-        addDocument() {
-          throw new Error("addDocument not implemented");
-        },
-      }}
-    >
-      <Story />
-    </DriveContextProvider>
-  );
-};
+import { type ExtendedState, type PartialState } from "document-model";
+import { type ComponentType } from "react";
 
 export function createDriveStory(
-  Editor: EditorStoryComponent<DocumentDriveDocument>,
+  Editor: ComponentType<DriveEditorProps>,
   initialState?: ExtendedState<
     PartialState<DocumentDriveState>,
     PartialState<DocumentDriveLocalState>
@@ -63,51 +26,50 @@ export function createDriveStory(
   additionalStoryArgs?: EditorStoryArgs<DocumentDriveDocument>,
   decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
 ): {
-  meta: Meta<typeof Editor>;
+  meta: Meta<EditorStoryComponent<DocumentDriveDocument>>;
   CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
-    Editor,
-    driveDocumentModelModule.reducer,
-    initialState ?? {
-      ...driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { name: "Powerhouse" }, local: {} },
-      }),
-      id: "powerhouse",
-    },
-    additionalStoryArgs,
-    [DriveContextDecorator, ...(decorators ?? [])],
-  );
-}
-
-export function createDriveStoryWithUINodes(
-  Editor: DriveEditorStoryComponent<DocumentDriveDocument>,
-  initialState?: ExtendedState<
-    PartialState<DocumentDriveState>,
-    PartialState<DocumentDriveLocalState>
-  >,
-  additionalStoryArgs?: EditorStoryArgs<DocumentDriveDocument>,
-  decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
-): {
-  meta: Meta<typeof Editor>;
-  CreateDocumentStory: DriveDocumentStory<DocumentDriveDocument>;
-} {
-  const { meta, CreateDocumentStory } = createDocumentStory(
-    Editor as EditorStoryComponent<DocumentDriveDocument>,
-    driveDocumentModelModule.reducer,
-    initialState ?? {
-      ...driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { name: "Powerhouse" }, local: {} },
-      }),
-      id: "powerhouse",
-    },
-    additionalStoryArgs,
-    [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
-  );
-
-  return {
-    meta: meta as Meta<typeof Editor>,
-    CreateDocumentStory:
-      CreateDocumentStory as DriveDocumentStory<DocumentDriveDocument>,
+  const EditorWithMockAddFileHandler = (
+    props: EditorStoryProps<DocumentDriveDocument>,
+  ) => {
+    const mockAddFile = async (
+      file: string | File,
+      driveId: string,
+      name?: string,
+      parentFolderId?: string,
+    ): Promise<FileNode> => {
+      console.log("Mock addFile called with:", {
+        file,
+        driveId,
+        name,
+        parentFolderId,
+      });
+      return {
+        id: "mock-file-id",
+        name: name || "mock-file",
+        kind: "file",
+        documentType: "mock-document-type",
+        parentFolder: parentFolderId || null,
+        synchronizationUnits: [],
+      };
+    };
+    const propsWithMock: DriveEditorProps = {
+      ...props,
+      addFile: mockAddFile,
+    };
+    return <Editor {...propsWithMock} />;
   };
+
+  return createDocumentStory(
+    EditorWithMockAddFileHandler,
+    driveDocumentModelModule.reducer,
+    initialState ?? {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
+      }),
+      id: "powerhouse",
+    },
+    additionalStoryArgs,
+    decorators,
+  );
 }

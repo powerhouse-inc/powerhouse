@@ -17,13 +17,14 @@
   "types": "./dist/index.d.ts",
   "imports": {
     "#document-models/*": "./dist/document-models/*.js",
-    "#editors/*": "./dist/editors/*.js"
+    "#editors/*": "./dist/editors/*.js",
+    "#state": "./dist/state/index.js"
   },
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "build:css": "pnpm dlx @tailwindcss/cli -i ./editors/styles.css -o ./dist/editors/styles.css",
-    "build:tsc": "tsc",
+    "build:tsc": "tsc --build",
     "lint": "eslint",
     "build": "npm run build:css && npm run build:tsc",
     "prebuild": "npm run clean",

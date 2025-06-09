@@ -105,7 +105,7 @@ describe("Internal Listener", () => {
       driveId,
       operations: [
         {
-          hash: expect.any(String) as string,
+          hash: expect.any(String) as unknown as string,
           context: undefined,
           id: expectUUID(expect) as string,
           index: 0,

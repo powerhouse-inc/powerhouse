@@ -1,19 +1,9 @@
-import { UiNodesContextProvider } from "@powerhousedao/reactor-browser";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { Breadcrumbs } from "./index.js";
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Connect/Components/Breadcrumbs",
   component: Breadcrumbs,
-  decorators: [
-    (Story, { args }) => {
-      return (
-        <UiNodesContextProvider>
-          <Story {...args} />
-        </UiNodesContextProvider>
-      );
-    },
-  ],
 };
 
 export default meta;
