@@ -1,3 +1,13 @@
+## 2.5.0-dev.14 (2025-06-10)
+
+### 🚀 Features
+
+- improved analytics frontend integration ([269aed50c](https://github.com/powerhouse-inc/powerhouse/commit/269aed50c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.13 (2025-06-10)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
