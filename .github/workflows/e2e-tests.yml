@@ -46,29 +46,12 @@ jobs:
         run: npx nx run @powerhousedao/ph-cli:build
         shell: bash
 
-      # - name: Install Playwright Browsers
-      #   run: pnpm exec playwright install --with-deps chromium
-      #   working-directory: ./test/connect-e2e
+      - name: Re-Install packages
+        run: pnpm install
 
-      - name: Start Reactor service
-        run: pnpm reactor
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/connect-e2e
-        shell: bash
-
-      - name: Start Connect service  
-        run: pnpm connect
-        working-directory: ./test/connect-e2e
-        shell: bash
-
-      - name: Wait for services to be ready
-        run: |
-          echo "Waiting for services to start..."
-          sleep 10
-          echo "Checking if services are responding..."
-          curl --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:3000 || exit 1
-          curl --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:4001/graphql || exit 1
-          echo "Services are ready!"
-        shell: bash
 
       - name: Run Playwright tests
         run: pnpm test:e2e
