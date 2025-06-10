@@ -65,20 +65,21 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: "pnpm connect",
-      url: CONNECT_URL,
-      stderr: "pipe",
-      stdout: "pipe",
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: "pnpm reactor",
-      url: `${REACTOR_URL}/graphql`,
-      stderr: "pipe",
-      stdout: "pipe",
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
+  // webServer configuration removed - services are started manually in CI
+  // webServer: [
+  //   {
+  //     command: "pnpm connect",
+  //     url: CONNECT_URL,
+  //     stderr: "pipe",
+  //     stdout: "pipe",
+  //     reuseExistingServer: !process.env.CI,
+  //   },
+  //   {
+  //     command: "pnpm reactor",
+  //     url: `${REACTOR_URL}/graphql`,
+  //     stderr: "pipe",
+  //     stdout: "pipe",
+  //     reuseExistingServer: !process.env.CI,
+  //   },
+  // ],
 });
