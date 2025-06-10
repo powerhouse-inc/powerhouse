@@ -2,10 +2,9 @@
 
 ### Summary
 
-- Append only: read/append access to raw operations.
-- No dependencies on `PHDocument`.
-- No dependencies on `Attachment`.
-- Optimistic locking via the `opId`, `index`, and `skip` fields.
+- Read/append-only access to raw operations.
+- No dependencies on `PHDocument` or `Attachment`.
+- Optimistic locking: see comparison below.
 - All writes are atomic.
 - Deterministic hashing.
 - Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
@@ -100,7 +99,6 @@ await operations.apply(
 The database schema, in prisma format, will look something like:
 
 ```prisma
-
 model Operation {
   // this is the primary key for the operation store, serving as a global sequence number and a pivot
   id              Int          @id @default(autoincrement())
@@ -117,23 +115,36 @@ model Operation {
   // write timestamp of the operation (this is supplied by the db)
   writeTimestampUtcMs DateTime @default(now())
 
-  // signed timestamp of the operation (this was submitted by the client)
-  timestampUtcMs  DateTime
+  // defines the stream
   documentId      String
   scope           String
   branch          String
+
+  // defines the signed action (the client does this before submitting the action)
+  timestampUtcMs  DateTime
   index           Int
-  skip            Int
   action          Json
+
+  // defines reshuffling logic (the reactor does this)
+  skip            Int
+  
+  // defines the result of applying the action (the reactor does this)
   resultingState  Json
   hash            String
-  
-  @@unique([documentId, scope, branch, (index + skip) ASC], name: "unique_operation")
 
-  @@index([documentId, scope, branch], name: "streamId")
-  @@index([documentId, scope], name: "branchlessStreamId")
+  // compound unique constraint: the sum of index + skip is unique
+  @@unique([documentId, scope, branch, (index + skip)], name: "unique_revision")
+
+  // indexes
+  @@index([documentId, scope, branch, id DESC], name: "streamOperations")
+  @@index([documentId, scope, id DESC], name: "branchlessStreamOperations")
 }
 ```
+
+#### Indexes
+
+- `streamOperations`: This index lets us find ordered operations by stream. It also lets us quickly find the max index for a stream, which would be the last operation (useful for correct index + skip calculation).
+- `branchlessStreamOperations`: This index lets us find all operations for a stream, without a branch.
 
 ### Locking
 
@@ -170,11 +181,11 @@ An optimistic approach would look like this:
 SELECT index, skip 
   FROM "Operation" 
   WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3 
-  ORDER BY "index" DESC 
+  ORDER BY "id" DESC 
 LIMIT 1;
 ```
 
-Calculate next index and skip. Then submit operation.
+Calculate the next index + skip and submit the operation.
 
 ```sql
 INSERT INTO "Operation"
@@ -183,6 +194,6 @@ VALUES
   ($1, $2, $3, $4, $5, $6, $7, $8);
 ```
 
-In the case that a write to the same stream was done in the time between read and write, the DB will bounce the write, as the `unique_operation` will not be unique. However, the only case in which this can happen is if there is a logic error with how the `IQueue` implementation is already queuing actions by stream.
+In the case that a write to the same stream was done in the time between read and write, the DB will bounce the write because of the `unique_operation` constraint. However, the only case in which this can happen is if there is a logic error with how the `IQueue` implementation is already queuing actions by stream.
 
 If this same bad logic happened with a pessimistic lock, the second lock would wait on the previous conflicting operation before recalculating and inserting the second operation. This is, surprisingly, a big issue as our initial assumption about how the queue and job execution works is flawed, but the pessimistic lock allows the write anyway.

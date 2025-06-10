@@ -22,7 +22,6 @@ The data structure for an `Action` is as follows:
 type BaseAction<
   TType extends string,
   TInput,
-  TScope extends OperationScope = OperationScope,
 > = {
   /** The unique id of the action */
   id: string;
@@ -34,7 +33,7 @@ type BaseAction<
   version: string;
 
   /** The scope of the action, like 'global' or 'local' */
-  scope: TScope;
+  scope: string;
 
   /** The payload of the action */
   input: TInput;
@@ -45,6 +44,25 @@ type BaseAction<
   /** The attachments used in the action */
   attachments: AttachmentRef[];
 };
+
+/**
+ * The context of an action.
+ */
+type ActionContext = {
+  /** The index of the previous operation, for ordering */
+  prevOpIndex: number;
+
+  /** The hash of the previous operation, for consistency */
+  prevOpHash: string;
+
+  /** A nonce, to prevent replay attacks from no-ops */
+  nonce: string;
+
+  /**
+   * The signature of the action.
+   */
+  signature: Signature;
+};
 ```
 
 #### Action Signing
@@ -53,14 +71,15 @@ Actions include cryptographic signatures on the `ActionContext` to verify that t
 
 - Cryptographic signatures are verified using the Web Crypto API.
 - Signatures need: a public key, a payload, and a signature.
-- The signature payload is generated from the `SignedPayloadParameters` and the `Action` using a stable, JSON-encoding.
+- The signature payload is generated from parameters on the `ActionContext`, `SignedPayloadParameters`, and `Action` using a stable, JSON-encoding.
   - This allows us to dedupe information.
   - Allows for wrapping signatures in other signatures.
   - Allows for different payloads, depending on the use case. [Upgrade Actions](./upgrades.md), for instance, may have a different payload than a regular Action.
 - In general, when submitting a new action, the signature payload will include:
   - The action itself
+  - The previous operation's index and hash
+  - A nonce
   - The application information
-  - The hash of the latest operation for the `(documentId, scope, branch)`
 - In the case or reshuffling, the `ISigner` will wrap the signature of an action in a new signature. This is because the previously signed state hash may not be valid so a new one must be generated.
 
 ```tsx
@@ -139,13 +158,6 @@ type Signature = {
    * Base64 encoded signature of the payload.
    */
   signature: string;
-};
-
-type ActionContext = {
-  /**
-   * The signature of the action.
-   */
-  signature: Signature;
 };
 ```
 
