@@ -9,7 +9,8 @@ const WARN_OUTDATED_APP =
 const PH_CONNECT_STUDIO_MODE =
     import.meta.env.PH_CONNECT_STUDIO_MODE || 'false';
 
-const DISABLE_ADD_DRIVE = import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || false;
+const DISABLE_ADD_DRIVE =
+    import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || 'false';
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =
@@ -49,6 +50,12 @@ const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
 const PH_CONNECT_CLI_VERSION =
     import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
 
+const PH_CONNECT_ANALYTICS_DATABASE_NAME =
+    import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
+    `${PH_CONNECT_ROUTER_BASENAME}:analytics`;
+const PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED =
+    import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED || 'false';
+
 const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
     ? import.meta.env.LOG_LEVEL
     : 'info';
@@ -60,7 +67,10 @@ export default {
     studioMode: PH_CONNECT_STUDIO_MODE.toString() === 'true',
     warnOutdatedApp: WARN_OUTDATED_APP === 'true',
     routerBasename: PH_CONNECT_ROUTER_BASENAME,
-    analyticsDatabaseName: `${PH_CONNECT_ROUTER_BASENAME}:analytics`,
+    analytics: {
+        databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
+        useWorker: PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED !== 'true',
+    },
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
         env: PH_CONNECT_SENTRY_ENV,

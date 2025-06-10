@@ -1,7 +1,7 @@
 import { type IPowerhouseAnalytics } from "../analytics/types.js";
 
 export interface PowerhouseGlobal {
-  analytics?: IPowerhouseAnalytics;
+  analytics?: Promise<IPowerhouseAnalytics>;
 }
 
 declare global {

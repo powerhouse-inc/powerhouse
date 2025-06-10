@@ -26,13 +26,14 @@ export function Tooltip(props: Props) {
     className,
     side = "top",
     sideOffset = 5,
+    delayDuration,
     ...rest
   } = props;
 
   return (
     <Root
       defaultOpen={defaultOpen}
-      delayDuration={0}
+      delayDuration={delayDuration}
       onOpenChange={onOpenChange}
       open={open}
     >

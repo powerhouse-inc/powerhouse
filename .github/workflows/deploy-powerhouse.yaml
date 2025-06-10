@@ -2,7 +2,7 @@ name: Deploy Powerhouse
 
 on:
   workflow_run:
-    workflows: [Release Package]
+    workflows: [Release Branch]
     types:
       - completed
 

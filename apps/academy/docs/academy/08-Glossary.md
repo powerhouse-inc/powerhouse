@@ -30,7 +30,9 @@
 - **Actions (Document Actions)** – Typed objects representing an intent to change a document's state, dispatched to reducers, containing an operation type and input data.
 - **API Integration (for Document Models)** – The capability of Document Models to connect with Switchboard API or external APIs, facilitating data exchange between Powerhouse applications and other systems.
 - **Boilerplate (Powerhouse Project)** – The `ph init` command's initial project structure, providing a standard starting point for new Powerhouse packages.
+- **Connect Build** – The output of the `ph connect build` command, which packages a Connect project into a distributable format. This build includes all necessary local/external packages, assets, and styles, and can be previewed locally with `ph connect preview` or deployed.
 - **Data Analysis (with Document Models)** – Leveraging the structured data within Document Models, often via read models, to extract insights, generate reports, and perform analytics on operational and historical data.
+- **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications, typically initiated with the `ph dev` command. It runs essential backend services like the Powerhouse Switchboard to enable real-time document model processing, code generation, and live updates, separate from the front-end Connect Studio.
 - **Dispatch (in Document Models)** – The act of sending an action (representing an operation) to a document model's reducer to trigger a state update.
 - **Document Model Editors** – An interface or UI to a document model that allows users to create and modify the data captured by the document models.
 - **Document Model Specification** – The formal definition of a document model (state, operations), created in Connect Studio (using GraphQL SDL) and exported (e.g., `.phdm.zip`) for code generation.
@@ -39,6 +41,7 @@
 - **Document Type** – A unique string identifier (e.g., `powerhouse/todolist`) for a Document Model, used by host apps to select the correct editor/logic.
 - **Drive** – A logical container in Powerhouse for storing, organizing, and managing collections of documents.
 - **Drive App (Custom Drive Explorer)** – A UI application, often custom, providing tailored views and interactions with documents in a Drive.
+- **Environments (Powerhouse Environments)** – Pre-defined configurations for a project's Powerhouse dependencies, such as `dev` (development), `prod` (production/latest), and `local`. The Powerhouse CLI (`ph use` command) allows developers to easily switch between these environments to use different versions of packages (e.g., bleeding-edge, stable, or from a local monorepo).
 - **Event History (Append-Only Log)** – An immutable, append-only log where every operation applied to a Powerhouse document is stored as an event. It provides a transparent audit trail and enables features like time travel debugging and state reconstruction.
 - **GraphQL Scalars** – Data types used in Powerhouse document modeling (e.g., `String`, `Int`, `Currency`, `OID` for unique object IDs).
 - **GraphQL Schema Definition Language (SDL) (for Document Models)** – Language used in Connect Studio to define a Document Model's data structure (state) and operations.
