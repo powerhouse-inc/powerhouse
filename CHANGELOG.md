@@ -1,3 +1,13 @@
+## 2.5.0-dev.12 (2025-06-10)
+
+### 🩹 Fixes
+
+- **document-drive:** queue strands to be transmitted to internal transmitters to avoid concurrency issues ([685e84483](https://github.com/powerhouse-inc/powerhouse/commit/685e84483))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.11 (2025-06-07)
 
 ### 🚀 Features
