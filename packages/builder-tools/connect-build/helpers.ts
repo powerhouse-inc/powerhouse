@@ -26,7 +26,14 @@ export async function bundleExternalPackages(
       ".gif": "dataurl",
       ".webp": "dataurl",
     },
-    plugins: [nodeModulesPolyfillPlugin()],
+    plugins: [
+      nodeModulesPolyfillPlugin({
+        globals: {
+          Buffer: false,
+          process: true,
+        },
+      }),
+    ],
   });
   return result;
 }
