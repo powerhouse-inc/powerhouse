@@ -9,7 +9,8 @@ const WARN_OUTDATED_APP =
 const PH_CONNECT_STUDIO_MODE =
     import.meta.env.PH_CONNECT_STUDIO_MODE || 'false';
 
-const DISABLE_ADD_DRIVE = import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || false;
+const DISABLE_ADD_DRIVE =
+    import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || 'false';
 const DISABLE_ADD_PUBLIC_DRIVES =
     import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
 const DISABLE_ADD_CLOUD_DRIVES =

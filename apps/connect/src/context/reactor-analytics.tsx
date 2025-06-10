@@ -3,12 +3,14 @@ import type { PGlite } from '@electric-sql/pglite';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
-    useAnalyticsStore,
+    useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
-import { logger } from 'document-drive';
+import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
-import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { Suspense, useEffect, useRef, type PropsWithChildren } from 'react';
 import { useUnwrappedProcessorManager } from '../store/processors';
+
+const logger = childLogger(['reactor-analytics']);
 
 function createPgLiteFactoryWorker(databaseName: string) {
     return async () => {
@@ -20,6 +22,11 @@ function createPgLiteFactoryWorker(databaseName: string) {
         const worker = new PGWorker({
             name: 'pglite-worker',
         });
+
+        worker.onmessage = event => {
+            logger.verbose(event.data);
+        };
+
         worker.onerror = event => {
             logger.error(event.message);
             throw event.error;
@@ -30,6 +37,8 @@ function createPgLiteFactoryWorker(databaseName: string) {
                 databaseName,
             },
         });
+
+        await pgLiteWorker.waitReady;
 
         return pgLiteWorker as unknown as PGlite;
     };
@@ -50,37 +59,41 @@ async function registerDiffAnalyzer(
 }
 
 export function DiffAnalyzerProcessor() {
-    const store = useAnalyticsStore();
+    const store = useAnalyticsStoreAsync();
     const manager = useUnwrappedProcessorManager();
     const hasRegistered = useRef(false);
 
     useEffect(() => {
-        if (!store || !manager || hasRegistered.current) {
+        if (!store.data || !manager || hasRegistered.current) {
             return;
         }
 
         hasRegistered.current = true;
-        registerDiffAnalyzer(manager, store).catch(logger.error);
-    }, [store, manager]);
+        registerDiffAnalyzer(manager, store.data).catch(logger.error);
+    }, [store.data, manager]);
 
     return null;
 }
 
 export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     return (
-        <AnalyticsProvider
-            options={{
-                databaseName: connectConfig.analytics.databaseName,
-                pgLiteFactory: connectConfig.analytics.useWorker
-                    ? createPgLiteFactoryWorker(
-                          connectConfig.analytics.databaseName,
-                      )
-                    : undefined,
-            }}
-        >
-            <DiffAnalyzerProcessor />
-            {children}
-        </AnalyticsProvider>
+        <Suspense fallback={<div>Loading Reactor Analytics</div>}>
+            <AnalyticsProvider
+                options={{
+                    databaseName: connectConfig.analytics.databaseName,
+                    pgLiteFactory: connectConfig.analytics.useWorker
+                        ? createPgLiteFactoryWorker(
+                              connectConfig.analytics.databaseName,
+                          )
+                        : undefined,
+                }}
+            >
+                <Suspense fallback={<div>Loading diff analyzer...</div>}>
+                    <DiffAnalyzerProcessor />
+                </Suspense>
+                {children}
+            </AnalyticsProvider>
+        </Suspense>
     );
 }
 

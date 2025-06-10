@@ -1,11 +1,11 @@
 import { CookieBanner } from '#components';
 import { ReadModeContextProvider, RootProvider } from '#context';
-import { useRenown } from '#hooks';
 import { atoms, atomStore } from '#store';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Provider, useAtomValue } from 'jotai';
 import React, { lazy, Suspense } from 'react';
+import { useRenown } from '../hooks/useRenown.js';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 

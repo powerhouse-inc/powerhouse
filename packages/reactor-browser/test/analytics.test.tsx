@@ -1,6 +1,6 @@
 import { type BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type PropsWithChildren, Suspense } from "react";
+import { type PropsWithChildren, useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import {
@@ -14,6 +14,7 @@ import {
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
+  useCreateAnalyticsStore,
   useGetDimensions,
 } from "../src/analytics/analytics.js";
 import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
@@ -24,31 +25,42 @@ describe("Analytics Store", () => {
     "test/analytics/AnalyticsStore.spec",
   );
 
+  function CreateAnalyticsStore({ databaseName }: { databaseName: string }) {
+    const { mutate } = useCreateAnalyticsStore({
+      databaseName,
+    });
+    useEffect(() => {
+      mutate();
+    }, [databaseName]);
+    return null;
+  }
+
   function createWrapper() {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
-          retry: false,
+          retry: true,
+          retryDelay: 1000,
         },
       },
     });
 
+    const databaseName = Date.now().toString();
+
     return function Wrapper({ children }: { children: React.ReactNode }) {
       return (
-        <Suspense fallback={<div>Loading...</div>}>
-          <AnalyticsProvider
-            databaseName={Date.now().toString()}
-            queryClient={queryClient}
-          >
-            {children}
-          </AnalyticsProvider>
-        </Suspense>
+        <AnalyticsProvider
+          databaseName={databaseName}
+          queryClient={queryClient}
+        >
+          {children}
+        </AnalyticsProvider>
       );
     };
   }
 
   async function resetGlobalAnalytics() {
-    const store = getGlobal("analytics")?.store as
+    const store = (await getGlobal("analytics"))?.store as
       | BrowserAnalyticsStore
       | undefined;
     await store?.destroy();
@@ -62,23 +74,25 @@ describe("Analytics Store", () => {
   it("should add and query analytics data", async () => {
     const wrapper = createWrapper();
 
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult, act } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
-    await addResult.current.mutateAsync({
-      start: DateTime.now(),
-      source: TEST_SOURCE,
-      value: 10000,
-      unit: "DAI",
-      metric: "Budget",
-      dimensions: {
-        budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
-        category: AnalyticsPath.fromString(
-          "atlas/headcount/CompensationAndBenefits/FrontEndEngineering",
-        ),
-        project: TEST_SOURCE,
-      },
+    act(() => {
+      addResult.current.mutate({
+        start: DateTime.now(),
+        source: TEST_SOURCE,
+        value: 10000,
+        unit: "DAI",
+        metric: "Budget",
+        dimensions: {
+          budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+          category: AnalyticsPath.fromString(
+            "atlas/headcount/CompensationAndBenefits/FrontEndEngineering",
+          ),
+          project: TEST_SOURCE,
+        },
+      });
     });
 
     // Test querying series data
@@ -104,7 +118,7 @@ describe("Analytics Store", () => {
       { wrapper },
     );
 
-    await vi.waitFor(() => expect(queryResult.current.isSuccess).toBe(true));
+    await vi.waitFor(() => expect(queryResult.current.status).toBe("success"));
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const results = queryResult.current.data!;
