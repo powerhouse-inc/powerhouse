@@ -17,7 +17,7 @@
 - **Powerhouse Academy** – A training platform for onboarding and upskilling SNO contributors.
 - **Connect** – The contributor's public or private workspace, serving as the entry point for individual contributors to install apps and packages for specific business solutions.
 - **Powergrid** – A decentralized network of reactors that sync with each other.
-- **ph-cmd (Powerhouse CLI)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio).
+- **Powerhouse CLI (ph)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio). It also manages services, ensuring the terminology aligns with the updated setup guide.
 - **Connect App (Connect Studio)** – The primary Powerhouse application for defining document models, building/testing editors (in Studio mode), and collaborating on documents.
 - **Document Tools** – Built-in features within Powerhouse applications (e.g., Connect) that assist with document management, inspection, and interaction, such as Operations History.
 - **Operations History** – A Document Tool in Connect providing a chronological, immutable log of all operations on a document for traceability.
