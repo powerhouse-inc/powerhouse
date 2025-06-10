@@ -512,6 +512,40 @@ This indicates that an error occurred in job execution remotely, but not locally
 
 * The job will be discarded.
 
+#### `MISSING_OPERATIONS`
+
+##### ChannelErrorSource.None
+
+This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
+
+* The job will be discarded.
+
+##### ChannelErrorSource.Inbox
+
+##### ChannelErrorSource.Outbox
+
+#### `EXCESSIVE_SHUFFLE`
+
+##### ChannelErrorSource.None
+
+This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
+
+* The job will be discarded.
+
+##### ChannelErrorSource.Inbox
+
+This would mean that a local reactor is trying to submit an extremely out of date `Action`. In this case:
+
+* Get latest operations from the remote reactor.
+* Rebase locally.
+* The action needs to be updated with the latest index and re-queued as a new job.
+
+##### ChannelErrorSource.Outbox
+
+This would mean that a remote reactor is trying to submit an extremely out of date `Action`. In this case:
+
+* Notify the remote reactor that their operation has been rejected and they must locally rebase before resubmitting.
+
 #### `GRACEFUL_ABORT`
 
 For all sources, the `ISyncManager` will either write the mailboxes to disk (for processing later) or simply ignore and discard.
