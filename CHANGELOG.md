@@ -1,3 +1,13 @@
+## 2.5.0-dev.13 (2025-06-10)
+
+### 🩹 Fixes
+
+- **ph-cli:** proxy pass to proper switchboard instance ([0cd8a2be0](https://github.com/powerhouse-inc/powerhouse/commit/0cd8a2be0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.12 (2025-06-10)
 
 ### 🩹 Fixes
