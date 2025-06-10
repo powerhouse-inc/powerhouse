@@ -13,8 +13,10 @@ import basicSsl from "@vitejs/plugin-basic-ssl";
 import viteReact from "@vitejs/plugin-react";
 import fs from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createLogger, createServer, type InlineConfig } from "vite";
 import { viteEnvs } from "vite-envs";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { type StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings
@@ -95,11 +97,27 @@ export async function startServer(
           find: "react-dom",
           replacement: join(projectRoot, "node_modules", "react-dom"),
         },
+        {
+          find: "vite-plugin-node-polyfills/shims/process",
+          replacement: join(
+            fileURLToPath(import.meta.url),
+            "../../../node_modules",
+            "vite-plugin-node-polyfills/shims/process/dist/index.js",
+          ),
+        },
       ],
       dedupe: ["@powerhousedao/reactor-browser"],
     },
     plugins: [
       tailwindcss(),
+      nodePolyfills({
+        include: ["events"],
+        globals: {
+          Buffer: false,
+          global: false,
+          process: true,
+        },
+      }),
       viteReact({
         // includes js|jsx|ts|tsx)$/ inside projectRoot
         include: [join(projectRoot, "**/*.(js|jsx|ts|tsx)")],
