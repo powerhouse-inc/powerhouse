@@ -49,13 +49,13 @@ type BaseAction<
  * The context of an action.
  */
 type ActionContext = {
-  /** The index of the previous operation, for ordering */
+  /** The index of the previous operation, showing intended ordering. */
   prevOpIndex: number;
 
-  /** The hash of the previous operation, for consistency */
+  /** The hash of the previous operation, showing intended state. */
   prevOpHash: string;
 
-  /** A nonce, to prevent replay attacks from no-ops */
+  /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
   nonce: string;
 
   /**
