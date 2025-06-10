@@ -6,6 +6,15 @@
 TARGET_TAG=${1:-"latest"}
 PROJECT_NAME=${2:-"global"}
 
+# Function to find an available port
+find_available_port() {
+    local port=4001
+    while netstat -tuln | grep -q ":$port "; do
+        port=$((port + 1))
+    done
+    echo $port
+}
+
 # =============================================================================
 # OS Detection and Windows Handling
 # =============================================================================
@@ -113,6 +122,13 @@ EOF
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  SSL Configuration"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Find an available port for Switchboard
+    SWITCHBOARD_PORT=$(find_available_port)
+    echo "Using port $SWITCHBOARD_PORT for Switchboard"
+
+    # Save Switchboard port to configuration
+    echo "SWITCHBOARD_PORT=$SWITCHBOARD_PORT" | sudo tee -a .env
 
     # Add compression settings to nginx.conf if not exists
     if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf || ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
@@ -276,7 +292,7 @@ server {
     add_header X-XSS-Protection "1; mode=block";
     
     location / {
-        proxy_pass http://localhost:4001;
+        proxy_pass http://localhost:$SWITCHBOARD_PORT;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -343,7 +359,7 @@ server {
     }
 
     location /switchboard {
-        proxy_pass http://localhost:4001;
+        proxy_pass http://localhost:$SWITCHBOARD_PORT;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
