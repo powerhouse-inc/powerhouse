@@ -2,7 +2,6 @@ import {
   backupIndexHtml,
   copyConnect,
   ensureNodeVersion,
-  generateImportMapPlugin,
   resolveConnect,
   runShellScriptPlugin,
   viteConnectDevStudioPlugin,
@@ -134,10 +133,6 @@ export async function startServer(
         basicSsl({
           name: "Powerhouse Connect Studio",
         }),
-      generateImportMapPlugin(studioPath, [
-        { name: "react", provider: "esm.sh" },
-        { name: "react-dom", provider: "esm.sh" },
-      ]),
     ],
   };
 

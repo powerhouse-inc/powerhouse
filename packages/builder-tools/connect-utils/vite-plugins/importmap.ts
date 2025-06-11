@@ -9,6 +9,13 @@ import { findPackageJson } from "./base.js";
 
 export type Provider = "node_modules" | "esm.sh";
 
+export type Dependency = {
+  name: string;
+  version?: string;
+  provider: Provider;
+  dependencies?: string[];
+};
+
 const nodeModules = builtinModules.concat(
   builtinModules.map((m) => `node:${m}`),
 );
@@ -132,10 +139,16 @@ async function getPackageExports(
   return entries;
 }
 
-function importFromEsmSh(name: string) {
+function importFromEsmSh(
+  name: string,
+  version?: string,
+  dependencies?: string[],
+) {
+  const lib = `${name}${version ? `@${version}` : ""}`;
+  const query = dependencies?.length ? `&deps=${dependencies.join(",")}` : "";
   return {
-    [name]: `https://esm.sh/${name}`,
-    [`${name}/`]: `https://esm.sh/${name}/`,
+    [name]: `https://esm.sh/${lib}${query}`,
+    [`${name}/`]: `https://esm.sh/${lib}${query}/`,
   };
 }
 
@@ -197,7 +210,7 @@ async function importFromNodeModules(
 
 async function generateImportMap(
   outputDir: string,
-  dependencies: (string | { name: string; provider: Provider })[],
+  dependencies: (string | Dependency)[],
   baseUrl: string,
 ): Promise<{
   importMap: Record<string, string>;
@@ -214,12 +227,14 @@ async function generateImportMap(
   const buildModules: BuildModule[] = [];
 
   for (const dependency of dependencies) {
-    const name = typeof dependency === "string" ? dependency : dependency.name;
-    const provider =
-      typeof dependency === "string" ? "node_modules" : dependency.provider;
+    const isString = typeof dependency === "string";
+    const name = isString ? dependency : dependency.name;
+    const version = isString ? undefined : dependency.version;
+    const provider = isString ? "node_modules" : dependency.provider;
+    const subDependencies = isString ? undefined : dependency.dependencies;
 
     if (provider === "esm.sh") {
-      const imports = importFromEsmSh(name);
+      const imports = importFromEsmSh(name, version, subDependencies);
       importMap = { ...importMap, ...imports };
     } else if (provider.toString() === "node_modules") {
       const { importMap: imports, buildModule } = await importFromNodeModules(
@@ -243,10 +258,7 @@ async function generateImportMap(
   };
 }
 
-async function addImportMapToHTML(
-  importMap: Record<string, string>,
-  html: string,
-) {
+function addImportMapToHTML(importMap: Record<string, string>, html: string) {
   let newHtml = "";
 
   // Regex to find existing import map
@@ -296,7 +308,7 @@ async function addImportMapToHTML(
  */
 export function generateImportMapPlugin(
   outputDir: string,
-  dependencies: (string | { name: string; provider: Provider })[],
+  dependencies: (string | Dependency)[],
 ): PluginOption[] {
   let buildModules: (() => Promise<void>) | undefined = undefined;
   let importMap: Record<string, string> = {};
@@ -324,8 +336,8 @@ export function generateImportMapPlugin(
         return buildModules?.();
       },
       // adds importmap to the html
-      async transformIndexHtml(html) {
-        const newHtml = await addImportMapToHTML(importMap, html);
+      transformIndexHtml(html) {
+        const newHtml = addImportMapToHTML(importMap, html);
         return newHtml || html;
       },
     },
