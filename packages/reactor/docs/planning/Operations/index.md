@@ -161,6 +161,20 @@ type Signature = {
 };
 ```
 
+#### Expected Operation State
+
+The `Signature` of an `Action` ensures that a user intended to perform an action.
+
+However, by default this does not provide any ordering or state guarantees. That is, while a user may specify that a specific `Action` be performed on a document, the reactor is allowed to [reshuffle](../Jobs/reshuffle.md) operations when needed. This may change the order in which a user's action occurs.
+
+This is useful for default functionlity but unwanted in certain classes of application. To handle this, we provide two additional parameters.
+
+A user may specify that the action be performed _at a specific document `index`_ by using the `prevOpIndex` field in the `ActionContext`. This is useful in cases where a user wants to disallow any sort of reshuffling. It does not, however, provide any specific guarantee about the state of the document at that index, since past actions could be manipulated to change the state.
+
+A user may also opt to specify that the action be performed on a specific value of the `state` by using the `prevOpHash` field in the `ActionContext`. Note that this allows certain types of reshuffling (reshuffling that results in the same state), but it requires a specific state to operate on.
+
+Providing both of these parameters is useful in cases for highly secure applications.
+
 ### Operations
 
 An `Operation` represents a result of an `Action` being executed. It is a "fact", not an "intent".
@@ -231,14 +245,6 @@ Along with the unique `(documentId, scope, branch, index)` constraint in the sto
 ### Attachments
 
 See the [Attachments doc](../Attachments/index.md) for more information on attachments. These are not stored with `Operation`s directly, but with the `Action` that consumes them.
-
-### Expected Operation State
-
-The `Action` object has a number of fields that ensure that a user intended to perform an action.
-
-Additionally, a user may specify that the action be performed on a specific `index` by using the `prevOpIndex` field in the `ActionContext`. This is useful in cases where a user wants to disallow any sort of reshuffling.
-
-A user may also optionally specify that the action be performed on a specific `state` by using the `prevOpHash` field in the `ActionContext`. This allows certain types of reshuffling, but requires a specific state to operate on. This is useful in cases for highly secure applications.
 
 ### "System Stream"
 
