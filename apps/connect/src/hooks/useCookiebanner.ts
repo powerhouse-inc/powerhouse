@@ -1,11 +1,15 @@
 import connectConfig from '#connect-config';
-import { useCallback, useMemo, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 const namespace = connectConfig.routerBasename;
 
 export const COOKIE_BANNER_KEY_STORAGE = `${namespace}:display-cookie-banner`;
 
-function getCookieBannerState(): boolean {
+const listeners = new Set<() => void>();
+
+let bannerShown = getInitial();
+
+function getInitial(): boolean {
     try {
         const value = localStorage.getItem(COOKIE_BANNER_KEY_STORAGE);
         return value !== 'false';
@@ -15,22 +19,25 @@ function getCookieBannerState(): boolean {
     }
 }
 
+function getCookieBannerState(): boolean {
+    return bannerShown;
+}
+
 function setCookieBannerState(state: boolean) {
+    bannerShown = state;
     localStorage.setItem(COOKIE_BANNER_KEY_STORAGE, JSON.stringify(state));
 }
 
+function subscribe(fn: () => void) {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+}
+
 export const useCookieBanner = () => {
-    const [cookieBannerShown, _setCookieBannerShown] = useState(
-        getCookieBannerState(),
+    const cookieBannerShown = useSyncExternalStore(
+        subscribe,
+        getCookieBannerState,
+        getCookieBannerState,
     );
-
-    const setCookieBanner = useCallback((state: boolean) => {
-        setCookieBannerState(state);
-        _setCookieBannerShown(state);
-    }, []);
-
-    return useMemo(
-        () => [cookieBannerShown, setCookieBanner] as const,
-        [cookieBannerShown],
-    );
+    return [cookieBannerShown, setCookieBannerState] as const;
 };
