@@ -24,6 +24,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
 
     const errors = await reactor.initialize();
     const error = errors?.at(0);
+    // await new Promise(resolve => setTimeout(resolve, 10000));
     if (error) {
         throw error;
     }

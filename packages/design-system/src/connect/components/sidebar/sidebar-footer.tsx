@@ -5,10 +5,10 @@ import { SidebarUser } from "./sidebar-user.js";
 
 export interface ConnectSidebarFooterProps extends SidebarFooterProps {
   address: `0x${string}` | undefined;
-  onClickSettings?: () => void;
-  onLogin: () => void;
+  onClickSettings: (() => void) | undefined;
+  onLogin: (() => void) | undefined;
   etherscanUrl?: string;
-  onDisconnect: () => void;
+  onDisconnect: (() => void) | undefined;
 }
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
@@ -28,7 +28,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         className,
       )}
     >
-      <div className="">
+      <div>
         {address ? (
           <SidebarUser
             address={address}
@@ -40,8 +40,12 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         )}
       </div>
       <button
+        aria-label="Settings"
         type="button"
-        className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
+        className={twMerge(
+          "mt-3 flex w-full items-center justify-center outline-none",
+          onClickSettings ? "cursor-pointer" : "cursor-wait",
+        )}
         onClick={onClickSettings}
       >
         <Icon className="text-gray-600" name="Settings" />
