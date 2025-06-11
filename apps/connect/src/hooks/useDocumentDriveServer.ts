@@ -85,6 +85,8 @@ export function useDocumentDriveServer() {
     const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
         useDocumentDrives();
 
+    const reactorLoaded = !!reactor;
+
     const openFile = useCallback(
         async (drive: string, id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
@@ -793,6 +795,7 @@ export function useDocumentDriveServer() {
 
     return useMemo(
         () => ({
+            reactorLoaded,
             documentDrives,
             documentDrivesStatus,
             addDocument,
@@ -823,6 +826,7 @@ export function useDocumentDriveServer() {
             getDocumentsIds,
         }),
         [
+            reactorLoaded,
             addDocument,
             addDrive,
             addFile,
