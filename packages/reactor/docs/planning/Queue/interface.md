@@ -4,6 +4,10 @@ See the [Jobs](../Jobs/index.md) doc for a detailed specification on `Job`s.
 
 ```tsx
 
+const QueueEventTypes = {
+  JOB_AVAILABLE: 10000,
+};
+
 class QueueCycleError extends Error {
   constructor() {
     super("Cycle detected in job dependencies");

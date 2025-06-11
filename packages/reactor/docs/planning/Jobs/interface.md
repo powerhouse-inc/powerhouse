@@ -90,6 +90,17 @@ export type JobExecutorConfig = {
   retryMaxDelay?: number;
 };
 
+export interface IReducer {
+  /**
+   * Applies an action to a state and returns the new state.
+   */
+  apply(
+    state: Draft<BaseStateFromDocument>,
+    action: Action,
+    dispatch: ActionDispatch,
+  ): BaseStateFromDocument;
+}
+
 /**
  * Interface for executing jobs from the queue.
  */
@@ -198,8 +209,11 @@ export const JobExecutorEventTypes = {
  */
 export const JobErrorCodes = {
   SIGNATURE_MISMATCH: 90001,
-  HASH_MISMATCH: 90002,
-  LIBRARY_ERROR: 90003,
+  UNAUTHORIZED: 90002,
+  HASH_MISMATCH: 90003,
+  REBASE_FAILED: 90004,
+  LIBRARY_ERROR: 90005,
+  IO_ERROR: 90006,
   GRACEFUL_ABORT: 90010,
 } as const;
 

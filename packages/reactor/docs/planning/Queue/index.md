@@ -11,8 +11,7 @@ The `IQueue` provides a durable API to queue new write jobs and to pull jobs fro
 - Internally, a list of directed graphs is maintained in memory to track the dependency relationships between jobs.
 - If a cycle is detected when enqueuing a job, the job will be rejected with a `QueueCycleError`.
 - On enqueue and on job completion, the queue scans the dependency graph to determine if any jobs are now ready to be executed.
-- If there is are jobs ready to be executed, the queue emits a `JOB_AVAILABLE` event through the `IEventBus`.
-
+- If there is are jobs ready to be executed, the queue emits a `QueueEventTypes.JOB_AVAILABLE` event through the `IEventBus`.
 - When there is heavy contention, reshuffle logic will be applied by the `IJobExecutor`, not the queue.
 - Retry and requeue logic is handled by the `IJobExecutor`, not the queue.
 
@@ -66,13 +65,9 @@ The `getNext` method will continue to return the same handle until the handle re
 ```mermaid
 graph TD
 
-  ES["External System"] -->|"Enqueue()"|AQueue
-  ASub -->|"JobComplete"| AQueue["IQueue"]
-  AQueue -->|"On State Update: Write"| Journal["IQueueJournal"]
-
-  subgraph AEvents["IEventBus"]
-      ASub["on()"]
-  end
+  ES["External System"] -->|"enqueue()"|AQueue
+  IJobExecutionHandle -->|"complete() or fail()"| AQueue["IQueue"]
+  AQueue -->|"Write State Update"| Journal["IQueueJournal"]
 
 ```
 

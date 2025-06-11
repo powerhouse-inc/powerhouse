@@ -2,93 +2,99 @@
 
 ### Summary
 
-- The `IJobExecutor` listens for `jobAvailable` events from the event bus and pulls jobs from the queue when capacity allows.
+- The `IJobExecutor` listens for `QueueEventTypes.JOB_AVAILABLE` events from the event bus and pulls jobs from the queue when capacity allows.
 - It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities.
 - Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
-- Jobs may be persisted in the `IQueue` for later execution, but the `IJobExecutor` does not worry about this. It simply pulls jobs from the queue and executes them.
-- The `IJobExecutor` is responsible for verifying signatures on `Action` objects before executing them.
-- The `IJobExecutor` is responsible for verifying authorization on `Action` objects before executing them.
-- The `IJobExecutor` is responsible for verifying that the resulting `Operation` hash matches the expected hash.
-- The `IJobExecutor` is responsible for writing `Operation`s to the `IOperationStore`.
-- The `IJobExecutor` is responsible for propagating errors to the `IEventBus`.
+- The `IQueue` is responsible for persisting jobs for later execution, but the `IJobExecutor` is not. It simply pulls jobs from the queue and executes them.
 
-### Reshuffle Logic
+### Flow
 
-The `IJobExecutor` will reshuffle jobs when necessary.
+The `IJobExecutor` follows the following flow:
 
-This can be done by invoking the merge helper with `reshuffleByTimestamp`. This rearranges the operations and introduces a skip offset for the newly inserted operations:
+1. Verify signatures on `Action` objects before executing them.
+2. Verify authorization on `Action` objects before executing them.
+3. Reshuffle to get list of actions to process.
+4. Execute reducers to get list of operations.
+5. Verify resulting `Operation` hashes match expected hashes.
+6. Write `Operation`s to the `IOperationStore`.
+7. Propagate events to the `IEventBus`.
 
-```tsx
-const trunk = garbageCollect(sortOperations(storageDocumentOperations));
-const [invertedTrunk, tail] = attachBranch(trunk, branch);
-const newHistory =
-  tail.length < 1
-    ? invertedTrunk
-    : merge(trunk, invertedTrunk, reshuffleByTimestamp);
+The following flowchart demonstrates:
+
+```mermaid
+flowchart TD
+    A("`QueueEventTypes.JOB_AVAILABLE`") --> C{"(1) Are Signatures Valid?"}
+    C -->|Yes| F{"(2) Is Authorized?"}
+    F -->|Yes| H{"(3) Reshuffle"}
+    H -->|Success| I{"(4) Execute Reducers"}
+    I -->|Success| J{"(5a) Is expected hash provided?"}
+    J -->|Yes| K{"(5b) Do hashes match?"}
+    J -->|No| L
+    K -->|No| O["TODO"]
+    K -->|Yes|L{"(6) Write Operations to<br/>IOperationStore"}
+    L -->|Success| M["(7) Emit Events"]
+
+    C -->|No<br/>SIGNATURE_MISMATCH| Failed
+    F -->|No<br/>UNAUTHORIZED| Failed
+    H -->|Failure<br/>REBASE_FAILED| Failed
+    I -->|Failure<br/>LIBRARY_ERROR| Failed
+    L -->|Failure| F5{"Is write retry policy successful?"}
+    F5 -->|Yes| M
+    F5 -->|No<br/>IO_ERROR| Failed
+
+    Failed["Emit JOB_FAILED"] --> End
+
+    M --> End("End")
 ```
 
-`merge` sets up a `startIndex` with a `skip` value and passes it to `reshuffle` (e.g., `reshuffleByTimestamp`). This function assigns new indices and updates the skip field for the reordered operations:
+#### (1) Signature Verification
 
-```tsx
-const newOperationHistory = reshuffle(
-  {
-    index: nextIndex,
-    skip: nextIndex - (maxCommonIndex + 1),
-  },
-  _targetOperations,
-  filteredMergeOperations,
-);
-```
+First, the `IJobExecutor` will verify that the `Action` signatures are valid.
 
-`reshuffleByTimestamp` then walks through the combined operations, reassigning indices and handling the skip value:
+If the `Action` signature is not valid, the `IJobExecutor` will emit a `JobExecutorEventTypes.JOB_FAILED` event with an error code of `JobErrorCodes.SIGNATURE_MISMATCH`.
 
-```tsx
-return [...opsA, ...opsB]
-  .sort((a, b) =>
-    new Date(a.timestamp || "").getTime() -
-    new Date(b.timestamp || "").getTime()
-  )
-  .map((op, i) => ({
-    ...op,
-    index: startIndex.index + i,
-    skip: i === 0 ? startIndex.skip : 0,
-  }));
-```
+The job will not be retried.
 
-### Signature Verification
+#### (2) Authorization Verification
 
-In all cases, the `IJobExecutor` will verify that the `Action` signatures are valid.
-
-If the `Action` signature is not valid, the `IJobExecutor` will emit a `jobFailed` event and the job will not be retried.
-
-### Authorization Verification
-
-The job executor will verify that the `Action` is authorized to be applied to the document.
-
-This is heavily dependent on the current state of the document and the specific `Action`s to be applied.
+The job executor will verify that the user is authorized to apply the `Action` to the document. This is heavily dependent on the current state of the document and the specific `Action`s to be applied.
 
 See the [Auth](../Auth/index.md) documentation for more information.
 
-### Operation Verification 
+#### (3) Reshuffle Logic
+
+See the [Reshuffle](./reshuffle.md) documentation for more information.
+
+#### (4) Reducer Execution
+
+For each `Action`, the `IJobExecutor` will execute the relevant reducer to construct the resulting state of the document. The job executor will generate corresponding `Operation` objects.
+
+##### System Stream
+
+The [`Operations` documentation](../Operations/index.md#system-stream) describes a special set of actions handled by the Reactor itself. These actions are not passed to document-model reducers, but instead are handled by a Reactor-specific reducer.
+
+The `IJobExecutor` will use a `IReducer` to apply the system actions to the document state. The `IReducer` is passed into the `IJobExecutor` constructor, so that the `IJobExecutor` does not need to know about the custom logic for handling these actions.
+
+#### (5) Operation Verification
 
 Optionally, a `Job` may contain information about expected `Operation` data. In this case, the executor will verify that resulting `Operation` hash matches the expected `Operation` hash.
 
-This is useful for the synchronization flow, where we receive `operation` objects over a network and need to apply them locally.
+This is useful for the synchronization flow, where we receive `Operation` objects over a network and need to apply them locally.
 
-### Events
+#### (6) Writing Operations to the `IOperationStore`
+
+The `IJobExecutor` will write `Operation`s to the `IOperationStore` after they have been successfully applied.
+
+On failure, the write will be retried according to a configurable retry policy using exponential backoff and jitter.
+
+#### (7) Propagating Operation Events to the `IEventBus`
 
 The executor emits a set of structured events so that clients can react to job progress and failures:
 
-- **`jobStarted`** - issued when execution of a job begins.
-- **`jobCompleted`** - issued after a job finishes successfully.
-- **`jobRetry`** - issued when execution throws an error and the executor will retry the job.
-- **`jobFailed`** - issued when execution throws an error and will not be retried.
-
-### System Stream
-
-The [`Operations` documentation](../Operations/index.md#system-stream) describes a special set of actions handled by the Reactor itself. These actions are not passed to reducers, but are handled by the `IJobExecutor`.
-
-> TODO: We should define a system action reducer type that is passed into the `IJobExecutor` constructor, so that the `IJobExecutor` does not need to know about the custom logic for handling these actions.
+- **`JobExecutorEventTypes.JOB_STARTED`** - issued when execution of a job begins.
+- **`JobExecutorEventTypes.JOB_COMPLETED`** - issued after a job finishes successfully.
+- **`JobExecutorEventTypes.JOB_RETRY`** - issued when execution throws a retryable error and the executor is retrying the job.
+- **`JobExecutorEventTypes.JOB_FAILED`** - issued when execution throws an unrecoverable error and will not be retried.
 
 ### Error Propagation
 
@@ -110,29 +116,17 @@ One or more `Operation` hashes did not match the expected hash, even after retry
 
 An exception was thrown in the related document model library, even after retry logic was applied.
 
+##### `UNAUTHORIZED`
+
+The user is not authorized to apply the `Action` to the document.
+
+##### `REBASE_FAILED`
+
+A rebase was attempted but failed.
+
 ##### `GRACEFUL_ABORT`
 
 This is used when a shutdown of the job executor is requested. This error code will be attached to all incomplete `JobResult` objects in all queues.
-
-#### Retry Logic
-
-Retries will only be attempted if the job failed for a reason that is likely to be resolved by retrying.
-
-If the job failed because the operation was already applied (a `DuplicateOperationError` was thrown) or because the operation was invalid, it will not be retried.
-
-In some cases, a retry might result in a requeue instead, where the job is added back to the queue to wait for some other job to be processed.
-
-If a job failed because of a temporary network issue, for example, it will be retried with exponential backoff + jitter.
-
-#### Fatal Errors
-
-If a `jobFailed` event is fired, we know that a set of operations could not be applied. We then follow a set of steps to try to resolve the issue:
-
-1. Sync missing history – Attempt to finishin syncing from any remotes, for the documents affected, before continuing.
-
-2. Re‑apply deterministically – Once caught up, retry applying the operation.
-
-3. Bubble up a sync failure if still inconsistent – If the operation still cannot be applied even after resyncing, the reactor itself will emit a failure event (`fatalError`) for monitoring but will not persist the failure in the operations store. The failing reactor can mark the operation for manual reconciliation or trigger a rollback to some previous state.
 
 ### Dependencies
 
@@ -144,15 +138,3 @@ If a `jobFailed` event is fired, we know that a set of operations could not be a
 
 - [Interface](interface.md)
 - [Usage](usage.md)
-
-### Notes
-
-- The job executor listens for 'jobAvailable' events from the event bus instead of polling the queue.
-- When a 'jobAvailable' event is received, the executor checks if it has capacity to process more jobs.
-- If capacity allows, the executor pulls a job from the queue and executes it.
-- When a job is fully executed, it tries to pull another job from the queue.
-- Jobs should be executed in the correct order per document/scope/branch to maintain consistency.
-- The executor should handle retries for failed jobs with exponential backoff.
-- Concurrency should be configurable but respect document/scope/branch ordering constraints.
-- The executor should emit events for monitoring and debugging purposes.
-- Failed jobs should be retried according to their retry configuration.
