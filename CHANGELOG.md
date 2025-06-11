@@ -1,3 +1,13 @@
+## 2.5.0-dev.15 (2025-06-11)
+
+### 🩹 Fixes
+
+- **builder-tools:** polyfill process on connect build ([3b1079fe2](https://github.com/powerhouse-inc/powerhouse/commit/3b1079fe2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.14 (2025-06-10)
 
 ### 🚀 Features
