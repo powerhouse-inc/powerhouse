@@ -6,7 +6,10 @@ export interface DocumentBasicData {
   description: string;
   authorWebsite: string;
   extension: string;
-  schema?: string;
+  global?: {
+    schema: string;
+    initialState: string;
+  };
   modules?: {
     name: string;
     operations: {
@@ -81,7 +84,7 @@ export async function createDocumentAndFillBasicData(
   await page.locator('textarea[name="extension"]').fill(data.extension);
   await page.getByText("Global State Schema").first().click();
 
-  if (data.schema) {
+  if (data.global) {
     // Focus the editor
     await page.click(".cm-editor");
 
@@ -89,10 +92,11 @@ export async function createDocumentAndFillBasicData(
     await page.keyboard.press("Meta+A"); // Use 'Control+A' on Windows if needed
     await page.keyboard.press("Backspace");
 
-    await page.locator(".cm-content").first().fill(data.schema);
+    await page.locator(".cm-content").first().fill(data.global.schema);
+    await page.locator(".cm-content").nth(1).fill(data.global.initialState);
+
     await page.getByText("Global State Schema").first().click();
-    await page.waitForTimeout(200);
-    await page.getByText("Sync with schema").click();
+    await page.waitForTimeout(500);
   }
 
   if (data.modules) {

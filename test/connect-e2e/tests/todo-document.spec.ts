@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Download,
+  type Locator,
+  type Page,
+} from "@playwright/test";
+import fs from "fs";
+import JSZip from "jszip";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
@@ -6,8 +16,77 @@ import {
   createDocumentAndFillBasicData,
   goToConnectDrive,
   normalizeCode,
+  verifyDocumentInList,
   type DocumentBasicData,
 } from "./helpers/index.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DOCUMENT_MODEL_TYPE = "powerhouse/document-model";
+const DOCUMENT_NAME = "ToDoDocument";
+const EXPECTED_OPERATIONS = [
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "ADD_OPERATION",
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "ADD_OPERATION",
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "SET_OPERATION_SCHEMA",
+  "ADD_OPERATION",
+  "ADD_MODULE",
+  "SET_INITIAL_STATE",
+  "SET_INITIAL_STATE",
+  "SET_STATE_SCHEMA",
+  "SET_STATE_SCHEMA",
+  "SET_MODEL_EXTENSION",
+  "SET_AUTHOR_WEBSITE",
+  "SET_MODEL_DESCRIPTION",
+  "SET_AUTHOR_NAME",
+  "SET_MODEL_ID",
+  "SET_STATE_SCHEMA",
+  "SET_MODEL_NAME",
+];
+const EXPECTED_OPERATIONS_COUNT = EXPECTED_OPERATIONS.length;
+
+const TEST_DOCUMENT_DATA: DocumentBasicData = {
+  documentType: "powerhouse/todo",
+  authorName: "Powerhouse",
+  description: "ToDo Document Model",
+  authorWebsite: "https://www.powerhouse.inc",
+  extension: ".phdm",
+  global: {
+    schema:
+      "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+    initialState:
+      '{\n  "items": [],\n  "stats": {\n    "total": 0,\n    "checked": 0,\n    "unchecked": 0\n  }\n}',
+  },
+  modules: [
+    {
+      name: "base_operations",
+      operations: [
+        {
+          name: "add todo item input",
+          schema:
+            "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}",
+        },
+        {
+          name: "update todo item input",
+          schema:
+            "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}",
+        },
+        {
+          name: "delete todo item input",
+          schema: "input DeleteTodoItemInputInput {\n  id: ID!\n}",
+        },
+      ],
+    },
+  ],
+};
 
 test.use({
   storageState: {
@@ -28,143 +107,239 @@ test.use({
 });
 
 test("Create ToDoDocument", async ({ page }) => {
-  const data: DocumentBasicData = {
-    documentType: "powerhouse/todo",
-    authorName: "Powerhouse",
-    description: "ToDo Document Model",
-    authorWebsite: "https://www.powerhouse.inc",
-    extension: ".phdm",
-    schema:
-      "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\n# Defines a GraphQL type for a single to-do item\ntype ToDoItem {\n  id: ID! # Unique identifier for each to-do item\n  text: String! # The text description of the to-do item\n  checked: Boolean! # Status of the to-do item (checked/unchecked)\n}\n\n# Defines a GraphQL type for the statistics of the to-do list\ntype ToDoListStats {\n  total: Int! # Total number of items\n  checked: Int! # Number of checked items\n  unchecked: Int! # Number of unchecked items\n}",
-    modules: [
-      {
-        name: "base_operations",
-        operations: [
-          {
-            name: "add todo item input",
-            schema:
-              "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}",
-          },
-          {
-            name: "update todo item input",
-            schema:
-              "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}",
-          },
-          {
-            name: "delete todo item input",
-            schema: "input DeleteTodoItemInputInput {\n  id: ID!\n}",
-          },
-        ],
-      },
-    ],
-  };
+  // Setup: Disable file picker for testing
+  await page.addInitScript(() => {
+    // @ts-expect-error - This is a test
+    delete window.showSaveFilePicker;
+  });
 
+  // Create and setup document
+  await setupDocument(page, TEST_DOCUMENT_DATA);
+
+  // Verify document in list and open it
+  await verifyDocumentInList(page, DOCUMENT_NAME, DOCUMENT_MODEL_TYPE);
+  await page.getByText(DOCUMENT_NAME).click();
+
+  // Verify all document aspects
+  await verifyDocumentBasicData(page, TEST_DOCUMENT_DATA);
+  await verifyDocumentInitialState(page);
+  await verifyDocumentOperations(page, TEST_DOCUMENT_DATA);
+  await verifyDocumentOperationHistory(page);
+
+  // Export and validate document
+  await exportAndValidateDocument(page);
+});
+
+// Helper Functions
+
+async function setupDocument(
+  page: Page,
+  data: DocumentBasicData,
+): Promise<void> {
   await goToConnectDrive(page, "My Local Drive");
-  await createDocumentAndFillBasicData(page, "ToDoDocument", data);
-  // Close document
+  await createDocumentAndFillBasicData(page, DOCUMENT_NAME, data);
   await closeDocumentFromToolbar(page);
+}
 
-  // Verify document appears in the list with correct name and type
-  await expect(page.locator("text=ToDoDocument")).toBeVisible();
-  await expect(page.locator("text=powerhouse/document-model")).toBeVisible();
+async function verifyDocumentBasicData(
+  page: Page,
+  data: DocumentBasicData,
+): Promise<void> {
+  const checks = [
+    {
+      selector: page.getByPlaceholder("Document Type"),
+      value: data.documentType,
+    },
+    {
+      selector: page.locator('textarea[name="authorName"]'),
+      value: data.authorName,
+    },
+    {
+      selector: page.locator('textarea[name="description"]').first(),
+      value: data.description,
+    },
+    {
+      selector: page.locator('textarea[name="authorWebsite"]'),
+      value: data.authorWebsite,
+    },
+    {
+      selector: page.locator('textarea[name="extension"]'),
+      value: data.extension,
+    },
+  ];
 
-  await page.getByText("ToDoDocument").click();
+  for (const check of checks) {
+    await expect(check.selector).toHaveValue(check.value);
+  }
+}
 
-  // Verify basic document data
-  await expect(page.getByPlaceholder("Document Type")).toHaveValue(
-    data.documentType,
-  );
-  await expect(page.locator('textarea[name="authorName"]')).toHaveValue(
-    data.authorName,
-  );
-  await expect(
-    page.locator('textarea[name="description"]').first(),
-  ).toHaveValue(data.description);
-  await expect(page.locator('textarea[name="authorWebsite"]')).toHaveValue(
-    data.authorWebsite,
-  );
-  await expect(page.locator('textarea[name="extension"]')).toHaveValue(
-    data.extension,
-  );
-
-  // Verify initial state
+async function verifyDocumentInitialState(page: Page): Promise<void> {
+  const expectedInitialState =
+    '{  "items": [],  "stats": {    "total": 0,    "checked": 0,    "unchecked": 0  }}';
   const initialState = await page.locator(".cm-content").nth(1).textContent();
-  expect(initialState).toBe(
-    '{  "items": [],  "stats": {    "total": 0,    "checked": 0,    "unchecked": 0  }}',
-  );
+  expect(initialState).toBe(expectedInitialState);
+}
 
-  // Verify operations
-  const addTodoItemInput = await page
-    .locator(".cm-content")
-    .nth(2)
-    .textContent();
+async function verifyDocumentOperations(
+  page: Page,
+  data: DocumentBasicData,
+): Promise<void> {
+  const operations = data.modules?.[0].operations || [];
 
-  expect(normalizeCode(addTodoItemInput)).toBe(
-    normalizeCode(data.modules?.[0].operations[0].schema),
-  );
+  for (let i = 0; i < operations.length; i++) {
+    const operationContent = await page
+      .locator(".cm-content")
+      .nth(i + 2)
+      .textContent();
+    expect(normalizeCode(operationContent)).toBe(
+      normalizeCode(operations[i].schema),
+    );
+  }
+}
 
-  const updateTodoItemInput = await page
-    .locator(".cm-content")
-    .nth(3)
-    .textContent();
-  expect(normalizeCode(updateTodoItemInput)).toBe(
-    normalizeCode(data.modules?.[0].operations[1].schema),
-  );
-
-  const deleteTodoItemInput = await page
-    .locator(".cm-content")
-    .nth(4)
-    .textContent();
-  expect(normalizeCode(deleteTodoItemInput)).toBe(
-    normalizeCode(data.modules?.[0].operations[2].schema),
-  );
-
-  // Verify document operation history
+async function verifyDocumentOperationHistory(page: Page): Promise<void> {
   await clickDocumentOperationHistory(page);
+
   const articles = await page
     .locator(
       ".flex.items-center.justify-between.rounded-xl.border.border-gray-200.bg-white.px-4.py-2",
     )
     .all();
 
+  expect(articles).toHaveLength(EXPECTED_OPERATIONS_COUNT);
+  await verifyOperationHistoryItems(articles, EXPECTED_OPERATIONS);
+  await closeDocumentOperationHistory(page);
+}
+
+async function verifyOperationHistoryItems(
+  articles: Locator[],
+  expectedOperations: string[],
+): Promise<void> {
   const articlesLength = articles.length;
-  expect(articles).toHaveLength(23);
 
-  const expectedOperations = [
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "ADD_OPERATION",
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "ADD_OPERATION",
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "SET_OPERATION_SCHEMA",
-    "ADD_OPERATION",
-    "ADD_MODULE",
-    "SET_INITIAL_STATE",
-    "SET_STATE_SCHEMA",
-    "SET_STATE_SCHEMA",
-    "SET_MODEL_EXTENSION",
-    "SET_AUTHOR_WEBSITE",
-    "SET_MODEL_DESCRIPTION",
-    "SET_AUTHOR_NAME",
-    "SET_MODEL_ID",
-    "SET_STATE_SCHEMA",
-    "SET_MODEL_NAME",
-  ];
-
-  let index = 0;
-
-  for (const article of articles) {
+  for (let index = 0; index < articles.length; index++) {
+    const article = articles[index];
     const articleText = await article.textContent();
+
     expect(articleText).toContain(`Revision ${articlesLength - index}.`);
     expect(articleText).toContain(expectedOperations[index]);
     expect(articleText).toContain("No errors");
-    index++;
+  }
+}
+
+async function exportAndValidateDocument(page: Page): Promise<void> {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /export/i }).click();
+  const download = await downloadPromise;
+
+  const downloadPath = await saveDownloadedFile(download);
+  await validateExportedZip(downloadPath);
+}
+
+async function saveDownloadedFile(download: Download): Promise<string> {
+  const downloadsDir = path.join(__dirname, "../downloads");
+  const customFilename = "todo.phdm.zip";
+  const downloadPath = path.join(downloadsDir, customFilename);
+
+  if (!fs.existsSync(downloadsDir)) {
+    fs.mkdirSync(downloadsDir, { recursive: true });
   }
 
-  await closeDocumentOperationHistory(page);
-});
+  await download.saveAs(downloadPath);
+  expect(fs.existsSync(downloadPath)).toBeTruthy();
+  console.log("File saved to:", downloadPath);
+
+  return downloadPath;
+}
+
+async function validateExportedZip(downloadPath: string): Promise<void> {
+  const zipBuffer = fs.readFileSync(downloadPath);
+  const zip = await JSZip.loadAsync(zipBuffer);
+  await validateZipContent(zip);
+}
+
+// Zip Validation Functions
+
+async function validateZipContent(zip: JSZip): Promise<void> {
+  const expectedFiles = [
+    "header.json",
+    "state.json",
+    "current-state.json",
+    "operations.json",
+  ];
+
+  verifyZipFilesExist(zip, expectedFiles);
+  await validateZipFileContents(zip, expectedFiles);
+}
+
+function verifyZipFilesExist(zip: JSZip, expectedFiles: string[]): void {
+  for (const filename of expectedFiles) {
+    expect(zip.files[filename]).toBeTruthy();
+    console.log(`✓ ${filename} exists in zip`);
+  }
+}
+
+async function validateZipFileContents(
+  zip: JSZip,
+  filenames: string[],
+): Promise<void> {
+  const expectedDir = path.join(__dirname, "./expected-zip-content");
+
+  for (const filename of filenames) {
+    await validateJsonFile(zip, filename, expectedDir);
+    console.log(`✓ ${filename} content validated`);
+  }
+}
+
+async function validateJsonFile(
+  zip: JSZip,
+  filename: string,
+  expectedDir: string,
+): Promise<void> {
+  const expectedContent = readExpectedFile(expectedDir, filename);
+  const actualContent = await readZipFile(zip, filename);
+
+  const cleanExpected = removeDynamicFields(JSON.parse(expectedContent));
+  const cleanActual = removeDynamicFields(JSON.parse(actualContent));
+
+  expect(cleanActual).toEqual(cleanExpected);
+}
+
+function readExpectedFile(expectedDir: string, filename: string): string {
+  const expectedPath = path.join(expectedDir, filename);
+  expect(fs.existsSync(expectedPath)).toBeTruthy();
+  return fs.readFileSync(expectedPath, "utf8");
+}
+
+async function readZipFile(zip: JSZip, filename: string): Promise<string> {
+  expect(zip.files[filename]).toBeTruthy();
+  return await zip.files[filename].async("text");
+}
+
+function removeDynamicFields(obj: unknown): unknown {
+  const dynamicFields = [
+    "id",
+    "slug",
+    "created",
+    "lastModified",
+    "timestamp",
+    "hash",
+    "moduleId",
+  ];
+
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item: unknown) => removeDynamicFields(item));
+  }
+
+  const cleaned: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (dynamicFields.includes(key)) {
+      continue;
+    }
+    cleaned[key] = removeDynamicFields(value);
+  }
+
+  return cleaned;
+}

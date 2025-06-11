@@ -43,3 +43,20 @@ export async function navigateBackAndVerify(
   await expect(page.getByText(currentFolder)).toHaveCount(1);
   await expect(page.getByText(targetFolder)).toHaveCount(1);
 }
+
+export async function verifyDocumentInList(
+  page: Page,
+  documentName: string,
+  documentType: string,
+): Promise<void> {
+  await expect(
+    page
+      .locator("div.rounded-md.border-2.border-transparent.p-2")
+      .getByText(documentName),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("div.rounded-md.border-2.border-transparent.p-2")
+      .getByText(documentType),
+  ).toBeVisible();
+}
