@@ -172,7 +172,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins,
         build: {
-            minify: false,
+            minify: isProd,
             sourcemap: true,
             rollupOptions: {
                 input: {
