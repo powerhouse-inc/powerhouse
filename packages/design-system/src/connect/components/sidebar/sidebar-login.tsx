@@ -15,8 +15,17 @@ export const SidebarLogin: React.FC<SidebarLoginProps> = ({ onLogin }) => {
   return (
     <AccountPopover content={content}>
       <div className="group/sidebar-footer flex w-full cursor-pointer items-baseline justify-start text-sm font-semibold leading-10 text-gray-600">
-        <img className="group-hover/sidebar-footer:hidden" src={renownShort} />
         <img
+          width={42}
+          height={42}
+          loading="lazy"
+          className="group-hover/sidebar-footer:hidden"
+          src={renownShort}
+        />
+        <img
+          width={42}
+          height={42}
+          loading="lazy"
           className="hidden group-hover/sidebar-footer:block"
           src={renownShortHover}
         />
