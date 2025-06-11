@@ -7,9 +7,9 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import { useAcceptedCookies } from './useAcceptedCookies/index.js';
+import { useAcceptedCookies } from './useAcceptedCookies.js';
 
-export function useInitSenty() {
+export function useInitSentry() {
     const [acceptedCookies] = useAcceptedCookies();
     const { analytics } = acceptedCookies;
 

@@ -1,5 +1,4 @@
-import { CookieBanner } from '#components';
-import { ReadModeContextProvider, RootProvider } from '#context';
+import { ReadModeContextProvider, SentryProvider } from '#context';
 import { atoms, atomStore } from '#store';
 import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
@@ -38,8 +37,8 @@ const ReactorAnalyticsProvider = lazy(
 const App = () => (
     <Provider store={atomStore}>
         <Preloader />
-        <WagmiContext>
-            <RootProvider>
+        <SentryProvider>
+            <WagmiContext>
                 <ReadModeContextProvider>
                     <ReactorAnalyticsProvider>
                         <ToastContainer
@@ -48,13 +47,12 @@ const App = () => (
                         />
                         <UiNodesContextProvider>
                             <Router />
-                            <CookieBanner />
                             <Analytics />
                         </UiNodesContextProvider>
                     </ReactorAnalyticsProvider>
                 </ReadModeContextProvider>
-            </RootProvider>
-        </WagmiContext>
+            </WagmiContext>
+        </SentryProvider>
     </Provider>
 );
 
