@@ -208,7 +208,7 @@ export const JobExecutorEventTypes = {
  * Error codes for job execution
  */
 export const JobErrorCodes = {
-  SIGNATURE_MISMATCH: 90001,
+  SIGNATURE_INVALID: 90001,
   UNAUTHORIZED: 90002,
   HASH_MISMATCH: 90003,
   REBASE_FAILED: 90004,

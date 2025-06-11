@@ -232,6 +232,14 @@ Along with the unique `(documentId, scope, branch, index)` constraint in the sto
 
 See the [Attachments doc](../Attachments/index.md) for more information on attachments. These are not stored with `Operation`s directly, but with the `Action` that consumes them.
 
+### Expected Operation State
+
+The `Action` object has a number of fields that ensure that a user intended to perform an action.
+
+Additionally, a user may specify that the action be performed on a specific `index` by using the `prevOpIndex` field in the `ActionContext`. This is useful in cases where a user wants to disallow any sort of reshuffling.
+
+A user may also optionally specify that the action be performed on a specific `state` by using the `prevOpHash` field in the `ActionContext`. This allows certain types of reshuffling, but requires a specific state to operate on. This is useful in cases for highly secure applications.
+
 ### "System Stream"
 
 In Event Sourcing terminology, the `IOperationStore` is the event log, holding many streams of events: and one stream per `(documentId, scope, branch)` tuple. However, there are some events ("facts") that occur outside of this tuple-defined stream. We are left with two options: either create a wrapper around `Operation` that functions more like a typical event log (`{ type, data: operations }`), or create a special stream events on top of the existing `Operation` scheme. We have opted for the latter.

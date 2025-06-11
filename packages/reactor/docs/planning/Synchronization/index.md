@@ -446,24 +446,27 @@ The `error` property can be one of two types:
 
 ### Job Errors
 
-#### `SIGNATURE_MISMATCH`
+#### `SIGNATURE_INVALID`
 
 ##### ChannelErrorSource.None
 
 This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
 
-* The job will be discarded.
+* The job will be logged as an error.
+* The job will be removed from the inbox queue.
 
 ##### ChannelErrorSource.Inbox
 
-This indicates that a remote operation could not be applied to the local reactor because of a signature mismatch. This should never happen _except in the case of a malicious actor_, as remote reactors are already validating signatures. However, in the case that this does happen:
+This indicates that a remote operation could not be applied to the local reactor because of a signature mismatch. This should never happen _except in the case of a malicious actor_, as remote reactors are already validating signatures.
+
+In the case that this does happen:
 
 * The remote will be marked as invalid and no further operations will be sent to or received from it.
-* The job will be discarded.
+* The job will be removed from the inbox queue.
 
 ##### ChannelErrorSource.Outbox
 
-This indicates that a local operation could not be applied to the remote reactor because of a signature mismatch. This means that we were able to verify a signature, but the remote was not. In this case, there is an unrecoverable error with a remote reactor itself:
+This indicates that a local operation could not be applied to the remote reactor because of a signature mismatch. This means that while we were able to verify a signature, the remote was not. This is an unrecoverable error, signaling a problem with a remote reactor itself:
 
 * The remote will be marked as invalid and no further operations will be sent to or received from it.
 * The job will be removed from the outbox queue.
@@ -474,7 +477,8 @@ This indicates that a local operation could not be applied to the remote reactor
 
 This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
 
-* The job will be discarded.
+* The job will be logged as an error.
+* The job will be removed from the inbox queue.
 
 ##### ChannelErrorSource.Inbox
 

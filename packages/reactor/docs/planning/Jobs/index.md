@@ -34,7 +34,7 @@ flowchart TD
     K -->|Yes|L{"(6) Write Operations to<br/>IOperationStore"}
     L -->|Success| M["(7) Emit Events"]
 
-    C -->|No<br/>SIGNATURE_MISMATCH| Failed
+    C -->|No<br/>SIGNATURE_INVALID| Failed
     F -->|No<br/>UNAUTHORIZED| Failed
     H -->|Failure<br/>REBASE_FAILED| Failed
     I -->|Failure<br/>LIBRARY_ERROR| Failed
@@ -51,7 +51,7 @@ flowchart TD
 
 First, the `IJobExecutor` will verify that the `Action` signatures are valid.
 
-If the `Action` signature is not valid, the `IJobExecutor` will emit a `JobExecutorEventTypes.JOB_FAILED` event with an error code of `JobErrorCodes.SIGNATURE_MISMATCH`.
+If the `Action` signature is not valid, the `IJobExecutor` will emit a `JobExecutorEventTypes.JOB_FAILED` event with an error code of `JobErrorCodes.SIGNATURE_INVALID`.
 
 The job will not be retried.
 
@@ -77,9 +77,7 @@ The `IJobExecutor` will use a `IReducer` to apply the system actions to the docu
 
 #### (5) Operation Verification
 
-Optionally, a `Job` may contain information about expected `Operation` data. In this case, the executor will verify that resulting `Operation` hash matches the expected `Operation` hash.
-
-This is useful for the synchronization flow, where we receive `Operation` objects over a network and need to apply them locally.
+Optionally, a user may specify additional consistency checks by using the `prevOpHash` or `prevOpIndex` in the `ActionContext` of the `Action`s in the `Job`. These are detailed in the [Operations](../Operations/index.md#expected-operation-state) documentation.
 
 #### (6) Writing Operations to the `IOperationStore`
 
@@ -104,13 +102,41 @@ Job errors are defined by the `error: JobError` property on the `JobResult` obje
 
 This is the exhaustive list of possible unrecoverable job error codes, each defined on the [JobErrorCodes](interface.md) object:
 
-##### `SIGNATURE_MISMATCH`
+##### `SIGNATURE_INVALID`
 
-One or more `Action` signatures did not match the expected signature.
+One or more `Action` signatures was invalid.
+
+While the [Synchronization](../Synchronization/index.md#signature_invalid) documentation describes its specific handling of this error, the general recovery flow is as follows:
+
+```mermaid
+flowchart TD
+  Start("Start") --> A{"Is local Action?"}
+  A --> |Yes| B[Retry Signing]
+  A --> |No| C["Reject Job"]
+
+  B --> D{"Is Signature different?"}
+  D --> |Yes| Queue["Queue New Job"]
+  D --> |No| C
+  C --> End
+  Queue --> End("End")
+```
 
 ##### `HASH_MISMATCH`
 
-One or more `Operation` hashes did not match the expected hash, even after retry logic and reshuffling was tried.
+One or more `Operation` hashes did not match the expected hash.
+
+While the [Synchronization](../Synchronization/index.md#hash_mismatch) documentation describes its specific handling of this error, the general recovery flow is as follows:
+
+```mermaid
+flowchart TD
+  Start("Start") --> A{"Is local Action?"}
+  A --> |Yes| B[Remove Expected Hash]
+  A --> |No| C["Reject Job"]
+
+  B --> Queue["Queue New Job"]
+  C --> End
+  Queue --> End("End")
+```
 
 ##### `LIBRARY_ERROR`
 
