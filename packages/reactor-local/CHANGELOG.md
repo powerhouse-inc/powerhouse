@@ -1,3 +1,7 @@
+## 2.5.0-dev.16 (2025-06-11)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.15 (2025-06-11)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.

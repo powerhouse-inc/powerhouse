@@ -1,3 +1,13 @@
+## 2.5.0-dev.16 (2025-06-11)
+
+### 🩹 Fixes
+
+- **ph-cli:** remove connect build dir before building new one ([0b2ef09ee](https://github.com/powerhouse-inc/powerhouse/commit/0b2ef09ee))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.15 (2025-06-11)
 
 ### 🩹 Fixes
