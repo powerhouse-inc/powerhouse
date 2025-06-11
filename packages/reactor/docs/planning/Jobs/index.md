@@ -14,7 +14,7 @@
 
 ### Reshuffle Logic
 
-The `IJobExecutor` will proactively reshuffle jobs to prevent as many revision mismatches as possible.
+The `IJobExecutor` will reshuffle jobs when necessary.
 
 This can be done by invoking the merge helper with `reshuffleByTimestamp`. This rearranges the operations and introduces a skip offset for the newly inserted operations:
 

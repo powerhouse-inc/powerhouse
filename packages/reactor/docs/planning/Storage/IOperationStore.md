@@ -132,8 +132,8 @@ model Operation {
   resultingState  Json
   hash            String
 
-  // compound unique constraint: the sum of index + skip is unique
-  @@unique([documentId, scope, branch, (index + skip)], name: "unique_revision")
+  // compound unique constraint: the index is unique
+  @@unique([documentId, scope, branch, index], name: "unique_revision")
 
   // indexes
   @@index([documentId, scope, branch, id DESC], name: "streamOperations")
