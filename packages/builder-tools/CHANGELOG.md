@@ -1,3 +1,13 @@
+## 2.5.0-dev.21 (2025-06-12)
+
+### 🩹 Fixes
+
+- **builder-tools:** add function to find vite-plugin-node-polyfills directory ([9cba2bf41](https://github.com/powerhouse-inc/powerhouse/commit/9cba2bf41))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.5.0-dev.20 (2025-06-12)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

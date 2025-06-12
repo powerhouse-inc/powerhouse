@@ -1,3 +1,7 @@
+## 2.5.0-dev.21 (2025-06-12)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.20 (2025-06-12)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
