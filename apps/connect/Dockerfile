@@ -1,42 +1,57 @@
-FROM node:22-alpine AS build
+FROM alpine:latest AS build
 
 WORKDIR /app
-# Install system dependencies required by node-gyp
-RUN apk add --no-cache python3 make g++ py3-setuptools && \
-    ln -sf /usr/bin/python3 /usr/bin/python
-RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
-ARG NX_SOCKET_DIR=""
-ENV NX_SOCKET_DIR=${NX_SOCKET_DIR}
-RUN npm install --global pnpm@10
-COPY . .
-RUN pnpm install --frozen-lockfile --filter @powerhousedao/connect...
-ENV NX_DAEMON=false
-ENV NX_ISOLATE_PLUGINS=false
-ARG BASE_PATH="/"
-ENV BASE_PATH=${BASE_PATH}
-ARG PH_PACKAGES
-ENV PH_PACKAGES=${PH_PACKAGES}
-RUN if [ -n "${PH_PACKAGES}" ]; then pnpm add --filter @powerhousedao/connect ${PH_PACKAGES//,/ }; fi
-RUN pnpm nx run @powerhousedao/connect:build --base ${BASE_PATH}
-RUN mkdir pruned && pnpm --filter "@powerhousedao/connect" deploy --prod pruned --legacy
 
-# Final production image
-FROM macbre/nginx-brotli:latest AS runner
-WORKDIR /app
+# Install system dependencies
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    python3 \
+    make \
+    g++ \
+    py3-setuptools \
+    nginx \
+    brotli \
+    nginx-mod-http-brotli \
+    certbot \
+    certbot-nginx \
+    curl \
+    bash \
+    git \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && npm install -g pnpm
+
+# Build arguments
+ARG TAG="latest"
+
+
+# Install ph-cmd
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN pnpm add -g ph-cmd@$TAG
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Environment variables
 ENV NODE_ENV=production
-ARG PORT=80
-ENV PORT=${PORT}
-ARG BASE_PATH=""
-ENV BASE_PATH=${BASE_PATH}
-ARG PH_CONNECT_ROUTER_BASENAME
-ENV PH_CONNECT_ROUTER_BASENAME=${PH_CONNECT_ROUTER_BASENAME}
-ARG PH_CONNECT_SENTRY_DSN=""
-ENV PH_CONNECT_SENTRY_DSN=${PH_CONNECT_SENTRY_DSN}
-ARG PH_CONNECT_SENTRY_ENV=""
-ENV PH_CONNECT_SENTRY_ENV=${PH_CONNECT_SENTRY_ENV}
-COPY --from=build /app/pruned/dist /usr/share/nginx/html
-COPY --from=build /app/pruned/nginx.conf /etc/nginx/conf.d/default.conf.template
-COPY --from=build /app/pruned/nginx.sh /usr/share/nginx/nginx.sh
-RUN chmod +x /usr/share/nginx/nginx.sh
-RUN [ ! -e /lib/libssl.so.3 ] && ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3 || echo "Link already exists"
-ENTRYPOINT ["/usr/share/nginx/nginx.sh"]
+ENV PORT=4000
+ENV PH_CONNECT_ROUTER_BASENAME=""
+ENV PH_CONNECT_SENTRY_DSN=""
+ENV PH_CONNECT_SENTRY_ENV=""
+ENV PH_PACKAGES=""
+WORKDIR /app
+RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
+        ph init project --${TAG}; \
+    else \
+        ph init project; \
+    fi
+WORKDIR /app/project
+
+# Copy and set up entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 4000
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
