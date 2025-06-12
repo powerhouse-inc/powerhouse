@@ -44,9 +44,10 @@ export function initCommand(program: Command): Command {
     .option("-p, --project", "Name of the project")
     .option("-i, --interactive", "Run the command in interactive mode")
     .option(
-      "-v, --version, --tag",
+      "-v, --version",
       'Specify development version to use. Defaults to "main"',
     )
+    .option("-t, --tag", "Same as -v/--version")
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
     .option(
