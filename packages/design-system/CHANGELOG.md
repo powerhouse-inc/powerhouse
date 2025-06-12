@@ -1,3 +1,17 @@
+## 2.5.0-dev.17 (2025-06-12)
+
+### 🚀 Features
+
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+
+### 🔥 Performance
+
+- **connect:** added compressed avif for background image ([1c31889dd](https://github.com/powerhouse-inc/powerhouse/commit/1c31889dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.16 (2025-06-11)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

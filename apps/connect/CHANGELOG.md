@@ -1,3 +1,21 @@
+## 2.5.0-dev.17 (2025-06-12)
+
+### 🚀 Features
+
+- show cookie banner while loading app ([48ad9a8ad](https://github.com/powerhouse-inc/powerhouse/commit/48ad9a8ad))
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+- **connect:** update react version ([37c5beb43](https://github.com/powerhouse-inc/powerhouse/commit/37c5beb43))
+- use fixed versions of react to make use of caching ([26d8ebf72](https://github.com/powerhouse-inc/powerhouse/commit/26d8ebf72))
+
+### 🩹 Fixes
+
+- sync localStorage based hooks with useSyncExternalStore ([be05d434a](https://github.com/powerhouse-inc/powerhouse/commit/be05d434a))
+- **connect:** fix reactor not loaded error ([13e80e4bc](https://github.com/powerhouse-inc/powerhouse/commit/13e80e4bc))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 2.5.0-dev.16 (2025-06-11)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

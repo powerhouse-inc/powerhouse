@@ -1,3 +1,13 @@
+## 2.5.0-dev.17 (2025-06-12)
+
+### 🚀 Features
+
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 2.5.0-dev.16 (2025-06-11)
 
 ### 🩹 Fixes
