@@ -18,6 +18,9 @@ RUN apk add --no-cache \
     curl \
     bash \
     git \
+    gettext \
+    libavif \
+    libavif-dev \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && npm install -g pnpm
 
@@ -52,6 +55,6 @@ WORKDIR /app/project
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 4000
+EXPOSE $PORT
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

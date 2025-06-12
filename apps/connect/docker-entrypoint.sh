@@ -19,6 +19,10 @@ cp -r .ph/connect-build/dist/* /var/www/html/project/
 # Stop any existing nginx process
 nginx -s stop 2>/dev/null || true
 
+# Substitute environment variables in nginx configuration
+envsubst '${PORT}' < /etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp
+mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+
 echo "Testing nginx configuration..."
 nginx -t
 
