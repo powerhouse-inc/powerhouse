@@ -1,12 +1,8 @@
 import { Button, Icon, type IconName } from "#powerhouse";
 
-import { Input } from "#ui";
+import { IdAutocomplete, Input, type IdAutocompleteProps } from "#ui";
 import type { PowerhousePackage } from "@powerhousedao/config";
 import { useCallback, useMemo, useState } from "react";
-import {
-  IdAutocomplete,
-  type IdAutocompleteProps,
-} from "../../../../../scalars/components/fragments/id-autocomplete/index.js";
 
 export type PackageManagerInputProps = {
   onInstall: (value: string) => void | Promise<void>;
