@@ -14,9 +14,15 @@ export async function bundleExternalPackages(
     entryPoints: [externalPackagesImportScriptPath],
     outdir: connectBuildDistDirPath,
     bundle: true,
+    treeShaking: true,
     minify: true,
+    metafile: true,
     format: "esm",
+    logLevel: "error",
     external: ["react", "react-dom"],
+    define: {
+      "process.env.NODE_ENV": '"production"',
+    },
     loader: {
       ".png": "dataurl",
       ".mp4": "dataurl",
@@ -25,9 +31,12 @@ export async function bundleExternalPackages(
       ".jpeg": "dataurl",
       ".gif": "dataurl",
       ".webp": "dataurl",
+      ".avif": "dataurl",
     },
     plugins: [
       nodeModulesPolyfillPlugin({
+        fallback: "empty",
+        modules: ["process", "events"],
         globals: {
           Buffer: false,
           process: true,
