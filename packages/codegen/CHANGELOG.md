@@ -1,3 +1,13 @@
+## 2.5.0-dev.20 (2025-06-12)
+
+### 🚀 Features
+
+- **codegen:** updated editor template ([e2d654238](https://github.com/powerhouse-inc/powerhouse/commit/e2d654238))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 2.5.0-dev.19 (2025-06-12)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

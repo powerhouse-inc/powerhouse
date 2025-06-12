@@ -1,3 +1,13 @@
+## 2.5.0-dev.20 (2025-06-12)
+
+### 🩹 Fixes
+
+- --tag option definition on ph init ([2c8ec8823](https://github.com/powerhouse-inc/powerhouse/commit/2c8ec8823))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.19 (2025-06-12)
 
 ### 🚀 Features
