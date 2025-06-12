@@ -121,10 +121,8 @@ const sidebars = {
           `,
         },
         'academy/ComponentLibrary/CreateCustomScalars',
-        'academy/ComponentLibrary/ScalarComponent',
-        'academy/ComponentLibrary/ComplexComponent',
-        'academy/ComponentLibrary/LayoutComponent',
-        'academy/ComponentLibrary/FragmentsComponent',
+        'academy/ComponentLibrary/IntegrateIntoAReactComponent',
+        'academy/ComponentLibrary/ScalarVsUIComponents',
       ],
     },
 
@@ -136,6 +134,7 @@ const sidebars = {
     },
     { type: 'doc', id: 'academy/Cookbook', label: 'Cookbook' },
     { type: 'doc', id: 'academy/Glossary', label: 'Glossary' },
+    { type: 'doc', id: 'academy/AIResources', label: 'AI Resources' },
     // ...add more as needed
   ],
 };
