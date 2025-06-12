@@ -116,7 +116,7 @@ Every operation applied to a document is **stored as an event** in an append-onl
 
 ## **2. How Document Models Work Technically**
 
-Document models in Powerhouse rely on **event-driven architecture, event sourcing, and CQRS principles**. Here’s a step-by-step breakdown:
+Document models in Powerhouse rely on **event-driven architecture, event sourcing, and CQRS principles**. Here's a step-by-step breakdown:
 
 ### **2.1 Document Creation**
 
@@ -191,3 +191,7 @@ Document Models offer a range of features that can be leveraged to create sophis
 - **Version Control**: Similar to how Git manages changes to source code, Document Models in Connect will support version control, enabling users to track changes, compare different versions, and ensure data integrity over time.
 
 Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data. 
+
+### Up Next: How to build a Document Model
+
+In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved. 

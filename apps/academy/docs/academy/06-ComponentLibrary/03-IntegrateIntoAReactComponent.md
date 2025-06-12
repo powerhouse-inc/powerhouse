@@ -1,0 +1,1 @@
+# Integrate your Scalar into a React Component

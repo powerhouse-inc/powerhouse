@@ -21,6 +21,8 @@ GraphQL has a set of built-in **scalar types**:
 *   `Boolean`: `true` or `false`.
 *   `ID`: A unique identifier, often used as a key for a field. It is serialized in the same way as a String; however, it is not intended to be human-readable.
 
+In addition to these standard types, the Powerhouse Document-Engineering system introduces custom scalars that are linked to reusable front-end components. These scalars are tailored for the web3 ecosystem and will be explored in the Component Library section of the documentation.
+
 ### Lists and Non-Null
 You can modify types using lists and non-null indicators:
 *   **Lists**: To indicate that a field will return a list of a certain type, you wrap the type in square brackets, e.g., `[ToDoItem!]!`. This means the field `items` in `ToDoListState` will be a list of `ToDoItem` objects.
@@ -70,3 +72,6 @@ type ToDoItem {
 6.  **Root State Type**: It's a common pattern to have a single root type for your document state (e.g., `ToDoListState`). This provides a clear entry point for accessing all document data.
 
 By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
+
+At the end of this Document Model Creation Chapter you will find the ToDoList Repository where you can explore the code and implementation of all the items we have discussed. 
+You'll be able to run the advanced ToDoList in Connect Studio and explore the reducers and editor code. 

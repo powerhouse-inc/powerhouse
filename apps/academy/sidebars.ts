@@ -120,6 +120,7 @@ const sidebars = {
             </a>
           `,
         },
+        'academy/ComponentLibrary/CreateCustomScalars',
         'academy/ComponentLibrary/ScalarComponent',
         'academy/ComponentLibrary/ComplexComponent',
         'academy/ComponentLibrary/LayoutComponent',

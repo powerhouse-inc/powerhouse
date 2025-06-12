@@ -1,6 +1,6 @@
 import { Tabs, TabItem } from '@theme/Tabs';
 
-# E.g. Scalar Component
+# Scalar Component Example
 
 Scalars are here to help you define custom fields in your document model schema and speed up the development process.
 There are two applications of scalar components in the document model workflow:
@@ -12,20 +12,13 @@ There are two applications of scalar components in the document model workflow:
 
 As you might know, the document model schema defines the structure of the document and serves as the backbone of the document model. The GraphQL state schema defines how data is captured with the help of types & scalars. When you define a scalar in the document model schema, you are essentially defining a new field that can be used in the document model to capture data.
 
-In the Document Model Editor, you can find all the custom scalar types available in our documentation under the 'Scalars' section.
+In the Document Model Editor, you can find all the custom scalar types available under the 'Scalars' section.
 
-Insert image of the feature. 
-
-````
-scalar PHID <-- imported from the design system library? not sure
-type MyType {
-  myScalar: PHID
-}   
-````
+Insert image of the feature. @callme-t
 
 ## React Component Implementation in the Frontend
 
-All of our reusable components are available in the Document-Engineering design system library or package.
+All of our reusable components are available in the Document-Engineering system package.
 This package comes as a dependency in your project when creating a new document model project.
 ````
 import PHIDField from 'document-engineering'
@@ -55,68 +48,5 @@ The reusable components are essentially a set of front-end components based on G
 
 Read the next chapter to get familiar with our reusable components. 
 
-# PHID Field Example
+# PHID Field Implementation Example
 
-### **Scalar Definition**
-
-- **Name:** `PHID` (Powerhouse ID)
-- **Purpose:** Represents a unique identifier pointing to a document, branch, scope, or data object within the Powerhouse system.
-
-
-<details>
-<summary>**Formatting of the component:**</summary>
-    - **Basic Notation:** `phd:<documentID>`
-        - **Branch and Scope:** Optional components appended using colons `:`.
-        - **Full Notation:** `phd:<documentID>:<branch>:<scope>`
-            - **Branch:** Defaults to `main` if omitted.
-            - **Scope:** Defaults to `public` if omitted.
-    - **Data Object Reference:** `phd:<documentID>/<dataObjectID>`
-    - **URL Format:** `phd://<domain>/<documentID>`
-        - Example: `phd://switchboard.powerhouse.xyz/baefc2a4-f9a0-4950-8161-fd8d8cc7dea9`
-
-**Examples of the component formatting:**
-    - **Basic PHID:** `phd:baefc2a4-f9a0-4950-8161-fd8d8cc7dea9`
-    - **With Branch:** `phd:baefc2a4...:draft`
-    - **With Scope:** `phd:baefc2a4...::local`
-    - **With Branch and Scope:** `phd:baefc2a4...:draft:local`
-    - **With Data Object ID:** `phd:baefc2a4.../3cf05e40...`
-</details>
-
-<details>
-<summary>**Validation of the Component:**</summary>
-    - **Validate each format:**
-        1. **PHID only:** Ensure the document ID is a valid UUID.
-        2. **PHID with data element (OID):** Validate both the document ID and the data object ID.
-        3. **PHID with branch:** Validate the document ID and check if the branch is properly formatted.
-        4. **PHID with scope:** Validate the document ID and check if the scope is valid.
-        5. **PHID with branch and scope:** Validate all three components: document ID, branch, and scope.
-    - **Error Message Example:** "Invalid PHID format. Please check the document ID, branch, or scope."
-</details>
-
-The following is the UI component for the PHID field and scalar in a storybook.
-We use Storybook as our component development environment. 
-It allows us to build and test UI components in isolation, making it easier to develop, test, and document reusable components.
-In our stories you'll find first find a basic UI implementation example of the component, followed by the component's properties, events, and validation options.
-
-- A list of the **default properties** and their descriptions, and a list of the available events that can be triggered.
-- A list of the **component's specific properties** and attributes based on the components functionality. 
-- A list of **validation options**, or ways to validate the component's desired input values.
-
-Additionally, you'll find various **stories of the components in different states**.
-
-<div style={{ 
-  border: '1px solid #E5E7EB', 
-  borderRadius: '8px', 
-  padding: '16px',
-  marginBottom: '20px',
-}}>
-  <iframe
-    src="https://storybook.powerhouse.academy/iframe.html?id=scalars-phid-field--readme&viewMode=story"
-    style={{
-      width: '100%',
-      height: '4500px',
-      border: 'none',
-    }}
-    title="PhidField Component Demo"
-  />
-</div>
