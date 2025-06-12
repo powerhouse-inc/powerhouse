@@ -1,3 +1,13 @@
+## 2.5.0-dev.18 (2025-06-12)
+
+### 🚀 Features
+
+- added docker publish workflow ([adf65ef8a](https://github.com/powerhouse-inc/powerhouse/commit/adf65ef8a))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.17 (2025-06-12)
 
 ### 🚀 Features
