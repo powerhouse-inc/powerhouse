@@ -404,7 +404,6 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 - Implementing Document Model Reducers (Details to be added)
 
 ## Further Reading
-- [Domain Modeling Guide](/domain-modeling)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
 
@@ -450,9 +449,6 @@ The command will output the generated reducer scaffolding code in the designated
 ## Related Recipes
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 - Generating a Document Editor
-
-## Further Reading
-- [Domain Modeling Guide](/domain-modeling)
 
 </details>
 

@@ -1,5 +1,10 @@
 # What is a Document Model?
 
+:::tip
+This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced ToDoList** document model. 
+If you have completed the Get Started tutorial you will revisit familiar topics. 
+:::
+
 A Document Model is: 
 - A structured software framework that represents and **manages business logic** within a digital environment. 
 - A sophisticated template that **encapsulates the essential aspects of a digital process or a set of data**. 

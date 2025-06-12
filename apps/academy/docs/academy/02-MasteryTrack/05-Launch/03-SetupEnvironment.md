@@ -13,7 +13,7 @@ While these are minimum requirements, more resources will provide better perform
 Also make sure you have your preferred domain registered and created subdomains for your Connect & Switchboard instances.
 
 <details>
-<summary>**Setting up a Droplet (Digitial Ocean) instance and connecting your domain**</summary>
+<summary>**Setting up a Droplet (Digital Ocean) instance and connecting your domain**</summary>
 
 This tutorial will guide you through the process of creating a new virtual private server (called a "Droplet") on DigitalOcean and then pointing your custom domain name to it. This will allow users to access your server using a memorable URL like `www.yourdomain.com`.
 
@@ -336,6 +336,9 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
     ph --version
     ```
     You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
+
+4. Create a project with `ph-init <projectname>`. After creation, move into the project with `cd <projectname>`. 
+   Up next is the configurations of your services. 
 
 ### Service Configuration
 

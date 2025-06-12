@@ -1,10 +1,20 @@
 # Explore the Demo Package
 
-:::tip
+:::info How Long Will This Tutorial Take?
+We've designed this "Get Started" track to be as smooth as possible. The time it takes will vary based on your familiarity with modern web development tools.
+
+- **For Experienced Developers** (familiar with TypeScript, React, and CLIs), you can expect to complete the entire four-part tutorial in approximately **1 to 1.5 hours**.
+- **For Developers New to This Stack**, we recommend setting aside **3.5 to 4.5 hours**. This allows for time to understand not just the steps, but the core concepts behind them.
+
+This is just a guideline. The goal is to learn comfortably and build a solid foundation with Powerhouse!
+
+A more in theoretic and advanced version of this tutorial can also be found in [Mastery Track - Document Model Creation](../MasteryTrack/DocumentModelCreation/WhatIsADocumentModel).
+:::
+
+
 To give you a quick idea of how the Powerhouse ecosystem operates on document models and packages, why don\'t you try installing a package?   
 
 Install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package with document models & editors.
-:::
 
 ## Step 1: Install the Powerhouse CLI
 
@@ -26,7 +36,7 @@ Now, use the `ph` command to install the demo package into a global project.
 
 ```bash
 # Install the package
-ph install contributor-billing
+ph install @powerhousedao/contributor-billing
 ```
 
 This command downloads and sets up the Contributor Billing package, making its features available in your Powerhouse environment.
@@ -34,10 +44,8 @@ This command downloads and sets up the Contributor Billing package, making its f
 You have now successfully installed `ph-cmd` and added your first package! 
 
 :::info 
-WORK IN PROGRESS @callmet
-Let's explore what exactly you can do with this package
-- Document model
-- Drive App
+Let's explore what exactly you can do with this package. 
+At the bottom of the Connect Application you'll find a button with 'invoice'. This allows you to open an invoice document. The invoice document helps contributors to get paid for their work through crypto, stablecoins or a number of other currencies. Contributors can change the state of their invoice from draft to issued, while processors or clients can follow up on the payment of these invoices. In the next steps you can explore this for yourself. 
 :::
 
 ## Step 3: Run the Connect App in Studio mode
@@ -45,7 +53,7 @@ To run the package locally in Connect Studio (our collaboration and contributor 
 
 ## Step 4: Log in with Renown
 
-Renown is Powerhouse's decentralized identity and reputation system designed to address the challenge of trust within DAOs, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities.
+Renown is Powerhouse's decentralized identity and reputation system designed to address the challenge of trust within open organization's, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities.
 
 :::tip
 When signing in with Renown, use an Ethereum or blockchain address that can function as your \'identity\', as this address will accrue more experience and history over time.
@@ -66,7 +74,7 @@ This DID is then associated with a credential that authorizes a specific Connect
 ### Modify a document
 Switchboard checks the validity of the DID and credential, ensuring the operation request is legitimate. This flow is designed to offer a verifiable, cryptographically secure login system that replaces traditional password-based authentication with decentralized identity and signature-based trust.
 
-## Step 5: Explore the Document Operations History 
+## Step 5: Create an invoice & Explore the Document Operations History 
 
 ![Renown Login](./images/OperationsHistory.png)
 
@@ -77,7 +85,7 @@ Learn more about the [Operations History and other document tools you get for fr
 
 ## Step 6: Export a Document
 
-Export the document as a `.phd` (Powerhouse Document) file using the export button in the document toolbar at the top. In this toolbar, you will find all available functionality for your documents. The `.phd` file can be sent through any of your preferred channels to other users on your Powergrid network. 
+Export the invoice document as a `.phd` (Powerhouse Document) file using the export button in the document toolbar at the top. In this toolbar, you will find all available functionality for your documents. The `.phd` file can be sent through any of your preferred channels to other users on your Powergrid network. 
 
 Now that you have explored a Powerhouse package and discovered its basic functionalities, it is time to start building your own. 
 Our next tutorial focuses on creating a simple To-Do list document and will introduce you to the world of Document Models. 
