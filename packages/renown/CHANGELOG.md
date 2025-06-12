@@ -1,3 +1,7 @@
+## 2.5.0-dev.19 (2025-06-12)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.18 (2025-06-12)
 
 ### 🚀 Features

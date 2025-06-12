@@ -1,3 +1,13 @@
+## 2.5.0-dev.19 (2025-06-12)
+
+### 🚀 Features
+
+- **ph-cmd:** support --tag on ph init ([7912ab760](https://github.com/powerhouse-inc/powerhouse/commit/7912ab760))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.18 (2025-06-12)
 
 ### 🚀 Features
