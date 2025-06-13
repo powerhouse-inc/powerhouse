@@ -12,6 +12,11 @@ services:
     networks:
       - powerhouse_network
     hostname: connect.powerhouse
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   switchboard:
     image: ghcr.io/powerhouse-inc/powerhouse/switchboard:main
     environment:
@@ -20,11 +25,24 @@ services:
     ports:
       - "127.0.0.1:3000:4001"
     hostname: switchboard.powerhouse
+    networks:
+      - powerhouse_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   redis:
     image: redis:7.2.1
     ports:
       - "127.0.0.1:6380:6379"
-    # command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - powerhouse_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
   postgres:
     image: postgres:16.1
     ports:
@@ -35,6 +53,11 @@ services:
       - POSTGRES_USER=postgres
     networks:
       - powerhouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
 
 networks:
   powerhouse_network:
