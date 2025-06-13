@@ -1,3 +1,14 @@
+## 2.5.0-dev.22 (2025-06-13)
+
+### 🩹 Fixes
+
+- **ci:** set proper tags for docker images ([3cab91969](https://github.com/powerhouse-inc/powerhouse/commit/3cab91969))
+- **ci:** connect deployment ([8ac8e423b](https://github.com/powerhouse-inc/powerhouse/commit/8ac8e423b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.21 (2025-06-12)
 
 ### 🩹 Fixes
