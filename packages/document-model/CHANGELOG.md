@@ -1,3 +1,17 @@
+## 2.5.0-dev.25 (2025-06-13)
+
+### 🚀 Features
+
+- start dependent services with switchboard ([188c82c6a](https://github.com/powerhouse-inc/powerhouse/commit/188c82c6a))
+
+### 🩹 Fixes
+
+- **docker:** request write permissions ([29d4d3fd7](https://github.com/powerhouse-inc/powerhouse/commit/29d4d3fd7))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.24 (2025-06-13)
 
 ### 🚀 Features
