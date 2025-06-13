@@ -473,7 +473,7 @@ export class DriveSubgraph extends Subgraph {
       ) => {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
-        this.logger.debug(
+        this.logger.verbose(
           `strands(drive: ${ctx.driveId}/${driveId}, listenerId: ${listenerId}, since:${since})`,
         );
 
