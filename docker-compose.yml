@@ -2,26 +2,23 @@ name: powerhouse
 
 services:
   connect:
-    build:
-      context: .
-      dockerfile: ./apps/connect/Dockerfile
-      args:
-        BASE_PATH: "/"
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:main
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
       - BASE_PATH=/
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:4000:4000"
+    networks:
+      - powerhouse_network
+    hostname: connect.powerhouse
   switchboard:
-    build:
-      context: .
-      dockerfile: ./apps/switchboard/Dockerfile
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:main
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
     ports:
-      - "127.0.0.1:8080:3000"
+      - "127.0.0.1:3000:3000"
   redis:
     image: redis:7.2.1
     ports:
@@ -35,3 +32,9 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
+    networks:
+      - powerhouse_network
+
+networks:
+  powerhouse_network:
+    name: powerhouse_network
