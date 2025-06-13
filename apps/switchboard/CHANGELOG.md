@@ -1,3 +1,13 @@
+## 2.5.0-dev.23 (2025-06-13)
+
+### 🩹 Fixes
+
+- **switchboard:** added semicolons ([ce23c47f0](https://github.com/powerhouse-inc/powerhouse/commit/ce23c47f0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.22 (2025-06-13)
 
 ### 🩹 Fixes
