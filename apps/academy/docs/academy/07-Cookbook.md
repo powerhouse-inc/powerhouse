@@ -337,6 +337,75 @@ ph init --package-manager pnpm
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
 
+## Powerhouse Environment Recipes
+This section covers recipes for setting up and managing Powerhouse environments, from local development to production servers.
+
+<details id="setting-up-a-production-environment">
+<summary>Setting up a Production Environment</summary>
+
+## How to Set Up a Production Powerhouse Environment
+---
+
+## Problem Statement
+You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
+
+## Prerequisites
+- A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
+- A registered domain name.
+- DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
+
+## Solution
+
+### Step 1: Install Powerhouse Services
+SSH into your server and run the universal installation script. This will install Node.js, pnpm, and prepare the system for Powerhouse services.
+```bash
+curl -fsSL https://apps.powerhouse.io/install | bash
+```
+
+### Step 2: Reload Your Shell
+After the installation, reload your shell's configuration to recognize the new commands.
+```bash
+source ~/.bashrc  # Or source ~/.zshrc if using zsh
+```
+
+### Step 3: Initialize a Project
+Create a project directory for your services. The `ph-init` command sets up the basic structure. Move into the directory after creation.
+```bash
+ph-init my-powerhouse-services
+cd my-powerhouse-services
+```
+
+### Step 4: Configure Services
+Run the interactive setup command. This will guide you through configuring Nginx, PM2, databases, and SSL.
+```bash
+ph service setup
+```
+During the setup, you will be prompted for:
+-   **Packages to install:** You can pre-install any Powerhouse packages you need. (Optional)
+-   **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
+-   **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
+
+## Expected Outcome
+- Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
+- Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
+- Services are managed by PM2 and will restart automatically on boot or if they crash.
+- You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
+
+## Common Issues and Solutions
+- **Issue:** `ph: command not found`
+  - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
+- **Issue:** Let's Encrypt SSL certificate creation fails.
+  - **Solution:** Verify that your domain's DNS records have fully propagated and are pointing to the correct server IP. This can take some time.
+- **Issue:** Services fail to start.
+  - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
+
+## Related Recipes
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+
+## Further Reading
+- [Full Setup Guide](/academy/MasteryTrack/Launch/SetupEnvironment)
+</details>
+
 ## Powerhouse Project Recipes
 This section focuses on creating, configuring, and managing Powerhouse projects, which are collections of document models, editors, and other resources.
 
@@ -923,6 +992,80 @@ You need to understand and manage different types of dependencies in your Powerh
 
 </details>
 
+<details id="packaging-and-publishing-a-powerhouse-project">
+<summary>Packaging and Publishing a Powerhouse Project</summary>
+
+## How to Package and Publish a Powerhouse Project
+---
+
+## Problem Statement
+You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
+
+## Prerequisites
+- A completed Powerhouse project that you are ready to share.
+- An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
+- Your project's `package.json` should have a unique name and correct version.
+- You must be logged into your npm account via the command line.
+
+## Solution
+
+### Step 1: Build the Project
+First, compile your project to create a production-ready build in the `dist/` or `build/` directory.
+
+```bash
+pnpm build
+```
+
+### Step 2: Log In to npm
+If you aren't already, log in to your npm account. You will be prompted for your username, password, and one-time password.
+
+```bash
+npm login
+```
+
+### Step 3: Version Your Package
+Update the package version according to semantic versioning. This command updates `package.json` and creates a new Git tag.
+
+```bash
+# Choose one depending on the significance of your changes
+pnpm version patch   # For bug fixes (e.g., 1.0.0 -> 1.0.1)
+pnpm version minor   # For new features (e.g., 1.0.1 -> 1.1.0)
+pnpm version major   # For breaking changes (e.g., 1.1.0 -> 2.0.0)
+```
+
+### Step 4: Publish the Package
+Publish your package to the npm registry. If it's your first time publishing a scoped package (e.g., `@your-org/your-package`), you may need to add the `--access public` flag.
+
+```bash
+npm publish --access public
+```
+
+### Step 5: Push Git Commits and Tags
+Push your new version commit and tag to your remote repository to keep it in sync.
+
+```bash
+# Push your current branch
+git push
+
+# Push the newly created version tag
+git push --tags
+```
+
+## Expected Outcome
+- Your Powerhouse project is successfully published to the npm registry.
+- Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
+- Your Git repository is updated with the new version information.
+
+## Common Issues and Solutions
+- **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
+  - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
+
+## Related Recipes
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Managing Powerhouse Dependencies and Versions](#managing-powerhouse-dependencies-and-versions)
+
+</details>
+
 ## Data Synchronisation Recipes
 This section helps troubleshoot and understand data synchronization within the Powerhouse ecosystem, including interactions between different services and components.
 
@@ -987,4 +1130,70 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
 -   **Issue:** Persistent syncing problems or unexpected behavior after trying the above.
     -   **Solution:** Consider cleaning the global Powerhouse setup by removing `~/.ph`
     
+</details>
+
+<details id="clearing-package-manager-caches">
+<summary>Clearing Package Manager Caches</summary>
+
+## How to Clear Package Manager Caches
+---
+
+## Problem Statement
+You are encountering unexpected issues with dependencies, `ph-cmd` installation, or package resolution. Corrupted or outdated caches for your package manager (pnpm, npm, yarn) can often be the cause. Clearing the cache forces the package manager to refetch packages, which can resolve these problems.
+
+## Prerequisites
+- Terminal or command prompt access
+- A package manager (pnpm, npm, or yarn) installed
+
+## Solution
+
+Choose the commands corresponding to the package manager you are using.
+
+### For pnpm
+`pnpm` has a robust set of commands to manage its content-addressable store.
+
+```bash
+# Verify the integrity of the cache
+pnpm cache verify
+
+# Remove orphaned packages from the store
+pnpm store prune
+```
+
+### For npm
+`npm` provides commands to clean and verify its cache.
+
+```bash
+# Verify the contents of the cache folder, which can fix some issues
+npm cache verify
+
+# If verification doesn't solve the issue, force clean the cache
+npm cache clean --force
+```
+
+### For Yarn (v1 Classic)
+Yarn Classic allows you to list and clean the cache.
+
+```bash
+# List the contents of the cache
+yarn cache list
+
+# Clean the cache
+yarn cache clean --force
+```
+
+## Expected Outcome
+- The package manager's cache is cleared or verified.
+- Subsequent installations will fetch fresh versions of packages, potentially resolving dependency-related errors.
+- Your system is in a cleaner state for managing Powerhouse project dependencies.
+
+## Common Issues and Solutions
+- **Issue**: Problems persist after clearing the cache.
+  - **Solution**: The issue might not be cache-related. Consider completely removing `node_modules` and lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`) and running `pnpm install` (or equivalent) again.
+
+## Related Recipes
+- [Installing 'ph-cmd'](#installing-ph-cmd)
+- [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
+- [Managing Powerhouse Dependencies and Versions](#managing-powerhouse-dependencies-and-versions)
+
 </details>

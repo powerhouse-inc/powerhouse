@@ -5,7 +5,13 @@ This chapter on **Document Model Creation** will help you with an in depth pract
 If you have completed the Get Started tutorial you will revisit familiar topics. 
 :::
 
-A Document Model is: 
+:::info **Definition: What is a Document Model?**
+A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
+:::
+
+For instance, an invoice document model might define fields like issuer, lineItems, and status, with operations such as AddLineItem and MarkAsPaid.
+
+A Document Model can be understood as: 
 - A structured software framework that represents and **manages business logic** within a digital environment. 
 - A sophisticated template that **encapsulates the essential aspects of a digital process or a set of data**. 
 - A blueprints that define how data is **captured, manipulated, and visualised** within a system. 
@@ -184,14 +190,16 @@ This removes the need for **complex database joins** and allows for **fast, stru
 
 Document Models offer a range of features that can be leveraged to create sophisticated, automated, and data-driven solutions:
 
-- **API Integration**: Document Models can be integrated with Switchboard API or external APIs, allowing for the exchange of data between Connect and other systems or services.
-
-- **Data Analysis**: The structured nature of Document Models makes them ideal for data analysis and reporting. Users can extract insights and generate reports based on the data captured within the models which is accessible through read models. (Operational data + Analytics data which takes into account time series of the data). 
-
-- **Version Control**: Similar to how Git manages changes to source code, Document Models in Connect will support version control, enabling users to track changes, compare different versions, and ensure data integrity over time.
+- **Automation**: Automate workflows using consistent, structured document logic.
+- **Auditability**: Maintain a full history of changes for compliance and transparency.
+- **API Integration**: Seamlessly connect with Switchboard or external APIs for data exchange.
+- **Data Analysis**: Enable real-time and historical insights through structured read models.
+- **Version Control**: Track and compare document states over time, similar to Git.
+- **Collaboration**: Empower decentralized teams to build, modify, and share documents asynchronously.
+- **Extensibility**: Add new fields, operations, and integrations over time without rewriting logic.
 
 Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data. 
 
 ### Up Next: How to build a Document Model
 
-In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved. 
+In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved. d
