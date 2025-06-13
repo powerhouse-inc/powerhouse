@@ -25,7 +25,9 @@ RUN apk add --no-cache \
     && npm install -g pnpm
 
 # Build arguments
-ARG TAG="latest"
+# Other
+ARG TAG=latest
+ENV TAG=$TAG
 
 
 # Install ph-cmd

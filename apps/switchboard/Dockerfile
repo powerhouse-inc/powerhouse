@@ -34,12 +34,18 @@ ENV PORT=4001
 ENV PH_SWITCHBOARD_PORT=$PORT
 
 # Other
-ARG PH_TAG=latest
-ENV PH_TAG=$PH_TAG
+ARG TAG=latest
+ENV TAG=$TAG
 
-RUN pnpm add -g ph-cmd@$PH_TAG && \
-    ph init powerhouse --package-manager pnpm --tag $PH_TAG && \
-    cd /app/powerhouse
+RUN pnpm add -g ph-cmd@$TAG
+RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
+        ph init project --${TAG} --package-manager pnpm \
+    else \
+        ph init project --package-manager pnpm \
+    fi 
+
+
+WORKDIR /app/project
 
 # Copy and set up entrypoint script
 

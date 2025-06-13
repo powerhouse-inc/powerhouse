@@ -18,6 +18,8 @@ on:
       verbose:
         type: boolean
         default: false
+  schedule:
+    - cron: '0 2 * * *'
 
 env:
   NX_ISOLATE_PLUGINS: false
