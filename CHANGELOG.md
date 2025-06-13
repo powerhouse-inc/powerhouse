@@ -1,3 +1,19 @@
+## 2.5.0-dev.24 (2025-06-13)
+
+### 🚀 Features
+
+- added hostnames in docker compose ([a590eea17](https://github.com/powerhouse-inc/powerhouse/commit/a590eea17))
+- **ci:** build and publish docker images on newly created tags ([ee930c4a4](https://github.com/powerhouse-inc/powerhouse/commit/ee930c4a4))
+- **docker-compose:** work with published images ([9f31b70fb](https://github.com/powerhouse-inc/powerhouse/commit/9f31b70fb))
+
+### 🩹 Fixes
+
+- **switchboard:** entrypoint script ([a50e5eb06](https://github.com/powerhouse-inc/powerhouse/commit/a50e5eb06))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.23 (2025-06-13)
 
 ### 🩹 Fixes

@@ -1,3 +1,15 @@
+## 2.5.0-dev.24 (2025-06-13)
+
+### 🚀 Features
+
+- added hostnames in docker compose ([a590eea17](https://github.com/powerhouse-inc/powerhouse/commit/a590eea17))
+- **docker-compose:** work with published images ([9f31b70fb](https://github.com/powerhouse-inc/powerhouse/commit/9f31b70fb))
+- **ci:** build and publish docker images on newly created tags ([ee930c4a4](https://github.com/powerhouse-inc/powerhouse/commit/ee930c4a4))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.23 (2025-06-13)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
