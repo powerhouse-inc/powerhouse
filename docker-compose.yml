@@ -18,7 +18,8 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3000:4001"
+    hostname: switchboard.powerhouse
   redis:
     image: redis:7.2.1
     ports:
