@@ -39,10 +39,10 @@ ENV TAG=$TAG
 
 RUN pnpm add -g ph-cmd@$TAG
 RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
-        ph init project --${TAG} --package-manager pnpm \
+        ph init project --${TAG} --package-manager pnpm; \
     else \
-        ph init project --package-manager pnpm \
-    fi 
+        ph init project --package-manager pnpm; \
+    fi
 
 
 WORKDIR /app/project
