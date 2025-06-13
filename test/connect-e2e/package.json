@@ -22,6 +22,7 @@
     "document-model": "workspace:*",
     "document-drive": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",

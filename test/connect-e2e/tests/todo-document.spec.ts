@@ -13,9 +13,9 @@ import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
   closeDocumentOperationHistory,
+  createDocument,
   createDocumentAndFillBasicData,
   goToConnectDrive,
-  isDocumentAvailableForCreation,
   normalizeCode,
   openDocumentByName,
   verifyDocumentInList,
@@ -132,9 +132,10 @@ test("Create ToDoDocument Model", async ({ page }) => {
   await exportAndValidateDocument(page);
 });
 
-test("Validate ToDoDocument is available for creation", async ({ page }) => {
+test("Create a TodoList", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
-  await isDocumentAvailableForCreation(page, "ToDoDocument");
+  await createDocument(page, "ToDoDocument", "MyTodoList");
+  await page.getByText("This h1 will be styled").waitFor({ state: "visible" });
 });
 
 // Helper Functions

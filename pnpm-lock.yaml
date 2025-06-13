@@ -1721,6 +1721,9 @@ importers:
       '@powerhousedao/connect':
         specifier: workspace:*
         version: link:../../apps/connect
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
