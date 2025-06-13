@@ -8,8 +8,10 @@ To export the document model specification, follow the steps in the [Define ToDo
 
 Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema.
 
+:::info
 **Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
 The reducers provide the actual implementation of what happens when those operations are performed.
+:::
 
 To import the document model specification into your Powerhouse project, you can either: 
 - Copy and paste the file directly into the root of your Powerhouse project.
@@ -18,6 +20,8 @@ To import the document model specification into your Powerhouse project, you can
 Either step will import the document model specification into your Powerhouse project.
 
 ![vscode image](./images/vscode.png)
+
+## In your Project Directory
 
 The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well. 
 
@@ -190,4 +194,5 @@ Output should be as follows:
 
 If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully set up the backbone for a simple **ToDoList** document. 
 
+## Up Next: ToDoListEditor
 In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.

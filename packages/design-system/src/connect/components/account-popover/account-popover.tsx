@@ -14,7 +14,13 @@ export const AccountPopover = ({ children, content }: AccountPopoverProps) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div className="cursor-pointer">{children}</div>
+        <button
+          type="button"
+          aria-label="Open Account"
+          className="cursor-pointer"
+        >
+          {children}
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-0" align="start">
         {content}

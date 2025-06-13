@@ -53,9 +53,6 @@ export async function getAnalyticsStore(
     globalAnalytics &&
     options.databaseName === (await globalAnalytics).options.databaseName
   ) {
-    logger.debug(
-      "Analytics store already initialized with the same database name. Returning existing store.",
-    );
     return (await globalAnalytics).store;
   }
 

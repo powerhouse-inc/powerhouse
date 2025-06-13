@@ -7,7 +7,7 @@ import {
 } from '@powerhousedao/reactor-browser/analytics/context';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
-import { Suspense, useEffect, useRef, type PropsWithChildren } from 'react';
+import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { useUnwrappedProcessorManager } from '../store/processors';
 
 const logger = childLogger(['reactor-analytics']);
@@ -77,23 +77,19 @@ export function DiffAnalyzerProcessor() {
 
 export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     return (
-        <Suspense fallback={<div>Loading Reactor Analytics</div>}>
-            <AnalyticsProvider
-                options={{
-                    databaseName: connectConfig.analytics.databaseName,
-                    pgLiteFactory: connectConfig.analytics.useWorker
-                        ? createPgLiteFactoryWorker(
-                              connectConfig.analytics.databaseName,
-                          )
-                        : undefined,
-                }}
-            >
-                <Suspense fallback={<div>Loading diff analyzer...</div>}>
-                    <DiffAnalyzerProcessor />
-                </Suspense>
-                {children}
-            </AnalyticsProvider>
-        </Suspense>
+        <AnalyticsProvider
+            options={{
+                databaseName: connectConfig.analytics.databaseName,
+                pgLiteFactory: connectConfig.analytics.useWorker
+                    ? createPgLiteFactoryWorker(
+                          connectConfig.analytics.databaseName,
+                      )
+                    : undefined,
+            }}
+        >
+            <DiffAnalyzerProcessor />
+            {children}
+        </AnalyticsProvider>
     );
 }
 

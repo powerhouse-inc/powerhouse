@@ -114,6 +114,6 @@ export const reducer: ToDoListToDoListOperations = {
 
 ## Conclusion
 
-Specifying document operations is a foundational step in building robust and predictable document models in Powerhouse. By clearly defining the "what" (the operation and its input) before implementing the "how" (the reducer logic), you create a clear contract for state transitions. This approach enhances type safety, testability, and the overall maintainability of your document model.
+Specifying document operations is a foundational step in building robust and predictable document models in Powerhouse. By clearly defining the **"what" (the operation and its input)** before implementing the **"how" (the reducer logic)**, you create a clear contract for state transitions. This approach enhances type safety, testability, and the overall maintainability of your document model.
 
 In the next section, we will dive deeper into the implementation of the reducer functions for these specified operations.

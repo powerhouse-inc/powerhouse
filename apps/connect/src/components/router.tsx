@@ -33,7 +33,7 @@ function createRoutes() {
         {
             path: 'd?/:driveId?/*?',
             element: (
-                <Suspense>
+                <Suspense name="Drive">
                     <Content />
                 </Suspense>
             ),
@@ -48,7 +48,7 @@ function createRoutes() {
         {
             path: '/',
             element: (
-                <Suspense>
+                <Suspense name="RouteRoot">
                     <Root />
                 </Suspense>
             ),

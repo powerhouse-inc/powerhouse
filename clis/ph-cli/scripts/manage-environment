@@ -93,6 +93,7 @@ else
             # Build Connect
             echo "Building Connect..."
             ph connect build
+            sudo rm -rf /var/www/html/${PROJECT_NAME}
             sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
             
             # Enable Nginx site

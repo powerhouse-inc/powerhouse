@@ -145,9 +145,10 @@ This command will **build** the project and create a build directory with the ou
 
 This command will **start a local server** and serve the build output.
 Inspect the build output and verify that the document models are working correctly.
+Instead of `pnpm serve`, we'll be using: 
 
 ```bash
-pnpm serve (Not working yet)
+ph connect
 ```
 
 ### 1.4 Storing your project in a git repository

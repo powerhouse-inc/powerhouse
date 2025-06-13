@@ -1,2 +1,2 @@
 export * from './read-mode.js';
-export * from './root-provider.js';
+export * from './sentry-provider.js';

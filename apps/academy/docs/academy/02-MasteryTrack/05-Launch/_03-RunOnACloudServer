@@ -17,7 +17,8 @@ Let's have a look at how to set up Connect & Switchboard apps on a cloud server.
 Ask your IT provider to get access to the AWS environment to set up a server.
 Launch a new server instance for Connect and Switchboard with the specific specs that fit your project.
 
-The steps to create an EC2 instance:
+<details>
+<summary> **The steps to create an EC2 instance** </summary>
    - Make sure your region is set to eu-west-1 (Ireland)
    - Name your instance something like `cloud-server` or your project's name
    - Select Ubuntu 24.04 LTS
@@ -34,12 +35,14 @@ The steps to create an EC2 instance:
       - Custom TCP (Port 8441) for Switchboard
    - **Launch the instance**
 
+   :::warning
+   Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
+   :::
+
+</details>
+
 Now click on your instance ID, which will open a new window with the instance details. Hit the 'Connect' button to get the connection details.
 Within the instance details, you'll find the public IP address of your server instance. We'll use this to connect to our server instance later.
-
-:::warning
-Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
-:::
 
 ### 1.2. Setting up your SSH connection
 

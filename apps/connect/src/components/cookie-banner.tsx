@@ -1,9 +1,10 @@
-import { useAcceptedCookies, useCookieBanner } from '#hooks';
 import {
     type CookieInput,
     CookieBanner as PHCookieBanner,
 } from '@powerhousedao/design-system';
 import { Trans, useTranslation } from 'react-i18next';
+import { useAcceptedCookies } from '../hooks/useAcceptedCookies.js';
+import { useCookieBanner } from '../hooks/useCookiebanner.js';
 import { useModal } from './modal/index.js';
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
@@ -37,11 +38,11 @@ export const CookieBanner = () => {
 
     const handleReject = () => {
         setShowBanner(false);
-        setAcceptedCookies({
+        setAcceptedCookies(() => ({
             analytics: false,
             functional: false,
             marketing: false,
-        });
+        }));
     };
 
     if (!showBanner) {

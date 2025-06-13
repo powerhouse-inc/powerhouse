@@ -3,13 +3,26 @@
 In this tutorial, you will learn how to define the specifications for a **ToDoList** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
-Before you start, make sure you have the Connect application running locally with the command `ph connect`
+Before you start, make sure you have the Connect application running locally with the command:
+```bash
+ph connect
+```
+The Connect application will start and you will see the following output:
+
+```bash
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.5.110:3000/
+  ➜  press h + enter to show help
+```
 
 ## ToDoList Document Specification
 
-Likely you have called your project 'ToDoList'. If you've used a different name, please create a new document specification named 'ToDoList'. **Pay close attention to capitalization, as it influences our code.**  
+Likely you have called your project 'ToDoList'.   
+If you've used a different name, please create a new document specification named 'ToDoList'.   
+**Pay close attention to capitalization, as it influences our code.**  
 
-We'll continue with this project to teach you how to create a document model specification and later an editor for your document model. We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model. Below, you can see the SDL for the `ToDoList` document model.
+We'll continue with this project to teach you how to create a document model specification and later an editor for your document model. We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model.   
+Below, you can see the SDL for the `ToDoList` document model.
 
 :::info
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
@@ -17,7 +30,7 @@ Documents in Powerhouse leverage **event sourcing principles**, where every stat
 :::
 
 <details>
-<summary>State Schema of our ToDoList</summary>
+<summary>State Schema of our Simplified ToDoList</summary>
 
 ```graphql
 # The state of our ToDoList
@@ -37,7 +50,7 @@ type ToDoItem {
 
 
 <details>
-<summary>Operations Schema of our ToDoList</summary>
+<summary>Operations Schema of our Simplified ToDoList</summary>
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item
 input AddTodoItemInput {
@@ -63,7 +76,7 @@ input DeleteTodoItemInput {
 
 To be able to define the document model, you need to open the document model editor in Connect. 
 
-#### The steps below show you how to do this:
+### The steps below show you how to do this:
 
 1. In the Connect application, click on **'document model'** to open the document model specification editor.
 2. Name your document model 'ToDoList' in the Connect application, paying close attention to capitalization. 
@@ -92,5 +105,7 @@ To be able to define the document model, you need to open the document model edi
 Check below screenshot for the complete implementation:
 
 ![ToDoList Document Model](./images/DocumentModelOperations.png)
+
+### Up next: Reducers 
 
 Up next, you'll learn how to implement the runtime logic and components that will use the `ToDoList` document model specification you've just created and exported. 

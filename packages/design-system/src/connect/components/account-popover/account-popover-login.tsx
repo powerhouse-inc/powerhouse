@@ -1,14 +1,17 @@
 import { Icon } from "#powerhouse";
 import { type FC, useState } from "react";
+import { twMerge } from "tailwind-merge";
 
 export interface AccountPopoverLoginProps {
-  onLogin: () => void;
+  onLogin: (() => void) | undefined;
 }
 
 export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
   onLogin,
 }) => {
   const [loading, setLoading] = useState(false);
+
+  const allowLogin = !loading && !!onLogin;
 
   const content = loading ? (
     <Icon name="Reload" size={14} className="animate-spin" />
@@ -17,8 +20,10 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
   );
 
   const handleLogin = () => {
-    setLoading(true);
-    onLogin();
+    if (onLogin) {
+      setLoading(true);
+      onLogin();
+    }
   };
 
   return (
@@ -29,8 +34,11 @@ export const AccountPopoverLogin: FC<AccountPopoverLoginProps> = ({
         </div>
       </div>
       <button
-        onClick={handleLogin}
-        className="mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm active:opacity-70"
+        onClick={allowLogin ? handleLogin : undefined}
+        className={twMerge(
+          "mt-4 flex h-7 w-full cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-transparent text-sm active:opacity-70",
+          allowLogin ? "cursor-pointer" : "cursor-wait",
+        )}
         type="button"
       >
         {content}

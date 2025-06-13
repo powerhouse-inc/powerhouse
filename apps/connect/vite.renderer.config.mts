@@ -154,8 +154,17 @@ export default defineConfig(({ mode }) => {
     if (isProd) {
         plugins.push(
             generateImportMapPlugin(outDir, [
-                { name: 'react', provider: 'esm.sh' },
-                { name: 'react-dom', provider: 'esm.sh' },
+                {
+                    name: 'react',
+                    version: pkg.devDependencies.react.replace('^', ''),
+                    provider: 'esm.sh',
+                },
+                {
+                    name: 'react-dom',
+                    version: pkg.devDependencies['react-dom'].replace('^', ''),
+                    provider: 'esm.sh',
+                    dependencies: ['scheduler@0.23.2'],
+                },
             ]),
         );
     }
@@ -163,7 +172,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins,
         build: {
-            minify: false,
+            minify: isProd,
             sourcemap: true,
             rollupOptions: {
                 input: {

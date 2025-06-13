@@ -33,6 +33,7 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
+    acceptDownloads: true,
   },
 
   /* Configure projects for major browsers */
@@ -64,18 +65,21 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: "pnpm connect",
-      url: CONNECT_URL,
-      stderr: "pipe",
-      reuseExistingServer: !process.env.CI,
-    },
-    {
-      command: "pnpm reactor",
-      url: `${REACTOR_URL}/graphql`,
-      stderr: "pipe",
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
+  // webServer configuration removed - services are started manually in CI
+  // webServer: [
+  //   {
+  //     command: "pnpm connect",
+  //     url: CONNECT_URL,
+  //     stderr: "pipe",
+  //     stdout: "pipe",
+  //     reuseExistingServer: !process.env.CI,
+  //   },
+  //   {
+  //     command: "pnpm reactor",
+  //     url: `${REACTOR_URL}/graphql`,
+  //     stderr: "pipe",
+  //     stdout: "pipe",
+  //     reuseExistingServer: !process.env.CI,
+  //   },
+  // ],
 });

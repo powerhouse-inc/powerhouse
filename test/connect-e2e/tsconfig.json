@@ -3,5 +3,5 @@
   "compilerOptions": {
     "resolveJsonModule": true
   },
-  "include": ["tests/*", "index.ts", "playwright.config.ts", "powerhouse.manifest.json"]
+  "include": ["tests/**/*", "index.ts", "playwright.config.ts", "powerhouse.manifest.json"]
 }

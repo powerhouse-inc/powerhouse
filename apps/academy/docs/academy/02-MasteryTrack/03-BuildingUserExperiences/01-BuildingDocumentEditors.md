@@ -1,4 +1,4 @@
-# Build Document Editors
+# Build Document Editors (WIP)
 
 ## Build with React on Powerhouse
 
@@ -6,7 +6,8 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 
 ### Development Environment
 
-Connect Studio is your primary tool for development. When you run `ph connect`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
+Connect Studio is your primary tool for development.   
+When you run `ph connect`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
 Key aspects of the Powerhouse development environment:
 - **React Foundation**: Build your editor UIs using React components, just as you would in any standard React project.
@@ -20,7 +21,8 @@ Powerhouse aims to keep your developer experience clean, familiar, and focused:
 
 ### Generating Your Editor Template
 
-To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model definition and creates the initial `editor.tsx` file.
+To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model specifications and creates the initial `editor.tsx` file.
+If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
 For example, to generate an editor for a `ToDoList` document model with a document type `powerhouse/todolist`:
 ```bash
@@ -71,40 +73,6 @@ You have several options for styling your editor components:
     ```
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Connect Studio (`ph connect`) will allow you to see your styles applied in real-time.
-
-<details>
-<summary>Refresher on React Hooks</summary>
-
-All of the Powerhouse React Hooks can be found here: [Powerhouse React Hooks API Reference](docs/academy/APIReferences/ReactHooks)
-
-React Hooks allow you to use various React features directly within your functional components. You can use built-in Hooks or combine them to create your own custom Hooks.
-
-**What are Custom Hooks?**
-A custom hook is a JavaScript function whose name starts with "use" and that calls other Hooks. They are used to:
-- Reuse stateful logic between components.
-- Abstract complex logic into a simpler interface.
-- Isolate side effects, particularly those managed by `useEffect`.
-
-**Key Built-in Hooks Examples:**
-- `useState`: Lets a component "remember" information (state).
-- `useEffect`: Lets a component perform side effects (e.g., data fetching, subscriptions, manually changing the DOM).
-- `useContext`: Lets a component receive information from distant parent components without explicitly passing props through every level of the component tree.
-
-**Naming Convention:**
-Hook names must always start with `use` followed by a capital letter (e.g., `useState`, `useOnlineStatus`).
-
-**Rules of Hooks:**
-1.  **Only Call Hooks at the Top Level**: Don't call Hooks inside loops, conditions, or nested functions.
-2.  **Only Call Hooks from React Functions**: Call Hooks from React functional components or from custom Hooks.
-
-It's important to note that a function should only be named and treated as a hook if it actually utilizes one or more built-in React hooks. If a function (even if named `useSomething`) doesn't call any built-in hooks, it behaves like a regular JavaScript function, and making it a "hook" offers no specific React advantages.
-
-For more details, see the official documentation and our API reference:
-- [Reusing Logic with Custom Hooks (react.dev)](https://react.dev/learn/reusing-logic-with-custom-hooks)
-- [Rules of Hooks (react.dev)](https://react.dev/reference/rules/rules-of-hooks)
-- [Powerhouse React Hooks API Reference](docs/academy/APIReferences/ReactHooks)
-
-</details>
 
 ### State Management in Editors
 
