@@ -337,8 +337,11 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
     ```
     You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
 
-4. Create a project with `ph-init <projectname>`. After creation, move into the project with `cd <projectname>`. 
-   Up next is the configurations of your services. 
+4. Create a project with `ph-init <projectname>`. 
+
+5. After creation, move into the project with `cd <projectname>`. 
+
+Up next is the configurations of your services. 
 
 ### Service Configuration
 

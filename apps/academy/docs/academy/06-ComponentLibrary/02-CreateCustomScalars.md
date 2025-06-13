@@ -3,13 +3,6 @@
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
 
-:::info
-When contributing as an open source developer please submit a pull request to the Powerhouse team. 
-Although a design or UI for your scalar is not mandatory, it definitely helps reviewers if there's a visual reference. 
-That said, not all scalars require a dedicated UI component. 
-Some scalars, like scalar Title or scalar Description, might both map to a string and use the same UI, in this case scalars plays more semantic role than a type definition.
-:::
-
 ## Table of Contents
 
 - [Creating New GraphQL Scalars](#creating-new-graphql-scalars)
@@ -392,6 +385,14 @@ export const schema = z.number().positive()
 export const type = 'string'
 export const schema = z.string().datetime()
 ```
+
+:::info
+**Contributing and UI for Scalars**
+
+- **Open Source**: Please submit contributions as a pull request to the Powerhouse team.
+- **UI is Optional but Helpful**: A design or UI for your scalar isn't required, but it helps reviewers understand its purpose.
+- **Semantic Scalars**: Some scalars don't need a unique UI. For instance, `Title` and `Description` might both use a simple text input but serve a semantic role by adding specific meaning and validation to the schema.
+:::
 
 ### Tips
 
