@@ -2,14 +2,14 @@
 
 :::tip
 This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced ToDoList** document model. 
-If you have completed the Get Started tutorial you will revisit familiar topics. 
+Although not required, if you have completed the 'Get Started' tutorial you will revisit familiar topics and can update your existing document model.
 :::
 
 :::info **Definition: What is a Document Model?**
 A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
-:::
 
-For instance, an invoice document model might define fields like issuer, lineItems, and status, with operations such as AddLineItem and MarkAsPaid.
+For instance, an invoice document model might define fields like *issuer*, *lineItems*, and *status*, with operations such as *AddLineItem* and *MarkAsPaid*.
+:::
 
 A Document Model can be understood as: 
 - A structured software framework that represents and **manages business logic** within a digital environment. 
@@ -43,19 +43,19 @@ Example of a **GraphQL-like state schema** for an invoice document:
 
 ```graphql
 type InvoiceState {
-  id: OID!             # Unique identifier for the invoice
-  issuer: OID!         # Reference to the issuing entity
-  recipient: OID!      # Reference to the recipient entity
-  status: String @default(value: "DRAFT") # Invoice status
-  dueDate: DateTime    # Payment due date
+  id: OID!                # Unique identifier for the invoice
+  issuer: OID!            # Reference to the issuing entity
+  recipient: OID!         # Reference to the recipient entity
+  status: String          # (value: "DRAFT") # Invoice status
+  dueDate: DateTime       # Payment due date
   lineItems: [LineItem!]! # List of line items
-  totalAmount: Currency  # Computed field for total invoice value
+  totalAmount: Currency   # Computed field for total invoice value
 }
 
 type LineItem {
   id: OID!
   description: String
-  quantity: Int @default(value: 1)
+  quantity: Int 
   unitPrice: Currency
 }
 ```
@@ -64,7 +64,6 @@ type LineItem {
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
 - Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
-- Allows **default values** using `@default(value: "DRAFT")`.
 - Defines **relationships** using object references (`OID!`).
 
 The state schema acts as a **template** for document instances. Every new invoice created will follow this structure.
@@ -81,7 +80,7 @@ Example operations for modifying an invoice:
 input AddLineItemInput {
   invoiceId: OID!
   description: String
-  quantity: Int @default(value: 1)
+  quantity: Int 
   unitPrice: Currency
 }
 
@@ -95,7 +94,8 @@ input MarkAsPaidInput {
 }
 ```
 
-Each operation **modifies the document state** without altering past data. Instead, a new event is appended to the document history.
+Each operation **modifies the document state** without altering past data.    
+Instead, a new event is appended to the document history.
 
 ---
 
@@ -202,4 +202,4 @@ Document Models are a powerful primitive within the Powerhouse vision, offering 
 
 ### Up Next: How to build a Document Model
 
-In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved. d
+In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved.

@@ -47,7 +47,6 @@ Let's break down its components and principles:
     While you can write one large reducer that uses a `switch` statement or `if/else if` blocks based on `action.type`, Powerhouse's generated code typically encourages a more modular approach. You'll often implement a separate function for each operation, which are then combined into a main reducer object or map. The `ph generate` command usually sets up this structure for you. For example, in your `document-models/to-do-list/src/reducers/to-do-list.ts`, you'll find an object structure like this:
 
     ```typescript
-    // Example structure from 01-GetStarted/03-ImplementOperationReducers.md
     import { ToDoListToDoListOperations } from '../../gen/to-do-list/operations.js'; // Generated type for operations
     import { ToDoListState } from '../../gen/types.js'; // Generated type for state
 
@@ -76,9 +75,9 @@ Let's break down its components and principles:
 
 ## Implementing Reducer Logic: A Practical Guide
 
-Let's use our familiar `ToDoList` example (as detailed in `01-GetStarted/03-ImplementOperationReducers.md`) to illustrate common patterns.
+Let's use our familiar `ToDoList` example to illustrate common patterns. For this example, we'll assume our state schema has been updated to include a `stats` object to track the number of total, checked, and unchecked items.
 
-Assume our `ToDoListState` is:
+Our `ToDoListState` now looks like this:
 ```typescript
 interface ToDoItem {
   id: string;
@@ -86,8 +85,15 @@ interface ToDoItem {
   checked: boolean;
 }
 
+interface ToDoListStats {
+  total: number;
+  checked: number;
+  unchecked: number;
+}
+
 interface ToDoListState {
   items: ToDoItem[];
+  stats: ToDoListStats;
 }
 ```
 
@@ -226,46 +232,105 @@ Using these types provides:
 *   **Autocompletion and IntelliSense**: Improved developer experience in your IDE.
 *   **Clearer code**: Types serve as documentation for the expected data structures.
 
-## Testing Your Reducers
+## Practical Implementation: Writing the `ToDoList` Reducers
 
-Reducers, being pure functions, are inherently easy to test. For each reducer:
-1.  Set up an initial state.
-2.  Create an action object (ideally using the generated action creators from `../../gen/creators.js` or `../../gen/operations.js`).
-3.  Call the reducer function with the initial state and the action.
-4.  Assert that the returned new state is what you expect it to be.
-5.  Crucially, also assert that the *original* state object was not modified.
+Now that you understand the principles, let's put them into practice by implementing the reducers for our `ToDoList` document model.
 
-The `01-GetStarted/03-ImplementOperationReducers.md` document provides excellent examples of reducer tests:
+<details>
+<summary>Tutorial: Implementing the `ToDoList` Reducers</summary>
+
+This tutorial assumes you have followed the steps in the previous chapters, especially using `ph generate ToDoList.phdm.zip` to scaffold your document model's code.
+
+### Implement the Operation Reducers
+
+Navigate to `document-models/to-do-list/src/reducers/to-do-list.ts`. The generator will have created a skeleton file. Replace its contents with the following logic.
 
 ```typescript
-// Example from 01-GetStarted/03-ImplementOperationReducers.md (simplified)
-import utils from '../../gen/utils'; // For createDocument
-import { reducer } from '../../gen/reducer'; // The combined reducer
-import * as creators from '../../gen/creators'; // Action creators
-import { ToDoListDocument, ToDoListState } from '../../gen/types';
+import { ToDoListToDoListOperations } from '../../gen/to-do-list/operations.js';
+import { ToDoListState } from '../../gen/types.js'; // Assuming this now includes the 'stats' object
 
-describe('Todolist Operations', () => {
-  let document: ToDoListDocument; // Assuming ToDoListDocument wraps ToDoListState
+// REMARKS: This is our main reducer object. It implements all operations defined in the schema.
+// The ToDoListToDoListOperations type is auto-generated from our GraphQL specification and ensures type safety.
+export const reducer: ToDoListToDoListOperations = {
+    // REMARKS: The addTodoItemOperation adds a new item and updates our tracking statistics.
+    // - state: The current document state. Powerhouse uses a library like Immer.js,
+    //   so you can write code that looks like it's mutating the state directly.
+    //   Behind the scenes, Powerhouse ensures this results in an immutable update.
+    // - action: Contains the operation's 'type' and 'input' data from the client.
+    // - dispatch: A function to trigger subsequent operations (advanced, not used here).
+    addTodoItemOperation(state, action, dispatch) {
+        // REMARKS: We update our statistics for total and unchecked items.
+        state.stats.total += 1;
+        state.stats.unchecked += 1;
 
-  beforeEach(() => {
-    document = utils.createDocument(); // Gets initial state
-  });
+        // REMARKS: We push the new to-do item into the items array.
+        // The data for the new item comes from the operation's input.
+        state.items.push({
+            id: action.input.id,
+            text: action.input.text,
+            checked: false, // New items always start as unchecked.
+        });
+    },
 
-  it('should handle addTodoItem operation', () => {
-    const input = { id: '1', text: 'Buy milk' };
-    const action = creators.addTodoItem(input); // Use action creator
+    // REMARKS: The updateTodoItemOperation modifies an existing to-do item.
+    // It handles partial updates for text and checked status.
+    updateTodoItemOperation(state, action, dispatch) {
+        // REMARKS: First, we find the specific item we want to update using its ID.
+        const item = state.items.find(item => item.id === action.input.id);
+        
+        // REMARKS: It's good practice to handle cases where the item might not be found.
+        if (!item) {
+            throw new Error(`Item with id ${action.input.id} not found`);
+        }
+        
+        // REMARKS: We only update the text if it was provided in the input.
+        // This allows for partial updates (e.g., just checking an item without changing its text).
+        if (action.input.text) {
+            item.text = action.input.text;
+        }
 
-    // Assuming your main reducer takes the whole document and action
-    const updatedDocument = reducer(document, action);
+        // REMARKS: When the checked status changes, we also update our statistics.
+        // We check for `true` and `false` explicitly.
+        if (action.input.checked) { // This is true only if action.input.checked is true
+            // Note: This assumes the item was previously unchecked. For a more robust implementation,
+            // you could check `if (item.checked === false)` before updating stats to prevent inconsistencies.
+            state.stats.unchecked -= 1;
+            state.stats.checked += 1;
+            item.checked = action.input.checked;
+        }
+        if (action.input.checked === false) {
+            // Note: This assumes the item was previously checked.
+            state.stats.unchecked += 1;
+            state.stats.checked -= 1;
+            item.checked = action.input.checked;
+        }
+    },
 
-    expect(updatedDocument.state.global.items).toHaveLength(1);
-    expect(updatedDocument.state.global.items[0].text).toBe('Buy milk');
-    // Also check that document.state.global.items is different from updatedDocument.state.global.items (immutability)
-  });
-});
+    // REMARKS: The deleteTodoItemOperation removes an item from the list.
+    deleteTodoItemOperation(state, action, dispatch) {
+        // REMARKS: Before removing the item, we find it to determine its checked status.
+        // This is necessary to correctly decrement our statistics.
+        const item = state.items.find(item => item.id === action.input.id);
+
+        // REMARKS: We always decrement the total count.
+        state.stats.total -= 1;
+
+        // REMARKS: We then decrement the 'checked' or 'unchecked' count based on the item's status.
+        if (item?.checked) { // This is shorthand for item?.checked === true
+            state.stats.checked -= 1;
+        }
+        if (item?.checked === false) {
+            state.stats.unchecked -= 1;
+        }
+
+        // REMARKS: Finally, we create a new 'items' array that excludes the deleted item.
+        // Assigning to 'state.items' is handled by Powerhouse to produce a new immutable state.
+        state.items = state.items.filter(item => item.id !== action.input.id);
+    },
+};
 ```
 
-The generator typically creates a test file skeleton (e.g., `document-models/<YourModelName>/src/reducers/tests/<your-model-name>.test.ts`) to get you started. **Thoroughly testing your reducers is paramount for a robust document model.**
+</details>
 
 ## Reducers and the Event Sourcing Model
 
@@ -279,4 +344,4 @@ This is why purity and immutability are so critical:
 
 Implementing document reducers is where you breathe life into your document model's specification. By adhering to the principles of purity and immutability, and by leveraging the type safety provided by Powerhouse's code generation, you can build predictable, testable, and maintainable business logic. These reducers form the immutable backbone of your document's state management, perfectly aligning with the event sourcing architecture that underpins Powerhouse.
 
-With your reducers implemented and tested, your document model is now functionally complete from a data manipulation perspective. The next stages often involve building user interfaces or integrations that interact with this model by dispatching the operations you've now so carefully implemented.
+With your reducers implemented, your document model is now functionally complete from a data manipulation perspective. The next chapter covers how to write tests for this logic to ensure its correctness and reliability.

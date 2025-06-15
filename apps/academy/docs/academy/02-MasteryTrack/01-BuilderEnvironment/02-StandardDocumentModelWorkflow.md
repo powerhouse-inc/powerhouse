@@ -1,9 +1,13 @@
-# Creating Powerhouse packages
+# Create Powerhouse packages
 
-This tutorial guides you through creating a Powerhouse Document Model, from initial setup to publishing a distributable package. We'll leverage the Powerhouse CLI and Connect Studio Mode for a streamlined development experience.
+:::warning
+**This tutorial is a summary for builders that are familiar with building document models**.    
+It guides you through creating a Powerhouse Document Model, from initial setup to publishing a distributable package. 
+Please start with the '**Get Started**' Chapter or '**Document Model Creation**' section if you are unfamiliar with building a document model.
+:::
 
 <details>
-<summary>Key Commands</summary>
+<summary>Key Commands that you'll use in this flow</summary>
 
 -   `pnpm install -g ph-cmd`: Installs the Powerhouse CLI globally.
 -   `ph init`: Initializes a new Powerhouse project or sets up the local environment.
