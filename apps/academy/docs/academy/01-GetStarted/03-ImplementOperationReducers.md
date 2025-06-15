@@ -111,10 +111,10 @@ Here are the tests for the three operations implemented in the reducers file. Th
 <details>
 <summary>Operation Reducers Tests</summary>
 ```typescript
-import utils from '../../gen/utils';
-import { reducer } from '../../gen/reducer';
-import * as creators from '../../gen/creators';
-import { ToDoListDocument } from '../../gen/types';
+import utils from '../../gen/utils.js';
+import { reducer } from '../../gen/reducer.js';
+import * as creators from '../../gen/creators.js';
+import { ToDoListDocument } from '../../gen/types.js';
 
 // REMARKS:
 // These tests demonstrate the event sourcing principles of our document model.
