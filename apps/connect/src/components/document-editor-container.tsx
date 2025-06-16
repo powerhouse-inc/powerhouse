@@ -2,7 +2,6 @@ import {
     useDocumentDriveById,
     useDocumentDriveServer,
     useGetDocument,
-    useOpenSwitchboardLink,
 } from '#hooks';
 import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';

@@ -1,119 +1,65 @@
 // test suite for the switchboard hooks
 
-import {
-  driveDocumentModelModule,
-  type IDocumentDriveServer,
-  ReactorBuilder,
-} from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
+import { generateDocumentStateQueryFields } from "document-drive/utils/graphql";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
 } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSwitchboard } from "../src/hooks/useSwitchboard.js";
+import { describe, it } from "vitest";
+import { renderHook } from "vitest-browser-react";
+import {
+  getDocumentGraphqlQuery,
+  getSwitchboardGatewayUrl,
+  useGetSwitchboardLink,
+} from "../src/hooks/useSwitchboard.js";
 
 describe("Switchboard hooks", () => {
-  let reactor: IDocumentDriveServer;
-  beforeEach(async () => {
-    const documentModels = [
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as DocumentModelModule[];
-    reactor = new ReactorBuilder(documentModels).build();
-    await reactor.initialize();
+  const documentModels = [
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[];
 
-    // Mock getDocument to return a document with documentModel type
-    reactor.getDocument = vi
-      .fn()
-      .mockImplementation(async (driveId: string, documentId: string) => {
-        return {
-          id: documentId,
-          driveId,
-          documentType: "document-model",
-          state: {
-            name: "TestDocument",
-            fields: {
-              title: { type: "string" },
-              content: { type: "string" },
-              createdAt: { type: "date" },
-              metadata: {
-                type: "object",
-                fields: {
-                  tags: { type: "array", items: { type: "string" } },
-                  version: { type: "number" },
-                },
-              },
-            },
-          },
-        };
-      });
-
-    // Mock getDocumentModelModules to return the document model module
-    reactor.getDocumentModelModules = vi.fn().mockReturnValue([
-      {
-        reducer: vi.fn(),
-        actions: {},
-        utils: {},
-        documentModel: {
-          id: "document-model",
-          name: "TestDocument",
-          extension: ".phdm",
-          description: "Test document model",
-          author: {
-            name: "Powerhouse",
-            website: "https://powerhouse.inc",
-          },
-          specifications: [
-            {
-              version: 1,
-              changeLog: [],
-              state: {
-                global: {
-                  schema:
-                    "type TestDocumentState { title: String content: String createdAt: String metadata: Metadata } type Metadata { tags: [String!]! version: Int! }",
-                  initialValue:
-                    '{"title":"","content":"","createdAt":"","metadata":{"tags":[],"version":1}}',
-                  examples: [],
-                },
-                local: {
-                  schema: "",
-                  initialValue: '""',
-                  examples: [],
-                },
-              },
-              modules: [],
-            },
-          ],
-        },
-      },
-    ]);
-  });
-
-  it("should return the proper switchboard url", async () => {
-    if (!reactor) {
-      throw new Error("Reactor not initialized");
-    }
-    const { getSwitchboardGatewayUrl } = useSwitchboard(reactor);
+  it("should return the proper switchboard url", () => {
     const url = getSwitchboardGatewayUrl("https://example.com/d/123");
     expect(url).toBe("https://example.com/graphql");
   });
 
-  it("should generate the proper query for a document type", async () => {
-    if (!reactor) {
-      throw new Error("Reactor not initialized");
-    }
-    const { getDocumentGraphqlQuery } = useSwitchboard(reactor);
-    const query = await getDocumentGraphqlQuery("123", "456");
-    expect(query).toBe(
+  it("should generate the proper query for a document type", () => {
+    const stateFields = generateDocumentStateQueryFields(
+      driveDocumentModelModule.documentModel,
+      "document",
+    );
+    expect(
+      getDocumentGraphqlQuery(
+        documentModels,
+        driveDocumentModelModule.documentModel.id,
+      ),
+    ).toBe(
       `
         query getDocument($documentId: String!) {
-          TestDocument {
+          DocumentDrive {
             getDocument(id: $documentId) {
-              title content createdAt metadata { tags version }
+              ${stateFields}
             }
           }
         }
       `,
+    );
+  });
+
+  it("should return the proper switchboard link", () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+
+    const { result } = renderHook(() =>
+      useGetSwitchboardLink(
+        "https://example.com/d/123",
+        document.documentType,
+        documentModels,
+      ),
+    );
+    expect(result.current).toBe(
+      "https://example.com/graphql?query=...on+DocumentDrive+...on+DocumentModel",
     );
   });
 });
