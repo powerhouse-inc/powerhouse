@@ -1,3 +1,18 @@
+## 2.5.0-dev.28 (2025-06-16)
+
+### 🚀 Features
+
+- add app skeleton to html at build time ([1882bb820](https://github.com/powerhouse-inc/powerhouse/commit/1882bb820))
+
+### 🩹 Fixes
+
+- **document-drive:** ensure valid slug assignment in BrowserStorage ([891df972a](https://github.com/powerhouse-inc/powerhouse/commit/891df972a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 2.5.0-dev.27 (2025-06-16)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
