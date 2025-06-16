@@ -1,3 +1,13 @@
+## 2.5.0-dev.27 (2025-06-16)
+
+### 🚀 Features
+
+- **connect:** eol ([42db87eb0](https://github.com/powerhouse-inc/powerhouse/commit/42db87eb0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.26 (2025-06-16)
 
 ### 🚀 Features

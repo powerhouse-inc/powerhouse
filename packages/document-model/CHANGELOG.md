@@ -1,3 +1,7 @@
+## 2.5.0-dev.27 (2025-06-16)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.26 (2025-06-16)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
