@@ -10,6 +10,7 @@ import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
 import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
+import fs from 'node:fs';
 import path from 'node:path';
 import {
     defineConfig,
@@ -24,6 +25,7 @@ import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
+import { renderSkeleton } from './scripts/render-skeleton.js';
 
 const staticFiles = [
     './src/service-worker.ts',
@@ -41,6 +43,70 @@ const staticInputs = staticFiles.reduce(
     {},
 );
 const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
+
+function buildAppSkeletonPlugin(outDir: string): PluginOption {
+    const chunkMap = new Map<string, string>();
+    return {
+        name: 'vite:build-app-skeleton',
+
+        // isolate app skeleton chunk
+        moduleParsed(info) {
+            const id = info.id;
+
+            for (const imp of info.importedIds) {
+                // If a module is imported from app-skeleton, but is not app-skeleton itself
+                if (
+                    id.includes('app-skeleton.tsx') &&
+                    !imp.includes('app-skeleton')
+                ) {
+                    // Redirect imported file to its own chunk
+                    chunkMap.set(
+                        imp,
+                        `${path.basename(imp, path.extname(imp))}`,
+                    );
+                }
+            }
+        },
+        configResolved(config) {
+            config.build.rollupOptions.output =
+                config.build.rollupOptions.output ?? {};
+            // @ts-ignore
+            config.build.rollupOptions.output.manualChunks = id => {
+                if (chunkMap.has(id)) {
+                    return chunkMap.get(id);
+                }
+                if (id.includes('app-skeleton.tsx')) return 'app-skeleton';
+                return undefined;
+            };
+        },
+        // inject app skeleton html
+        async closeBundle() {
+            const skeletonHtml = await renderSkeleton(
+                path.resolve(outDir, 'assets/app-skeleton.js'),
+            );
+            const html = fs.readFileSync(
+                path.resolve(outDir, 'index.html'),
+                'utf-8',
+            );
+            fs.writeFileSync(
+                path.resolve(outDir, 'index.html'),
+                html.replace(
+                    '<div id="app"></div>',
+                    `<div id="app">${skeletonHtml}</div>`,
+                ),
+            );
+        },
+        // async transformIndexHtml(html) {
+        //     const skeletonHtml = await renderSkeleton(
+        //         path.resolve(outDir, 'assets/app-skeleton.js'),
+        //     );
+        //     return html.replace(
+        //         '<div id="app"></div>',
+        //         `<div id="app">${skeletonHtml}</div>`,
+        //     );
+        // },
+    };
+}
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -122,6 +188,7 @@ export default defineConfig(({ mode }) => {
                 plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
             },
         }),
+        isProd && buildAppSkeletonPlugin(outDir),
         svgr(),
         createHtmlPlugin({
             minify: true,
@@ -172,7 +239,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins,
         build: {
-            minify: isProd,
+            minify: true,
             sourcemap: true,
             rollupOptions: {
                 input: {
@@ -184,6 +251,12 @@ export default defineConfig(({ mode }) => {
                         Object.keys(staticInputs).includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
+                    chunkFileNames(chunk) {
+                        if (chunk.name === 'app-skeleton') {
+                            return 'assets/app-skeleton.js';
+                        }
+                        return 'assets/[name].[hash].js';
+                    },
                 },
                 external: [...externalAndExclude, ...externalIds],
             },
