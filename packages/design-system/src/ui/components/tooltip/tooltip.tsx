@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "#powerhouse";
 import {
   Content,
   Portal,
@@ -10,7 +11,6 @@ import {
   Trigger,
 } from "@radix-ui/react-tooltip";
 import * as React from "react";
-import { cn } from "../../../scalars/lib/utils.js";
 
 interface TooltipProps
   extends TooltipPrimitiveProps,
@@ -88,5 +88,6 @@ export {
   Provider as TooltipProvider,
   Root as TooltipRoot,
   Trigger as TooltipTrigger,
-  type TooltipProps,
+  type TooltipProps
 };
+
