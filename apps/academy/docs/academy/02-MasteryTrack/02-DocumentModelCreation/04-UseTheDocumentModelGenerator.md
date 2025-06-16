@@ -95,7 +95,7 @@ Leveraging the `ph generate` command offers numerous advantages:
 Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `ToDoList` example.
 
 <details>
-<summary>Tutorial: Generating the `ToDoList` Document Model</summary>
+<summary>Tutorial: Generating the ToDoList Document Model</summary>
 
 This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `ToDoList` model in Connect and exported it.
 

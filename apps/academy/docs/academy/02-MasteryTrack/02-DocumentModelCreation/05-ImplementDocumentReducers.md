@@ -237,7 +237,7 @@ Using these types provides:
 Now that you understand the principles, let's put them into practice by implementing the reducers for our `ToDoList` document model.
 
 <details>
-<summary>Tutorial: Implementing the `ToDoList` Reducers</summary>
+<summary>Tutorial: Implementing the ToDoList Reducers</summary>
 
 This tutorial assumes you have followed the steps in the previous chapters, especially using `ph generate ToDoList.phdm.zip` to scaffold your document model's code.
 

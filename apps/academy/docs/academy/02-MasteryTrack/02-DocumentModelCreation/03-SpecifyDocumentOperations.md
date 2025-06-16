@@ -115,7 +115,7 @@ export const reducer: ToDoListToDoListOperations = {
 Now that you understand the theory, let's walk through the practical steps of defining these operations for our `ToDoList` document model within the Powerhouse Connect application.
 
 <details>
-<summary>Tutorial: Specifying `ToDoList` Operations</summary>
+<summary>Tutorial: Specifying ToDoList Operations</summary>
 
 Assuming you have already defined the state schema for the `ToDoList` as covered in the previous section, follow these steps to add the operations:
 

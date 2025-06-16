@@ -134,5 +134,6 @@ Implementing comprehensive tests for your document model reducers is an investme
 By following the tutorial and applying these best practices, you can build a strong suite of tests that safeguard the integrity and functionality of your document models. This diligence is a hallmark of a "Mastery Track" developer, ensuring that the solutions you build are not just functional but also stable, maintainable, and trustworthy.
 
 ## Up Next
-In the next chapter of the Mastery Track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.
-For a complete, working example, you can always refer to the [Example ToDoList Repository](./ExampleToDoListRepository.md) which contains the full implementation of the concepts discussed in this Mastery Track.
+In the next chapter of the Mastery Track - Building User Experiences you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.
+
+For a complete, working example, you can always refer to the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
