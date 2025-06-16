@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "2.5.0-dev.25",
+  "version": "2.5.0-dev.26",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {

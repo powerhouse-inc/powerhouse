@@ -1,3 +1,13 @@
+## 2.5.0-dev.26 (2025-06-16)
+
+### 🚀 Features
+
+- **connect:** updated readme ([0c34d6cc6](https://github.com/powerhouse-inc/powerhouse/commit/0c34d6cc6))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.25 (2025-06-13)
 
 ### 🚀 Features
