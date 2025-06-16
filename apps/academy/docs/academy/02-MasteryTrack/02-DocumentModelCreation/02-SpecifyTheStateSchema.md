@@ -141,5 +141,5 @@ By completing these steps, you have successfully specified the data structure fo
 
 </details>
 
-For a complete, working example, you can always refer to the [Example ToDoList Repository](./07-ExampleToDoListRepository.md) which contains the full implementation of the concepts discussed in this Mastery Track.
+For a complete, working example, you can always refer to the [Example ToDoList Repository](./ExampleToDoListRepository.md) which contains the full implementation of the concepts discussed in this Mastery Track.
 
