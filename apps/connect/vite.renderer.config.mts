@@ -214,6 +214,12 @@ export default defineConfig(({ mode }) => {
                 authToken,
                 org,
                 project,
+                bundleSizeOptimizations: {
+                    excludeDebugStatements: true,
+                },
+                reactComponentAnnotation: {
+                    enabled: true,
+                },
             }) as PluginOption,
         );
     }
@@ -259,6 +265,7 @@ export default defineConfig(({ mode }) => {
                     },
                 },
                 external: [...externalAndExclude, ...externalIds],
+                treeshake: 'smallest',
             },
         },
         optimizeDeps: {

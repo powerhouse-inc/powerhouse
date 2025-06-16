@@ -1,11 +1,14 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import '../i18n';
-import '../index.css';
-import { AppSkeleton } from './app-skeleton.js';
 
+import { AppSkeleton } from './app-skeleton.js';
 const App = lazy(() => import('./app.js'));
 const CookieBanner = lazy(() =>
     import('./cookie-banner.js').then(m => ({ default: m.CookieBanner })),
+);
+
+const ModalManager = lazy(() =>
+    import('./modal/modal.js').then(m => ({ default: m.ModalManager })),
 );
 
 export const AppLoader = (
@@ -14,7 +17,9 @@ export const AppLoader = (
             <App />
         </Suspense>
         <Suspense name="CookieBanner">
-            <CookieBanner />
+            <ModalManager>
+                <CookieBanner />
+            </ModalManager>
         </Suspense>
     </StrictMode>
 );
