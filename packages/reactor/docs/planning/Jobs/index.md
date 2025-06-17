@@ -2,17 +2,18 @@
 
 ### Summary
 
-- The `IJobExecutor` listens for `QueueEventTypes.JOB_AVAILABLE` events from the event bus and pulls jobs from the queue when capacity allows.
+- The `IJobExecutorManager` listens for `QueueEventTypes.JOB_AVAILABLE` events from the event bus and pulls jobs from the queue when capacity allows.
+- It creates and manages `IJobExecutor`s, which are objects that process jobs.
 - It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities.
-- Multiple `IJobExecutor`s can be used to execute jobs in parallel, across workers.
 - Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
 - The `IQueue` is responsible for persisting jobs for later execution, but the `IJobExecutor` is not. It simply pulls jobs from the queue and executes them.
 
 ### Workers
 
-This is the main primitive duplicated across workers to allow for parallel execution of jobs. Below is a high-level diagram of the main components, but a few things to note:
+The `IJobExecutorManager` sits on the main `IReactor` thread, but is free to create and manage `IJobExecutor`s on other threads. Below is a high-level diagram of the main components, but a few things to note:
 
-- Performance characteristics across workers are largely unknown. `postMessage` will be used to communicate between workers, but it has two main APIs for data transfer:
+- "Workers" describe a threading primitive, but for server applications this may be across process boundaries as well.
+- Performance characteristics across in-process workers are largely unknown. `postMessage` will be used to communicate between workers, but it has two main APIs for data transfer:
   - [`structuredClone()`](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) - The default method that copies data across workers.
   - [Transferable Objects](https://developer.chrome.com/blog/transferable-objects-lightning-fast) - Used to transfer large objects by reference, which may be applicable for some operations.
 - Depending on performance information and implementation details of the `IOperationStore`, we might have each executor insert via its own `IOperationStore`, then propagate smaller events back through `postMessage` to the queue.
@@ -31,10 +32,12 @@ graph LR
   subgraph Shared Worker
     subgraph IReactor
       IQueueManager
+      IJobExecutorManager
       IOperationStore
       IDocumentView
       IDocumentIndexer
 
+      IQueueManager -->|"via event bus"| IJobExecutorManager
       IOperationStore --> emit
       
       subgraph IEventBus
@@ -51,18 +54,18 @@ graph LR
   end
 
   subgraph W1["Worker 1"]
-    J1["JobExecutor"]
+    J1["IJobExecutor"]
   end
 
   subgraph W2["Worker 2"]
-    J2["JobExecutor"]
+    J2["IJobExecutor"]
   end
 
   MT1 --> IQueueManager
   MT2 --> IQueueManager
 
-  IQueueManager -->|"Action[]"| W1
-  IQueueManager -->|"Action[]"| W2
+  IJobExecutorManager -->|"Action[]"| W1
+  IJobExecutorManager -->|"Action[]"| W2
 
   W1 -->|"Operation[]"| IOperationStore
   W2 -->|"Operation[]"| IOperationStore
@@ -70,7 +73,7 @@ graph LR
 
 ### Flow
 
-The `IJobExecutor` follows the following flow:
+An `IJobExecutor` follows the following flow:
 
 1. Verify signatures on `Action` objects before executing them.
 2. Verify authorization on `Action` objects before executing them.

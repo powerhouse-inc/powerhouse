@@ -76,7 +76,7 @@ export type JobResult = {
 /**
  * Configuration options for the job executor
  */
-export type JobExecutorConfig = {
+export type JobExecutorManagerConfig = {
   /** Maximum number of concurrent jobs to execute */
   maxConcurrency?: number;
   
@@ -90,6 +90,17 @@ export type JobExecutorConfig = {
   retryMaxDelay?: number;
 };
 
+export type JobExecutionConfig = {
+  /** Maximum time in milliseconds a job can run before being considered timed out */
+  jobTimeout?: number;
+  
+  /** Base delay in milliseconds for exponential backoff retries */
+  retryBaseDelay?: number;
+  
+  /** Maximum delay in milliseconds for exponential backoff retries */
+  retryMaxDelay?: number;
+}
+
 export interface IReducer {
   /**
    * Applies an action to a state and returns the new state.
@@ -101,10 +112,22 @@ export interface IReducer {
   ): BaseStateFromDocument;
 }
 
+export interface IJobExecutor {
+  /**
+   * Executes a job.
+   * 
+   * @param job - The job to execute
+   * @param config - Configuration options for the job execution
+   * @param signal - Optional abort signal to cancel the promise. This does NOT cancel the job execution.
+   * @returns Promise that resolves to the job result
+   */
+  executeJob(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
+}
+
 /**
  * Interface for executing jobs from the queue.
  */
-export interface IJobExecutor {
+export interface IJobExecutorManager {
   /**
    * Start the job executor.
    * 
@@ -115,7 +138,7 @@ export interface IJobExecutor {
    * 
    * @returns Promise that resolves when the executor is started
    */
-  start(config?: JobExecutorConfig, signal?: AbortSignal): Promise<void>;
+  start(config?: JobExecutorManagerConfig, signal?: AbortSignal): Promise<void>;
   
   /**
    * Stop the job executor.
@@ -125,15 +148,6 @@ export interface IJobExecutor {
    * @returns Promise that resolves when the executor is stopped
    */
   stop(graceful?: boolean, signal?: AbortSignal): Promise<void>;
-  
-  /**
-   * Execute a single job immediately.
-   * @param job - The job to execute
-   * @param config - Configuration options for the job execution
-   * @param signal - Optional abort signal to cancel the promise. This does NOT cancel the job execution.
-   * @returns Promise that resolves to the job result
-   */
-  executeJob(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
   
   /**
    * Get the current status of the job executor.
