@@ -13,7 +13,7 @@
 This is the main primitive duplicated across workers to allow for parallel execution of jobs. Below is a high-level diagram of the main components, but a few things to note:
 
 - Performance characteristics across workers are largely unknown. `postMessage` will be used to communicate between workers, but it has two main APIs for data transfer:
-  - `[structuredClone()](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)` - The default method that copies data across workers.
+  - [`structuredClone()`](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) - The default method that copies data across workers.
   - [Transferable Objects](https://developer.chrome.com/blog/transferable-objects-lightning-fast) - Used to transfer large objects by reference, which may be applicable for some operations.
 - Depending on performance information and implementation details of the `IOperationStore`, we might have each executor insert via its own `IOperationStore`, then propagate smaller events back through `postMessage` to the queue.
 
