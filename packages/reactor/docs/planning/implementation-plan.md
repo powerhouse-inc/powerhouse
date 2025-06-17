@@ -4,100 +4,101 @@ This document outlines the plan to refactor the existing `document-drive` packag
 
 All new development will take place in the `packages/reactor` directory, providing a clean separation from the existing `document-drive` codebase.
 
-## Phase 1: The `IReactor` Facade ([Strangler Fig](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig) Pattern)
+## Phase 1: Foundational `PHDocument` Refactoring
 
-The first phase is to create a new `IReactor` interface that will serve as a facade over the existing `BaseDocumentDriveServer`. This allows new code to be written against the target architecture from day one, while we gradually strangle the old implementation.
+Before building any new `Reactor` components, we must first refactor the core data structure, `PHDocument`, within the existing `document-drive` package. This is a significant breaking change that must be handled in isolation.
 
-1.  **Define `IReactor` and `PHDocument` v2**:
-    *   In `packages/reactor`, define the `IReactor` interface based on the target architecture outlined in the planning documents.
-    *   Define the new `PHDocument` v2 structure, including its `state`, `mutations`, and `history` components.
+1.  **Define `PHDocument` v2**:
+    *   Define the new `PHDocument` v2 structure as a set of types, including its distinct `state`, `mutations`, and `history` components, based on the planning documents.
 
+2.  **Refactor `BaseDocumentDriveServer`**:
+    *   Modify the internal logic and public method signatures of the existing `BaseDocumentDriveServer` to natively produce and consume the new `PHDocument` v2 structure. The server itself will now be the source of truth for the new document format.
+
+3.  **Update All Consumers**:
+    *   Systematically update all application code that currently consumes `BaseDocumentDriveServer` or interacts with the old `PHDocument` structure. This includes UI components, utilities, and tests. This is a breaking change across the codebase, and all affected code must be updated to be compatible with `PHDocument` v2.
+
+## Phase 2: The `IReactor` Facade ([Strangler Fig](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig) Pattern)
+
+With the `PHDocument` structure stabilized, we can now create the `IReactor` interface as a facade.
+
+1.  **Define `IReactor`**:
+    *   In `packages/reactor`, define the `IReactor` interface based on the target architecture.
 2.  **Implement the `Reactor` Facade**:
     *   Create a `Reactor` class that implements `IReactor`.
-    *   Internally, this class will instantiate and hold a private reference to the `BaseDocumentDriveServer` from `document-drive`.
-    *   Implement the `IReactor` methods by delegating calls to the underlying `BaseDocumentDriveServer`. This will involve:
-        *   Translating incoming arguments to fit the old server's methods.
-        *   Transforming the results from the old server into the new `PHDocument` v2 format before returning them.
+    *   Internally, this class will wrap the newly-refactored `BaseDocumentDriveServer`.
+    *   **Crucially**: No complex data translation is needed. The facade is now a simple pass-through for `PHDocument` objects, as the underlying server already speaks v2.
 
-## Phase 2: Implement Core Write Path Components
+## Phase 3: Implement Core Write Path Components
 
-Instead of immediately writing to a new store, we first build the new asynchronous pipeline for handling mutations.
+This phase proceeds as before: building the new asynchronous pipeline for handling mutations.
 
-1.  **Implement `IEventBus`**:
-    *   Within `packages/reactor`, define and implement the `IEventBus` interface as an in-memory pub/sub system.
+1.  **Implement `IEventBus`**, **`IQueue`**, and **`IJobExecutorManager`**:
+    *   Within `packages/reactor`, define and implement these core components as planned.
 
-2.  **Implement `IQueue`**:
-    *   Define and implement the `IQueue` interface, along with its durable companion, `IQueueJournal`. This component will manage job dependencies and states.
+## Phase 4: Connect Facade to Legacy Write Path
 
-3.  **Implement `IJobExecutorManager`**:
-    *   Define and implement the `IJobExecutorManager` and `IJobExecutor` interfaces. This component will be responsible for pulling jobs from the queue, handling execution logic (like retries and validation), and eventually writing operations.
+Instead of a "big bang" switch, we first validate the new job pipeline while still relying on the legacy storage system as the source of truth.
 
-## Phase 3: Transition Write Path & Implement Read Model
+1.  **Update `Reactor` Facade Mutations**:
+    *   Modify the facade's mutation methods to package requests as `Job`s and `enqueue` them into the new `IQueue`.
+2.  **Executor Writes to Legacy Storage**:
+    *   Configure the `IJobExecutor` to take the legacy `IDriveOperationStorage` as a dependency. After processing a job, it will write the resulting `Operation`s back to the existing legacy database.
+    *   **Goal**: This validates the entire `Facade -> Queue -> Executor` pipeline is working correctly before introducing any new storage.
 
-With the core pipeline components defined, we now make the new `Reactor` write path the authoritative source for all changes.
+## Phase 5: Introduce `IOperationStore` with Dual-Writing
 
-1.  **Update Facade and Executor**:
-    *   Modify the `Reactor` facade's mutation methods to `enqueue` jobs into the `IQueue`.
-    *   The `IJobExecutor` will be configured to write the resulting `Operation`s **only** to the new `IOperationStore`. This store is now the single source of truth for operations.
+With the job pipeline validated, we now introduce the new `IOperationStore` and populate it in parallel.
 
-2.  **Implement `IDocumentView`**:
-    *   Define and implement the `IDocumentView` interface.
-    *   It will subscribe to the `IEventBus` to learn about new operations from the `IJobExecutor` and will build its cached document states by reading from `IOperationStore`.
+1.  **Implement `IOperationStore`**:
+    *   Define and implement the `IOperationStore` in `packages/reactor`.
+2.  **Enable Dual-Writing**:
+    *   Modify the `IJobExecutor` to write to **both** the legacy `IDriveOperationStorage` and the new `IOperationStore`.
+    *   **Goal**: This safely populates the new store. We can add validation logic to compare the data in both stores to ensure consistency and correctness of the new implementation.
 
-## Phase 4: Create Legacy System Adapter
+## Phase 6: Implement and Validate `IDocumentView`
 
-This is the key step to keep the existing listener and sync systems running. We create an adapter that makes the new storage system "look" like the old one.
+With the `IOperationStore` being populated, we can now build and validate the new read model without making it live.
 
-1.  **Implement Storage Adapter**:
-    *   Create a new class, `OperationStoreLegacyAdapter`, that implements the legacy `IDriveOperationStorage` interface from `document-drive`.
-    *   This adapter will be backed by the new `IOperationStore` and `IDocumentView`. When a method is called on the adapter, it will fetch the necessary data from the new components and translate it into the format expected by the old interface.
+1.  **Implement `IDocumentView`**:
+    *   Define and implement the `IDocumentView` interface, which subscribes to the `IEventBus` and builds its state from `IOperationStore`.
+2.  **Validate Read Path**:
+    *   **Goal**: We can now run comparison tests. For any given document, we can query its state via both the legacy system and the new `IDocumentView` and assert the results are identical, proving the correctness of our new read path.
 
-2.  **Integrate Adapter**:
-    *   Modify the initialization of the existing `SynchronizationManager` (from `sync-manager.ts`) to use the new `OperationStoreLegacyAdapter` as its storage backend.
-    *   Since the existing `ListenerManager` depends on `SynchronizationManager`, both legacy systems will now transparently read their data from the new `Reactor` storage system, allowing them to function without modification.
+## Phase 7: Promote `IOperationStore` to Source of Truth
 
-## Phase 5: Isolate the Reactor Facade
+This is the official switchover, where the new system becomes the authoritative source of truth.
 
-With the legacy systems supported by the adapter, we can now fully decouple the primary `Reactor` interface.
+1.  **Disable Dual-Write**:
+    *   Modify the `IJobExecutor` to write **only** to the new `IOperationStore`. The write to the legacy storage is removed.
+2.  **Implement and Integrate Legacy Adapters**:
+    *   Create `OperationStoreLegacyAdapter`: This class will implement the legacy `IDriveOperationStorage` interface, backed by the new `IOperationStore`.
+    *   Create `DocumentStorageLegacyAdapter`: This class will implement the legacy `IDocumentStorage` interface, backed by the new `IDocumentView`.
+    *   Inject both new adapters into the existing `SynchronizationManager` to satisfy all its storage dependencies. This keeps the legacy listener and sync systems fully functional, now reading from the new `Reactor` components.
+
+## Phase 8: Isolate the Reactor Facade
+
+With legacy systems supported by the adapter, we can fully decouple the primary `Reactor` interface.
 
 1.  **Shift Facade Reads**:
-    *   Update the `Reactor` facade's read methods to source their data from the new `IDocumentView`.
-    *   Remove the internal instance of `BaseDocumentDriveServer` from the facade. The `IReactor` interface is now fully served by the new-world components.
+    *   Update the `Reactor` facade's read methods to source data from `IDocumentView`.
+    *   Remove the internal instance of `BaseDocumentDriveServer` from the facade.
 
-## Phase 6: Implement and Migrate to New Subscription Manager
+## Phase 9 & 10: Implement and Migrate New Managers
 
-Now we can begin to incrementally replace the legacy `listener-manager.ts`.
+With a stable `Reactor` core, we can now incrementally replace the legacy managers.
 
-1.  **Implement `IReactorSubscriptionManager`**:
-    *   Build the new subscription manager as planned, using `IEventBus` for updates.
-2.  **Migrate Clients**:
-    *   Gradually migrate application clients from the old listener system to the new `IReactorSubscriptionManager`. Both systems can run in parallel, as the old one is kept alive by the adapter.
+1.  **Implement `IReactorSubscriptionManager`** and migrate clients from the old listener system.
+2.  **Implement `ISynchronizationManager`** and migrate peers from the old sync system.
 
-## Phase 7: Implement and Migrate to New Synchronization Manager
-
-Similarly, we can now replace the legacy `sync-manager.ts`.
-
-1.  **Implement `ISynchronizationManager`**:
-    *   Build the new `ISynchronizationManager` and `IChannel` abstractions as planned.
-2.  **Migrate Peers**:
-    *   Gradually migrate synchronization connections and peers to use the new, more robust synchronization system.
-
-## Phase 8: Deprecate Legacy Managers
+## Phase 11: Deprecate Legacy Systems
 
 Once all clients and peers have been migrated, we can remove the old systems and the adapter.
 
-1.  **Remove Adapter**:
-    *   With no components left using it, the `OperationStoreLegacyAdapter` can be deleted.
-2.  **Remove Legacy Managers**:
-    *   The `listener-manager.ts` and `sync-manager.ts` files, and their related dependencies in `document-drive`, can now be safely removed.
+1.  **Remove Adapter** and legacy `listener-manager.ts` and `sync-manager.ts`.
 
-## Phase 9: Final Data Migration and Cleanup
+## Phase 12: Final Cleanup
 
-The final phase is to migrate any remaining historical data and clean up the legacy codebase.
+The final phase is to clean up the legacy codebase.
 
-1.  **One-Time Data Migration**:
-    *   Develop a script to migrate all data from the old `document-drive` storage system into the new `IOperationStore`. This script will handle documents and history created before the `Reactor` facade was introduced.
-
-2.  **Deprecate `document-drive`**:
-    *   Begin the process of formally deprecating any remaining parts of the `document-drive` package.
-    *   Ultimately, the `document-drive` package can be removed or significantly reduced in scope. 
+1.  **Deprecate `document-drive`**:
+    *   Formally remove unused parts of the `document-drive` package. 

@@ -2,67 +2,49 @@
 
 This document outlines the testing strategy for each phase of the `document-drive` to `Reactor` refactoring plan. The goal is to ensure each step is verifiable and maintains system consistency.
 
-## Phase 1: The `IReactor` Facade
+## Phase 1: Foundational `PHDocument` Refactoring
 
--   **Goal**: Validate that the facade is a behaviorally identical, drop-in replacement for the old entry point.
--   **Challenge**: `BaseDocumentDriveServer` is difficult to mock, and a comprehensive integration test suite does not exist.
--   **Revised Strategy**:
-    1.  **Create Characterization Tests**: Before implementing the facade, we will create a new, targeted test suite. This suite will instantiate a real `BaseDocumentDriveServer` using an in-memory storage implementation. It will test the critical public API of the server (e.g., creating documents, applying operations, retrieving state). This suite establishes the "golden standard" for behavior.
-    2.  **Implement the Facade**: Create the `IReactor` facade which wraps the `BaseDocumentDriveServer`.
-    3.  **Run Tests Against the Facade**: Adapt the characterization test suite to run against the new `IReactor` facade. The underlying setup will be the same: the facade will wrap a real `BaseDocumentDriveServer` with in-memory storage. The tests will verify that performing actions through the facade produces the exact same results and side effects as interacting with the `BaseDocumentDriveServer` directly. Success here proves the facade is a transparent, behaviorally-identical wrapper.
+-   **Goal**: Ensure `BaseDocumentDriveServer` correctly implements `PHDocument` v2 and that all consumers are updated without regressions.
+-   **Strategy**:
+    1.  **Create Characterization Tests**: Before any refactoring, create a new test suite against the *current* `BaseDocumentDriveServer` using in-memory storage. This suite will test critical user journeys (creating documents, applying operations, reading state) and assert on the results using the *old* `PHDocument` v1 structure. This establishes a behavioral baseline.
+    2.  **Refactor and Update Tests**: Perform the refactoring of `BaseDocumentDriveServer` and all its consumers to use `PHDocument` v2. As part of this, update the characterization test suite to work with and assert against the new v2 structure.
+    3.  **Validate**: Run the updated test suite against the refactored server. All tests must pass. Success proves that the core behavior of the system is unchanged, even though the data contract has been updated.
 
-## Phase 2: Core Write Path Components
+## Phase 2: The `IReactor` Facade
+
+-   **Goal**: Validate that the facade is a behaviorally identical, drop-in replacement for the newly refactored `BaseDocumentDriveServer`.
+-   **Strategy**:
+    -   **Run Characterization Tests**: The test suite created in Phase 1 for the refactored `BaseDocumentDriveServer` can be run directly against the new `IReactor` facade. Since the facade now wraps a server that already speaks `PHDocument` v2, the tests should pass with minimal changes, proving the facade is a correct and simple wrapper.
+
+## Phase 3: Core Write Path Components
 
 -   **Goal**: Verify the correctness of the new, isolated `IQueue`, `IEventBus`, and `IJobExecutorManager` components.
--   **Unit Tests**:
-    -   `IEventBus`: Test pub/sub functionality, async handlers, and subscription management.
-    -   `IQueue`: Mock the `IQueueJournal`. Test job enqueueing, dependency graph logic (cycle detection), state transitions, and startup recovery from the journal.
-    -   `IJobExecutorManager`: Mock the `IQueue`. Verify it pulls jobs on `JOB_AVAILABLE` events and respects concurrency settings.
+-   **Strategy**:
+    -   **Unit Tests**: Test each component in isolation, mocking its immediate dependencies (e.g., test `IQueue` by mocking `IQueueJournal`).
 
-## Phase 3: Transition Write Path & Implement Read Model
+## Phase 4: Connect Facade to Legacy Write Path
 
--   **Goal**: Ensure the new write path correctly persists operations and that the new read model (`IDocumentView`) accurately reflects this state.
--   **Unit Tests**:
-    -   `IDocumentView`: Mock `IEventBus` and `IOperationStore`. Emit a mock "operation added" event and assert that the view correctly fetches data and builds the document state.
--   **Integration Tests**:
-    -   Test the full write path: Call a mutation on the `Reactor` facade and assert that the correct operation is persisted in `IOperationStore`.
-    -   Test write-then-read: After the write path test succeeds, query the `IDocumentView` and assert that the document state reflects the change.
+-   **Goal**: Verify the new job pipeline (`Facade -> Queue -> Executor`) works correctly by using the legacy storage as its output.
+-   **Strategy**:
+    -   **Integration Test**: Write a test that calls a mutation method on the `Reactor` facade. Assert that the correct operations are written to the legacy `IDriveOperationStorage` by mocking or inspecting the storage layer. This confirms the new pipeline correctly processes and delegates writes.
 
-## Phase 4: Create Legacy System Adapter
+## Phase 5: Introduce `IOperationStore` with Dual-Writing
 
--   **Goal**: Prove that the adapter makes the new storage system perfectly emulate the old one.
--   **Unit Tests**:
-    -   Mock `IOperationStore` and `IDocumentView`.
-    -   For each method in the legacy `IDriveOperationStorage` interface, test that the `OperationStoreLegacyAdapter` calls the correct methods on the new components and correctly transforms the data to the legacy format.
--   **Characterization Tests**:
-    -   This is the most critical test. Take the entire existing test suite for `document-drive`'s `sync-manager.ts` and `listener-manager.ts`.
-    -   Run this suite without modification, but inject the new `OperationStoreLegacyAdapter` as the storage implementation.
-    -   **Success Criterion**: 100% of these legacy tests must pass. This validates that the new backend is a fully compliant replacement.
+-   **Goal**: Ensure the `IOperationStore` is being populated correctly and is consistent with the legacy store.
+-   **Strategy**:
+    -   **Consistency Check**: After a write, fetch the newly written operations from both the legacy `IDriveOperationStorage` and the new `IOperationStore`. Assert that the operations are identical. This test can run continuously in the background during this phase to guarantee consistency.
 
-## Phase 5: Isolate the Reactor Facade
+## Phase 6: Implement and Validate `IDocumentView`
 
--   **Goal**: Validate that the `IReactor` facade is now fully powered by the new-world components and is consistent.
--   **End-to-End Tests**:
-    -   Perform an action (write) and a query (read) through the `IReactor` facade.
-    -   Assert that the state read back is correct. This tests the full loop of `Facade -> Queue -> Executor -> Store -> View -> Facade`.
--   **Comparison Tests**:
-    -   For a given document, query for its state via both the `Reactor` facade (hitting `IDocumentView`) and the legacy `ListenerManager` (hitting the adapter).
-    -   Assert that the results are identical.
+-   **Goal**: Prove that the `IDocumentView` correctly builds state from `IOperationStore` and matches the legacy system.
+-   **Strategy**:
+    -   **Comparison Test**: After any write action, fetch the full document state from both the legacy `BaseDocumentDriveServer` and the new `IDocumentView`. Assert that the resulting state objects are deeply equal. This confirms the new read model is a valid replacement.
 
-## Phase 6 & 7: Migrate Subscriptions and Sync
+## Phase 7-12: Switchover, Migration, and Cleanup
 
--   **Goal**: Ensure the new `IReactorSubscriptionManager` and `ISynchronizationManager` work correctly and can run in parallel with their legacy counterparts.
--   **Integration Tests**:
-    -   **Subscriptions**: Connect a test client to the new `IReactorSubscriptionManager`. Perform a mutation and assert that the client receives the correct, filtered update. Run this alongside a client connected to the old `ListenerManager` and assert both receive equivalent notifications.
-    -   **Synchronization**: Set up two `Reactor` instances using the new `ISynchronizationManager`. Make a change on one instance and assert that it is correctly propagated to the second instance's `IOperationStore` and reflected in its `IDocumentView`.
-
-## Phase 8 & 9: Deprecation and Final Migration
-
--   **Goal**: Ensure the system remains correct after removing legacy code and migrating historical data.
--   **Regression Testing**:
-    -   After deleting the legacy managers and the adapter (`Phase 8`), run the *entire* application test suite. All tests must pass.
--   **Migration Script Testing**:
-    -   The one-time data migration script must be tested against a realistic, production-like data snapshot.
-    -   Write validation tools to compare a migrated document in the new `IOperationStore` against its original form in the legacy database, asserting data integrity and correctness.
--   **Final Regression Test**:
-    -   After the data migration and final removal of `document-drive` code, run the full test suite one last time. 
+-   **Goal**: Ensure the system remains correct as the new store becomes the source of truth and legacy code is removed.
+-   **Strategy**:
+    -   **Legacy Characterization Tests**: The critical test for Phase 7 is to run the entire existing test suite for `sync-manager.ts` and `listener-manager.ts`. We will inject *both* the `OperationStoreLegacyAdapter` and the `DocumentStorageLegacyAdapter` to satisfy the manager's dependencies. Success proves the adapters are compliant replacements.
+    -   **Parallel Validation**: As the new `IReactorSubscriptionManager` and `ISynchronizationManager` are built (`Phase 9 & 10`), run them in parallel with the legacy systems. Write comparison tests to assert that for a given action, both the old and new managers produce equivalent results or notifications.
+    -   **Full Regression**: After each major deprecation step (`Phase 11` and `Phase 12`), run the *entire* application test suite (both old and new tests) to ensure no regressions have been introduced.
+    -   **Migration Script Testing**: The data migration script (`Phase 12`) must be tested against a realistic, production-like data snapshot to ensure data integrity. 
