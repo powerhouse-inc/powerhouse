@@ -9,9 +9,8 @@ Before you start, make sure you have the Connect application running.
 
 We use GraphQL Schema Definition Language (SDL) to define the document model schema. Below, you can see the SDL for the `ChatRoom` document model.
 
-:::info
-This schema contains the data structure of the document model and the basic operations that can be performed on the document model.
-Document models in Powerhouse leverage event sourcing principles, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands, supporting CQRS (Command Query Responsibility Segregation) patterns.
+:::info **The State Schema**
+This schema contains the data structure of the document model and the basic operations that can be performed on the document model. For more in depth information please visit [State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 :::
 
 ## State Schema (See next steps)
@@ -101,7 +100,7 @@ The steps below show you how to do this:
 1. In the Connect application, click on the `ChatRoom` document model you've created in the previous step, to open the document model editor.
 2. You'll be welcomed with a form to fill, this is metadata about the document model, fill in the details in the fields. 
 
-    In the `Document Type` field, type `powerhouse/chatroom`. This defines the new type of document that will be created with this document model.
+    In the `Document Type` field, type `powerhouse/chat-room`. This defines the new type of document that will be created with this document model.
     
     ![Chatroom Document Model Form Metadata](image-2.png)
 

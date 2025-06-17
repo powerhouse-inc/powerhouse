@@ -1,4 +1,4 @@
-# Create Custom Scalars
+# Step 1: Create Custom Scalars
 
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)

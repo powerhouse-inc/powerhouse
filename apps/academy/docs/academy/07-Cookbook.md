@@ -1132,6 +1132,49 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
     
 </details>
 
+<details id="resetting-your-localhost-environment">
+<summary>Resetting Your Localhost Environment</summary>
+
+## How to Reset Your Localhost Environment
+---
+
+## Problem Statement
+You are running Powerhouse Connect locally (via `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
+
+## Prerequisites
+- Powerhouse Connect is running locally.
+- The Powerhouse Connect interface is open in your browser.
+
+## Solution
+This issue is often caused by corrupted or inconsistent data stored in your browser's local storage for the Connect application. Clearing this storage forces a re-initialization of your local environment.
+
+### Step 1: Open Settings
+In the bottom-left corner of the Powerhouse Connect UI, click on the "Settings" menu.
+
+### Step 2: Find the Danger Zone
+In the settings panel that appears, scroll or navigate to the "Danger Zone" section.
+
+### Step 3: Clear Local Storage
+Click the "Clear storage" button. A confirmation prompt may appear. Confirming this action will wipe all application data stored in your browser for your local environment, including the state of your local drive.
+
+### Step 4: Verify the Reset
+The application should automatically refresh and re-initialize its state. If it doesn't, manually reload the page. Your local drive should now be present with the `DocumentModel` button restored.
+
+## Expected Outcome
+- Your local drive is visible again in the Powerhouse Connect UI.
+- The `DocumentModel` button is available inside the local drive.
+- You can proceed to create and edit document models in your local environment.
+
+## Common Issues and Solutions
+- **Issue**: The problem persists after clearing storage.
+  - **Solution**: Try clearing your browser's cache and cookies for the localhost domain. As a last resort, follow the recipe for [Clearing Package Manager Caches](#clearing-package-manager-caches) and reinstalling dependencies.
+
+## Related Recipes
+- [Troubleshooting Document Syncing](#troubleshooting-document-syncing)
+- [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
+
+</details>
+
 <details id="clearing-package-manager-caches">
 <summary>Clearing Package Manager Caches</summary>
 

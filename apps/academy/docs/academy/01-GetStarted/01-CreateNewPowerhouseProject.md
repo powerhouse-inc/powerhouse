@@ -11,7 +11,7 @@ For this purpose, you'll be using Connect, our use-centric collaboration tool, l
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
-If you need help with installing the prerequisites you can visit our page prerequisites. @callme-t
+If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
 
 ## Quick Start
 Create a new Powerhouse project with a single command:
