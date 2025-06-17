@@ -1,3 +1,13 @@
+## 2.5.0-dev.29 (2025-06-17)
+
+### 🚀 Features
+
+- removed scalars components ([#1574](https://github.com/powerhouse-inc/powerhouse/pull/1574))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 2.5.0-dev.28 (2025-06-16)
 
 ### 🚀 Features
