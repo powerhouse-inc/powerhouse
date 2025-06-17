@@ -52,7 +52,7 @@ const PH_CONNECT_CLI_VERSION =
 
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
     import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
-    `${PH_CONNECT_ROUTER_BASENAME}:analytics`;
+    `${PH_CONNECT_ROUTER_BASENAME.replace(/\//g, '')}:analytics`; // remove ending slash
 const PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED =
     import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED || 'false';
 
