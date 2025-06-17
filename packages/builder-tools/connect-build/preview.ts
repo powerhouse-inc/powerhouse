@@ -6,7 +6,7 @@ import { type ConnectPreviewOptions } from "./types.js";
 
 export async function previewConnect(options: ConnectPreviewOptions) {
   const {
-    base = (import.meta.env.BASE_PATH as string) || "/",
+    base = process.env.BASE_PATH || "/",
     projectRoot = process.cwd(),
     port = 4173,
     open = true,
@@ -17,7 +17,7 @@ export async function previewConnect(options: ConnectPreviewOptions) {
     CONNECT_BUILD_DIR_NAME,
   );
   const previewServer = await preview({
-    base,
+    base: `${base}${base.endsWith("/") ? "" : "/"}`,
     root: connectBuildDir,
     preview: {
       port,
