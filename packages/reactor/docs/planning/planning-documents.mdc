@@ -1,0 +1,145 @@
+---
+description: 
+globs: packages/reactor/docs/planning/*/**
+alwaysApply: false
+---
+# Planning Documents Guidelines
+
+This rule ensures consistent structure and formatting for planning documents in the Reactor project.
+
+<rule>
+name: planning_documents
+description: Enforces consistent structure and formatting for planning documents in the Reactor project
+filters:
+  - type: file_path
+    pattern: "packages/reactor/docs/planning/*/**"
+  - type: event
+    pattern: "(file_create|file_modify)"
+
+actions:
+  - type: suggest
+    conditions:
+      - pattern: "^# [A-Z]"
+        message: |
+          Planning documents should follow this structure:
+
+          ## For Component/System Index Files (index.md):
+          ```markdown
+          # ComponentName
+
+          ### Summary
+          Brief description of the component's purpose and responsibilities.
+
+          ### Dependencies
+          - [Component1](mdc:../Component1/index.md)
+          - [Component2](mdc:../Component2/index.md)
+
+          ### Links
+          * [Interface](mdc:interface.md)
+          * [Usage](mdc:usage.md)
+          * [Diagram](mdc:diagram.md)
+          ```
+
+          ## For Interface Documentation:
+          ```markdown
+          # IInterfaceName
+
+          ### Summary
+          Purpose and key responsibilities of this interface.
+
+          ### Interface
+          ```tsx
+          // TypeScript interface definition
+          ```
+
+          ### Usage
+          ```tsx
+          // Code examples showing typical usage
+          ```
+
+          ### Schema (if applicable)
+          Database or data structure definitions.
+          ```
+
+          ## For Usage Documentation:
+          ```markdown
+          # Usage
+
+          Comprehensive code examples showing:
+          - Basic usage patterns
+          - Advanced scenarios
+          - Error handling
+          - Best practices
+          ```
+
+  - type: validate
+    conditions:
+      - pattern: "^# [^\\n]+\\n\\n### Summary"
+        inverse: true
+        message: "Planning documents must start with a title followed by a Summary section"
+      
+      - pattern: "### Summary\\n\\n[^\\n#]+"
+        inverse: true
+        message: "Summary section must contain a description of the component's purpose"
+
+  - type: suggest
+    conditions:
+      - pattern: "### Dependencies\\n\\n- \\[.*?\\]\\(.*?\\)"
+        inverse: true
+        message: |
+          When documenting dependencies, use this format:
+          ```markdown
+          ### Dependencies
+          - [ComponentName](mdc:../ComponentName/index.md)
+          - [InterfaceName](mdc:../Path/InterfaceName.md)
+          ```
+          Use relative paths and ensure links are valid.
+
+      - pattern: "### Links\\n\\n\\* \\[.*?\\]\\(.*?\\.md\\)"
+        inverse: true
+        message: |
+          When adding navigation links, use this format:
+          ```markdown
+          ### Links
+          * [Interface](mdc:interface.md)
+          * [Usage](mdc:usage.md)
+          * [Diagram](mdc:diagram.md)
+          ```
+
+  - type: suggest
+    conditions:
+      - pattern: "```tsx\\n[\\s\\S]*?\\n```"
+        message: |
+          Good! TypeScript code blocks should:
+          - Use realistic, working examples
+          - Include proper imports when necessary
+          - Show both API usage and error handling
+          - Use meaningful variable names and comments
+
+examples:
+  - input: |
+      # MyComponent
+
+      ### Summary
+      This component handles data processing.
+
+      ### Dependencies
+      - [Queue](mdc:../Queue/index.md)
+      - [Events](mdc:../Events/index.md)
+
+      ### Links
+      * [Interface](mdc:interface.md)
+      * [Usage](mdc:usage.md)
+    output: "Well-structured planning document following conventions"
+
+  - input: |
+      # BadComponent
+      
+      Some description here.
+    output: "Missing required Summary section and proper structure"
+
+metadata:
+  priority: medium
+  version: 1.0
+  tags: ["documentation", "planning", "reactor"]
+</rule>
