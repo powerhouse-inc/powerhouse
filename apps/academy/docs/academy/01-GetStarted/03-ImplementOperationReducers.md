@@ -1,4 +1,4 @@
-# 3. Implement the Document Model
+# Implement the Document Model
 
 In this section, we will implement and test the operation reducers for the **ToDoList** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory. 
 
@@ -6,30 +6,22 @@ To export the document model specification, follow the steps in the [Define ToDo
 
 ## Understanding Reducers in Document Models
 
-Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema:
+Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema.
 
-1. **Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema? The reducers provide the actual implementation of what happens when those operations are performed.
+:::info
+**Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
+The reducers provide the actual implementation of what happens when those operations are performed.
+:::
 
-2. **Event Sourcing Pattern**: Document models in Powerhouse follow event sourcing principles, where each operation is recorded in the document's history. The current state of the document is derived by applying all operations in sequence.
-
-3. **Immutable Updates**: While the reducer code appears to modify the state directly, Powerhouse handles immutability behind the scenes. Each operation produces a new document state without modifying the previous one.
-
-4. **Type Safety**: Powerhouse generates TypeScript types from your SDL, ensuring that your reducers and operations are type-safe.
-
-5. **Pure Functions**: Reducers should be pure functions that depend only on the current state and the operation input, making them predictable and testable.
-
-Let's see how these concepts are implemented in our **ToDoList** document model.
-
-## Importing the Document Model Specification and Generating Code
-
-To import the document model specification into your Powerhouse project, you can either:
- 
+To import the document model specification into your Powerhouse project, you can either: 
 - Copy and paste the file directly into the root of your Powerhouse project.
 - Or drag and drop the file into the Powerhouse project directory in the VSCode editor as seen in the image below:
 
 Either step will import the document model specification into your Powerhouse project.
 
 ![vscode image](./images/vscode.png)
+
+## In your Project Directory
 
 The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well. 
 
@@ -119,10 +111,10 @@ Here are the tests for the three operations implemented in the reducers file. Th
 <details>
 <summary>Operation Reducers Tests</summary>
 ```typescript
-import utils from '../../gen/utils';
-import { reducer } from '../../gen/reducer';
-import * as creators from '../../gen/creators';
-import { ToDoListDocument } from '../../gen/types';
+import utils from '../../gen/utils.js';
+import { reducer } from '../../gen/reducer.js';
+import * as creators from '../../gen/creators.js';
+import { ToDoListDocument } from '../../gen/types.js';
 
 // REMARKS:
 // These tests demonstrate the event sourcing principles of our document model.
@@ -202,4 +194,5 @@ Output should be as follows:
 
 If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully set up the backbone for a simple **ToDoList** document. 
 
+## Up Next: ToDoListEditor
 In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.

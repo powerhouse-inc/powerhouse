@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-cd /app/powerhouse 
 
 if [ ! -z "$PH_PACKAGES" ]; then
   # Convert comma-separated list to space-separated

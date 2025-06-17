@@ -1,8 +1,12 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "1.22.41-dev.1",
+  "version": "2.5.0-dev.30",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -34,22 +38,22 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.4.1",
-    "@vitest/browser": "^3.0.7",
+    "@vitest/browser": "^3.1.2",
     "playwright": "^1.51.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite-plugin-node-polyfills": "^0.23.0",
     "vitest": "^3.1.2",
-    "vitest-browser-react": "^0.1.1"
+    "vitest-browser-react": "^0.2.0"
   },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
-    "@powerhousedao/analytics-engine-browser": "0.5.0",
-    "@powerhousedao/analytics-engine-core": "0.4.0",
-    "@powerhousedao/analytics-engine-knex": "0.5.1",
+    "@powerhousedao/analytics-engine-browser": "^0.6.0",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/analytics-engine-knex": "^0.6.0",
     "@tanstack/react-query": "^5.49.2",
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",

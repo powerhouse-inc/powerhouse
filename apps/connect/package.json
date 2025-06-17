@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.28-dev.2",
+    "version": "2.5.0-dev.30",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
@@ -18,12 +18,12 @@
     "author": "acaldas@powerhouse.inc",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+        "url": "https://github.com/powerhouse-inc/powerhouse"
     },
     "bugs": {
-        "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+        "url": "https://github.com/powerhouse-inc/powerhouse/issues"
     },
-    "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
+    "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
     "scripts": {
         "build:tsc": "tsc --build",
         "start": "electron-forge start",
@@ -42,7 +42,7 @@
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev",
         "prebuild": "npm run clean && tsc --build --noEmit",
         "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "preview:web": "vite preview -c vite.renderer.config.mts",
+        "preview": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
         "build:service-worker": "tsc --build ./tsconfig.sw.json",
@@ -51,6 +51,7 @@
     },
     "devDependencies": {
         "@didtools/key-webcrypto": "^0.2.0",
+        "@electric-sql/pglite": "^0.2.17",
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
         "@electron-forge/maker-rpm": "^6.1.1",
@@ -65,7 +66,7 @@
         "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
-        "@powerhousedao/diff-analyzer": "^0.0.0-dev.4",
+        "@powerhousedao/diff-analyzer": "^0.0.0-dev.7",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@renown/sdk": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
@@ -102,8 +103,8 @@
         "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
         "react-error-boundary": "^4.0.11",
         "react-hotkeys-hook": "^4.5.0",
         "react-i18next": "^13.5.0",

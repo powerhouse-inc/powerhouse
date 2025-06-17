@@ -45,8 +45,8 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
     <div {...mergeClassNameProps(divProps, "flex flex-col items-center")}>
       <div className="text-center">{children}</div>
       <div className="my-8 flex gap-x-16 text-sm font-medium">
-        {cookiesValue.map((cookie) => (
-          <div className="cursor-pointer" key={cookie.id}>
+        {cookiesValue.map((cookie, i) => (
+          <div className="cursor-pointer" key={i}>
             <input
               checked={cookie.value}
               className="mr-1 size-3 cursor-pointer rounded-sm border-2 border-gray-900 accent-gray-900 focus:outline-none"
@@ -66,6 +66,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
           color="light"
           onClick={() => onReject()}
           size="small"
+          key={"button-reject"}
         >
           {rejectLabel}
         </Button>
@@ -73,6 +74,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
           className={buttonStyles}
           onClick={() => onSubmit(cookiesValue)}
           size="small"
+          key={"button-submit"}
         >
           {submitLabel}
         </Button>

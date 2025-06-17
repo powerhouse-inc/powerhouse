@@ -394,7 +394,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                     onClose={hideRevisionHistory}
                 />
             ) : (
-                <Suspense fallback={<EditorLoader />}>
+                <Suspense fallback={<EditorLoader />} name="EditorLoader">
                     <ErrorBoundary
                         fallbackRender={FallbackEditorError}
                         key={documentId}

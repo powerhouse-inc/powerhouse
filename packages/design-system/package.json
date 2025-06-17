@@ -1,11 +1,15 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "1.39.32-dev.1",
+  "version": "2.5.0-dev.30",
   "description": "",
   "files": [
     "/dist"
   ],
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -14,10 +18,6 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
-    },
-    "./scalars": {
-      "types": "./dist/src/scalars/index.d.ts",
-      "import": "./dist/src/scalars/index.js"
     },
     "./ui": {
       "types": "./dist/src/ui/index.d.ts",
@@ -31,7 +31,6 @@
     "#connect": "./dist/src/connect/index.js",
     "#powerhouse": "./dist/src/powerhouse/index.js",
     "#rwa": "./dist/src/rwa/index.js",
-    "#scalars": "./dist/src/scalars/index.js",
     "#ui": "./dist/src/ui/index.js",
     "#services": "./dist/src/services/index.js"
   },
@@ -52,10 +51,6 @@
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/powerhouse-inc/design-system.git"
   },
   "author": {
     "name": "https://www.powerhouse.inc/"

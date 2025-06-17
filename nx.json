@@ -63,8 +63,7 @@
   },
   "release": {
     "projects": ["packages/*", "clis/*", "apps/*"],
-    "projectsRelationship": "independent",
-    "releaseTagPattern": "dev/{projectName}/{version}",
+    "projectsRelationship": "managed",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {

@@ -1,8 +1,12 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.27.53-dev.1",
+  "version": "2.5.0-dev.30",
   "main": "dist/server.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -44,7 +48,7 @@
     "vite": "^6.3.3"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.3.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.4.0",
     "@powerhousedao/config": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",

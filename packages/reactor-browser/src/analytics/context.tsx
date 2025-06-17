@@ -1,12 +1,18 @@
-import { type BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import {
+  BrowserAnalyticsStore,
+  type BrowserAnalyticsStoreOptions,
+} from "@powerhousedao/analytics-engine-browser";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
   QueryClientProvider,
+  useMutation,
   useQuery,
+  useQueryClient,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { childLogger } from "document-drive";
-import { type PropsWithChildren } from "react";
+import { useEffect, useMemo, type PropsWithChildren } from "react";
 import { getGlobal, setGlobal } from "../global/core.js";
 import { type IAnalyticsStore } from "./types.js";
 
@@ -20,68 +26,118 @@ export const analyticsOptionsKey = ["analytics", "options"] as const;
 export const analyticsStoreKey = ["analytics", "store"] as const;
 export const analyticsEngineKey = ["analytics", "store"] as const;
 
-export async function createAnalyticsStore({
-  databaseName,
-}: CreateStoreOptions): Promise<IAnalyticsStore> {
-  const globalAnalytics = getGlobal("analytics");
-  if (databaseName === globalAnalytics?.options.databaseName) {
-    logger.warn(
-      "Analytics store already initialized with the same database name. Returning existing store.",
-    );
-    return globalAnalytics.store;
-  }
-
-  const { BrowserAnalyticsStore } = await import("./store/browser.js");
-  const store = new BrowserAnalyticsStore({ databaseName });
+async function createAnalyticsStore(options: CreateStoreOptions) {
+  const store = new BrowserAnalyticsStore(options);
   await store.init();
+
   const engine = new AnalyticsQueryEngine(store);
-  setGlobal("analytics", { store, engine, options: { databaseName } });
-  return store;
+  return { store, engine, options };
 }
 
-export function useCreateAnalyticsStore(
-  queryClient: QueryClient,
-  options: CreateStoreOptions,
-) {
-  queryClient.setQueryDefaults(analyticsOptionsKey, {
-    queryFn: () => options,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+export async function getAnalyticsStore(
+  options?: CreateStoreOptions,
+): Promise<IAnalyticsStore | null> {
+  const globalAnalytics = getGlobal("analytics");
 
-  queryClient.setQueryDefaults(analyticsStoreKey, {
-    queryFn: () => createAnalyticsStore(options),
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  if (!options || !options.databaseName) {
+    if (globalAnalytics) {
+      return (await globalAnalytics).store;
+    } else {
+      throw new Error(
+        "Analytics store options are required if no global analytics store is available",
+      );
+    }
+  }
+
+  if (
+    globalAnalytics &&
+    options.databaseName === (await globalAnalytics).options.databaseName
+  ) {
+    return (await globalAnalytics).store;
+  }
+
+  return null;
+}
+
+export async function createOrGetAnalyticsStore(
+  options?: CreateStoreOptions,
+): Promise<IAnalyticsStore> {
+  const globalAnalytics = await getAnalyticsStore(options);
+  if (globalAnalytics) {
+    return globalAnalytics;
+  }
+
+  if (!options) {
+    throw new Error(
+      "Analytics store options are required if no global analytics store is available",
+    );
+  }
+
+  const analytics = createAnalyticsStore(options);
+  setGlobal("analytics", analytics);
+  analytics
+    .then(({ store }) => {
+      logger.debug("Analytics store created", store);
+    })
+    .catch((e) => {
+      logger.error("Analytics store creation failed", e);
+    });
+  return (await analytics).store;
 }
 
 export function useAnalyticsStoreOptions() {
-  return useQuery<CreateStoreOptions>({
+  return useQuery<CreateStoreOptions | undefined>({
     queryKey: analyticsOptionsKey,
+  }).data;
+}
+
+export function useCreateAnalyticsStore(options?: CreateStoreOptions) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    queryClient.setQueryDefaults(analyticsOptionsKey, {
+      queryFn: () => options,
+      staleTime: Infinity,
+      gcTime: Infinity,
+    });
+  }, [queryClient, options]);
+
+  return useMutation({
+    mutationFn: async () => {
+      const store = await createOrGetAnalyticsStore(options);
+      queryClient.setQueryDefaults(analyticsStoreKey, {
+        queryFn: () => options,
+        staleTime: Infinity,
+        gcTime: Infinity,
+      });
+      return store;
+    },
   });
 }
 
-export function useAnalyticsStore() {
-  const { data: storeOptions } = useAnalyticsStoreOptions();
-
-  const store = useQuery<IAnalyticsStore>({
-    queryKey: analyticsStoreKey,
-    enabled: !!storeOptions,
-    retry: false,
+export function useAnalyticsStoreQuery(options?: CreateStoreOptions) {
+  return useSuspenseQuery({
+    queryKey: [analyticsStoreKey, options],
+    queryFn: () => getAnalyticsStore(options),
+    retry: true,
   });
+}
 
-  // useEffect(() => {
-  //   if (storeOptions) {
-  //     store.refetch().catch(logger.error);
-  //   }
-  // }, [storeOptions]);
-
+export function useAnalyticsStore(options?: CreateStoreOptions) {
+  const store = useAnalyticsStoreQuery(options);
   return store.data;
 }
 
-interface AnalyticsProviderProps extends PropsWithChildren {
-  databaseName: string;
+export function useAnalyticsStoreAsync(options?: CreateStoreOptions) {
+  return useQuery({
+    queryKey: [analyticsStoreKey, options],
+    queryFn: () => getAnalyticsStore(options),
+    retry: true,
+    throwOnError: false,
+  });
+}
+
+interface BaseAnalyticsProviderProps extends PropsWithChildren {
   /**
    * Custom QueryClient instance
    * @default undefined
@@ -89,19 +145,78 @@ interface AnalyticsProviderProps extends PropsWithChildren {
   queryClient?: QueryClient;
 }
 
+type CreateAnalyticsStoreProps =
+  | {
+      options?: CreateStoreOptions;
+    }
+  | {
+      databaseName?: string;
+    };
+
+type AnalyticsProviderProps = BaseAnalyticsProviderProps &
+  CreateAnalyticsStoreProps;
+
+function CreateAnalyticsStore(props: CreateAnalyticsStoreProps) {
+  const options = useMemo(
+    () =>
+      "options" in props
+        ? props.options
+        : "databaseName" in props && props.databaseName
+          ? {
+              databaseName: props.databaseName,
+            }
+          : undefined,
+    [props],
+  );
+
+  const { mutate } = useCreateAnalyticsStore(options);
+
+  useEffect(() => {
+    if (options?.databaseName) {
+      mutate();
+    }
+  }, [options]);
+  return null;
+}
+
 export function AnalyticsProvider({
   children,
-  databaseName,
   queryClient = defaultQueryClient,
+  ...props
 }: AnalyticsProviderProps) {
-  useCreateAnalyticsStore(queryClient, { databaseName });
-
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+      <CreateAnalyticsStore {...props} />
+      {children}
+    </QueryClientProvider>
   );
 }
 
 export function useAnalyticsEngine(): AnalyticsQueryEngine | undefined {
-  const globalAnalytics = getGlobal("analytics");
-  return globalAnalytics?.engine;
+  return useSuspenseQuery({
+    queryKey: analyticsEngineKey,
+    queryFn: async () => {
+      const globalAnalytics = getGlobal("analytics");
+      if (!globalAnalytics) {
+        throw new Error("No analytics store available");
+      }
+      return (await globalAnalytics).engine;
+    },
+    retry: false,
+  }).data;
+}
+
+export function useAnalyticsEngineAsync() {
+  return useQuery({
+    queryKey: analyticsEngineKey,
+    queryFn: async () => {
+      const globalAnalytics = getGlobal("analytics");
+      if (!globalAnalytics) {
+        throw new Error("No analytics store available");
+      }
+      return (await globalAnalytics).engine;
+    },
+    retry: false,
+  });
 }

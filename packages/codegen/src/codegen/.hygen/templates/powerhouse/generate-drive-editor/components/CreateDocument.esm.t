@@ -4,6 +4,7 @@ unless_exists: true
 ---
 import { Button } from "@powerhousedao/design-system";
 import { type DocumentModelModule } from "document-model";
+import { TypeFormatFlags } from "typescript";
 
 interface CreateDocumentProps {
   documentModels?: DocumentModelModule[];
@@ -36,7 +37,8 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
               color="light"
               size="small"
               className="cursor-pointer"
-              aria-details={spec.description}
+              title={spec.name}
+              aria-description={spec.description}
               onClick={() => createDocument(doc)}
             >
               <span className="text-sm">{spec.name}</span>

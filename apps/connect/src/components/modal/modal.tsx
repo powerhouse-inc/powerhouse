@@ -1,4 +1,10 @@
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, {
+    Suspense,
+    useCallback,
+    useContext,
+    useMemo,
+    useState,
+} from 'react';
 import {
     type ModalPropsMapping,
     type ModalType,
@@ -60,13 +66,15 @@ export const ModalManager: React.FC<{ children?: React.ReactNode }> = props => {
     return (
         <ModalContext.Provider value={value}>
             {children}
-            {ModalComponent && (
-                <ModalComponent
-                    {...(modalProps as any)}
-                    open={open}
-                    onClose={closeModal}
-                />
-            )}
+            <Suspense name="ModalManager">
+                {ModalComponent && (
+                    <ModalComponent
+                        {...(modalProps as any)}
+                        open={open}
+                        onClose={closeModal}
+                    />
+                )}
+            </Suspense>
         </ModalContext.Provider>
     );
 };

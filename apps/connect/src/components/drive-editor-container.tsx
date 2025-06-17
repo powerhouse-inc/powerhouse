@@ -170,7 +170,7 @@ export function DriveEditorContainer() {
                 context={{
                     ...editorProps.context,
                     ...driveContext,
-                    analyticsDatabaseName: connectConfig.analyticsDatabaseName,
+                    analyticsDatabaseName: connectConfig.analytics.databaseName,
                     getDocumentRevision: onGetDocumentRevision,
                     getDocumentModelModule,
                     getEditor,

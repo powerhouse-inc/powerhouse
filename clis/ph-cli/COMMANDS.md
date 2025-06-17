@@ -367,13 +367,11 @@ Arguments:
                         - all: Act on all services (default)
 
 Examples:
-  $ ph service                               # List all services (same as 'ph service list all')
-  $ ph service start switchboard             # Start the Switchboard service
-  $ ph service stop connect                  # Stop the Connect service
-  $ ph service start all                     # Start all services
+  $ ph service setup                              # Setup services
+  $ ph service start              # Start the services
+  $ ph service stop                   # Stop the services
   $ ph service status                        # Check status of all services
-  $ ph service startup                       # Configure services to start on system boot
-  $ ph service unstartup                     # Remove services from system startup
+  
 
 Notes:
   - Services are managed using PM2, a process manager for Node.js applications

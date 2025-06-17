@@ -1,4 +1,6 @@
+import { useUnwrappedReactor } from '#store';
 import { LOCAL } from '@powerhousedao/design-system';
+import { useSwitchboard } from '@powerhousedao/reactor-browser';
 import {
     logger,
     type PullResponderTrigger,
@@ -7,7 +9,6 @@ import {
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
-import { useSwitchboard } from './useSwitchboard.js';
 
 export type ClientErrorHandler = {
     strandsErrorHandler: (
@@ -43,7 +44,8 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         setDriveSharingType,
     } = useDocumentDriveServer();
 
-    const { getDriveIdBySlug } = useSwitchboard();
+    const reactor = useUnwrappedReactor();
+    const { getDriveIdBySlug } = useSwitchboard(reactor!);
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 

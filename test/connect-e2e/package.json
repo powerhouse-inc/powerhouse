@@ -1,14 +1,16 @@
 {
   "name": "connect-e2e",
-  "version": "1.0.193-dev.0",
+  "version": "1.0.237-dev.0",
   "description": "",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
+    "generate": "ph-cli generate",
     "lint": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "keywords": [],
   "author": "",
@@ -17,11 +19,23 @@
     "@electric-sql/pglite": "^0.2.12",
     "@playwright/test": "^1.41.2",
     "@powerhousedao/connect": "workspace:*",
+    "document-model": "workspace:*",
+    "document-drive": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@types/jszip": "^3.4.1",
     "@types/node": "^22.15.17",
     "graphql-request": "^6.1.0",
+    "jszip": "^3.10.1",
     "react": "18",
     "react-dom": "18",
-    "vite": "^6.3.3"
+    "vite": "^6.3.3",
+    "graphql": "^16.10.0",
+    "graphql-tag": "^2.12.6",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
   }
 }
