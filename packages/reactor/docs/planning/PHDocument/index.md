@@ -20,7 +20,7 @@ We break PHDocument into four objects:
 
 #### Id
 
-The `id` is a unique, Ed25519 signature of the document header data. It is used to verify the creator of a document to a document id.
+The `id` is a unique, Ed25519 signature of the document header data. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
 
 This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
 
@@ -28,16 +28,55 @@ See the header section below for more information.
 
 #### State
 
-The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers.
+The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers. For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
 
-For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
+The `header` scope is a "special case" scope that is always populated, and the `document` scope is a default scope used for upgrades and initial scope, but is not necessarily populated.
 
-The `header` scope is a "special case" scope that is always populated.
+```tsx
+type JsonSerializable =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | JsonSerializable[]
+  | { [key: string]: JsonSerializable };
+
+export type PHDocumentState<TDocumentScopeState extends JsonSerializable = JsonSerializable> = {
+  header: PHDocumentHeader;
+  document: TDocumentScopeState;
+
+  [scope: string]: JsonSerializable;
+}
+
+export type PHDocument<TDocumentScopeState extends JsonSerializable = JsonSerializable> = {
+  id: string;
+  state: PHDocumentState<TDocumentScopeState>;
+};
+```
+
+Querying looks like:
 
 ```tsx
 let drive = await client.get<DocumentDriveDocument>("mine");
 
-console.log(`Drive icon: ${drive.state.global.icon}`);
+console.log(`Drive icon: ${drive.state.document.icon}`);
+```
+
+Custom document types extend this:
+
+```tsx
+type MyDocumentDocumentState = {
+  title: string;
+}
+
+type MyOtherScopeState = {
+  foo: number;
+}
+
+type MyDocument = PHDocument<MyDocumentDocumentState> & {
+  myOtherScope: MyOtherScopeState;
+};
 ```
 
 ##### Header
@@ -45,20 +84,17 @@ console.log(`Drive icon: ${drive.state.global.icon}`);
 The special case `header` scope contains a number of key elements:
 
 ```tsx
-type SignatureInfo = {
+export type PHDocumentSignatureInfo = {
   /** The public key of the document creator. */
   publicKey: string;
 
-  /** The message that was signed. */
-  message: string;
-
   /** The nonce that was appended to the message to create the signature. */
   nonce: string;
-}
+};
 
-type DocumentHeader = {
+export type PHDocumentHeader = {
   /** Information to verify the document creator. */
-  sig: SignatureInfo;
+  sig: PHDocumentSignatureInfo;
 
   /** The slug of the document. */
   slug: string;
@@ -72,14 +108,9 @@ type DocumentHeader = {
   /** The type of the document. */
   documentType: string;
 
-  /** The number of operations applied to the document, per scope. */
-  revisions: {
-    [scope: string]: number;
-  };
-  
   /** The timestamp of the creation date of the document. */
   createdAtUtcMs: number;
-  
+
   /** The timestamp of the last change in the document. */
   lastModifiedAtUtcMs: number;
 
@@ -88,7 +119,7 @@ type DocumentHeader = {
     /** The preferred editor for the document. */
     preferredEditor?: string;
   };
-}
+};
 ```
 
 #### Mutations
