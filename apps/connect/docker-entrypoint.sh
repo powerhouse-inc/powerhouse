@@ -9,7 +9,7 @@ if [ ! -z "$PH_PACKAGES" ]; then
 fi
 
 # Build connect
-ph connect build
+ph connect build --base "$BASE_PATH"
 
 # Move build to nginx directory
 rm -rf /var/www/html/project

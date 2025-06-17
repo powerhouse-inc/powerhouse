@@ -41,6 +41,7 @@ setCustomHelp(studioCommand, connectStudioHelp);
 
 const buildCommand = new Command("build")
   .description("Build Connect project")
+  .option("--base <base>", "Base path for the app", "/")
   .option(
     "--project-root <path>",
     "The root directory of the project",
@@ -60,6 +61,7 @@ setCustomHelp(buildCommand, connectBuildHelp);
 
 const previewCommand = new Command("preview")
   .description("Preview built Connect project")
+  .option("--base <base>", "Base path for the app", "/")
   .option("--project-root <path>", "The root directory of the project")
   .option("-p, --port <port>", "The port to run the server on", "4173")
   .option("--open", "Open the browser")

@@ -32,6 +32,7 @@ import { type ConnectBuildOptions } from "./types.js";
  */
 export async function buildConnect(options: ConnectBuildOptions) {
   const {
+    base = (import.meta.env.BASE_PATH as string) || "/",
     projectRoot = process.cwd(),
     assetsDirName = DEFAULT_ASSETS_DIR_NAME,
     externalPackagesFileName = DEFAULT_EXTERNAL_PACKAGES_FILE_NAME,
@@ -122,4 +123,7 @@ export async function buildConnect(options: ConnectBuildOptions) {
     connectBuildIndexHtmlPath,
     `<noscript><link rel="stylesheet" href="/${CONNECT_BUILD_ASSETS_DIR_NAME}/${CONNECT_BUILD_EXTERNAL_PACKAGES_CSS_FILE_NAME}"></noscript>`,
   );
+
+  // Add base tag to index.html
+  await appendToHtmlHead(connectBuildIndexHtmlPath, `<base href="${base}">`);
 }

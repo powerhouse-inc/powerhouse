@@ -29,6 +29,8 @@ RUN apk add --no-cache \
 ARG TAG=latest
 ENV TAG=$TAG
 
+ARG BASE_PATH=/
+ENV BASE_PATH=$BASE_PATH
 
 # Install ph-cmd
 ENV PNPM_HOME="/pnpm"
