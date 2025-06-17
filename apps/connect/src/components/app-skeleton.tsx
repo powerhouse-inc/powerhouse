@@ -4,6 +4,7 @@ import {
     HomeScreen,
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
+import { getBasePath } from '../utils/browser';
 
 const LOADER_DELAY = 250;
 
@@ -46,6 +47,7 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
 
 export const AppSkeleton = () => {
     const isSSR = typeof window === 'undefined';
+    const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
     return (
         <div className="flex h-screen">
             <ConnectSidebar
@@ -56,14 +58,19 @@ export const AppSkeleton = () => {
                 address={undefined}
             />
             <HomeScreen
-                containerClassName={isSSR ? 'hidden home-screen' : undefined}
+                containerClassName={
+                    isSSR || !isHomeScreen ? 'hidden home-screen' : undefined
+                }
                 children={null}
             />
             {isSSR ? (
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `
-                    if (window.location.pathname === '/') {
+                    const baseEl = document.querySelector('base');
+                    const href = baseEl.getAttribute('href');
+                    const basePath = href || '/';
+                    if (window.location.pathname === basePath) {
                         document.querySelector('.home-screen')?.classList.remove('hidden')
                     }`,
                     }}

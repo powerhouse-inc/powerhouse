@@ -41,7 +41,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=4000
-ENV PH_CONNECT_ROUTER_BASENAME=""
 ENV PH_CONNECT_SENTRY_DSN=""
 ENV PH_CONNECT_SENTRY_ENV=""
 ENV PH_PACKAGES=""

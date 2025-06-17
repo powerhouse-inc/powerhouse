@@ -84,6 +84,7 @@ function buildAppSkeletonPlugin(outDir: string): PluginOption {
             const skeletonHtml = await renderSkeleton(
                 path.resolve(outDir, 'assets/app-skeleton.js'),
             );
+
             const html = fs.readFileSync(
                 path.resolve(outDir, 'index.html'),
                 'utf-8',
@@ -243,6 +244,7 @@ export default defineConfig(({ mode }) => {
     }
 
     return {
+        base: './',
         plugins,
         build: {
             minify: true,
