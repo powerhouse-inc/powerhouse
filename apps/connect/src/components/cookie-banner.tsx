@@ -67,6 +67,7 @@ export const CookieBanner = () => {
                 >
                     <p className="font-semibold text-gray-500">
                         <Trans
+                            key={'cookieBanner.message'}
                             i18nKey="cookieBanner.message"
                             components={{
                                 a: (
@@ -74,6 +75,7 @@ export const CookieBanner = () => {
                                         onClick={() =>
                                             showModal('cookiesPolicy', {})
                                         }
+                                        key={'cookieBanner.message-link'}
                                         className="cursor-pointer text-gray-900 hover:underline"
                                     />
                                 ),
