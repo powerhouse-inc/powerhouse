@@ -1,3 +1,13 @@
+## 2.5.0-dev.30 (2025-06-17)
+
+### 🩹 Fixes
+
+- **connect:** set proper tag on docker build ([598c1b3fb](https://github.com/powerhouse-inc/powerhouse/commit/598c1b3fb))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.29 (2025-06-17)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
