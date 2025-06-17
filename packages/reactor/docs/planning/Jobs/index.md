@@ -204,19 +204,60 @@ flowchart TD
 
 ##### `LIBRARY_ERROR`
 
-An exception was thrown in the related document model library, even after retry logic was applied.
+An exception was thrown in the related document model library, even after retry logic was applied. High level recovery flow:
+
+```mermaid
+flowchart TD
+  Start("Start") --> A{"Is local Action?"}
+  A --> |"Yes"| B["Reject Job"]
+  A --> |"No"| C["Alert Other Reactor"]
+  C --> B
+
+  B --> End("End")
+  C --> End("End")
+```
 
 ##### `UNAUTHORIZED`
 
-The user is not authorized to apply the `Action` to the document.
+The user is not authorized to apply the `Action` to the document. High level recovery flow:
+
+```mermaid
+flowchart TD
+  Start("Start") --> A{"Is local Action?"}
+  A --> |"Yes"| B["Reject Job"]
+  A --> |"No"| C["Alert Other Reactor"]
+  C --> B
+
+  B --> End("End")
+  C --> End("End")
+```
 
 ##### `REBASE_FAILED`
 
-A rebase was attempted but failed.
+A rebase was attempted but failed. High level recovery flow:
+
+```mermaid
+flowchart TD
+  Start("Start") --> A{"Is local Action?"}
+  A --> |"Yes"| B["Reject Job (Unrecoverable Logic Error)"]
+  A --> |"No"| C["Alert Other Reactor"]
+  C --> D["Remove Remote"]
+
+  B --> End("End")
+  D --> End("End")
+```
 
 ##### `GRACEFUL_ABORT`
 
 This is used when a shutdown of the job executor is requested. This error code will be attached to all incomplete `JobResult` objects in all queues.
+
+High level recovery flow:
+
+```mermaid
+flowchart TD
+  Start("Start") --> B["Reject Job"]
+  B --> End("End")
+```
 
 ### Dependencies
 
