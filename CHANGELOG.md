@@ -1,3 +1,13 @@
+## 2.5.0-dev.32 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** added support for basepath ([1d5d3580f](https://github.com/powerhouse-inc/powerhouse/commit/1d5d3580f))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.31 (2025-06-18)
 
 ### 🚀 Features
