@@ -1,3 +1,28 @@
+## 2.5.0-staging.2 (2025-06-18)
+
+### 🚀 Features
+
+- removed scalars components ([#1574](https://github.com/powerhouse-inc/powerhouse/pull/1574))
+- add app skeleton to html at build time ([1882bb820](https://github.com/powerhouse-inc/powerhouse/commit/1882bb820))
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### 🩹 Fixes
+
+- deploy not on push to main ([63eef7020](https://github.com/powerhouse-inc/powerhouse/commit/63eef7020))
+- deploy powerhouse to available environments ([a45859a22](https://github.com/powerhouse-inc/powerhouse/commit/a45859a22))
+- **connect:** set proper tag on docker build ([598c1b3fb](https://github.com/powerhouse-inc/powerhouse/commit/598c1b3fb))
+
+### 🔥 Performance
+
+- bundle and accessibility improvements ([94ef22345](https://github.com/powerhouse-inc/powerhouse/commit/94ef22345))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 2.5.0-staging.1 (2025-06-13)
 
 ### 🚀 Features
