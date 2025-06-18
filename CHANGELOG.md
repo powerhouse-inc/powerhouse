@@ -1,3 +1,14 @@
+## 2.5.0-dev.37 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** redirect to proper base path ([9a24e5311](https://github.com/powerhouse-inc/powerhouse/commit/9a24e5311))
+- **connect:** added cache control header ([ec9397e57](https://github.com/powerhouse-inc/powerhouse/commit/ec9397e57))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.36 (2025-06-18)
 
 ### 🩹 Fixes
