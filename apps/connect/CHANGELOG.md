@@ -1,3 +1,13 @@
+## 2.5.0-dev.40 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** nginx config ([db59bb69c](https://github.com/powerhouse-inc/powerhouse/commit/db59bb69c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.39 (2025-06-18)
 
 ### 🩹 Fixes
