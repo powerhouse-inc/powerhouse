@@ -1,3 +1,13 @@
+## 2.5.0-dev.35 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** nginx base path ([42428c4ae](https://github.com/powerhouse-inc/powerhouse/commit/42428c4ae))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.34 (2025-06-18)
 
 ### 🚀 Features

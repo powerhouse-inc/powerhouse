@@ -1,3 +1,16 @@
+## 2.5.0-dev.35 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** use relative path for external-packages.css ([e41a46b94](https://github.com/powerhouse-inc/powerhouse/commit/e41a46b94))
+- **codegen:** removed stray import ([539cd017d](https://github.com/powerhouse-inc/powerhouse/commit/539cd017d))
+- **connect:** nginx base path ([42428c4ae](https://github.com/powerhouse-inc/powerhouse/commit/42428c4ae))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 2.5.0-dev.34 (2025-06-18)
 
 ### 🚀 Features

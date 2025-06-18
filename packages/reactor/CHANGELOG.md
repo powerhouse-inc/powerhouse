@@ -1,3 +1,7 @@
+## 2.5.0-dev.35 (2025-06-18)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.34 (2025-06-18)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

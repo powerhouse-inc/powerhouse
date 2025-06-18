@@ -1,3 +1,13 @@
+## 2.5.0-dev.35 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** use relative path for external-packages.css ([e41a46b94](https://github.com/powerhouse-inc/powerhouse/commit/e41a46b94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.34 (2025-06-18)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
