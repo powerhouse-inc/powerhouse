@@ -1,3 +1,13 @@
+## 2.5.0-dev.41 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** remove redirect ([d1605708b](https://github.com/powerhouse-inc/powerhouse/commit/d1605708b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.40 (2025-06-18)
 
 ### 🩹 Fixes

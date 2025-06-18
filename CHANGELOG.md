@@ -1,3 +1,15 @@
+## 2.5.0-dev.41 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** add base tag to the start of the head element in the connect prod html ([c84dcd458](https://github.com/powerhouse-inc/powerhouse/commit/c84dcd458))
+- **connect:** remove redirect ([d1605708b](https://github.com/powerhouse-inc/powerhouse/commit/d1605708b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 2.5.0-dev.40 (2025-06-18)
 
 ### 🩹 Fixes

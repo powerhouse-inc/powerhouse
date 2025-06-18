@@ -1,3 +1,13 @@
+## 2.5.0-dev.41 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** add base tag to the start of the head element in the connect prod html ([c84dcd458](https://github.com/powerhouse-inc/powerhouse/commit/c84dcd458))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.40 (2025-06-18)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
