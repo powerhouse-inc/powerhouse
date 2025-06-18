@@ -29,9 +29,6 @@ RUN apk add --no-cache \
 ARG TAG=latest
 ENV TAG=$TAG
 
-ARG BASE_PATH=/
-ENV BASE_PATH=$BASE_PATH
-
 # Install ph-cmd
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -46,6 +43,7 @@ ENV PORT=4000
 ENV PH_CONNECT_SENTRY_DSN=""
 ENV PH_CONNECT_SENTRY_ENV=""
 ENV PH_PACKAGES=""
+ENV PH_CONNECT_BASE_PATH=""
 WORKDIR /app
 RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
         ph init project --${TAG}; \
