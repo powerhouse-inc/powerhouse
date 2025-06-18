@@ -16,6 +16,9 @@ export const REACTOR_URL = "http://127.0.0.1:4001";
  */
 export default defineConfig({
   testDir: "./tests",
+  /* Global setup and teardown for codegen */
+  globalSetup: "./global-setup.ts",
+  globalTeardown: "./global-teardown.ts",
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

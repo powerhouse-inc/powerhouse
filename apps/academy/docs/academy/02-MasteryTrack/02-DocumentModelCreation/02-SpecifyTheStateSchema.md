@@ -31,6 +31,7 @@ You can modify types using lists and non-null indicators:
 ## Example: ToDoList State Schema
 
 Let's revisit the `ToDoList` example from the "Define the ToDoList document specification" tutorial.
+Only this time, we'll also add a 'Stats' type. Since we want to keep track of the number of completed To-Do's.
 
 ```graphql
 # The state of our ToDoList
@@ -43,6 +44,12 @@ type ToDoItem {
   id: ID!
   text: String!
   checked: Boolean!
+}
+# The statistics on our to-do's
+type ToDoListStats {
+  total: Int!
+  checked: Int!
+  unchecked: Int!
 }
 ```
 
@@ -59,6 +66,11 @@ type ToDoItem {
     *   `text: String!`: The textual description of the to-do item. It cannot be null, ensuring every to-do has a description.
     *   `checked: Boolean!`: Indicates whether the to-do item is completed. It defaults to a boolean value (true or false) and cannot be null.
 
+*   **`ToDoListStats` type**: This type holds the summary statistics for the to-do list.
+    *   `total: Int!`: The total count of all to-do items. This field must be an integer and cannot be null.
+    *   `checked: Int!`: The number of to-do items that are marked as completed. This must be an integer and cannot be null.
+    *   `unchecked: Int!`: The number of to-do items that are still pending. This also must be an integer and cannot be null.
+
 ## Best Practices for Designing Your State Schema
 
 1.  **Start Simple, Iterate**: Begin with the core entities and properties. You can always expand and refine your schema as your understanding of the document's requirements grows.
@@ -73,5 +85,61 @@ type ToDoItem {
 
 By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
 
-At the end of this Document Model Creation Chapter you will find the ToDoList Repository where you can explore the code and implementation of all the items we have discussed. 
-You'll be able to run the advanced ToDoList in Connect Studio and explore the reducers and editor code. 
+## Practical Implementation: Defining the State Schema in Connect
+
+Now that you understand the concepts behind the state schema, let's put it into practice. This section will guide you through creating a document model specification for the advanced ToDoList example discussed above.
+
+<details>
+<summary>Tutorial: The State Schema Specification</summary> 
+
+### Prerequisites
+
+-   You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
+-   Connect Studio is running. If not, navigate to your project directory in the terminal and run `ph connect`.
+
+### Steps
+
+1.  **Create a New Document Model**:
+    -   With Connect Studio open in your browser, navigate into your local drive.
+    -   At the bottom of the page in the 'New Document' section, click the `DocumentModel` button to create a new document model specification.
+
+2.  **Define Document Metadata**:
+    -   **Name**: Give your document model a descriptive name, for example, `ToDoList`. **Pay close attention to capitalization, as it influences our code.**
+    -   **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type, for instance, `powerhouse/todolist`.
+
+3.  **Specify the State Schema**:
+    -   In the code editor provided, you'll see a template for a GraphQL schema.
+    -   Replace the entire content of the editor with the advanced `ToDoList` schema we've designed in this chapter:
+
+    ```graphql
+    # The state of our ToDoList
+    type ToDoListState {
+      items: [ToDoItem!]!
+    }
+
+    # A single to-do item
+    type ToDoItem {
+      id: ID!
+      text: String!
+      checked: Boolean!
+    }
+    # The statistics on our to-do's
+    type ToDoListStats {
+      total: Int!
+      checked: Int!
+      unchecked: Int!
+    }
+    ```
+
+4.  **Sync Schema and View Initial State**:
+    -   After pasting the schema, click the **'Sync with schema'** button.
+    -   This action processes your schema and generates an initial JSON state for your document model based on the `ToDoListState` type. You can view this initial state, which helps you verify that your schema is structured correctly.
+
+    For now, you can ignore the "Modules & Operations" section. We will define and implement the operations that modify this state in the upcoming sections of this Mastery Track.
+
+By completing these steps, you have successfully specified the data structure for the advanced ToDoList document model. The next step is to define the operations that will allow users to interact with and change this state.
+
+</details>
+
+For a complete, working example, you can always refer to the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
+

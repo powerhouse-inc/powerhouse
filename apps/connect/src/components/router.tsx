@@ -4,18 +4,20 @@ import {
     type RouteObject,
     RouterProvider,
     createBrowserRouter,
-    createMemoryRouter,
 } from 'react-router-dom';
-import { Home } from '../pages/home.js';
-import { AtlasImport } from './demo/atlas-import.js';
-import Root from './root.js';
 
+const Home = React.lazy(() =>
+    import('../pages/home.js').then(m => ({ default: m.Home })),
+);
 const Content = React.lazy(() => import('../pages/content.js'));
+const Root = React.lazy(() => import('./root.js'));
 
-async function createRouter(routes: RouteObject[]) {
-    const isPackaged = await window.electronAPI?.isPackaged();
-    const createRouter = isPackaged ? createMemoryRouter : createBrowserRouter;
-    return createRouter(routes, {
+const AtlasImport = React.lazy(() =>
+    import('./demo/atlas-import.js').then(m => ({ default: m.AtlasImport })),
+);
+
+function createRouter(routes: RouteObject[]) {
+    return createBrowserRouter(routes, {
         basename: connectConfig.routerBasename,
         future: {
             v7_fetcherPersist: true,
@@ -28,7 +30,11 @@ function createRoutes() {
     const routes: RouteObject[] = [
         {
             path: '/',
-            element: <Home />,
+            element: (
+                <Suspense name="Home">
+                    <Home />
+                </Suspense>
+            ),
         },
         {
             path: 'd?/:driveId?/*?',
@@ -40,7 +46,11 @@ function createRoutes() {
         },
         {
             path: 'import/:documentId',
-            element: <AtlasImport />,
+            element: (
+                <Suspense name="AtlasImport">
+                    <AtlasImport />
+                </Suspense>
+            ),
         },
     ];
 
@@ -56,7 +66,7 @@ function createRoutes() {
         },
         {
             element: (
-                <Suspense>
+                <Suspense name="DefaultRoot">
                     <Root />
                 </Suspense>
             ),
@@ -65,12 +75,8 @@ function createRoutes() {
 }
 
 const routes = createRoutes();
+const router = createRouter(routes);
 
-const RouterAsync = async () => {
-    const router = await createRouter(routes);
-
-    const Router = () => <RouterProvider router={router} />;
-    return Router;
+export const Router = () => {
+    return <RouterProvider router={router} />;
 };
-
-export default RouterAsync;

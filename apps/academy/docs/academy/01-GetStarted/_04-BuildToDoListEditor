@@ -1,6 +1,6 @@
 # Build a ToDoList Editor
 
-In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
+In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items, but also dispaly the statistics we've implemented in our reducers. 
 
 ## Generate the editor template
 
@@ -26,167 +26,6 @@ When building your editor component within the Powerhouse ecosystem, you have se
 
 Connect Studio provides a dynamic local environment (`ph connect`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
 
-Let's look at a simple example component structure a styling method can be applied.
-
-**Example Component Structure (Base HTML with inline styles)**
-
-<details>
-<summary>Base HTML Example</summary>
-
-Here's a basic editor structure using only standard HTML tags.    
-This demonstrates how elements look with very minimal default styling:
-
-```typescript
-import { EditorProps } from 'document-model';
-// Assuming a simple document model for demonstration
-// import { ExampleDocument, actions } from '../../document-models/example'; 
-
-// Replace with your actual document type props if needed
-export type IProps = EditorProps<any>; 
-
-export default function Editor({ document, dispatch }: IProps) {
-    return (
-        <div>
-            <h1 style={{ fontWeight: 'bold' }}>Document Title</h1>
-            <h2>Document Subtitle</h2>
-            <input 
-                type="text" 
-                placeholder="Small text input"
-                style={{ border: '1px solid gray', marginBottom: '0.5rem' }}
-            />
-            <textarea 
-                placeholder="Large text area" 
-                rows={4}
-                style={{ border: '1px solid gray', display: 'block', marginBottom: '0.5rem' }}
-            />
-            <button style={{ backgroundColor: 'yellow' }}>
-                Submit
-            </button>
-        </div>
-    );
-}
-```
-</details>
-
-*Run `ph connect` to see the default styles applied to components in real-time.*
-
-**Styling with Tailwind CSS**
-
-<details>
-<summary>Tailwind CSS Example</summary>
-
-Now, let's add Tailwind utility classes to the same structure for styling:
-
-```typescript
-import { EditorProps } from 'document-model';
-// import { ExampleDocument, actions } from '../../document-models/example';
-
-export type IProps = EditorProps<any>;
-
-export default function Editor({ document, dispatch }: IProps) {
-    return (
-        <div className="p-4 space-y-4"> {/* Add padding and spacing */}
-            <h1 className="text-2xl font-bold">Document Title</h1> {/* Style heading */}
-            <h2 className="text-lg text-gray-600 mb-4">Document Subtitle</h2> {/* Style subheading */}
-            <input 
-                type="text" 
-                placeholder="Small text input"
-                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4" // Style input
-            />
-            <textarea 
-                placeholder="Large text area" 
-                rows={4}
-                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" // Style textarea
-            />
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"> {/* Style button */}
-                Submit
-            </button>
-        </div>
-    );
-}
-```
-</details>
-
-*Run `ph connect` to see these Tailwind styles applied in real-time.*
-
-**Styling with a Custom CSS File**
-
-<details>
-<summary>Custom CSS File Example</summary>
-
-You can also import a standard CSS file.
-
-1.  Create a CSS file (e.g., `editor.css`) in the same directory as your `editor.tsx`:
-
-    ```css
-        /* editors/your-editor/editor.css */
-    .editor-container {
-        padding: 1rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-
-    .editor-title {
-        color: rgb(51, 51, 54);
-        font-size: 2rem;
-        margin-bottom: 4px;
-    }
-
-    .editor-subtitle {
-        color: rgb(51, 51, 54);
-        font-size: 1.5rem;
-        margin-bottom: 4px;
-    }
-
-    .editor-button {
-        background-color: green;
-        color: white;
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .editor-button:hover {
-        background-color: darkgreen;
-    }
-    ```
-
-2.  Import the CSS file and use the classes in your component:
-
-```typescript
-  import { EditorProps } from 'document-model';
-// import { ExampleDocument, actions } from '../../document-models/example';
-import './editor.css'; // Import the CSS file
-
-export type IProps = EditorProps<any>;
-
-export default function Editor({ document, dispatch }: IProps) {
-    return (
-        <div className="editor-container"> {/* Use custom class */}
-            <h1 className="editor-title">Document Title</h1> {/* Use custom class */}
-            <h2 className="editor-subtitle">Document Subtitle</h2> {/* Default or other styles */}
-            <input 
-                type="text" 
-                placeholder="Small text input" 
-                className="w-full p-2 border rounded mb-4" // Can mix with Tailwind/defaults
-            />
-            <textarea 
-                placeholder="Large text area" 
-                rows={4} 
-                className="w-full p-2 border rounded mb-4" // Can mix with Tailwind/defaults
-            />
-            <button className="editor-button"> {/* Use custom class */}
-                Submit
-            </button>
-        </div>
-    );
-}  
-```
-</details>
- 
-*Run `ph connect` to see your custom CSS styles applied.*
-
 ---
 
 ## ToDoList Editor
@@ -200,7 +39,7 @@ These are imported from the Powerhouse Document Engineering design system (`@pow
 This system provides a library of reusable components to ensure consistency and speed up development.  
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/DocumentEngineering) page.
 
-For this tutorial, create a `components` folder inside `editors/to-do-list`. Then, within this new `components` folder, create the files for the `Checkbox` and `InputField` components (e.g., `Checkbox.tsx` and `InputField.tsx`) with the following code:
+For this tutorial, create a `components` folder inside `editors/to-do-list`. Then, within this new `components` folder, create the files for the `Checkbox` and `InputField` components (e.g., `checkbox.tsx` and `inputfield.tsx`) with the following code:
 :::
 
 <details>
@@ -277,7 +116,6 @@ Below is the complete code for the To-Do List editor. It primarily uses Tailwind
 <summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
 
 ```typescript
-// Import necessary types and components.
 import { EditorProps } from 'document-model'; // Core type for editor components.
 import {
     ToDoListState,       // Type for the global state of the ToDoList.
@@ -286,10 +124,10 @@ import {
     ToDoItem,            // Type for a single item in the list.
     actions,             // Object containing action creators for dispatching changes.
     ToDoListDocument     // The complete document structure including state and metadata.
-} from '../../document-models/to-do-list/index.js'; // Path to your document model definition.
+} from '../document-models/to-do-list/index.js'; // Path to your document model definition.
 import { useState } from 'react'; // React hook for managing component-local state.
 import { Checkbox } from './components/checkbox.js'; // Custom Checkbox component.
-import { InputField } from './components/inputField.js'; // Custom InputField component.
+import { InputField } from './components/inputfield.js'; // Custom InputField component.
 
 // Define the props expected by this Editor component. It extends EditorProps with our specific document type.
 export type IProps = EditorProps<ToDoListDocument>;
@@ -309,19 +147,44 @@ export default function Editor(props: IProps) {
     // State to hold the text of the item currently being edited.
     const [editedText, setEditedText] = useState('');
 
+    // Sort items to show unchecked items first
+    const sortedItems: ToDoItem[] = [...state.items].sort((a, b) => {
+        return (a.checked ? 1 : 0) - (b.checked ? 1 : 0);
+    });
+
     // --- JSX Structure (What gets rendered) ---
     return (
         // Main container div.
         // `container`: Sets max-width based on viewport breakpoints.
         // `mx-auto`: Centers the container horizontally.
         // `p-4`: Adds padding on all sides (4 units, typically 1rem).
-        // `max-w-md`: Sets a maximum width (medium size).
-        <div className="container mx-auto p-4 max-w-md">
+        // `max-w-sm`: Sets a maximum width (small size).
+        <div className="container mx-auto p-4 max-w-xs">
             {/* Heading for the editor */}
             {/* `text-2xl`: Sets font size to extra-large. */}
             {/* `font-bold`: Makes the text bold. */}
-            {/* `mb-4`: Adds margin to the bottom (4 units). */}
+            {/* `mb-4`: Adds margin to the bottom. */}
             <h1 className="text-2xl font-bold mb-4">To-do List</h1>
+
+            {/* Stats Section */}
+            {state.items.length >= 2 && (
+                <div className="mb-4 bg-white rounded-lg px-3 py-2 shadow-md">
+                    <div className="grid grid-cols-3 gap-3">
+                        <div>
+                            <div className="text-xs text-slate-500 mb-0.5">Total</div>
+                            <div className="text-lg font-semibold text-slate-800">{state.stats.total}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-slate-500 mb-0.5">Completed</div>
+                            <div className="text-lg font-semibold text-green-600">{state.stats.checked}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs text-slate-500 mb-0.5">Remaining</div>
+                            <div className="text-lg font-semibold text-orange-600">{state.stats.unchecked}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Container for the input field and "Add" button */}
             {/* `flex items-end`: Enables flexbox layout for children with bottom alignment. */}
@@ -329,21 +192,23 @@ export default function Editor(props: IProps) {
             {/* `mb-4`: Adds margin to the bottom. */}
             <div className="flex items-end gap-2 mb-4">
                 {/* Custom InputField component */}
-                <InputField
-                    label="New Task" // Prop for accessibility/placeholder.
-                    input={todoItem} // Current value from state.
-                    value={todoItem} // Controlled component value.
-                    handleInputChange={(e) => setTodoItem(e.target.value)} // Update state on change.
-                    onKeyDown={(e) => { // Handle "Enter" key press to add item.
-                        if (e.key === 'Enter' && todoItem.trim()) { // Check if key is Enter and input is not empty
-                            dispatch(actions.addTodoItem({ // Dispatch action to add item.
-                                id: Math.random().toString(), // Generate a simple unique ID (use a better method in production!).
-                                text: todoItem,
-                            }));
-                            setTodoItem(''); // Clear the input field.
-                        }
-                    }}
-                />
+                <div className="flex-grow">
+                    <InputField
+                        label="New Task" // Prop for accessibility/placeholder.
+                        input={todoItem} // Current value from state.
+                        value={todoItem} // Controlled component value.
+                        handleInputChange={(e) => setTodoItem(e.target.value)} // Update state on change.
+                        onKeyDown={(e) => { // Handle "Enter" key press to add item.
+                            if (e.key === 'Enter' && todoItem.trim()) { // Check if key is Enter and input is not empty
+                                dispatch(actions.addTodoItem({ // Dispatch action to add item.
+                                    id: Math.random().toString(), // Generate a simple unique ID (use a better method in production!).
+                                    text: todoItem,
+                                }));
+                                setTodoItem(''); // Clear the input field.
+                            }
+                        }}
+                    />
+                </div>
                 {/* "Add" button */}
                 {/* `bg-blue-500`: Sets background color to blue. */}
                 {/* `hover:bg-blue-600`: Changes background color on hover. */}
@@ -373,7 +238,7 @@ export default function Editor(props: IProps) {
             {/* `p-0`: Removes default padding. */}
             <ul className="list-none p-0">
                 {/* Map over the items array in the global state to render each item */}
-                {state.items.map((item: ToDoItem) => (
+                {sortedItems.map((item: ToDoItem) => (
                     // List item element for each to-do.
                     // `key={item.id}`: React requires a unique key for list items for efficient updates.
                     // `flex`: Enables flexbox layout (checkbox, text, delete icon in a row).

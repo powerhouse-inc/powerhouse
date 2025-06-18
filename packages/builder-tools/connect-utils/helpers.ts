@@ -4,7 +4,6 @@ import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import ts from "typescript";
 import { type Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
 export function resolvePackage(packageName: string, root = process.cwd()) {

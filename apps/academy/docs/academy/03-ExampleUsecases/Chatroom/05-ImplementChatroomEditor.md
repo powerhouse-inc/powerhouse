@@ -191,4 +191,4 @@ Below GIF shows the `Chatroom` editor in action.
 
 ![Chatroom Editor](./images/ChatRoomTest.gif)
 
-If you managed to follow this tutorial until this point, you have successfully implemented the `ChatRoom` document model with its reducer operations and editor. In the next chapter we'll be showing you how to simulate a synchronisation between two nodes or users making use of the chatroom by starting up a local reactor.
+If you managed to follow this tutorial until this point, you have successfully implemented the `ChatRoom` document model with its reducer operations and editor. 

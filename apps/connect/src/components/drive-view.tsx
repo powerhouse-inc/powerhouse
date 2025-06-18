@@ -104,7 +104,8 @@ export function DriveView() {
                             {documentModels?.map(doc => (
                                 <Button
                                     key={doc.documentModel.id}
-                                    aria-details={doc.documentModel.description}
+                                    title={doc.documentModel.name}
+                                    aria-label={doc.documentModel.name}
                                     className="bg-gray-200 text-slate-800"
                                     onClick={() => createDocument(doc)}
                                 >

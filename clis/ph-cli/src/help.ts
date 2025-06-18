@@ -51,6 +51,7 @@ Command Overview:
   The Connect build command creates a connect build with the project's local and external packages included.
 
 Options:
+  --base <path> The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
   --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
@@ -67,6 +68,7 @@ Command Overview:
   NOTE: You must run \`ph connect build\` first.
 
 Options:
+  --base <path>          The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --port <port>          The port to run the server on. Default is 4173.
   --open                 Open the browser. Default is true.

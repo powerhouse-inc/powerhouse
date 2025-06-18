@@ -79,7 +79,7 @@ To be able to define the document model, you need to open the document model edi
 ### The steps below show you how to do this:
 
 1. In the Connect application, click on **'document model'** to open the document model specification editor.
-2. Name your document model 'ToDoList' in the Connect application, paying close attention to capitalization. 
+2. Name your document model '**ToDoList**' in the Connect application, paying close attention to capitalization. 
 3. You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields. 
 
     In the **Document Type** field, type `powerhouse/todolist`. This defines the new type of document that will be created with this document model specification.

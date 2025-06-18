@@ -33,7 +33,10 @@ export async function createDocument(
   documentName: string,
 ) {
   // Click the document type button
-  await page.click(`text=${documentType}`);
+  await page
+    .locator(".flex.w-full.flex-wrap.gap-4")
+    .getByText(documentType)
+    .click();
 
   // Fill in the document name
   await page.fill('input[type="text"]', documentName);
@@ -43,6 +46,16 @@ export async function createDocument(
 
   // Wait for the document to be created and opened
   await page.getByText(documentName).first().waitFor({ state: "visible" });
+}
+
+export async function isDocumentAvailableForCreation(
+  page: Page,
+  documentType: string,
+) {
+  return await page
+    .locator(".flex.w-full.flex-wrap.gap-4")
+    .getByText(documentType)
+    .click();
 }
 
 /**

@@ -1,13 +1,15 @@
 import { ReadModeContextProvider, SentryProvider } from '#context';
-import { atoms, atomStore } from '#store';
+import { atomStore } from '#store';
 import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
-import { Provider, useAtomValue } from 'jotai';
-import React, { lazy } from 'react';
+import { Provider } from 'jotai';
+import { Suspense } from 'react';
+import ReactorAnalyticsProvider from '../context/reactor-analytics.js';
 import { useRenown } from '../hooks/useRenown.js';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
+import { Router } from './router.js';
 
 if (import.meta.env.MODE === 'development') {
     window.documentEditorDebugTools = new DocumentEditorDebugTools();
@@ -15,28 +17,18 @@ if (import.meta.env.MODE === 'development') {
     serviceWorkerManager.registerServiceWorker(false);
 }
 
-const Router = React.lazy(async () => {
-    const createRouterComponent = await import('./router.js');
-    const router = await createRouterComponent.default();
-    return { default: router };
-});
-
-const Preloader = () => {
+const PreloadRenown = () => {
     useRenown();
-    for (const atom of Object.values(atoms)) {
-        useAtomValue(atom);
-    }
+    return null;
+};
+
+const PreloadProcessorManager = () => {
     useProcessorManager();
     return null;
 };
 
-const ReactorAnalyticsProvider = lazy(
-    () => import('../context/reactor-analytics.js'),
-);
-
 const App = () => (
     <Provider store={atomStore}>
-        <Preloader />
         <SentryProvider>
             <WagmiContext>
                 <ReadModeContextProvider>
@@ -53,6 +45,10 @@ const App = () => (
                 </ReadModeContextProvider>
             </WagmiContext>
         </SentryProvider>
+        <Suspense>
+            <PreloadProcessorManager />
+            <PreloadRenown />
+        </Suspense>
     </Provider>
 );
 

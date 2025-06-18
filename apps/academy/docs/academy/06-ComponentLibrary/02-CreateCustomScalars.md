@@ -3,40 +3,11 @@
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
 
-:::info
-When contributing as an open source developer please submit a pull request to the Powerhouse team. 
-Although a design or UI for your scalar is not mandatory, it definitely helps reviewers if there's a visual reference. 
-That said, not all scalars require a dedicated UI component. 
-Some scalars, like scalar Title or scalar Description, might both map to a string and use the same UI, in this case scalars plays more semantic role than a type definition.
-:::
-
-## Table of Contents
-
-- [Creating New GraphQL Scalars](#creating-new-graphql-scalars)
-  - [Step 1: Create the Scalar File](#step-1-create-the-scalar-file)
-    - [Key Components to Update](#key-components-to-update)
-  - [Step 2: Register the Scalar in scalars.ts](#step-2-register-the-scalar-in-scalarts)
-    - [2.1 Add Namespace Import](#21-add-namespace-import)
-    - [2.2 Add Type Export](#22-add-type-export)
-    - [2.3 Add to Export Object](#23-add-to-export-object)
-    - [2.4 Add to Custom Scalars](#24-add-to-custom-scalars)
-    - [2.5 Add to Resolvers](#25-add-to-resolvers)
-    - [2.6 Add to Type Definitions](#26-add-to-type-definitions)
-    - [2.7 Add to Generator Type Definitions](#27-add-to-generator-type-definitions)
-    - [2.8 Add to Validation Schema](#28-add-to-validation-schema)
-  - [Step 3: Create Tests for Your Scalar](#step-3-create-tests-for-your-scalar)
-    - [Required Test Cases](#required-test-cases)
-    - [Testing Best Practices](#testing-best-practices)
-    - [Example Edge Cases for Different Scalar Types](#example-edge-cases-for-different-scalar-types)
-  - [Step 4: Validate Your Implementation](#step-4-validate-your-implementation)
-  - [Common Scalar Types](#common-scalar-types)
-  - [Tips](#tips)
-
-## Creating New GraphQL Scalars
+### Creating New GraphQL Scalars
 
 GraphQL scalars are custom data types that define how data is validated, serialized, and parsed. This guide will walk you through creating a new scalar in the `src/scalars/graphql/` directory.
 
-### Step 1: Create the Scalar File
+## Step 1: Create the Scalar File
 
 Create a new TypeScript file in `src/scalars/graphql/` for your scalar. Use `EmailAddress.ts` as a reference.
 
@@ -87,7 +58,7 @@ export const config: GraphQLScalarTypeConfig<string, string> = {
 export const scalar = new GraphQLScalarType(config)
 ```
 
-#### Key Components to Update:
+### Key Components to Update:
 
 1. **`type`**: The TypeScript type (usually `'string'` for text-based scalars)
 2. **`typedef`**: The GraphQL type definition (e.g., `'scalar PhoneNumber'`)
@@ -97,12 +68,12 @@ export const scalar = new GraphQLScalarType(config)
 6. **`config.name`**: The name of your scalar (must match the typedef)
 7. **`config.description`**: Human-readable description of the scalar
 
-### Step 2: Register the Scalar in `scalars.ts`
+## Step 2: Register the Scalar in `scalars.ts`
 
 After creating your scalar file, you need to register it in `src/scalars/graphql/scalars.ts`. This involves updating multiple sections of the file.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
 
-#### 2.1 Add Namespace Import
+### 2.1 Add Namespace Import
 
 Add your scalar to the namespace imports section (around line 2):
 
@@ -115,7 +86,7 @@ import * as PhoneNumber from './PhoneNumber.js' // ADD THIS LINE
 import * as URLScalar from './URL.js'
 ```
 
-#### 2.2 Add Type Export
+### 2.2 Add Type Export
 
 Add the type export (around line 22):
 
@@ -127,7 +98,7 @@ export type { ScalarType as PhoneNumberScalarType } from './PhoneNumber.js' // A
 export type { ScalarType as URLScalarType } from './URL.js'
 ```
 
-#### 2.3 Add to Export Object
+### 2.3 Add to Export Object
 
 Add your scalar to the main export object (around line 40):
 
@@ -141,7 +112,7 @@ export {
 }
 ```
 
-#### 2.4 Add to Custom Scalars
+### 2.4 Add to Custom Scalars
 
 Add your scalar to the `customScalars` object (around line 54):
 
@@ -167,7 +138,7 @@ export const resolvers = {
 }
 ```
 
-#### 2.6 Add to Type Definitions
+### 2.6 Add to Type Definitions
 
 Add your typedef to the `typeDefs` array (around line 90):
 
@@ -181,7 +152,7 @@ export const typeDefs = [
 ]
 ```
 
-#### 2.7 Add to Generator Type Definitions
+### 2.7 Add to Generator Type Definitions
 
 Add your scalar to the `generatorTypeDefs` object (around line 105):
 
@@ -195,7 +166,7 @@ export const generatorTypeDefs = {
 }
 ```
 
-#### 2.8 Add to Validation Schema
+### 2.8 Add to Validation Schema
 
 Add your scalar to the `validationSchema` object (around line 120):
 
@@ -209,7 +180,7 @@ export const validationSchema = {
 }
 ```
 
-### Step 3: Create Tests for Your Scalar
+## Step 3: Create Tests for Your Scalar
 
 Every scalar must have comprehensive tests to ensure it works correctly. Create a test file in `src/scalars/graphql/test/` following the naming convention `YourScalar.test.ts`.
 
@@ -359,7 +330,7 @@ expect(scalar.parseValue('2023-12-25T00:00:00Z')).toBe('2023-12-25T00:00:00Z')
 expect(() => scalar.parseValue('25/12/2023')).toThrow()
 ```
 
-### Step 4: Validate Your Implementation
+## Step 4: Validate Your Implementation
 
 After implementing your scalar and tests, make sure to:
 
@@ -392,6 +363,14 @@ export const schema = z.number().positive()
 export const type = 'string'
 export const schema = z.string().datetime()
 ```
+
+:::info
+**Contributing and UI for Scalars**
+
+- **Open Source**: Please submit contributions as a pull request to the Powerhouse team.
+- **UI is Optional but Helpful**: A design or UI for your scalar isn't required, but it helps reviewers understand its purpose.
+- **Semantic Scalars**: Some scalars don't need a unique UI. For instance, `Title` and `Description` might both use a simple text input but serve a semantic role by adding specific meaning and validation to the schema.
+:::
 
 ### Tips
 

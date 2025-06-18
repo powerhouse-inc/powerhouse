@@ -29,7 +29,7 @@ Manual build steps are typically only needed when publishing packages.
 
 ## ToDoList Editor
 
-Below is the complete code for the To-Do List editor. 
+Below is the complete code for the To-Do List editor. Paste this code in `editors/to-do-list/editor.tsx`.
 
 <details>
 <summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
@@ -43,7 +43,7 @@ import {
     ToDoItem,
     actions,
     ToDoListDocument,
-} from '../../document-models/to-do-list';
+} from '../../document-models/to-do-list/index.js';
 import { useState } from 'react';
 
 // EditorProps is a generic type that provides the document and a dispatch function.
@@ -207,16 +207,12 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
 
-### Up Next: Drive Explorers & Drive Apps
-
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
-Imagine you have many ToDoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
-
-
 ### Up Next: Mastery Track
 
-In the [Mastery Track chapther: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while created a more advanced ToDoList.
+In the [Mastery Track chapther: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while created a more advanced version of the ToDoList.
+
 You will learn: 
 - The in's & out's of a document model.
 - How to use UI & Scalar components from the Document Engineering system.
+- How to build Custom Drive Apps or Drive Explorers. 
 

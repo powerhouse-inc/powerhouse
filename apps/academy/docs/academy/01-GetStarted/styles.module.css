@@ -96,4 +96,35 @@
 :global(.path-button:hover) {
   background: #ffffff;
   border-color: #d1d5db;
+}
+
+.masteryTrackTitle {
+  background-color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 2;
+  position: absolute;
+  top: 18px;
+}
+
+:global([data-theme='dark']) .masteryTrackTitle {
+  background-color: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+:global([data-theme='dark']) .pathCard {
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+:global([data-theme='dark']) :global(.path-button) {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-emphasis-200);
+  color: var(--ifm-font-color-primary);
+}
+
+:global([data-theme='dark']) :global(.path-button:hover) {
+  background: var(--ifm-color-emphasis-200);
+  border-color: var(--ifm-color-emphasis-300);
 } 

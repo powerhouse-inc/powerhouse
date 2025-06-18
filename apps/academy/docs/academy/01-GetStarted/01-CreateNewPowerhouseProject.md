@@ -11,7 +11,7 @@ For this purpose, you'll be using Connect, our use-centric collaboration tool, l
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
-If you need help with installing the prerequisites you can visit our page prerequisites. @callme-t
+If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
 
 ## Quick Start
 Create a new Powerhouse project with a single command:
@@ -82,7 +82,9 @@ In the terminal, you will be asked to enter the project name. Fill in the projec
 
     A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
 
-    You will see your local drive and a button to create a new drive. 
+    You will see your local drive and a button to create a new drive.    
+    If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.    
+    Clear the storage of your localhost application as it might has an old session cached.   
 
 :::tip
 A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)

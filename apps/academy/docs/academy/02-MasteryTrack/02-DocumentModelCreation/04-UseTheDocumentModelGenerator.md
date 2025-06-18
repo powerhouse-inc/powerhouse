@@ -90,22 +90,42 @@ Leveraging the `ph generate` command offers numerous advantages:
 5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
 6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Connect. If the specification changes, regenerating the model will update these components accordingly.
 
-## Example Workflow Snippet
+## Practical Implementation: Generating the `ToDoList` Model
 
-Let's assume you have defined a `ProjectTask` document model and exported `ProjectTask.phdm.zip`.
+Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `ToDoList` example.
 
-1.  **Navigate to your Powerhouse project root in the terminal.**
-2.  **Run the generator:**
+<details>
+<summary>Tutorial: Generating the ToDoList Document Model</summary>
+
+This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `ToDoList` model in Connect and exported it.
+
+### Prerequisites
+
+*   **`ToDoList.phdm.zip` file**: You must have the document model specification file exported from Connect. If you do not have this file, please revisit the previous sections on specifying the state schema and operations.
+
+### Steps
+
+1.  **Place the Specification File in Your Project**:
+    *   Navigate to the root directory of your Powerhouse project.
+    *   Move or copy your `ToDoList.phdm.zip` file into this directory.
+
+2.  **Run the Generator Command**:
+    *   Open your terminal in the root directory of your Powerhouse project.
+    *   Execute the `ph generate` command, pointing to your specification file:
     ```bash
-    ph generate ProjectTask.phdm.zip
+    ph generate ToDoList.phdm.zip
     ```
-3.  **Explore the generated files:**
-    You would now find a new directory `document-models/project-task/` containing:
-    *   `project-task/spec.json`
-    *   `project-task/schema.graphql`
-    *   `project-task/gen/types.ts` (with `ProjectTaskState`, `AssignUserInput`, etc.)
-    *   `project-task/gen/operations.ts` (with `creators.assignUser(...)`, `creators.completeTask(...)`, etc.)
-    *   `project-task/src/reducers/project-task.ts` (with empty functions like `assignUserOperation`, `completeTaskOperation` awaiting your implementation).
+
+3.  **Explore the Generated Files**:
+    *   After the command completes successfully, you will find a new directory: `document-models/to-do-list/`.
+    *   Take a moment to explore its contents, which will match the structure described earlier in this document:
+        *   `spec.json` and `schema.graphql`: The definition of your model.
+        *   `gen/`: Type-safe, generated code including `types.ts`, `operations.ts`, etc.
+        *   `src/`: The skeleton for your implementation, most importantly `src/reducers/to-do-list.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
+
+With these files generated, you have successfully scaffolded your document model. The project is now set up for you to implement the core business logic.
+
+</details>
 
 ## Next Steps
 

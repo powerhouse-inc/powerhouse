@@ -60,3 +60,10 @@ export async function verifyDocumentInList(
       .getByText(documentType),
   ).toBeVisible();
 }
+
+export async function openDocumentByName(page: Page, documentName: string) {
+  await page
+    .locator("div.rounded-md.border-2.border-transparent.p-2")
+    .getByText(documentName)
+    .click({ force: true });
+}

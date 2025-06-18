@@ -1,9 +1,13 @@
-# Creating Powerhouse packages
+# Create Powerhouse packages
 
-This tutorial guides you through creating a Powerhouse Document Model, from initial setup to publishing a distributable package. We'll leverage the Powerhouse CLI and Connect Studio Mode for a streamlined development experience.
+:::warning
+**This tutorial is a summary for builders that are familiar with building document models**.    
+It guides you through creating a Powerhouse Document Model, from initial setup to publishing a distributable package. 
+Please start with the '**Get Started**' Chapter or '**Document Model Creation**' section if you are unfamiliar with building a document model.
+:::
 
 <details>
-<summary>Key Commands</summary>
+<summary>Key Commands that you'll use in this flow</summary>
 
 -   `pnpm install -g ph-cmd`: Installs the Powerhouse CLI globally.
 -   `ph init`: Initializes a new Powerhouse project or sets up the local environment.
@@ -25,8 +29,8 @@ Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. This
 ```bash
 pnpm install -g ph-cmd
 ```
-:::info
-Refer to the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/StandardDocumentModelWorkflow) guide for detailed installation instructions for Node.js, pnpm, and Git if you haven't set them up yet.
+:::info **Prerequisites**
+The [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js, pnpm, and Git if you haven't set them up yet.
 :::
 
 ### 1.2. Initialize Your Project Environment
@@ -125,7 +129,7 @@ ph generate --editor YourModelName --document-types powerhouse/YourModelName
 This creates a template file, typically at `editors/your-model-name/editor.tsx`.
 -   Customize this React component to build your UI.
 -   You can use standard HTML, Tailwind CSS (available in Connect), or import custom CSS.
--   Utilize components from `@powerhousedao/document-engineering` for consistency and rapid development. @Callmet Reference back to document engineering
+-   Utilize components from `@powerhousedao/document-engineering` for consistency and rapid development. Learn more at [Document-Engineering](/academy/ComponentLibrary/DocumentEngineering)
 
 
 ### 3.5. Test the Editor

@@ -18,7 +18,8 @@ Install the Powerhouse command-line tool `ph-cmd` and then use it to install a p
 
 ## Step 1: Install the Powerhouse CLI
 
-You will use the Powerhouse CLI to launch a local environment with a "**Contributor Billing**" package. This package demonstrates how you might track and bill for contributions in a project. First, you need the Powerhouse command-line interface (CLI). Open your terminal and run the installation command:
+You will use the Powerhouse CLI to launch a local environment with a "**ToDoList Demo Package**". 
+This is also the package that you'll recreate during the tutorials and get's you familiar with Powerhouse. 
 
 ```bash
 pnpm install -g ph-cmd
@@ -36,17 +37,12 @@ Now, use the `ph` command to install the demo package into a global project.
 
 ```bash
 # Install the package
-ph install @powerhousedao/contributor-billing
+ph install @powerhousedao/todo-demo-package.
 ```
 
-This command downloads and sets up the Contributor Billing package, making its features available in your Powerhouse environment.
+This command downloads and sets up the todo-demo-package, making its features available in your Powerhouse environment.
 
 You have now successfully installed `ph-cmd` and added your first package! 
-
-:::info 
-Let's explore what exactly you can do with this package. 
-At the bottom of the Connect Application you'll find a button with 'invoice'. This allows you to open an invoice document. The invoice document helps contributors to get paid for their work through crypto, stablecoins or a number of other currencies. Contributors can change the state of their invoice from draft to issued, while processors or clients can follow up on the payment of these invoices. In the next steps you can explore this for yourself. 
-:::
 
 ## Step 3: Run the Connect App in Studio mode
 To run the package locally in Connect Studio (our collaboration and contributor app), run the `ph connect` command. 

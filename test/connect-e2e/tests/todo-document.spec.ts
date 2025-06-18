@@ -13,9 +13,11 @@ import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
   closeDocumentOperationHistory,
+  createDocument,
   createDocumentAndFillBasicData,
   goToConnectDrive,
   normalizeCode,
+  openDocumentByName,
   verifyDocumentInList,
   type DocumentBasicData,
 } from "./helpers/index.js";
@@ -106,7 +108,7 @@ test.use({
   },
 });
 
-test("Create ToDoDocument", async ({ page }) => {
+test("Create ToDoDocument Model", async ({ page }) => {
   // Setup: Disable file picker for testing
   await page.addInitScript(() => {
     // @ts-expect-error - This is a test
@@ -118,7 +120,7 @@ test("Create ToDoDocument", async ({ page }) => {
 
   // Verify document in list and open it
   await verifyDocumentInList(page, DOCUMENT_NAME, DOCUMENT_MODEL_TYPE);
-  await page.getByText(DOCUMENT_NAME).click();
+  await openDocumentByName(page, DOCUMENT_NAME);
 
   // Verify all document aspects
   await verifyDocumentBasicData(page, TEST_DOCUMENT_DATA);
@@ -128,6 +130,12 @@ test("Create ToDoDocument", async ({ page }) => {
 
   // Export and validate document
   await exportAndValidateDocument(page);
+});
+
+test("Create a TodoList", async ({ page }) => {
+  await goToConnectDrive(page, "My Local Drive");
+  await createDocument(page, "ToDoDocument", "MyTodoList");
+  await page.getByText("This h1 will be styled").waitFor({ state: "visible" });
 });
 
 // Helper Functions
