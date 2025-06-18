@@ -179,12 +179,14 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
 
     const [, branchTag, branchVersion] = branchRelease.split('/');
     const normalizedBranchVersion = branchVersion.replace("v", '');
-    
-    preid = validProductionBranches.includes(branchTag) ? undefined : branchTag;
+    const isProdRelease = validProductionBranches.includes(branchTag);
+
+    preid = isProdRelease ? undefined : branchTag;
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
 
     if (semver.lte(specifier, connectVersion)) {
-      specifier = semver.inc(connectVersion, "prerelease", preid) || undefined;
+      const releaseType = isProdRelease ? "patch" : "prerelease";
+      specifier = semver.inc(connectVersion, releaseType, preid) || undefined;
     }
   }
 
