@@ -3,6 +3,9 @@ import {
   encodeDIDfromHexString,
   rawKeyInHexfromUncompressed,
 } from "did-key-creator";
+import { childLogger } from "document-drive";
+
+const logger = childLogger(["reactor-browser", "crypto"]);
 
 export type JwkKeyPair = {
   publicKey: JsonWebKey;
@@ -78,14 +81,14 @@ export class ConnectCrypto implements IConnectCrypto {
     const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
     if (loadedKeyPair) {
       this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-      console.log("Found key pair");
+      logger.info("Found key pair");
     } else {
       this.#keyPair = await this.#generateECDSAKeyPair();
-      console.log("Created key pair");
+      logger.info("Created key pair");
       await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
     }
     const did = await this.#parseDid();
-    console.log("Connect DID:", did);
+    logger.info("App DID:", did);
     return did;
   }
 

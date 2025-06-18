@@ -1,5 +1,5 @@
 import { Button } from "@powerhousedao/design-system";
-import { DocumentModelModule } from "document-model";
+import { type DocumentModelModule } from "document-model";
 
 interface CreateDocumentProps {
   documentModels?: DocumentModelModule[];
@@ -30,7 +30,8 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
             <Button
               key={spec.id}
               color="light"
-              aria-details={spec.description}
+              title={spec.name}
+              aria-description={spec.description}
               onClick={() => createDocument(doc)}
             >
               <span className="text-sm">{spec.name}</span>

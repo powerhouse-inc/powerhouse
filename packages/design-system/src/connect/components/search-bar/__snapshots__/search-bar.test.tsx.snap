@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ConnectSearchBar Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="flex items-center"
+  >
+    <svg
+      class="mr-3"
+      fill="currentcolor"
+      style="width: 24px; height: 24px;"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M10.0137 1.95312C5.59537 1.95312 2.01367 5.53513 2.01367 9.95314C2.01367 14.3712 5.59537 17.9532 10.0137 17.9532C11.8504 17.9532 13.5913 17.3222 14.9416 16.2822L19.2949 20.6722C19.6855 21.0622 20.3419 21.0622 20.7325 20.6722C21.123 20.2812 21.123 19.6252 20.7325 19.2342L16.349 14.8741C17.3898 13.5241 18.0137 11.7901 18.0137 9.95314C18.0137 5.53513 14.432 1.95312 10.0137 1.95312ZM10.0137 3.95313C13.3274 3.95313 16.0137 6.63914 16.0137 9.95314C16.0137 13.2672 13.3274 15.9532 10.0137 15.9532C6.69997 15.9532 4.01367 13.2672 4.01367 9.95314C4.01367 6.63914 6.69997 3.95313 10.0137 3.95313Z"
+      />
+    </svg>
+    <input
+      class="flex h-[52px] min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-slate-200 outline-none"
+      placeholder="Search Files"
+      value="test"
+    />
+    <button
+      aria-expanded="false"
+      aria-haspopup="menu"
+      class="ml-3 flex h-full flex-row items-center outline-none"
+      data-state="closed"
+      id="radix-:r0:"
+      type="button"
+    >
+      <div
+        class="mr-2 text-sm font-semibold text-slate-200"
+      >
+        File type
+      </div>
+       
+      <svg
+        fill="none"
+        stroke="currentcolor"
+        style="width: 24px; height: 24px;"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M6 9L12 15L18 9"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+        />
+      </svg>
+    </button>
+  </div>
+</DocumentFragment>
+`;

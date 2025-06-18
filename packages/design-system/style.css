@@ -258,4 +258,7 @@ input[type="number"] {
   p {
     color: var(--color-gray-900);
   }
+  button {
+    @apply cursor-pointer;
+  }
 }

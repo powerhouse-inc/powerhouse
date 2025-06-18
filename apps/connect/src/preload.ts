@@ -1,5 +1,6 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import { type Issuer } from 'did-jwt-vc';
 import type {
     DocumentDriveAction,
     DocumentDriveDocument,
@@ -18,6 +19,12 @@ const connectCrypto: IConnectCrypto = {
         ipcRenderer.invoke('crypto:regenerateDid') as Promise<void>,
     did: () => ipcRenderer.invoke('crypto:did') as Promise<`did:key:${string}`>,
     sign: message => ipcRenderer.invoke('crypto:sign', message),
+    getIssuer: function (): Promise<Issuer> {
+        throw new Error('Function not implemented.');
+    },
+    getBearerToken: function (driveUrl: string): Promise<string> {
+        throw new Error('Function not implemented.');
+    },
 };
 
 const renown: IRenown = {

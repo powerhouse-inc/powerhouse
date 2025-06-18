@@ -4,11 +4,11 @@ import {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
 } from "#server/types";
-import { generateUUID } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   documentModelDocumentModelModule,
   DocumentModelModule,
+  generateId,
 } from "document-model";
 import { bench, BenchOptions, describe, vi } from "vitest";
 import { BrowserStorage } from "../../src/storage/browser";
@@ -51,7 +51,7 @@ vi.mock(import("graphql-request"), async () => {
           if (query.includes("mutation registerPullResponderListener")) {
             return Promise.resolve({
               registerPullResponderListener: {
-                listenerId: generateUUID(),
+                listenerId: generateId(),
               },
             });
           }
@@ -120,7 +120,7 @@ describe("Process Operations", () => {
     onError: (error: Error) => void,
   ) {
     const server = new ReactorBuilder(documentModels)
-      .withStorage(new BrowserStorage(generateUUID()))
+      .withStorage(new BrowserStorage(generateId()))
       .withOptions({
         defaultDrives: { remoteDrives: defaultRemoteDrives },
         taskQueueMethod: runOnMacroTask,

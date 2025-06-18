@@ -2,7 +2,12 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
@@ -13,7 +18,12 @@ import type {
   PHDocument,
 } from "document-model";
 import LocalForage from "localforage";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import {
+  type IDocumentAdminStorage,
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -25,7 +35,9 @@ interface SlugManifest {
   slugToId: Record<string, string>;
 }
 
-export class BrowserStorage implements IDriveStorage, IDocumentStorage {
+export class BrowserStorage
+  implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
+{
   private db: Promise<LocalForage>;
 
   static DBName = "DOCUMENT_DRIVES";
@@ -43,6 +55,10 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       }),
     );
   }
+
+  ////////////////////////////////
+  // IDocumentAdminStorage
+  ////////////////////////////////
 
   async clear() {
     const db = await this.db;
@@ -62,14 +78,34 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return !!document;
   }
 
-  // TODO: this should throw an error if the document already exists.
-  async create(documentId: string, document: PHDocument): Promise<void> {
+  async create(document: PHDocument): Promise<void> {
+    const documentId = document.id;
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     const db = await this.db;
+
+    if (await this.exists(documentId)) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    // check if the slug is already taken
+    const slugManifest = await this.getSlugManifest();
+    if (slugManifest.slugToId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    document.slug = slug;
     await db.setItem(this.buildDocumentKey(documentId), document);
 
     // Update the slug manifest if the document has a slug
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
     if (slug) {
       const slugManifest = await this.getSlugManifest();
 
@@ -80,6 +116,11 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
 
       slugManifest.slugToId[slug] = documentId;
       await this.updateSlugManifest(slugManifest);
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
 
@@ -111,6 +152,76 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const db = await this.db;
+    const keys = await db.keys();
+
+    const documentKeys = keys.filter((key) =>
+      key.startsWith(`${BrowserStorage.DOCUMENT_KEY}${BrowserStorage.SEP}`),
+    );
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+    for (const key of documentKeys) {
+      const documentId = key.slice(
+        BrowserStorage.DOCUMENT_KEY.length + BrowserStorage.SEP.length,
+      );
+
+      try {
+        const document = await db.getItem<PHDocument>(key);
+        if (!document || document.documentType !== documentModelType) {
+          continue;
+        }
+
+        documentsAndIds.push({ id: documentId, document });
+      } catch (error) {
+        continue;
+      }
+    }
+
+    // Sort by creation date, then by ID
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // cursor
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     const db = await this.db;
 
@@ -123,8 +234,8 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     }
 
     // Remove from slug manifest if it has a slug
+    const slug = document.slug.length > 0 ? document.slug : documentId;
     try {
-      const slug = (document.initialState.state.global as any)?.slug;
       if (slug) {
         const slugManifest = await this.getSlugManifest();
         if (slugManifest.slugToId[slug] === documentId) {
@@ -136,12 +247,19 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       // If we can't get the slug, we can't remove it from the manifest
     }
 
-    // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    // remove from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
-      await this.removeChild(driveId, documentId);
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1 && childParents[0] === documentId) {
+        await this.delete(child);
+      }
     }
 
     // delete any manifest for this document
@@ -188,6 +306,32 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const db = await this.db;
+    const keys = await db.keys();
+    const parents: string[] = [];
+
+    // Find all manifest keys
+    const manifestKeys = keys.filter((key) =>
+      key.startsWith(`${BrowserStorage.MANIFEST_KEY}${BrowserStorage.SEP}`),
+    );
+
+    // Check each manifest to see if it contains the childId
+    for (const key of manifestKeys) {
+      // Extract the driveId from the manifest key
+      const driveId = key.slice(
+        BrowserStorage.MANIFEST_KEY.length + BrowserStorage.SEP.length,
+      );
+
+      const manifest = await this.getManifest(driveId);
+      if (manifest.documentIds.includes(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
@@ -221,10 +365,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
     await db.setItem(BrowserStorage.SLUG_MANIFEST_KEY, manifest);
   }
 
-  async clearStorage(): Promise<void> {
-    return (await this.db).clear();
-  }
-
   async addDocumentOperations(
     drive: string,
     id: string,
@@ -244,36 +384,6 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
       ...header,
       operations: mergedOperations,
     });
-  }
-
-  async getDrives() {
-    const db = await this.db;
-    const keys = await db.keys();
-    return keys
-      .filter((key) => key.startsWith(BrowserStorage.MANIFEST_KEY))
-      .map((key) =>
-        key.slice(
-          BrowserStorage.MANIFEST_KEY.length + BrowserStorage.SEP.length,
-        ),
-      );
-  }
-
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
-
-    // Initialize an empty manifest for the new drive
-    await this.updateDriveManifest(id, { documentIds: [] });
-  }
-
-  async deleteDrive(id: string) {
-    // First get all documents in this drive
-    const documents = await this.getChildren(id);
-
-    // Delete each document (this already updates the manifest)
-    await Promise.all(documents.map((doc) => this.delete(doc)));
-
-    // Delete the drive and its manifest
-    await this.delete(id);
   }
 
   async addDriveOperations(
@@ -344,15 +454,24 @@ export class BrowserStorage implements IDriveStorage, IDocumentStorage {
 
   // migrates all stored operations from legacy signature to signatures array
   async migrateOperationSignatures() {
-    const drives = await this.getDrives();
-    for (const drive of drives) {
-      await this.migrateDrive(drive);
-
-      const documents = await this.getChildren(drive);
-      await Promise.all(
-        documents.map(async (docId) => this.migrateDocument(drive, docId)),
+    let cursor: string | undefined;
+    do {
+      const { documents: drives, nextCursor } = await this.findByType(
+        "powerhouse/document-drive",
+        100,
+        cursor,
       );
-    }
+      for (const drive of drives) {
+        await this.migrateDrive(drive);
+
+        const documents = await this.getChildren(drive);
+        await Promise.all(
+          documents.map(async (docId) => this.migrateDocument(drive, docId)),
+        );
+      }
+
+      cursor = nextCursor;
+    } while (cursor);
   }
 
   private async migrateDrive(driveId: string) {

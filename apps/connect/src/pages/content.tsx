@@ -1,5 +1,7 @@
-import { useDocumentDrives, useUiNodes } from '#hooks';
+import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
+import { useFileNodeDocument } from '#store';
 import { FILE } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
@@ -10,9 +12,9 @@ export default function Content() {
     const navigate = useNavigate();
     const { driveId } = useParams();
     const [documentDrives, , , status] = useDocumentDrives();
-    const uiNodes = useUiNodes();
-    const { fileNodeDocument, selectedDriveNode, selectedNode, addFile } =
-        uiNodes;
+    const { selectedDriveNode, selectedNode } = useUiNodesContext();
+    const { addFile } = useDocumentDriveServer();
+    const { fileNodeDocument } = useFileNodeDocument();
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -36,8 +38,8 @@ export default function Content() {
             (status === 'LOADED' || status === 'ERROR') &&
             !documentDrives.find(
                 d =>
-                    d.state.global.id === driveId ||
-                    d.state.global.slug === driveId ||
+                    d.id === driveId ||
+                    d.slug === driveId ||
                     d.state.global.name === driveId,
             )
         ) {

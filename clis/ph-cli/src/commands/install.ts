@@ -20,10 +20,14 @@ export function installDependency(
   projectPath: string,
   workspace?: boolean,
 ) {
-  if (!fs.existsSync(projectPath)) {
-    throw new Error(`Project path not found: ${projectPath}`);
-  }
+  return buildInstallCommand(packageManager, dependencies, workspace);
+}
 
+export function buildInstallCommand(
+  packageManager: PackageManager,
+  dependencies: string[],
+  workspace?: boolean,
+): string {
   const manager = packageManagers[packageManager];
 
   let installCommand = manager.installCommand.replace(
@@ -35,12 +39,7 @@ export function installDependency(
     installCommand += ` ${manager.workspaceOption}`;
   }
 
-  const commandOptions = { cwd: projectPath };
-
-  execSync(installCommand, {
-    stdio: "inherit",
-    ...commandOptions,
-  });
+  return installCommand;
 }
 
 export const install: CommandActionType<
@@ -56,6 +55,41 @@ export const install: CommandActionType<
 > = (dependencies, options) => {
   if (options.debug) {
     console.log(">>> command arguments", { dependencies, options });
+  }
+
+  if (!dependencies || dependencies.length === 0) {
+    throw new Error("❌ Dependency name is required");
+  }
+
+  // Parse package names to extract version/tag
+  const parsedDependencies = dependencies.map((dep) => {
+    // Handle scoped packages (@org/package[@version])
+    if (dep.startsWith("@")) {
+      const matches = /^(@[^/]+\/[^@]+)(?:@(.+))?$/.exec(dep);
+      if (!matches) {
+        throw new Error(`Invalid scoped package name format: ${dep}`);
+      }
+      return {
+        name: matches[1],
+        version: matches[2] || "latest",
+        full: dep,
+      };
+    }
+
+    // Handle regular packages (package[@version])
+    const matches = /^([^@]+)(?:@(.+))?$/.exec(dep);
+    if (!matches) {
+      throw new Error(`Invalid package name format: ${dep}`);
+    }
+    return {
+      name: matches[1],
+      version: matches[2] || "latest",
+      full: dep,
+    };
+  });
+
+  if (options.debug) {
+    console.log(">>> parsedDependencies", parsedDependencies);
   }
 
   if (!dependencies || dependencies.length === 0) {
@@ -92,12 +126,20 @@ export const install: CommandActionType<
 
   try {
     console.log("installing dependencies 📦 ...");
-    installDependency(
+    if (!fs.existsSync(projectInfo.path)) {
+      throw new Error(`Project path not found: ${projectInfo.path}`);
+    }
+    const installCommand = installDependency(
       packageManager as PackageManager,
-      dependencies,
+      parsedDependencies.map((dep) => dep.full),
       projectInfo.path,
       options.workspace,
     );
+    const commandOptions = { cwd: projectInfo.path };
+    execSync(installCommand, {
+      stdio: "inherit",
+      ...commandOptions,
+    });
     console.log("Dependency installed successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to install dependencies");
@@ -112,7 +154,7 @@ export const install: CommandActionType<
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "install");
+    updateConfigFile(parsedDependencies, projectInfo.path, "install");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");

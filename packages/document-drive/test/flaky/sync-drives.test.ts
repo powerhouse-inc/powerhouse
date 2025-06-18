@@ -16,7 +16,7 @@ import {
   reducer,
 } from "document-drive";
 import * as DocumentModelLib from "document-model";
-import { DocumentModelModule, Operation } from "document-model";
+import { DocumentModelModule, Operation, generateId } from "document-model";
 import * as DocumentModelsLibs from "document-model-libs/document-models";
 import stringify from "json-stringify-deterministic";
 import { GraphQLQuery, HttpResponse, graphql } from "msw";
@@ -29,7 +29,6 @@ import {
   StrandUpdate,
   SyncStatus,
 } from "../../src/server/types.js";
-import { generateUUID } from "../../src/utils/misc.js";
 import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document Drive Server interaction", () => {
@@ -102,7 +101,7 @@ describe("Document Drive Server interaction", () => {
         async ({ variables }) => {
           const driveId = "1";
           const { filter } = variables;
-          const uuid = generateUUID();
+          const uuid = generateId();
           const listener: Listener = {
             block: false,
             callInfo: {

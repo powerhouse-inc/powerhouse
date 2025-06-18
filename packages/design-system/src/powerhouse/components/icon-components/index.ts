@@ -100,6 +100,7 @@ import Settings from "./Settings.js";
 import Synced from "./Synced.js";
 import Syncing from "./Syncing.js";
 import Tabler from "./Tabler.js";
+import TimelineCaret from "./TimelineCaret.js";
 import Timeline from "./Timeline.js";
 import TrashFill from "./TrashFill.js";
 import Trash from "./Trash.js";
@@ -216,6 +217,7 @@ export const iconNames = [
   "Synced",
   "Syncing",
   "Tabler",
+  "TimelineCaret",
   "Timeline",
   "TrashFill",
   "Trash",
@@ -336,6 +338,7 @@ export const iconComponents: Record<
   Synced,
   Syncing,
   Tabler,
+  TimelineCaret,
   Timeline,
   TrashFill,
   Trash,

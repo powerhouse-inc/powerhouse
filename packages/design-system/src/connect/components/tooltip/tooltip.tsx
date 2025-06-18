@@ -12,6 +12,8 @@ import { twMerge } from "tailwind-merge";
 type Props = TooltipProps & {
   readonly className?: string;
   readonly content: ReactNode;
+  readonly side?: "top" | "right" | "bottom" | "left";
+  readonly sideOffset?: number;
 };
 
 export function Tooltip(props: Props) {
@@ -22,13 +24,16 @@ export function Tooltip(props: Props) {
     defaultOpen,
     onOpenChange,
     className,
+    side = "top",
+    sideOffset = 5,
+    delayDuration,
     ...rest
   } = props;
 
   return (
     <Root
       defaultOpen={defaultOpen}
-      delayDuration={0}
+      delayDuration={delayDuration}
       onOpenChange={onOpenChange}
       open={open}
     >
@@ -36,6 +41,8 @@ export function Tooltip(props: Props) {
       <Portal>
         <Content
           {...rest}
+          side={side}
+          sideOffset={sideOffset}
           className={twMerge(
             "shadow-tooltip rounded-lg border border-gray-200 bg-white p-2 text-xs",
             className,

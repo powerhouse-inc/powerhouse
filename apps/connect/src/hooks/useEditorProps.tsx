@@ -1,5 +1,10 @@
 import { useModal } from '#components';
-import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
+import {
+    themeAtom,
+    useFileNodeDocument,
+    useGetDocumentModelModule,
+    useUser,
+} from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -12,6 +17,7 @@ import {
     type UiDriveNode,
     type UiFileNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -26,7 +32,6 @@ import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
-import { useUiNodes } from './useUiNodes.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 export interface EditorProps {
@@ -121,13 +126,9 @@ export function useEditorProps(
     const userPermissions = useUserPermissions();
 
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-
-    const {
-        selectedParentNode,
-        selectedDocument,
-        setSelectedNode,
-        getDocumentModelModule,
-    } = useUiNodes();
+    const { selectedDocument } = useFileNodeDocument();
+    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
         !!document &&

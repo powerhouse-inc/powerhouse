@@ -13,6 +13,7 @@ import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
 } from "@powerhousedao/analytics-engine-knex";
+import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
   childLogger,
@@ -43,6 +44,12 @@ type Options = {
   client?: PGlite | typeof Pool | undefined;
   configFile?: string;
   packages?: string[];
+  auth?: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  };
   https?:
     | {
         keyPath: string;
@@ -99,6 +106,12 @@ async function setupGraphQLManager(
   db: Knex,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
+  auth?: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  },
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -117,6 +130,21 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
+  if (auth?.enabled) {
+    graphqlManager.setAdditionalContextFields({
+      isGuest: (address: string) =>
+        auth.enabled && auth.guests.includes(address),
+      isUser: (address: string) => auth.enabled && auth.users.includes(address),
+      isAdmin: (address: string) =>
+        auth.enabled && auth.admins.includes(address),
+    });
+  } else {
+    graphqlManager.setAdditionalContextFields({
+      isGuest: (address: string) => true,
+      isUser: (address: string) => true,
+      isAdmin: (address: string) => true,
+    });
+  }
   return graphqlManager;
 }
 
@@ -215,6 +243,70 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
+  const admins = options.auth?.admins.map((a) => a.toLowerCase()) ?? [];
+  const users = options.auth?.users.map((u) => u.toLowerCase()) ?? [];
+  const guests = options.auth?.guests.map((g) => g.toLowerCase()) ?? [];
+
+  const all = [...admins, ...users, ...guests];
+
+  // add auth middleware if auth is enabled
+  if (options.auth?.enabled) {
+    // set admin, users and guest list
+    app.use(async (req, res, next) => {
+      if (!options.auth || req.method === "OPTIONS" || req.method === "GET") {
+        next();
+        return;
+      }
+
+      req.admins = admins;
+      req.users = users;
+      req.guests = guests;
+
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) {
+        res.status(400).json({ error: "Missing authorization token" });
+        return;
+      }
+
+      const verified = await verifyAuthBearerToken(token);
+      if (!verified) {
+        res.status(401).json({ error: "Verification failed" });
+        return;
+      }
+
+      const { address, chainId, networkId } = verified.verifiableCredential
+        .credentialSubject as {
+        address: string;
+        chainId: number;
+        networkId: string;
+      };
+
+      // @todo: check renown eth credential
+
+      if (!address || !chainId || !networkId) {
+        res.status(401).json({ error: "Missing credentials" });
+        return;
+      }
+      req.user = {
+        address: address.toLowerCase(),
+        chainId,
+        networkId,
+      };
+
+      if (!all.includes(req.user.address)) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      req.user = {
+        address,
+        chainId,
+        networkId,
+      };
+
+      next();
+    });
+  }
 
   const defaultRouter = express.Router();
   setupGraphQlExplorer(defaultRouter);
@@ -287,7 +379,7 @@ export async function startAPI(
 
   // hook up processor manager to drive added event
   reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
-    await processorManager.registerDrive(drive.state.global.id);
+    await processorManager.registerDrive(drive.id);
   });
 
   // set up subgraph manager
@@ -297,6 +389,7 @@ export async function startAPI(
     db,
     analyticsStore,
     subgraphs,
+    options.auth,
   );
 
   // Set up event listeners

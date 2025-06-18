@@ -1,5 +1,5 @@
 import { createDocumentStory } from "#editor-utils/storybook";
-import { type Meta } from "@storybook/react";
+import { type Meta, type StoryObj } from "@storybook/react";
 import {
   documentModelCreateExtendedState,
   documentModelReducer,
@@ -292,8 +292,9 @@ type TestLocalDefinition${id} {
   },
 );
 
-export default { ...meta, title: "Document Model 2" } as Meta<
-  typeof DocumentModelEditor
->;
+export default meta as Meta<typeof DocumentModelEditor>;
 
-export { Empty, WithBackgroundUpdates, WithData };
+export const EmptyStory: StoryObj<typeof DocumentModelEditor> = Empty;
+export const WithDataStory: StoryObj<typeof DocumentModelEditor> = WithData;
+export const WithBackgroundUpdatesStory: StoryObj<typeof DocumentModelEditor> =
+  WithBackgroundUpdates;

@@ -2,10 +2,7 @@ import {
   CreateDocument,
   CreateExtendedState,
   CreateState,
-  LoadFromFile,
-  LoadFromInput,
-  SaveToFile,
-  SaveToFileHandle,
+  type DocumentModelUtils,
   baseCreateDocument,
   baseCreateExtendedState,
   baseLoadFromFile,
@@ -13,51 +10,66 @@ import {
   baseSaveToFile,
   baseSaveToFileHandle,
 } from "document-model";
-import {
-  documentType,
-  fileExtension,
-  initialGlobalState,
-  initialLocalState,
-} from "./constants.js";
 import { reducer } from "./reducer.js";
-import { DocumentDriveDocument } from "./types.js";
+import {
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDriveState,
+} from "./types.js";
 
-export { fileExtension } from "./constants.js";
-
-export const createState: CreateState<DocumentDriveDocument> = (state) => {
-  return {
-    global: { ...initialGlobalState, ...state?.global },
-    local: { ...initialLocalState, ...state?.local },
-  };
+export const initialGlobalState: DocumentDriveState = {
+  name: "",
+  nodes: [],
+  icon: null,
+};
+export const initialLocalState: DocumentDriveLocalState = {
+  listeners: [],
+  triggers: [],
+  sharingType: "private",
+  availableOffline: false,
 };
 
-export const createExtendedState: CreateExtendedState<DocumentDriveDocument> = (
-  extendedState,
-) => {
-  return baseCreateExtendedState(
-    { ...extendedState, documentType },
-    createState,
-  );
+export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;
+
+const utils: DocumentDriveUtils = {
+  fileExtension: "phdd",
+  createState(state) {
+    return {
+      global: { ...initialGlobalState, ...state?.global },
+      local: { ...initialLocalState, ...state?.local },
+    };
+  },
+  createExtendedState(extendedState) {
+    return baseCreateExtendedState(
+      { ...extendedState, documentType: "powerhouse/document-drive" },
+      utils.createState,
+    );
+  },
+  createDocument(state) {
+    return baseCreateDocument(
+      utils.createExtendedState(state),
+      utils.createState,
+    );
+  },
+  saveToFile(document, path, name) {
+    return baseSaveToFile(document, path, "phdd", name);
+  },
+  saveToFileHandle(document, input) {
+    return baseSaveToFileHandle(document, input);
+  },
+  loadFromFile(path) {
+    return baseLoadFromFile(path, reducer);
+  },
+  loadFromInput(input) {
+    return baseLoadFromInput(input, reducer);
+  },
 };
 
-export const createDocument: CreateDocument<DocumentDriveDocument> = (
-  state,
-) => {
-  return baseCreateDocument(createExtendedState(state), createState);
-};
+export const createDocument: CreateDocument<DocumentDriveDocument> =
+  utils.createDocument;
+export const createExtendedState: CreateExtendedState<DocumentDriveDocument> =
+  utils.createExtendedState;
+export const createState: CreateState<DocumentDriveDocument> =
+  utils.createState;
 
-export const saveToFile: SaveToFile = (document, path, name) => {
-  return baseSaveToFile(document, path, fileExtension, name);
-};
-
-export const saveToFileHandle: SaveToFileHandle = (document, input) => {
-  return baseSaveToFileHandle(document, input);
-};
-
-export const loadFromFile: LoadFromFile<DocumentDriveDocument> = (path) => {
-  return baseLoadFromFile(path, reducer);
-};
-
-export const loadFromInput: LoadFromInput<DocumentDriveDocument> = (input) => {
-  return baseLoadFromInput(input, reducer);
-};
+export default utils;

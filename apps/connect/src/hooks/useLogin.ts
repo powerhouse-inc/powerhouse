@@ -1,5 +1,5 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
-import { useUser } from '#store';
+import { atomStore, reactorAtom, useUser } from '#store';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -14,7 +14,7 @@ export const useLogin = () => {
     const [status, setStatus] = useAtom(loginStatusAtom);
     const user = useUser();
     const renown = useRenown();
-    const { did } = useConnectCrypto();
+    const { did, getBearerToken } = useConnectCrypto();
 
     const openRenown = useCallback(async () => {
         const connectId = await did();
@@ -53,6 +53,16 @@ export const useLogin = () => {
                 const newUser = await renown.login(userDid);
                 if (newUser) {
                     setStatus('authorized');
+
+                    atomStore
+                        .get(reactorAtom)
+                        .then(reactor => {
+                            reactor.setGenerateJwtHandler(async driveUrl =>
+                                getBearerToken(driveUrl, newUser.address),
+                            );
+                        })
+                        .catch(err => console.error(err));
+
                     return newUser;
                 } else {
                     setStatus('not-authorized');
@@ -74,6 +84,12 @@ export const useLogin = () => {
     const logout = useCallback(async () => {
         setStatus('initial');
         await renown?.logout();
+        atomStore
+            .get(reactorAtom)
+            .then(reactor => {
+                reactor.removeJwtHandler();
+            })
+            .catch(err => console.error(err));
     }, [renown]);
 
     return useMemo(

@@ -30,6 +30,7 @@ export class ListenerManager implements IListenerManager {
 
   protected syncManager: ISynchronizationManager;
   protected options: ListenerManagerOptions;
+  public generateJwtHandler?: (driveUrl: string) => Promise<string>;
 
   // driveId -> listenerId -> listenerState
   protected listenerStateByDriveId = new Map<
@@ -45,6 +46,14 @@ export class ListenerManager implements IListenerManager {
     this.options = { ...DefaultListenerManagerOptions, ...options };
 
     this.logger.verbose(`constructor(...)`);
+  }
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>) {
+    this.generateJwtHandler = handler;
+  }
+
+  removeJwtHandler() {
+    this.generateJwtHandler = undefined;
   }
 
   async initialize(handler: DriveUpdateErrorHandler) {

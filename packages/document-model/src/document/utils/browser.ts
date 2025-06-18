@@ -3,11 +3,19 @@ import { createHash as createSha1Hash } from "sha1-uint8array";
 
 const FileSystemError = new Error("File system not available.");
 
+/**
+ * This should never be linked to directly. Instead, use the `#utils/misc`
+ * module. This will automatically pick the correct implementation for the
+ * current environment. See package.json for the mapping.
+ *
+ * Generates a secure UUID.
+ */
 export function generateUUID() {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (!crypto.randomUUID) {
+  if (typeof crypto === "undefined" || !crypto.randomUUID) {
     throw new Error("generateUUID is not available in unsecure contexts.");
   }
+
   return crypto.randomUUID();
 }
 

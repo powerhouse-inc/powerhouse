@@ -1,5 +1,4 @@
 import { logger } from 'document-drive';
-import { EventEmitter } from 'events';
 import type { IStorage } from '../storage/index.js';
 import { getEnsInfo } from '../viem.js';
 import { RENOWN_URL } from './constants.js';
@@ -10,17 +9,21 @@ import {
 } from './types.js';
 import { parsePkhDid } from './utils.js';
 
+export * from './browser.js';
+export * from './constants.js';
+export * from './types.js';
 export type {
     PowerhouseVerifiableCredential,
     Unsubscribe,
     User,
 } from './types.js';
+export * from './utils.js';
 
 export class Renown {
     #baseUrl: string;
     #store: RenownStorage;
     #connectId: string;
-    #eventEmitter = new EventEmitter();
+    #eventEmitter = new EventTarget();
 
     constructor(store: IStorage, connectId: string, baseUrl = RENOWN_URL) {
         this.#store = store as RenownStorage;
@@ -39,7 +42,9 @@ export class Renown {
     #updateUser(user: User | undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         user ? this.#store.set('user', user) : this.#store.delete('user');
-        this.#eventEmitter.emit('user', user);
+        this.#eventEmitter.dispatchEvent(
+            new CustomEvent('user', { detail: user }),
+        );
     }
 
     set connectId(connectId: string) {
@@ -100,9 +105,13 @@ export class Renown {
     }
 
     on(event: 'user', listener: (user: User) => void) {
-        this.#eventEmitter.on(event, listener);
+        const eventListener = ((e: CustomEvent<User>) => {
+            listener(e.detail);
+        }) as EventListener;
+
+        this.#eventEmitter.addEventListener(event, eventListener);
         return () => {
-            this.#eventEmitter.removeListener(event, listener);
+            this.#eventEmitter.removeEventListener(event, eventListener);
         };
     }
 
@@ -131,7 +140,3 @@ export class Renown {
         }
     }
 }
-export * from './browser.js';
-export * from './constants.js';
-export * from './types.js';
-export * from './utils.js';

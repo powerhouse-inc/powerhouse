@@ -1,5 +1,10 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -9,13 +14,20 @@ import {
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import {
+  type IDocumentAdminStorage,
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
 };
 
-export class MemoryStorage implements IDriveStorage, IDocumentStorage {
+export class MemoryStorage
+  implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
+{
   private documents: Record<string, PHDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDocumentId: Record<string, string>;
@@ -34,19 +46,44 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(!!this.documents[documentId]);
   }
 
-  // TODO: this should throw an error if the document already exists.
-  create(documentId: string, document: PHDocument) {
+  create(document: PHDocument) {
+    const documentId = document.id;
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
+    // check if the document already exists by id
+    if (this.documents[documentId]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    // check if the document already exists by slug
+    if (slug && this.slugToDocumentId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    // store the document and update the slug
+    document.slug = slug;
     this.documents[documentId] = document;
 
-    // Add slug to lookup if it exists
-    const slug = (document.initialState.state.global as any)?.slug;
+    // add slug to lookup if it exists
     if (slug) {
       // check if the slug is already taken
       if (this.slugToDocumentId[slug]) {
-        throw new Error(`Document with slug ${slug} already exists`);
+        throw new DocumentAlreadyExistsError(documentId);
       }
 
       this.slugToDocumentId[slug] = documentId;
+    }
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: new Set() });
     }
 
     return Promise.resolve();
@@ -71,22 +108,87 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const documentsAndIds = Object.entries(this.documents)
+      .filter(([_, doc]) => doc.documentType === documentModelType)
+      .map(([id, doc]) => ({
+        id,
+        document: doc,
+      }));
+
+    // sort: created first, then id -- similar to prisma's ordinal but not guaranteed
+    documentsAndIds.sort((a, b) => {
+      // get date objects
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      // if the dates are the same, sort by id
+      if (aDate.getTime() === bDate.getTime()) {
+        const aId = a.id;
+        const bId = b.id;
+
+        return aId.localeCompare(bId);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // if cursor is provided, start there
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    // return the documents
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = document.slug.length > 0 ? document.slug : documentId;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }
     }
 
-    // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    // remove from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
-      await this.removeChild(driveId, documentId);
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1) {
+        await this.delete(child);
+      }
     }
 
     // delete any manifest for this document
@@ -138,15 +240,32 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     return [...manifest.documentIds];
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Scan through all drive manifests to find ones that contain the childId
+    for (const [driveId, manifest] of Object.entries(this.driveManifests)) {
+      if (manifest.documentIds.has(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
-  // IDriveStorage
+  // IDocumentAdminStorage
   ////////////////////////////////
 
-  async clearStorage(): Promise<void> {
+  async clear(): Promise<void> {
     this.documents = {};
     this.driveManifests = {};
     this.slugToDocumentId = {};
   }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   async addDocumentOperations(
     drive: string,
@@ -168,17 +287,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
     };
   }
 
-  async getDrives() {
-    return Object.keys(this.driveManifests);
-  }
-
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
-
-    // Initialize an empty manifest for the new drive
-    this.updateDriveManifest(id, { documentIds: new Set() });
-  }
-
   async addDriveOperations(
     id: string,
     operations: OperationFromDocument<DocumentDriveDocument>[],
@@ -195,42 +303,6 @@ export class MemoryStorage implements IDriveStorage, IDocumentStorage {
       ...header,
       operations: mergedOperations,
     };
-  }
-
-  async deleteDrive(id: string) {
-    // Get all documents in this drive
-    const manifest = this.getManifest(id);
-
-    // delete each document that belongs only to this drive
-    const drives = await this.getDrives();
-    await Promise.all(
-      [...manifest.documentIds].map((docId) => {
-        for (const driveId of drives) {
-          if (driveId === id) {
-            continue;
-          }
-
-          const manifest = this.getManifest(driveId);
-          if (manifest.documentIds.has(docId)) {
-            return;
-          }
-        }
-
-        // Remove from slug lookup if needed
-        const document = this.documents[docId];
-        if (document) {
-          const slug = (document.initialState.state.global as any)?.slug;
-          if (slug && this.slugToDocumentId[slug] === docId) {
-            delete this.slugToDocumentId[slug];
-          }
-        }
-
-        delete this.documents[docId];
-      }),
-    );
-
-    // Delete the drive manifest and the drive itself
-    await this.delete(id);
   }
 
   async getSynchronizationUnitsRevision(

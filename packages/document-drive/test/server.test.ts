@@ -2,25 +2,26 @@ import {
   ActionContext,
   DocumentModelDocument,
   documentModelDocumentModelModule,
+  generateId,
   PHDocument,
 } from "document-model";
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import InMemoryCache from "../src/cache/memory";
-import { reducer } from "../src/drive-document-model/gen/reducer";
-import { driveDocumentModelModule } from "../src/drive-document-model/module";
-import * as DriveUtils from "../src/drive-document-model/src/utils";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils";
-import { ReactorBuilder } from "../src/server/builder";
-import { BrowserStorage } from "../src/storage/browser";
-import { FilesystemStorage } from "../src/storage/filesystem";
-import { MemoryStorage } from "../src/storage/memory";
-import { PrismaClient } from "../src/storage/prisma/client";
-import { PrismaStorage } from "../src/storage/prisma/prisma";
-import { IDriveStorage } from "../src/storage/types";
-import { generateUUID } from "../src/utils/misc";
-import { baseDocumentModels, expectUUID } from "./utils";
+import InMemoryCache from "../src/cache/memory.js";
+import { reducer } from "../src/drive-document-model/gen/reducer.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import * as DriveUtils from "../src/drive-document-model/src/utils.js";
+import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
+import { ReactorBuilder } from "../src/server/builder.js";
+import { DocumentAlreadyExistsError } from "../src/server/error.js";
+import { BrowserStorage } from "../src/storage/browser.js";
+import { FilesystemStorage } from "../src/storage/filesystem.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import { PrismaClient } from "../src/storage/prisma/client/index.js";
+import { PrismaStorage } from "../src/storage/prisma/prisma.js";
+import { IDriveOperationStorage } from "../src/storage/types.js";
+import { baseDocumentModels, expectUUID } from "./utils.js";
 
 const documentModels = baseDocumentModels;
 
@@ -44,20 +45,7 @@ const storageLayers = [
     },
   ],
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
-  /*[
-    "SequelizeStorage",
-    async () => {
-      const storage = new SequelizeStorage({
-        dialect: "sqlite",
-        storage: ":memory:",
-        logging: false,
-      });
-
-      await storage.syncModels();
-      return storage;
-    },
-  ],*/
-] as unknown as [string, () => Promise<IDriveStorage>][];
+] as unknown as [string, () => Promise<IDriveOperationStorage>][];
 
 let file: PHDocument | undefined = undefined;
 // TODO import RealWorldAssets
@@ -78,7 +66,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     if (storageName === "FilesystemStorage") {
       return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
-      return (await buildStorage()).clearStorage?.();
+      return ((await buildStorage()) as BrowserStorage).clear();
     } else if (storageName === "PrismaStorage") {
       await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
       await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
@@ -93,7 +81,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     if (storageName === "FilesystemStorage") {
       return fs.rm(FileStorageDir, { recursive: true, force: true });
     } else if (storageName === "BrowserStorage") {
-      return (await buildStorage()).clearStorage?.();
+      return ((await buildStorage()) as BrowserStorage).clear();
     } else if (storageName === "PrismaStorage") {
       //await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
       //await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
@@ -103,16 +91,16 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   });
 
   it("adds drive to server", async ({ expect }) => {
+    const driveId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: null,
       },
       local: {
         availableOffline: false,
@@ -121,14 +109,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    const drive = await server.getDrive("1");
+    const drive = await server.getDrive(driveId);
     expect(drive.state).toStrictEqual(
       DocumentDriveUtils.createState({
         global: {
-          id: "1",
           name: "name",
           icon: "icon",
-          slug: null,
         },
         local: {
           availableOffline: false,
@@ -140,20 +126,22 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     const drives = await server.getDrives();
-    expect(drives.includes("1")).toBeTruthy();
+    expect(drives.includes(driveId)).toBeTruthy();
   });
 
   it.skipIf(!file)("adds file to server", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -162,14 +150,14 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     // performs ADD_FILE operation locally
     drive = reducer(
       drive,
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -179,14 +167,14 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // dispatches operation to server
     const operation = drive.operations.global[0]!;
-    const operationResult = await server.addDriveOperation("1", operation);
+    const operationResult = await server.addDriveOperation(driveId, operation);
     expect(operationResult.status).toBe("SUCCESS");
 
-    drive = await server.getDrive("1");
+    drive = await server.getDrive(driveId);
     expect(drive.state).toStrictEqual(operationResult.document?.state);
 
     expect(drive.state.global.nodes[0]).toStrictEqual({
-      id: "1.1",
+      id: documentId,
       kind: "file",
       name: "document 1",
       documentType: "powerhouse/document-model",
@@ -209,16 +197,18 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   it("creates new document of the correct document type when file is added to server", async ({
     expect,
   }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -227,13 +217,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     drive = reducer(
       drive,
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -242,32 +232,34 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
     const operation = drive.operations.global[0]!;
 
-    const result = await server.addDriveOperation("1", operation);
+    const result = await server.addDriveOperation(driveId, operation);
     if (result.error) {
       console.error(result.error);
       throw result.error;
     }
     expect(result.status).toBe("SUCCESS");
 
-    const document = await server.getDocument("1", "1.1");
+    const document = await server.getDocument(driveId, documentId);
     expect(document.documentType).toBe("powerhouse/document-model");
     expect(document.state).toStrictEqual(DocumentModelUtils.createState());
 
-    const driveDocuments = await server.getDocuments("1");
-    expect(driveDocuments).toStrictEqual(["1.1"]);
+    const driveDocuments = await server.getDocuments(driveId);
+    expect(driveDocuments).toStrictEqual([documentId]);
   });
 
   it("deletes file from server", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -276,7 +268,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     // adds file
     drive = reducer(
@@ -284,7 +276,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -292,7 +284,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ),
     );
     let result = await server.addDriveOperation(
-      "1",
+      driveId,
       drive.operations.global[0]!,
     );
     expect(result.status).toBe("SUCCESS");
@@ -301,29 +293,34 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     drive = reducer(
       drive,
       actions.deleteNode({
-        id: "1.1",
+        id: documentId,
       }),
     );
-    result = await server.addDriveOperation("1", drive.operations.global[1]!);
+    result = await server.addDriveOperation(
+      driveId,
+      drive.operations.global[1]!,
+    );
     expect(result.status).toBe("SUCCESS");
 
-    const serverDrive = await server.getDrive("1");
+    const serverDrive = await server.getDrive(driveId);
     expect(serverDrive.state.global.nodes).toStrictEqual([]);
   });
 
   it("deletes document when file is removed from server", async ({
     expect,
   }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -332,13 +329,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     drive = reducer(
       drive,
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -348,37 +345,40 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     drive = reducer(
       drive,
       actions.deleteNode({
-        id: "1.1",
+        id: documentId,
       }),
     );
 
     const result = await server.addDriveOperations(
-      "1",
+      driveId,
       drive.operations.global,
     );
     expect(result.status).toBe("SUCCESS");
 
-    const documents = await server.getDocuments("1");
+    const documents = await server.getDocuments(driveId);
     expect(documents).toStrictEqual([]);
 
-    await expect(server.getDocument("1", "1.1")).rejects.toThrowError(
-      "Document with id 1.1 not found",
+    await expect(server.getDocument(driveId, documentId)).rejects.toThrowError(
+      `Document with id ${documentId} not found`,
     );
   });
 
   it("deletes documents inside a folder when it is removed from a drive", async ({
     expect,
   }) => {
+    const driveId = generateId();
+    const folderId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -387,12 +387,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     drive = reducer(
       drive,
       actions.addFolder({
-        id: "1.1",
+        id: folderId,
         name: "document 1",
       }),
     );
@@ -401,11 +401,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
-
-          parentFolder: "1.1",
+          parentFolder: folderId,
         },
         ["global", "local"],
       ),
@@ -413,35 +412,36 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     drive = reducer(
       drive,
       actions.deleteNode({
-        id: "1.1",
+        id: folderId,
       }),
     );
 
     const result = await server.addDriveOperations(
-      "1",
+      driveId,
       drive.operations.global,
     );
     expect(result.status).toBe("SUCCESS");
 
-    const documents = await server.getDocuments("1");
+    const documents = await server.getDocuments(driveId);
     expect(documents).toStrictEqual([]);
 
-    await expect(server.getDocument("1", "1.1")).rejects.toThrowError(
-      "Document with id 1.1 not found",
+    await expect(server.getDocument(driveId, documentId)).rejects.toThrowError(
+      `Document with id ${documentId} not found`,
     );
   });
 
   it("deletes drive from server", async ({ expect }) => {
+    const driveId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -451,7 +451,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
 
-    await server.deleteDrive("1");
+    await server.deleteDrive(driveId);
 
     const drives = await server.getDrives();
     expect(drives).toStrictEqual([]);
@@ -460,16 +460,18 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   it("deletes documents when drive is deleted from server", async ({
     expect,
   }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -479,13 +481,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
 
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     drive = reducer(
       drive,
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -494,28 +496,29 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     const result = await server.addDriveOperation(
-      "1",
+      driveId,
       drive.operations.global[0]!,
     );
     expect(result.status).toBe("SUCCESS");
 
-    await server.deleteDrive("1");
+    await server.deleteDrive(driveId);
 
-    const documents = await server.getDocuments("1");
+    const documents = await server.getDocuments(driveId);
     expect(documents).toStrictEqual([]);
   });
 
   it("renames drive", async ({ expect }) => {
+    const driveId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -524,7 +527,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     drive = reducer(
       drive,
       actions.setDriveName({
@@ -533,26 +536,31 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     const result = await server.addDriveOperation(
-      "1",
+      driveId,
       drive.operations.global[0]!,
     );
     expect(result.status).toBe("SUCCESS");
 
-    drive = await server.getDrive("1");
+    drive = await server.getDrive(driveId);
     expect(drive.state.global.name).toBe("new name");
   });
 
   it("copies document when file is copied drive", async ({ expect }) => {
+    const driveId = generateId();
+    const folder1Id = generateId();
+    const folder2Id = generateId();
+    const document1Id = generateId();
+    const document2Id = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "drive",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -561,18 +569,18 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
     drive = reducer(
       drive,
       actions.addFolder({
-        id: "1",
+        id: folder1Id,
         name: "1",
       }),
     );
     drive = reducer(
       drive,
       actions.addFolder({
-        id: "2",
+        id: folder2Id,
         name: "2",
       }),
     );
@@ -581,10 +589,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: document1Id,
           name: "1.1",
           documentType: "powerhouse/document-model",
-          parentFolder: "1",
+          parentFolder: folder1Id,
         },
         ["global", "local"],
       ),
@@ -592,37 +600,46 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     drive = reducer(
       drive,
       DocumentDriveUtils.generateCopyNodeAction(drive.state.global, {
-        srcId: "1.1",
-        targetId: "2.1",
+        srcId: document1Id,
+        targetId: document2Id,
         targetName: "2.2",
-        targetParentFolder: "2",
+        targetParentFolder: folder2Id,
       }),
     );
     vi.useRealTimers();
     const result = await server.addDriveOperations(
-      "1",
+      driveId,
       drive.operations.global,
     );
 
     expect(result.status).toBe("SUCCESS");
 
-    drive = await server.getDrive("1");
-    const document = await server.getDocument("1", "1.1");
-    const documentB = await server.getDocument("1", "2.1");
-    expect(document).toStrictEqual(documentB);
+    drive = await server.getDrive(driveId);
+    const document = await server.getDocument(driveId, document1Id);
+    const documentB = await server.getDocument(driveId, document2Id);
+
+    // slugs have to change, as they are unique
+    expect(document.slug).not.toBe(documentB.slug);
+
+    // compare everything but the slug + id (which are supposed to be different)
+    const { slug, id, ...rest } = document;
+    const { slug: slugB, id: idB, ...restB } = documentB;
+    expect(rest).toStrictEqual(restB);
   });
 
   it("adds document operation", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -631,7 +648,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     // adds file
     drive = reducer(
@@ -639,18 +656,18 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
         ["global", "local"],
       ),
     );
-    await server.addDriveOperation("1", drive.operations.global[0]!);
+    await server.addDriveOperation(driveId, drive.operations.global[0]!);
 
     let document = (await server.getDocument(
-      "1",
-      "1.1",
+      driveId,
+      documentId,
     )) as DocumentModelDocument;
 
     document = documentModelDocumentModelModule.reducer(
@@ -658,29 +675,31 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       documentModelDocumentModelModule.actions.setModelName("Test"),
     );
     const operation = document.operations.global[0]!;
-    const result = await server.addOperation("1", "1.1", operation);
+    const result = await server.addOperation(driveId, documentId, operation);
     expect(result.error).toBeUndefined();
     expect(result.status).toBe("SUCCESS");
     expect(result.operations[0]).toStrictEqual(
       expect.objectContaining(operation),
     );
 
-    const storedDocument = await server.getDocument("1", "1.1");
+    const storedDocument = await server.getDocument(driveId, documentId);
     expect(storedDocument.state).toStrictEqual(document.state);
     expect(storedDocument.operations).toMatchObject(document.operations);
   });
 
   it("saves operation context", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -689,7 +708,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     const context: ActionContext = {
       signer: {
@@ -710,7 +729,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ...DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -721,25 +740,29 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // dispatches operation to server
     const operation = drive.operations.global[0]!;
-    const operationResult = await server.addDriveOperation("1", operation);
+    const operationResult = await server.addDriveOperation(driveId, operation);
     expect(operationResult.status).toBe("SUCCESS");
 
-    drive = await server.getDrive("1");
+    drive = await server.getDrive(driveId);
     expect(drive.operations.global[0]?.context).toStrictEqual(context);
   });
 
   it("get drives by slug", async ({ expect }) => {
+    const driveId1 = generateId();
+    const driveId2 = generateId();
+    const driveId3 = generateId();
+    const driveId4 = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     const addDrive = (driveId: string, slug: string) =>
       server.addDrive({
+        id: driveId,
+        slug,
         global: {
-          id: driveId,
           name: "name",
           icon: "icon",
-          slug: slug,
         },
         local: {
           availableOffline: false,
@@ -749,37 +772,44 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         },
       });
 
-    await addDrive("1", "slug1");
-    await addDrive("2", "slug2");
-    await addDrive("3", "slug3");
+    await addDrive(driveId1, "slug1");
+    await addDrive(driveId2, "slug2");
+    await addDrive(driveId3, "slug3");
 
     // add drive with the same slug as the first drive, which should throw an error
-    await expect(addDrive("4", "slug1")).rejects.toThrowError(
-      "Document with slug slug1 already exists",
-    );
+    try {
+      await addDrive(driveId4, "slug1");
+
+      throw new Error("created drive with duplicate slug");
+    } catch (error) {
+      expect((error as DocumentAlreadyExistsError).documentId).toContain(
+        driveId4,
+      );
+    }
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive.state.global.id).toBe("1");
+    expect(drive.id).toBe(driveId1);
 
     drive = await server.getDriveBySlug("slug2");
-    expect(drive.state.global.id).toBe("2");
+    expect(drive.id).toBe(driveId2);
 
     drive = await server.getDriveBySlug("slug3");
-    expect(drive.state.global.id).toBe("3");
+    expect(drive.id).toBe(driveId3);
   });
 
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
+    const driveId = generateId();
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(storage)
       .build();
     const drive = await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -788,37 +818,38 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    const id = generateUUID();
+    const documentId = generateId();
     const action = generateAddNodeAction(
       drive.state.global,
       {
-        id,
+        id: documentId,
         name: "name",
         parentFolder: null,
         documentType: file!.documentType,
-
         document: file,
       },
       ["global"],
     );
-    const result = await server.addDriveAction("1", action);
+    const result = await server.addDriveAction(driveId, action);
     expect(result.status).toBe("SUCCESS");
-    const document = await server.getDocument("1", id);
+    const document = await server.getDocument(driveId, documentId);
     expect(document).toStrictEqual(file);
   });
 
   it("should get synchronization units revision", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(storage)
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -827,7 +858,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     // adds file
     drive = reducer(
@@ -835,32 +866,32 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
         ["global", "local"],
       ),
     );
-    await server.addDriveOperation("1", drive.operations.global[0]!);
+    await server.addDriveOperation(driveId, drive.operations.global[0]!);
 
     let document = (await server.getDocument(
-      "1",
-      "1.1",
+      driveId,
+      documentId,
     )) as DocumentModelDocument;
     document = documentModelDocumentModelModule.reducer(
       document,
       documentModelDocumentModelModule.actions.setModelName("Test"),
     );
     const operation = document.operations.global[0]!;
-    await server.addOperation("1", "1.1", operation);
-    await server.getDocument("1", "1.1");
+    await server.addOperation(driveId, documentId, operation);
+    await server.getDocument(driveId, documentId);
 
-    const syncUnits = await server.getSynchronizationUnits("1");
+    const syncUnits = await server.getSynchronizationUnits(driveId);
     expect(syncUnits).toStrictEqual([
       {
-        driveId: "1",
-        documentId: drive.state.global.id,
+        driveId: driveId,
+        documentId: drive.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
@@ -869,8 +900,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         syncId: "0",
       },
       {
-        driveId: "1",
-        documentId: "1.1",
+        driveId: driveId,
+        documentId: documentId,
         documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
@@ -879,8 +910,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         syncId: expectUUID(expect),
       },
       {
-        driveId: "1",
-        documentId: "1.1",
+        driveId: driveId,
+        documentId: documentId,
         documentType: "powerhouse/document-model",
         scope: "local",
         branch: "main",
@@ -892,17 +923,19 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   });
 
   it("should store all operation attributes", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const storage = await buildStorage();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(storage)
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -911,7 +944,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(driveId);
 
     const context: ActionContext = {
       signer: {
@@ -933,7 +966,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ...DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -942,24 +975,26 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       context,
     });
 
-    await server.addDriveOperation("1", drive.operations.global[0]!);
-    const storedDrive = await server.getDrive("1");
+    await server.addDriveOperation(driveId, drive.operations.global[0]!);
+    const storedDrive = await server.getDrive(driveId);
     expect(storedDrive.operations.global[0]).toMatchObject(
       drive.operations.global[0]!,
     );
   });
 
   it("gets document at specific revision", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
     const server = new ReactorBuilder(documentModels)
       .withCache(cache)
       .withStorage(await buildStorage())
       .build();
     await server.addDrive({
+      id: driveId,
+      slug: "slug",
       global: {
-        id: "1",
         name: "name",
         icon: "icon",
-        slug: "slug",
       },
       local: {
         availableOffline: false,
@@ -968,7 +1003,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         triggers: [],
       },
     });
-    const drive = await server.getDrive("1");
+    const drive = await server.getDrive(driveId);
 
     // adds file
     const newDrive = reducer(
@@ -976,7 +1011,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       DocumentDriveUtils.generateAddNodeAction(
         drive.state.global,
         {
-          id: "1.1",
+          id: documentId,
           name: "document 1",
           documentType: "powerhouse/document-model",
         },
@@ -984,9 +1019,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ),
     );
 
-    await server.addDriveOperation("1", newDrive.operations.global[0]!);
+    await server.addDriveOperation(driveId, newDrive.operations.global[0]!);
 
-    const drive0 = await server.getDrive("1", { revisions: { global: -1 } });
+    const drive0 = await server.getDrive(driveId, {
+      revisions: { global: -1 },
+    });
     expect(drive0.operations.global.length).toBe(0);
     expect(drive0).toStrictEqual(drive);
   });
@@ -1000,11 +1037,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .build();
 
     await server.addDrive({
+      id: "test-drive",
+      slug: "test-drive",
       global: {
-        id: "test-drive",
         name: "test-drive",
         icon: "icon",
-        slug: "test-drive",
       },
       local: {
         availableOffline: false,
@@ -1017,11 +1054,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.deleteDrive("test-drive");
 
     await server.addDrive({
+      id: "test-drive",
+      slug: "test-drive",
       global: {
-        id: "test-drive",
         name: "test-drive",
         icon: "icon",
-        slug: "test-drive",
       },
       local: {
         availableOffline: false,
@@ -1032,6 +1069,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     const drive = await server.getDriveBySlug("test-drive");
-    expect(drive.state.global.slug).toBe("test-drive");
+    expect(drive.slug).toBe("test-drive");
   });
 });

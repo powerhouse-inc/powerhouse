@@ -47,6 +47,7 @@ export function initCommand(program: Command): Command {
       "-v, --version",
       'Specify development version to use. Defaults to "main"',
     )
+    .option("-t, --tag", "Same as -v/--version")
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
     .option(

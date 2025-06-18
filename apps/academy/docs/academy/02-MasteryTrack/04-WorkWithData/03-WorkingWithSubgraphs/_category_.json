@@ -1,0 +1,8 @@
+{
+    "label": "Working With Subgraphs",
+    "position": 4,
+    "link": {
+      "type": "generated-index",
+      "description": "Learn how to work with graphQL, subgraphs, and processors in Powerhouse."
+    }
+}

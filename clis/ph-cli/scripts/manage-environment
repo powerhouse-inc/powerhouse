@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# Configuration
+# =============================================================================
+PROJECT_NAME=${1:-"global"}
+ACTION=${2:-"status"}
+
+# Get Switchboard port from .env or use default
+if [ -f ".env" ]; then
+    SWITCHBOARD_PORT=$(grep "SWITCHBOARD_PORT=" .env | cut -d'=' -f2)
+fi
+SWITCHBOARD_PORT=${SWITCHBOARD_PORT:-4001}
+
+# =============================================================================
+# OS Detection and Windows Handling
+# =============================================================================
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    if [ -f "$0.ps1" ]; then
+        powershell -ExecutionPolicy Bypass -File "$0.ps1" -PROJECT_NAME "$PROJECT_NAME" -ACTION "$ACTION"
+    else
+        echo "Error: Windows management script (manage-environment.ps1) not found"
+        exit 1
+    fi
+else
+    # =============================================================================
+    # Service Management
+    # =============================================================================
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Managing project: $PROJECT_NAME"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Function to check if service is properly set up
+    check_setup() {
+        local project_name=$1
+        local error=0
+
+        # Check if .env file exists
+        if [ ! -f ".env" ]; then
+            echo "Error: .env file not found in project directory"
+            error=1
+        fi
+
+        # Check if Nginx configuration exists
+        if [ ! -f "/etc/nginx/sites-available/$project_name" ]; then
+            echo "Error: Nginx configuration not found"
+            error=1
+        fi
+
+        # Check if database is configured
+        if ! grep -q "DATABASE_URL" ".env"; then
+            echo "Error: Database configuration not found in .env file"
+            error=1
+        fi
+
+        if [ $error -eq 1 ]; then
+            echo "Please run 'ph setup-environment' first to set up the service"
+            exit 1
+        fi
+    }
+
+    # Function to enable/disable Nginx site
+    manage_nginx_site() {
+        local action=$1
+        local site_path="/etc/nginx/sites-available/$PROJECT_NAME"
+        local enabled_path="/etc/nginx/sites-enabled/$PROJECT_NAME"
+        
+        if [ ! -f "$site_path" ]; then
+            echo "Error: Nginx site configuration for $PROJECT_NAME not found"
+            return 1
+        fi
+        
+        case "$action" in
+            "enable")
+                if [ ! -L "$enabled_path" ]; then
+                    sudo ln -sf "$site_path" "$enabled_path"
+                    sudo nginx -t && sudo nginx -s reload
+                fi
+                ;;
+            "disable")
+                if [ -L "$enabled_path" ]; then
+                    sudo rm -f "$enabled_path"
+                    sudo nginx -t && sudo nginx -s reload
+                fi
+                ;;
+        esac
+    }
+
+    case "$ACTION" in
+        "start")
+            check_setup "$PROJECT_NAME"
+            echo "Starting services..."
+            # Build Connect
+            echo "Building Connect..."
+            ph connect build
+            sudo rm -rf /var/www/html/${PROJECT_NAME}
+            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
+            
+            # Enable Nginx site
+            manage_nginx_site "enable"
+            
+            # Start Switchboard via PM2
+            if ! pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                cd $PROJECT_NAME
+                pm2 start "pnpm switchboard --port $SWITCHBOARD_PORT" --name "switchboard_${PROJECT_NAME}"
+                pm2 save
+            else
+                pm2 start "switchboard_${PROJECT_NAME}"
+            fi
+            ;;
+            
+        "stop")
+            check_setup "$PROJECT_NAME"
+            echo "Stopping services..."
+            # Stop Switchboard via PM2
+            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                pm2 stop "switchboard_${PROJECT_NAME}"
+            fi
+            
+            # Disable Nginx site
+            manage_nginx_site "disable"
+            ;;
+            
+        "restart")
+            check_setup "$PROJECT_NAME"
+            echo "Restarting services..."
+            # Build Connect
+            echo "Building Connect..."
+            ph connect build
+            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
+            
+            # Restart Nginx site
+            manage_nginx_site "disable"
+            manage_nginx_site "enable"
+            
+            # Restart Switchboard via PM2
+            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+                pm2 restart "switchboard_${PROJECT_NAME}"
+            else
+                cd $PROJECT_NAME
+                pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
+                pm2 save
+            fi
+            ;;
+            
+        "status")
+            check_setup "$PROJECT_NAME"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Service Status for $PROJECT_NAME"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            # Create table header
+            printf "%-15s %-10s %-15s %-10s %-10s\n" "Service" "Status" "Memory" "Uptime" "Health"
+            echo "────────────────────────────────────────────────────────────────────"
+            
+            # Check Connect status
+            connect_status="Disabled"
+            connect_health="❌"
+            connect_memory="N/A"
+            connect_uptime="N/A"
+            if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then
+                connect_status="Enabled"
+                # Check if Connect is reachable
+                if curl -s -f "http://localhost/$PROJECT_NAME" > /dev/null; then
+                    connect_health="✅"
+                fi
+                # Get Nginx memory usage for the site
+                nginx_pid=$(pgrep -f "nginx.*$PROJECT_NAME" | head -n 1)
+                if [ -n "$nginx_pid" ]; then
+                    connect_memory=$(ps -o rss= -p "$nginx_pid" 2>/dev/null | awk '{printf "%.1fmb", $1/1024}')
+                    connect_uptime=$(ps -o etime= -p "$nginx_pid" 2>/dev/null)
+                fi
+            fi
+            printf "%-15s %-10s %-15s %-10s %-10s\n" "Connect" "$connect_status" "$connect_memory" "$connect_uptime" "$connect_health"
+            
+            # Check Switchboard status
+            switchboard_info=$(pm2 list | grep "switchboard_${PROJECT_NAME}")
+            if [ -n "$switchboard_info" ]; then
+                switchboard_status="Enabled"
+                switchboard_memory=$(echo "$switchboard_info" | awk '{print $12}')
+                switchboard_uptime=$(echo "$switchboard_info" | awk '{print $7}')
+                switchboard_health="✅"
+                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "$switchboard_status" "$switchboard_memory" "$switchboard_uptime" "$switchboard_health"
+            else
+                printf "%-15s %-10s %-15s %-10s %-10s\n" "Switchboard" "Disabled" "N/A" "N/A" "❌"
+            fi
+            echo "────────────────────────────────────────────────────────────────────"
+            ;;
+            
+        *)
+            echo "Usage: $0 [project_name] {start|stop|restart|status}"
+            echo "Default project_name: global"
+            echo "Default action: status"
+            exit 1
+            ;;
+    esac
+fi 

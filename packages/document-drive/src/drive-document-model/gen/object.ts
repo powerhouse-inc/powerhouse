@@ -1,61 +1,48 @@
 import {
-  applyMixins,
   BaseDocumentClass,
-  ExtendedState,
-  SignalDispatch,
+  type ExtendedState,
+  type PartialState,
+  applyMixins,
+  type SignalDispatch,
 } from "document-model";
-import { ExtendedStateFromDocument } from "../../../../document-model/src/document/types.js";
-import { DocumentDriveAction } from "./actions.js";
-import { fileExtension } from "./constants.js";
-import DocumentDrive_Drive from "./drive/object.js";
-import DocumentDrive_Node from "./node/object.js";
-import { reducer } from "./reducer.js";
 import {
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
+  type DocumentDriveState,
+  type DocumentDriveLocalState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { type DocumentDriveAction } from "./actions.js";
+import { reducer } from "./reducer.js";
+import utils from "./utils.js";
+import DocumentDrive_Node from "./node/object.js";
+import DocumentDrive_Drive from "./drive/object.js";
 
-export * from "./drive/object.js";
 export * from "./node/object.js";
-
-type DeepPartial<T> = T extends object
-  ? {
-      [P in keyof T]?: DeepPartial<T[P]>;
-    }
-  : T;
+export * from "./drive/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-interface DocumentDriveClass extends DocumentDrive_Node, DocumentDrive_Drive {}
+interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class DocumentDriveClass extends BaseDocumentClass<
+class DocumentDrive extends BaseDocumentClass<
   DocumentDriveState,
   DocumentDriveLocalState,
   DocumentDriveAction
 > {
-  static fileExtension = fileExtension;
+  static fileExtension = "phdd";
 
   constructor(
-    initialState?: DeepPartial<
-      ExtendedState<DocumentDriveState, DocumentDriveLocalState>
+    initialState?: Partial<
+      ExtendedState<
+        PartialState<DocumentDriveState>,
+        PartialState<DocumentDriveLocalState>
+      >
     >,
     dispatch?: SignalDispatch,
   ) {
-    super(
-      reducer,
-      createDocument(
-        initialState as Partial<
-          ExtendedStateFromDocument<DocumentDriveDocument>
-        >,
-      ),
-      dispatch,
-    );
+    super(reducer, utils.createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, DocumentDriveClass.fileExtension, name);
+    return super.saveToFile(path, DocumentDrive.fileExtension, name);
   }
 
   public loadFromFile(path: string) {
@@ -69,6 +56,6 @@ class DocumentDriveClass extends BaseDocumentClass<
   }
 }
 
-applyMixins(DocumentDriveClass, [DocumentDrive_Node, DocumentDrive_Drive]);
+applyMixins(DocumentDrive, [DocumentDrive_Node, DocumentDrive_Drive]);
 
-export { DocumentDriveClass };
+export { DocumentDrive };

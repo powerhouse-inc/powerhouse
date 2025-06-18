@@ -1,5 +1,4 @@
 import {
-  type TNodeOptions,
   type UiDriveNode,
   type UiFileNode,
   type UiFolderNode,
@@ -7,9 +6,6 @@ import {
 } from "#connect";
 
 export type NodeProps = {
-  nodeOptions: TNodeOptions;
-  isAllowedToCreateDocuments?: boolean;
-  isRemoteDrive?: boolean;
   onAddFolder: (name: string, uiNode: UiNode) => void;
   onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
   onAddAndSelectNewFolder: (name: string) => Promise<void>;
@@ -19,7 +15,4 @@ export type NodeProps = {
   onDuplicateNode: (uiNode: UiNode) => void;
   onDeleteNode: (uiNode: UiFileNode | UiFolderNode) => void;
   onDeleteDrive: (uiNode: UiDriveNode) => void;
-  onAddTrigger: (uiNodeDriveId: string) => void;
-  onRemoveTrigger: (uiNodeDriveId: string) => void;
-  onAddInvalidTrigger: (uiNodeDriveId: string) => void;
 };

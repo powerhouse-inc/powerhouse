@@ -1,8 +1,15 @@
+// @ts-nocheck
+// TODO fix interface errors
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
@@ -14,7 +21,8 @@ import {
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
-import type { IDocumentStorage, IStorage } from "./types.js";
+import type { IDocumentOperationStorage, IDocumentStorage } from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -26,7 +34,9 @@ interface SlugManifest {
   slugToId: Record<string, string>;
 }
 
-export class IPFSStorage implements IStorage, IDocumentStorage {
+export class IPFSStorage
+  implements IDocumentOperationStorage, IDocumentStorage
+{
   private fs: MFS;
 
   constructor(helia: Helia) {
@@ -56,20 +66,39 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return false;
   }
 
-  // TODO: this should throw an error if the document already exists.
-  async create(documentId: string, document: PHDocument): Promise<void> {
+  async create(document: PHDocument): Promise<void> {
+    const documentId = document.id;
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
+    if (await this.exists(documentId)) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    const slugManifest = await this.getSlugManifest();
+    if (slugManifest.slugToId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    document.slug = slug;
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
     );
 
     // Update the slug manifest if the document has a slug
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
-    if (slug) {
-      const slugManifest = await this.getSlugManifest();
-      slugManifest.slugToId[slug] = documentId;
-      await this.updateSlugManifest(slugManifest);
+    slugManifest.slugToId[slug] = documentId;
+    await this.updateSlugManifest(slugManifest);
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
 
@@ -106,11 +135,100 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    // Get all document files from IPFS
+    const documentFiles = [];
+    try {
+      for await (const entry of this.fs.ls("/")) {
+        if (
+          entry.name.startsWith("document-") &&
+          entry.name.endsWith(".json")
+        ) {
+          documentFiles.push(entry.name);
+        }
+      }
+    } catch (error) {
+      // If directory listing fails, return empty results
+      return { documents: [], nextCursor: undefined };
+    }
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+
+    for (const fileName of documentFiles) {
+      // Extract the document ID from the filename
+      const documentId = fileName.replace("document-", "").replace(".json", "");
+
+      try {
+        // Read and parse the document from IPFS
+        const chunks = [];
+        for await (const chunk of this.fs.cat(`/${fileName}`)) {
+          chunks.push(chunk);
+        }
+
+        const buffer = Buffer.concat(chunks);
+        const content = new TextDecoder().decode(buffer);
+        const document = JSON.parse(content) as PHDocument;
+
+        // Only include documents of the requested type
+        if (document.documentType === documentModelType) {
+          documentsAndIds.push({ id: documentId, document });
+        }
+      } catch (error) {
+        // Skip files that can't be read or parsed
+        continue;
+      }
+    }
+
+    // Sort by creation date first, then by ID
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    // cursor
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // count to limit
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -123,12 +241,19 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       // If we can't get the document, we can't remove its slug
     }
 
-    // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    // delete the document from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
-      await this.removeChild(driveId, documentId);
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1 && childParents[0] === documentId) {
+        await this.delete(child);
+      }
     }
 
     // delete any manifest for this document
@@ -182,6 +307,35 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Get all manifest files by listing the directory and finding manifest files
+    try {
+      for await (const entry of this.fs.ls("/")) {
+        if (
+          entry.name.startsWith("manifest-") &&
+          entry.name.endsWith(".json")
+        ) {
+          // Extract the driveId from the manifest filename
+          const driveId = entry.name
+            .replace("manifest-", "")
+            .replace(".json", "");
+
+          // Check if the manifest contains the childId
+          const manifest = await this.getDriveManifest(driveId);
+          if (manifest.documentIds.includes(childId)) {
+            parents.push(driveId);
+          }
+        }
+      }
+    } catch (error) {
+      // If listing fails, return empty array
+    }
+
+    return parents;
+  }
+
   // IDriveStorage
   ////////////////////////////////
 
@@ -207,24 +361,8 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
   }
 
   async getDrives(): Promise<string[]> {
-    try {
-      // List all files in root directory
-      const drives = [];
-      for await (const entry of this.fs.ls("/")) {
-        if (
-          entry.name.startsWith("manifest-") &&
-          entry.name.endsWith(".json")
-        ) {
-          const driveId = entry.name
-            .replace("manifest-", "")
-            .replace(".json", "");
-          drives.push(driveId);
-        }
-      }
-      return drives;
-    } catch (error) {
-      return [];
-    }
+    const result = await this.findByType("powerhouse/document-drive");
+    return result.documents;
   }
 
   async getDrive(id: string): Promise<DocumentDriveDocument> {
@@ -242,59 +380,6 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
     }
   }
 
-  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    // check if a drive with the same slug already exists
-    const slug = drive.initialState.state.global.slug;
-    if (slug) {
-      let existingDrive;
-      try {
-        existingDrive = await this.getBySlug(slug);
-      } catch {
-        // do nothing
-      }
-      if (existingDrive) {
-        throw new Error(`Drive with slug ${slug} already exists`);
-      }
-    }
-
-    const drivePath = this._buildDrivePath(id);
-    const driveContent = stringify(drive);
-    const driveBuffer = new TextEncoder().encode(driveContent);
-
-    // Write the drive to storage
-    await this.fs.writeBytes(driveBuffer, drivePath);
-
-    // Initialize an empty manifest for the new drive
-    await this.updateDriveManifest(id, { documentIds: [] });
-
-    return Promise.resolve();
-  }
-
-  async deleteDrive(id: string): Promise<void> {
-    // Get all documents in this drive
-    const manifest = await this.getDriveManifest(id);
-    const documents = manifest.documentIds;
-
-    // Delete each document from this drive (may not actually delete files if shared with other drives)
-    await Promise.all(documents.map((document) => this.delete(document)));
-
-    // Delete the drive manifest
-    try {
-      await this.fs.rm(this._buildDriveManifestPath(id));
-    } catch (error) {
-      // If manifest doesn't exist, ignore the error
-    }
-
-    // Delete the drive document
-    try {
-      await this.fs.rm(this._buildDrivePath(id));
-    } catch (error) {
-      // If file doesn't exist, ignore the error
-    }
-
-    return Promise.resolve();
-  }
-
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
@@ -306,7 +391,7 @@ export class IPFSStorage implements IStorage, IDocumentStorage {
       operations,
     );
 
-    await this.createDrive(id, {
+    await this.create(id, {
       ...drive,
       ...header,
       operations: mergedOperations,

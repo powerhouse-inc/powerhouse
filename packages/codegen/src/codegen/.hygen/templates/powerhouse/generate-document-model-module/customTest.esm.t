@@ -28,9 +28,6 @@ describe('<%= h.changeCase.pascal(module) %> Operations', () => {
 
 <% actions.forEach(action => { _%>
     it('should handle <%= h.changeCase.camel(action.name) %> operation', () => {
-        // generate a random id
-        // const id = documentModelUtils.hashKey();
-
         const input: <%= h.changeCase.pascal(action.name) %>Input = generateMock(
             z.<%= h.changeCase.pascal(action.name) %>InputSchema(),
         );

@@ -7,7 +7,7 @@ import {
   setDriveName,
   setSharingType,
 } from "../../gen/creators.js";
-import { DocumentDriveClass } from "../../gen/object.js";
+import { DocumentDrive as DocumentDriveClass } from "../../gen/object.js";
 import { reducer } from "../../gen/reducer.js";
 import { createDocument } from "../../gen/utils.js";
 describe("DocumentDrive Class", () => {

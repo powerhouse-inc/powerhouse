@@ -137,9 +137,12 @@ export function createDriveStory(
     Editor,
     driveDocumentModelModule.reducer,
     initialState ??
-      driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { id: "powerhouse", name: "Powerhouse" }, local: {} },
+    {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
       }),
+      id: "powerhouse",
+    },
     additionalStoryArgs,
     [DriveContextDecorator, ...(decorators ?? [])],
   );
@@ -161,9 +164,12 @@ export function createDriveStoryWithUINodes(
     Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
     initialState ??
-      driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { id: "powerhouse", name: "Powerhouse" }, local: {} },
-      }),
+      {
+        ...driveDocumentModelModule.utils.createExtendedState({
+          state: { global: { name: "Powerhouse" }, local: {} },
+        }),
+        id: "powerhouse",
+      },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );

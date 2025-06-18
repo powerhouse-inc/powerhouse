@@ -5,19 +5,19 @@ import {
 } from "document-drive";
 
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import { DriveInput, IDocumentDriveServer } from "document-drive";
-import { ICache } from "document-drive/cache/types";
+import { type DriveInput, type IDocumentDriveServer } from "document-drive";
+import { type ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
-import { IDriveStorage } from "document-drive/storage/types";
+import { type IDriveOperationStorage } from "document-drive/storage/types";
 import { createServer } from "vite";
-import { StorageOptions } from "./types.js";
+import { type StorageOptions } from "./types.js";
 
 export const createStorage = (
   options: StorageOptions,
   cache: ICache,
-): IDriveStorage => {
+): IDriveOperationStorage => {
   switch (options.type) {
     case "filesystem":
       logger.info(
@@ -51,7 +51,15 @@ export async function addDefaultDrive(
   drive: DriveInput,
   serverPort: number,
 ) {
-  let driveId = drive.global.slug ?? drive.global.id;
+  let driveId = drive.id;
+  if (!driveId || driveId.length === 0) {
+    driveId = drive.slug;
+  }
+
+  if (!driveId || driveId.length === 0) {
+    throw new Error("Invalid Drive Id");
+  }
+
   try {
     // add default drive
     await driveServer.addDrive(drive);

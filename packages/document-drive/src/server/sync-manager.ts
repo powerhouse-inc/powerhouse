@@ -4,7 +4,10 @@ import {
   type FileNode,
 } from "#drive-document-model/gen/types";
 import { isFileNode } from "#drive-document-model/src/utils";
-import { type IDocumentStorage, type IDriveStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import { childLogger } from "#utils/logger";
 import { isBefore, isDocumentDrive } from "#utils/misc";
 import {
@@ -32,7 +35,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
   private logger = childLogger(["SynchronizationManager"]);
 
   constructor(
-    private readonly storage: IDriveStorage,
+    private readonly storage: IDriveOperationStorage,
     private readonly documentStorage: IDocumentStorage,
     private readonly cache: ICache,
     private documentModelModules: DocumentModelModule[],

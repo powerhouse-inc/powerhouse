@@ -103,7 +103,6 @@ export {
   createAction,
   createReducer,
   hashDocumentStateForScope,
-  hashKey,
   isDocumentAction,
   replayDocument,
 } from "#document/utils/base.js";

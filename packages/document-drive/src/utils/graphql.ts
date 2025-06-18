@@ -3,10 +3,12 @@ import {
   type FileNode,
   type FolderNode,
 } from "#drive-document-model/gen/types";
+import { type IBaseDocumentDriveServer } from "#server/types";
 import { pascalCase } from "change-case";
 import {
   type DocumentModelModule,
   type DocumentModelState,
+  type GlobalStateFromDocument,
   type OperationFromDocument,
   type PHDocument,
 } from "document-model";
@@ -22,7 +24,6 @@ import {
   type ParseOptions,
   buildSchema,
 } from "graphql";
-import type request from "graphql-request";
 import { GraphQLClient, gql } from "graphql-request";
 import { logger } from "./logger.js";
 
@@ -38,13 +39,18 @@ export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
 
 // replaces fetch so it can be used in Node and Browser envs
 export async function requestGraphql<T>(
-  ...args: Parameters<typeof request>
+  url: string,
+  document: string,
+  variables?: Record<string, unknown>,
+  headers?: Record<string, string>,
 ): Promise<GraphQLResult<T>> {
-  const [url, ...requestArgs] = args;
-  const client = new GraphQLClient(url, { fetch });
+  const client = new GraphQLClient(url, {
+    fetch,
+    headers: headers || {},
+  });
   const { errors, ...response } = await client.request<
     { [K in keyof T]: T[K] | null } & { errors?: ReqGraphQLError[] }
-  >(...requestArgs);
+  >(document, variables);
 
   const result = { ...response } as GraphQLResult<T>;
   if (errors?.length) {
@@ -140,7 +146,21 @@ export function generateDocumentStateQueryFields(
   return queryFields;
 }
 
-export async function requestPublicDrive(url: string): Promise<DriveInfo> {
+export async function requestPublicDriveWithTokenFromReactor(
+  url: string,
+  server: IBaseDocumentDriveServer,
+): Promise<DriveInfo> {
+  const token = await server.generateJwtHandler?.(url);
+  const headers: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+  return requestPublicDrive(url, headers);
+}
+
+export async function requestPublicDrive(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<DriveInfo> {
   let drive: DriveInfo;
   try {
     const result = await requestGraphql<{ drive: DriveInfo }>(
@@ -158,6 +178,8 @@ export async function requestPublicDrive(url: string): Promise<DriveInfo> {
           }
         }
       `,
+      undefined,
+      headers,
     );
     if (result.errors?.length || !result.drive) {
       throw result.errors?.at(0) ?? new Error("Drive not found");
@@ -177,6 +199,9 @@ export type DriveState = DriveInfo &
   };
 
 export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
+  revision: number;
+  state: GlobalStateFromDocument<TDocument>;
+  initialState: GlobalStateFromDocument<TDocument>;
   operations: (OperationFromDocument<TDocument> & {
     inputText: string;
   })[];
@@ -248,7 +273,7 @@ export async function fetchDocument<TDocument extends PHDocument>(
     ? {
         ...result.document,
         revision: {
-          global: result.document.revision.global,
+          global: result.document.revision,
           local: 0,
         },
         state: result.document.state,
@@ -262,14 +287,18 @@ export async function fetchDocument<TDocument extends PHDocument>(
           local: [],
         },
         attachments: {},
-        initialState: utils.createExtendedState({
-          // TODO: getDocument should return all the initial state fields
-          created: result.document.created,
-          lastModified: result.document.created,
-          state: utils.createState({
-            global: result.document.initialState.state.global,
+        initialState: {
+          ...utils.createExtendedState({
+            // TODO: getDocument should return all the initial state fields
+            created: result.document.created,
+            lastModified: result.document.created,
+            state: utils.createState({
+              global: result.document.initialState,
+            }),
           }),
-        }),
+          id: result.document.id,
+          slug: result.document.slug,
+        },
         clipboard: [],
       }
     : null;

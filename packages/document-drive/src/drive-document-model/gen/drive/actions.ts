@@ -1,13 +1,13 @@
-import { BaseAction } from "document-model";
-import {
-  AddListenerInput,
-  AddTriggerInput,
-  RemoveListenerInput,
-  RemoveTriggerInput,
-  SetAvailableOfflineInput,
-  SetDriveIconInput,
+import { type BaseAction } from "document-model";
+import type {
   SetDriveNameInput,
+  SetDriveIconInput,
   SetSharingTypeInput,
+  SetAvailableOfflineInput,
+  AddListenerInput,
+  RemoveListenerInput,
+  AddTriggerInput,
+  RemoveTriggerInput,
 } from "../types.js";
 
 export type SetDriveNameAction = BaseAction<
@@ -40,7 +40,11 @@ export type RemoveListenerAction = BaseAction<
   RemoveListenerInput,
   "local"
 >;
-export type AddTriggerAction = BaseAction<"ADD_TRIGGER", AddTriggerInput, "local">;
+export type AddTriggerAction = BaseAction<
+  "ADD_TRIGGER",
+  AddTriggerInput,
+  "local"
+>;
 export type RemoveTriggerAction = BaseAction<
   "REMOVE_TRIGGER",
   RemoveTriggerInput,
