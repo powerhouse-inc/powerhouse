@@ -1,3 +1,13 @@
+## 2.5.0-dev.36 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** assets not found ([92ec79305](https://github.com/powerhouse-inc/powerhouse/commit/92ec79305))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.35 (2025-06-18)
 
 ### 🩹 Fixes
