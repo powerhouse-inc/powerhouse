@@ -100,7 +100,6 @@
         "jotai": "^2.1.0",
         "jotai-effect": "^1.1.6",
         "localforage": "^1.10.0",
-        "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
         "react": "^18.3.1",

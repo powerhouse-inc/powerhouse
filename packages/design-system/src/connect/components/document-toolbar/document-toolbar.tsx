@@ -132,24 +132,18 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
         </div>
 
         <div className="flex items-center gap-x-2">
-          <button
-            className={twMerge(
-              "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",
-              isSwitchboardLinkDisabled
-                ? "cursor-not-allowed"
-                : "cursor-pointer active:opacity-70",
-            )}
-            onClick={onSwitchboardLinkClick}
-            disabled={isSwitchboardLinkDisabled}
-          >
-            <Icon
-              name="Drive"
-              size={16}
-              className={
-                isSwitchboardLinkDisabled ? "text-gray-500" : "text-gray-900"
-              }
-            />
-          </button>
+          {!isSwitchboardLinkDisabled ? (
+            <button
+              className={twMerge(
+                "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",
+                "cursor-pointer active:opacity-70",
+              )}
+              onClick={onSwitchboardLinkClick}
+              disabled={isSwitchboardLinkDisabled}
+            >
+              <Icon name="Drive" size={16} className="text-gray-900" />
+            </button>
+          ) : null}
           <button
             className={twMerge(
               "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",

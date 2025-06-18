@@ -4,7 +4,8 @@ import {
     useGetDocument,
 } from '#hooks';
 import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import { type GetDocumentOptions } from 'document-drive';
 import {
     type EditorContext,
@@ -14,7 +15,7 @@ import {
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { exportFile } from '../utils/index.js';
+import { exportFile, openUrl } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
 
@@ -34,8 +35,9 @@ export function DocumentEditorContainer() {
         selectedParentNode,
         setSelectedNode,
     } = useUiNodesContext();
-    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
-    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const { isRemoteDrive, remoteUrl } = useDocumentDriveById(
+        selectedDriveNode?.id,
+    );
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const getDocument = useGetDocument();
@@ -142,9 +144,39 @@ export function DocumentEditorContainer() {
 
     const onOpenSwitchboardLink = useMemo(() => {
         return isRemoteDrive
-            ? () => openSwitchboardLink(selectedNode)
+            ? async () => {
+                  if (!selectedDocument) {
+                      console.error('No selected document');
+                      return;
+                  }
+
+                  if (!remoteUrl) {
+                      console.error('No remote drive url found');
+                      return;
+                  }
+
+                  const documentModelModule = getDocumentModelModule(
+                      selectedDocument.documentType,
+                  );
+
+                  if (!documentModelModule) {
+                      console.error('No document model found');
+                      return;
+                  }
+
+                  const url = buildDocumentSubgraphUrl(
+                      remoteUrl,
+                      selectedDocument.id,
+                      documentModelModule.documentModel,
+                  );
+                  try {
+                      await openUrl(url);
+                  } catch (e) {
+                      console.error('Error opening switchboard link', e);
+                  }
+              }
             : undefined;
-    }, [isRemoteDrive, openSwitchboardLink, selectedNode]);
+    }, [isRemoteDrive, remoteUrl, selectedDocument, getDocumentModelModule]);
 
     if (!fileNodeDocument) return null;
 

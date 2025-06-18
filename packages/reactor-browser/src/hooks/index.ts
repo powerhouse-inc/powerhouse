@@ -5,6 +5,5 @@ export * from "./useDocumentEditor.js";
 export * from "./useDriveActions.js";
 export * from "./useDriveActionsWithUiNodes.js";
 export * from "./useDriveContext.js";
-export * from "./useSwitchboard.js";
 export * from "./useUiNodesContext.js";
 export * from "./useUserPermissions.js";
