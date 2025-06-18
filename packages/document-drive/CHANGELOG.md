@@ -1,3 +1,7 @@
+## 2.5.0-dev.39 (2025-06-18)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.38 (2025-06-18)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

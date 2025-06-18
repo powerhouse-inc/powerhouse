@@ -1,3 +1,13 @@
+## 2.5.0-dev.39 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** redirect ([6729ec934](https://github.com/powerhouse-inc/powerhouse/commit/6729ec934))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.38 (2025-06-18)
 
 ### 🩹 Fixes
