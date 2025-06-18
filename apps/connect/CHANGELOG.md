@@ -1,3 +1,13 @@
+## 2.5.0-dev.38 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** redirect to trailing slash ([b3df4e795](https://github.com/powerhouse-inc/powerhouse/commit/b3df4e795))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.37 (2025-06-18)
 
 ### 🚀 Features
