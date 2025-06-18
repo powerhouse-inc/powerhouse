@@ -1,3 +1,13 @@
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 2.5.0-dev.30 (2025-06-17)
 
 ### 🩹 Fixes

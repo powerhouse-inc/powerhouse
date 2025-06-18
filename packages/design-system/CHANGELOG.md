@@ -1,3 +1,18 @@
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### 🩹 Fixes
+
+- **connect, design-system:** each list entry should have key field ([bf218c74c](https://github.com/powerhouse-inc/powerhouse/commit/bf218c74c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 2.5.0-dev.30 (2025-06-17)
 
 ### 🩹 Fixes

@@ -1,3 +1,22 @@
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **connect,builder-tools,ph-cli:** added support for path argument on ph connect build and preview ([fe049aae8](https://github.com/powerhouse-inc/powerhouse/commit/fe049aae8))
+- **connect:** use relative imports and rely on <base href> ([fa9eba139](https://github.com/powerhouse-inc/powerhouse/commit/fa9eba139))
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### 🩹 Fixes
+
+- **connect:** remove trailing slash from basepath when setting analytics database name ([7901889e2](https://github.com/powerhouse-inc/powerhouse/commit/7901889e2))
+- **connect, design-system:** each list entry should have key field ([bf218c74c](https://github.com/powerhouse-inc/powerhouse/commit/bf218c74c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 2.5.0-dev.30 (2025-06-17)
 
 ### 🩹 Fixes

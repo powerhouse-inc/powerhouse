@@ -1,3 +1,21 @@
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **connect,builder-tools,ph-cli:** added support for path argument on ph connect build and preview ([fe049aae8](https://github.com/powerhouse-inc/powerhouse/commit/fe049aae8))
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### 🩹 Fixes
+
+- **builder-tools:** enforce trailing slash on base path and read BASE_PATH env variable correctly ([93beeb00c](https://github.com/powerhouse-inc/powerhouse/commit/93beeb00c))
+- **ph-cli:** install and uninstall packages with and without version tag ([c2a4ad13f](https://github.com/powerhouse-inc/powerhouse/commit/c2a4ad13f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 2.5.0-dev.30 (2025-06-17)
 
 ### 🩹 Fixes
