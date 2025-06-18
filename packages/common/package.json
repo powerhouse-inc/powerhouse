@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "2.5.0-staging.3",
+  "version": "3.1.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [

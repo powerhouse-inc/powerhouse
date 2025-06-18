@@ -1,3 +1,7 @@
+## 3.1.0 (2025-06-18)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 2.5.0-staging.3 (2025-06-18)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
