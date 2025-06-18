@@ -1,3 +1,18 @@
+## 2.5.0-dev.33 (2025-06-18)
+
+### 🚀 Features
+
+- **reactor:** added repository url to package.json ([662c90e89](https://github.com/powerhouse-inc/powerhouse/commit/662c90e89))
+
+### 🩹 Fixes
+
+- deploy powerhouse to available environments ([a45859a22](https://github.com/powerhouse-inc/powerhouse/commit/a45859a22))
+- deploy not on push to main ([63eef7020](https://github.com/powerhouse-inc/powerhouse/commit/63eef7020))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.32 (2025-06-18)
 
 ### 🚀 Features
