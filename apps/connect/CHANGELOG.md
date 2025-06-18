@@ -1,3 +1,13 @@
+## 2.5.0-dev.34 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** added base path for nginx ([fd809c593](https://github.com/powerhouse-inc/powerhouse/commit/fd809c593))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.33 (2025-06-18)
 
 ### 🩹 Fixes
