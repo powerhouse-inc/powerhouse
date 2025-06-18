@@ -4,7 +4,6 @@ unless_exists: true
 ---
 import { Button } from "@powerhousedao/design-system";
 import { type DocumentModelModule } from "document-model";
-import { TypeFormatFlags } from "typescript";
 
 interface CreateDocumentProps {
   documentModels?: DocumentModelModule[];
