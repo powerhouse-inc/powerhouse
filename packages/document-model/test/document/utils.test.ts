@@ -159,7 +159,6 @@ describe("Base utils", () => {
 
   it("should replay document and keep lastModified timestamp", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     const newDocument = countReducer(document, setLocalName("test"));
@@ -169,12 +168,12 @@ describe("Base utils", () => {
       document.initialState,
       newDocument.operations,
       countReducer,
-      undefined,
-      newDocument,
     );
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);
-    expect(newDocument.lastModified).toBe(replayedDocument.lastModified);
+    expect(newDocument.header.lastModifiedAtUtcMs).toBe(
+      replayedDocument.header.lastModifiedAtUtcMs,
+    );
     expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
       replayedDocument.operations.global.map((o) => o.timestamp),
     );
@@ -183,7 +182,6 @@ describe("Base utils", () => {
   it("should work with mutable reducer", () => {
     const reducer = createReducer<CountDocument>(mutableCountReducer);
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     const newDocument = reducer(document, increment());

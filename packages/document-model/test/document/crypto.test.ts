@@ -32,7 +32,6 @@ describe("Crypto utils", () => {
 
   it("should build signature with empty previousState", () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -70,7 +69,6 @@ describe("Crypto utils", () => {
 
   it("should build signature with previousState", () => {
     let document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -127,7 +125,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -191,7 +188,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -252,7 +248,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 

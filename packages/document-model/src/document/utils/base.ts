@@ -40,6 +40,7 @@ import {
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
+import { createPresignedHeader } from "./header.js";
 
 export function isNoopOperation<
   TOp extends {
@@ -193,8 +194,11 @@ export function baseCreateDocument<TDocument extends PHDocument>(
     initialState,
     createState,
   );
+
+  const header = createPresignedHeader();
   return {
     ...state,
+    header,
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],

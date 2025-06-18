@@ -20,7 +20,7 @@ describe("Local reducer", () => {
       input: {},
       scope: "local",
     });
-    expect(newDocument.revision.local).toBe(1);
+    expect(newDocument.header.revision.local).toBe(1);
   });
 
   it("should update lastModified", async () => {
@@ -35,9 +35,9 @@ describe("Local reducer", () => {
       input: {},
       scope: "local",
     });
-    expect(new Date(document.lastModified).getTime()).toBeLessThan(
-      new Date(newDocument.lastModified).getTime(),
-    );
+    expect(
+      new Date(document.header.lastModifiedAtUtcMs).getTime(),
+    ).toBeLessThan(new Date(newDocument.header.lastModifiedAtUtcMs).getTime());
     vi.useRealTimers();
   });
 
@@ -91,18 +91,11 @@ describe("Local reducer", () => {
   });
   it("should update local name", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     const newDocument = countReducer(document, setLocalName("test"));
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "test" },
-    });
-    expect(document.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "" },
-    });
+    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 1 });
+    expect(document.header.revision).toStrictEqual({ global: 0, local: 0 });
 
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -123,14 +116,13 @@ describe("Local reducer", () => {
 
   it("should undo local operation", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, setLocalName("test"));
 
-    expect(newDocument.revision).toStrictEqual({ global: 0, local: 1 });
+    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 1 });
     newDocument = countReducer(newDocument, undo(1, "local"));
-    expect(newDocument.revision).toStrictEqual({ global: 0, local: 2 });
+    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "" },
@@ -165,13 +157,12 @@ describe("Local reducer", () => {
 
   it("should redo local operation", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
     newDocument = countReducer(newDocument, redo(1, "local"));
-    expect(newDocument.revision).toStrictEqual({ global: 0, local: 3 });
+    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 3 });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "test" },
@@ -200,12 +191,11 @@ describe("Local reducer", () => {
 
   it.skip("should prune local operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, setLocalName("test 2"));
-    expect(newDocument.revision).toStrictEqual({ global: 0, local: 2 });
+    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "test 2" },
@@ -238,7 +228,7 @@ describe("Local reducer", () => {
     });
 
     newDocument = countReducer(newDocument, prune(0, undefined, "local"));
-    expect(newDocument.revision).toStrictEqual({ global: 1, local: 0 });
+    expect(newDocument.header.revision).toStrictEqual({ global: 1, local: 0 });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "test 2" },

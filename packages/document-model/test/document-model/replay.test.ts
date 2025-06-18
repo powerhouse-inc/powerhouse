@@ -15,17 +15,6 @@ import {
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
   const initialState = {
-    id: "",
-    name: "",
-    slug: "",
-    revision: {
-      global: 0,
-      local: 0,
-    },
-    documentType: "",
-    created: "",
-    lastModified: "",
-    meta: {},
     state: {
       global: {
         count: 0,
@@ -41,17 +30,22 @@ describe("DocumentModel Class", () => {
     CountLocalState,
     CountAction
   > = {
-    id: "",
-    name: "",
-    slug: "",
-    revision: {
-      global: 0,
-      local: 0,
+    header: {
+      id: "",
+      sig: { publicKey: {}, nonce: "" },
+      documentType: "",
+      createdAtUtcMs: 0,
+      slug: "",
+      name: "",
+      branch: "",
+      revision: {
+        global: 0,
+        local: 0,
+      },
+      lastModifiedAtUtcMs: 0,
+      meta: {},
     },
-    documentType: "",
-    created: "",
-    lastModified: "",
-    meta: {},
+    history: {},
     state: {
       global: {
         count: 0,

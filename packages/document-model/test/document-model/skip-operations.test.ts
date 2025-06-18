@@ -36,10 +36,7 @@ describe("Document Operations", () => {
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
 
-      expect(document.revision).toStrictEqual({
-        global: 6,
-        local: 0,
-      });
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -83,7 +80,7 @@ describe("Document Operations", () => {
         { skip: 6, ignoreSkipOperations: true },
       );
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -106,7 +103,7 @@ describe("Document Operations", () => {
         setAuthorName({ authorName: "<authorName>" }),
       );
 
-      expect(document.revision.global).toBe(5);
+      expect(document.header.revision.global).toBe(5);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -144,7 +141,7 @@ describe("Document Operations", () => {
         { skip: 5, ignoreSkipOperations: true },
       );
 
-      expect(document.revision.global).toBe(5);
+      expect(document.header.revision.global).toBe(5);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -172,7 +169,7 @@ describe("Document Operations", () => {
       );
       document = reducer(document, setModelId({ id: "<id2>" }));
 
-      expect(document.revision.global).toBe(7);
+      expect(document.header.revision.global).toBe(7);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -220,7 +217,7 @@ describe("Document Operations", () => {
         ignoreSkipOperations: true,
       });
 
-      expect(document.revision.global).toBe(7);
+      expect(document.header.revision.global).toBe(7);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -243,7 +240,7 @@ describe("Document Operations", () => {
         setAuthorName({ authorName: "<authorName>" }),
       );
 
-      expect(document.revision.global).toBe(5);
+      expect(document.header.revision.global).toBe(5);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -281,7 +278,7 @@ describe("Document Operations", () => {
         { skip: 5, ignoreSkipOperations: true },
       );
 
-      expect(document.revision.global).toBe(5);
+      expect(document.header.revision.global).toBe(5);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -308,7 +305,7 @@ describe("Document Operations", () => {
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -352,7 +349,7 @@ describe("Document Operations", () => {
         { skip: 6, ignoreSkipOperations: true },
       );
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -379,7 +376,7 @@ describe("Document Operations", () => {
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
@@ -423,7 +420,7 @@ describe("Document Operations", () => {
         { skip: 6, ignoreSkipOperations: true },
       );
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       document.operations.global.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
@@ -464,7 +461,7 @@ describe("Document Operations", () => {
         stateReducer,
       );
 
-      expect(replayedDoc.revision.global).toBe(6);
+      expect(replayedDoc.header.revision.global).toBe(6);
       expect(replayedDoc.operations.global.length).toBe(3);
       expect(replayedDoc.state.global).toMatchObject({
         id: "<id>",

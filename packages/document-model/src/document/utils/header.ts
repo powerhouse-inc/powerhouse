@@ -94,16 +94,14 @@ export const verify = async (
  *
  * @returns An unsigned header for a document.
  */
-export const createPresignedHeader = (
-  documentType: string,
-): PHDocumentHeader => {
+export const createPresignedHeader = (): PHDocumentHeader => {
   return {
     id: "",
     sig: {
       publicKey: {},
       nonce: "",
     },
-    documentType,
+    documentType: "",
     createdAtUtcMs: Date.now(),
     slug: "",
     name: "",
@@ -127,10 +125,11 @@ export const createPresignedHeader = (
  */
 export const createSignedHeader = async (
   presignedHeader: PHDocumentHeader,
+  documentType: string,
   signer: Signer,
 ): Promise<PHDocumentHeader> => {
   const parameters: SigningParameters = {
-    documentType: presignedHeader.documentType,
+    documentType,
     createdAtUtcMs: presignedHeader.createdAtUtcMs,
     nonce: generateUUID(),
   };
@@ -149,7 +148,7 @@ export const createSignedHeader = async (
       publicKey,
       nonce: parameters.nonce,
     },
-    documentType: presignedHeader.documentType,
+    documentType,
     createdAtUtcMs: presignedHeader.createdAtUtcMs,
 
     // mutable fields
@@ -178,8 +177,12 @@ export const createSignedHeaderForSigner = async (
   documentType: string,
   signer: Signer,
 ): Promise<PHDocumentHeader> => {
-  const presignedHeader = createPresignedHeader(documentType);
-  const signedHeader = await createSignedHeader(presignedHeader, signer);
+  const presignedHeader = createPresignedHeader();
+  const signedHeader = await createSignedHeader(
+    presignedHeader,
+    documentType,
+    signer,
+  );
 
   return signedHeader;
 };

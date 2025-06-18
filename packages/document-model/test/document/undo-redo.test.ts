@@ -17,7 +17,6 @@ describe("UNDO/REDO", () => {
 
   beforeEach(() => {
     const initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -89,7 +88,6 @@ describe("UNDO/REDO", () => {
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -108,7 +106,6 @@ describe("UNDO/REDO", () => {
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -184,7 +181,7 @@ describe("UNDO/REDO", () => {
     it("should undo operations", () => {
       document = countReducer(document, undo(1));
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(4);
 
       expect(document.clipboard.length).toBe(1);
@@ -214,7 +211,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, undo());
       document = countReducer(document, undo());
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(2);
 
       expect(document.clipboard.length).toBe(3);
@@ -253,7 +250,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, undo());
       document = countReducer(document, undo());
 
-      expect(document.revision.global).toBe(9);
+      expect(document.header.revision.global).toBe(9);
       expect(document.state.global.count).toBe(1);
 
       expect(document.clipboard.length).toBe(3);
@@ -288,7 +285,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, undo());
       document = countReducer(document, undo());
 
-      expect(document.revision.global).toBe(10);
+      expect(document.header.revision.global).toBe(10);
       expect(document.state.global.count).toBe(2);
 
       expect(document.clipboard.length).toBe(2);
@@ -324,7 +321,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, undo());
       document = countReducer(document, redo());
 
-      expect(document.revision.global).toBe(7);
+      expect(document.header.revision.global).toBe(7);
       expect(document.state.global.count).toBe(4);
       expect(document.operations.global.length).toBe(5);
       expect(document.clipboard.length).toBe(1);
@@ -340,7 +337,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, redo());
       document = countReducer(document, redo());
 
-      expect(document.revision.global).toBe(8);
+      expect(document.header.revision.global).toBe(8);
       expect(document.state.global.count).toBe(5);
       expect(document.operations.global.length).toBe(6);
       expect(document.clipboard.length).toBe(0);
@@ -381,7 +378,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, undo());
       document = countReducer(document, increment());
 
-      expect(document.revision.global).toBe(7);
+      expect(document.header.revision.global).toBe(7);
       expect(document.state.global.count).toBe(4);
       expect(document.operations.global.length).toBe(5);
       expect(document.clipboard.length).toBe(0);
@@ -404,7 +401,7 @@ describe("UNDO/REDO", () => {
         skip: 1,
       });
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(4);
       expect(document.operations.global.length).toBe(5);
       expect(document.operations.global[4]).toMatchObject({
@@ -433,7 +430,7 @@ describe("UNDO/REDO", () => {
       document = countReducer(document, op2, undefined, { skip: 2 });
       document = countReducer(document, op3, undefined, { skip: 3 });
 
-      expect(document.revision.global).toBe(6);
+      expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(2);
       expect(document.operations.global.length).toBe(3);
       expect(document.operations.global[2]).toMatchObject({
