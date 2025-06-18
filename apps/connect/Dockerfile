@@ -43,7 +43,7 @@ ENV PORT=4000
 ENV PH_CONNECT_SENTRY_DSN=""
 ENV PH_CONNECT_SENTRY_ENV=""
 ENV PH_PACKAGES=""
-ENV PH_CONNECT_BASE_PATH=""
+ENV PH_CONNECT_BASE_PATH="/"
 WORKDIR /app
 RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
         ph init project --${TAG}; \
