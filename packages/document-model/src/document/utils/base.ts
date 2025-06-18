@@ -1,4 +1,4 @@
-import { generateUUID, hash } from "#utils/env";
+import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -175,20 +175,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
-  const id = initialState?.id ?? generateUUID();
   return {
-    name: "",
-    documentType: "",
-    revision: {
-      global: 0,
-      local: 0,
-    },
-    created: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-    attachments: {},
-    ...initialState,
-    id: id,
-    slug: initialState?.slug ?? id,
     state:
       createState?.(initialState?.state) ??
       ((initialState?.state ?? {
@@ -299,7 +286,7 @@ export function getDocumentLastModified(document: PHDocument) {
     Object.values(document.operations).flat(),
   );
   const timestamp =
-    sortedOperations.at(-1)?.timestamp || document.initialState.lastModified;
+    sortedOperations.at(-1)?.timestamp || document.header.lastModifiedAtUtcMs;
   return timestamp;
 }
 
@@ -410,7 +397,7 @@ export function replayDocument<TDocument extends PHDocument>(
   // builds a new document from the initial data
   const document = baseCreateDocument(documentState);
   if (header?.slug) {
-    document.slug = header.slug;
+    document.header.slug = header.slug;
   }
   document.initialState = initialState;
   document.operations = initialOperations;
@@ -485,11 +472,15 @@ export function replayDocument<TDocument extends PHDocument>(
   // gets the last modified timestamp from the latest operation
   const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
     const operation = curr.at(-1);
-    if (operation && operation.timestamp > acc) {
-      acc = operation.timestamp;
+    if (operation) {
+      const ts = parseInt(operation.timestamp);
+      if (ts > acc) {
+        acc = ts;
+      }
     }
+
     return acc;
-  }, initialState.lastModified);
+  }, document.header.lastModifiedAtUtcMs);
 
   return {
     ...result,

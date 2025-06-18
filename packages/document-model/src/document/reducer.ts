@@ -75,11 +75,14 @@ export function updateHeader<TDocument extends PHDocument>(
 ): TDocument {
   return {
     ...document,
-    revision: {
-      ...document.revision,
-      [action.scope]: getNextRevision(document, action),
+    header: {
+      ...document.header,
+      revision: {
+        ...document.header.revision,
+        [action.scope]: getNextRevision(document, action),
+      },
+      lastModifiedAtUtcMs: getDocumentLastModified(document),
     },
-    lastModified: getDocumentLastModified(document),
   };
 }
 

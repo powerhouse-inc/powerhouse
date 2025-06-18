@@ -61,6 +61,14 @@ export type PHDocumentHeader = {
   branch: string;
 
   /**
+   * The revision of each scope of the document. This object is updated every
+   * time any _other_ scope is updated.
+   */
+  revision: {
+    [scope: string]: number;
+  };
+
+  /**
    * The timestamp of the last change in the document.
    **/
   lastModifiedAtUtcMs: number;
@@ -76,3 +84,5 @@ export type PHBaseState<TDocumentState = JsonSerializable> = {
   // todo: will not be optional in the future
   document?: TDocumentState;
 };
+
+export type PHDocumentHistory = {};

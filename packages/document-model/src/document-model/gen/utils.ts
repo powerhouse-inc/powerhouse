@@ -17,10 +17,8 @@ import {
   baseSaveToFile,
   baseSaveToFileHandle,
 } from "#document/utils/file.js";
-import { createEmptyHeader } from "#document/utils/header.js";
 import {
   documentModelState,
-  documentType,
   fileExtension,
   initialLocalState,
 } from "./constants.js";
@@ -31,7 +29,6 @@ export { fileExtension } from "./constants.js";
 
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
-    header: createEmptyHeader(),
     document: { ...documentModelState, ...state?.document },
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
@@ -41,10 +38,7 @@ export const createState: CreateState<DocumentModelDocument> = (state) => {
 export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
   extendedState,
 ) => {
-  return baseCreateExtendedState(
-    { ...extendedState, documentType },
-    createState,
-  );
+  return baseCreateExtendedState({ ...extendedState }, createState);
 };
 
 export const createDocument: CreateDocument<DocumentModelDocument> = (

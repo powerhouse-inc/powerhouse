@@ -3,7 +3,11 @@ import { type DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { type DocumentAction } from "./actions/types.js";
-import { PHBaseState } from "./ph-types.js";
+import {
+  PHBaseState,
+  PHDocumentHeader,
+  PHDocumentHistory,
+} from "./ph-types.js";
 import type {
   CreateChildDocumentInput,
   Signal,
@@ -178,7 +182,7 @@ export type DocumentHeader = {
   /** The slug of the document. */
   slug: string;
   /** The number of operations applied to the document. */
-  revision: Record<OperationScope, number>;
+  revision: Record<string, number>;
   /** The type of the document model. */
   documentType: string;
   /** The timestamp of the creation date of the document. */
@@ -284,7 +288,7 @@ export type CreateDocument<TDocument extends BaseDocument<any, any, any>> = (
   createState?: CreateState<TDocument>,
 ) => TDocument;
 
-export type ExtendedState<TDocumentState, TLocalState> = DocumentHeader & {
+export type ExtendedState<TDocumentState, TLocalState> = {
   /** The document model specific state. */
   state: BaseState<TDocumentState, TLocalState>;
 
@@ -331,9 +335,17 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<TDocumentState, TLocalState, TAction extends Action> =
-  /** The document model specific state. */
-  ExtendedState<TDocumentState, TLocalState> & {
+export type BaseDocument<
+  TDocumentState,
+  TLocalState,
+  TAction extends Action,
+> = {
+  /** The header of the document. */
+  header: PHDocumentHeader;
+
+  /** The history of the document. */
+  history: PHDocumentHistory;
+} & ExtendedState<TDocumentState, TLocalState> & {
     /** The operations history of the document. */
     operations: DocumentOperations<TAction>;
     /** The initial state of the document, enabling replaying operations. */

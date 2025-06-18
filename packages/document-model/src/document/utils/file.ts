@@ -25,16 +25,23 @@ export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
 
-  const { id, slug, name, revision, documentType, created, lastModified } =
-    document;
+  const {
+    id,
+    slug,
+    name,
+    revision,
+    documentType,
+    createdAtUtcMs,
+    lastModifiedAtUtcMs,
+  } = document.header;
   const header: DocumentHeader = {
     id,
     slug,
     name,
     revision,
     documentType,
-    created,
-    lastModified,
+    created: createdAtUtcMs.toString(),
+    lastModified: lastModifiedAtUtcMs.toString(),
   };
   zip.file("header.json", JSON.stringify(header, null, 2));
   zip.file("state.json", JSON.stringify(document.initialState || {}, null, 2));
@@ -89,7 +96,7 @@ export async function baseSaveToFile(
     type: "uint8array",
     streamFiles: true,
   });
-  const fileName = name ?? document.name;
+  const fileName = name ?? document.header.name;
   const fileExtension = `.${extension}.zip`;
 
   return writeFile(

@@ -100,12 +100,12 @@ export const prune = (
  * @category Actions
  */
 export const loadState = <S, T>(
-  state: Pick<ExtendedState<S, T>, "state" | "name">,
+  state: Pick<ExtendedState<S, T>, "state"> & { name: string },
   operations: number,
 ) =>
   createAction<LoadStateAction>(
     "LOAD_STATE",
-    { state, operations },
+    { state: { name: state.name, ...state.state }, operations },
     undefined,
     LoadStateActionInputSchema,
   );

@@ -89,45 +89,49 @@ export const verify = async (
 };
 
 /**
- * Creates an empty header for a document. This header is not valid, but can
- * be used for type checking.
+ * Creates an unsigned header for a document. This header is not valid, but
+ * can be input into {@link createSignedHeader} to create a signed header.
  *
- * @returns An empty header for a document.
+ * @returns An unsigned header for a document.
  */
-export const createEmptyHeader = (): PHDocumentHeader => {
+export const createPresignedHeader = (
+  documentType: string,
+): PHDocumentHeader => {
   return {
     id: "",
     sig: {
       publicKey: {},
       nonce: "",
     },
-    documentType: "",
-    createdAtUtcMs: 0,
+    documentType,
+    createdAtUtcMs: Date.now(),
     slug: "",
     name: "",
     branch: "",
-    lastModifiedAtUtcMs: 0,
+    revision: {
+      document: 0,
+    },
+    lastModifiedAtUtcMs: Date.now(),
     meta: {},
   };
 };
 
 /**
- * Creates a header for a document. The document header requires a signer as
- * the document id is a Ed25519 signature.
+ * Creates a new, signed header for a document.
  *
- * @param documentType - The type of the document.
+ * @param presignedHeader - The presigned header to created the signed header from.
  * @param signer - The signer of the document.
  *
- * @returns The default header for a document. Some fields are mutable and
+ * @returns A new signed header for a document. Some fields are mutable and
  * some are not. See the PHDocumentHeader type for more information.
  */
-export const createHeaderForSigner = async (
-  documentType: string,
+export const createSignedHeader = async (
+  presignedHeader: PHDocumentHeader,
   signer: Signer,
 ): Promise<PHDocumentHeader> => {
   const parameters: SigningParameters = {
-    documentType,
-    createdAtUtcMs: Date.now(),
+    documentType: presignedHeader.documentType,
+    createdAtUtcMs: presignedHeader.createdAtUtcMs,
     nonce: generateUUID(),
   };
 
@@ -145,14 +149,37 @@ export const createHeaderForSigner = async (
       publicKey,
       nonce: parameters.nonce,
     },
-    documentType,
-    createdAtUtcMs: parameters.createdAtUtcMs,
+    documentType: presignedHeader.documentType,
+    createdAtUtcMs: presignedHeader.createdAtUtcMs,
 
     // mutable fields
     slug: "",
     name: "",
     branch: "",
-    lastModifiedAtUtcMs: parameters.createdAtUtcMs,
+    revision: {
+      document: 0,
+    },
+    lastModifiedAtUtcMs: presignedHeader.lastModifiedAtUtcMs,
     meta: {},
   };
+};
+
+/**
+ * Creates a signed header for a document. The document header requires a signer
+ * as the document id is a Ed25519 signature.
+ *
+ * @param documentType - The type of the document.
+ * @param signer - The signer of the document.
+ *
+ * @returns The signed header for a document. Some fields are mutable and
+ * some are not. See the PHDocumentHeader type for more information.
+ */
+export const createSignedHeaderForSigner = async (
+  documentType: string,
+  signer: Signer,
+): Promise<PHDocumentHeader> => {
+  const presignedHeader = createPresignedHeader(documentType);
+  const signedHeader = await createSignedHeader(presignedHeader, signer);
+
+  return signedHeader;
 };
