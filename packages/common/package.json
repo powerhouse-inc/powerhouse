@@ -12,7 +12,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./*": "./dist/*.js"
+    "./*": "./dist/*.js",
+    "./drive-analytics": "./dist/drive-analytics/index.js"
   },
   "types": "./dist/index.d.ts",
   "imports": {
@@ -39,8 +40,10 @@
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
