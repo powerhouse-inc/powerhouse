@@ -1,4 +1,8 @@
-import { useDocumentDriveServer, useUiNodes } from '#hooks';
+import {
+    useConnectConfig,
+    useDocumentDriveServer,
+    useShowAddDriveModal,
+} from '#hooks';
 import { useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
@@ -7,6 +11,7 @@ import {
     Icon,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useCallback } from 'react';
 
 function getDriveIcon(driveNode: UiDriveNode) {
@@ -29,9 +34,10 @@ function getDriveIcon(driveNode: UiDriveNode) {
 
 export function Home() {
     const getAppDescriptionForEditorId = useGetAppNameForEditorId();
-    const { showAddDriveModal, driveNodes, setSelectedNode } = useUiNodes();
+    const showAddDriveModal = useShowAddDriveModal();
     const { documentDrives } = useDocumentDriveServer();
-
+    const { driveNodes, setSelectedNode } = useUiNodesContext();
+    const [config] = useConnectConfig();
     const handleDriveClick = useCallback(
         (driveNode: UiDriveNode) => {
             setSelectedNode(driveNode);
@@ -46,9 +52,7 @@ export function Home() {
     return (
         <HomeScreen>
             {driveNodes.map(driveNode => {
-                const drive = documentDrives.find(
-                    d => d.state.global.id === driveNode.id,
-                );
+                const drive = documentDrives.find(d => d.id === driveNode.id);
                 const editorId = drive?.meta?.preferredEditor;
                 const appName = editorId
                     ? getAppDescriptionForEditorId(editorId)
@@ -63,7 +67,9 @@ export function Home() {
                     />
                 );
             })}
-            <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+            {config.drives.addDriveEnabled && (
+                <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+            )}
         </HomeScreen>
     );
 }

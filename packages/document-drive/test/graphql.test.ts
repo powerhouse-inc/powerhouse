@@ -6,6 +6,7 @@ describe("Graphql methods", () => {
   it("should generate document drive query", ({ expect }) => {
     const schema = generateDocumentStateQueryFields(
       driveDocumentModelModule.documentModel,
+      "",
     );
     expect(schema).toEqual(
       "id name nodes { ... on FolderNode { id name kind parentFolder } ... on FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon slug",

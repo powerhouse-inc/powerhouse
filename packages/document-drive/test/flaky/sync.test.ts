@@ -37,7 +37,6 @@ describe("Document Drive Server with %s", () => {
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
   ] as DocumentModelModule[];
-  w;
 
   const prismaClient = new PrismaClient();
   const storageLayer = new MemoryStorage();

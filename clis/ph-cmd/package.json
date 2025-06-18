@@ -1,9 +1,13 @@
 {
   "name": "ph-cmd",
-  "version": "0.44.2",
+  "version": "3.1.0",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -16,7 +20,7 @@
   "scripts": {
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "prebuild": "npm run generate-commands-md && npm run generate-version",
+    "prebuild": "npm run clean && npm run generate-commands-md && npm run generate-version",
     "build": "tsc --build",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build",

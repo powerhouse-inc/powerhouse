@@ -1,3 +1,4 @@
+import { isValidDocumentId, isValidSlug } from "#storage/utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
@@ -20,11 +21,14 @@ import {
 } from "../../drive-document-model/gen/types.js";
 import {
   ConflictOperationError,
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
   DocumentNotFoundError,
+  DocumentSlugValidationError,
 } from "../../server/error.js";
 import { type SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
-import type { IDocumentStorage, IDriveStorage } from "../types.js";
+import type { IDocumentStorage, IDriveOperationStorage } from "../types.js";
 import { type Prisma, type PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
@@ -94,7 +98,7 @@ type ExtendedPrismaClient = ReturnType<
   typeof getRetryTransactionsClient<PrismaClient>
 >;
 
-export class PrismaStorage implements IDriveStorage, IDocumentStorage {
+export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   private logger = childLogger(["PrismaStorage"]);
 
   private db: ExtendedPrismaClient;
@@ -124,31 +128,35 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return count > 0;
   }
 
-  // TODO: this should throw an error if the document already exists.
-  async create(documentId: string, document: PHDocument) {
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
+  async create(document: PHDocument) {
+    const documentId = document.id;
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
+    const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    document.slug = slug;
 
     try {
-      await this.db.document.upsert({
-        where: {
+      await this.db.document.create({
+        data: {
           id: documentId,
-        },
-        update: {},
-        create: {
+          slug,
           name: document.name,
           documentType: document.documentType,
-          slug,
           initialState: JSON.stringify(document.initialState),
           lastModified: document.lastModified,
           revision: JSON.stringify(document.revision),
           meta: document.meta ? JSON.stringify(document.meta) : undefined,
-          id: documentId,
         },
       });
     } catch (e) {
-      if ((e as any).code === "P2002") {
-        throw new Error(`Document with slug ${slug} already exists`);
+      if ((e as { code?: string }).code === "P2002") {
+        throw new DocumentAlreadyExistsError(documentId);
       }
 
       throw e;
@@ -276,8 +284,10 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     }, cachedOperations) as OperationsFromDocument<TDocument>;
     const dbDoc = result;
     const doc = {
+      id: dbDoc.id,
       created: dbDoc.created.toISOString(),
       name: dbDoc.name ? dbDoc.name : "",
+      slug: dbDoc.slug ? dbDoc.slug : "",
       documentType: dbDoc.documentType,
       initialState: JSON.parse(
         dbDoc.initialState,
@@ -310,14 +320,95 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(result.id);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const queryOptions: Prisma.DocumentFindManyArgs = {
+      where: {
+        documentType: documentModelType,
+      },
+      orderBy: {
+        ordinal: "asc",
+      },
+      select: {
+        id: true,
+        ordinal: true,
+      },
+      take: limit,
+    };
+
+    // if cursor is provided, add it to the query
+    if (cursor) {
+      const cursorOrdinal = parseInt(cursor, 10);
+      if (isNaN(cursorOrdinal)) {
+        throw new Error("Invalid cursor format: Expected an integer");
+      }
+
+      queryOptions.cursor = {
+        ordinal: cursorOrdinal,
+      };
+
+      // skip the cursor itself
+      queryOptions.skip = 1;
+    }
+
+    const results = await this.db.document.findMany(queryOptions);
+
+    let nextCursor: string | undefined;
+    if (results.length === limit) {
+      // the cursor is the last document in the results
+      nextCursor = results[limit - 1].ordinal.toString();
+    }
+
+    return {
+      documents: results.map((doc) => doc.id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
+    // find all children that are only children of this document
+    try {
+      // Find documents that are only associated with this drive (have no other parents)
+      const documentsToDelete = await this.db.document.findMany({
+        where: {
+          driveDocuments: {
+            some: {
+              driveId: documentId,
+            },
+            every: {
+              driveId: documentId,
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Delete these documents that only belong to this drive
+      for (const doc of documentsToDelete) {
+        await this.delete(doc.id);
+      }
+    } catch (e: unknown) {
+      this.logger.error(
+        "Error deleting child documents that only belong to this document",
+        e,
+      );
+    }
+
     try {
       // delete out of drives
       await this.db.drive.deleteMany({
         where: {
           driveDocuments: {
-            none: {
-              documentId,
+            every: {
+              driveId: documentId,
             },
           },
         },
@@ -422,13 +513,24 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     return docs.map((doc) => doc.id);
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    // Query the DriveDocument table to find all drives that have the given document as a child
+    const driveDocuments = await this.db.driveDocument.findMany({
+      where: {
+        documentId: childId,
+      },
+      select: {
+        driveId: true,
+      },
+    });
+
+    // Extract the drive IDs from the query result
+    return driveDocuments.map((doc) => doc.driveId);
+  }
+
   ////////////////////////////////
   // IDriveStorage
   ////////////////////////////////
-
-  async createDrive(id: string, drive: DocumentDriveDocument): Promise<void> {
-    return this.create(id, drive);
-  }
 
   async addDriveOperations(
     id: string,
@@ -594,43 +696,6 @@ export class PrismaStorage implements IDriveStorage, IDocumentStorage {
     header: DocumentHeader,
   ): Promise<void> {
     return this._addDocumentOperations(this.db, drive, id, operations, header);
-  }
-
-  async getDrives() {
-    const drives = await this.db.drive.findMany({
-      select: {
-        id: true,
-      },
-    });
-
-    return drives.map((d) => d.id);
-  }
-
-  async deleteDrive(id: string) {
-    // delete drive
-    await this.db.drive.delete({
-      where: {
-        id,
-      },
-    });
-
-    // delete drive document (will cascade)
-    await this.db.document.delete({
-      where: {
-        id,
-      },
-    });
-
-    // deletes all documents that only belong to this drive
-    await this.db.document.deleteMany({
-      where: {
-        driveDocuments: {
-          none: {
-            driveId: id,
-          },
-        },
-      },
-    });
   }
 
   async getOperationResultingState(

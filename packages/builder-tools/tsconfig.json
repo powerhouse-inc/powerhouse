@@ -13,7 +13,7 @@
       "path": "../document-model"
     },
     {
-      "path": "../design-system/tsconfig.lib.json"
+      "path": "../design-system"
     }
   ],
   "include": ["**/*"]

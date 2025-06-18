@@ -168,8 +168,12 @@ export type Meta = {
  * The base attributes of a {@link BaseDocument}.
  */
 export type DocumentHeader = {
+  /** The id of the document. */
+  id: string;
   /** The name of the document. */
   name: string;
+  /** The slug of the document. */
+  slug: string;
   /** The number of operations applied to the document. */
   revision: Record<OperationScope, number>;
   /** The type of the document model. */
@@ -188,10 +192,13 @@ export type DocumentHeader = {
 export type Attachment = {
   /** The binary data of the attachment in Base64 */
   data: string;
+
   /** The MIME type of the attachment */
   mimeType: string;
+
   // The extension of the attachment.
   extension?: string | null;
+
   // The file name of the attachment.
   fileName?: string | null;
 };
@@ -362,10 +369,26 @@ export type User = {
   ens?: ENSInfo;
 };
 
+export type PartialRecord<K extends keyof any, T> = {
+  [P in K]?: T;
+};
+
+export type RevisionsFilter = PartialRecord<OperationScope, number>;
+
+export type GetDocumentOptions = ReducerOptions & {
+  revisions?: RevisionsFilter;
+  checkHashes?: boolean;
+};
+
 export type EditorContext = {
   theme: "light" | "dark";
   debug?: boolean;
   user?: User;
+  readMode?: boolean;
+  selectedTimelineRevision?: string | number | null;
+  getDocumentRevision?: (
+    options?: GetDocumentOptions,
+  ) => Promise<PHDocument> | undefined;
 };
 
 export type ActionErrorCallback = (error: unknown) => void;
@@ -411,6 +434,7 @@ export type EditorModule<
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
+    timelineEnabled?: boolean;
   };
 };
 
@@ -436,6 +460,10 @@ export type Manifest = {
     id: string;
     name: string;
     documentTypes: string[];
+  }[];
+  processors?: {
+    id: string;
+    name: string;
   }[];
   subgraphs?: {
     id: string;

@@ -10,17 +10,19 @@ on:
     branches: ["main"]
     paths-ignore:
       - "packages/document-drive/**"
+      - "apps/academy/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
     paths-ignore:
       - "packages/document-drive/**"
+      - "apps/academy/**"
 
 env:
   NX_ISOLATE_PLUGINS: false
-  PNPM_VERSION: 9
+  PNPM_VERSION: 10
   NODE_VERSION: 22
-  EXCLUDE: document-drive
+  EXCLUDE: document-drive,academy
 
 permissions:
   contents: read
@@ -42,6 +44,7 @@ jobs:
     uses: ./.github/workflows/run-nx-target.yml
     with:
       target: build
+      exclude: academy
 
   storybook:
     uses: ./.github/workflows/run-nx-target.yml
@@ -68,7 +71,7 @@ jobs:
 
       - name: Prepare and send Discord notification
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
         run: |
           FAILED_TARGETS="${{ steps.collect-failures.outputs.failed }}"

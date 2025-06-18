@@ -1,5 +1,12 @@
-import { useConnectConfig, useUiNodes } from '#hooks';
+import {
+    useConnectConfig,
+    useDocumentDriveServer,
+    useUiNodes,
+    useUserPermissions,
+} from '#hooks';
+import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button.js';
@@ -17,18 +24,25 @@ const getDocumentModelName = (name: string) => {
 export function DriveView() {
     const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
-    const uiNodes = useUiNodes();
+    const { addFolder } = useDocumentDriveServer();
     const {
-        documentModels,
-        isAllowedToCreateDocuments,
         selectedDriveNode,
         selectedParentNode,
         setSelectedNode,
         selectedNodePath,
         getNodeById,
-        addFolder,
-    } = uiNodes;
-
+    } = useUiNodesContext();
+    const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
+    const documentModels = useFilteredDocumentModels();
+    const {
+        onAddFile,
+        onAddFolder,
+        onRenameNode,
+        onCopyNode,
+        onMoveNode,
+        onDuplicateNode,
+        onAddAndSelectNewFolder,
+    } = useUiNodes();
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
             if (!selectedDriveNode) {
@@ -71,7 +85,15 @@ export function DriveView() {
             {connectConfig.content.showSearchBar && <SearchBar />}
             <div className="px-4">
                 <div className="mb-5">
-                    <FolderView {...uiNodes} />
+                    <FolderView
+                        onAddFile={onAddFile}
+                        onAddFolder={onAddFolder}
+                        onRenameNode={onRenameNode}
+                        onCopyNode={onCopyNode}
+                        onMoveNode={onMoveNode}
+                        onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+                        onDuplicateNode={onDuplicateNode}
+                    />
                 </div>
                 {isAllowedToCreateDocuments && (
                     <>
@@ -82,7 +104,8 @@ export function DriveView() {
                             {documentModels?.map(doc => (
                                 <Button
                                     key={doc.documentModel.id}
-                                    aria-details={doc.documentModel.description}
+                                    title={doc.documentModel.name}
+                                    aria-label={doc.documentModel.name}
                                     className="bg-gray-200 text-slate-800"
                                     onClick={() => createDocument(doc)}
                                 >

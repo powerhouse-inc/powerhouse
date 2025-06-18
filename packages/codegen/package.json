@@ -1,12 +1,16 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "0.50.2",
+  "version": "3.1.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
   "files": [
     "dist/*"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "exports": "./dist/index.js",
   "imports": {
     "#utils/*": "./dist/src/utils/*.js",
@@ -20,7 +24,7 @@
     "clean": "rimraf dist/",
     "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
     "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
-    "prebuild": "rimraf dist/src/codegen/.hygen/**/*.esm.t",
+    "prebuild": "npm run clean",
     "build": "tsc --build",
     "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
     "prepublishOnly": "npm run build",
@@ -38,7 +42,7 @@
     "@graphql-codegen/typescript": "^4.0.1",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "^1.0.2",
-    "@types/node": "^20.11.2",
+    "@types/node": "^22.15.17",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",
     "document-model": "workspace:*",

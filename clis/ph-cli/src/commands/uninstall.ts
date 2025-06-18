@@ -62,6 +62,37 @@ export const uninstall: CommandActionType<
     throw new Error("❌ Dependency name is required");
   }
 
+  // Parse package names to extract version/tag
+  const parsedDependencies = dependencies.map((dep) => {
+    // Handle scoped packages (@org/package[@version])
+    if (dep.startsWith("@")) {
+      const matches = /^(@[^/]+\/[^@]+)(?:@(.+))?$/.exec(dep);
+      if (!matches) {
+        throw new Error(`Invalid scoped package name format: ${dep}`);
+      }
+      return {
+        name: matches[1],
+        version: matches[2] || "latest",
+        full: dep,
+      };
+    }
+
+    // Handle regular packages (package[@version])
+    const matches = /^([^@]+)(?:@(.+))?$/.exec(dep);
+    if (!matches) {
+      throw new Error(`Invalid package name format: ${dep}`);
+    }
+    return {
+      name: matches[1],
+      version: matches[2] || "latest",
+      full: dep,
+    };
+  });
+
+  if (options.debug) {
+    console.log(">>> parsedDependencies", parsedDependencies);
+  }
+
   if (
     options.packageManager &&
     !SUPPORTED_PACKAGE_MANAGERS.includes(options.packageManager)
@@ -94,7 +125,7 @@ export const uninstall: CommandActionType<
     console.log("Uninstalling dependencies 📦 ...");
     uninstallDependency(
       packageManager as PackageManager,
-      dependencies,
+      parsedDependencies.map((dep) => dep.name),
       projectInfo.path,
       options.workspace,
     );
@@ -113,7 +144,7 @@ export const uninstall: CommandActionType<
 
   try {
     console.log("⚙️ Updating powerhouse config file...");
-    updateConfigFile(dependencies, projectInfo.path, "uninstall");
+    updateConfigFile(parsedDependencies, projectInfo.path, "uninstall");
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");

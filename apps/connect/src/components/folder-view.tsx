@@ -1,4 +1,4 @@
-import { type TUiNodes } from '#hooks';
+import { useShowDeleteNodeModal, type TUiNodes } from '#hooks';
 import { sortUiNodesByName } from '#utils';
 import {
     FILE,
@@ -9,21 +9,25 @@ import {
     type BaseUiNode,
     type UiFolderNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content/index.js';
 import FileContentView from './file-content-view.js';
 
-export function FolderView(props: TUiNodes) {
+export function FolderView(
+    props: TUiNodes & { isAllowedToCreateDocuments?: boolean },
+) {
     const { t } = useTranslation();
-    const { selectedParentNode } = props;
+    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
+    const showDeleteNodeModal = useShowDeleteNodeModal();
     const { isDropTarget, dropProps } = useDrop({
         ...props,
         uiNode: selectedParentNode,
     });
 
     const handleSelectNode = (node: BaseUiFolderNode) => {
-        props.setSelectedNode(node as unknown as UiFolderNode);
+        setSelectedNode(node as unknown as UiFolderNode);
     };
 
     const handleRenameNode = (name: string, node: BaseUiFolderNode) => {
@@ -35,7 +39,7 @@ export function FolderView(props: TUiNodes) {
     };
 
     const handleDeleteNode = (node: BaseUiFolderNode) => {
-        props.onDeleteNode(node as unknown as UiFolderNode);
+        showDeleteNodeModal(node as unknown as UiFolderNode);
     };
 
     const handleAddFile = async (file: File, parentNode: BaseUiNode | null) => {

@@ -55,6 +55,10 @@ export const forwardCommand = async (
       forwardPHCommand(packageManager, projectInfo.path, args, options.debug);
     }
   } catch (error) {
+    if (!args.length) {
+      return;
+    }
+
     console.error("❌ Failed to forward command");
     if ((error as FSError).code === "ENOENT") {
       console.error("Have you run `ph setup-globals` or `ph init`?");

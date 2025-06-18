@@ -1,3 +1,226 @@
+## 3.1.0 (2025-06-18)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-staging.3 (2025-06-18)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-staging.2 (2025-06-18)
+
+### 🚀 Features
+
+- add app skeleton to html at build time ([1882bb820](https://github.com/powerhouse-inc/powerhouse/commit/1882bb820))
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### 🩹 Fixes
+
+- deploy not on push to main ([63eef7020](https://github.com/powerhouse-inc/powerhouse/commit/63eef7020))
+- deploy powerhouse to available environments ([a45859a22](https://github.com/powerhouse-inc/powerhouse/commit/a45859a22))
+- **connect:** set proper tag on docker build ([598c1b3fb](https://github.com/powerhouse-inc/powerhouse/commit/598c1b3fb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 2.5.0-staging.1 (2025-06-13)
+
+### 🚀 Features
+
+- start dependent services with switchboard ([188c82c6a](https://github.com/powerhouse-inc/powerhouse/commit/188c82c6a))
+- added hostnames in docker compose ([a590eea17](https://github.com/powerhouse-inc/powerhouse/commit/a590eea17))
+- **docker-compose:** work with published images ([9f31b70fb](https://github.com/powerhouse-inc/powerhouse/commit/9f31b70fb))
+- **ci:** build and publish docker images on newly created tags ([ee930c4a4](https://github.com/powerhouse-inc/powerhouse/commit/ee930c4a4))
+- added docker publish workflow ([adf65ef8a](https://github.com/powerhouse-inc/powerhouse/commit/adf65ef8a))
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+- improved analytics frontend integration ([269aed50c](https://github.com/powerhouse-inc/powerhouse/commit/269aed50c))
+- **connect:** updated diff-analyzer processor ([ce5d1219f](https://github.com/powerhouse-inc/powerhouse/commit/ce5d1219f))
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### 🩹 Fixes
+
+- **docker:** request write permissions ([29d4d3fd7](https://github.com/powerhouse-inc/powerhouse/commit/29d4d3fd7))
+- **switchboard:** entrypoint script ([a50e5eb06](https://github.com/powerhouse-inc/powerhouse/commit/a50e5eb06))
+- **switchboard:** added semicolons ([ce23c47f0](https://github.com/powerhouse-inc/powerhouse/commit/ce23c47f0))
+- **ci:** set proper tags for docker images ([3cab91969](https://github.com/powerhouse-inc/powerhouse/commit/3cab91969))
+- **ci:** connect deployment ([8ac8e423b](https://github.com/powerhouse-inc/powerhouse/commit/8ac8e423b))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 2.5.0-staging.0 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.9 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.8 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.7 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.6 (2025-06-05)
+
+### 🩹 Fixes
+
+- set node 22 in release branch workflow ([b33681938](https://github.com/powerhouse-inc/powerhouse/commit/b33681938))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.5 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.4 (2025-06-05)
+
+### 🩹 Fixes
+
+- **builder-tools:** move esbuild dev dep to deps ([baa22be6f](https://github.com/powerhouse-inc/powerhouse/commit/baa22be6f))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 2.5.0-dev.3 (2025-06-05)
+
+### 🚀 Features
+
+- **builder-tools:** add node polyfills esbuild plugin for connect build ([43dd16b4d](https://github.com/powerhouse-inc/powerhouse/commit/43dd16b4d))
+
+### ❤️ Thank You
+
+- ryanwolhuter
+
+## 2.5.0-dev.2 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.1 (2025-06-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.0 (2025-06-04)
+
+### 🚀 Features
+
+- **academy:** centralize husky & auto-update cli docs ([8c92e0bb1](https://github.com/powerhouse-inc/powerhouse/commit/8c92e0bb1))
+- **ph-cli:** added setup-service command ([dfa082aa6](https://github.com/powerhouse-inc/powerhouse/commit/dfa082aa6))
+- **scripts:** updated setup scripts ([9f7fa7644](https://github.com/powerhouse-inc/powerhouse/commit/9f7fa7644))
+- enforce conventional commits ([faa49da40](https://github.com/powerhouse-inc/powerhouse/commit/faa49da40))
+- **switchboard:** deploy with new dockerfile ([54f65af17](https://github.com/powerhouse-inc/powerhouse/commit/54f65af17))
+- **switchboard:** new dockerfile based on ph-cmd ([fafff7143](https://github.com/powerhouse-inc/powerhouse/commit/fafff7143))
+- **switchboard:** added auth params from powerhouse config ([5ad2becdd](https://github.com/powerhouse-inc/powerhouse/commit/5ad2becdd))
+- **switchboard:** added authentication middleware ([7cab35e96](https://github.com/powerhouse-inc/powerhouse/commit/7cab35e96))
+- removed scalars package ([d6f7059a7](https://github.com/powerhouse-inc/powerhouse/commit/d6f7059a7))
+- enabled switchboard command ([5a9c467bf](https://github.com/powerhouse-inc/powerhouse/commit/5a9c467bf))
+- removed scalars dependencies ([596aedbd5](https://github.com/powerhouse-inc/powerhouse/commit/596aedbd5))
+- **builder-tools:** handle recursive objects in initial state generator ([c9eedcc43](https://github.com/powerhouse-inc/powerhouse/commit/c9eedcc43))
+- **monorepo:** bump graphql lib ([ba9d5d338](https://github.com/powerhouse-inc/powerhouse/commit/ba9d5d338))
+- **monorepo:** handle updating monorepo build deps ([db2ac2316](https://github.com/powerhouse-inc/powerhouse/commit/db2ac2316))
+- **monorepo:** regenerate lockfile ([a6c390b4e](https://github.com/powerhouse-inc/powerhouse/commit/a6c390b4e))
+- **builder-tools:** fix wrong value used for field id ([a6c6142e0](https://github.com/powerhouse-inc/powerhouse/commit/a6c6142e0))
+- **reactor-api,reactor-local:** updated analytics dependencies ([cbeace573](https://github.com/powerhouse-inc/powerhouse/commit/cbeace573))
+- **reactor-api,reactor-local,switchboard:** wait initial timeout before start listening to requests ([409f1e316](https://github.com/powerhouse-inc/powerhouse/commit/409f1e316))
+
+### 🩹 Fixes
+
+- **academy:** lockfile issue second time' ([6208fe614](https://github.com/powerhouse-inc/powerhouse/commit/6208fe614))
+- **academy:** fix frozen lockfile issue' ([80f18ec73](https://github.com/powerhouse-inc/powerhouse/commit/80f18ec73))
+- **pre-commit:** use bash syntax and shebang ([da00ff581](https://github.com/powerhouse-inc/powerhouse/commit/da00ff581))
+- added missing dep to academy ([4ec6c8278](https://github.com/powerhouse-inc/powerhouse/commit/4ec6c8278))
+- **academy:** clean up husky script ([e18e26cd8](https://github.com/powerhouse-inc/powerhouse/commit/e18e26cd8))
+- **switchboard:** set port in entrypoint ([c09677ec9](https://github.com/powerhouse-inc/powerhouse/commit/c09677ec9))
+- **switchboard:** entrypoint ([472d6fa11](https://github.com/powerhouse-inc/powerhouse/commit/472d6fa11))
+- **switchboard:** damn heroku ([fb95e9adc](https://github.com/powerhouse-inc/powerhouse/commit/fb95e9adc))
+- **switchboard:** improved dockerfile ([130fc5535](https://github.com/powerhouse-inc/powerhouse/commit/130fc5535))
+- **switchboard:** docker build ([7052e39e1](https://github.com/powerhouse-inc/powerhouse/commit/7052e39e1))
+- docker build with PH_PACKAGES ([856ac1187](https://github.com/powerhouse-inc/powerhouse/commit/856ac1187))
+- **auth:** some error handling ([1b3d6a38d](https://github.com/powerhouse-inc/powerhouse/commit/1b3d6a38d))
+- **switchboard:** use config ([28b994a9e](https://github.com/powerhouse-inc/powerhouse/commit/28b994a9e))
+- **document-drive:** fix type issue on browser storage ([240a78b41](https://github.com/powerhouse-inc/powerhouse/commit/240a78b41))
+- **ph-cli:** ph add does not remove installed packages ([aedfbf56e](https://github.com/powerhouse-inc/powerhouse/commit/aedfbf56e))
+- remove .env and add to .gitignore ([0d2d48684](https://github.com/powerhouse-inc/powerhouse/commit/0d2d48684))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([72bf72fd4](https://github.com/powerhouse-inc/powerhouse/commit/72bf72fd4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Callme-T
+- Frank
+- Guillermo Puente @gpuente
+- ryanwolhuter @ryanwolhuter
+
+## 2.3.0 (2025-05-06)
+
+### 🚀 Features
+
+- moved log levels definition to config and set default level to "info" ([ef6040210](https://github.com/powerhouse-inc/powerhouse/commit/ef6040210))
+- **document-drive:** implemented LRU in memory cache ([9f6347b58](https://github.com/powerhouse-inc/powerhouse/commit/9f6347b58))
+- **reactor-browser,connect:** use global analytics store ([213059fcd](https://github.com/powerhouse-inc/powerhouse/commit/213059fcd))
+- **reactor-api,reactor-local:** updated analytics dependencies ([34ba69ba4](https://github.com/powerhouse-inc/powerhouse/commit/34ba69ba4))
+- **connect,reactor-browser:** implemented analytics demo on connect ([d71c42400](https://github.com/powerhouse-inc/powerhouse/commit/d71c42400))
+- **reactor-browser:** added analytics engine support ([50067856f](https://github.com/powerhouse-inc/powerhouse/commit/50067856f))
+- **reactor-api,reactor-local,switchboard:** wait initial timeout before start listening to requests ([f49c00d4a](https://github.com/powerhouse-inc/powerhouse/commit/f49c00d4a))
+- checkout release branch ([6f3e20067](https://github.com/powerhouse-inc/powerhouse/commit/6f3e20067))
+- added sky-atlas-staging ([7eb24f6c6](https://github.com/powerhouse-inc/powerhouse/commit/7eb24f6c6))
+- removed DriveContextProvider dep from connect DriveEditorContainer ([ea926fc30](https://github.com/powerhouse-inc/powerhouse/commit/ea926fc30))
+- **nx-cloud:** setup nx cloud workspace ([3048ba71d](https://github.com/powerhouse-inc/powerhouse/commit/3048ba71d))
+- **switchboard:** use reactor api package manager ([e5b5722fe](https://github.com/powerhouse-inc/powerhouse/commit/e5b5722fe))
+- **reactor:** added vscode launch config and cli for debugging react-local ([610b33f50](https://github.com/powerhouse-inc/powerhouse/commit/610b33f50))
+- **reactor-api:** added JSON scalar ([d3f8b4193](https://github.com/powerhouse-inc/powerhouse/commit/d3f8b4193))
+- **ui:** improve cell navigation ([eaaa8b995](https://github.com/powerhouse-inc/powerhouse/commit/eaaa8b995))
+- **builder-tools:** load local package from manifest ([96f4962d3](https://github.com/powerhouse-inc/powerhouse/commit/96f4962d3))
+- **ph-cli:** add update command for dependency management ([ab3f06f85](https://github.com/powerhouse-inc/powerhouse/commit/ab3f06f85))
+- added support for supergraphs ([650321bd6](https://github.com/powerhouse-inc/powerhouse/commit/650321bd6))
+
+### 🩹 Fixes
+
+- **release-app:** set pnpm version to install ([8587ca47d](https://github.com/powerhouse-inc/powerhouse/commit/8587ca47d))
+- **switchboard:** use inmemory cache if redis env var is not provided ([de27c68ad](https://github.com/powerhouse-inc/powerhouse/commit/de27c68ad))
+- separate node code in powerhouse config packages ([77071d3e9](https://github.com/powerhouse-inc/powerhouse/commit/77071d3e9))
+- added script for testing end-to-end codegen pipeline ([8668f82b4](https://github.com/powerhouse-inc/powerhouse/commit/8668f82b4))
+- updating launch confituration to fix reactor local debug source mapping ([32af5af15](https://github.com/powerhouse-inc/powerhouse/commit/32af5af15))
+- **switchboard:** add analytics-engine-core as a dependency of switchboard ([bded7cbab](https://github.com/powerhouse-inc/powerhouse/commit/bded7cbab))
+- **ph-cli:** ph add does not remove installed packages ([1109ef2ed](https://github.com/powerhouse-inc/powerhouse/commit/1109ef2ed))
+- **connect:** fixed diff analyzer dependency version ([c4119416f](https://github.com/powerhouse-inc/powerhouse/commit/c4119416f))
+- **connect:** updated diff analyzer dependency ([012eb867c](https://github.com/powerhouse-inc/powerhouse/commit/012eb867c))
+- **connect,document-drive,reactor-browser:** build issues ([d8142a0e3](https://github.com/powerhouse-inc/powerhouse/commit/d8142a0e3))
+- remove .env and add to .gitignore ([5ca95a8ee](https://github.com/powerhouse-inc/powerhouse/commit/5ca95a8ee))
+- **switchboard,reactor-local:** latest version of sky atlas was not being installed ([7245bb133](https://github.com/powerhouse-inc/powerhouse/commit/7245bb133))
+- add source map generation so we can debug ([a4e8cbb69](https://github.com/powerhouse-inc/powerhouse/commit/a4e8cbb69))
+- update lockfile ([07931c848](https://github.com/powerhouse-inc/powerhouse/commit/07931c848))
+- **deploy:** set branch env var ([835cc704d](https://github.com/powerhouse-inc/powerhouse/commit/835cc704d))
+- build and deploy action ([e8c550849](https://github.com/powerhouse-inc/powerhouse/commit/e8c550849))
+- **switchboard:** removed duplicate listen ([02ca53a9d](https://github.com/powerhouse-inc/powerhouse/commit/02ca53a9d))
+- made ph packages env var ([b9aaff84d](https://github.com/powerhouse-inc/powerhouse/commit/b9aaff84d))
+- remove filter ([ece84a667](https://github.com/powerhouse-inc/powerhouse/commit/ece84a667))
+- **document-drive:** linting issues ([de8e4472e](https://github.com/powerhouse-inc/powerhouse/commit/de8e4472e))
+- **scalars:** restore scrollbar styles ([b450e57b6](https://github.com/powerhouse-inc/powerhouse/commit/b450e57b6))
+- roll back replace plugin ([6c4781da2](https://github.com/powerhouse-inc/powerhouse/commit/6c4781da2))
+- **codegen:** update validation plugin name ([18de56413](https://github.com/powerhouse-inc/powerhouse/commit/18de56413))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- nesdc88
+- ryanwolhuter @ryanwolhuter
+- Yasiel Cabrera @YasielCabrera
+
 ## 2.2.0 (2025-03-19)
 
 ### 🚀 Features

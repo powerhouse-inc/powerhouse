@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
+  "include": [
+    "tests/**/*",
+    "index.ts",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "playwright.config.ts",
+    "powerhouse.manifest.json",
+    "document-models/**/*",
+    "editors/**/*",
+    "subgraphs/**/*"
+  ]
+}

@@ -1,8 +1,10 @@
 import { Subgraph } from "#graphql/base/index.js";
-import { type DriveInput } from "document-drive";
+import { childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { type SystemContext } from "./types.js";
+
+const logger = childLogger(["reactor", "system-subgraph"]);
 
 export class SystemSubgraph extends Subgraph {
   name = "system";
@@ -15,11 +17,22 @@ export class SystemSubgraph extends Subgraph {
 
     type Mutation {
       addDrive(
-        global: DocumentDriveStateInput!
+        name: String!
+        icon: String
+        id: String
+        slug: String
         preferredEditor: String
-      ): DocumentDrive_DocumentDriveState
+      ): AddDriveResult
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
+    }
+
+    type AddDriveResult {
+      id: String!
+      slug: String!
+      name: String!
+      icon: String
+      preferredEditor: String
     }
 
     input DocumentDriveStateInput {
@@ -39,22 +52,51 @@ export class SystemSubgraph extends Subgraph {
     Mutation: {
       addDrive: async (
         parent: unknown,
-        args: DriveInput & { preferredEditor?: string },
+        args: {
+          name: string;
+          icon?: string;
+          id?: string;
+          slug?: string;
+          preferredEditor?: string;
+        },
         ctx: SystemContext,
-      ) => {
+      ): Promise<{
+        id: string;
+        slug: string;
+        name: string;
+        icon: string | null;
+        preferredEditor?: string;
+      }> => {
         try {
-          const isAdmin = ctx.isAdmin(ctx);
+          const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
           if (!isAdmin) {
-            throw new GraphQLError("Unauthorized");
+            throw new GraphQLError("Forbidden");
           }
+
+          const { name, icon, preferredEditor, ...driveInput } = args;
+
           const drive = await this.reactor.addDrive(
-            { global: args.global, local: args.local },
-            args.preferredEditor,
+            {
+              ...driveInput,
+              global: { name, icon },
+              local: {},
+            },
+            preferredEditor,
           );
-          return drive.state.global;
+
+          const driveAdded = {
+            id: drive.id,
+            slug: drive.slug,
+            name: drive.state.global.name,
+            icon: drive.state.global.icon,
+            preferredEditor: drive.meta?.preferredEditor,
+          };
+          logger.info("Drive added", driveAdded);
+
+          return driveAdded;
         } catch (e) {
-          console.error(e);
-          throw new Error(e as string);
+          logger.error(e);
+          throw e instanceof Error ? e : new Error(e as string);
         }
       },
     },
@@ -62,18 +104,5 @@ export class SystemSubgraph extends Subgraph {
 
   async onSetup() {
     await super.onSetup();
-    this.graphqlManager.setAdditionalContextFields({
-      isAdmin: (ctx: SystemContext) => {
-        const adminUsers =
-          process.env.ADMIN_USERS?.split(",")
-            .map((user) => user.trim())
-            .filter(Boolean) ?? [];
-        return (
-          adminUsers.length === 0 ||
-          (ctx.session.address &&
-            adminUsers.includes(ctx.session.address.toLocaleLowerCase()))
-        );
-      },
-    });
   }
 }

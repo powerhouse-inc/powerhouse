@@ -1,5 +1,8 @@
 import config from '#connect-config';
-import * as Sentry from '@sentry/react';
+
+import type { BrowserOptions } from '@sentry/react';
+
+import { childLogger } from 'document-drive/utils/logger';
 import React, { useEffect } from 'react';
 import {
     createRoutesFromChildren,
@@ -7,71 +10,92 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import { useAcceptedCookies } from './useAcceptedCookies/index.js';
+import { useAcceptedCookies } from './useAcceptedCookies.js';
 
-export function useInitSenty() {
+const logger = childLogger(['sentry']);
+
+let clientStarted = false;
+
+async function getSentry() {
+    return await import('@sentry/react');
+}
+
+async function initSentry() {
+    const release = import.meta.env.SENTRY_RELEASE;
+
+    const Sentry = await getSentry();
+    const integrations: BrowserOptions['integrations'] = [
+        Sentry.httpClientIntegration(),
+        Sentry.extraErrorDataIntegration({ depth: 5 }),
+        Sentry.replayIntegration(),
+        Sentry.captureConsoleIntegration({ levels: ['error'] }),
+    ];
+    if (config.sentry.tracing) {
+        integrations.push(
+            Sentry.reactRouterV6BrowserTracingIntegration({
+                useEffect: React.useEffect,
+                useLocation,
+                useNavigationType,
+                createRoutesFromChildren,
+                matchRoutes,
+            }),
+        );
+    }
+
+    Sentry.init({
+        release,
+        dsn: config.sentry.dsn,
+        environment: config.sentry.env,
+        integrations,
+        ignoreErrors: [
+            'User is not allowed to create files',
+            'User is not allowed to move documents',
+            'The user aborted a request.',
+        ],
+        sendDefaultPii: true,
+        tracesSampleRate: 1.0,
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+        beforeSend(event, hint) {
+            const error = hint.originalException;
+            if (
+                error instanceof TypeError &&
+                error.message.includes('Failed to fetch') &&
+                !navigator.onLine
+            ) {
+                // If fetch fails because user is offline then ignores the error
+                return null;
+            }
+            return event;
+        },
+    });
+
+    clientStarted = true;
+}
+
+async function closeClient() {
+    if (!clientStarted) {
+        return;
+    }
+    const sentry = await getSentry();
+    const client = sentry.getClient();
+    return client?.close();
+}
+
+export function useInitSentry() {
     const [acceptedCookies] = useAcceptedCookies();
     const { analytics } = acceptedCookies;
 
     useEffect(() => {
-        const client = Sentry.getClient();
         if (!analytics) {
-            if (client) {
-                void client.close();
-            }
+            closeClient().catch((error: unknown) => logger.error(error));
             return;
         }
 
-        if (client || !config.sentry.dsn || config.sentry.dsn === '') {
+        if (clientStarted || !config.sentry.dsn || config.sentry.dsn === '') {
             return;
         }
 
-        const release = import.meta.env.SENTRY_RELEASE;
-
-        const integrations: Sentry.BrowserOptions['integrations'] = [
-            Sentry.httpClientIntegration(),
-            Sentry.extraErrorDataIntegration({ depth: 5 }),
-            Sentry.replayIntegration(),
-            Sentry.captureConsoleIntegration({ levels: ['error'] }),
-        ];
-        if (config.sentry.tracing) {
-            integrations.push(
-                Sentry.reactRouterV6BrowserTracingIntegration({
-                    useEffect: React.useEffect,
-                    useLocation,
-                    useNavigationType,
-                    createRoutesFromChildren,
-                    matchRoutes,
-                }),
-            );
-        }
-
-        Sentry.init({
-            release,
-            dsn: config.sentry.dsn,
-            environment: config.sentry.env,
-            integrations,
-            ignoreErrors: [
-                'User is not allowed to create files',
-                'User is not allowed to move documents',
-                'The user aborted a request.',
-            ],
-            sendDefaultPii: true,
-            tracesSampleRate: 1.0,
-            replaysSessionSampleRate: 0.1,
-            replaysOnErrorSampleRate: 1.0,
-            beforeSend(event, hint) {
-                const error = hint.originalException;
-                if (
-                    error instanceof TypeError &&
-                    error.message.includes('Failed to fetch') &&
-                    !navigator.onLine
-                ) {
-                    // If fetch fails because user is offline then ignores the error
-                    return null;
-                }
-                return event;
-            },
-        });
+        initSentry().catch((error: unknown) => logger.error(error));
     }, [analytics]);
 }

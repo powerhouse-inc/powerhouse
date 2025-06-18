@@ -1,4 +1,4 @@
-import { SelectFieldRaw, type SelectOption } from "#scalars";
+import { SelectFieldRaw, type SelectOption } from "#ui";
 import { useCallback } from "react";
 
 export type PackageManagerReactorSelectProps = {

@@ -2,7 +2,12 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
 } from "#drive-document-model/gen/types";
-import { DocumentNotFoundError } from "#server/error";
+import {
+  DocumentAlreadyExistsError,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+} from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
@@ -21,7 +26,8 @@ import {
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
-import { type IDocumentStorage, type IDriveStorage } from "./types.js";
+import { type IDocumentStorage, type IDriveOperationStorage } from "./types.js";
+import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {
@@ -39,7 +45,9 @@ function ensureDir(dir: string) {
   }
 }
 
-export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
+export class FilesystemStorage
+  implements IDriveOperationStorage, IDocumentStorage
+{
   private basePath: string;
 
   constructor(basePath: string) {
@@ -56,24 +64,40 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return Promise.resolve(documentExists);
   }
 
-  // TODO: this should throw an error if the document already exists.
-  async create(documentId: string, document: PHDocument) {
+  async create(document: PHDocument) {
+    const documentId = document.id;
+    if (!isValidDocumentId(documentId)) {
+      throw new DocumentIdValidationError(documentId);
+    }
+
     const documentPath = this._buildDocumentPath(documentId);
+    if (existsSync(documentPath)) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    const slug = document.slug.length > 0 ? document.slug : documentId;
+    if (!isValidSlug(slug)) {
+      throw new DocumentSlugValidationError(slug);
+    }
+
+    const slugManifest = await this.getSlugManifest();
+    if (slugManifest.slugToId[slug]) {
+      throw new DocumentAlreadyExistsError(documentId);
+    }
+
+    document.slug = slug;
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
 
     // Update the slug manifest if the document has a slug
-    const slug =
-      (document.initialState.state.global as any)?.slug ?? documentId;
-    if (slug) {
-      const slugManifest = await this.getSlugManifest();
-      if (slugManifest.slugToId[slug]) {
-        throw new Error(`Document with slug ${slug} already exists`);
-      }
 
-      slugManifest.slugToId[slug] = documentId;
-      await this.updateSlugManifest(slugManifest);
+    slugManifest.slugToId[slug] = documentId;
+    await this.updateSlugManifest(slugManifest);
+
+    // temporary: initialize an empty manifest for new drives
+    if (document.documentType === "powerhouse/document-drive") {
+      this.updateDriveManifest(documentId, { documentIds: [] });
     }
 
     return Promise.resolve();
@@ -104,11 +128,85 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return this.get<TDocument>(documentId);
   }
 
+  async findByType(
+    documentModelType: string,
+    limit = 100,
+    cursor?: string,
+  ): Promise<{
+    documents: string[];
+    nextCursor: string | undefined;
+  }> {
+    const files = await fs.readdir(this.basePath, { withFileTypes: true });
+    const documentFiles = files.filter(
+      (file) =>
+        file.name.startsWith("document-") && file.name.endsWith(".json"),
+    );
+
+    // Load documents with matching type and collect their metadata
+    const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
+    for (const file of documentFiles) {
+      const documentId = file.name
+        .replace("document-", "")
+        .replace(".json", "");
+
+      try {
+        // Read and parse the document
+        const document = JSON.parse(
+          readFileSync(this._buildDocumentPath(documentId), {
+            encoding: "utf-8",
+          }),
+        ) as PHDocument;
+
+        // Only include documents of the requested type
+        if (document.documentType === documentModelType) {
+          documentsAndIds.push({ id: documentId, document });
+        }
+      } catch (error) {
+        // Skip files that can't be read or parsed
+        continue;
+      }
+    }
+
+    // Sort by creation date first, then by ID (consistent sort order for pagination)
+    documentsAndIds.sort((a, b) => {
+      const aDate = new Date(a.document.created);
+      const bDate = new Date(b.document.created);
+
+      if (aDate.getTime() === bDate.getTime()) {
+        return a.id.localeCompare(b.id);
+      }
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    let startIndex = 0;
+    if (cursor) {
+      const index = documentsAndIds.findIndex(({ id }) => id === cursor);
+      if (index !== -1) {
+        startIndex = index;
+      }
+    }
+
+    // cursor
+    const endIndex = Math.min(startIndex + limit, documentsAndIds.length);
+    let nextCursor: string | undefined;
+    if (endIndex < documentsAndIds.length) {
+      nextCursor = documentsAndIds[endIndex].id;
+    }
+
+    return {
+      documents: documentsAndIds
+        .slice(startIndex, endIndex)
+        .map(({ id }) => id),
+      nextCursor,
+    };
+  }
+
   async delete(documentId: string): Promise<boolean> {
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = (document.initialState.state.global as any)?.slug;
+      const slug = document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -121,12 +219,19 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       // If we can't get the document, we can't remove its slug
     }
 
-    // delete the document from all other drive manifests
-    const drives = await this.getDrives();
-    for (const driveId of drives) {
-      if (driveId === documentId) continue;
+    // delete from parent manifests
+    const parents = await this.getParents(documentId);
+    for (const parent of parents) {
+      await this.removeChild(parent, documentId);
+    }
 
-      await this.removeChild(driveId, documentId);
+    // check children: any children that are only children of this document should be deleted
+    const children = await this.getChildren(documentId);
+    for (const child of children) {
+      const childParents = await this.getParents(child);
+      if (childParents.length === 1 && childParents[0] === documentId) {
+        await this.delete(child);
+      }
     }
 
     // delete any manifest for this document
@@ -187,11 +292,37 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
     return manifest.documentIds;
   }
 
+  async getParents(childId: string): Promise<string[]> {
+    const parents: string[] = [];
+
+    // Get all files in the base directory
+    const files = await fs.readdir(this.basePath, { withFileTypes: true });
+
+    // Filter to only include manifest files
+    const manifestFiles = files.filter(
+      (file) =>
+        file.name.startsWith("manifest-") && file.name.endsWith(".json"),
+    );
+
+    // Check each manifest file to see if it contains the childId
+    for (const file of manifestFiles) {
+      // Extract the driveId from the manifest filename
+      const driveId = file.name.replace("manifest-", "").replace(".json", "");
+
+      const manifest = await this.getManifest(driveId);
+      if (manifest.documentIds.includes(childId)) {
+        parents.push(driveId);
+      }
+    }
+
+    return parents;
+  }
+
   ////////////////////////////////
-  // IDriveStorage
+  // IDocumentAdminStorage
   ////////////////////////////////
 
-  async clearStorage() {
+  async clear() {
     // delete content of basePath
     const files = (
       await fs.readdir(this.basePath, { withFileTypes: true })
@@ -205,6 +336,10 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
       }),
     );
   }
+
+  ////////////////////////////////
+  // IDriveStorage
+  ////////////////////////////////
 
   async addDocumentOperations(
     drive: string,
@@ -231,35 +366,6 @@ export class FilesystemStorage implements IDriveStorage, IDocumentStorage {
         encoding: "utf-8",
       },
     );
-  }
-
-  async getDrives() {
-    // get anything that starts with drive-
-    const files = await fs.readdir(this.basePath, { withFileTypes: true });
-    return (
-      files
-        .filter((file) => file.name.startsWith("manifest-"))
-        // remove manifest- prefix and extension
-        .map((file) => file.name.replace("manifest-", "").replace(".json", ""))
-    );
-  }
-
-  async createDrive(id: string, drive: DocumentDriveDocument) {
-    await this.create(id, drive);
-
-    // Initialize an empty manifest for the new drive
-    await this.updateDriveManifest(id, { documentIds: [] });
-  }
-
-  async deleteDrive(id: string) {
-    // First get all documents in this drive
-    const documents = await this.getChildren(id);
-
-    // Delete each document from this drive (may not actually delete the file if shared with other drives)
-    await Promise.all(documents.map((doc) => this.delete(doc)));
-
-    // Delete the drive manifest and the drive itself
-    await this.delete(id);
   }
 
   async addDriveOperations(

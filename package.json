@@ -21,13 +21,13 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
-    "@commitlint/cli": "^19.7.1",
-    "@commitlint/config-conventional": "^19.7.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
     "@jscutlery/semver": "^5.6.0",
-    "@nx/eslint": "20.4.6",
     "@nx/devkit": "20.4.6",
+    "@nx/eslint": "20.4.6",
     "@nx/js": "20.4.6",
     "@nx/plugin": "^20.4.6",
     "@storybook/addon-actions": "^8.6.3",
@@ -48,7 +48,9 @@
     "@swc/cli": "~0.6.0",
     "@swc/core": "~1.11.1",
     "@swc/helpers": "~0.5.15",
-    "@types/node": "^22.13.5",
+    "@types/node": "^22.15.17",
+    "@types/semver": "^7.7.0",
+    "@types/yargs": "^17.0.33",
     "chromatic": "^11.26.1",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.2",
@@ -62,26 +64,37 @@
     "prettier": "^3.5.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "rimraf": "^6.0.1",
+    "semver": "^7.7.2",
     "storybook": "^8.6.3",
     "storybook-addon-pseudo-states": "^4.0.2",
     "tslib": "^2.8.1",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.25.0"
+    "typescript-eslint": "^8.25.0",
+    "vitest": "^3.1.2",
+    "yargs": "^18.0.0"
   },
   "dependencies": {
     "@nx/devkit": "20.4.6",
     "@nx/plugin": "^20.4.6"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "resolutions": {
+    "zod": "^3.24.3"
   },
   "resolutions": {
     "zod": "^3.24.3"
   },
   "commitlint": {
     "rules": {
-      "header-max-length": [2, "always", 200]
+      "header-max-length": [
+        2,
+        "always",
+        200
+      ]
     }
-  }
+  },
+  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
 }

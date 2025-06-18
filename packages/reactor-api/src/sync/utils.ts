@@ -41,6 +41,7 @@ export const processPushUpdate = async (
       driveId: strand.driveId,
       scope: strand.scope,
       status: result.status,
+      error: result.error?.message,
     };
   }
 

@@ -1,4 +1,5 @@
-import { DriveInput, IDocumentDriveServer } from "document-drive";
+import { type LogLevel } from "@powerhousedao/config";
+import { type DriveInput, type IDocumentDriveServer } from "document-drive";
 import path from "node:path";
 
 export type StorageOptions = {
@@ -22,7 +23,7 @@ export type StartServerOptions = {
       }
     | boolean
     | undefined;
-  logLevel?: "info" | "warn" | "error" | "debug" | "verbose" | "silent";
+  logLevel?: LogLevel;
 };
 
 export const DefaultStartServerOptions = {
@@ -33,11 +34,11 @@ export const DefaultStartServerOptions = {
   },
   dbPath: path.join(process.cwd(), ".ph/read-model.db"),
   drive: {
+    id: "powerhouse",
+    slug: "powerhouse",
     global: {
-      id: "powerhouse",
       name: "Powerhouse",
       icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
-      slug: "powerhouse",
     },
     local: {
       availableOffline: true,

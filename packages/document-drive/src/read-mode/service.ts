@@ -130,8 +130,13 @@ export class ReadModeService implements IReadModeDriveService {
   }
 
   async addReadDrive(url: string, options?: ReadDriveOptions): Promise<void> {
-    const { id } =
-      options?.expectedDriveInfo ?? (await requestPublicDrive(url));
+    let id: string;
+    if (options?.expectedDriveInfo) {
+      id = options.expectedDriveInfo.id;
+    } else {
+      const drive = await requestPublicDrive(url);
+      id = drive.id;
+    }
 
     const result = await this.#fetchDrive(id, url);
     if (result instanceof Error) {
@@ -165,7 +170,7 @@ export class ReadModeService implements IReadModeDriveService {
     slug: string,
   ): Promise<ReadDrive | ReadDriveSlugNotFoundError> {
     const readDrive = [...this.#drives.values()].find(
-      ({ drive }) => drive.state.global.slug === slug,
+      ({ drive }) => drive.slug === slug,
     );
 
     return Promise.resolve(

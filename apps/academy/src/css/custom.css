@@ -1,0 +1,488 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #1A1A1B;
+  --ifm-color-primary-dark: #1A1A1B;
+  --ifm-color-primary-darker: #1A1A1B;
+  --ifm-color-primary-darkest: #1A1A1B;
+  --ifm-color-primary-light: #1A1A1B;
+  --ifm-color-primary-lighter: #1A1A1B;
+  --ifm-color-primary-lightest: #1A1A1B;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --toc-color: #555; /* Muted black for inactive items */
+  --toc-color-active: #1A1A1B; /* Black for active items */
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #ffffff;
+  --ifm-color-primary-dark: #ffffff;
+  --ifm-color-primary-darker: #ffffff;
+  --ifm-color-primary-darkest: #ffffff;
+  --ifm-color-primary-light: #ffffff;
+  --ifm-color-primary-lighter: #ffffff;
+  --ifm-color-primary-lightest: #ffffff;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --toc-color: #ccc; /* Light grey for inactive items */
+  --toc-color-active: #ffffff; /* White for active items */
+}
+
+@font-face {
+  font-family: 'Franie';
+  src: url('/fonts/FranieRegular.otf') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Franie';
+  src: url('/fonts/FranieBold.otf') format('woff2');
+  font-weight: bold;
+  font-style: normal;
+}
+
+.hero__title {
+  font-family: 'Franie', sans-serif;
+  font-weight: bold;
+  font-size: 39.75px;
+  margin-bottom: 0.1rem; /* Reduce bottom margin */
+}
+
+.hero__subtitle {
+  font-family: 'Inter', sans-serif;
+  font-weight: normal;
+  margin-top: 0.1rem; /* Reduce top margin */
+}
+
+/* Ensure white text in both light and dark modes */
+.hero__title,
+.hero__subtitle {
+  color: #ffffff;
+}
+
+/* If you need different colors for light mode, use this */
+html[data-theme='light'] .hero__title,
+html[data-theme='light'] .hero__subtitle {
+  color: #ffffff; /* or any other color for light mode */
+}
+
+/* Explicitly set white color for dark mode */
+html[data-theme='dark'] .hero__title,
+html[data-theme='dark'] .hero__subtitle {
+  color: #ffffff;
+}
+
+/* Dark mode styles */
+html[data-theme='dark'] {
+  --ifm-background-color: #1A1A1B;
+  --ifm-background-surface-color: #1A1A1B;
+}
+
+/* If you want to affect specific elements, you can add more specific rules */
+html[data-theme='dark'] .main-wrapper {
+  background-color: #1A1A1B;
+}
+
+html[data-theme='dark'] .navbar {
+  background-color: #1A1A1B;
+}
+
+html[data-theme='dark'] .footer {
+  background-color: #1A1A1B;
+}
+
+html[data-theme='light'] .footer {
+  background-color: #f5f5f5;
+}
+
+/* Light theme styles for footer */
+html[data-theme='light'] .footer {
+  --ifm-footer-color: #000000;
+  --ifm-footer-link-color: #000000;
+  --ifm-footer-title-color: #000000;
+}
+
+/* If you need more specific control: */
+html[data-theme='light'] .footer .footer__link-item,
+html[data-theme='light'] .footer .footer__title,
+html[data-theme='light'] .footer .footer__copyright {
+  color: #000000;
+}
+
+/* Change link color */
+a {
+  font-weight: 400; /* Slightly more bold */
+}
+
+/* Special styling for documentation links */
+.docs-doc-page a {
+  text-decoration: underline;
+  color: #0066cc; /* bright blue */
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.docs-doc-page a:hover {
+  color: #003d7a; /* darker blue on hover */
+}
+
+/* Keep navbar and sidebar links with their original styling */
+.navbar a,
+.theme-doc-sidebar-container a {
+  text-decoration: none;
+  color: var(--ifm-menu-color);
+}
+
+/* Keep footer links with their original styling */
+.footer a {
+  text-decoration: none;
+  color: var(--ifm-footer-link-color);
+}
+
+/* Target links only in the main markdown content of doc pages */
+.docs-doc-page .theme-doc-markdown a {
+  text-decoration: underline;
+  color: #0066cc; /* bright blue */
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.docs-doc-page .theme-doc-markdown a:hover {
+  color: #003d7a; /* darker blue on hover */
+}
+
+/* Reset styling for navigation elements, category pages, and utility links */
+.breadcrumbs a,
+.pagination-nav a,
+.navbar a,
+.theme-doc-sidebar-container a,
+.footer a,
+.card a,
+article > a,
+.markdown > a,
+.hash-link,
+.theme-edit-this-page {
+  text-decoration: none !important;
+  color: var(--ifm-link-color) !important;
+}
+
+/* Keep the pencil icon black too */
+.theme-edit-this-page svg {
+  color: var(--ifm-link-color) !important;
+}
+
+/* Track styles */
+.tracks-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  margin-top: 2rem;
+}
+
+.tracks-row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.track-link {
+  text-decoration: none;
+}
+
+.track-link.full-width {
+  width: 512px; /* 240px * 2 + 32px gap */
+}
+
+.track-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+  width: 240px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  height: 100%; /* This ensures equal height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.track-card.full-width {
+  width: 100%;
+}
+
+.track-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.track-title {
+  margin: 0 0 12px 0;
+  color: #333;
+}
+
+.track-description {
+  margin: 0;
+  color: #666;
+}
+
+/* Learning path styles */
+.learning-path {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.path-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0;
+}
+
+.path-row.split {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 732px;
+}
+
+.path-button {
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  text-decoration: none !important;
+  color: inherit !important;
+  font-weight: 500;
+  text-align: center;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  min-height: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.path-button:hover {
+  text-decoration: none !important;
+  color: inherit !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .path-button {
+  background-color: #1f1f20;
+  border: none; /* Remove default border */
+  position: relative; /* For pseudo-element positioning */
+  isolation: isolate; /* Ensures proper layering */
+}
+
+/* Gradient border effect - dark mode only */
+[data-theme='dark'] .path-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 8px;
+  padding: 1px; /* Border width */
+  background: linear-gradient(90deg, #4633eb, #7a5cff);
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Hover effects - dark mode */
+[data-theme='dark'] .path-button:hover {
+  transform: translateY(-2px);
+}
+
+[data-theme='dark'] .path-button:hover::before {
+  box-shadow: 0 0 15px rgba(74, 51, 235, 0.3); /* Subtle blue glow */
+}
+
+.path-card {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.path-card.full-width {
+  width: 1000px;
+}
+
+.path-card.equal-width {
+  width: 480px;
+}
+
+.card-title {
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  color: var(--ifm-color-primary);
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .path-card {
+  background-color: #2a2a2b;
+  border-color: #3a3a3b;
+}
+
+[data-theme='dark'] .card-title {
+  color: white;
+}
+
+/* Algolia DocSearch Dark Mode Styles */
+html[data-theme='dark'] .DocSearch-Hits {
+  background-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit {
+  background-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-source {
+  background-color: #1A1A1B !important;
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-content-wrapper {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-title {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-path {
+  color: #a0a0a0 !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-icon {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit-action {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit[aria-selected='true'] {
+  background-color: #2a2a2b !important;
+}
+
+html[data-theme='dark'] .DocSearch-Modal {
+  background-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-SearchBar {
+  background-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-Form {
+  background-color: #2a2a2b !important;
+}
+
+html[data-theme='dark'] .DocSearch-Input {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Reset {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Cancel {
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit:first-child {
+  background-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hit--empty,
+html[data-theme='dark'] .DocSearch-Hit[aria-label="No results"],
+html[data-theme='dark'] .DocSearch-Hit-content-wrapper:empty,
+html[data-theme='dark'] .DocSearch-Hit[style*="background-color: white"],
+html[data-theme='dark'] .DocSearch-Hit {
+  background-color: #1A1A1B !important;
+  color: #ffffff !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hits > * {
+  background-color: #1A1A1B !important;
+  color: #ffffff !important;
+  border-color: #1A1A1B !important;
+}
+
+html[data-theme='dark'] .DocSearch-Hits > *:empty {
+  background-color: #1A1A1B !important;
+  color: #ffffff !important;
+  min-height: 48px; /* or whatever height matches the box */
+  border-radius: 8px;
+  border: none;
+}
+
+/* Styles for DocCardList as a list */
+.doc-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ifm-spacing-vertical);
+}
+
+.doc-card-list-item {
+  width: 100%; /* Ensure items take full width */
+}
+
+/* Attempt to hide icons in DocCard titles */
+.doc-card-list .card h2 svg {
+  display: none !important;
+}
+
+/* Table of Contents Styling */
+.theme-doc-toc-desktop .table-of-contents__link {
+  color: var(--toc-color);
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.2s ease;
+}
+
+.theme-doc-toc-desktop .table-of-contents__link:hover {
+  color: var(--toc-color-active);
+  text-decoration: none;
+}
+
+.theme-doc-toc-desktop .table-of-contents__link--active {
+  color: var(--toc-color-active);
+  font-weight: bold;
+  text-decoration: none;
+}

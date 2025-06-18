@@ -1,10 +1,17 @@
 import { type Command } from "commander";
+import fs from "node:fs";
+import path from "node:path";
 import {
-  forwardPHCommand,
   getPackageManagerFromLockfile,
   getProjectInfo,
 } from "../utils/index.js";
 import { version } from "../version.js";
+
+interface PackageJson {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
 // Custom version handler
 export const customVersionHandler = async () => {
   const projectInfo = await getProjectInfo(undefined, false);
@@ -14,29 +21,23 @@ export const customVersionHandler = async () => {
   if (projectInfo.available) {
     const packageManager = getPackageManagerFromLockfile(projectInfo.path);
 
-    let versionOutput = "";
-    let errorOutput = "";
-
     try {
-      versionOutput = forwardPHCommand(
-        packageManager,
-        projectInfo.path,
-        "--version",
-        false,
-        true,
-      );
+      const packageJsonPath = path.join(projectInfo.path, "package.json");
+      const packageJsonContent = fs.readFileSync(packageJsonPath, "utf-8");
+      const packageJson = JSON.parse(packageJsonContent) as PackageJson;
+
+      const phCliVersion =
+        packageJson.dependencies?.["@powerhousedao/ph-cli"] ||
+        packageJson.devDependencies?.["@powerhousedao/ph-cli"];
+
+      if (phCliVersion) {
+        console.log("PH CLI version: ", phCliVersion);
+      }
     } catch (err) {
-      errorOutput = (err as Error).message;
-    }
-
-    const cleanedOutput = versionOutput.replace(/\n/g, "");
-
-    if (errorOutput) {
       console.log(
-        "The current version of the PH CLI does not support --version flag",
+        "Error reading PH CLI version from package.json:",
+        (err as Error).message,
       );
-    } else {
-      console.log("PH CLI version: ", cleanedOutput);
     }
 
     console.log("-------------------------------------");
@@ -54,6 +55,14 @@ export const customVersionHandler = async () => {
 export function versionOption(program: Command): Command {
   return program.option(
     "-v, --version",
+    "Display version information",
+    customVersionHandler,
+  );
+}
+
+export function versionArgument(program: Command): Command {
+  return program.argument(
+    "version",
     "Display version information",
     customVersionHandler,
   );

@@ -134,31 +134,32 @@ export function getPackageManagerFromPath(dir: string): PackageManager {
 
 export function updatePackagesArray(
   currentPackages: PowerhouseConfig["packages"] = [],
-  dependencies: string[],
+  dependencies: { name: string; version: string | undefined; full: string }[],
   task: "install" | "uninstall" = "install",
 ): PowerhouseConfig["packages"] {
   const isInstall = task === "install";
   const mappedPackages = dependencies.map((dep) => ({
-    packageName: dep,
+    packageName: dep.name,
+    version: dep.version,
+    provider: "npm" as const,
   }));
 
   if (isInstall) {
-    return [
-      ...currentPackages.filter(
-        (pkg) => !dependencies.includes(pkg.packageName),
-      ),
-      ...mappedPackages,
-    ];
+    // Overwrite existing package if version is different
+    const filteredPackages = currentPackages.filter(
+      (pkg) => !dependencies.find((dep) => dep.name === pkg.packageName),
+    );
+    return [...filteredPackages, ...mappedPackages];
   }
 
   return currentPackages.filter(
-    (pkg) => !dependencies.includes(pkg.packageName),
+    (pkg) => !dependencies.map((dep) => dep.name).includes(pkg.packageName),
   );
 }
 
 // Modify updateConfigFile to use the new function
 export function updateConfigFile(
-  dependencies: string[],
+  dependencies: { name: string; version: string | undefined; full: string }[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
 ) {
@@ -244,4 +245,4 @@ export function setCustomHelp(command: Command, helpText: string): Command {
   return command;
 }
 
-export { getConfig } from "@powerhousedao/config/powerhouse";
+export { getConfig } from "@powerhousedao/config/utils";

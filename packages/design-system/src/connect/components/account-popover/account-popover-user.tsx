@@ -1,10 +1,11 @@
 import { Button, Icon } from "#powerhouse";
 import type { FC } from "react";
 import { useCallback, useState } from "react";
+import { twMerge } from "tailwind-merge";
 
 export interface AccountPopoverUserProps {
   address: `0x${string}`;
-  onDisconnect: () => void;
+  onDisconnect: (() => void) | undefined;
   etherscanUrl?: string;
   username?: string;
 }
@@ -75,7 +76,12 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
       <div className="px-3 py-2">
         <button
           onClick={onDisconnect}
-          className="flex w-full cursor-pointer items-center gap-2 text-sm text-red-900 hover:text-red-700"
+          className={twMerge(
+            "flex w-full items-center gap-2 text-sm text-red-900",
+            onDisconnect
+              ? "cursor-pointer hover:text-red-700"
+              : "pointer-events-none cursor-wait",
+          )}
           type="button"
         >
           <Icon name="Disconnect" size={14} color="#EA4335" />

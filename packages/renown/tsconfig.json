@@ -1,14 +1,15 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true
-  },
   "references": [
+    {
+      "path": "./tsconfig.common.json"
+    },
     {
       "path": "./tsconfig.browser.json"
     },
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
+  "include": ["src/index.ts"]
 }

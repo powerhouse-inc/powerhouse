@@ -1,3 +1,4 @@
+import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
 import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
 import dotenv from "dotenv";
@@ -30,10 +31,10 @@ const startServer = async (
     ...options,
   };
 
-  process.env.LOG_LEVEL = logLevel ?? "debug";
+  process.env.LOG_LEVEL = isLogLevel(logLevel) ? logLevel : "info";
 
-  // be aware: this may not log anything if the log level is above info
-  logger.info(`Setting log level to ${logLevel}.`);
+  // be aware: this may not log anything if the log level is above debug
+  logger.debug(`Setting log level to ${logLevel}.`);
   const serverPort = Number(process.env.PORT ?? port);
 
   // start vite server if dev

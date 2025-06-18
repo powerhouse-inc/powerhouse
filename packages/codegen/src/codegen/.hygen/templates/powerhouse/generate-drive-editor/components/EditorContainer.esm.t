@@ -9,6 +9,7 @@ import {
   type DriveEditorContext,
 } from "@powerhousedao/reactor-browser";
 import {
+  type EditorContext,
   type DocumentModelModule,
   type EditorModule,
   type EditorProps,
@@ -18,7 +19,9 @@ import {
   DocumentToolbar,
   RevisionHistory,
   DefaultEditorLoader,
+  type TimelineItem,
 } from "@powerhousedao/design-system";
+import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
 import { useState, Suspense, type FC, useCallback } from "react";
 
 export interface EditorContainerProps {
@@ -27,7 +30,7 @@ export interface EditorContainerProps {
   documentType: string;
   onClose: () => void;
   title: string;
-  context: DriveEditorContext;
+  context: Omit<DriveEditorContext, "getDocumentRevision"> & Pick<EditorContext, "getDocumentRevision">;
   documentModelModule: DocumentModelModule<PHDocument>;
   editorModule: EditorModule;
 }
@@ -44,8 +47,11 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     documentModelModule,
   } = props;
 
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const { useDocumentEditorProps } = useDriveContext();
+  const timelineItems = useTimelineItems(documentId);
+
   const user = context.user as User | undefined;
 
   const { dispatch, error, document } = useDocumentEditorProps({
@@ -90,9 +96,20 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
         onSwitchboardLinkClick={() => {}}
         title={title}
+        timelineButtonVisible={editorModule.config.timelineEnabled}
+        timelineItems={timelineItems.data}
+        onTimelineItemClick={setSelectedTimelineItem}
       />
       <EditorComponent
-        context={context}
+        context={{
+          ...context,
+          readMode: !!selectedTimelineItem,
+          selectedTimelineRevision: getRevisionFromDate(
+            selectedTimelineItem?.startDate,
+            selectedTimelineItem?.endDate,
+            document.operations.global,
+          ),
+        }}
         dispatch={dispatch}
         document={document}
         error={error}

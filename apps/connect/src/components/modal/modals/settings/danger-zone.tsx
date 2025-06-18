@@ -1,8 +1,9 @@
-import { useDocumentDriveServer, useUiNodes } from '#hooks';
+import { useDocumentDriveServer } from '#hooks';
 import {
     DangerZone as BaseDangerZone,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,8 +14,8 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
     onRefresh,
 }) => {
     const { t } = useTranslation();
-    const { clearStorage } = useDocumentDriveServer();
-    const { driveNodes, deleteDrive } = useUiNodes();
+    const { clearStorage, deleteDrive } = useDocumentDriveServer();
+    const { driveNodes } = useUiNodesContext();
     const { showModal } = useModal();
     const navigate = useNavigate();
 

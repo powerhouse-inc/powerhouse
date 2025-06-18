@@ -1,8 +1,12 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.28.3",
+  "version": "3.1.0",
   "main": "dist/server.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -10,6 +14,7 @@
     "start": "vite-node src/index.ts",
     "build:tsc": "tsc --build",
     "build": "tsc --build",
+    "prebuild": "npm run clean",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },
@@ -43,13 +48,12 @@
     "vite": "^6.2.2"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.3.0",
+    "@powerhousedao/analytics-engine-graphql": "^0.4.0",
     "@powerhousedao/config": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/ms": "^0.7.34",
-    "@types/node": "^22.7.5",
-    "vitest": "^3.1.2"
+    "@types/node": "^22.15.17"
   }
 }

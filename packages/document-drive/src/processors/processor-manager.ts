@@ -1,6 +1,7 @@
 import {
   type IProcessorManager,
   type ProcessorFactory,
+  type ProcessorRecord,
 } from "document-drive/processors/types";
 import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
 import {
@@ -31,7 +32,7 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    this.logger.info(`Registering factory '${identifier}'.`);
+    this.logger.debug(`Registering factory '${identifier}'.`);
 
     this.idToFactory.set(identifier, factory);
 
@@ -46,10 +47,9 @@ export class ProcessorManager implements IProcessorManager {
     // remove all listeners for this identifier
     const listeners = this.identifierToListeners.get(identifier) ?? [];
     for (const listener of listeners) {
-      await this.listeners.removeListener(
-        listener.driveId,
-        listener.listenerId,
-      );
+      await this.listeners
+        .removeListener(listener.driveId, listener.listenerId)
+        .catch(this.logger.error);
 
       if (listener.transmitter?.disconnect) {
         await listener.transmitter.disconnect();
@@ -60,7 +60,7 @@ export class ProcessorManager implements IProcessorManager {
   }
 
   async registerDrive(driveId: string) {
-    this.logger.info(`Registering drive '${driveId}'.`);
+    this.logger.debug(`Registering drive '${driveId}'.`);
 
     // iterate over all factories and create listeners
     for (const [identifier, factory] of this.idToFactory) {
@@ -85,7 +85,14 @@ export class ProcessorManager implements IProcessorManager {
       this.identifierToListeners.set(identifier, listeners);
     }
 
-    const processors = factory(driveId);
+    // don't let the factory throw, we want to continue with the rest of the processors
+    let processors: ProcessorRecord[] = [];
+    try {
+      processors = factory(driveId);
+    } catch (e) {
+      this.logger.error(`Error creating processors for drive ${driveId}:`, e);
+      return;
+    }
 
     for (const { filter, processor } of processors) {
       const id = generateId();

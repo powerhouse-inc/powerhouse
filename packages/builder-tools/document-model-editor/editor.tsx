@@ -20,7 +20,7 @@ import {
   setOperationErrorName,
   setOperationName,
   setOperationSchema,
-  setStateSchema,
+  setStateSchema
 } from "document-model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Divider } from "./components/divider.js";

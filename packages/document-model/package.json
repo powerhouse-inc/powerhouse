@@ -1,11 +1,15 @@
 {
   "name": "document-model",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": "./dist/index.js",
@@ -17,11 +21,12 @@
     }
   },
   "scripts": {
-    "build:tsc": "tsc --build",
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
+    "build:tsc": "tsc --build",
     "build:watch": "tsc --build --watch",
+    "prebuild": "npm run clean",
     "test": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
@@ -30,7 +35,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/jest": "^29.5.13",
     "@types/mime": "^4.0.0",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.15.17",
     "@types/react": "^18.3.12",
     "@types/uuid": "^10.0.0",
     "playwright": "^1.46.1",
@@ -45,6 +50,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   }
 }

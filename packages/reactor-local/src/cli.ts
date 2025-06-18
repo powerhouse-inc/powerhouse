@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import path from "path";
 import { startServer } from "./server.js";
 
@@ -9,5 +9,5 @@ startServer({
   configFile: path.join(process.cwd(), "./powerhouse.config.json"),
   dev: true,
   ...config.reactor,
-  logLevel: "verbose",
+  logLevel: "info",
 }).catch(console.error);

@@ -1,5 +1,3 @@
-import { AuthContext } from "#graphql/auth/types.js";
+import { type Context } from "#graphql/types.js";
 
-export type SystemContext = AuthContext & {
-  isAdmin: (ctx: AuthContext) => boolean;
-};
+export type SystemContext = Context;

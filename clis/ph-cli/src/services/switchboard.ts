@@ -1,106 +1,39 @@
-import { generateFromFile } from "@powerhousedao/codegen";
+import { getConfig } from "@powerhousedao/config/utils";
 import {
-  getConfig,
-  type PowerhouseConfig,
-} from "@powerhousedao/config/powerhouse";
-import {
-  DefaultStartServerOptions,
-  startServer,
-  type LocalReactor,
   type StartServerOptions,
-} from "@powerhousedao/reactor-local";
-import { type IProcessor } from "document-drive/processors/types";
-import {
-  InternalTransmitter,
-  type InternalTransmitterUpdate,
-} from "document-drive/server/listener/transmitter/internal";
-import { type Listener } from "document-drive/server/types";
-import { type DocumentModelDocument } from "document-model";
+  startSwitchboard as startSwitchboardServer,
+} from "@powerhousedao/switchboard/server";
+import path from "node:path";
 
-export type SwitchboardOptions = StartServerOptions & {
-  configFile?: string;
-  generate?: boolean;
-  watch?: boolean;
-  dbPath?: string;
+const defaultSwitchboardOptions: Partial<StartServerOptions> = {
+  port: 4001,
+  dbPath: path.join(process.cwd(), ".ph/read-model.db"),
+  drive: {
+    id: "powerhouse",
+    slug: "powerhouse",
+    global: {
+      name: "Powerhouse",
+      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+    },
+    local: {
+      availableOffline: true,
+      listeners: [],
+      sharingType: "public",
+      triggers: [],
+    },
+  },
 };
 
-export const DefaultSwitchboardOptions = {
-  ...DefaultStartServerOptions,
-  dev: true,
-};
-
-export async function startLocalSwitchboard(
-  switchboardOptions: SwitchboardOptions,
-) {
-  const baseConfig = getConfig(switchboardOptions.configFile);
-  const options = {
-    ...DefaultSwitchboardOptions,
-    ...switchboardOptions,
-  };
+export async function startSwitchboard(options: StartServerOptions) {
+  const baseConfig = getConfig(options.configFile);
 
   const { https } = baseConfig.reactor ?? { https: false };
 
-  const reactor = await startServer({
+  const reactor = await startSwitchboardServer({
+    ...defaultSwitchboardOptions,
     ...options,
     https,
-    logLevel: baseConfig.logLevel,
-    storage: baseConfig.reactor?.storage || options.storage,
   });
 
-  if (options.generate) {
-    await addGenerateTransmitter(reactor, baseConfig);
-  }
   return reactor;
-}
-
-// TODO: instead of doing this by hand, we should use the processor manager
-async function addGenerateTransmitter(
-  reactor: LocalReactor,
-  config: PowerhouseConfig,
-) {
-  const processor: IProcessor = {
-    onStrands: async function (
-      strands: InternalTransmitterUpdate<DocumentModelDocument>[],
-    ) {
-      const documentPaths = new Set<string>();
-      for (const strand of strands) {
-        documentPaths.add(
-          reactor.getDocumentPath(strand.driveId, strand.documentId),
-        );
-      }
-      for (const path of documentPaths) {
-        await generateFromFile(path, config);
-      }
-      return Promise.resolve();
-    },
-    onDisconnect: () => Promise.resolve(),
-  };
-
-  const listenerManager = reactor.server.listeners;
-
-  // todo: simplify
-  const listener: Listener = {
-    driveId: "powerhouse",
-    listenerId: "reactor-local-document-model-generator",
-    label: "reactor-local-document-model-generator",
-    filter: {
-      documentType: ["powerhouse/document-model"],
-      scope: ["global"],
-      branch: ["*"],
-      documentId: ["*"],
-    },
-    block: false,
-    system: false,
-    callInfo: {
-      data: "",
-      name: "reactor-local-document-model-generator",
-      transmitterType: "Internal",
-    },
-  };
-
-  const transmitter = new InternalTransmitter(reactor.server, processor);
-
-  listener.transmitter = transmitter;
-
-  await listenerManager.setListener(listener.driveId, listener);
 }

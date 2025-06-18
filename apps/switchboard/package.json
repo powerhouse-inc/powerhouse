@@ -1,14 +1,23 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "2.2.148",
+  "version": "3.1.0",
   "main": "dist/src/index.js",
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./server": "./dist/src/server.js"
+  },
   "bin": {
     "switchboard": "dist/src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
     "build:tsc": "tsc --build",
     "build": "pnpm run build:tsc",
+    "prebuild": "npm run clean",
     "start": "node dist/src/index.js",
     "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
     "lint": "eslint .",
@@ -23,7 +32,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@powerhousedao/analytics-engine-knex": "^0.4.0",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/analytics-engine-knex": "^0.6.0",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
@@ -40,7 +50,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.13.9",
+    "@types/node": "^22.15.17",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.9",
     "typescript": "^5.7.3"

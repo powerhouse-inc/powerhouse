@@ -10,7 +10,6 @@ import {
   DUPLICATE,
   FILE,
   LOCAL,
-  NEW_FOLDER,
   NodeInput,
   type NodeOption,
   type NodeProps,
@@ -19,6 +18,7 @@ import {
   REMOVE_TRIGGER,
   RENAME,
   SETTINGS,
+  type TNodeOptions,
   type UiDriveNode,
   type UiNode,
   WRITE,
@@ -28,42 +28,45 @@ import {
   useDrop,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { type TUiNodesContext } from "@powerhousedao/reactor-browser";
+import { useUiNodesContext } from "@powerhousedao/reactor-browser";
 import { type MouseEventHandler, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { DropIndicator } from "./drop-indicator.js";
 
-export type ConnectTreeViewProps = TUiNodesContext &
-  NodeProps & {
-    readonly uiNode: UiNode;
-    readonly level?: number;
-    readonly customDocumentIconSrc?: string;
-    readonly showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
-    readonly onClick?: MouseEventHandler<HTMLDivElement>;
-  };
+export type ConnectTreeViewProps = NodeProps & {
+  uiNode: UiNode;
+  nodeOptions: TNodeOptions;
+  isAllowedToCreateDocuments: boolean;
+  level?: number;
+  customDocumentIconSrc?: string;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+  showDriveSettingsModal: (uiDriveNode: UiDriveNode) => void;
+  onAddTrigger: (uiNodeDriveId: string) => Promise<void>;
+  onRemoveTrigger: (uiNodeDriveId: string) => Promise<void>;
+  onAddInvalidTrigger: (uiNodeDriveId: string) => Promise<void>;
+};
 
 export function ConnectTreeView(props: ConnectTreeViewProps) {
   const {
     uiNode,
-    nodeOptions,
     level = 0,
-    isAllowedToCreateDocuments,
     customDocumentIconSrc,
-    setSelectedNode,
-    getIsInSelectedNodePath,
-    getIsSelected,
+    nodeOptions,
+    isAllowedToCreateDocuments,
+    showDriveSettingsModal,
     onClick,
+    onAddFile,
+    onMoveNode,
+    onCopyNode,
     onAddFolder,
     onRenameNode,
     onDuplicateNode,
     onDeleteNode,
     onDeleteDrive,
-    showDriveSettingsModal,
     onAddTrigger,
     onRemoveTrigger,
     onAddInvalidTrigger,
   } = props;
-
   const [mode, setMode] = useState<typeof READ | typeof WRITE | typeof CREATE>(
     READ,
   );
@@ -71,6 +74,12 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
   const [internalExpandedState, setInternalExpandedState] = useState(true);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag(props);
+  const {
+    getParentNode,
+    getIsSelected,
+    setSelectedNode,
+    getIsInSelectedNodePath,
+  } = useUiNodesContext();
   const { isDropTarget, dropProps } = useDrop(props);
 
   const levelPadding = 10;
@@ -296,7 +305,14 @@ export function ConnectTreeView(props: ConnectTreeViewProps) {
           paddingLeft: `${level * levelPadding + (hasChildren ? 0 : 20)}px`,
         }}
       >
-        <DropIndicator {...props} position="before" />
+        <DropIndicator
+          uiNode={uiNode}
+          getParentNode={getParentNode}
+          onAddFile={onAddFile}
+          onMoveNode={onMoveNode}
+          onCopyNode={onCopyNode}
+          position="before"
+        />
         {hasChildren ? caretIcon : null}
         {nodeIcon}
         {mode === READ && readModeContent}

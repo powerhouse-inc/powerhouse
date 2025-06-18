@@ -1,8 +1,20 @@
-import { type Operation, type PHDocument } from 'document-model';
+import {
+    useDocumentDriveById,
+    useDocumentDriveServer,
+    useGetDocument,
+    useOpenSwitchboardLink,
+} from '#hooks';
+import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import { type GetDocumentOptions } from 'document-drive';
+import {
+    type EditorContext,
+    type Operation,
+    type PHDocument,
+} from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { useUiNodes } from '../hooks/useUiNodes.js';
 import { exportFile } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
@@ -11,18 +23,23 @@ export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
     const {
-        selectedNode,
-        selectedParentNode,
-        isRemoteDrive,
         selectedDocument,
         fileNodeDocument,
-        setSelectedNode,
         setSelectedDocument,
-        openSwitchboardLink,
         addOperationToSelectedDocument,
-        renameNode,
-        getDocumentModelModule,
-    } = useUiNodes();
+    } = useFileNodeDocument();
+    const { renameNode } = useDocumentDriveServer();
+    const {
+        selectedNode,
+        selectedDriveNode,
+        selectedParentNode,
+        setSelectedNode,
+    } = useUiNodesContext();
+    const { isRemoteDrive } = useDocumentDriveById(selectedDriveNode?.id);
+    const openSwitchboardLink = useOpenSwitchboardLink(selectedDriveNode?.id);
+    const getDocumentModelModule = useGetDocumentModelModule();
+
+    const getDocument = useGetDocument();
 
     const handleAddOperationToSelectedDocument = useCallback(
         async (operation: Operation) => {
@@ -102,6 +119,22 @@ export function DocumentEditorContainer() {
         [getDocumentModelModule, showModal, t],
     );
 
+    const onGetDocumentRevision: EditorContext['getDocumentRevision'] =
+        useCallback(
+            (options?: GetDocumentOptions) => {
+                if (!selectedNode) {
+                    console.error('No selected node');
+                    return Promise.reject(new Error('No selected node'));
+                }
+                return getDocument(
+                    selectedNode.driveId,
+                    selectedNode.id,
+                    options,
+                );
+            },
+            [getDocument, selectedNode],
+        );
+
     const onExport = useCallback(() => {
         if (selectedDocument) {
             return exportDocument(selectedDocument);
@@ -127,6 +160,7 @@ export function DocumentEditorContainer() {
                 onChange={onDocumentChangeHandler}
                 onClose={onClose}
                 onExport={onExport}
+                onGetDocumentRevision={onGetDocumentRevision}
                 onAddOperation={handleAddOperationToSelectedDocument}
                 onOpenSwitchboardLink={onOpenSwitchboardLink}
             />

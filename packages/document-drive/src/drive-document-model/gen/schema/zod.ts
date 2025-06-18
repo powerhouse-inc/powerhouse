@@ -1,28 +1,32 @@
 import { z } from "zod";
-import {
-    AddFileInput,
-    AddFolderInput,
-    AddListenerInput,
-    AddTriggerInput,
-    CopyNodeInput,
-    DeleteNodeInput,
-    DocumentDriveLocalState,
-    DocumentDriveState,
-    FileNode,
-    FolderNode,
-    Listener,
-    ListenerCallInfo,
-    ListenerFilter,
-    MoveNodeInput,
-    PullResponderTriggerData,
-    RemoveListenerInput,
-    RemoveTriggerInput,
-    SetAvailableOfflineInput,
-    SetDriveIconInput,
-    SetDriveNameInput,
-    SetSharingTypeInput,
-    SynchronizationUnit, Trigger, UpdateFileInput,
-    UpdateNodeInput
+import type {
+  AddFileInput,
+  AddFolderInput,
+  AddListenerInput,
+  AddTriggerInput,
+  CopyNodeInput,
+  DeleteNodeInput,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  FileNode,
+  FolderNode,
+  Listener,
+  ListenerCallInfo,
+  ListenerFilter,
+  MoveNodeInput,
+  PullResponderTriggerData,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
+  SynchronizationUnit,
+  TransmitterType,
+  Trigger,
+  TriggerType,
+  UpdateFileInput,
+  UpdateNodeInput,
 } from "./types.js";
 
 type Properties<T> = Required<{
@@ -122,10 +126,8 @@ export function DocumentDriveStateSchema(): z.ZodObject<
   return z.object({
     __typename: z.literal("DocumentDriveState").optional(),
     icon: z.string().nullable(),
-    id: z.string(),
     name: z.string(),
     nodes: z.array(NodeSchema()),
-    slug: z.string().nullable(),
   });
 }
 

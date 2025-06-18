@@ -1,10 +1,21 @@
 /* eslint-disable no-unused-private-class-members */
 import {
+    RENOWN_CHAIN_ID,
+    RENOWN_NETWORK_ID,
+} from '@powerhousedao/reactor-browser/renown/constants';
+import { createAuthBearerToken } from '@renown/sdk';
+import { bytesToBase64url } from 'did-jwt';
+import type { Issuer } from 'did-jwt-vc';
+import {
     compressedKeyInHexfromRaw,
     encodeDIDfromHexString,
     rawKeyInHexfromUncompressed,
 } from 'did-key-creator';
+import { fromString } from 'uint8arrays';
 
+import { childLogger } from 'document-drive';
+
+const logger = childLogger(['connect', 'crypto']);
 export type JwkKeyPair = {
     publicKey: JsonWebKey;
     privateKey: JsonWebKey;
@@ -27,6 +38,12 @@ export interface IConnectCrypto {
     did: () => Promise<DID>;
     regenerateDid(): Promise<void>;
     sign: (data: Uint8Array) => Promise<Uint8Array>;
+    getIssuer: () => Promise<Issuer>;
+    getBearerToken: (
+        driveUrl: string,
+        address: string | undefined,
+        refresh?: boolean,
+    ) => Promise<string>;
 }
 
 export type DID = `did:key:${string}`;
@@ -37,6 +54,7 @@ export class ConnectCrypto implements IConnectCrypto {
     #keyPairStorage: JsonWebKeyPairStorage;
 
     #did: Promise<DID>;
+    #bearerToken: string | undefined;
 
     static algorithm: EcKeyAlgorithm = {
         name: 'ECDSA',
@@ -81,15 +99,33 @@ export class ConnectCrypto implements IConnectCrypto {
         const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
         if (loadedKeyPair) {
             this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-            console.log('Found key pair');
+            logger.info('Found key pair');
         } else {
             this.#keyPair = await this.#generateECDSAKeyPair();
-            console.log('Created key pair');
+            logger.info('Created key pair');
             await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
         }
         const did = await this.#parseDid();
-        console.log('Connect DID:', did);
+        logger.info('Connect DID:', did);
         return did;
+    }
+
+    async getBearerToken(
+        driveUrl: string,
+        address: string | undefined,
+        refresh = false,
+    ) {
+        const issuer = await this.getIssuer();
+        if (refresh || !this.#bearerToken) {
+            this.#bearerToken = await createAuthBearerToken(
+                Number(RENOWN_CHAIN_ID),
+                RENOWN_NETWORK_ID,
+                address || (await this.#did),
+                issuer,
+            );
+        }
+
+        return this.#bearerToken;
     }
 
     did() {
@@ -179,20 +215,46 @@ export class ConnectCrypto implements IConnectCrypto {
         return (await this.#subtleCrypto).verify(...args);
     };
 
-    async sign(data: Uint8Array): Promise<Uint8Array> {
+    #stringToBytes(s: string): Uint8Array {
+        return fromString(s, 'utf-8');
+    }
+
+    async sign(data: Uint8Array | string): Promise<Uint8Array> {
         if (this.#keyPair?.privateKey) {
+            const dataBytes: Uint8Array =
+                typeof data === 'string' ? this.#stringToBytes(data) : data;
+
             const subtleCrypto = await this.#subtleCrypto;
 
             const arrayBuffer = await subtleCrypto.sign(
                 ConnectCrypto.signAlgorithm,
                 this.#keyPair.privateKey,
-                data.buffer as ArrayBuffer,
+                dataBytes.buffer as ArrayBuffer,
             );
 
             return new Uint8Array(arrayBuffer);
         } else {
             throw new Error('No private key available');
         }
+    }
+
+    async getIssuer(): Promise<Issuer> {
+        if (!this.#keyPair?.privateKey) {
+            throw new Error('No private key available');
+        }
+
+        return {
+            did: await this.#did,
+            signer: async (data: string | Uint8Array) => {
+                const signature = await this.sign(
+                    typeof data === 'string'
+                        ? new TextEncoder().encode(data)
+                        : data,
+                );
+                return bytesToBase64url(signature);
+            },
+            alg: 'ES256',
+        };
     }
 }
 export * from './browser.js';
