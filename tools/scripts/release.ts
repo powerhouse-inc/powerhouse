@@ -200,7 +200,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     process.exit(1);
   }
 
-  if (preReleaseResult.isEmptyRelease) {
+  if (preReleaseResult.isEmptyRelease && !isBranchRelease) {
     console.warn('>>> There are no available changes to release');
     process.exit(0);
   }
