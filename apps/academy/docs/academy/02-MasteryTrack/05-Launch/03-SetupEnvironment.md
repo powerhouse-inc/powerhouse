@@ -1,4 +1,4 @@
-# Powerhouse Setup Guide
+# Environment Setup Guide
 
 ## Introduction
 Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.   
@@ -345,10 +345,14 @@ Up next is the configurations of your services.
 
 ### Service Configuration
 
-Next, run `ph service setup` and follow the interactive prompts. This command installs the Powerhouse services (Connect and Switchboard) and guides you through their configuration.
+Next, run 
+```bash
+ph service setup
+``` 
 
-:::info
-**What does `ph service setup` do?**
+Follow the interactive prompts. This command installs the Powerhouse services (Connect and Switchboard) and guides you through their configuration.
+
+:::info **What does `ph service setup` do?**
 The script takes care of all the necessary service configuration automatically.
 It installs and configures **Nginx** as a reverse proxy, sets up SSL certificates, and configures the proxy settings for optimal performance.
 It also installs **PM2** for process management and starts your services with the appropriate configuration based on your SSL choice.
