@@ -121,7 +121,7 @@ export async function buildConnect(options: ConnectBuildOptions) {
   const connectBuildIndexHtmlPath = join(connectBuildDistDir, "index.html");
   await appendToHtmlHead(
     connectBuildIndexHtmlPath,
-    `<noscript><link rel="stylesheet" href="/${CONNECT_BUILD_ASSETS_DIR_NAME}/${CONNECT_BUILD_EXTERNAL_PACKAGES_CSS_FILE_NAME}"></noscript>`,
+    `<noscript><link rel="stylesheet" href="./${CONNECT_BUILD_ASSETS_DIR_NAME}/${CONNECT_BUILD_EXTERNAL_PACKAGES_CSS_FILE_NAME}"></noscript>`,
   );
 
   // Add base tag to index.html
