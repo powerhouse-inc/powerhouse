@@ -2,26 +2,18 @@
 
 import { driveDocumentModelModule } from "document-drive";
 import { generateDocumentStateQueryFields } from "document-drive/utils/graphql";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
 import { describe, it } from "vitest";
-import { renderHook } from "vitest-browser-react";
 import {
+  buildDocumentSubgraphUrl,
   getDocumentGraphqlQuery,
-  getSwitchboardGatewayUrl,
-  useGetSwitchboardLink,
-} from "../src/hooks/useSwitchboard.js";
+  getSwitchboardGatewayUrlFromDriveUrl,
+} from "../src/utils/switchboard.js";
 
 describe("Switchboard hooks", () => {
-  const documentModels = [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as DocumentModelModule[];
-
   it("should return the proper switchboard url", () => {
-    const url = getSwitchboardGatewayUrl("https://example.com/d/123");
+    const url = getSwitchboardGatewayUrlFromDriveUrl(
+      "https://example.com/d/123",
+    );
     expect(url).toBe("https://example.com/graphql");
   });
 
@@ -31,35 +23,33 @@ describe("Switchboard hooks", () => {
       "document",
     );
     expect(
-      getDocumentGraphqlQuery(
-        documentModels,
-        driveDocumentModelModule.documentModel.id,
-      ),
+      getDocumentGraphqlQuery(driveDocumentModelModule.documentModel),
     ).toBe(
-      `
-        query getDocument($documentId: String!) {
-          DocumentDrive {
-            getDocument(id: $documentId) {
-              ${stateFields}
-            }
-          }
-        }
-      `,
+      `query getDocument($documentId: PHID!, $driveId: String) {
+  DocumentDrive {
+    getDocument(docId: $documentId, driveId: $driveId) {
+      id
+      created
+      lastModified
+      name
+      revision
+      state {
+        ${stateFields}
+      }
+    }
+  }
+}`,
     );
   });
 
   it("should return the proper switchboard link", () => {
-    const document = driveDocumentModelModule.utils.createDocument();
-
-    const { result } = renderHook(() =>
-      useGetSwitchboardLink(
-        "https://example.com/d/123",
-        document.documentType,
-        documentModels,
-      ),
+    const url = buildDocumentSubgraphUrl(
+      "https://example.com/d/123",
+      "test-document",
+      driveDocumentModelModule.documentModel,
     );
-    expect(result.current).toBe(
-      "https://example.com/graphql?query=...on+DocumentDrive+...on+DocumentModel",
+    expect(url).toBe(
+      "https://example.com/graphql/document-drive?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RACgBJsUAhABoiTPAEsAbgg5cAyiklISASiLAAOkiJEqLWhUkyN23brKVqreszljmNdmFFhjszg-cd1Wned0JMDMAoig8BABDFARg-wCAG0iAZxQAWQgwCQAzCViQgKRIxALzCKkJZIkIJFLdVOiEU3jQosQiJEyEZI0iADoBohqiRxsAfQAxCASwfAA5Lt6gjuKmgGsJJDAiAAdIiNQpmfwiAF9+weHR2kmJBIQF2aXttvXN7evUABUCHaa9g4oI6zPBEZIEJBQAAWeBqEgAXtFqkgAKpICQoHrAMEQqAcMFQCB-IgAIzwkUhULO1POEkJtRaulOpWZ-lZpxAwhAUn2EkiJPuyQwID8uk04GstA44q44piqQAtJ8UOLhCFxW5pB4ZURxQBGABMAGZxdoOacgA",
     );
   });
 });
