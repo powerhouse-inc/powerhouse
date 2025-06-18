@@ -1,4 +1,5 @@
 import { type PHReducer } from "#document/types.js";
+import { generateUUID } from "#utils/env";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,
@@ -12,6 +13,12 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
+import {
+  sign,
+  Signer,
+  SigningParameters,
+  verify,
+} from "../../src/document/utils/header.js";
 import { type CountDocument, countReducer, increment } from "../helpers.js";
 
 describe("Crypto utils", () => {
@@ -288,5 +295,30 @@ describe("Crypto utils", () => {
       },
     );
     expect(verified).toBe(false);
+  });
+
+  it("should sign and verify id", async () => {
+    const parameters: SigningParameters = {
+      documentType: "powerhouse/counter",
+      createdAtUtcMs: Date.now(),
+      nonce: generateUUID(),
+    };
+
+    const keyPair = await crypto.subtle.generateKey("Ed25519", true, [
+      "sign",
+      "verify",
+    ]);
+
+    const signer: Signer = {
+      publicKey: keyPair.publicKey,
+      privateKey: keyPair.privateKey,
+    };
+
+    const signature = await sign(parameters, signer);
+
+    delete signer.privateKey;
+
+    const verified = await verify(parameters, signature, signer);
+    expect(verified).toBe(true);
   });
 });

@@ -17,6 +17,7 @@ import {
   baseSaveToFile,
   baseSaveToFileHandle,
 } from "#document/utils/file.js";
+import { createEmptyHeader } from "#document/utils/header.js";
 import {
   documentModelState,
   documentType,
@@ -30,6 +31,8 @@ export { fileExtension } from "./constants.js";
 
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
+    header: createEmptyHeader(),
+    document: { ...documentModelState, ...state?.document },
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };

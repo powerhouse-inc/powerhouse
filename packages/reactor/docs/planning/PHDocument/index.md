@@ -8,7 +8,7 @@ We break PHDocument into four objects:
 
 ```tsx
 {
-  id,        // the document ID
+  header,    // header information
 
 	state,     // plain, serializable object
 	
@@ -18,9 +18,61 @@ We break PHDocument into four objects:
 }
 ```
 
-#### Id
+#### Header
 
-The `id` is a unique, Ed25519 signature of the document header data. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
+The special case `header` scope contains a number of key elements:
+
+```tsx
+export type PHDocumentSignatureInfo = {
+  /** The public key of the document creator. */
+  publicKey: string;
+
+  /** The nonce that was appended to the message to create the signature. */
+  nonce: string;
+};
+
+export type PHDocumentHeader = {
+  /**
+   * The id of the document.
+   *
+   * This is a Ed25519 signature and is immutable.
+   **/
+  id: string;
+
+  /** Information to verify the document creator. */
+  sig: PHDocumentSignatureInfo;
+
+  /** The slug of the document. */
+  slug: string;
+
+  /** The name of the document. */
+  name: string;
+
+  /** The branch of this document. */
+  branch: string;
+
+  /** The type of the document. */
+  documentType: string;
+
+  /** The timestamp of the creation date of the document. */
+  createdAtUtcMs: number;
+
+  /** The timestamp of the last change in the document. */
+  lastModifiedAtUtcMs: number;
+
+  /** Meta information about the document. */
+  meta?: {
+    /** The preferred editor for the document. */
+    preferredEditor?: string;
+  };
+};
+```
+
+##### Id
+
+The `id` is a unique, Ed25519 signature on the header object. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
+
+Cryptographic signatures are generated and verified using the Web Crypto API.
 
 This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
 
@@ -76,49 +128,6 @@ type MyOtherScopeState = {
 
 type MyDocument = PHDocument<MyDocumentDocumentState> & {
   myOtherScope: MyOtherScopeState;
-};
-```
-
-##### Header
-
-The special case `header` scope contains a number of key elements:
-
-```tsx
-export type PHDocumentSignatureInfo = {
-  /** The public key of the document creator. */
-  publicKey: string;
-
-  /** The nonce that was appended to the message to create the signature. */
-  nonce: string;
-};
-
-export type PHDocumentHeader = {
-  /** Information to verify the document creator. */
-  sig: PHDocumentSignatureInfo;
-
-  /** The slug of the document. */
-  slug: string;
-
-  /** The name of the document. */
-  name: string;
-
-  /** The branch of this document. */
-  branch: string;
-
-  /** The type of the document. */
-  documentType: string;
-
-  /** The timestamp of the creation date of the document. */
-  createdAtUtcMs: number;
-
-  /** The timestamp of the last change in the document. */
-  lastModifiedAtUtcMs: number;
-
-  /** Meta information about the document. */
-  meta?: {
-    /** The preferred editor for the document. */
-    preferredEditor?: string;
-  };
 };
 ```
 

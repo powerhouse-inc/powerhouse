@@ -1,0 +1,78 @@
+export type JsonSerializable =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | JsonSerializable[]
+  | { [key: string]: JsonSerializable };
+
+export type PHDocumentSignatureInfo = {
+  /**
+   * The public key of the document creator.
+   *
+   * This is generally a JsonWebKey, but there is no shared type for this
+   * between node and the browser.
+   **/
+  publicKey: any;
+
+  /** The nonce that was appended to the message to create the signature. */
+  nonce: string;
+};
+
+export type PHDocumentHeader = {
+  /**
+   * The id of the document.
+   *
+   * This is a Ed25519 signature and is immutable.
+   **/
+  id: string;
+
+  /**
+   * Information to verify the document creator.
+   *
+   * This is immutable.
+   **/
+  sig: PHDocumentSignatureInfo;
+
+  /**
+   * The type of the document.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  documentType: string;
+
+  /**
+   * The timestamp of the creation date of the document.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  createdAtUtcMs: number;
+
+  /** The slug of the document. */
+  slug: string;
+
+  /** The name of the document. */
+  name: string;
+
+  /** The branch of this document. */
+  branch: string;
+
+  /**
+   * The timestamp of the last change in the document.
+   **/
+  lastModifiedAtUtcMs: number;
+
+  /** Meta information about the document. */
+  meta?: {
+    /** The preferred editor for the document. */
+    preferredEditor?: string;
+  };
+};
+
+export type PHBaseState<TDocumentState = JsonSerializable> = {
+  // todo: will not be optional in the future
+  document?: TDocumentState;
+};
