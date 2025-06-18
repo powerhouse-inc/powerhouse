@@ -1,3 +1,13 @@
+## 3.2.0-dev.0 (2025-06-18)
+
+### 🚀 Features
+
+- use document model subgraph when clicking on switchboard url button ([24cf6ad94](https://github.com/powerhouse-inc/powerhouse/commit/24cf6ad94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 2.5.0-dev.41 (2025-06-18)
 
 ### 🩹 Fixes
