@@ -3,6 +3,7 @@ import {
   copyConnect,
   makeImportScriptFromPackages,
   PH_DIR_NAME,
+  prependToHtmlHead,
   resolveConnect,
   runTsc,
 } from "#connect-utils";
@@ -125,7 +126,7 @@ export async function buildConnect(options: ConnectBuildOptions) {
   );
 
   // Add base tag to index.html
-  await appendToHtmlHead(
+  await prependToHtmlHead(
     connectBuildIndexHtmlPath,
     `<base href="${base}${base.endsWith("/") ? "" : "/"}">`,
   );
