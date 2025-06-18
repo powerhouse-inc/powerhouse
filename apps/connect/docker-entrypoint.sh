@@ -20,7 +20,7 @@ cp -r .ph/connect-build/dist/* /var/www/html/project/
 nginx -s stop 2>/dev/null || true
 
 # Substitute environment variables in nginx configuration
-envsubst '${PORT}' < /etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp
+envsubst '${PORT},${PH_CONNECT_BASE_PATH:-/}' < /etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp
 mv /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
 
 echo "Testing nginx configuration..."
