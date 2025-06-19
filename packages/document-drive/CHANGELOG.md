@@ -1,3 +1,13 @@
+## 3.2.0-dev.1 (2025-06-19)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** support base paths without ending slash ([1ee6d9d9f](https://github.com/powerhouse-inc/powerhouse/commit/1ee6d9d9f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.2.0-dev.0 (2025-06-18)
 
 ### 🚀 Features
