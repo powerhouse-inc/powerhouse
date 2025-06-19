@@ -94,8 +94,8 @@ describe("Local reducer", () => {
       state: { global: { count: 0 }, local: { name: "" } },
     });
     const newDocument = countReducer(document, setLocalName("test"));
-    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 1 });
-    expect(document.header.revision).toStrictEqual({ global: 0, local: 0 });
+    expect(newDocument.header.revision.local).toStrictEqual(1);
+    expect(document.header.revision.local).toBe(undefined);
 
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -120,9 +120,15 @@ describe("Local reducer", () => {
     });
     let newDocument = countReducer(document, setLocalName("test"));
 
-    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 1 });
+    expect(newDocument.header.revision).toStrictEqual({
+      document: 0,
+      local: 1,
+    });
     newDocument = countReducer(newDocument, undo(1, "local"));
-    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });
+    expect(newDocument.header.revision).toStrictEqual({
+      document: 0,
+      local: 2,
+    });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "" },
@@ -162,7 +168,10 @@ describe("Local reducer", () => {
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
     newDocument = countReducer(newDocument, redo(1, "local"));
-    expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 3 });
+    expect(newDocument.header.revision).toStrictEqual({
+      document: 0,
+      local: 3,
+    });
     expect(newDocument.state).toStrictEqual({
       global: { count: 0 },
       local: { name: "test" },

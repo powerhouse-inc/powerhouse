@@ -16,7 +16,7 @@ export function setNameOperation<TDocument extends PHDocument>(
   document: TDocument,
   name: string,
 ) {
-  return { ...document, name };
+  return { ...document, header: { ...document.header, name } };
 }
 
 export function undoOperation<TDocument extends PHDocument>(
