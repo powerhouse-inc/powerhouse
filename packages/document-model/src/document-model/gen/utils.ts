@@ -11,6 +11,7 @@ import {
   baseCreateDocument,
   baseCreateExtendedState,
 } from "#document/utils/base.js";
+import { generateId } from "#document/utils/crypto.js";
 import {
   baseLoadFromFile,
   baseLoadFromInput,
@@ -47,6 +48,10 @@ export const createDocument: CreateDocument<DocumentModelDocument> = (
 ) => {
   const document = baseCreateDocument(createExtendedState(state), createState);
   document.header.documentType = documentType;
+
+  // for backward compatibility -- but this is NOT a valid document id
+  document.header.id = generateId();
+
   return document;
 };
 

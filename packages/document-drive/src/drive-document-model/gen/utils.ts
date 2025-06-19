@@ -10,6 +10,7 @@ import {
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
+  generateId,
 } from "document-model";
 import { reducer } from "./reducer.js";
 import {
@@ -48,7 +49,11 @@ const utils: DocumentDriveUtils = {
       utils.createExtendedState(state),
       utils.createState,
     );
+
     document.header.documentType = driveDocumentType;
+
+    // for backward compatibility -- but this is NOT a valid document id
+    document.header.id = generateId();
 
     return document;
   },
