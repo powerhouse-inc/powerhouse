@@ -15,7 +15,7 @@ describe("Document Drive Document Model", () => {
     const document = createDocument();
 
     expect(document).toBeDefined();
-    expect(document.documentType).toBe("powerhouse/document-drive");
+    expect(document.header.documentType).toBe("powerhouse/document-drive");
   });
 
   it("should create a new Document Drive document with a valid initial state", () => {

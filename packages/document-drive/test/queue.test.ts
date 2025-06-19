@@ -104,8 +104,14 @@ describe.each(queueLayers)(
         );
         promisses.push(
           queue
-            ? server.queueDriveOperations(drive.id, drive.operations.global)
-            : server.addDriveOperations(drive.id, drive.operations.global),
+            ? server.queueDriveOperations(
+                drive.header.id,
+                drive.operations.global,
+              )
+            : server.addDriveOperations(
+                drive.header.id,
+                drive.operations.global,
+              ),
         );
       }
       return Promise.all(promisses);
@@ -124,7 +130,7 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive.id;
+      const driveId = drive.header.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
@@ -206,7 +212,7 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive.id;
+      const driveId = drive.header.id;
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
@@ -308,7 +314,7 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       let drive = await createDrive(server);
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
       const document = createDocumentModelDocument();
 
@@ -443,7 +449,7 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       const drive = await createDrive(server);
-      const driveId = drive.id;
+      const driveId = drive.header.id;
       const action = addListener({
         listener: {
           block: true,

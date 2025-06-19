@@ -57,13 +57,15 @@ function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
-  return createDocument({
-    id,
-    slug,
+  const doc = createDocument({
     state: createState({
       global: state,
     }),
   });
+  doc.header.id = id;
+  doc.header.slug = slug;
+
+  return doc;
 }
 
 function buildModelDocument(
@@ -79,7 +81,7 @@ function buildModelDocument(
 function buildDocumentResponse(drive: PHDocument) {
   return {
     ...drive,
-    revision: drive.revision,
+    revision: drive.header.revision,
     state: drive.state,
     operations: drive.operations.global.map(({ input, ...op }) => ({
       ...op,
@@ -100,7 +102,7 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
       body: JSON.stringify({
         data:
           operationName === "getDrive"
-            ? { drive: { ...drive.state.global, id: drive.id } }
+            ? { drive: { ...drive.state.global, id: drive.header.id } }
             : {
                 document: buildDocumentResponse(drive),
               },
@@ -227,7 +229,7 @@ describe("Read mode methods", () => {
       ...drive,
       initialState: {
         ...drive.initialState,
-        lastModified: (result as ReadDrive).initialState.lastModified,
+        lastModified: (result as ReadDrive).header.lastModifiedAtUtcIso,
       },
       readContext: context,
     });
@@ -326,8 +328,6 @@ describe("Read mode methods", () => {
     const documentId = generateId();
 
     let drive = createDocument({
-      id: readDriveId,
-      slug: "read-drive",
       state: {
         global: {
           name: "Read drive",
@@ -337,6 +337,10 @@ describe("Read mode methods", () => {
         local: {},
       },
     });
+
+    drive.header.id = readDriveId;
+    drive.header.slug = "read-drive";
+
     let document = createDocument();
     const addNodeAction = addFile({
       name: "Document 1",

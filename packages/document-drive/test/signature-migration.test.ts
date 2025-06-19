@@ -1,5 +1,10 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { ActionContext, Operation, generateId } from "document-model";
+import {
+  ActionContext,
+  DocumentHeader,
+  Operation,
+  generateId,
+} from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
@@ -92,8 +97,6 @@ describe.each(storageLayers)(
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        id: driveId,
-        slug: driveId,
         state: {
           global: {
             icon: null,
@@ -107,6 +110,8 @@ describe.each(storageLayers)(
           },
         },
       });
+      drive.header.id = driveId;
+      drive.header.slug = driveId;
       await storage.create(drive);
 
       const driveOperation = buildOperation(
@@ -121,7 +126,18 @@ describe.each(storageLayers)(
       );
       expect(driveOperation.context).toBeUndefined();
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive);
+      // create legacy DocumentHeader
+      const header: DocumentHeader = {
+        id: driveId,
+        name: "name",
+        slug: driveId,
+        revision: drive.header.revision,
+        documentType: drive.header.documentType,
+        created: drive.header.createdAtUtcIso,
+        lastModified: drive.header.lastModifiedAtUtcIso,
+        meta: drive.header.meta,
+      };
+      await storage.addDriveOperations(driveId, [driveOperation], header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -142,7 +158,6 @@ describe.each(storageLayers)(
     }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        id: driveId,
         state: {
           global: {
             icon: null,
@@ -156,6 +171,8 @@ describe.each(storageLayers)(
           },
         },
       });
+      drive.header.id = driveId;
+
       await storage.create(drive);
 
       const driveOperation = buildOperation(
@@ -183,7 +200,18 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive);
+      // create legacy DocumentHeader
+      const header: DocumentHeader = {
+        id: driveId,
+        name: "name",
+        slug: driveId,
+        revision: drive.header.revision,
+        documentType: drive.header.documentType,
+        created: drive.header.createdAtUtcIso,
+        lastModified: drive.header.lastModifiedAtUtcIso,
+        meta: drive.header.meta,
+      };
+      await storage.addDriveOperations(driveId, [driveOperation], header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -217,7 +245,6 @@ describe.each(storageLayers)(
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        id: driveId,
         state: {
           global: {
             icon: null,
@@ -231,6 +258,7 @@ describe.each(storageLayers)(
           },
         },
       });
+      drive.header.id = driveId;
       await storage.create(drive);
 
       const driveOperation = buildOperation(
@@ -258,7 +286,19 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive);
+      // create legacy DocumentHeader
+      const header: DocumentHeader = {
+        id: driveId,
+        name: "name",
+        slug: driveId,
+        revision: drive.header.revision,
+        documentType: drive.header.documentType,
+        created: drive.header.createdAtUtcIso,
+        lastModified: drive.header.lastModifiedAtUtcIso,
+        meta: drive.header.meta,
+      };
+
+      await storage.addDriveOperations(driveId, [driveOperation], header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
