@@ -142,15 +142,8 @@ export abstract class BaseDocumentClass<
     return this._document.header.lastModifiedAtUtcIso;
   }
 
-  /**
-   * Gets the global revision number of the document.
-   */
-  get revision() {
-    return this._document.header.revision.global;
-  }
-
   getRevision(scope: OperationScope) {
-    return this._document.header.revision[scope];
+    return this._document.header.revision[scope] || 0;
   }
 
   /**

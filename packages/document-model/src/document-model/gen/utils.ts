@@ -19,6 +19,7 @@ import {
 } from "#document/utils/file.js";
 import {
   documentModelState,
+  documentType,
   fileExtension,
   initialLocalState,
 } from "./constants.js";
@@ -44,7 +45,9 @@ export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
 export const createDocument: CreateDocument<DocumentModelDocument> = (
   state,
 ) => {
-  return baseCreateDocument(createExtendedState(state), createState);
+  const document = baseCreateDocument(createExtendedState(state), createState);
+  document.header.documentType = documentType;
+  return document;
 };
 
 export const saveToFile: SaveToFile = (document, path, name) => {

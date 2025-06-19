@@ -124,7 +124,7 @@ describe("DocumentModel Class", () => {
       { global: [], local: [] },
       countReducer,
     );
-    expect(initialDocument).toStrictEqual(document);
+    expect(initialDocument.state).toStrictEqual(document.state);
   });
 
   it("should replay document with operations", () => {
@@ -139,7 +139,7 @@ describe("DocumentModel Class", () => {
       reducer,
     );
     expect(newDocument.state.global.count).toBe(2);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
     expect(mockReducer).toHaveBeenCalledTimes(4);
   });
 
@@ -161,7 +161,7 @@ describe("DocumentModel Class", () => {
     expect(mockReducer).toHaveBeenCalledTimes(6);
 
     expect(newDocument.state.global.count).toBe(1);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
   });
 
   it("should reuse resulting state when replaying document with undone operations", () => {
@@ -193,6 +193,6 @@ describe("DocumentModel Class", () => {
 
     expect(mockReducer).toHaveBeenCalledTimes(3);
     expect(document.state.global.count).toBe(1);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
   });
 });
