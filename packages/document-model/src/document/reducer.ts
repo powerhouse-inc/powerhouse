@@ -7,6 +7,7 @@ import {
   undoOperation,
 } from "./actions/operations.js";
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
+import { PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
@@ -73,16 +74,18 @@ export function updateHeader<TDocument extends PHDocument>(
   document: TDocument,
   action: Action | DefaultAction | Operation,
 ): TDocument {
+  const header: PHDocumentHeader = {
+    ...document.header,
+    revision: {
+      ...document.header.revision,
+      [action.scope]: getNextRevision(document, action),
+    },
+    lastModifiedAtUtcIso: getDocumentLastModified(document),
+  };
+
   return {
     ...document,
-    header: {
-      ...document.header,
-      revision: {
-        ...document.header.revision,
-        [action.scope]: getNextRevision(document, action),
-      },
-      lastModifiedAtUtcMs: getDocumentLastModified(document),
-    },
+    header,
   };
 }
 
