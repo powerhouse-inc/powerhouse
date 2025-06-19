@@ -179,9 +179,11 @@ async function loadFromZip<TDocument extends PHDocument>(
     {},
     options,
   );
+
   if (header) {
     result = {
       ...result,
+      header,
     };
   }
   return result;
