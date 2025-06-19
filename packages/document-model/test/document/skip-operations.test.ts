@@ -517,7 +517,7 @@ describe("skip operations", () => {
         skip: 1,
       });
 
-      expect(document.header.revision.global).toBe(3);
+      expect(document.state.global.count).toBe(3);
       expect(document.operations.global.length).toBe(3);
 
       expect(document.operations.global).toMatchObject([
