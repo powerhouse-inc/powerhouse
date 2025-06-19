@@ -87,7 +87,7 @@
     "document-model": "workspace:*",
     "dspot-powerhouse-components": "^1.1.0",
     "es-toolkit": "^1.37.2",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.5",
     "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "fast-glob": "^3.3.3",
     "graphql": "^16.11.0",

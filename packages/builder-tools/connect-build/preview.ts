@@ -17,7 +17,7 @@ export async function previewConnect(options: ConnectPreviewOptions) {
     CONNECT_BUILD_DIR_NAME,
   );
   const previewServer = await preview({
-    base: `${base}${base.endsWith("/") ? "" : "/"}`,
+    base,
     root: connectBuildDir,
     preview: {
       port,

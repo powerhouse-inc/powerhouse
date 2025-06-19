@@ -16,9 +16,13 @@ const AtlasImport = React.lazy(() =>
     import('./demo/atlas-import.js').then(m => ({ default: m.AtlasImport })),
 );
 
+const routerBasename = connectConfig.routerBasename.endsWith('/')
+    ? connectConfig.routerBasename.slice(0, -1)
+    : connectConfig.routerBasename;
+
 function createRouter(routes: RouteObject[]) {
     return createBrowserRouter(routes, {
-        basename: connectConfig.routerBasename,
+        basename: routerBasename,
         future: {
             v7_fetcherPersist: true,
             v7_relativeSplatPath: true,
@@ -29,7 +33,7 @@ function createRouter(routes: RouteObject[]) {
 function createRoutes() {
     const routes: RouteObject[] = [
         {
-            path: '/',
+            index: true,
             element: (
                 <Suspense name="Home">
                     <Home />
@@ -56,20 +60,12 @@ function createRoutes() {
 
     return [
         {
-            path: '/',
             element: (
                 <Suspense name="RouteRoot">
                     <Root />
                 </Suspense>
             ),
             children: routes,
-        },
-        {
-            element: (
-                <Suspense name="DefaultRoot">
-                    <Root />
-                </Suspense>
-            ),
         },
     ];
 }
