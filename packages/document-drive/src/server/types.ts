@@ -361,7 +361,9 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
-  getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
+  getDriveIdBySlug(
+    slug: string,
+  ): Promise<DocumentDriveDocument["header"]["id"]>;
 
   getDocuments(driveId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(
@@ -528,7 +530,7 @@ export type DriveUpdateErrorHandler = (
 export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
-  removeDrive(driveId: DocumentDriveDocument["id"]): Promise<void>;
+  removeDrive(driveId: DocumentDriveDocument["header"]["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
   setListener(driveId: string, listener: Listener): Promise<void>;

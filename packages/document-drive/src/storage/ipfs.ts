@@ -76,7 +76,8 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -86,7 +87,7 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
@@ -97,7 +98,7 @@ export class IPFSStorage
     await this.updateSlugManifest(slugManifest);
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
@@ -178,7 +179,7 @@ export class IPFSStorage
         const document = JSON.parse(content) as PHDocument;
 
         // Only include documents of the requested type
-        if (document.documentType === documentModelType) {
+        if (document.header.documentType === documentModelType) {
           documentsAndIds.push({ id: documentId, document });
         }
       } catch (error) {
@@ -189,8 +190,8 @@ export class IPFSStorage
 
     // Sort by creation date first, then by ID
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -228,7 +229,8 @@ export class IPFSStorage
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug.length > 0 ? document.header.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

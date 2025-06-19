@@ -90,8 +90,8 @@ class RedisCache implements ICache {
       return false;
     }
 
-    if (drive.slug.length > 0) {
-      const slugRedisId = RedisCache._getDriveBySlugKey(drive.slug);
+    if (drive.header.slug.length > 0) {
+      const slugRedisId = RedisCache._getDriveBySlugKey(drive.header.slug);
       await this.redis.del(slugRedisId);
     }
 
@@ -100,7 +100,7 @@ class RedisCache implements ICache {
 
   // We store two pices: slug -> driveId, and driveId -> drive
   async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
-    const driveId = drive.id;
+    const driveId = drive.header.id;
     const redisId = RedisCache._getDriveBySlugKey(slug);
     const result = await this.redis.set(redisId, driveId, {
       EX: this.timeoutInSeconds ? this.timeoutInSeconds : undefined,

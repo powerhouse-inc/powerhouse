@@ -79,7 +79,7 @@ export class BrowserStorage
   }
 
   async create(document: PHDocument): Promise<void> {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -91,7 +91,9 @@ export class BrowserStorage
     }
 
     const slug =
-      document.slug && document.slug.length > 0 ? document.slug : documentId;
+      document.header.slug && document.header.slug.length > 0
+        ? document.header.slug
+        : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -102,7 +104,7 @@ export class BrowserStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
     await db.setItem(this.buildDocumentKey(documentId), document);
 
     // Update the slug manifest if the document has a slug
@@ -119,7 +121,7 @@ export class BrowserStorage
     }
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
@@ -176,7 +178,7 @@ export class BrowserStorage
 
       try {
         const document = await db.getItem<PHDocument>(key);
-        if (!document || document.documentType !== documentModelType) {
+        if (!document || document.header.documentType !== documentModelType) {
           continue;
         }
 
@@ -188,8 +190,8 @@ export class BrowserStorage
 
     // Sort by creation date, then by ID
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -234,7 +236,8 @@ export class BrowserStorage
     }
 
     // Remove from slug manifest if it has a slug
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug.length > 0 ? document.header.slug : documentId;
     try {
       if (slug) {
         const slugManifest = await this.getSlugManifest();

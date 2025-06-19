@@ -51,6 +51,11 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
+import { PHDocumentHeader } from "../../../document-model/src/document/ph-types.js";
+import {
+  createPresignedHeader,
+  validateHeader,
+} from "../../../document-model/src/document/utils/header.js";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
@@ -156,7 +161,7 @@ export class BaseDocumentDriveServer
 
   // internal state
   private triggerMap = new Map<
-    DocumentDriveDocument["id"],
+    PHDocumentHeader["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
@@ -447,7 +452,7 @@ export class BaseDocumentDriveServer
     const drive = await this.getDrive(driveId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.slug}"`,
+      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.header.slug}"`,
     );
 
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
@@ -482,7 +487,7 @@ export class BaseDocumentDriveServer
         await this.listenerManager
           .setListener(driveId, {
             block: zodListener.block,
-            driveId: drive.id,
+            driveId: drive.header.id,
             filter: {
               branch: zodListener.filter.branch ?? [],
               documentId: zodListener.filter.documentId ?? [],
@@ -610,8 +615,6 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
-      id: input.id,
-      slug: input.slug,
       state: {
         global: {
           icon: input.global.icon ?? null,
@@ -621,9 +624,19 @@ export class BaseDocumentDriveServer
       },
     });
 
-    document.meta = {
-      preferredEditor: preferredEditor,
-    };
+    if (input.id && input.id.length > 0) {
+      document.header.id = input.id;
+    }
+
+    if (input.slug && input.slug.length > 0) {
+      document.header.slug = input.slug;
+    }
+
+    if (preferredEditor) {
+      document.header.meta = {
+        preferredEditor: preferredEditor,
+      };
+    }
 
     await this.documentStorage.create(document);
 
@@ -631,7 +644,7 @@ export class BaseDocumentDriveServer
       await this.cache.deleteDriveBySlug(input.slug);
     }
 
-    await this._initializeDrive(document.id);
+    await this._initializeDrive(document.header.id);
 
     this.eventEmitter.emit("driveAdded", document);
 
@@ -769,17 +782,17 @@ export class BaseDocumentDriveServer
     }
   }
 
-  async getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]> {
+  async getDriveIdBySlug(slug: string): Promise<string> {
     try {
       const drive = await this.cache.getDriveBySlug(slug);
       if (drive) {
-        return drive.id;
+        return drive.header.id;
       }
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
     const driveStorage = await this.documentStorage.getBySlug(slug);
-    return driveStorage.id;
+    return driveStorage.header.id;
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -819,9 +832,10 @@ export class BaseDocumentDriveServer
     // if a document was provided then checks if it's valid
     let state = undefined;
     if (input.document) {
-      if (input.documentType !== input.document.documentType) {
+      if (input.documentType !== input.document.header.documentType) {
         throw new Error(`Provided document is not ${input.documentType}`);
       }
+
       const doc = this._buildDocument(input.document);
       state = doc.state;
     }
@@ -831,20 +845,43 @@ export class BaseDocumentDriveServer
       input.document ??
       this.getDocumentModelModule(input.documentType).utils.createDocument();
 
+    // get the header
+    let header: PHDocumentHeader;
+
+    // handle the legacy case where an id is provided
     if (input.id && input.id.length > 0) {
-      document.id = input.id;
+      if (input.document) {
+        header = document.header;
+        document.header.id = input.id;
+
+        this.logger.warn(
+          "Assigning an id to a document is deprecated. Use the header field instead.",
+        );
+      } else {
+        this.logger.warn(
+          "Creating a document with an id is deprecated. Use the header field instead.",
+        );
+
+        header = createPresignedHeader();
+        header.id = input.id;
+        header.documentType = input.documentType;
+      }
+    } else if (input.header) {
+      // validate the header passed in
+      await validateHeader(input.header);
+
+      header = input.header;
+    } else {
+      // otherwise, generate a header
+      header = createPresignedHeader();
+      header.documentType = input.documentType;
     }
 
     // stores document information
     const documentStorage: PHDocument = {
-      id: document.id,
-      name: document.name,
-      slug: document.slug,
-      revision: document.revision,
-      documentType: document.documentType,
-      created: document.created,
-      lastModified: document.lastModified,
-      operations: { global: [], local: [] },
+      header,
+      history: document.history,
+      operations: document.operations,
       initialState: document.initialState,
       clipboard: [],
       state: state ?? document.state,
@@ -853,13 +890,13 @@ export class BaseDocumentDriveServer
     await this.documentStorage.create(documentStorage);
 
     try {
-      await this.documentStorage.addChild(driveId, input.id);
+      await this.documentStorage.addChild(driveId, header.id);
     } catch (e) {
       this.logger.error("Error adding child document", e);
 
       // revert the document creation
       try {
-        await this.documentStorage.delete(input.id);
+        await this.documentStorage.delete(header.id);
       } catch (e) {
         this.logger.error(
           "FATAL: Could not revert document creation. This means that we created a document but failed to add it to the drive..",
@@ -884,18 +921,30 @@ export class BaseDocumentDriveServer
     // stores the operations in the storage
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
+      // Convert PHDocumentHeader to DocumentHeader for legacy storage
+      const documentHeader: DocumentHeader = {
+        id: document.header.id,
+        name: document.header.name,
+        slug: document.header.slug,
+        revision: document.header.revision,
+        documentType: document.header.documentType,
+        created: document.header.createdAtUtcIso,
+        lastModified: document.header.lastModifiedAtUtcIso,
+        meta: document.header.meta,
+      };
+
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
           driveId,
           operations,
-          document,
+          documentHeader,
         );
       } else {
         await this.legacyStorage.addDocumentOperations(
           driveId,
-          input.id,
+          header.id,
           operations,
-          document,
+          documentHeader,
         );
       }
     }
@@ -1083,7 +1132,7 @@ export class BaseDocumentDriveServer
     }
 
     const documentModelModule = this.getDocumentModelModule<TDocument>(
-      documentStorage.documentType,
+      documentStorage.header.documentType,
     );
 
     const revisionOperations =
@@ -1100,7 +1149,7 @@ export class BaseDocumentDriveServer
       operations,
       documentModelModule.reducer,
       undefined,
-      documentStorage,
+      documentStorage.header,
       undefined,
       {
         ...options,
@@ -1118,7 +1167,7 @@ export class BaseDocumentDriveServer
     skipHashValidation = false,
   ) {
     const documentModelModule = this.getDocumentModelModule(
-      document.documentType,
+      document.header.documentType,
     );
 
     const signalResults: SignalResult[] = [];
@@ -1169,12 +1218,15 @@ export class BaseDocumentDriveServer
                 (documentToCopy) => {
                   const doc = {
                     ...documentToCopy,
-                    slug: signal.input.newId,
+                    header: {
+                      ...documentToCopy.header,
+                      slug: signal.input.newId,
+                    },
                   };
 
                   return this.createDocument(driveId, {
                     id: signal.input.newId,
-                    documentType: documentToCopy.documentType,
+                    documentType: documentToCopy.header.documentType,
                     document: doc,
                     synchronizationUnits: signal.input.synchronizationUnits,
                   });
@@ -1257,7 +1309,25 @@ export class BaseDocumentDriveServer
       await this.legacyStorage.addDocumentOperationsWithTransaction(
         driveId,
         documentId,
-        callback,
+        async (document: PHDocument) => {
+          const result = await callback(document);
+          // Convert PHDocumentHeader to DocumentHeader for legacy storage
+          const documentHeader: DocumentHeader = {
+            id: document.header.id,
+            name: document.header.name,
+            slug: document.header.slug,
+            revision: document.header.revision,
+            documentType: document.header.documentType,
+            created: document.header.createdAtUtcIso,
+            lastModified: document.header.lastModifiedAtUtcIso,
+            meta: document.header.meta,
+          };
+
+          return {
+            operations: result.operations,
+            header: documentHeader,
+          };
+        },
       );
     }
   }
@@ -1517,10 +1587,21 @@ export class BaseDocumentDriveServer
           signals.push(...result.signals);
           operationsApplied.push(...result.operationsApplied);
 
+          // Convert PHDocumentHeader to DocumentHeader for legacy storage
+          const documentHeader: DocumentHeader = {
+            id: result.document.header.id,
+            name: result.document.header.name,
+            slug: result.document.header.slug,
+            revision: result.document.header.revision,
+            documentType: result.document.header.documentType,
+            created: result.document.header.createdAtUtcIso,
+            lastModified: result.document.header.lastModifiedAtUtcIso,
+            meta: result.document.header.meta,
+          };
+
           return {
             operations: result.operationsApplied,
-            header: result.document,
-            newState: document.state,
+            header: documentHeader,
           };
         },
       );
@@ -1822,9 +1903,21 @@ export class BaseDocumentDriveServer
         signals.push(...result.signals);
         error = result.error;
 
+        // Convert PHDocumentHeader to DocumentHeader for legacy storage
+        const documentHeader: DocumentHeader = {
+          id: result.document.header.id,
+          name: result.document.header.name,
+          slug: result.document.header.slug,
+          revision: result.document.header.revision,
+          documentType: result.document.header.documentType,
+          created: result.document.header.createdAtUtcIso,
+          lastModified: result.document.header.lastModifiedAtUtcIso,
+          meta: result.document.header.meta,
+        };
+
         return {
           operations: result.operationsApplied,
-          header: result.document,
+          header: documentHeader,
         };
       });
 
@@ -1951,7 +2044,9 @@ export class BaseDocumentDriveServer
     actions: TAction[],
   ): Operation<TAction>[] {
     const operations: Operation<TAction>[] = [];
-    const { reducer } = this.getDocumentModelModule(documentId.documentType);
+    const { reducer } = this.getDocumentModelModule(
+      documentId.header.documentType,
+    );
     for (const action of actions) {
       documentId = reducer(documentId, action);
       const operation = documentId.operations[action.scope].slice().pop();

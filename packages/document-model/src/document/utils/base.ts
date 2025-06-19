@@ -186,6 +186,10 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   };
 }
 
+/**
+ * Important note: it is the responsibility of the caller to set the document type
+ * on the header.
+ */
 export function baseCreateDocument<TDocument extends PHDocument>(
   initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
   createState?: CreateState<TDocument>,

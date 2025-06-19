@@ -129,29 +129,32 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   async create(document: PHDocument) {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
 
     try {
       await this.db.document.create({
         data: {
           id: documentId,
           slug,
-          name: document.name,
-          documentType: document.documentType,
+          name: document.header.name,
+          documentType: document.header.documentType,
           initialState: JSON.stringify(document.initialState),
-          lastModified: document.lastModified,
-          revision: JSON.stringify(document.revision),
-          meta: document.meta ? JSON.stringify(document.meta) : undefined,
+          lastModified: document.header.lastModifiedAtUtcIso,
+          revision: JSON.stringify(document.header.revision),
+          meta: document.header.meta
+            ? JSON.stringify(document.header.meta)
+            : undefined,
         },
       });
     } catch (e) {
@@ -164,7 +167,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
     // temporary -- but we need to create drive records automatically for documents
     // of the correct type
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       await this.db.drive.create({
         data: {
           id: documentId,

@@ -65,7 +65,7 @@ export class FilesystemStorage
   }
 
   async create(document: PHDocument) {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -75,7 +75,8 @@ export class FilesystemStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -85,7 +86,7 @@ export class FilesystemStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
     writeFileSync(documentPath, stringify(document), {
       encoding: "utf-8",
     });
@@ -96,7 +97,7 @@ export class FilesystemStorage
     await this.updateSlugManifest(slugManifest);
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
 
@@ -158,7 +159,7 @@ export class FilesystemStorage
         ) as PHDocument;
 
         // Only include documents of the requested type
-        if (document.documentType === documentModelType) {
+        if (document.header.documentType === documentModelType) {
           documentsAndIds.push({ id: documentId, document });
         }
       } catch (error) {
@@ -169,8 +170,8 @@ export class FilesystemStorage
 
     // Sort by creation date first, then by ID (consistent sort order for pagination)
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -206,7 +207,8 @@ export class FilesystemStorage
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug.length > 0 ? document.header.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

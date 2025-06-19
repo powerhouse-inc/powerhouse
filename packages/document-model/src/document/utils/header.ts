@@ -1,6 +1,14 @@
 import { PHDocumentHeader } from "#document/ph-types.js";
 import { generateUUID } from "#utils/env";
 
+export class InvalidSignatureError extends Error {
+  constructor(message: string) {
+    super(message);
+
+    this.name = "InvalidSignatureError";
+  }
+}
+
 export type SigningParameters = {
   documentType: string;
   createdAtUtcIso: string;
@@ -24,6 +32,25 @@ const generateStablePayload = (parameters: SigningParameters): string => {
   const payload = `${parameters.documentType}:${parameters.createdAtUtcIso}:${parameters.nonce}`;
 
   return payload;
+};
+
+const createSignerFromHeader = async (
+  header: PHDocumentHeader,
+): Promise<Signer> => {
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    header.sig.publicKey,
+    {
+      name: "Ed25519",
+      namedCurve: "Ed25519",
+    },
+    true,
+    ["verify"],
+  );
+
+  return {
+    publicKey,
+  };
 };
 
 export const sign = async (
@@ -59,33 +86,51 @@ export const verify = async (
   parameters: SigningParameters,
   signature: string,
   signer: Signer,
-): Promise<boolean> => {
+): Promise<void> => {
+  // Generate the same stable payload that was signed
+  const payload = generateStablePayload(parameters);
+
+  // Convert payload to Uint8Array for verification
+  const encoder = new TextEncoder();
+  const data = encoder.encode(payload);
+
+  // Decode the base64 signature back to binary
+  const signatureBytes = Uint8Array.from(atob(signature), (c) =>
+    c.charCodeAt(0),
+  );
+
+  // Verify signature using Web Crypto API with Ed25519
+  let isValid;
   try {
-    // Generate the same stable payload that was signed
-    const payload = generateStablePayload(parameters);
-
-    // Convert payload to Uint8Array for verification
-    const encoder = new TextEncoder();
-    const data = encoder.encode(payload);
-
-    // Decode the base64 signature back to binary
-    const signatureBytes = Uint8Array.from(atob(signature), (c) =>
-      c.charCodeAt(0),
-    );
-
-    // Verify signature using Web Crypto API with Ed25519
-    const isValid = await crypto.subtle.verify(
+    isValid = await crypto.subtle.verify(
       "Ed25519",
       signer.publicKey,
       signatureBytes,
       data,
     );
-
-    return isValid;
   } catch (error) {
-    // If any step fails (invalid base64, crypto error, etc.), signature is invalid
-    return false;
+    throw new InvalidSignatureError("Invalid signature");
   }
+
+  if (!isValid) {
+    throw new InvalidSignatureError("Invalid signature");
+  }
+};
+
+export const validateHeader = async (
+  header: PHDocumentHeader,
+): Promise<void> => {
+  const signer = await createSignerFromHeader(header);
+
+  return await verify(
+    {
+      documentType: header.documentType,
+      createdAtUtcIso: header.createdAtUtcIso,
+      nonce: header.sig.nonce,
+    },
+    header.id,
+    signer,
+  );
 };
 
 /**

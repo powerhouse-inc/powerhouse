@@ -272,6 +272,7 @@ export async function fetchDocument<TDocument extends PHDocument>(
   const document = result.document
     ? {
         ...result.document,
+        header: result.document.header,
         revision: {
           global: result.document.revision,
           local: 0,
@@ -290,14 +291,12 @@ export async function fetchDocument<TDocument extends PHDocument>(
         initialState: {
           ...utils.createExtendedState({
             // TODO: getDocument should return all the initial state fields
-            created: result.document.created,
-            lastModified: result.document.created,
             state: utils.createState({
               global: result.document.initialState,
             }),
           }),
-          id: result.document.id,
-          slug: result.document.slug,
+          id: result.document.header.id,
+          slug: result.document.header.slug,
         },
         clipboard: [],
       }

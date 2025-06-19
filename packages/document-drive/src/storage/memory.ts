@@ -47,7 +47,7 @@ export class MemoryStorage
   }
 
   create(document: PHDocument) {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -57,7 +57,8 @@ export class MemoryStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -68,7 +69,7 @@ export class MemoryStorage
     }
 
     // store the document and update the slug
-    document.slug = slug;
+    document.header.slug = slug;
     this.documents[documentId] = document;
 
     // add slug to lookup if it exists
@@ -82,7 +83,7 @@ export class MemoryStorage
     }
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: new Set() });
     }
 
@@ -117,7 +118,7 @@ export class MemoryStorage
     nextCursor: string | undefined;
   }> {
     const documentsAndIds = Object.entries(this.documents)
-      .filter(([_, doc]) => doc.documentType === documentModelType)
+      .filter(([_, doc]) => doc.header.documentType === documentModelType)
       .map(([id, doc]) => ({
         id,
         document: doc,
@@ -126,8 +127,8 @@ export class MemoryStorage
     // sort: created first, then id -- similar to prisma's ordinal but not guaranteed
     documentsAndIds.sort((a, b) => {
       // get date objects
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       // if the dates are the same, sort by id
       if (aDate.getTime() === bDate.getTime()) {
@@ -170,7 +171,8 @@ export class MemoryStorage
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug.length > 0 ? document.header.slug : documentId;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }

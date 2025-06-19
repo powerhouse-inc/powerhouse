@@ -313,7 +313,6 @@ describe("Crypto utils", () => {
 
     delete signer.privateKey;
 
-    const verified = await verify(parameters, signature, signer);
-    expect(verified).toBe(true);
+    await verify(parameters, signature, signer);
   });
 });

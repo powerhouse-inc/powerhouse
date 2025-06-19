@@ -170,7 +170,7 @@ export class ReadModeService implements IReadModeDriveService {
     slug: string,
   ): Promise<ReadDrive | ReadDriveSlugNotFoundError> {
     const readDrive = [...this.#drives.values()].find(
-      ({ drive }) => drive.slug === slug,
+      ({ drive }) => drive.header.slug === slug,
     );
 
     return Promise.resolve(
