@@ -1,3 +1,4 @@
+import { PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
@@ -18,7 +19,6 @@ import {
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
-  type DocumentHeader,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
   type ExtendedState,
@@ -289,9 +289,10 @@ export function getDocumentLastModified(document: PHDocument) {
   const sortedOperations = sortOperations(
     Object.values(document.operations).flat(),
   );
-  const timestamp =
-    sortedOperations.at(-1)?.timestamp || document.header.lastModifiedAtUtcMs;
-  return timestamp;
+
+  return (
+    sortedOperations.at(-1)!.timestamp || document.header.lastModifiedAtUtcIso
+  );
 }
 
 // Runs the operations on the initial data using the
@@ -302,7 +303,7 @@ export function replayOperations<TDocument extends PHDocument>(
   clearedOperations: OperationsFromDocument<TDocument>,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
-  header?: DocumentHeader,
+  header?: PHDocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
@@ -343,7 +344,7 @@ export function replayDocument<TDocument extends PHDocument>(
   operations: DocumentOperations,
   reducer: Reducer<TDocument>,
   dispatch?: SignalDispatch,
-  header?: DocumentHeader,
+  header?: PHDocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
 ): TDocument {
@@ -474,17 +475,22 @@ export function replayDocument<TDocument extends PHDocument>(
   );
 
   // gets the last modified timestamp from the latest operation
-  const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
-    const operation = curr.at(-1);
-    if (operation) {
-      const ts = parseInt(operation.timestamp);
-      if (ts > acc) {
-        acc = ts;
-      }
-    }
+  const lastModified = header
+    ? header.lastModifiedAtUtcIso
+    : Object.values(resultOperations).reduce((acc, curr) => {
+        const operation = curr.at(-1);
+        if (operation) {
+          if (operation.timestamp > acc) {
+            return operation.timestamp;
+          }
+        }
 
-    return acc;
-  }, document.header.lastModifiedAtUtcMs);
+        return acc;
+      }, document.header.lastModifiedAtUtcIso);
+
+  if (header) {
+    //result.header.createdAtUtcIso = header.createdAtUtcIso;
+  }
 
   return {
     ...result,

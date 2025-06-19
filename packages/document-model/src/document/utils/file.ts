@@ -1,3 +1,4 @@
+import { PHDocumentHeader } from "#document/ph-types.js";
 import {
   type ExtendedStateFromDocument,
   type Reducer,
@@ -8,7 +9,6 @@ import mime from "mime/lite";
 import {
   type Attachment,
   type AttachmentInput,
-  type DocumentHeader,
   type DocumentOperations,
   type PHDocument,
 } from "../types.js";
@@ -25,24 +25,7 @@ export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
 
-  const {
-    id,
-    slug,
-    name,
-    revision,
-    documentType,
-    createdAtUtcMs,
-    lastModifiedAtUtcMs,
-  } = document.header;
-  const header: DocumentHeader = {
-    id,
-    slug,
-    name,
-    revision,
-    documentType,
-    created: createdAtUtcMs.toString(),
-    lastModified: lastModifiedAtUtcMs.toString(),
-  };
+  const header = document.header;
   zip.file("header.json", JSON.stringify(header, null, 2));
   zip.file("state.json", JSON.stringify(document.initialState || {}, null, 2));
   zip.file("current-state.json", JSON.stringify(document.state || {}, null, 2));
@@ -166,9 +149,9 @@ async function loadFromZip<TDocument extends PHDocument>(
   ) as ExtendedStateFromDocument<TDocument>;
 
   const headerZip = zip.file("header.json");
-  let header: DocumentHeader | undefined = undefined;
+  let header: PHDocumentHeader | undefined = undefined;
   if (headerZip) {
-    header = JSON.parse(await headerZip.async("string")) as DocumentHeader;
+    header = JSON.parse(await headerZip.async("string")) as PHDocumentHeader;
   }
 
   const operationsZip = zip.file("operations.json");
@@ -199,7 +182,6 @@ async function loadFromZip<TDocument extends PHDocument>(
   if (header) {
     result = {
       ...result,
-      ...header,
     };
   }
   return result;

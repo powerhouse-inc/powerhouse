@@ -44,12 +44,12 @@ export type PHDocumentHeader = {
   documentType: string;
 
   /**
-   * The timestamp of the creation date of the document.
+   * The timestamp of the creation date of the document, in UTC ISO format.
    *
    * This is used as part of the signature payload and thus, cannot be changed
    * after the document header has been created.
    **/
-  createdAtUtcMs: number;
+  createdAtUtcIso: string;
 
   /** The slug of the document. */
   slug: string;
@@ -69,9 +69,9 @@ export type PHDocumentHeader = {
   };
 
   /**
-   * The timestamp of the last change in the document.
+   * The timestamp of the last change in the document, in UTC ISO format.
    **/
-  lastModifiedAtUtcMs: number;
+  lastModifiedAtUtcIso: string;
 
   /** Meta information about the document. */
   meta?: {

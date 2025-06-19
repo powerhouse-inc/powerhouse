@@ -295,7 +295,7 @@ describe("Crypto utils", () => {
   it("should sign and verify id", async () => {
     const parameters: SigningParameters = {
       documentType: "powerhouse/counter",
-      createdAtUtcMs: Date.now(),
+      createdAtUtcIso: new Date().toISOString(),
       nonce: generateUUID(),
     };
 

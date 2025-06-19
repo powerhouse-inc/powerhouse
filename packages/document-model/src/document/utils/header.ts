@@ -3,7 +3,7 @@ import { generateUUID } from "#utils/env";
 
 export type SigningParameters = {
   documentType: string;
-  createdAtUtcMs: number;
+  createdAtUtcIso: string;
   nonce: string;
 };
 
@@ -21,7 +21,7 @@ export interface Signer {
 const generateStablePayload = (parameters: SigningParameters): string => {
   // Create a deterministic string representation using string interpolation
   // This ensures stability across different JavaScript environments
-  const payload = `${parameters.documentType}:${parameters.createdAtUtcMs}:${parameters.nonce}`;
+  const payload = `${parameters.documentType}:${parameters.createdAtUtcIso}:${parameters.nonce}`;
 
   return payload;
 };
@@ -102,14 +102,14 @@ export const createPresignedHeader = (): PHDocumentHeader => {
       nonce: "",
     },
     documentType: "",
-    createdAtUtcMs: Date.now(),
+    createdAtUtcIso: new Date().toISOString(),
     slug: "",
     name: "",
     branch: "",
     revision: {
       document: 0,
     },
-    lastModifiedAtUtcMs: Date.now(),
+    lastModifiedAtUtcIso: new Date().toISOString(),
     meta: {},
   };
 };
@@ -130,7 +130,7 @@ export const createSignedHeader = async (
 ): Promise<PHDocumentHeader> => {
   const parameters: SigningParameters = {
     documentType,
-    createdAtUtcMs: presignedHeader.createdAtUtcMs,
+    createdAtUtcIso: presignedHeader.createdAtUtcIso,
     nonce: generateUUID(),
   };
 
@@ -149,7 +149,7 @@ export const createSignedHeader = async (
       nonce: parameters.nonce,
     },
     documentType,
-    createdAtUtcMs: presignedHeader.createdAtUtcMs,
+    createdAtUtcIso: presignedHeader.createdAtUtcIso,
 
     // mutable fields
     slug: "",
@@ -158,7 +158,7 @@ export const createSignedHeader = async (
     revision: {
       document: 0,
     },
-    lastModifiedAtUtcMs: presignedHeader.lastModifiedAtUtcMs,
+    lastModifiedAtUtcIso: presignedHeader.lastModifiedAtUtcIso,
     meta: {},
   };
 };

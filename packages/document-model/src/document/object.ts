@@ -132,14 +132,14 @@ export abstract class BaseDocumentClass<
    * Gets the timestamp of the date the document was created.
    */
   get created() {
-    return this._document.header.createdAtUtcMs;
+    return this._document.header.createdAtUtcIso;
   }
 
   /**
    * Gets the timestamp of the date the document was last modified.
    */
   get lastModified() {
-    return this._document.header.lastModifiedAtUtcMs;
+    return this._document.header.lastModifiedAtUtcIso;
   }
 
   /**

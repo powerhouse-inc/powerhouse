@@ -36,8 +36,8 @@ describe("Local reducer", () => {
       scope: "local",
     });
     expect(
-      new Date(document.header.lastModifiedAtUtcMs).getTime(),
-    ).toBeLessThan(new Date(newDocument.header.lastModifiedAtUtcMs).getTime());
+      new Date(document.header.lastModifiedAtUtcIso).getTime(),
+    ).toBeLessThan(new Date(newDocument.header.lastModifiedAtUtcIso).getTime());
     vi.useRealTimers();
   });
 

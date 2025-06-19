@@ -46,8 +46,8 @@ describe("Base reducer", () => {
       scope: "global",
     });
     expect(
-      newDocument.header.lastModifiedAtUtcMs >
-        document.header.lastModifiedAtUtcMs,
+      newDocument.header.lastModifiedAtUtcIso >
+        document.header.lastModifiedAtUtcIso,
     ).toBe(true);
     vi.useRealTimers();
   });

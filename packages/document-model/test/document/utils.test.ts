@@ -171,8 +171,8 @@ describe("Base utils", () => {
     );
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);
-    expect(newDocument.header.lastModifiedAtUtcMs).toBe(
-      replayedDocument.header.lastModifiedAtUtcMs,
+    expect(newDocument.header.lastModifiedAtUtcIso).toBe(
+      replayedDocument.header.lastModifiedAtUtcIso,
     );
     expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
       replayedDocument.operations.global.map((o) => o.timestamp),
