@@ -486,3 +486,21 @@ html[data-theme='dark'] .DocSearch-Hits > *:empty {
   font-weight: bold;
   text-decoration: none;
 }
+
+.image-container {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.image-container img {
+  border-radius: var(--ifm-card-border-radius);
+}
+
+.image-container figcaption {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
