@@ -1,0 +1,78 @@
+import {
+  AnalyticsGranularity,
+  AnalyticsPath,
+  type AnalyticsQuery,
+  DateTime,
+  useAnalyticsQuery,
+} from "@powerhousedao/reactor-browser/analytics";
+import { type ActionType, type Target } from "./processor/index.js";
+
+export type UseDriveAnalyticsOptions = {
+  from?: string;
+  to?: string;
+  granularity?: AnalyticsGranularity;
+  levelOfDetail?: {
+    document?: number;
+    operation?: number;
+    target?: number;
+    actionType?: number;
+  };
+  filters?: {
+    driveId?: string[];
+    operation?: string[];
+    target?: Target[];
+    actionType?: ActionType[];
+  };
+};
+
+export const useDriveAnalytics = (options: UseDriveAnalyticsOptions) => {
+  const start = options.from
+    ? DateTime.fromISO(options.from)
+    : DateTime.now().startOf("day");
+
+  const end = options.to
+    ? DateTime.fromISO(options.to)
+    : DateTime.now().endOf("day");
+
+  const granularity = options.granularity ?? AnalyticsGranularity.Daily;
+
+  const lod = options.levelOfDetail ?? {
+    document: 1,
+  };
+
+  const selectDrives = options.filters?.driveId?.map((driveId) =>
+    AnalyticsPath.fromString(`document/${driveId}`),
+  );
+
+  const operations = options.filters?.operation?.map((operation) =>
+    AnalyticsPath.fromString(`operation/${operation}`),
+  );
+
+  const targets = options.filters?.target?.map((target) =>
+    AnalyticsPath.fromString(`target/${target}`),
+  );
+
+  const actionTypes = options.filters?.actionType?.map((actionType) =>
+    AnalyticsPath.fromString(`actionType/${actionType}`),
+  );
+
+  const select = {
+    document: selectDrives ?? [AnalyticsPath.fromString("document")],
+    ...(operations && { operation: operations }),
+    ...(targets && { target: targets }),
+    ...(actionTypes && { actionType: actionTypes }),
+  };
+
+  const config: AnalyticsQuery = {
+    start,
+    end,
+    metrics: ["DriveOperations"],
+    granularity,
+    lod,
+    select,
+  };
+
+  const result = useAnalyticsQuery(config);
+
+  return result;
+};

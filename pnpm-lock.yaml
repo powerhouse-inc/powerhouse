@@ -844,12 +844,18 @@ importers:
 
   packages/common:
     dependencies:
+      '@powerhousedao/analytics-engine-core':
+        specifier: ^0.5.0
+        version: 0.5.0
       '@powerhousedao/builder-tools':
         specifier: workspace:*
         version: link:../builder-tools
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/reactor-api':
+        specifier: workspace:*
+        version: link:../reactor-api
       '@tanstack/react-virtual':
         specifier: ^3.8.1
         version: 3.13.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
