@@ -145,10 +145,13 @@ export function makeImportScriptFromPackages(args: {
       }`);
     }
   }
-
-  const exportStatement = `export default [
+  const exportsString = exports.length
+    ? `
         ${exports.join(",\n")}
-    ];`;
+    `
+    : "";
+
+  const exportStatement = `export default [${exportsString}];`;
 
   const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
 

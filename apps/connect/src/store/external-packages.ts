@@ -11,11 +11,19 @@ export type ExternalPackagesModule = { default?: ExternalPackage[] };
 
 const externalPackagesUrl =
     connectConfig.routerBasename + 'external-packages.js';
+const externalPackagesEnabled = import.meta.env.PROD;
 
-function loadExternalPackages() {
-    return import(/* @vite-ignore */ externalPackagesUrl)
-        .catch(e => console.error(e))
-        .then(module => (module as ExternalPackagesModule).default ?? []);
+async function loadExternalPackages() {
+    try {
+        if (!externalPackagesEnabled) return [];
+        const module = (await import(
+            /* @vite-ignore */ externalPackagesUrl
+        )) as ExternalPackagesModule;
+        return module.default ?? [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 }
 
 const hmrAvailableAtom = atom(async () => {
@@ -29,11 +37,11 @@ export const useMutableExternalPackages = () => useAtomValue(hmrAvailableAtom);
 export const externalPackagesAtom = atomWithLazy(loadExternalPackages);
 
 // subscribes to changes to the external packages from HMR
-let externalPackagesSubscripion: Promise<() => void> | undefined;
+let externalPackagesSubscription: Promise<() => void> | undefined;
 externalPackagesAtom.onMount = setAtom => {
-    if (externalPackagesSubscripion) return;
+    if (externalPackagesSubscription) return;
 
-    externalPackagesSubscripion = subscribeExternalPackages(
+    externalPackagesSubscription = subscribeExternalPackages(
         externalPackages => {
             setAtom(externalPackages);
         },

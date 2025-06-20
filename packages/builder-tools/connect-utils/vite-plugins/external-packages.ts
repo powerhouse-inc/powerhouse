@@ -34,7 +34,7 @@ function generateImportScript(
     localJsPath,
     localCssPath,
   });
-  fs.writeFileSync(targetPath, fileContent);
+  fs.writeFileSync(targetPath, fileContent.trim());
 
   return targetPath;
 }

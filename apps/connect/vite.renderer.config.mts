@@ -168,7 +168,7 @@ export default defineConfig(({ mode }) => {
         viteLoadExternalPackages(
             false,
             phPackages,
-            path.resolve(__dirname, './src'),
+            path.resolve(__dirname, './public'),
         ),
         tsconfigPaths(),
         react({
