@@ -11,11 +11,11 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 <div className={styles.learningPath}>
   {/* Get Started Card - Full Width */}
   <div className={`${styles.pathCard} ${styles.fullWidth}`}>
-    <div className={styles.cardHeader} style={{ justifyContent: 'center' }}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Flash.svg" alt="" />
-      </div>
-      <h3 className="card-title">Get started</h3>
+    <div className={styles.cardHeader}>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Flash.svg" alt="" className={styles.titleIcon} />
+        Get started
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
@@ -49,10 +49,10 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/BuilderEnvironment.svg" alt="" />
-      </div>
-      <h3 className="card-title">Get Started</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Flash.svg" alt="" className={styles.titleIcon} />
+        Get Started
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/GetStarted/CreateNewPowerhouseProject" className="path-button">Build a Todo-list Document Model</a>
@@ -64,10 +64,10 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   {/* Row 2: Build User Experiences, Builder Track Image, Work with Data */}
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Editor.svg" alt="" />
-      </div>
-      <h3 className="card-title">Build User Experiences</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Editor.svg" alt="" className={styles.titleIcon} />
+        Build User Experiences
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/GetStarted/BuildToDoListEditor" className="path-button">Building a Todo-list Editor</a>
@@ -92,26 +92,25 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Data.svg" alt="" />
-      </div>
-      <h3 className="card-title">Work with Data</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Data.svg" alt="" className={styles.titleIcon} />
+        Work with Data
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI" className="path-button">Reading & Writing through the API</a>
       <a href="/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className="path-button">Create your own Subgraph</a>
-      <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Using the Analytics Engine</a>
       <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Using the Analytics Engine</a>
     </div>
   </div>
 
   {/* Launch Card - Full Width with 3 column buttons - RE-INSERTED */}
   <div className={`${styles.pathCard} ${styles.fullWidth}`}>
-    <div className={styles.cardHeader} style={{ justifyContent: 'center' }}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Launch.svg" alt="" />
-      </div>
-      <h3 className="card-title">Launch</h3>
+    <div className={styles.cardHeader}>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Launch.svg" alt="" className={styles.titleIcon} />
+        Launch
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <div className={styles.buttonContainer}>
@@ -125,10 +124,10 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   {/* Row 3: Cookbook, Use-cases, Advanced Topics */}
   <div className={styles.pathCard}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Cookbook.svg" alt="" />
-      </div>
-      <h3 className="card-title">Cookbook</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Cookbook.svg" alt="" className={styles.titleIcon} />
+        Cookbook
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/Cookbook" className="path-button">Powerhouse Recipes</a>
@@ -138,10 +137,10 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   {/* Ensure this Use-cases Card block is clean */}
   <div className={styles.pathCard}> {/* New Use-cases Card */}
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Cookbook.svg" alt="Use-cases Icon" />
-      </div>
-      <h3 className="card-title">Use-cases</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Cookbook.svg" alt="Use-cases Icon" className={styles.titleIcon} />
+        Use-cases
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/ExampleUsecases/Chatroom/SetupBuilderEnvironment" className="path-button">Explore Use-cases</a>
@@ -150,10 +149,10 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
   <div className={styles.pathCard}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Advanced.svg" alt="" />
-      </div>
-      <h3 className="card-title">Architecture</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Advanced.svg" alt="" className={styles.titleIcon} />
+        Architecture
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <a href="/academy/Architecture/PowerhouseArchitecture" className="path-button">Learn More</a>
