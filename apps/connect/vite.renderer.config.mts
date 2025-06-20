@@ -27,11 +27,7 @@ import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
 import { renderSkeleton } from './scripts/render-skeleton.js';
 
-const staticFiles = [
-    './src/service-worker.ts',
-    './src/external-packages.js',
-    './src/hmr.ts',
-];
+const staticFiles = ['./src/service-worker.ts', './src/hmr.ts'];
 const staticInputs = staticFiles.reduce(
     (acc, file) =>
         Object.assign(acc, {
@@ -81,31 +77,26 @@ function buildAppSkeletonPlugin(outDir: string): PluginOption {
         },
         // inject app skeleton html
         async closeBundle() {
-            const skeletonHtml = await renderSkeleton(
-                path.resolve(outDir, 'assets/app-skeleton.js'),
-            );
+            try {
+                const skeletonHtml = await renderSkeleton(
+                    path.resolve(outDir, 'assets/app-skeleton.js'),
+                );
 
-            const html = fs.readFileSync(
-                path.resolve(outDir, 'index.html'),
-                'utf-8',
-            );
-            fs.writeFileSync(
-                path.resolve(outDir, 'index.html'),
-                html.replace(
-                    '<div id="app"></div>',
-                    `<div id="app">${skeletonHtml}</div>`,
-                ),
-            );
+                const html = fs.readFileSync(
+                    path.resolve(outDir, 'index.html'),
+                    'utf-8',
+                );
+                fs.writeFileSync(
+                    path.resolve(outDir, 'index.html'),
+                    html.replace(
+                        '<div id="app"></div>',
+                        `<div id="app">${skeletonHtml}</div>`,
+                    ),
+                );
+            } catch (error) {
+                console.error('Failed to inject app skeleton html:\n', error);
+            }
         },
-        // async transformIndexHtml(html) {
-        //     const skeletonHtml = await renderSkeleton(
-        //         path.resolve(outDir, 'assets/app-skeleton.js'),
-        //     );
-        //     return html.replace(
-        //         '<div id="app"></div>',
-        //         `<div id="app">${skeletonHtml}</div>`,
-        //     );
-        // },
     };
 }
 

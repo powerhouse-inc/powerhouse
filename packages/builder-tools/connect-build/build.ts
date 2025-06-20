@@ -128,6 +128,6 @@ export async function buildConnect(options: ConnectBuildOptions) {
   // Add base tag to index.html
   await prependToHtmlHead(
     connectBuildIndexHtmlPath,
-    `<base href="${base || "/"}">`,
+    `<base href="${base}${base.endsWith("/") ? "" : "/"}">`,
   );
 }

@@ -1,3 +1,4 @@
+import connectConfig from '#connect-config';
 import { getHMRModule, subscribeExternalPackages } from '#services';
 import { type DriveEditorModule } from '@powerhousedao/reactor-browser';
 import { type App, type DocumentModelLib } from 'document-model';
@@ -6,11 +7,15 @@ import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 
 export type ExternalPackage = DocumentModelLib & { id: string };
+export type ExternalPackagesModule = { default?: ExternalPackage[] };
+
+const externalPackagesUrl =
+    connectConfig.routerBasename + 'external-packages.js';
 
 function loadExternalPackages() {
-    return import('../external-packages.js')
+    return import(/* @vite-ignore */ externalPackagesUrl)
         .catch(e => console.error(e))
-        .then(module => (module?.default ?? []) as ExternalPackage[]);
+        .then(module => (module as ExternalPackagesModule).default ?? []);
 }
 
 const hmrAvailableAtom = atom(async () => {

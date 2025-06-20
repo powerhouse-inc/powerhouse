@@ -41,7 +41,8 @@ export const useLoadInitialData = () => {
         if (
             import.meta.env.MODE === 'development' ||
             connectConfig.studioMode ||
-            !connectConfig.warnOutdatedApp
+            !connectConfig.warnOutdatedApp ||
+            result.currentVersion.includes('-') // ignore dev/staging versions
         ) {
             logger.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
