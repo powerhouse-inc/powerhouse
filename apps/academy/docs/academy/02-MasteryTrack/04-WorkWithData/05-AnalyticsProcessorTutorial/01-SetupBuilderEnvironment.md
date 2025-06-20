@@ -1,4 +1,4 @@
-# Setup Builder Environment
+# Setup builder environment
 
 Let's set up your computer to start with any of the Powerhouse Connect tutorials. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
@@ -6,7 +6,7 @@ Let's set up your computer to start with any of the Powerhouse Connect tutorials
 If you've already setup git, node, and npm, your most important step is to install the Powerhouse CLI with the command `npm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and give you direct access to a series of Powerhouse ecosystem tools.
 :::
 
-## Table of Contents
+## Table of contents
 - [Prerequisites](#prerequisites)
 - [Installing node.js 22](#installing-nodejs)
   - [For Windows](#for-windows)
@@ -27,11 +27,11 @@ If you've already setup git, node, and npm, your most important step is to insta
 
 Before we begin with any of the Powerhouse Connect tutorials, we need to install some software on your computer. We'll need three main tools: node.js 22, which helps us run our code, Visual Studio Code (VS Code), which is where we'll write our code, and Git, which helps us manage our code. Follow the steps below based on your computer's operating system.
 
-### Installing node.js 22
+### Installing Node.js 22
 
 node.js 22 is a tool that lets us run our application. Let's install it step by step.
 
-#### For Windows:
+#### For Windows
 1. **Set up PowerShell for running commands:**
    - Press the Windows key
    - Type "PowerShell"
@@ -60,7 +60,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 
 > **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
 
-#### For macOS:
+#### For macOS
 1. **Install Homebrew:**
    - Open Terminal (press Command + Space and type "Terminal")
    - Copy and paste this command into Terminal and press Enter:
@@ -83,7 +83,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    ```
    - If you see version numbers, you've successfully installed node.js 22!
 
-#### For Linux (Ubuntu/Debian):
+#### For Linux (Ubuntu/Debian)
 1. **Open Terminal:**
    - Press Ctrl + Alt + T on your keyboard, or
    - Click the Activities button and type "Terminal"
@@ -110,7 +110,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 
 VS Code is the editor we'll use to write our code. Here's how to install it:
 
-#### For Windows:
+#### For Windows
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Windows" button
 3. Once the installer downloads, double-click it
@@ -120,7 +120,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 7. Click "Next" and then "Install"
 8. When installation is complete, click "Finish"
 
-#### For macOS:
+#### For macOS
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Mac" button
 3. Once the .zip file downloads, double-click it to extract
@@ -131,7 +131,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    - Press Command + Shift + P
    - Type "shell command" and select "Install 'code' command in PATH"
 
-#### For Linux (Ubuntu/Debian):
+#### For Linux (Ubuntu/Debian)
 1. Open Terminal (Ctrl + Alt + T)
 2. First, update the packages list:
    ```bash
@@ -159,7 +159,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 
 ### Install Git
 
-#### Windows
+#### For Windows
 1. Open PowerShell (press Windows key, type "PowerShell", and press Enter)
 2. Visit the [Git website](https://git-scm.com/)
 3. Download the latest version for Windows
@@ -169,7 +169,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    git --version
    ```
 
-#### macOS
+#### For macOS
 1. Install using Homebrew:
    ```bash
    brew install git
@@ -179,7 +179,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    git --version
    ```
 
-#### Linux (Ubuntu/Debian)
+#### For Linux (Ubuntu/Debian)
 1. Update package list:
    ```bash
    sudo apt update
@@ -193,7 +193,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    git --version
    ```
 
-### Configure Git (All Systems)
+### Configure Git (all systems)
 
 Open your terminal (command prompt) and run the following commands to set up Git:
 
@@ -203,7 +203,7 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 ```
 
-### Verify Installation
+### Verify installation
 
 Open your terminal (command prompt) and run the following commands to verify your setup:
 ```bash

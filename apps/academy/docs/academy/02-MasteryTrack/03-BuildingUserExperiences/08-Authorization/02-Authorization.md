@@ -1,15 +1,15 @@
-# Switchboard Authorization
+# Switchboard authorization
 
 This tutorial explains how to configure authorization for the Powerhouse Switchboard using the new role-based authentication system.
 
-## Basic Configuration
+## Basic configuration
 
 The Switchboard supports two main ways to configure authorization:
 
 1. Using environment variables
 2. Using the powerhouse configuration file
 
-### Environment Variables
+### Environment variables
 
 The following environment variables can be used to configure authorization:
 
@@ -27,7 +27,7 @@ USERS="0xdef,0xghi"
 ADMINS="0x123,0x456"
 ```
 
-### Powerhouse Configuration
+### Powerhouse configuration
 
 Alternatively, you can configure authorization in your `powerhouse.config.json`:
 
@@ -44,7 +44,7 @@ Alternatively, you can configure authorization in your `powerhouse.config.json`:
 }
 ```
 
-## Role-Based Access Control
+## Role-based access control
 
 The new authorization system implements role-based access control with three distinct roles:
 
@@ -63,7 +63,7 @@ The new authorization system implements role-based access control with three dis
    - Can manage drives
    - Can perform administrative tasks
 
-## Docker Configuration
+## Docker configuration
 
 When running the Switchboard in Docker, you can pass these configurations as environment variables:
 
@@ -75,13 +75,13 @@ docker run -e AUTH_ENABLED=true \
            your-switchboard-image
 ```
 
-## Authorization Flow
+## Authorization flow
 
 1. Authentication can be enabled/disabled using AUTH_ENABLED
 2. Users are assigned roles based on their wallet addresses
 3. Each role has specific permissions and access levels
 
-## Security Best Practices
+## Security best practices
 
 1. Keep your admin wallet addresses secure
 2. Use HTTPS in production environments

@@ -1,4 +1,4 @@
-# Configure Your Environment
+# Configure your environment
 
 After successfully setting up your server and installing the Powerhouse services using the `ph service setup` command as described in the [Setup Environment](./03-SetupEnvironment.md) guide, the next crucial step is to configure your environment. Proper configuration ensures that your Powerhouse Connect and Switchboard instances behave exactly as you need them to for your specific application.
 
@@ -13,11 +13,11 @@ A key principle to remember is that **environment variables will always override
 
 This guide will walk you through both methods and provide details on common configuration options, including setting up authorization.
 
-## Using Environment Variables
+## Using environment variables
 
 The most common way to configure Powerhouse services is through environment variables. You can place these variables in a `.env` file at the root of your project directory. When you run `ph service start` or `ph service restart`, these variables are loaded into the environment of your running services.
 
-### How to Create and Edit Your `.env` File
+### How to create and edit your .env file
 
 If you're on your cloud server, you can create and edit the `.env` file directly:
 
@@ -38,7 +38,7 @@ If you're on your cloud server, you can create and edit the `.env` file directly
     ph service restart
     ```
 
-### Common Environment Variables for Connect
+### Common environment variables for Connect
 
 The Powerhouse Connect application has a wide range of available environment variables to toggle features and change its behavior. Below is a list of some variables you can configure.
 
@@ -102,17 +102,17 @@ SENTRY_RELEASE=""
 ```
 You can find the most up-to-date list of variables in the source repository: [https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env](https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env)
 
-## Using a Configuration File
+## Using a configuration file
 
 For services like the Switchboard, you can also use a `powerhouse.config.json` file for more structured configuration, especially for features like authorization.
 
-### Configuring Authorization
+### Configuring authorization
 
 A critical aspect of your environment configuration is setting up authorization to control who can access your services and what they can do. As detailed in our dedicated [Switchboard Authorization](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) guide, you can manage access using a role-based system.
 
 Here's a quick overview of how you can configure authorization:
 
-#### Via Environment Variables
+#### Via environment variables
 
 You can set the roles directly in your `.env` file. This is quick and easy for simple allowlists.
 
@@ -151,7 +151,7 @@ Remember, if you define `AUTH_ENABLED=false` as an environment variable, it will
 
 For a complete understanding of how roles (Guest, User, Admin) work and the permissions they have, please refer to the full [Authorization guide](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization).
 
-## Applying Your Changes
+## Applying your changes
 
 Regardless of which method you use to update your configuration, the changes will not be applied until you restart your services.
 

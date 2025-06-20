@@ -2,13 +2,13 @@
 sidebar_position: 1000
 ---
 
-# Best Practices
+# Best practices
 
 ### GraphQL
 
 **Start general, end with detailed queries.** In the case you want to find a specific number for a specific metric and dimension, the rule of thumb is to start general in the filter definitions and slowly start cutting down the paths to a particular team or budget period.
 
-For example: Looking at the dimension section in the filter options: To see available sub paths for the budget, leave the select: "atlas" and lod as 5 . With lod:5 you’ll be able to see the different paths available under your defined filter. Then, later you can apply a more detailed path in the select: "atlas/..." path that will suit your needs.
+For example: Looking at the dimension section in the filter options: To see available sub paths for the budget, leave the select: "atlas" and lod as 5 . With lod:5 you'll be able to see the different paths available under your defined filter. Then, later you can apply a more detailed path in the select: "atlas/..." path that will suit your needs.
 
 ```graphql
 {
@@ -30,7 +30,7 @@ For example: Looking at the dimension section in the filter options: To see avai
 
 **Fetch per specified path** if performance is an issue.
 
-### Guidelines for Selecting and Combining Dimensions
+### Guidelines for selecting and combining dimensions
 
 1. **Understand the Purpose of Analysis**  
 Before selecting dimensions, clarify the objective of your analysis. Are you looking to track expenses for a specific project, analyze budget utilization, or examine transaction patterns? Your objective will guide which dimensions are most relevant.
@@ -54,7 +54,7 @@ While combining dimensions can provide depth, avoid overly complex combinations 
 Where icons are available, they can be used as a quick visual reference to identify different dimensions or categories, particularly in user interfaces where rapid identification is beneficial.
 
 8. **Experiment and Iterate**  
-Don’t hesitate to experiment with different combinations of dimensions to see which provide the most meaningful insights. The flexibility of the dimensions allows for various permutations and combinations to suit diverse analytical needs.
+Don't hesitate to experiment with different combinations of dimensions to see which provide the most meaningful insights. The flexibility of the dimensions allows for various permutations and combinations to suit diverse analytical needs.
 
 9. **Stay Updated**  
 Keep abreast of any changes or additions to the dimensions within the analytics engine, as this can impact ongoing and future analyses.

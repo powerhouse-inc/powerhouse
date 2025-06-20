@@ -1,4 +1,4 @@
-# Create New Powerhouse Project
+# Create new Powerhouse project
 
 Before we start diving into the tutorial, lets have a quick look at all the steps we'll go through. 
 
@@ -16,7 +16,7 @@ Let's start with step 1 & 2 in the next section of the tutorial!
 
 To create a new Powerhouse Document Model Library project, you can use the `ph init` command in your terminal. This command will create a new project in the current directory.
 
-## Create New Powerhouse Document Model Library Project
+## Create new Powerhouse document model library project
 
 :::info
 This command will create a new project in the current directory.

@@ -6,7 +6,7 @@ sidebar_position: 3
 
 A basic understanding of GraphQL is helpful to understand this document, as we use concepts and vocabulary from the broader ecosystem. For a good primer on the subject, see the [Introduction to GraphQL](https://graphql.org/learn/).
 
-## Basic GraphQL Structure:
+## Basic GraphQL structure
 
 - **Query**: At its core, a GraphQL query is about asking or 'querying' for specific fields on objects. The query is structured like a JSON object, but without the values. This structure lets you specify exactly which data you want to fetch from the server.
 
@@ -33,7 +33,7 @@ query {
 In this example, query is the operation type, user is the field on the root type, and name, email, and friends are fields on the user type. The id: `"1"` is a parameter passed to the query, specifying which user to fetch.
 You can find more examples of GraphQL core concept in the section [GraphQL at Powerhouse](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse).
 
-## Analytics Query Structure
+## Analytics query structure
 
 In the GraphQL query for the Analytics Engine below, each element requests specific pieces of data from the analytics API. Here is a breakdown of the fields and elements with a dropdown with their descriptions below.
 
@@ -102,7 +102,7 @@ This query structure allows users to extract detailed and summarized analytics d
 
 In the analytics engine, the filter object in a GraphQL query is crucial for tailoring the data retrieval to specific requirements. For the query to function correctly, a complete and fully structured filter object, containing all necessary parameters, must be used. Here's a guide on how to construct these filter objects and examples of different filter configurations.
 
-### Constructing a Complete Filter Object
+### Constructing a complete filter object
 
 A filter object must include all the following parameters:
 
@@ -133,7 +133,7 @@ The level of detail (`lod`) Parameter
     - **Impact on Analysis**: The level of detail can significantly affect the analysis. For instance, a high lod can provide in-depth insights into a specific area, useful for detailed audits or close examination of a particular segment. Conversely, a low lod is better for broader overviews or when comparing larger categories.
 
 Importance of Correct Configuration
-    - **Accuracy of Results**: Setting the correct path in the select field and aligning it with an appropriate lod ensures the accuracy and relevance of the query results. Incorrect or mismatched configurations might lead to misleading insights or data that doesn’t serve the intended analytical purpose.
+    - **Accuracy of Results**: Setting the correct path in the select field and aligning it with an appropriate lod ensures the accuracy and relevance of the query results. Incorrect or mismatched configurations might lead to misleading insights or data that doesn't serve the intended analytical purpose.
     - **Customized Analysis**: Together, the select field and lod allow for a high degree of customization in data queries. Users can tailor their data requests precisely to their specific requirements, whether they need a broad overview or a detailed breakdown.
     - Follow the right upper or lower case letter style from metrics, granularity and dimensions.
 
@@ -149,15 +149,15 @@ The filter object can be created by using the UI menu from the graphql apollo st
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 **Mistyping the filter options or not using proper upper or lower case when necessary.** Make sure to check this first when running into problems
 
-### Error Messages
+### Error messages
 
 Usually, error messages are explicit and easy to understand what is wrong, below you can find some examples.
 
-- `"message": "Cannot read properties of undefined (reading 'filter')"`, → There is something wrong with the filter options, make sure you’ve added all fields in the filter options.
+- `"message": "Cannot read properties of undefined (reading 'filter')"`, → There is something wrong with the filter options, make sure you've added all fields in the filter options.
 
 - `"message": "No valid metrics provided, make sure to use metrics from this list: Actuals, Budget, Forecast, FTEs, PaymentsOffChainIncluded, PaymentsOnChain, ProtocolNetOutflow"`, → A wrong format when adding metrics
 

@@ -1,7 +1,7 @@
-# Create a ToDoList Document
+# Create a to-do list document
 
 ## Overview
-This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **ToDoList**.   
+This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.   
 A Powerhouse project primarily consists of a document model and its editor.   
 For this purpose, you'll be using Connect, our use-centric collaboration tool, locally, known as Connect in 'Studio mode'.
 
@@ -13,13 +13,13 @@ For this purpose, you'll be using Connect, our use-centric collaboration tool, l
 
 If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
 
-## Quick Start
+## Quick start
 Create a new Powerhouse project with a single command:
 ```bash
 ph init
 ```
 <details>
-<summary> How to make use of different branches? </summary>
+<summary>How to use different branches</summary>
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches.   
 These branches contain more experimental features then the latest stable release the PH CLI uses by default.   
@@ -40,7 +40,7 @@ They can be used to get access to a bugfix or features under development.
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 </details>
 
-## Before You Begin
+## Before you begin
 1. Open your terminal (either your system terminal or IDE's integrated terminal)
 2. Navigate to your desired project directory using:
 
@@ -52,12 +52,12 @@ In the terminal, you will be asked to enter the project name. Fill in the projec
    ```bash
     you@yourmachine:~/Powerhouse$ ph init
 
-    ? What is the project name? ‣ <yourprojectname>
+    ? What is the project name? ‣ <ToDoList>
     ```	
 
     Once the project is created, you will see the following output:
     ```bash
-    Initialized empty Git repository in /Users/yourmachine/<yourprojectname>/.git/
+    Initialized empty Git repository in /Users/yourmachine/<ToDoList>/.git/
     The installation is done! 
     ```
 
@@ -86,13 +86,11 @@ In the terminal, you will be asked to enter the project name. Fill in the projec
     If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.    
     Clear the storage of your localhost application as it might has an old session cached.   
 
-:::tip
-A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
-:::
-
-Move into your local drive.   
+4. Move into your local drive.   
 Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. 
 
 If you've followed the steps correctly, you'll have an empty document where you can define the **'Document Specifications'**.
+
+## Up next
 
 In the next tutorials, you will learn how to specify, add code and build an editor for your document model and export it to be used in your Powerhouse package. 

@@ -2,6 +2,6 @@
 sidebar_position: 4
 ---
 
-# Use Cases
+# Use cases
 
 This section covers various real-world use cases.

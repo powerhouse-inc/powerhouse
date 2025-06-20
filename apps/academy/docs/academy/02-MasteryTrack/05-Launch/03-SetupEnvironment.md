@@ -1,4 +1,4 @@
-# Environment Setup Guide
+# Environment setup guide
 
 ## Introduction
 Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.   
@@ -19,16 +19,16 @@ This tutorial will guide you through the process of creating a new virtual priva
 
 **Current Date:** May 15, 2024
 
-## Part 1: Setting Up Your DigitalOcean Droplet
+## Part 1: Setting up your DigitalOcean droplet
 
 A Droplet is a scalable virtual machine that you can configure to host your websites, applications, or other services.
 
-### Step 1: Sign Up or Log In to DigitalOcean
+### Step 1: Sign up or log in to DigitalOcean
 
 - If you don't have an account, go to [digitalocean.com](https://digitalocean.com) and sign up. You'll likely need to provide payment information.
 - If you already have an account, log in.
 
-### Step 2: Create a New Droplet
+### Step 2: Create a new droplet
 
 1. From your DigitalOcean dashboard, click the green "Create" button in the top right corner and select "Droplets".
 
@@ -62,7 +62,7 @@ A Droplet is a scalable virtual machine that you can configure to host your webs
    - Select Project: Assign the Droplet to a project.
    - Review your selections and click the "Create Droplet" button at the bottom.
 
-### Step 3: Access Your Droplet
+### Step 3: Access your droplet
 
 It will take a minute or two for your Droplet to be provisioned. Once it's ready, its IP address will be displayed in your Droplets list.
 
@@ -86,9 +86,9 @@ To log in via SSH:
 
 Now your Droplet is running! Now you can continue with the Powerhouse tutorial or any next steps.
 
-### DNS Configuration
+### DNS configuration
 
-#### Option A: Using DigitalOcean's Nameservers (Recommended)
+#### Option A: Using DigitalOcean's nameservers (recommended)
 
 1. **Add Your Domain to DigitalOcean:**
    - Go to "Networking" → "Domains"
@@ -129,7 +129,7 @@ Now your Droplet is running! Now you can continue with the Powerhouse tutorial o
      - **WILL DIRECT TO:** Your Droplet's IP
      - **TTL:** 3600
 
-#### Option B: Using Your Existing Nameservers (NS locked)
+#### Option B: Using your existing nameservers (NS locked)
 
 1. **Just Create DNS Records at Your Registrar:**
    - **Root Domain (A Record):**
@@ -158,7 +158,7 @@ Now your Droplet is running! Now you can continue with the Powerhouse tutorial o
 
 **Note:** DNS changes may take up to 48 hours to propagate globally.
 
-### Verify Configuration
+### Verify configuration
 
 1. Use DNS lookup tools to verify your records:
    ```bash
@@ -202,9 +202,9 @@ This tutorial will guide you through the process of assigning a static IP (Elast
    :::
 
 
-## Part 1: Assigning a Static IP to EC2 Instance
+## Part 1: Assigning a static IP to EC2 instance
 
-### Step 1: Allocate Elastic IP
+### Step 1: Allocate elastic IP
 
 1. Navigate to the EC2 service in the AWS console
 2. Choose "Elastic IPs" from the navigation pane
@@ -212,7 +212,7 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 4. Select the VPC where your EC2 instance is located
 5. Click "Allocate"
 
-### Step 2: Associate Elastic IP
+### Step 2: Associate elastic IP
 
 1. Go back to the EC2 console and select your instance
 2. From the "Networking" tab, expand "Network interfaces"
@@ -221,9 +221,9 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 5. Choose "Actions", then "Manage IP Addresses"
 6. Find the Elastic IP you allocated and click "Associate"
 
-## Part 2: DNS Configuration
+## Part 2: DNS configuration
 
-### Option A: Using AWS Route 53 (Recommended)
+### Option A: Using AWS Route 53 (recommended)
 
 1. **Add Your Domain to Route 53:**
    - Go to Route 53 → "Hosted zones"
@@ -267,7 +267,7 @@ This tutorial will guide you through the process of assigning a static IP (Elast
      - **VALUE:** Your Elastic IP
      - **TTL:** 3600
 
-### Option B: Using Your Existing Nameservers
+### Option B: Using your existing nameservers
 
 1. **Create DNS Records at Your Registrar:**
    - **Root Domain (A Record):**
@@ -299,7 +299,7 @@ This tutorial will guide you through the process of assigning a static IP (Elast
    - Point them to your EC2 instance's public IP address
    - Wait for DNS propagation before requesting SSL certificates
 
-### Verify Configuration
+### Verify configuration
 
 1. Use DNS lookup tools to verify your records:
    ```bash
@@ -343,7 +343,7 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
 Up next is the configurations of your services. 
 
-### Service Configuration
+### Service configuration
 
 Next, run 
 ```bash
@@ -362,26 +362,26 @@ PM2 is configured to automatically restart services if they crash and to start t
 
 The setup command will prompt you for the following information:
 
-#### Package Installation
+#### Package installation
 During this phase, you can enter package names that you want to install. For example, you might want to `ph install @powerhousedao/todo-demo-package` or other Powerhouse packages. This step is crucial for adding the specific functionality you need. You can also press Enter to skip this step and install packages later using the `ph install` command.
 
-#### Database Configuration
+#### Database configuration
 The script offers two options for database configuration:
 *   **Option 1: Local Database** Sets up a local PostgreSQL database, which is ideal for development or small deployments. It automatically creates a database user with a secure random password and configures the database to accept local connections. This option is perfect for getting started quickly.
 *   **Option 2: Remote Database** Allows you to connect to a remote PostgreSQL database by providing a connection URL in the format `postgres://user:password@host:port/db`. This is recommended for production environments.
 
-#### SSL Configuration
+#### SSL configuration
 For SSL configuration, you have two choices:
 *   **Option 1: Let's Encrypt (Recommended for Production)** This option requires you to provide a base domain (e.g., `powerhouse.xyz`) and subdomains for your services. The script will automatically obtain and configure SSL certificates for your domains.
 *   **Option 2: Self-signed Certificate** This is suitable for development or testing. It uses your machine's hostname and generates a self-signed certificate. Browsers will show security warnings with this option.
 
-#### Domain Setup
+#### Domain setup
 You will be asked to enter your `connect` and `switchboard` subdomains to complete the setup. If you need more information, revisit the cloud provider setup sections at the beginning of this guide.
 
-#### Security Features
+#### Security features
 Security is a top priority. The script implements automatic SSL certificate management, generates secure database passwords, and configures security headers in Nginx, and sets up proper proxy settings to support WebSocket connections securely.
 
-## 2. Verifying the Setup
+## 2. Verifying the setup
 
 After the installation is complete, it's important to verify that everything is working correctly. You can check the status of your services using PM2, verify the Nginx configuration, and ensure your SSL certificates are properly installed. This step is crucial for identifying any potential issues before they affect your users.
 
@@ -406,16 +406,16 @@ sudo nginx -t
 sudo certbot certificates  # if using Let's Encrypt
 ```
 
-## 3. Accessing the Services
+## 3. Accessing the services
 
 Once everything is set up, you can access your services through the configured domains.   
 If you chose Let's Encrypt, your services will be available at their respective subdomains. With a self-signed certificate, you'll access the services through your machine's hostname with the appropriate base paths. The services are configured to use HTTPS by default, ensuring secure communication.
 
-### With Let's Encrypt:
+### With Let's Encrypt
 - Connect: `https://connect.yourdomain.com`
 - Switchboard: `https://switchboard.yourdomain.com`
 
-### With Self-signed Certificate:
+### With self-signed certificate
 - Connect: `https://your-hostname/connect`
 - Switchboard: `https://your-hostname/switchboard`
 
@@ -426,7 +426,7 @@ When issues arise, there are several common problems you might encounter.
 - Nginx configuration errors can be investigated through the error logs, and service issues can be diagnosed using PM2 logs. 
 - SSL certificate problems often relate to DNS settings or certificate paths. Understanding these common issues and their solutions will help you maintain a stable Powerhouse installation.
 
-### Common Issues:
+### Common issues
 1. **"`ph`: command not found"**
    - Run `source ~/.bashrc` or restart your terminal
    - Verify that the `PNPM_HOME` environment variable is set correctly
@@ -451,22 +451,22 @@ When issues arise, there are several common problems you might encounter.
 
 Regular maintenance is crucial for keeping your Powerhouse installation running smoothly. You can update services using the Powerhouse CLI, restart services through PM2, and monitor logs to ensure everything is functioning correctly. Regular maintenance helps prevent issues and ensures that your services are running with the latest security patches and features.
 
-### Updating Services:
+### Updating services
 ```bash
 ph update <package-name>
 ```
 
-### Restarting Services:
+### Restarting services
 ```bash
 ph service restart
 ```
 
-### Checking Service Status and Logs:
+### Checking service status and logs
 ```bash
 ph service status
 ```
 
-## 6. Security Notes
+## 6. Security notes
 
 Maintaining security is an ongoing process. It's essential to keep your database credentials secure and regularly update your SSL certificates. Regular monitoring of system logs helps identify potential security issues, and keeping your system and packages updated ensures you have the latest security patches. Consider implementing additional security measures such as firewall rules, intrusion detection systems, and regular security audits.
 
@@ -474,17 +474,17 @@ Maintaining security is an ongoing process. It's essential to keep your database
 
 Regular backups are crucial for data safety. The database can be backed up using pg_dump, and your configuration files can be archived using tar. These backups should be stored securely and tested regularly to ensure they can be restored if needed. Consider implementing an automated backup schedule and storing backups in multiple locations for redundancy.
 
-### Database Backup:
+### Database backup
 ```bash
 pg_dump -U powerhouse -d powerhouse > backup.sql
 ```
 
-### Configuration Backup:
+### Configuration backup
 ```bash
 sudo tar -czf powerhouse-config.tar.gz /etc/powerhouse/
 ```
 
-## 8. Best Practices
+## 8. Best practices
 
 To get the most out of your Powerhouse installation, follow these best practices:
 
@@ -494,7 +494,7 @@ To get the most out of your Powerhouse installation, follow these best practices
 4. **Testing**: Test your backup and restore procedures regularly.
 5. **Security**: Regularly review and update your security measures.
 
-## 9. Getting Help
+## 9. Getting help
 
 If you encounter issues or need assistance, there are several resources available:
 

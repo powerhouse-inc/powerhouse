@@ -16,7 +16,7 @@ We will show how you can receive:
 > #### 2. Only the latest changes and updates:
 > Or specific operations of a document by registering a listener with a specific filter.
 
-### Adding the specific Document Drive to Connect with an URL
+### Adding the specific document drive to Connect with a URL
 
 The specific drive where your RWA-report or any other document is being stored can be accessed through Connect. Connect functions as your decentralised document drive to access and edit document models that capture the data present in your organisation.
 
@@ -44,7 +44,7 @@ It extracts common fields such as id, name, documentType, revision, created, and
 
 Additionally, it retrieves specific data related to the 'Real World Assets' document model, including accounts, SPVs, fixed income types, fee types, portfolio, and transactions. The RWA section of the query is designed to pull in detailed information about the financial structure and transactions of real-world assets managed within the document model.
 
-#### Common Document Fields
+#### Common document fields
 
 - `name`: The name of the document.
 - `documentType`: The type classification of the document.

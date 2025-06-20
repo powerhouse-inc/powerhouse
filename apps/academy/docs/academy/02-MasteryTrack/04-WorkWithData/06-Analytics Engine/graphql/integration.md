@@ -6,7 +6,7 @@ sidebar_position: 1
 
 The `analytics-engine-graphql` module provides types and resolvers needed for a fully-functional GraphQL Server API. This library has no dependencies on any particular server but has been tested using [Apollo Server 3 and 4](https://www.apollographql.com/docs/apollo-server).
 
-## Resolvers and Types
+## Resolvers and types
 
 The graphql package contains typical resolvers and typedefs. The resolvers, however, are dependent on another object: `AnalyticsModel`. This object is responsible for connecting GQL types with an `IAnalyticsStore` implementation.
 

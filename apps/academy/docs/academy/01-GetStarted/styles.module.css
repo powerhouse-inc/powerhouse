@@ -12,9 +12,9 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+  /* max-width: 1200px; */
+  /* margin: 0 auto; */
+  /* padding: 2rem; */
   width: 100%;
   box-sizing: border-box;
 }
@@ -120,4 +120,4 @@
 :global([data-theme='dark']) :global(.path-button:hover) {
   background: var(--ifm-color-emphasis-200);
   border-color: var(--ifm-color-emphasis-300);
-} 
+}

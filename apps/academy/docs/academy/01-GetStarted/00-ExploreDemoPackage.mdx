@@ -1,7 +1,7 @@
-# Explore the Demo Package
+# Explore the demo package
 
 <details>
-<summary>How Long Will This Tutorial Take?</summary>
+<summary>How long will this tutorial take?</summary>
 
 We've designed this "Get Started" track to be as smooth as possible. The time it takes will vary based on your familiarity with modern web development tools.
 
@@ -13,9 +13,10 @@ This is just a guideline. The goal is to learn comfortably and build a solid fou
 A more theoretical and advanced version of this tutorial can also be found in [Mastery Track - Document Model Creation](../MasteryTrack/DocumentModelCreation/WhatIsADocumentModel).
 </details>
 
-## Let's Get Started
+## Let's get started
 
-To give you a quick idea of how the Powerhouse ecosystem operates on document models and packages, why don't you try installing a package? We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package with document models and editors.
+To give you a quick idea of how the Powerhouse ecosystem operates on document models and packages, why don't you try installing a package? 
+We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package with a document models, an editor and a drive-app.
 
 ## Step 1: Install the Powerhouse CLI
 
@@ -32,7 +33,7 @@ Verify the installation:
 ph-cmd --version
 ```                                                   
 
-## Step 2: Install the To-do List Demo Package
+## Step 2: Install the to-do list demo package
 
 Now, use the `ph` command to install the demo package into a global project.
 
@@ -88,7 +89,7 @@ This command downloads and sets up the `@powerhousedao/todo-demo-package`, makin
 
 You have now successfully installed `ph-cmd` and added your first package! 
 
-## Step 3: Run the Connect App in Studio mode
+## Step 3: Run the connect app in studio mode
 To run the package locally in Connect Studio (our collaboration and contributor app), run:
 
 ```bash
@@ -116,7 +117,7 @@ Renown is Powerhouse's **decentralized identity and reputation system** designed
 When signing in with Renown, use an Ethereum or blockchain address that can function as your 'identity', as this address will accrue more experience and history over time.
 :::
 
-### Login Flow 
+### Login flow
 "**Log in with Renown**" is a decentralized authentication flow that enables you to log into applications by signing a credential with your Ethereum wallet. Upon signing in, a Decentralized Identifier (DID) is created based on your Ethereum key. 
 
 <figure className="image-container">
@@ -140,7 +141,7 @@ This DID is then associated with a credential that authorizes a specific Connect
 ### Verifying signatures
 **Switchboard**, our (remote & local) data processing engine, acts as a verifier in the Renown authentication flow. Switchboard checks the validity of the DID and credential, ensuring the operation request is legitimate. This flow is designed to offer a verifiable, cryptographically secure login system that replaces traditional password-based authentication with decentralized identity and signature-based trust.
 
-## Step 5: Create a To-do List & Explore the Document Operations History
+## Step 5: Create a to-do list and explore the document operations history
 
 <figure className="image-container">
   <img src={require("./images/OperationsHistory.png").default} alt="Operations History" />
@@ -150,14 +151,19 @@ This DID is then associated with a credential that authorizes a specific Connect
 By leveraging this system, every operation or modification made to a document is cryptographically signed by the contributor's Renown identity. This ensures that each change is verifiable, traceable, and attributable to a specific pseudonymous user, providing a robust audit trail for all document activity. 
 
 A key feature you get with Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when. This ensures every action is traceable and verifiable.
-Learn more about the [Operations History and other document tools you get for free](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory).
+Learn more about the [Operations History](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
 
 
-### 5.1 Create a To-do List
+### 5.1 Create a to-do list
 
 Now, move back to your local drive and create a to-do list. Add a few to-dos that are on your mind. You'll see a statistics widget that counts the open to-dos.
 
-### 5.2 Create a specific To-do Drive App
+### 5.2 Create a specific to-do drive app
+
+:::tip What is a 'drive' at Powerhouse?
+A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+:::
+
 Since your previous to-do list was created inside a local drive with a general-purpose drive explorer, it didn't look particularly special.
 
 - Now let's create a new drive by clicking the new drive icon. In the **Drive App** field, select 'To-do Drive App'.  
@@ -171,10 +177,12 @@ Since your previous to-do list was created inside a local drive with a general-p
 </figure>
 
 This is the power of Drive Apps. They offer a customized interface that works well with the different documents inside your drive. Read more about drive apps in the Mastery Track: [Drive Apps & Drive Explorers](../MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer/WhatIsADriveApp).
-## Step 6: Export a Document
+## Step 6: Export a document
 
 Export the document as a `.phd` (Powerhouse Document) file using the export button in the document toolbar at the top. In this toolbar, you will find all available functionality for your documents. The `.phd` file can be sent through any of your preferred channels to other users on your network. 
 
+### Up next 
+
 Now that you have explored a Powerhouse package and discovered its basic functionalities, it is time to start building your own. 
-Our next tutorial focuses on creating a simple to-do list document and will introduce you to the world of Document Models.
+Our next tutorial focuses on creating a simple to-do list document and will introduce you to the world of **Document Models**.
 

@@ -1,4 +1,4 @@
-# Build a ToDoList Editor
+# Build a to-do list editor
 
 In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
@@ -16,7 +16,7 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
 
 
-### Editor Implementation Options
+### Editor implementation options
 
 When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
 
@@ -27,7 +27,7 @@ When building your editor component within the Powerhouse ecosystem, you have se
 Connect Studio provides a dynamic local environment, by running `ph connect` to visualize your components instantly as you build them, regardless of the styling method you choose.    
 Manual build steps are typically only needed when publishing packages.
 
-## ToDoList Editor
+## ToDoList editor
 
 Below is the complete code for the To-Do List editor. Paste this code in `editors/to-do-list/editor.tsx`.
 
@@ -207,7 +207,7 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
 
-### Up Next: Mastery Track
+### Up next: Mastery Track
 
 In the [Mastery Track chapther: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while created a more advanced version of the ToDoList.
 

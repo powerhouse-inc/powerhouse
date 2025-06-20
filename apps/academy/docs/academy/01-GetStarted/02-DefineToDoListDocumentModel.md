@@ -1,6 +1,6 @@
-# Define the ToDoList document specification 
+# Define the to-do list document specification 
 
-In this tutorial, you will learn how to define the specifications for a **ToDoList** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+In this tutorial, you will learn how to define the specifications for a **To-do List** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
 Before you start, make sure you have the Connect application running locally with the command:
@@ -15,7 +15,7 @@ The Connect application will start and you will see the following output:
   ➜  press h + enter to show help
 ```
 
-## ToDoList Document Specification
+## To-do list document specification
 
 Likely you have called your project 'ToDoList'.   
 If you've used a different name, please create a new document specification named 'ToDoList'.   
@@ -30,7 +30,7 @@ Documents in Powerhouse leverage **event sourcing principles**, where every stat
 :::
 
 <details>
-<summary>State Schema of our Simplified ToDoList</summary>
+<summary>State schema of our simplified To-do list</summary>
 
 ```graphql
 # The state of our ToDoList
@@ -50,7 +50,7 @@ type ToDoItem {
 
 
 <details>
-<summary>Operations Schema of our Simplified ToDoList</summary>
+<summary>Operations schema of our simplified to-do list</summary>
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item
 input AddTodoItemInput {
@@ -72,7 +72,7 @@ input DeleteTodoItemInput {
 ```
 </details>
 
-## Define the Document Model Specification
+## Define the document model specification
 
 To be able to define the document model, you need to open the document model editor in Connect. 
 
@@ -106,6 +106,6 @@ Check below screenshot for the complete implementation:
 
 ![ToDoList Document Model](./images/DocumentModelOperations.png)
 
-### Up next: Reducers 
+### Up next: reducers 
 
 Up next, you'll learn how to implement the runtime logic and components that will use the `ToDoList` document model specification you've just created and exported. 

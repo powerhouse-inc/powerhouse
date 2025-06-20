@@ -1,10 +1,10 @@
-# Build Document Editors
+# Build document editors
 
-## Build with React on Powerhouse
+## Build with react on powerhouse
 
 At Powerhouse, frontend development for document editors follows a simple and familiar flow, leveraging the power and flexibility of React.
 
-### Development Environment
+### Development environment
 
 Connect Studio is your primary tool for development.   
 When you run `ph connect`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
@@ -19,7 +19,7 @@ Powerhouse aims to keep your developer experience clean, familiar, and focused:
 - Use styling approaches you're comfortable with.
 - Trust Connect Studio to handle the setup and build processes for you.
 
-### Generating Your Editor Template
+### Generating your editor template
 
 To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model specifications and creates the initial `editor.tsx` file.
 If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
@@ -30,7 +30,7 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 ```
 This will create the template in the `editors/to-do-list/editor.tsx` folder.
 
-### Styling Your Editor
+### Styling your editor
 
 You have several options for styling your editor components:
 
@@ -74,7 +74,7 @@ You have several options for styling your editor components:
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Connect Studio (`ph connect`) will allow you to see your styles applied in real-time.
 
-### State Management in Editors
+### State management in editors
 
 When you build an editor in Powerhouse, your main editor component receives `EditorProps`. These props are crucial for interacting with the document:
 
@@ -112,11 +112,11 @@ Your document model's generated code (e.g., in `document-models/your-model/index
 ```
 The actual state modification logic resides in your document model's reducers, ensuring that all changes are consistent and follow the defined operations.
 
-## Powerhouse Component Library
+## Powerhouse component library
 
 Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types.
 
-### Exploring Components
+### Exploring components
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance:
 [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy)
 
@@ -126,7 +126,7 @@ Storybook allows you to:
 *   View code snippets for basic implementation.
 *   Consult the props table for detailed configuration options.
 
-### Using Components
+### Using components
 1.  **Import**: Add an import statement at the top of your editor file:
     ```typescript
     import { Checkbox, StringField, Form } from '@powerhousedao/document-engineering/scalars';
@@ -147,7 +147,7 @@ Storybook allows you to:
 <details>
 <summary>Tutorial: Implementing the `ToDoList` Editor</summary>
 
-## Build a ToDoList Editor
+## Build a todolist editor
 
 In this final part of our tutorial we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items, but also dispaly the statistics we've implemented in our reducers. 
 
@@ -165,7 +165,7 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
 
 
-### Editor Implementation Options
+### Editor implementation options
 
 When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
 
@@ -177,10 +177,10 @@ Connect Studio provides a dynamic local environment (`ph connect`) to visualize 
 
 ---
 
-## ToDoList Editor
+## Todolist editor
 
 :::tip
-### Implementing Components
+### Implementing components
 The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**. 
 When you add the editor code, you'll see it makes use of two components, the `Checkbox` and `InputField`.
 These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`).   

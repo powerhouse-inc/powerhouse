@@ -1,11 +1,11 @@
-# Define the Chatroom Document Model
+# Define the chatroom document model
 
 In this tutorial, you will learn how to design your document model and export it to be later used in your Powerhouse project.
 If you don't have a document model created yet, have a look at the previous steps of this tutorial to create a new document model.
 
 Before you start, make sure you have the Connect application running.
 
-## Chatroom Document Model Schema
+## Chatroom document model schema
 
 We use GraphQL Schema Definition Language (SDL) to define the document model schema. Below, you can see the SDL for the `ChatRoom` document model.
 
@@ -13,7 +13,7 @@ We use GraphQL Schema Definition Language (SDL) to define the document model sch
 This schema contains the data structure of the document model and the basic operations that can be performed on the document model. For more in depth information please visit [State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 :::
 
-## State Schema (See next steps)
+## State schema (See next steps)
 
 ```graphql
 # Defines a GraphQL type for the state of the chatroom document
@@ -58,7 +58,7 @@ enum ReactionType {
 }
 ```
 
-## Operations Schema (See next steps)
+## Operations schema (See next steps)
 
 ```graphql
 # add_message
@@ -91,7 +91,7 @@ input EditChatDescriptionInput {
 }
 ```
 
-## Define the Document Model
+## Define the document model
 
 To be able to define the document model, you need to open the Chatroom document model editor in Connect. 
 
