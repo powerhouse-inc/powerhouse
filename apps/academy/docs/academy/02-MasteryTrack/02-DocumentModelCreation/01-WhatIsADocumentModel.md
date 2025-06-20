@@ -1,7 +1,7 @@
-# What is a Document Model?
+# What is a document model?
 
 :::tip
-This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced ToDoList** document model. 
+This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced to-do list** document model. 
 Although not required, if you have completed the 'Get Started' tutorial you will revisit familiar topics and can update your existing document model.
 :::
 
@@ -19,7 +19,7 @@ A Document Model can be understood as:
 
 ### **How does a document model function?**
 
-#### **Structure and Composition**
+#### **Structure and composition**
 
 Each document model consists of three key components:
 
@@ -31,11 +31,11 @@ Document models leverage **event sourcing, CQRS (Command Query Responsibility Se
 
 ---
 
-## **1. Structure of a Document Model**
+## **1. Structure of a document model**
 
 A document model consists of the following key components:
 
-### **1.1 State Schema**
+### **1.1 State schema**
 
 The **state schema** defines the structure of the document, including its fields and data types. It serves as a blueprint for how data is stored and validated.
 
@@ -60,7 +60,7 @@ type LineItem {
 }
 ```
 
-### **State Schema Features:**
+### **State schema features:**
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
 - Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
@@ -70,7 +70,7 @@ The state schema acts as a **template** for document instances. Every new invoic
 
 ---
 
-### **1.2 Document Operations**
+### **1.2 Document operations**
 
 Document models are **append-only**, meaning changes are not made directly to the document state. Instead, **document operations** define valid state transitions.
 
@@ -99,7 +99,7 @@ Instead, a new event is appended to the document history.
 
 ---
 
-### **1.3 Event History (Append-Only Log)**
+### **1.3 Event history (append-only log)**
 
 Every operation applied to a document is **stored as an event** in an append-only log.
 
@@ -112,7 +112,7 @@ Every operation applied to a document is **stored as an event** in an append-onl
   { "timestamp": 1700000200, "operation": "MARK_AS_PAID", "data": {} 
 ```
 
-### **Event History Benefits:**
+### **Event history benefits:**
 
 - Provides a **transparent audit trail** of changes.
 - Enables **time travel debugging** by reconstructing past states.
@@ -120,11 +120,11 @@ Every operation applied to a document is **stored as an event** in an append-onl
 
 ---
 
-## **2. How Document Models Work Technically**
+## **2. How document models work technically**
 
 Document models in Powerhouse rely on **event-driven architecture, event sourcing, and CQRS principles**. Here's a step-by-step breakdown:
 
-### **2.1 Document Creation**
+### **2.1 Document creation**
 
 1. A user (or system) **submits an operation** to create a new document.
 2. The document model **validates** the input data against the state schema.
@@ -142,7 +142,7 @@ Document models in Powerhouse rely on **event-driven architecture, event sourcin
 
 ---
 
-### **2.2 Document Modification**
+### **2.2 Document modification**
 
 1. A user submits an **operation** (e.g., `ADD_LINE_ITEM`).
 2. The **event is appended** to the document history.
@@ -163,7 +163,7 @@ Since changes are **not applied directly**, this model is **highly scalable and 
 
 ---
 
-### **2.3 Querying Document Models**
+### **2.3 Querying document models**
 
 Powerhouse uses **GraphQL queries** to fetch document states efficiently. Because documents store structured data, developers can instantly query:
 
@@ -200,6 +200,6 @@ Document Models offer a range of features that can be leveraged to create sophis
 
 Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data. 
 
-### Up Next: How to build a Document Model
+### Up next: How to build a document model
 
 In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved.

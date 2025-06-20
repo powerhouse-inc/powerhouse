@@ -1,4 +1,4 @@
-# Use the Document Model Generator
+# Use the document model generator
 
 In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within the Connect application and exporting it as a `.phdm.zip` file, the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
 
@@ -13,7 +13,7 @@ Before you can use the Document Model Generator, ensure you have the following:
 1.  **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/MasteryTrack/BuilderEnvironment/BuilderTools#installing-the-powerhouse-cli).
 2.  **Document Model Specification File (`.phdm.zip`):** You must have already defined your document model in Connect and exported it. This file (e.g., `YourModelName.phdm.zip`) contains the GraphQL schema for your document's state and operations. This process is typically covered in a preceding step, such as "Define [YourModelName] Document Model."
 
-## The Command
+## The command
 
 The core command to invoke the Document Model Generator is:
 
@@ -29,7 +29,7 @@ ph generate Invoice.phdm.zip
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
 
-## What Happens Under the Hood? A Deep Dive into the Generated Artifacts
+## What happens under the hood? A deep dive into the generated artifacts
 
 Running `ph generate` triggers a series of actions that lay the groundwork for your document model's implementation. Let's explore the typical output structure and the significance of each generated component.
 
@@ -79,7 +79,7 @@ For example, using `Invoice.phdm.zip` would result in a directory structure unde
         *   **Purpose:** You can create this directory for any custom utility functions specific to your document model's implementation that don't fit directly into the reducers.
         *   **Significance:** Helps in organizing shared logic or complex computations that might be used across multiple reducers or other parts of your model's ecosystem.
 
-## Benefits of Using the Document Model Generator
+## Benefits of using the document model generator
 
 Leveraging the `ph generate` command offers numerous advantages:
 
@@ -90,12 +90,12 @@ Leveraging the `ph generate` command offers numerous advantages:
 5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
 6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Connect. If the specification changes, regenerating the model will update these components accordingly.
 
-## Practical Implementation: Generating the `ToDoList` Model
+## Practical implementation: Generating the `ToDoList` model
 
 Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `ToDoList` example.
 
 <details>
-<summary>Tutorial: Generating the ToDoList Document Model</summary>
+<summary>Tutorial: Generating the `ToDoList` document model</summary>
 
 This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `ToDoList` model in Connect and exported it.
 
@@ -127,7 +127,7 @@ With these files generated, you have successfully scaffolded your document model
 
 </details>
 
-## Next Steps
+## Next steps
 
 Once the Document Model Generator has successfully scaffolded your project, the immediate next step is to implement the logic for each operation within the generated reducer files (e.g., `document-models/YourModelName/src/reducers/your-model-name.ts`). This involves taking the current state and the action input, and returning the new state of the document.
 
