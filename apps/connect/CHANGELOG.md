@@ -1,3 +1,13 @@
+## 3.2.0-dev.2 (2025-06-20)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** serve files at the root on nginx and enforce trailing slash on <base href> ([3c53390f6](https://github.com/powerhouse-inc/powerhouse/commit/3c53390f6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.2.0-dev.1 (2025-06-19)
 
 ### 🩹 Fixes
