@@ -85,26 +85,16 @@ The state object is a plain, serializable object that has keys for each populate
 The `header` scope is a "special case" scope that is always populated, and the `document` scope is a default scope used for upgrades and initial scope, but is not necessarily populated.
 
 ```tsx
-type JsonSerializable =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | JsonSerializable[]
-  | { [key: string]: JsonSerializable };
-
-export type PHDocumentState<TDocumentScopeState extends JsonSerializable = JsonSerializable> = {
-  header: PHDocumentHeader;
-  document: TDocumentScopeState;
-
-  [scope: string]: JsonSerializable;
+type BaseDocumentState = {
+  auth: AuthScopeState;
 }
 
-export type PHDocument<TDocumentScopeState extends JsonSerializable = JsonSerializable> = {
-  id: string;
-  state: PHDocumentState<TDocumentScopeState>;
-};
+export type PHDocument<TState extends BaseDocumentState> = {
+  header: PHDocumentHeader;
+  state: TState;
+  mutations: PHDocumentMutations<TState>;
+  history: PHDocumentHistory<TState>;
+}
 ```
 
 Querying looks like:
