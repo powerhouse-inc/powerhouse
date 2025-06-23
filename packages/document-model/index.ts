@@ -39,6 +39,7 @@ export {
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
+export type { PHDocumentHeader } from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,
@@ -119,6 +120,10 @@ export {
   baseSaveToFileHandle,
   createZip,
 } from "#document/utils/file.js";
+export {
+  createPresignedHeader,
+  validateHeader,
+} from "#document/utils/header.js";
 
 export {
   validateInitialState,

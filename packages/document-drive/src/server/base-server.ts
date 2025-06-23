@@ -37,7 +37,9 @@ import {
   type Operation,
   type OperationScope,
   type PHDocument,
+  PHDocumentHeader,
   attachBranch,
+  createPresignedHeader,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -48,14 +50,10 @@ import {
   reshuffleByTimestamp,
   skipHeaderOperations,
   sortOperations,
+  validateHeader,
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
-import { PHDocumentHeader } from "../../../document-model/src/document/ph-types.js";
-import {
-  createPresignedHeader,
-  validateHeader,
-} from "../../../document-model/src/document/utils/header.js";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
