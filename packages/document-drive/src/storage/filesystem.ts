@@ -9,6 +9,7 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { mergeOperations } from "#utils/misc";
 import {
   type DocumentHeader,
@@ -53,6 +54,47 @@ export class FilesystemStorage
   constructor(basePath: string) {
     this.basePath = basePath;
     ensureDir(this.basePath);
+  }
+
+  ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const ids: string[] = [];
+    for (const slug of slugs) {
+      const documentId = slugManifest.slugToId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs: string[] = [];
+    for (const id of ids) {
+      const document = await this.get<PHDocument>(id);
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError("Aborted");
+      }
+
+      slugs.push(document.slug);
+    }
+
+    return Promise.resolve(slugs);
   }
 
   ////////////////////////////////
