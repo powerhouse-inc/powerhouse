@@ -106,7 +106,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
 
 2.  **Define Document Metadata**:
     -   **Name**: Give your document model a descriptive name, for example, `ToDoList`. **Pay close attention to capitalization, as it influences our code.**
-    -   **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type, for instance, `powerhouse/todolist`.
+    -   **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type: `powerhouse/todolist`.
 
 3.  **Specify the State Schema**:
     -   In the code editor provided, you'll see a template for a GraphQL schema.
@@ -116,6 +116,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
     # The state of our ToDoList
     type ToDoListState {
       items: [ToDoItem!]!
+      stats: ToDoListStats!
     }
 
     # A single to-do item
@@ -142,5 +143,5 @@ By completing these steps, you have successfully specified the data structure fo
 
 </details>
 
-For a complete, working example, you can always refer to the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
+For a complete, working example, you can always have a look at the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
 

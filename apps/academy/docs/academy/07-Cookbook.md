@@ -644,7 +644,7 @@ cd <yourprojectname>
 Run the `generate` command, specifying the editor name (usually matching the document model name) and the associated document type.
 
 ```bash
-# Replace <ModelName> with the name of your document model (e.g., ToDoList)
+# Replace <ModelName> with the name of your document model (e.g., To-do List)
 # Replace <docType> with the identifier for your document (e.g., powerhouse/todolist)
 ph generate --editor <ModelName> --document-types <docType>
 ```

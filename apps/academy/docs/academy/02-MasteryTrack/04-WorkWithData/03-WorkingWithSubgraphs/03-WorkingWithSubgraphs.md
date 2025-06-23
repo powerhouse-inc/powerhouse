@@ -1,6 +1,6 @@
 # Working with subgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our ToDoList project as an example.
+This tutorial will demonstrate how to create and customize a subgraph using our To-do List project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
 
 ## What is a subgraph?
@@ -40,7 +40,7 @@ context: {
 
 ## 1. How to generate a subgraph
 
-Lets start by generating a new subgraph. For our tutorial we will create a new subgraph within our ToDoList project.   
+Lets start by generating a new subgraph. For our tutorial we will create a new subgraph within our To-do List project.   
 Open your project and start your terminal.
 The Powerhouse toolkit provides a command-line utility to create new subgraphs easily.   
 
@@ -281,7 +281,7 @@ This is a quick example of how the supegraph can be used.
 
 ## Subgraphs are particularly useful for
 
-1. **Cross-Document Interactions**: For example, connecting a ToDoList with an Invoice document model:
+1. **Cross-Document Interactions**: For example, connecting a To-do List with an Invoice document model:
    - When an invoice-related task is marked complete, update the invoice status
    - When an invoice is paid, automatically check off related tasks
 

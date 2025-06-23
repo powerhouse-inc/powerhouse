@@ -6,7 +6,7 @@ In the previous section, we defined the state schema for our document model. Now
 
 In Powerhouse, document models adhere to event sourcing principles. This means that every change to a document's state is the result of a sequence of operations (or events). Instead of directly mutating the state, you define specific, named operations that describe the intended change.
 
-For example, in our `ToDoList` document model, operations might include:
+For example, in our `To-do List` document model, operations might include:
 
 *   `ADD_TODO_ITEM`: To add a new task.
 *   `UPDATE_TODO_ITEM`: To modify an existing task (e.g., change its text or mark it as completed).
@@ -16,7 +16,7 @@ Each operation acts as a command that, when applied, transitions the document fr
 
 ## Connecting operations to the schema
 
-In the "Define ToDoList Document Model" chapter in the "Get Started" guide, we used GraphQL `input` types to define the structure of the data required for each operation. Let's revisit that:
+In the "Define To-do List Document Model" chapter in the "Get Started" guide, we used GraphQL `input` types to define the structure of the data required for each operation. Let's revisit that:
 
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item
@@ -112,12 +112,12 @@ export const reducer: ToDoListToDoListOperations = {
 
 ## Practical implementation: Defining operations in Connect
 
-Now that you understand the theory, let's walk through the practical steps of defining these operations for our `ToDoList` document model within the Powerhouse Connect application.
+Now that you understand the theory, let's walk through the practical steps of defining these operations for our `To-do List` document model within the Powerhouse Connect application.
 
 <details>
-<summary>Tutorial: Specifying ToDoList operations</summary>
+<summary>Tutorial: Specifying To-do List operations</summary>
 
-Assuming you have already defined the state schema for the `ToDoList` as covered in the previous section, follow these steps to add the operations:
+Assuming you have already defined the state schema for the `To-do List` as covered in the previous section, follow these steps to add the operations:
 
 1.  **Create a Module for Operations:**
     Below the schema editor in Connect, find the input field labeled `Add module`. Modules help organize your operations.

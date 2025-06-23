@@ -202,4 +202,4 @@ Document Models are a powerful primitive within the Powerhouse vision, offering 
 
 ### Up next: How to build a document model
 
-In the next chapters, we'll teach you how to build a ToDoList document model while explaining all of the theory that is involved.
+In the next chapters, we'll teach you how to build a To-do List document model while explaining all of the theory that is involved.

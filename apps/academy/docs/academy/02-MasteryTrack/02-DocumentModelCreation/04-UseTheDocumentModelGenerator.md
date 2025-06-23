@@ -90,14 +90,14 @@ Leveraging the `ph generate` command offers numerous advantages:
 5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
 6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Connect. If the specification changes, regenerating the model will update these components accordingly.
 
-## Practical implementation: Generating the `ToDoList` model
+## Practical implementation: Generating the `To-do List` model
 
-Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `ToDoList` example.
+Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `To-do List` example.
 
 <details>
-<summary>Tutorial: Generating the `ToDoList` document model</summary>
+<summary>Tutorial: Generating the `To-do List` document model</summary>
 
-This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `ToDoList` model in Connect and exported it.
+This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `To-do List` model in Connect and exported it.
 
 ### Prerequisites
 

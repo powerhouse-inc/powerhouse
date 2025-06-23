@@ -22,7 +22,7 @@ If you've used a different name, please create a new document specification name
 **Pay close attention to capitalization, as it influences our code.**  
 
 We'll continue with this project to teach you how to create a document model specification and later an editor for your document model. We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model.   
-Below, you can see the SDL for the `ToDoList` document model.
+Below, you can see the SDL for the `To-do List` document model.
 
 :::info
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.

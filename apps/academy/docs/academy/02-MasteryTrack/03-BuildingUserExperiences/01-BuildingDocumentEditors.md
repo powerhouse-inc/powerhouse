@@ -24,7 +24,7 @@ Powerhouse aims to keep your developer experience clean, familiar, and focused:
 To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model specifications and creates the initial `editor.tsx` file.
 If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
-For example, to generate an editor for a `ToDoList` document model with a document type `powerhouse/todolist`:
+For example, to generate an editor for a `To-do List` document model with a document type `powerhouse/todolist`:
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
 ```
@@ -145,18 +145,18 @@ Storybook allows you to:
     ```
 
 <details>
-<summary>Tutorial: Implementing the `ToDoList` Editor</summary>
+<summary>Tutorial: Implementing the `To-do List` Editor</summary>
 
-## Build a todolist editor
+## Build a To-do List editor
 
-In this final part of our tutorial we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items, but also dispaly the statistics we've implemented in our reducers. 
+In this final part of our tutorial we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your To-do List items, but also dispaly the statistics we've implemented in our reducers. 
 
 ## Generate the editor template
 
-Run the command below to generate the editor template for the **ToDoList** document model.   
-This command reads the **ToDoList** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
+Run the command below to generate the editor template for the **To-do List** document model.   
+This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
 
-Notice the `--editor` flag which specifies the **ToDoList** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
+Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
 
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
@@ -177,13 +177,12 @@ Connect Studio provides a dynamic local environment (`ph connect`) to visualize 
 
 ---
 
-## Todolist editor
+## To-do List editor
 
-:::tip
-### Implementing components
+:::tip Implementing components
 The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**. 
 When you add the editor code, you'll see it makes use of two components, the `Checkbox` and `InputField`.
-These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`).   
+These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`) which you should find under 'devdependencies' in your package.json file.   
 
 This system provides a library of reusable components to ensure consistency and speed up development.  
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/DocumentEngineering) page.
@@ -262,7 +261,7 @@ export const InputField = (props: InputFieldProps) => {
 Below is the complete code for the To-Do List editor. It primarily uses Tailwind CSS for styling and imports the local `Checkbox` and `InputField` components you created in the previous step. These local components, in turn, utilize elements from the Powerhouse Document Engineering design system.
 
 <details>
-<summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
+<summary>Complete To-do List Editor Example (using Tailwind CSS)</summary>
 
 ```typescript
 import { EditorProps } from 'document-model'; // Core type for editor components.
@@ -273,7 +272,7 @@ import {
     ToDoItem,            // Type for a single item in the list.
     actions,             // Object containing action creators for dispatching changes.
     ToDoListDocument     // The complete document structure including state and metadata.
-} from '../document-models/to-do-list/index.js'; // Path to your document model definition.
+} from '../../document-models/to-do-list/index.js'; // Path to your document model definition.
 import { useState } from 'react'; // React hook for managing component-local state.
 import { Checkbox } from './components/checkbox.js'; // Custom Checkbox component.
 import { InputField } from './components/inputfield.js'; // Custom InputField component.
@@ -486,23 +485,22 @@ export default function Editor(props: IProps) {
 ```
 </details>
 
-Now you can run the Connect app and see the **ToDoList** editor in action.
+Now you can run the Connect app and see the **To-do List** editor in action.
 
 ```bash
 ph connect
 ```
 
-In Connect, in the bottom right corner you'll find a new Document Model that you can create: **ToDoList**.    
-Click on it to create a new ToDoList document.
+In Connect, in the bottom right corner you'll find a new Document Model that you can create: **To-do List**. Click on it to create a new To-do List document.
 
-:::info
+:::tip Connect as your dynamic development environment
 The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio. 
 :::
 
 </details>
 
 Congratulations!
-If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
+If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor. 
 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
-Imagine you have many ToDoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your To-do List document.    
+Imagine you have many To-do Lists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!

@@ -26,7 +26,7 @@ Either step will import the document model specification into your Powerhouse pr
 The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well. 
 
 
-To write the operation reducers of the **ToDoList** document model, you need to generate the document model code from the document model specification file you have exported into the Powerhouse project directory.
+To write the operation reducers of the **To-do List** document model, you need to generate the document model code from the document model specification file you have exported into the Powerhouse project directory.
 
 To do this, run the following command in the terminal:
 
@@ -192,7 +192,7 @@ Output should be as follows:
    Duration  417ms (transform 79ms, setup 0ms, collect 174ms, tests 12ms, environment 0ms, prepare 158ms)
 ```
 
-If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully set up the backbone for a simple **ToDoList** document. 
+If you got the same output, you have successfully implemented the operation reducers and tests for the **To-do List** document model. Congratulations, you've successfully set up the backbone for a simple **To-do List** document. 
 
 ## Up next: To-do list editor
-In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.
+In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **To-do List** document model in action.

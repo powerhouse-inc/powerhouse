@@ -1,13 +1,13 @@
 # Build a ToDoList Editor
 
-In this chapter we will continue with the interface or editor implementation of the **ToDoList** document model. This means you will create a simple user interface for the **ToDoList** document model which will be used inside the Connect app to create, update and delete your ToDoList items, but also dispaly the statistics we've implemented in our reducers. 
+In this chapter we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your To-do List items, but also dispaly the statistics we've implemented in our reducers. 
 
 ## Generate the editor template
 
-Run the command below to generate the editor template for the **ToDoList** document model.   
-This command reads the **ToDoList** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
+Run the command below to generate the editor template for the **To-do List** document model.   
+This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
 
-Notice the `--editor` flag which specifies the **ToDoList** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
+Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
 
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
@@ -28,7 +28,7 @@ Connect Studio provides a dynamic local environment (`ph connect`) to visualize 
 
 ---
 
-## ToDoList Editor
+## To-do List Editor
 
 :::tip
 ### Implementing Components
@@ -113,7 +113,7 @@ export const InputField = (props: InputFieldProps) => {
 Below is the complete code for the To-Do List editor. It primarily uses Tailwind CSS for styling and imports the local `Checkbox` and `InputField` components you created in the previous step. These local components, in turn, utilize elements from the Powerhouse Document Engineering design system.
 
 <details>
-<summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
+<summary>Complete To-do List Editor Example (using Tailwind CSS)</summary>
 
 ```typescript
 import { EditorProps } from 'document-model'; // Core type for editor components.
@@ -337,24 +337,24 @@ export default function Editor(props: IProps) {
 ```
 </details>
 
-Now you can run the Connect app and see the **ToDoList** editor in action.
+Now you can run the Connect app and see the **to-do list** editor in action.
 
 ```bash
 ph connect
 ```
 
-In Connect, in the bottom right corner you'll find a new Document Model that you can create: **ToDoList**.    
-Click on it to create a new ToDoList document.
+In Connect, in the bottom right corner you'll find a new Document Model that you can create: **to-do list**.    
+Click on it to create a new to-do list document.
 
 :::info
 The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio. 
 :::
 
 Congratulations!
-If you managed to follow this tutorial until this point, you have successfully implemented the **ToDoList** document model with its reducer operations and editor. 
+If you managed to follow this tutorial until this point, you have successfully implemented the **to-do list** document model with its reducer operations and editor. 
 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your ToDoList document.    
-Imagine you have many ToDoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your to-do list document.    
+Imagine you have many to-do Lists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 
 
