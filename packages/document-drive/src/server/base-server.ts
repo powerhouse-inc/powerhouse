@@ -724,6 +724,12 @@ export class BaseDocumentDriveServer
     return drives;
   }
 
+  // TODO: paginate, move into IReactorClient eventually
+  async getDrivesSlugs() {
+    const drives = await this.getDrives();
+    return this.documentStorage.resolveSlugs(drives);
+  }
+
   async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {

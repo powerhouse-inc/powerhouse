@@ -6,6 +6,7 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { mergeOperations } from "#utils/misc";
 import {
   type DocumentHeader,
@@ -36,6 +37,45 @@ export class MemoryStorage
     this.documents = {};
     this.driveManifests = {};
     this.slugToDocumentId = {};
+  }
+
+  ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const ids = [];
+    for (const slug of slugs) {
+      const documentId = this.slugToDocumentId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs = [];
+    for (const id of ids) {
+      const document = this.documents[id];
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      slugs.push(document.slug);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(slugs);
   }
 
   ////////////////////////////////

@@ -54,21 +54,21 @@ for (const operation of operations) {
 ```tsx
 interface IDocumentView {
   /**
-   * Resolves a list of slugs from a list of ids.
+   * Resolves a list of ids from a list of slugs.
    *
-   * @param ids - Required, the list of document ids
+   * @param slugs - Required, the list of document slugs
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The parallel list of slugs
    */
   resolveIds(
-    ids: string[],
+    slugs: string[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<string[]>;
 
   /**
-   * Resolves a list of ids from a list of slugs.
+   * Resolves a list of slugs from a list of ids.
    *
    * @param ids - Required, the list of document ids
    * @param view - Optional filter containing branch and scopes information
@@ -76,7 +76,7 @@ interface IDocumentView {
    * @returns The parallel list of ids
    */
   resolveSlugs(
-    slugs: string[],
+    ids: string[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<string[]>;
