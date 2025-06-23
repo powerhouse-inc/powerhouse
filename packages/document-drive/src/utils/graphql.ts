@@ -269,15 +269,18 @@ export async function fetchDocument<TDocument extends PHDocument>(
         `,
     { id: documentId },
   );
-  const document = result.document
+  const document: any = result.document
     ? {
-        ...result.document,
+        clipboard: result.document.clipboard,
         header: result.document.header,
-        revision: {
-          global: result.document.revision,
-          local: 0,
+        initialState: {
+          ...utils.createExtendedState({
+            // TODO: getDocument should return all the initial state fields
+            state: utils.createState({
+              global: result.document.initialState,
+            }),
+          }),
         },
-        state: result.document.state,
         operations: {
           global: result.document.operations.map(({ inputText, ...o }) => ({
             ...o,
@@ -287,20 +290,13 @@ export async function fetchDocument<TDocument extends PHDocument>(
           })),
           local: [],
         },
-        attachments: {},
-        initialState: {
-          ...utils.createExtendedState({
-            // TODO: getDocument should return all the initial state fields
-            state: utils.createState({
-              global: result.document.initialState,
-            }),
-          }),
-          id: result.document.header.id,
-          slug: result.document.header.slug,
-        },
-        clipboard: [],
+        state: result.document.state,
       }
     : null;
+
+  if (result?.document?.attachments) {
+    document.attachments = result.document.attachments;
+  }
 
   return {
     ...result,

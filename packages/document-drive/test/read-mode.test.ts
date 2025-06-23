@@ -1,4 +1,8 @@
 import {
+  responseForDocument,
+  responseForDrive,
+} from "#utils/gql-transformations";
+import {
   createDocument as createDocumentModelDocument,
   createState as createDocumentModelState,
   DocumentModelDocument,
@@ -31,7 +35,7 @@ import {
   ReadDriveSlugNotFoundError,
 } from "../src/read-mode/errors.js";
 import { ReadModeService } from "../src/read-mode/service.js";
-import { ReadDrive, ReadDriveContext } from "../src/read-mode/types.js";
+import { ReadDriveContext } from "../src/read-mode/types.js";
 import { DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
@@ -93,18 +97,19 @@ function buildDocumentResponse(drive: PHDocument) {
 
 function mockAddDrive(url: string, drive: DocumentDriveDocument) {
   fetchMocker.mockIf(url, async (req) => {
-    const { operationName } = (await req.json()) as {
-      operationName: string;
-    };
+    const json = await req.json();
+    const { operationName } = json;
 
     return {
       headers: { "content-type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         data:
           operationName === "getDrive"
-            ? { drive: { ...drive.state.global, id: drive.header.id } }
+            ? {
+                drive: responseForDrive(drive),
+              }
             : {
-                document: buildDocumentResponse(drive),
+                document: responseForDocument(drive, "DocumentDrive"),
               },
       }),
     };
@@ -227,10 +232,7 @@ describe("Read mode methods", () => {
     const result = await readModeService.getReadDrive(readDriveId);
     expect(result).toStrictEqual({
       ...drive,
-      initialState: {
-        ...drive.initialState,
-        lastModified: (result as ReadDrive).header.lastModifiedAtUtcIso,
-      },
+      state: drive.state.global,
       readContext: context,
     });
 
@@ -241,6 +243,7 @@ describe("Read mode methods", () => {
     const readDrive = await readModeService.fetchDrive(readDriveId);
     expect(readDrive).toStrictEqual({
       ...drive,
+      state: drive.state.global,
       readContext: context,
     });
   });
@@ -278,6 +281,7 @@ describe("Read mode methods", () => {
 
     expect(result).toStrictEqual({
       ...drive,
+      state: drive.state.global,
       readContext: context,
     });
   });
@@ -377,7 +381,10 @@ describe("Read mode methods", () => {
 
     const readDrive = await readModeService.getReadDrive(readDriveId);
     const expectedDrive = { ...drive, readContext: context };
-    expect(readDrive).toMatchObject(expectedDrive);
+    expect(readDrive).toMatchObject({
+      ...expectedDrive,
+      state: drive.state.global,
+    });
 
     fetchMocker.mockOnceIf(context.url, () => {
       return {

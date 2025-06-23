@@ -1,0 +1,32 @@
+import { DocumentDriveDocument } from "document-drive";
+import { Operation, PHDocument } from "document-model";
+
+export function responseForDrive(drive: DocumentDriveDocument) {
+  return {
+    id: drive.header.id,
+    slug: drive.header.slug,
+    meta: drive.header.meta,
+    name: drive.state.global.name,
+    icon: drive.state.global.icon ?? undefined,
+  };
+}
+
+export function responseForDocument(
+  document: PHDocument,
+  typeName: string,
+): any {
+  return {
+    ...document,
+    id: document.header.id,
+    revision: document.header.revision,
+    state: document.state.global,
+    stateJSON: document.state.global,
+    operations: document.operations.global.map((op: Operation) => ({
+      ...op,
+      inputText:
+        typeof op.input === "string" ? op.input : JSON.stringify(op.input),
+    })),
+    initialState: document.initialState.state.global,
+    __typename: typeName,
+  };
+}
