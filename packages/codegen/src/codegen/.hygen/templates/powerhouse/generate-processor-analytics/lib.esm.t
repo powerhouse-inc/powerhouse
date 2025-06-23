@@ -7,10 +7,11 @@ unless_exists: true
 * Delete the file and run the code generator again to have it reset
 */
 
-import { ProcessorRecord } from "document-drive/processors/types";
+import { type ProcessorRecord } from "document-drive/processors/types";
+import { type IProcessorHostModule } from "@powerhousedao/reactor-api";
 import { <%= pascalName %>Processor } from "./<%= h.changeCase.param(name)  %>/index.js";
 
-export const processorFactory = (module:any) => (driveId: string):ProcessorRecord[] => {
+export const processorFactory = (module: IProcessorHostModule) => (driveId: string):ProcessorRecord[] => {
   return [
     {
       processor: new <%= pascalName %>Processor(module.analyticsStore),

@@ -6,10 +6,10 @@
         "module": "ESNext",
         "target": "ESNext",
         "lib": ["es2019", "es6", "dom", "webworker"],
-        "noEmit": false,
-        "moduleResolution": "node",
-        "skipLibCheck": true,
-        "outDir": "./dist"
+        "noEmit": true,
+        "moduleResolution": "bundler",
+        "skipLibCheck": true
     },
-    "files": ["./src/service-worker.ts"]
+    "include": ["src/workers/*.ts"],
+    "files": ["./src/service-worker.ts", "./src/vite-env.d.ts"]
 }

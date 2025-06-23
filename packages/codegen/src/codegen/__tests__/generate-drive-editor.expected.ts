@@ -16,12 +16,14 @@ export const module: DriveEditorModule<DocumentDriveDocument> = {
 export default module;`;
 
 export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { AnalyticsProvider } from '@powerhousedao/reactor-browser/analytics/context';
 import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
 import { generateId } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
+import { generateId } from "document-model";
 
 export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
@@ -66,7 +68,7 @@ export function BaseEditor(props: IProps) {
       style={{ height: "100%" }}
     >
       <DriveExplorer
-        driveId={props.document.state.global.id}
+        driveId={props.document.id}
         nodes={props.document.state.global.nodes}
         onAddFolder={onAddFolder}
         onDeleteNode={onDeleteNode}
@@ -82,7 +84,9 @@ export default function Editor(props: IProps) {
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
-        <BaseEditor {...props} />
+        <AnalyticsProvider databaseName={props.context.analyticsDatabaseName}>
+          <BaseEditor {...props} />
+        </AnalyticsProvider>
       </WagmiContext>
     </DriveContextProvider>
   );

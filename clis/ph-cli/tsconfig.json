@@ -1,38 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "resolveJsonModule": true
+    "composite": true
   },
-  "include": ["**/*", "package.json"],
-  "exclude": ["node_modules", "dist", "test/**/*"],
+  "files": [],
   "references": [
     {
-      "path": "../../packages/codegen"
+      "path": "tsconfig.lib.json"
     },
     {
-      "path": "../../packages/config"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/document-model"
-    },
-    {
-      "path": "../../packages/reactor-local"
-    },
-    {
-      "path": "../../packages/scalars"
-    },
-    {
-      "path": "../../packages/design-system/tsconfig.lib.json"
-    },
-    {
-      "path": "../../packages/reactor-api"
-    },
-    {
-      "path": "../../packages/builder-tools"
+      "path": "tsconfig.test.json"
     }
   ]
 }

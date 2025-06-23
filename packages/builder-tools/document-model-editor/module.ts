@@ -9,5 +9,6 @@ export const documentModelEditorModule: EditorModule<DocumentModelDocument> = {
     id: "document-model-editor-v2",
     disableExternalControls: true,
     documentToolbarEnabled: true,
+    timelineEnabled: true,
   },
 };

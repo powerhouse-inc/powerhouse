@@ -2,7 +2,6 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
-  type DocumentDriveState,
   type ListenerCallInfo,
   type ListenerFilter,
   type Trigger,
@@ -14,7 +13,6 @@ import { type RunAsap } from "#utils/run-asap";
 import {
   type Action,
   type ActionContext,
-  type BaseState,
   type CreateChildDocumentInput,
   type DocumentModelModule,
   type Operation,
@@ -46,10 +44,16 @@ export type DocumentDriveServerMixin<I> = Mixin<
   I
 >;
 
-export type DriveInput = BaseState<
-  Omit<DocumentDriveState, "__typename" | "id" | "nodes"> & { id?: string },
-  DocumentDriveLocalState
->;
+export type DriveInput = {
+  global: {
+    name: string;
+    icon?: string | null;
+  };
+  id?: string;
+  slug?: string;
+  preferredEditor?: string;
+  local?: Partial<DocumentDriveLocalState>;
+};
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
 
@@ -296,7 +300,7 @@ export type RemoveOldRemoteDrivesOption =
     };
 
 export type DocumentDriveServerOptions = {
-  defaultDrives: {
+  defaultDrives?: {
     loadOnInit?: boolean; // defaults to true
     remoteDrives?: Array<DefaultRemoteDriveInput>;
     removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
@@ -307,6 +311,11 @@ export type DocumentDriveServerOptions = {
    */
   taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
   listenerManager?: ListenerManagerOptions;
+  jwtHandler?: (
+    driveUrl: string,
+    address: string | undefined,
+    refresh?: boolean,
+  ) => Promise<string>;
 };
 
 export type GetStrandsOptions = {
@@ -352,6 +361,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
+  getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
 
   getDocuments(driveId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(
@@ -498,9 +508,11 @@ export interface IBaseDocumentDriveServer {
   /** Internal methods **/
   getDocumentModelModules(): DocumentModelModule[];
 
-  clearStorage(): Promise<void>;
-
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
+  generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
 export type IDocumentDriveServer = IBaseDocumentDriveServer &
@@ -516,7 +528,7 @@ export type DriveUpdateErrorHandler = (
 export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
-  removeDrive(driveId: DocumentDriveState["id"]): Promise<void>;
+  removeDrive(driveId: DocumentDriveDocument["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
   setListener(driveId: string, listener: Listener): Promise<void>;
@@ -552,6 +564,10 @@ export interface IListenerManager {
     driveId: string,
     syncUnits: Pick<SynchronizationUnit, "syncId">[],
   ): Promise<void>;
+
+  setGenerateJwtHandler(handler: (driveUrl: string) => Promise<string>): void;
+  removeJwtHandler(): void;
+  generateJwtHandler?: (driveUrl: string) => Promise<string>;
 }
 
 export type ListenerStatus =

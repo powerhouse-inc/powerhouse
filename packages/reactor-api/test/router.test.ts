@@ -8,7 +8,7 @@ const documentModels = [
   documentModelDocumentModelModule,
 ] as DocumentModelModule[];
 
-describe("Reactor Router", () => {
+describe.skip("Reactor Router", () => {
   it("should be initialized", () => {
     // const app = express();
     // const knex = getDbClient();

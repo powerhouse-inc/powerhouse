@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "types": ["@types/node"]
+  },
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../renown"
+    }
+  ],
+  "include": ["src", "index.ts", "types.d.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/docs",
+    "**/*.stories.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test.tsx.snap"
+  ]
+}

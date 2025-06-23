@@ -1,8 +1,8 @@
 import { createRoot } from 'react-dom/client';
+import { AppLoader } from './components/app-loader.js';
 
-async function renderApp(element: HTMLElement) {
-    const AppLoader = await import('./components/app-loader.js');
-    createRoot(element).render(AppLoader.default);
+function renderApp(element: HTMLElement) {
+    createRoot(element).render(AppLoader);
 }
 
 const AppElement = document.getElementById('app');
@@ -10,4 +10,4 @@ if (!AppElement) {
     throw new Error('#app element not found!');
 }
 
-renderApp(AppElement).catch(console.error);
+renderApp(AppElement);

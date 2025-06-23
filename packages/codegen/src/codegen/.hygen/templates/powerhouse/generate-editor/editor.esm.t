@@ -13,7 +13,14 @@ export type IProps = <% if(!documentTypes.length){ %>EditorProps<PHDocument><% }
 export default function Editor(props: IProps) {
     return (
         <div>
-            <Button onClick={() => console.log('Hello world!')}>My Button</Button>
+            <div className="html-defaults-container">
+                <h1>This h1 will be styled</h1>
+                <p>This paragraph will also be styled.</p>
+                <button>Styled Button</button>
+            </div>
+            <div>
+                <h1>This h1 outside the container will NOT be styled by html-defaults.css</h1>
+            </div>
         </div>
     );
 };

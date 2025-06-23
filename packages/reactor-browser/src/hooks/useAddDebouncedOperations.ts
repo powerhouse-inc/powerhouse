@@ -78,7 +78,7 @@ export function useAddDebouncedOperations(
       }
 
       const drive = documentDrivesRef.current.find(
-        (drive) => drive.state.global.id === driveId,
+        (drive) => drive.id === driveId,
       );
       if (!drive) {
         throw new Error(`Drive with id ${driveId} not found`);

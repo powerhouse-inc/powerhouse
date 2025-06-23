@@ -1,6 +1,7 @@
 import {
   documentModelDocumentModelModule,
   DocumentModelModule,
+  generateId,
   Operation,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -13,6 +14,7 @@ import { reducer as documentDriveReducer } from "../src/drive-document-model/gen
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../src/server/builder.js";
+import { MemoryStorage } from "../src/storage/memory.js";
 
 function buildOperation(
   document: DocumentDriveDocument,
@@ -43,7 +45,8 @@ describe("Drive operations", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule[];
 
-  let server = new ReactorBuilder(documentModels).build();
+  const storage: MemoryStorage = new MemoryStorage();
+  let server = new ReactorBuilder(documentModels).withStorage(storage).build();
 
   beforeEach(async () => {
     server = new ReactorBuilder(documentModels).build();
@@ -51,8 +54,10 @@ describe("Drive operations", () => {
   });
 
   it("should be able to apply an operation to the drive", async () => {
+    const id = generateId();
     await server.addDrive({
-      global: { id: "1", name: "test", icon: null, slug: null },
+      id,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -60,18 +65,20 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    const drive = await server.getDrive("1");
+    const drive = await server.getDrive(id);
     const result = await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
     expect(result.status).toBe("SUCCESS");
   });
 
   it("should reject invalid operation", async () => {
-    await server.clearStorage();
+    const id = generateId();
+    await storage.clear();
     await server.addDrive({
-      global: { id: "1", name: "test", icon: null, slug: null },
+      id,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -79,14 +86,14 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    const drive = await server.getDrive("1");
+    const drive = await server.getDrive(id);
     await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "1", name: "test" }), 1),
     );
     expect(result.status).toBe("SUCCESS");
@@ -96,8 +103,10 @@ describe("Drive operations", () => {
   });
 
   it("should reject operation with missing index", async () => {
+    const id = generateId();
     await server.addDrive({
-      global: { id: "1", name: "test", icon: null, slug: null },
+      id,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -105,14 +114,14 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    const drive = await server.getDrive("1");
+    const drive = await server.getDrive(id);
     await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
-      "1",
+      id,
       buildOperation(drive, addFolder({ id: "2", name: "test 2" }), 2),
     );
     expect(result.status).toBe("ERROR");
@@ -122,8 +131,10 @@ describe("Drive operations", () => {
   });
 
   it("should accept operations until invalid operation", async () => {
+    const id = generateId();
     await server.addDrive({
-      global: { id: "1", name: "test", icon: null, slug: null },
+      id,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -131,8 +142,8 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
-    const result = await server.addDriveOperations("1", [
+    let drive = await server.getDrive(id);
+    const result = await server.addDriveOperations(id, [
       ...buildOperations(drive, [
         addFolder({ id: "1", name: "test 1" }),
         addFolder({ id: "2", name: "test 2" }),
@@ -147,7 +158,7 @@ describe("Drive operations", () => {
     );
     expect(result.operations.length).toBe(3);
 
-    drive = await server.getDrive("1");
+    drive = await server.getDrive(id);
     expect(drive.state.global.nodes).toStrictEqual([
       expect.objectContaining({ id: "1", name: "test 1" }),
       expect.objectContaining({ id: "2", name: "test 2" }),
@@ -156,8 +167,10 @@ describe("Drive operations", () => {
   });
 
   it("should apply operations with different scopes", async () => {
+    const id = generateId();
     await server.addDrive({
-      global: { id: "1", name: "test", icon: null, slug: null },
+      id,
+      global: { name: "test" },
       local: {
         availableOffline: false,
         sharingType: "PRIVATE",
@@ -165,9 +178,9 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive("1");
+    let drive = await server.getDrive(id);
     const result = await server.addDriveOperations(
-      "1",
+      id,
       buildOperations(drive, [
         addFolder({ id: "1", name: "test 1" }),
         addFolder({ id: "2", name: "test 2" }),
@@ -178,7 +191,7 @@ describe("Drive operations", () => {
     expect(result.status).toBe("SUCCESS");
     expect(result.operations.length).toBe(3);
 
-    drive = await server.getDrive("1");
+    drive = await server.getDrive(id);
     expect(drive.state.global.nodes).toStrictEqual([
       expect.objectContaining({ id: "1", name: "test 1" }),
       expect.objectContaining({ id: "2", name: "test 2" }),

@@ -1,5 +1,6 @@
 import {
   type IPackageLoader,
+  type IProcessorHostModule,
   isSubgraphClass,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
@@ -87,7 +88,7 @@ export class VitePackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<((module: any) => ProcessorFactory) | null> {
+  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
     const fullPath = path.join(identifier, "./processors");
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -105,7 +106,9 @@ export class VitePackageLoader implements IPackageLoader {
           `  ➜  Loaded Processor factory from: ${identifier}`,
         );
 
-        return module.processorFactory as (module: any) => ProcessorFactory;
+        return module.processorFactory as (
+          module: IProcessorHostModule,
+        ) => ProcessorFactory;
       }
     } catch (e) {
       //

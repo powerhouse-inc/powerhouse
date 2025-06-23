@@ -4,7 +4,10 @@ import { type ICache } from "../cache/types.js";
 import { BaseQueueManager } from "../queue/base.js";
 import { type IQueueManager } from "../queue/types.js";
 import { MemoryStorage } from "../storage/memory.js";
-import { type IDocumentStorage, type IDriveStorage } from "../storage/types.js";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "../storage/types.js";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { ListenerManager } from "./listener/listener-manager.js";
@@ -26,7 +29,7 @@ import {
 export class ReactorBuilder {
   public documentModelModules: DocumentModelModule[] = [];
 
-  public storage?: IDriveStorage;
+  public storage?: IDriveOperationStorage;
   public cache?: ICache;
   public queueManager?: IQueueManager;
   public eventEmitter?: IEventEmitter;
@@ -39,7 +42,7 @@ export class ReactorBuilder {
     this.documentModelModules = documentModelModules;
   }
 
-  public withStorage(storage: IDriveStorage): this {
+  public withStorage(storage: IDriveOperationStorage): this {
     this.storage = storage;
     return this;
   }

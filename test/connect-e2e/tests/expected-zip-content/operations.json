@@ -1,0 +1,314 @@
+{
+  "global": [
+    {
+      "type": "SET_MODEL_NAME",
+      "input": {
+        "name": "ToDoDocument"
+      },
+      "scope": "global",
+      "id": "476cfc73-1e5d-4c0f-afbd-599851918bc8",
+      "index": 0,
+      "timestamp": "2025-06-11T17:06:25.585Z",
+      "hash": "P9WLZOlueGiInIn/EwxsIajeZWQ=",
+      "skip": 0
+    },
+    {
+      "type": "SET_STATE_SCHEMA",
+      "input": {
+        "schema": "type ToDoDocumentState {\n  \"Add your global state fields here\"\n  _placeholder: String\n}",
+        "scope": "global"
+      },
+      "scope": "global",
+      "id": "21d2f217-235a-48a3-b804-f1fda4d8372f",
+      "index": 1,
+      "timestamp": "2025-06-11T17:06:25.585Z",
+      "hash": "nAzvxl70iZ3pwuF/+mo/GJ0/ops=",
+      "skip": 0
+    },
+    {
+      "type": "SET_MODEL_ID",
+      "input": {
+        "id": "powerhouse/todo"
+      },
+      "scope": "global",
+      "id": "e7ae9ddd-de6a-4985-ad8a-b0e51ccb7295",
+      "index": 2,
+      "timestamp": "2025-06-11T17:06:25.660Z",
+      "hash": "PgylcKdKxfAv+dPmIGP1u/e6O+U=",
+      "skip": 0
+    },
+    {
+      "type": "SET_AUTHOR_NAME",
+      "input": {
+        "authorName": "Powerhouse"
+      },
+      "scope": "global",
+      "id": "dea2dd6d-776e-4de6-a4c5-c00191394f13",
+      "index": 3,
+      "timestamp": "2025-06-11T17:06:25.725Z",
+      "hash": "mYUaLRVerPJl8msqO0aEIWui/OI=",
+      "skip": 0
+    },
+    {
+      "type": "SET_MODEL_DESCRIPTION",
+      "input": {
+        "description": "ToDo Document Model"
+      },
+      "scope": "global",
+      "id": "46a85a77-5e4f-4258-b490-9ff5e353b48d",
+      "index": 4,
+      "timestamp": "2025-06-11T17:06:25.810Z",
+      "hash": "lKNvuR0Pew/ST2q895vrZPEAX7k=",
+      "skip": 0
+    },
+    {
+      "type": "SET_AUTHOR_WEBSITE",
+      "input": {
+        "authorWebsite": "https://www.powerhouse.inc"
+      },
+      "scope": "global",
+      "id": "d660752a-e3c1-4180-8039-2738012e1cbc",
+      "index": 5,
+      "timestamp": "2025-06-11T17:06:25.858Z",
+      "hash": "2zKG16iVThsKENow3lDLhLEp1TM=",
+      "skip": 0
+    },
+    {
+      "type": "SET_MODEL_EXTENSION",
+      "input": {
+        "extension": ".phdm"
+      },
+      "scope": "global",
+      "id": "14e695f6-ebe9-41d2-979a-7623151fb0b6",
+      "index": 6,
+      "timestamp": "2025-06-11T17:06:25.910Z",
+      "hash": "RFhOw9vup+B6H4olmg8+ng8dyWg=",
+      "skip": 0
+    },
+    {
+      "type": "SET_STATE_SCHEMA",
+      "input": {
+        "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+        "scope": "global"
+      },
+      "scope": "global",
+      "id": "7ec40365-deba-4630-877b-ec468d434f9e",
+      "index": 7,
+      "timestamp": "2025-06-11T17:06:25.994Z",
+      "hash": "mimCdV8uMFHksxd3vPr5Ve63kt4=",
+      "skip": 0
+    },
+    {
+      "type": "SET_STATE_SCHEMA",
+      "input": {
+        "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+        "scope": "global"
+      },
+      "scope": "global",
+      "id": "5b6bdc33-87b5-4b2f-9ed6-c5687e9da5a0",
+      "index": 8,
+      "timestamp": "2025-06-11T17:06:25.995Z",
+      "hash": "mimCdV8uMFHksxd3vPr5Ve63kt4=",
+      "skip": 0
+    },
+    {
+      "type": "SET_INITIAL_STATE",
+      "input": {
+        "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+        "scope": "global"
+      },
+      "scope": "global",
+      "id": "09155006-608e-489f-a782-a219350af138",
+      "index": 9,
+      "timestamp": "2025-06-11T17:06:26.036Z",
+      "hash": "cNgDypoLnsmkmtjUgOC9XFhFrjw=",
+      "skip": 0
+    },
+    {
+      "type": "SET_INITIAL_STATE",
+      "input": {
+        "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+        "scope": "global"
+      },
+      "scope": "global",
+      "id": "de3df978-ce05-473b-a8b3-985d52969f65",
+      "index": 10,
+      "timestamp": "2025-06-11T17:06:26.037Z",
+      "hash": "cNgDypoLnsmkmtjUgOC9XFhFrjw=",
+      "skip": 0
+    },
+    {
+      "type": "ADD_MODULE",
+      "input": {
+        "id": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "name": "base_operations"
+      },
+      "scope": "global",
+      "id": "a84987e5-f119-4355-8a29-71e294241266",
+      "index": 11,
+      "timestamp": "2025-06-11T17:06:26.545Z",
+      "hash": "iVhTd5K5qLBNNLRyloDMRDzYLMU=",
+      "skip": 0
+    },
+    {
+      "type": "ADD_OPERATION",
+      "input": {
+        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "name": "ADD_TODO_ITEM_INPUT"
+      },
+      "scope": "global",
+      "id": "b796e38a-7f6b-489f-8e86-e2dcbcb63c74",
+      "index": 12,
+      "timestamp": "2025-06-11T17:06:26.566Z",
+      "hash": "lDexFsfSeK4UrW0vPno1yWuq7HM=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "schema": "input AddTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+      },
+      "scope": "global",
+      "id": "27ea99ee-9ab9-4cdf-b5e3-d69b39664482",
+      "index": 13,
+      "timestamp": "2025-06-11T17:06:26.579Z",
+      "hash": "t1d0yF3VjIHrm9+0YxEMeiYem9M=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
+      },
+      "scope": "global",
+      "id": "f0464748-7961-4c14-ad51-a5cd9b766576",
+      "index": 14,
+      "timestamp": "2025-06-11T17:06:26.720Z",
+      "hash": "vDGNOikDy8dRu+x1bk/FRX5CUkI=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
+      },
+      "scope": "global",
+      "id": "20c4a12f-6be1-4a02-85b4-b24328c57742",
+      "index": 15,
+      "timestamp": "2025-06-11T17:06:26.721Z",
+      "hash": "vDGNOikDy8dRu+x1bk/FRX5CUkI=",
+      "skip": 0
+    },
+    {
+      "type": "ADD_OPERATION",
+      "input": {
+        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "name": "UPDATE_TODO_ITEM_INPUT"
+      },
+      "scope": "global",
+      "id": "134bd100-ac02-403c-abda-5a1e8f076d81",
+      "index": 16,
+      "timestamp": "2025-06-11T17:06:27.229Z",
+      "hash": "+SUFXzJ88FvHhmhArq5ZusGhNug=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "schema": "input UpdateTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+      },
+      "scope": "global",
+      "id": "7a576c7c-3056-46dd-8bf1-0b40def9450b",
+      "index": 17,
+      "timestamp": "2025-06-11T17:06:27.251Z",
+      "hash": "/YjcxsoMumdvuUPAdIR6kW/C2Ts=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
+      },
+      "scope": "global",
+      "id": "bbf3e2e3-119e-4251-a26a-75e4e5d47eb5",
+      "index": 18,
+      "timestamp": "2025-06-11T17:06:27.371Z",
+      "hash": "+gto6s0XQgWNts7eP9ZYspyBvg0=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
+      },
+      "scope": "global",
+      "id": "6dfe07f6-0f35-4143-9cb0-0076005e4a88",
+      "index": 19,
+      "timestamp": "2025-06-11T17:06:27.372Z",
+      "hash": "+gto6s0XQgWNts7eP9ZYspyBvg0=",
+      "skip": 0
+    },
+    {
+      "type": "ADD_OPERATION",
+      "input": {
+        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "name": "DELETE_TODO_ITEM_INPUT"
+      },
+      "scope": "global",
+      "id": "935710a1-0d24-4353-8f56-472033cb0914",
+      "index": 20,
+      "timestamp": "2025-06-11T17:06:27.881Z",
+      "hash": "jXP9BqdJEfjtMC688oqxYvnH0qw=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "schema": "input DeleteTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+      },
+      "scope": "global",
+      "id": "cfbe6a5c-ae9b-43bf-9f56-b18629ee3dbf",
+      "index": 21,
+      "timestamp": "2025-06-11T17:06:27.896Z",
+      "hash": "k/diqcoIRvzFm3WIcvifE9Q73ik=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
+      },
+      "scope": "global",
+      "id": "d82dd7b3-853e-49c1-8a4b-5d4a380efb42",
+      "index": 22,
+      "timestamp": "2025-06-11T17:06:28.035Z",
+      "hash": "1beBrkN5N4/hZ5wT3gfZ59ZfJp0=",
+      "skip": 0
+    },
+    {
+      "type": "SET_OPERATION_SCHEMA",
+      "input": {
+        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
+      },
+      "scope": "global",
+      "id": "b92917fe-105c-4f92-a097-f14ceb480f66",
+      "index": 23,
+      "timestamp": "2025-06-11T17:06:28.035Z",
+      "hash": "1beBrkN5N4/hZ5wT3gfZ59ZfJp0=",
+      "skip": 0
+    }
+  ],
+  "local": []
+}

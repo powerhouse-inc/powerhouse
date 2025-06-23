@@ -2,7 +2,7 @@ import {
   type ConnectStudioOptions,
   startConnectStudio,
 } from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/powerhouse";
+import { getConfig } from "@powerhousedao/config/utils";
 import packageJson from "../../package.json" with { type: "json" };
 
 const version = packageJson.version;

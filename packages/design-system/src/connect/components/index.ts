@@ -6,6 +6,7 @@ export * from "./cookie-banner/index.js";
 export * from "./default-editor-loader/index.js";
 export * from "./disclosure/index.js";
 export * from "./divider/index.js";
+export * from "./document-timeline/index.js";
 export * from "./document-toolbar/index.js";
 export * from "./drive-view/index.js";
 export * from "./dropdown-menu/index.js";
@@ -31,3 +32,4 @@ export * from "./toast/index.js";
 export * from "./toggle/index.js";
 export * from "./tooltip/index.js";
 export * from "./tree-view/index.js";
+

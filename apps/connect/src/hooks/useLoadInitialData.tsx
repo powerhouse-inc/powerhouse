@@ -1,7 +1,6 @@
 import { ReloadConnectToast } from '#components';
 import { useReadModeContext } from '#context';
-import { useUiNodes } from '#hooks';
-import { useAsyncReactor } from '#store';
+import { useDocumentDriveServer, useMakeUiDriveNode } from '#hooks';
 import {
     CONFLICT,
     ERROR,
@@ -9,7 +8,8 @@ import {
     SUCCESS,
     type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { type DocumentDriveDocument } from 'document-drive';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,19 +21,14 @@ import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const {
-        documentDrives,
-        driveNodes,
-        setDriveNodes,
-        makeUiDriveNodes,
-        onSyncStatus,
-    } = useUiNodes();
+    const { reactorLoaded, documentDrives, onSyncStatus } =
+        useDocumentDriveServer();
+    const { driveNodes, setDriveNodes } = useUiNodesContext();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives();
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
-    const reactor = useAsyncReactor();
     const [connectConfig] = useConnectConfig();
 
     async function checkLatestVersion() {
@@ -48,7 +43,7 @@ export const useLoadInitialData = () => {
             connectConfig.studioMode ||
             !connectConfig.warnOutdatedApp
         ) {
-            console.warn(
+            logger.warn(
                 `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
             );
         } else {
@@ -130,6 +125,15 @@ export const useLoadInitialData = () => {
         checkDrivesErrors(driveNodes, t).catch(console.error);
     }, [driveNodes, t, checkDrivesErrors]);
 
+    const makeUiDriveNode = useMakeUiDriveNode();
+
+    const makeUiDriveNodes = useCallback(
+        async (documentDrives: DocumentDriveDocument[]) => {
+            return Promise.all(documentDrives.map(makeUiDriveNode));
+        },
+        [makeUiDriveNode],
+    );
+
     const updateUiDriveNodes = useCallback(
         async (documentDrives: DocumentDriveDocument[]) => {
             const uiDriveNodes = await makeUiDriveNodes(documentDrives);
@@ -146,11 +150,11 @@ export const useLoadInitialData = () => {
     }, [documentDrives, readDrives, updateUiDriveNodes]);
 
     useEffect(() => {
-        if (!reactor) {
+        if (!reactorLoaded) {
             return;
         }
 
         const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
         return unsub;
-    }, [reactor, documentDrives, onSyncStatus, updateUiDriveNodes]);
+    }, [reactorLoaded, documentDrives, onSyncStatus, updateUiDriveNodes]);
 };

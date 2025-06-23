@@ -8,7 +8,7 @@ force: true
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
-import { generateId, hashKey } from "document-model";
+import { generateId } from "document-model";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
 
@@ -24,7 +24,6 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
             const docId: string = args.docId || "";
             const doc = await reactor.getDocument(driveId, docId);
              return {
-              id: docId,
               driveId: driveId,
               ...doc,
               state: doc.state.global,
@@ -39,7 +38,6 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
               docsIds.map(async (docId) => {
                 const doc = await reactor.getDocument(driveId, docId);
                 return {
-                  id: docId,
                   driveId: driveId,
                   ...doc,
                   state: doc.state.global,
@@ -70,12 +68,12 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
             { 
               branch: "main", 
               scope: "global", 
-              syncId: hashKey(), 
+              syncId: generateId(), 
             },
             { 
               branch: "main", 
               scope: "local", 
-              syncId: hashKey(), 
+              syncId: generateId(), 
             }
           ],
         }));

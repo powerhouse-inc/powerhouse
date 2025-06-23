@@ -1,0 +1,267 @@
+.features {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-bottom: 2.5rem;
+}
+
+/* Add a wrapper class to contain and center the features */
+.featuresWrapper {
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 2rem;
+}
+
+.featuresSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1.5rem;
+  padding: 0;
+}
+
+.col {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  padding: 0;
+}
+
+.featureContent {
+  padding: 0;
+  width: 100%;
+}
+
+.featureLink {
+  display: block;
+  width: 100%;
+}
+
+.featureImageWrapper {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.featureImage {
+  max-width: 100%;
+  height: auto;
+}
+
+.featureText {
+  width: 100%;
+  text-align: left;
+}
+
+.featureTitle {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.featureDescription {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+@media screen and (max-width: 996px) {
+  .features {
+    padding: 1rem;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .col {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .pathRow {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pathColumn {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .featuresWrapper {
+    padding: 0 1rem;
+  }
+
+  .sectionTitle {
+    padding: 0 1rem;
+    text-align: center;
+  }
+
+  .featureContent {
+    align-items: center;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .featureImageWrapper {
+    text-align: center;
+  }
+
+  .featureImage {
+    max-width: 100%;
+    width: auto;
+  }
+
+  .featureText {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .features {
+    padding: 0.5rem;
+  }
+
+  .featuresWrapper {
+    padding: 0 0.5rem;
+  }
+
+  .pathCard {
+    padding: 1rem;
+  }
+}
+
+.sectionTitle {
+  text-align: left;
+  margin-bottom: 2rem;
+  margin-top: 2rem;
+  width: 100%;
+  padding: 0;
+  max-width: 1200px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+}
+
+
+.learningPath {
+  width: 100%;
+  padding: 3rem 0 0 0;  /* Added top padding */
+  margin-bottom: 3rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 1200px;
+  box-sizing: border-box;
+}
+
+.pathRow {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.pathColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  max-width: 360px;
+}
+
+.pathCard {
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Added styles from MDX file */
+.fullWidth {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.middleColumn {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.buttonContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.cardIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.75rem;
+}
+
+.cardTitle {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: var(--ifm-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pathButton {
+  display: block;
+  padding: 0.8rem 1rem;
+  background: var(--ifm-color-emphasis-200);
+  border-radius: 6px;
+  color: var(--ifm-font-color-base);
+  text-decoration: none;
+  transition: background 0.2s;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.pathButton:hover {
+  background: var(--ifm-color-emphasis-300);
+  text-decoration: none;
+}
+
+.pathColumnTitle {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--ifm-color-primary);
+  font-weight: 600;
+}

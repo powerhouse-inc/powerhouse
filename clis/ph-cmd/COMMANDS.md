@@ -173,6 +173,11 @@ Options:
                         
   --debug               Show additional logs during execution for troubleshooting.
 
+  --use-resolved        Resolves tags to their actual version numbers. For example:
+                        - @dev tag will be resolved to the latest dev version (e.g. v1.0.1-dev.1)
+                        - @latest tag will be resolved to the latest stable version (e.g. v1.0.0)
+                        This ensures you get the exact version that matches the tag.
+
 Special Cases:
   - Local Development: When using the 'local' environment, dependencies are linked directly
     to local filesystem paths, allowing for real-time development and testing.
@@ -187,6 +192,7 @@ Examples:
   $ ph use local /path/to/monorepo   # Link to local versions in the specified monorepo
   $ ph use dev --package-manager npm # Use npm instead of the auto-detected package manager
   $ ph use dev --debug               # Show debug information during execution
+  $ ph use dev --use-resolved        # Resolve @dev tags to actual version numbers (e.g. v1.0.1-dev.1)
 ```
 
 ---

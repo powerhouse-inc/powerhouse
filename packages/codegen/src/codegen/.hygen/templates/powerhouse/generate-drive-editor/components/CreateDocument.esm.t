@@ -36,7 +36,8 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
               color="light"
               size="small"
               className="cursor-pointer"
-              aria-details={spec.description}
+              title={spec.name}
+              aria-description={spec.description}
               onClick={() => createDocument(doc)}
             >
               <span className="text-sm">{spec.name}</span>

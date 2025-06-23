@@ -1,9 +1,0 @@
-{
-    "generators": {
-        "new-scalar": {
-            "factory": "./src/generators/new-scalar/generator",
-            "schema": "./src/generators/new-scalar/schema.json",
-            "description": "new-scalar generator"
-        }
-    }
-}

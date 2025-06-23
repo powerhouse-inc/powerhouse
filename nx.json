@@ -39,7 +39,7 @@
     },
     "test": {
       "cache": true,
-      "dependsOn": ["^build"]
+      "dependsOn": ["build"]
     },
     "build": {
       "cache": true,
@@ -63,8 +63,7 @@
   },
   "release": {
     "projects": ["packages/*", "clis/*", "apps/*"],
-    "projectsRelationship": "independent",
-    "releaseTagPattern": "production/{projectName}/{version}",
+    "projectsRelationship": "managed",
     "version": {
       "conventionalCommits": true,
       "generatorOptions": {

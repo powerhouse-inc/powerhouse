@@ -1,4 +1,6 @@
+import { useUnwrappedReactor } from '#store';
 import { LOCAL } from '@powerhousedao/design-system';
+import { useSwitchboard } from '@powerhousedao/reactor-browser';
 import {
     logger,
     type PullResponderTrigger,
@@ -7,7 +9,6 @@ import {
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer.js';
-import { useSwitchboard } from './useSwitchboard.js';
 
 export type ClientErrorHandler = {
     strandsErrorHandler: (
@@ -43,7 +44,8 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         setDriveSharingType,
     } = useDocumentDriveServer();
 
-    const { getDriveIdBySlug } = useSwitchboard();
+    const reactor = useUnwrappedReactor();
+    const { getDriveIdBySlug } = useSwitchboard(reactor!);
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
@@ -110,22 +112,22 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
             try {
                 // get local drive by id
                 const drive = documentDrives.find(
-                    drive => drive.state.global.id === driveId,
+                    drive => drive.id === driveId,
                 );
                 if (!drive) return;
                 await removeTrigger(driveId, trigger.id);
 
                 await renameDrive(
                     driveId,
-                    drive.state.global.name + ` (${drive.state.global.id})`,
+                    drive.state.global.name + ` (${drive.id})`,
                 );
 
                 await setDriveSharingType(driveId, LOCAL);
 
-                if (trigger.data?.url && drive.state.global.slug) {
+                if (trigger.data?.url && drive.slug) {
                     const newId = await getDriveIdBySlug(
                         trigger.data.url,
-                        drive.state.global.slug,
+                        drive.slug,
                     );
                     if (newId) {
                         const urlParts = trigger.data.url.split('/');

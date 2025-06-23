@@ -1,10 +1,9 @@
 import type { DocumentModelState } from "document-model";
-import { documentModelName, documentType, fileExtension } from "./constants.js";
 
-export const documentModelState: DocumentModelState = {
-  id: documentType,
-  name: documentModelName,
-  extension: fileExtension,
+export const documentModel: DocumentModelState = {
+  id: "powerhouse/document-drive",
+  name: "DocumentDrive",
+  extension: "phdd",
   description: "",
   author: {
     name: "Powerhouse Inc",
@@ -17,9 +16,8 @@ export const documentModelState: DocumentModelState = {
       state: {
         global: {
           schema:
-            "type FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    id: ID!\n    name: String!\n    nodes: [Node!]!\n    icon: String\n    slug: String\n}",
-          initialValue:
-            '"{\\"id\\":\\"\\",\\"name\\":\\"\\",\\"nodes\\":[],\\"icon\\":null,\\"slug\\":null}"',
+            "scalar Unknown\n\ntype FolderNode {\n    id: String!\n    name: String!\n    kind: String!\n    parentFolder: String\n}\n\ntype SynchronizationUnit {\n    syncId: ID!\n    scope: String!\n    branch: String!\n}\n\ntype FileNode {\n    id: String!\n    name: String!\n    kind: String!\n    documentType: String!\n    parentFolder: String\n    synchronizationUnits: [SynchronizationUnit!]!\n}\n\nunion Node = FolderNode | FileNode\n\ntype DocumentDriveState {\n    name: String!\n    nodes: [Node!]!\n    icon: String\n}",
+          initialValue: '"{\\"name\\":\\"\\",\\"nodes\\":[],\\"icon\\":null}"',
           examples: [],
         },
         local: {
@@ -41,7 +39,7 @@ export const documentModelState: DocumentModelState = {
               name: "ADD_FILE",
               description: "",
               schema:
-                "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    parentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]!\n}",
+                "input AddFileInput {\n    id: ID!\n    name: String!\n    documentType: String!\n    document: Unknown\n    parentFolder: ID\n    synchronizationUnits: [SynchronizationUnit!]!\n}",
               template: "",
               reducer: "",
               errors: [],

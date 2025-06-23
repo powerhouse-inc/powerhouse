@@ -18,6 +18,8 @@ model Drive {
 
 model Document {
   id                  String               @id
+  // ordinal used only for paging
+  ordinal             Int                  @default(autoincrement()) @unique
   created             DateTime             @default(now())
   lastModified        DateTime             @default(now())
   slug                String?              @unique

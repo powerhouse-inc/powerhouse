@@ -1,21 +1,32 @@
 import { createPublicClient, http, type PublicClient } from 'viem';
 import { getEnsAvatar, getEnsName } from 'viem/actions';
-import * as chains from 'viem/chains';
+import {
+    arbitrum,
+    base,
+    type Chain,
+    goerli,
+    mainnet,
+    optimism,
+    sepolia,
+} from 'viem/chains';
 
-export type Chain = chains.Chain;
+const defaultChains = [mainnet, sepolia, goerli, arbitrum, base, optimism];
 
 export function getChain(id: number): Chain | undefined {
-    return Object.values(chains).find(
-        x =>
-            typeof x === 'object' &&
-            x !== null &&
-            'id' in x &&
-            (x as Chain).id === id,
-    ) as Chain | undefined;
+    return defaultChains.find(chain => chain.id === id);
+    // TODO: allow loading extra chains at build time
+    // const chains = await import('viem/chains');
+    // return Object.values(chains).find(
+    //     x =>
+    //         typeof x === 'object' &&
+    //         x !== null &&
+    //         'id' in x &&
+    //         (x as Chain).id === id,
+    // ) as Chain | undefined;
 }
 
 let client: PublicClient = createPublicClient({
-    chain: chains.mainnet,
+    chain: mainnet,
     batch: {
         multicall: true,
     },

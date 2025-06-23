@@ -16,23 +16,31 @@ vi.mock("node:fs");
 vi.mock("node:child_process");
 
 // Import installDependency after mocking
-import { installDependency } from "../../utils/index.js";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/index.js";
 
-vi.mock("../../utils/index.js", () => ({
-  packageManagers: {
-    pnpm: {
-      buildAffected: "pnpm run build:affected",
-      updateCommand: "pnpm update {{dependency}}",
-      installCommand: "pnpm install {{dependency}}",
-      workspaceOption: "--workspace-root",
-      lockfile: "pnpm-lock.yaml",
+vi.mock("../../utils/index.js", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    packageManagers: {
+      pnpm: {
+        buildAffected: "pnpm run build:affected",
+        updateCommand: "pnpm update {{dependency}}",
+        installCommand: "pnpm install {{dependency}}",
+        workspaceOption: "--workspace-root",
+        lockfile: "pnpm-lock.yaml",
+      },
     },
-  },
-  getPackageManagerFromLockfile: vi.fn(),
-  getProjectInfo: vi.fn(),
-  findContainerDirectory: vi.fn(),
-  installDependency: vi.fn(),
-}));
+    getPackageManagerFromLockfile: vi.fn(),
+    getProjectInfo: vi.fn(),
+    findContainerDirectory: vi.fn(),
+    installDependency: vi.fn(),
+    updateDependencyVersionString: vi.fn(),
+  } as unknown;
+});
 
 describe("updateCommand", () => {
   let program: Command;
@@ -128,7 +136,7 @@ describe("updateCommand", () => {
     await cmd?.parseAsync(["node", "test", "--force", "prod"]);
 
     // When using --force, it should call installDependency with the latest versions
-    expect(installDependency).toHaveBeenCalledWith(
+    expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       ["@powerhousedao/common@latest", "@powerhousedao/design-system@latest"],
       "/test/project",

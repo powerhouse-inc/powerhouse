@@ -64,7 +64,7 @@ export default function Root() {
                     role="presentation"
                     tabIndex={0}
                 >
-                    <Suspense>
+                    <Suspense name="Root">
                         <Sidebar />
                         <div className="relative flex-1 overflow-auto">
                             <Outlet />
