@@ -1,3 +1,13 @@
+## 3.1.1 (2025-06-23)
+
+### 🩹 Fixes
+
+- adding id/slug resolution to document storage ([d6af77f51](https://github.com/powerhouse-inc/powerhouse/commit/d6af77f51))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.1.0 (2025-06-18)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

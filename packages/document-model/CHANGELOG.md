@@ -1,3 +1,7 @@
+## 3.1.1 (2025-06-23)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 3.1.0 (2025-06-18)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
