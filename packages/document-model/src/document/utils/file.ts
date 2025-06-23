@@ -170,6 +170,9 @@ async function loadFromZip<TDocument extends PHDocument>(
     throw new Error(errorMessages.join("\n"));
   }
 
+  // TODO: There is a race condition here where operations are replayed and do not necessary
+  // result in the same lastModified value. This will be fixed once the header replaces this
+  // information as it is explicitly set below to the saved time.
   let result = replayDocument(
     initialState,
     clearedOperations,
