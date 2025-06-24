@@ -2,11 +2,14 @@ import {
   type GetDocumentOptions,
   type IDocumentDriveServer,
 } from "document-drive";
-import { type PHDocument } from "document-model";
+import { PHDocumentHeader, type PHDocument } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type HookState = PHDocument["state"] &
-  Pick<PHDocument, "documentType" | "revision" | "created" | "lastModified">;
+  Pick<
+    PHDocumentHeader,
+    "documentType" | "revision" | "createdAtUtcIso" | "lastModifiedAtUtcIso"
+  >;
 
 export function useDocumentsState(args: {
   reactor: IDocumentDriveServer | undefined | null;
@@ -33,10 +36,10 @@ export function useDocumentsState(args: {
         const document = await reactor.getDocument(driveId, id, options);
         statesByDocumentId[id] = {
           ...document.state,
-          documentType: document.documentType,
-          revision: document.revision,
-          created: document.created,
-          lastModified: document.lastModified,
+          documentType: document.header.documentType,
+          revision: document.header.revision,
+          createdAtUtcIso: document.header.createdAtUtcIso,
+          lastModifiedAtUtcIso: document.header.lastModifiedAtUtcIso,
         };
       }
       setStatesByDocumentId(statesByDocumentId);
@@ -65,10 +68,10 @@ export function useDocumentsState(args: {
         const newStatesByDocumentId = { ...prev };
         newStatesByDocumentId[update.documentId] = {
           ...updatedDocument.state,
-          documentType: updatedDocument.documentType,
-          revision: updatedDocument.revision,
-          created: updatedDocument.created,
-          lastModified: updatedDocument.lastModified,
+          documentType: updatedDocument.header.documentType,
+          revision: updatedDocument.header.revision,
+          createdAtUtcIso: updatedDocument.header.createdAtUtcIso,
+          lastModifiedAtUtcIso: updatedDocument.header.lastModifiedAtUtcIso,
         };
         return newStatesByDocumentId;
       });

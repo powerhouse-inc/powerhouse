@@ -127,7 +127,7 @@ function createDriveActions(
   context: IDriveContext,
 ): IDriveActions {
   const drive = document;
-  const driveId = drive.id;
+  const driveId = drive.header.id;
 
   const { selectedNode } = context;
 
