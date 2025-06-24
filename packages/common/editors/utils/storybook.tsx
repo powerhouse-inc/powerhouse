@@ -133,7 +133,7 @@ export function createDriveStory(
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
+  const story = createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
     initialState ??
@@ -141,11 +141,12 @@ export function createDriveStory(
       ...driveDocumentModelModule.utils.createExtendedState({
         state: { global: { name: "Powerhouse" }, local: {} },
       }),
-      id: "powerhouse",
     },
     additionalStoryArgs,
     [DriveContextDecorator, ...(decorators ?? [])],
   );
+  story.meta.id = "powerhouse";
+  return story;
 }
 
 export function createDriveStoryWithUINodes(
@@ -168,11 +169,11 @@ export function createDriveStoryWithUINodes(
         ...driveDocumentModelModule.utils.createExtendedState({
           state: { global: { name: "Powerhouse" }, local: {} },
         }),
-        id: "powerhouse",
       },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
+  meta.id = "powerhouse";
 
   return {
     meta: meta as Meta<typeof Editor>,
