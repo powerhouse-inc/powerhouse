@@ -12,10 +12,10 @@ import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
 import type {
-  DocumentHeader,
   Operation,
   OperationScope,
   PHDocument,
+  PHDocumentHeader,
 } from "document-model";
 import LocalForage from "localforage";
 import {
@@ -372,7 +372,7 @@ export class BrowserStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const document = await this.get(id);
     if (!document) {
@@ -384,7 +384,7 @@ export class BrowserStorage
     const db = await this.db;
     await db.setItem(this.buildDocumentKey(id), {
       ...document,
-      ...header,
+      header,
       operations: mergedOperations,
     });
   }
@@ -392,7 +392,7 @@ export class BrowserStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations(drive.operations, operations);
@@ -400,7 +400,7 @@ export class BrowserStorage
 
     await db.setItem(this.buildDocumentKey(id), {
       ...drive,
-      ...header,
+      header,
       operations: mergedOperations,
     });
   }

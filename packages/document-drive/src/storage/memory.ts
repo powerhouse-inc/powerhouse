@@ -8,7 +8,7 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  type DocumentHeader,
+  PHDocumentHeader,
   type Operation,
   type OperationFromDocument,
   type OperationScope,
@@ -273,7 +273,7 @@ export class MemoryStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const document = await this.get(id);
     if (!document) {
@@ -284,7 +284,7 @@ export class MemoryStorage
 
     this.documents[id] = {
       ...document,
-      ...header,
+      header,
       operations: mergedOperations,
     };
   }
@@ -292,7 +292,7 @@ export class MemoryStorage
   async addDriveOperations(
     id: string,
     operations: OperationFromDocument<DocumentDriveDocument>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
@@ -302,7 +302,7 @@ export class MemoryStorage
 
     this.documents[id] = {
       ...drive,
-      ...header,
+      header,
       operations: mergedOperations,
     };
   }

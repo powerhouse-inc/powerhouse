@@ -14,10 +14,10 @@ import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
 import {
-  type DocumentHeader,
   type Operation,
   type OperationScope,
   type PHDocument,
+  type PHDocumentHeader,
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
@@ -35,7 +35,7 @@ interface SlugManifest {
 }
 
 export class IPFSStorage
-  implements IDocumentOperationStorage, IDocumentStorage
+  implements IDriveStorage, IDocumentOperationStorage, IDocumentStorage
 {
   private fs: MFS;
 
@@ -345,7 +345,7 @@ export class IPFSStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const document = await this.get<TDocument>(id);
     if (!document) {
@@ -356,7 +356,7 @@ export class IPFSStorage
 
     await this.create(id, {
       ...document,
-      ...header,
+      header,
       operations: mergedOperations,
     });
     await this.addChild(drive, id);
@@ -385,7 +385,7 @@ export class IPFSStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
@@ -395,7 +395,7 @@ export class IPFSStorage
 
     await this.create(id, {
       ...drive,
-      ...header,
+      header,
       operations: mergedOperations,
     });
   }

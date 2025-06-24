@@ -32,7 +32,6 @@ import {
 } from "document-drive";
 import {
   type Action,
-  type DocumentHeader,
   type DocumentModelModule,
   type Operation,
   type OperationScope,
@@ -919,30 +918,18 @@ export class BaseDocumentDriveServer
     // stores the operations in the storage
     const operations = Object.values(document.operations).flat();
     if (operations.length) {
-      // Convert PHDocumentHeader to DocumentHeader for legacy storage
-      const documentHeader: DocumentHeader = {
-        id: document.header.id,
-        name: document.header.name,
-        slug: document.header.slug,
-        revision: document.header.revision,
-        documentType: document.header.documentType,
-        created: document.header.createdAtUtcIso,
-        lastModified: document.header.lastModifiedAtUtcIso,
-        meta: document.header.meta,
-      };
-
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
           driveId,
           operations,
-          documentHeader,
+          document.header,
         );
       } else {
         await this.legacyStorage.addDocumentOperations(
           driveId,
           header.id,
           operations,
-          documentHeader,
+          document.header,
         );
       }
     }
@@ -1287,7 +1274,7 @@ export class BaseDocumentDriveServer
     documentId: string,
     callback: (document: PHDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      header: PHDocumentHeader;
     }>,
   ) {
     if (!this.legacyStorage.addDocumentOperationsWithTransaction) {
@@ -1309,21 +1296,10 @@ export class BaseDocumentDriveServer
         documentId,
         async (document: PHDocument) => {
           const result = await callback(document);
-          // Convert PHDocumentHeader to DocumentHeader for legacy storage
-          const documentHeader: DocumentHeader = {
-            id: document.header.id,
-            name: document.header.name,
-            slug: document.header.slug,
-            revision: document.header.revision,
-            documentType: document.header.documentType,
-            created: document.header.createdAtUtcIso,
-            lastModified: document.header.lastModifiedAtUtcIso,
-            meta: document.header.meta,
-          };
 
           return {
             operations: result.operations,
-            header: documentHeader,
+            header: document.header,
           };
         },
       );
@@ -1585,21 +1561,9 @@ export class BaseDocumentDriveServer
           signals.push(...result.signals);
           operationsApplied.push(...result.operationsApplied);
 
-          // Convert PHDocumentHeader to DocumentHeader for legacy storage
-          const documentHeader: DocumentHeader = {
-            id: result.document.header.id,
-            name: result.document.header.name,
-            slug: result.document.header.slug,
-            revision: result.document.header.revision,
-            documentType: result.document.header.documentType,
-            created: result.document.header.createdAtUtcIso,
-            lastModified: result.document.header.lastModifiedAtUtcIso,
-            meta: result.document.header.meta,
-          };
-
           return {
             operations: result.operationsApplied,
-            header: documentHeader,
+            header: result.document.header,
           };
         },
       );
@@ -1747,7 +1711,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      header: PHDocumentHeader;
     }>,
   ) {
     if (!this.legacyStorage.addDriveOperationsWithTransaction) {
@@ -1901,21 +1865,9 @@ export class BaseDocumentDriveServer
         signals.push(...result.signals);
         error = result.error;
 
-        // Convert PHDocumentHeader to DocumentHeader for legacy storage
-        const documentHeader: DocumentHeader = {
-          id: result.document.header.id,
-          name: result.document.header.name,
-          slug: result.document.header.slug,
-          revision: result.document.header.revision,
-          documentType: result.document.header.documentType,
-          created: result.document.header.createdAtUtcIso,
-          lastModified: result.document.header.lastModifiedAtUtcIso,
-          meta: result.document.header.meta,
-        };
-
         return {
           operations: result.operationsApplied,
-          header: documentHeader,
+          header: result.document.header,
         };
       });
 

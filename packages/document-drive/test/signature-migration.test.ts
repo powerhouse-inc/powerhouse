@@ -1,10 +1,5 @@
 import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import {
-  ActionContext,
-  DocumentHeader,
-  Operation,
-  generateId,
-} from "document-model";
+import { ActionContext, Operation, generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
@@ -112,6 +107,7 @@ describe.each(storageLayers)(
       });
       drive.header.id = driveId;
       drive.header.slug = driveId;
+      drive.header.name = "name";
       await storage.create(drive);
 
       const driveOperation = buildOperation(
@@ -126,18 +122,7 @@ describe.each(storageLayers)(
       );
       expect(driveOperation.context).toBeUndefined();
 
-      // create legacy DocumentHeader
-      const header: DocumentHeader = {
-        id: driveId,
-        name: "name",
-        slug: driveId,
-        revision: drive.header.revision,
-        documentType: drive.header.documentType,
-        created: drive.header.createdAtUtcIso,
-        lastModified: drive.header.lastModifiedAtUtcIso,
-        meta: drive.header.meta,
-      };
-      await storage.addDriveOperations(driveId, [driveOperation], header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -172,6 +157,7 @@ describe.each(storageLayers)(
         },
       });
       drive.header.id = driveId;
+      drive.header.name = "name";
 
       await storage.create(drive);
 
@@ -200,18 +186,7 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      // create legacy DocumentHeader
-      const header: DocumentHeader = {
-        id: driveId,
-        name: "name",
-        slug: driveId,
-        revision: drive.header.revision,
-        documentType: drive.header.documentType,
-        created: drive.header.createdAtUtcIso,
-        lastModified: drive.header.lastModifiedAtUtcIso,
-        meta: drive.header.meta,
-      };
-      await storage.addDriveOperations(driveId, [driveOperation], header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -259,6 +234,8 @@ describe.each(storageLayers)(
         },
       });
       drive.header.id = driveId;
+      drive.header.slug = driveId;
+      drive.header.name = "name";
       await storage.create(drive);
 
       const driveOperation = buildOperation(
@@ -286,19 +263,7 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      // create legacy DocumentHeader
-      const header: DocumentHeader = {
-        id: driveId,
-        name: "name",
-        slug: driveId,
-        revision: drive.header.revision,
-        documentType: drive.header.documentType,
-        created: drive.header.createdAtUtcIso,
-        lastModified: drive.header.lastModifiedAtUtcIso,
-        meta: drive.header.meta,
-      };
-
-      await storage.addDriveOperations(driveId, [driveOperation], header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 

@@ -3,7 +3,6 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
   BaseStateFromDocument,
-  DocumentHeader,
   DocumentOperations,
   ExtendedStateFromDocument,
   FileRegistry,
@@ -12,6 +11,7 @@ import type {
   OperationScope,
   OperationsFromDocument,
   PHDocument,
+  PHDocumentHeader,
 } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
 import { type ICache } from "../../cache/types.js";
@@ -538,7 +538,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     await this.addDocumentOperations("drives", id, operations, header);
   }
@@ -547,7 +547,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      header: PHDocumentHeader;
     }>,
   ) {
     return this.addDocumentOperationsWithTransaction(
@@ -562,7 +562,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     try {
       await tx.operation.createMany({
@@ -589,7 +589,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           id,
         },
         data: {
-          lastModified: header.lastModified,
+          lastModified: header.lastModifiedAtUtcIso,
           revision: JSON.stringify(header.revision),
         },
       });
@@ -660,13 +660,13 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
-      header: DocumentHeader;
+      header: PHDocumentHeader;
       newState?: BaseStateFromDocument<TDocument> | undefined;
     }>,
   ) {
     let result: {
       operations: OperationFromDocument<TDocument>[];
-      header: DocumentHeader;
+      header: PHDocumentHeader;
       newState?: BaseStateFromDocument<TDocument> | undefined;
     } | null = null;
 
@@ -678,7 +678,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         }
         result = await callback(document);
 
-        const { operations, header, newState } = result;
+        const { operations, header } = result;
         return this._addDocumentOperations(tx, drive, id, operations, header);
       },
       { isolationLevel: "Serializable", maxWait: 10000, timeout: 20000 },
@@ -696,7 +696,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     return this._addDocumentOperations(this.db, drive, id, operations, header);
   }

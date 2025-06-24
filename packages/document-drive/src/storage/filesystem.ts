@@ -11,7 +11,7 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  type DocumentHeader,
+  PHDocumentHeader,
   type Operation,
   type OperationScope,
   type PHDocument,
@@ -347,7 +347,7 @@ export class FilesystemStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ) {
     const document = await this.get(id);
     if (!document) {
@@ -361,7 +361,7 @@ export class FilesystemStorage
       documentPath,
       stringify({
         ...document,
-        ...header,
+        header,
         operations: mergedOperations,
       }),
       {
@@ -373,7 +373,7 @@ export class FilesystemStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
@@ -386,7 +386,7 @@ export class FilesystemStorage
       drivePath,
       stringify({
         ...drive,
-        ...header,
+        header,
         operations: mergedOperations,
       }),
       {
