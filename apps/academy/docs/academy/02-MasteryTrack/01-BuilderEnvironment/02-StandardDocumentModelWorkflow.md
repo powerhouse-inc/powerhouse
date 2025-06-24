@@ -1,8 +1,9 @@
 # Create Powerhouse packages
 
 :::warning
-**This tutorial is a summary for builders that are familiar with building document models**.    
-It guides you through creating a Powerhouse Document Model, from initial setup to publishing a distributable package. 
+**This tutorial is a summary for builders that are already familiar with building document models**.    
+It provides a summary from initial setup up to publishing a distributable package.    
+
 Please start with the '**Get Started**' Chapter or '**Document Model Creation**' section if you are unfamiliar with building a document model.
 :::
 

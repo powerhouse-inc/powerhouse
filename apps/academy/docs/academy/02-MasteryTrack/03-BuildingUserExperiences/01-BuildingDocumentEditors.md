@@ -24,7 +24,7 @@ Powerhouse aims to keep your developer experience clean, familiar, and focused:
 To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model specifications and creates the initial `editor.tsx` file.
 If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
-For example, to generate an editor for a `To-do List` document model with a document type `powerhouse/todolist`:
+For example, to generate an editor for a To-do List document model with a document type `powerhouse/todolist`:
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
 ```
@@ -40,7 +40,7 @@ You have several options for styling your editor components:
     *Example (from the ToDoList Editor):*
     ```typescript
     <div className="container mx-auto p-4 max-w-md">
-        <h1 className="text-2xl font-bold mb-4">To-do List</h1>
+        <h1 className="text-2xl font-bold mb-4">ToDoList</h1>
         {/* ... more Tailwind styled elements */}
     </div>
     ```
@@ -114,7 +114,7 @@ The actual state modification logic resides in your document model's reducers, e
 
 ## Powerhouse component library
 
-Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types.
+Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](docs/academy/ComponentLibrary/DocumentEngineering)
 
 ### Exploring components
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance:
@@ -261,7 +261,7 @@ export const InputField = (props: InputFieldProps) => {
 Below is the complete code for the To-Do List editor. It primarily uses Tailwind CSS for styling and imports the local `Checkbox` and `InputField` components you created in the previous step. These local components, in turn, utilize elements from the Powerhouse Document Engineering design system.
 
 <details>
-<summary>Complete To-do List Editor Example (using Tailwind CSS)</summary>
+<summary>Complete To-do list editor example (using Tailwind CSS)</summary>
 
 ```typescript
 import { EditorProps } from 'document-model'; // Core type for editor components.
@@ -502,5 +502,6 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor. 
 
+## Up Next 
 Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your To-do List document.    
 Imagine you have many To-do Lists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
