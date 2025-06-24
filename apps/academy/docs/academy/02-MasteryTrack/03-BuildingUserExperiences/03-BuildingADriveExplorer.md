@@ -61,7 +61,7 @@ This example demonstrates how to create a To-do Drive Explorer application using
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
 :::warning Heads-up!
-If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](docs/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema).
+If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema).
 
 If not, you can follow the shortened guide below to prepare your project for this tutorial.
 
@@ -545,7 +545,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
    ```
    </details>
 
-- In case you are getting stuck and want to verify your progress with the reference repository you can find the example repository of the [Todo-demo-package here](docs/academy/02-MasteryTrack/DocumentModelCreation/ExampleToDoListRepository)
+- In case you are getting stuck and want to verify your progress with the reference repository you can find the example repository of the [Todo-demo-package here](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository)
 ### 3. Run the application:
 - With the code for our Drive App in place, it's time to see it in action. Run Connect in Studio mode:
    ```bash

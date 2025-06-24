@@ -114,7 +114,7 @@ The actual state modification logic resides in your document model's reducers, e
 
 ## Powerhouse component library
 
-Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](docs/academy/ComponentLibrary/DocumentEngineering)
+Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/ComponentLibrary/DocumentEngineering)
 
 ### Exploring components
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance:

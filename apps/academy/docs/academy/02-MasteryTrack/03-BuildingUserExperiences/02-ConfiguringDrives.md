@@ -109,8 +109,6 @@ You can also add a new remote drive to your Connect environment programmatically
    }
    ```
 
-
-
 4. **Construct the Drive URL**
    - Once you have the `id` or `slug`, you can construct the drive URL for Connect:
      - Format: `domain/d/driveId` or `domain/d/driveSlug`
