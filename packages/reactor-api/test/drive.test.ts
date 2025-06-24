@@ -50,9 +50,9 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toEqual({
-      id: createdDrive.id,
-      slug: createdDrive.slug,
-      meta: createdDrive.meta,
+      id: createdDrive.header.id,
+      slug: createdDrive.header.slug,
+      meta: createdDrive.header.meta,
       name: createdDrive.state.global.name,
       icon: createdDrive.state.global.icon ?? undefined,
     });
@@ -90,9 +90,9 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toStrictEqual({
-      id: createdDrive.id,
-      slug: createdDrive.slug,
-      meta: createdDrive.meta,
+      id: createdDrive.header.id,
+      slug: createdDrive.header.slug,
+      meta: createdDrive.header.meta,
       name: createdDrive.state.global.name,
       icon: createdDrive.state.global.icon ?? undefined,
     });
@@ -173,13 +173,13 @@ describe("DriveSubgraph", () => {
 
     const document = await (driveSubgraph.resolvers.Query as any)?.document(
       null,
-      { id: mockDocumentData.id },
+      { id: mockDocumentData.header.id },
       context as any,
     );
 
     expect(document).toStrictEqual({
       ...mockDocumentData,
-      revision: mockDocumentData.revision.global,
+      revision: mockDocumentData.header.revision.global,
       state: mockDocumentData.state.global,
       initialState: mockDocumentData.initialState.state.global,
       stateJSON: mockDocumentData.state.global,
@@ -189,7 +189,7 @@ describe("DriveSubgraph", () => {
 
     expect(mockReactor.getDocument).toHaveBeenCalledWith(
       context.driveId,
-      mockDocumentData.id,
+      mockDocumentData.header.id,
     );
   });
 });

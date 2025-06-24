@@ -85,11 +85,11 @@ export class SystemSubgraph extends Subgraph {
           );
 
           const driveAdded = {
-            id: drive.id,
-            slug: drive.slug,
+            id: drive.header.id,
+            slug: drive.header.slug,
             name: drive.state.global.name,
             icon: drive.state.global.icon,
-            preferredEditor: drive.meta?.preferredEditor,
+            preferredEditor: drive.header.meta?.preferredEditor,
           };
           logger.info("Drive added", driveAdded);
 
