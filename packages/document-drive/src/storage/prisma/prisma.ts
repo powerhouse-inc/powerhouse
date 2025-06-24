@@ -150,6 +150,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           name: document.header.name,
           documentType: document.header.documentType,
           initialState: JSON.stringify(document.initialState),
+          created: document.header.createdAtUtcIso,
           lastModified: document.header.lastModifiedAtUtcIso,
           revision: JSON.stringify(document.header.revision),
           meta: document.header.meta
