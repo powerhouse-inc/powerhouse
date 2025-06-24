@@ -23,6 +23,17 @@ export const module: EditorModule<ToDoDocument> = {
 
 This setting enables the timeline button in the document toolbar.
 
+:::warning Heads Up! 
+The revision history timeline will only become visible once your document model has some operations or 'history'. 
+Add a few to-do's or some data in the model you are working on and the revision history timeline button in the Document Toolbar will be activated. 
+Click the button to see the timeline expand and see the first history 'candle' appear.
+:::
+
+<figure className="image-container">
+  <img src={require("./images/revision-history-timeline.png").default} alt="revision history timeline" />
+  <figcaption>Once your document has a few operations added to it's history the revision history timeline gets activated.</figcaption>
+</figure>
+
 ## How to implement the timeline feature
 
 ### Default drive explorer
