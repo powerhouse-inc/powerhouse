@@ -1,9 +1,9 @@
-# Working with Subgraphs
+# Working with subgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our ToDoList project as an example.
+This tutorial will demonstrate how to create and customize a subgraph using our To-do List project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
 
-## What is a Subgraph?
+## What is a subgraph?
 
 A subgraph in Powerhouse is a **GraphQL-based modular data component** that extends the functionality of your document models. While document models handle the core state and operations, subgraphs can:
 1. Connect to external APIs or databases
@@ -11,19 +11,19 @@ A subgraph in Powerhouse is a **GraphQL-based modular data component** that exte
 3. Automate interactions between different document models
 4. Provide additional backend functionality
 
-### Subgraphs can retrieve data from:
+### Subgraphs can retrieve data from
 
 - **The Reactor** – The core Powerhouse data system or network node.   
 - **Operational Data Stores** – Structured data storage for operational processes, offering real-time updates, for querying structured data.  
 - **Analytics Stores** – Aggregated historical data, useful for insights, reporting and business intelligence.
 
-### Subgraphs consist of:
+### Subgraphs consist of
 
 - **A schema** – Which defines the GraphQL Queries and Mutations.
 - **Resolvers** – Which handle data fetching and logic.
 - **Context Fields** – Additional metadata that helps in resolving data efficiently.
 
-#### Additionaly, context fields allow resolvers to access extra information, such as:
+#### Additionally, context fields allow resolvers to access extra information, such as:
 - **User authentication** (e.g., checking if a user is an admin).
 - **External data sources** (e.g., analytics).
 
@@ -38,9 +38,9 @@ context: {
 }
 ```
 
-## 1. How to generate a subgraph?
+## 1. How to generate a subgraph
 
-Lets start by generating a new subgraph. For our tutorial we will create a new subgraph within our ToDoList project.   
+Lets start by generating a new subgraph. For our tutorial we will create a new subgraph within our To-do List project.   
 Open your project and start your terminal.
 The Powerhouse toolkit provides a command-line utility to create new subgraphs easily.   
 
@@ -55,7 +55,7 @@ Loaded templates: node_modules/@powerhousedao/codegen/dist/codegen/.hygen/templa
       inject: ./subgraphs/index.ts
 ```
 
-### What Happened?
+### What happened?
 1. A new subgraph was created in `./subgraphs/to-do-list-subgraph/`
 2. The subgraph was automatically registered in your project's registry
 3. Basic boilerplate code was generated with an example query
@@ -67,7 +67,7 @@ If we now run 'phreactor' we will see the new subgraph being registered during t
 
 Now that we've generated our subgraph, let's open it and define the schema inside the `index.ts` file.
 
-### 2.1 Define the Schema
+### 2.1 Define the schema
 
 Here we define the schema (typeDefs) which defines the structure of your queries and mutations.
 For educational purposes we will define a simple query that mimics the functionality of the todoList interface (or editor): 
@@ -83,7 +83,7 @@ type Query {
 }
 ```
 
-### What Happened?
+### What happened?
 
 - Added two queries: todoList and todoItems
 - Created an operational table todo_items to store the todo items
@@ -93,7 +93,7 @@ type Query {
 - The todoList query returns the full list with its statistics
 
 
-### 2.2 Implement the Resolver for the subgraph's schema
+### 2.2 Implement the resolver for the subgraph's schema
 Resolvers define how data is retrieved or modified.
 If you query for a specific value you can retrieve the value from either the reactor itself or an operational datastore.    
 We'll look into this in more detail in the next section.
@@ -108,7 +108,7 @@ resolvers: {
 }
 ```
 
-### 2.3 Add Operational Data Storage (Optional)
+### 2.3 Add operational data storage (optional)
 If you need to persist data, initialize an operational datastore inside onSetup():
 
 ```typescript title="Adding an operational datastore"
@@ -126,7 +126,7 @@ async createOperationalTables() {
 }
 ```
 
-### 2.4 Fetching from an Operational Store
+### 2.4 Fetching from an operational store
 If your subgraph interacts with an Operational Data Store, modify the resolver:
 
 ```typescript title="Example of a resolver that fetches data from an operational store"
@@ -139,9 +139,9 @@ resolvers: {
 }
 ```
 
-### 2.5 Connecting to a Processor (Optional, but Recommended)
+### 2.5 Connecting to a processor (optional, but recommended)
 
-#### Why Connect a Processor?
+#### Why connect a processor?
 Subgraphs alone are limited. A subgraph only queries data, but doesn't generate or store it.
 To make subgraphs useful, connect them with processors that update the data dynamically.
 **A processor listens to system events and updates the operational store in real-time.**
@@ -173,9 +173,9 @@ resolvers: {
 }
 ```
 
-## 3. Testing the Subgraph
+## 3. Testing the subgraph
 
-### 3.1. Start the Reactor
+### 3.1. Start the reactor
 To activate the subgraph, run:
 
 ```bash
@@ -187,7 +187,7 @@ Or, for full system startup:
 ph dev 
 ```
 
-### 3.2. Access GraphQL Playground
+### 3.2. Access GraphQL playground
 Open your browser and go to:
 
 ```bash
@@ -199,7 +199,7 @@ Example:
 http://localhost:4001/test-subgraph
 ```
 
-### 3.3. Run a Query
+### 3.3. Run a query
 
 ```graphql
 query {
@@ -207,7 +207,7 @@ query {
 }
 ```
 
-### 3.4. Expected Response
+### 3.4. Expected response
 If everything works, you should see:
 
 ```json
@@ -218,16 +218,16 @@ If everything works, you should see:
 }
 ```
 
-## 4. Working with the Supergraph or Gateway
+## 4. Working with the supergraph or gateway
 
 A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data
 
-### 4.1 Key Concepts
+### 4.1 Key concepts
 
 *   **Subgraph:** An independent GraphQL service with its own schema. Each subgraph typically represents a specific domain or microservice within a larger system.
 *   **Gateway/Router:** A server that sits in front of the subgraphs. It receives client queries, consults the supergraph schema, and routes parts of the query to the relevant subgraphs. It then stitches the results back together before sending the final response to the client.
 
-### 4.2 Benefits of Using a Supergraph
+### 4.2 Benefits of using a supergraph
 
 *   **Federated Architecture:** Enables a microservices-based approach where different teams can own and operate their services independently.
 *   **Scalability:** Individual subgraphs can be scaled independently based on their specific needs.
@@ -236,7 +236,7 @@ A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs,
 *   **Clear Separation of Concerns:** Each subgraph focuses on a specific domain, leading to more maintainable and understandable codebases.
 
 
-### 4.3 Use the Powerhouse Supergraph
+### 4.3 Use the Powerhouse supergraph
 
 The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To get to the endpoint open your localhost by starting the reactor and adding `graphql` to the end of the url. The following commands explain how you can test & try the supergraph. 
 
@@ -279,9 +279,9 @@ The supergraph allows to both query & mutate data from the same endpoint.
 This is a quick example of how the supegraph can be used. 
 
 
-## Subgraphs are particularly useful for:
+## Subgraphs are particularly useful for
 
-1. **Cross-Document Interactions**: For example, connecting a ToDoList with an Invoice document model:
+1. **Cross-Document Interactions**: For example, connecting a To-do List with an Invoice document model:
    - When an invoice-related task is marked complete, update the invoice status
    - When an invoice is paid, automatically check off related tasks
 
@@ -300,7 +300,7 @@ This is a quick example of how the supegraph can be used.
 Some subgraphs (e.g., System Subgraph, Drive Subgraph) already exist.  
 To integrate with them, register them via the Reactor API.
 
-### Future Enhancements
+### Future enhancements
 
 Bridge Processors and Subgraphs – Currently, there's a gap in how processors and subgraphs interact. Powerhouse might improve this in future updates.
 

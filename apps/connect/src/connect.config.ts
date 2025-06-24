@@ -1,6 +1,7 @@
 import { CLOUD, LOCAL, PUBLIC } from '@powerhousedao/design-system';
 import { isLogLevel, logger, setLogLevel } from 'document-drive/utils/logger';
 import pkg from '../package.json' with { type: 'json' };
+import { getBasePath } from './utils/browser';
 
 const version = pkg.version;
 const APP_VERSION = import.meta.env.APP_VERSION || version;
@@ -38,8 +39,7 @@ const HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS =
     import.meta.env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS ||
     'false';
 
-const PH_CONNECT_ROUTER_BASENAME =
-    import.meta.env.PH_CONNECT_ROUTER_BASENAME || '/';
+const PH_CONNECT_ROUTER_BASENAME = getBasePath() || '/';
 
 const PH_CONNECT_SENTRY_DSN = import.meta.env.PH_CONNECT_SENTRY_DSN || '';
 const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || 'dev';
@@ -52,7 +52,7 @@ const PH_CONNECT_CLI_VERSION =
 
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
     import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
-    `${PH_CONNECT_ROUTER_BASENAME}:analytics`;
+    `${PH_CONNECT_ROUTER_BASENAME.replace(/\//g, '')}:analytics`; // remove ending slash
 const PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED =
     import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED || 'false';
 

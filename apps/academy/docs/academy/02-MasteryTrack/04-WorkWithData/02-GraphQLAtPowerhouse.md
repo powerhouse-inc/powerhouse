@@ -11,7 +11,7 @@ In this section, we will cover **the core concepts of GraphQL with examples appl
 - **Single Endpoint**: With GraphQL, you can access all the data you need through one endpoint, reducing the number of network requests.
 - **Dynamic Queries**: Its introspective nature allows developers to explore the API's schema dynamically, which streamlines development and documentation.
 
-## GraphQL: Core Concepts
+## GraphQL: Core concepts
 
 ### Schema
 The schema defines the structure of a GraphQL API. It acts as a contract between the client and server, detailing:
@@ -60,7 +60,7 @@ For example the contributor type has a relationship with the project type
 
 ---
 
-### Fields & Arguments
+### Fields and arguments
 - **Field**: A specific piece of data you can request from an object. When you build a query, you select the fields you want to retrieve.
 - **Argument**: Key-value pairs that can be attached to fields to customize and refine the query. Some fields require arguments to work correctly, especially when dealing with mutations.
 
@@ -101,7 +101,7 @@ GraphQL APIs are self-documenting. Through introspection, you can query the API 
   ```
 
 ---
-### Connections, Edges, and Nodes
+### Connections, edges, and nodes
 When dealing with lists of data, GraphQL employs a pattern that includes:
 
 - **Connection**: A structure that represents a list of related objects.

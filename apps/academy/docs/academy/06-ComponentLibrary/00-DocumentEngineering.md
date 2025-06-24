@@ -56,9 +56,7 @@ While Storybook aims for accuracy, there might occasionally be discrepancies or 
 
 ## Implementing a Component
 
-@callme-t
-
-Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/academy/GetStarted/BuildToDoListEditor).
+Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors).
 
 1.  **Identify the Need:** While building your feature (e.g., the To-do List editor in `editor.tsx`), you determine the need for a standard UI element, like a checkbox.
 2.  **Consult the Document Engineering Components in Storybook:**

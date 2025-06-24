@@ -20,7 +20,6 @@ export * from './useLoadInitialData.js';
 export * from './useLogin.js';
 export * from './useNodeNavigation.js';
 export * from './useOpenFile.js';
-export * from './useOpenSwitchboardLink.js';
 export * from './useRenown.js';
 export * from './useSyncStatus.js';
 export * from './useUiNodes.js';

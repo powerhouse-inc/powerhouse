@@ -78,7 +78,7 @@ const result = profiler.recordSync("computeSync", () => {
 });
 ```
 
-### Name Stack
+### Name stack
 
 Often, it is useful to group metrics together. This is accomplished through a metric naming stack, which takes the form: `[Namespace].[... Stack Values].[Metric Name]`. This allows systems to pass down a profiler instance, and compose results.
 

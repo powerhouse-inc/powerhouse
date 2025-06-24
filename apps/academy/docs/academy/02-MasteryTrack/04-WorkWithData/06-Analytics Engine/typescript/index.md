@@ -16,7 +16,7 @@ The `core` library contains common data types and abstractions used throughout. 
 
 The `knex`, `pg`, and `browser` libraries contain various storage implementations. Finally, the `graphql` library contains types, resolvers, and data types for a GraphQL API on top.
 
-## Querying Data
+## Querying data
 
 The entry point for data queries in Typescript is the `AnalyticsQueryEngine`. This wraps an `IAnalyticsStore` implementation, which will be discussed in detail later.
 
@@ -121,7 +121,7 @@ type GroupedPeriodResult = {
 
 - `sum`: A total or aggregated value of the metric over the entire period, providing a summarized figure.
 
-### A Note about Times
+### A note about times
 
 Time is a bit of a sore subject in JavaScript, and we wrestled a bit with how to attack this problem.
 
@@ -133,7 +133,7 @@ As this is a time-series analytics system, times are rather important to get rig
 
 This is why our analytics API uses these luxon types as inputs and outputs to the system: to make it hard to screw up.
 
-## Inserting Data
+## Inserting data
 
 The `IAnalyticsStore` interface is the primary entry point for inserting and deleting data. Multiple storage implementations are provided, but for simplicity we can get up and running quickly with the [`MemoryAnalyticsStore`](#memory).
 
@@ -168,7 +168,7 @@ await store.addSeriesValue([
 ]);
 ```
 
-## Subscribing to Data Changes
+## Subscribing to data changes
 
 The `IAnalyticsStore` also provides an API for subscribing to data changes. This is achieved by subscribing to an `AnalyticsPath`.
 
@@ -221,7 +221,7 @@ await store.addSeriesValue({ source: AnalyticsPath.fromString("atlas/foo/test/a/
 await store.addSeriesValue({ source: AnalyticsPath.fromString("rwa/foo/test"), ... });
 ```
 
-## Store Implementations
+## Store implementations
 
 Multiple storage implementations are provided, each with comprehensive documentation. See the corresponding docs for:
 

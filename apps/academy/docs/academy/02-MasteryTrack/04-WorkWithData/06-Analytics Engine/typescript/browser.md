@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-# Browser Store
+# Browser store
 
 The `BrowserAnalyticsStore` is an `IAnalyticsStore` implementation that sits on top of [`MemoryAnalyticsStore`](#memory) but adds an `IndexedDB` plugin for persistence.
 

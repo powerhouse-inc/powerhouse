@@ -21,9 +21,9 @@ You can follow these instructions to setup a dev environment:
 **Starting Connect**
 
 ```bash
-npm start # start desktop app
+pnpm start # start desktop app
 # OR
-npm run dev:web # start web app
+pnpm run dev # start web app
 ```
 
 After initialized, you can access the web app at `http://localhost:5173`.
@@ -31,11 +31,31 @@ After initialized, you can access the web app at `http://localhost:5173`.
 **Create a packaged version of the desktop app**
 
 ```bash
-npm run make # Create package for the current platform
-npm run make:mac # Create package for Mac OSX
-npm run make:linux # Create package for Linux
-npm run make:windows # Create package for Windows
+pnpm run make # Create package for the current platform
+pnpm run make:mac # Create package for Mac OSX
+pnpm run make:linux # Create package for Linux
+pnpm run make:windows # Create package for Windows
 ```
+
+**Test Connect production deployment**
+
+You can test the production deployment of Connect by running it in a Docker container linked to your local packages.
+
+```bash
+pnpm run docker:build # Build the Docker image, only needs to run once
+```
+
+Build the Monorepo packages before starting a container
+```bash
+pnpm build:all # Build the packages, needs to run before running the Docker container
+```
+
+Run the Docker container from `apps/connect/`:
+```bash
+pnpm docker:run # Run the Docker container
+```
+
+Connect will be available at: `http://localhost:4000/develop/powerhouse/connect`
 
 
 ## Troubleshooting

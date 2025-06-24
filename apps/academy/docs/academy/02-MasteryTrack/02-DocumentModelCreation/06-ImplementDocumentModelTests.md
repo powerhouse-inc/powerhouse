@@ -1,21 +1,21 @@
-# Implement Document Model Tests
+# Implement document model tests
 
-## Ensuring Robustness and Reliability
+## Ensuring robustness and reliability
 
 In the previous chapter, we implemented the core reducer logic for our document model. Now, we reach a critical stage that underpins the reliability and correctness of our entire model: **Implementing Document Model Tests**.
 
 Testing is not an afterthought; it's an integral part of the development lifecycle, especially in systems like Powerhouse where data integrity and predictable state transitions are paramount. Well-crafted tests serve as a safety net, allowing you to refactor and extend your document model with confidence.
 
-This document provides a practical, hands-on tutorial for testing the `ToDoList` document model reducers you have just built.
+This document provides a practical, hands-on tutorial for testing the `To-do List` document model reducers you have just built.
 
-## Practical Implementation: Writing and Running the ToDoList Tests
+## Practical implementation: Writing and running the To-do List tests
 
-This tutorial assumes you have implemented the `ToDoList` reducers as described in the previous chapter and that the code generator has created a test file skeleton at `document-models/to-do-list/src/reducers/tests/to-do-list.test.ts`.
+This tutorial assumes you have implemented the `To-do List` reducers as described in the previous chapter and that the code generator has created a test file skeleton at `document-models/to-do-list/src/reducers/tests/to-do-list.test.ts`.
 
 <details>
-<summary>Tutorial: Implementing and Running the `ToDoList` Reducer Tests</summary>
+<summary>Tutorial: Implementing and running the `To-do List` reducer tests</summary>
 
-### 1. Implement the Reducer Tests
+### 1. Implement the reducer tests
 
 With the reducer logic in place, it's critical to test it. Navigate to the generated test file at `document-models/to-do-list/src/reducers/tests/to-do-list.test.ts` and replace its contents with the following test suite.
 
@@ -96,7 +96,7 @@ describe('Todolist Operations', () => {
 });
 ```
 
-### 2. Run the Tests
+### 2. Run the tests
 
 Now, run the tests from your project's root directory to verify your implementation.
 
@@ -104,11 +104,11 @@ Now, run the tests from your project's root directory to verify your implementat
 pnpm run test
 ```
 
-If all tests pass, you have successfully verified the core logic of your `ToDoList` document model. This ensures that the reducers you wrote behave exactly as expected.
+If all tests pass, you have successfully verified the core logic of your `To-do List` document model. This ensures that the reducers you wrote behave exactly as expected.
 
 </details>
 
-## Best Practices for Document Model Tests
+## Best practices for document model tests
 
 While the tutorial provides a concrete example, keep these general best practices in mind when writing your tests:
 
@@ -122,7 +122,7 @@ While the tutorial provides a concrete example, keep these general best practice
 *   **Cover Edge Cases**: Test what happens when an operation receives invalid input (e.g., trying to update an item that doesn't exist). Your test should confirm the reducer either throws an error or returns the state unchanged, depending on your implementation.
 *   **Run Tests Frequently**: Integrate testing into your development workflow. Run tests after making changes to ensure you haven't broken anything. The `pnpm run test` command is your friend.
 
-## Conclusion: The Payoff of Diligent Testing
+## Conclusion: The payoff of diligent testing
 
 Implementing comprehensive tests for your document model reducers is an investment that pays dividends in the long run. It leads to:
 
@@ -133,7 +133,7 @@ Implementing comprehensive tests for your document model reducers is an investme
 
 By following the tutorial and applying these best practices, you can build a strong suite of tests that safeguard the integrity and functionality of your document models. This diligence is a hallmark of a "Mastery Track" developer, ensuring that the solutions you build are not just functional but also stable, maintainable, and trustworthy.
 
-## Up Next
-In the next chapter of the Mastery Track - Building User Experiences you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.
+## Up next
+In the next chapter of the Mastery Track - Building User Experiences you will learn how to implement an [editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors) for your document model so you can see a simple user interface for the **To-do List** document model in action. 
 
-For a complete, working example, you can always refer to the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
+For a complete, working example, you can always have a look at the [Example To-do List Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.

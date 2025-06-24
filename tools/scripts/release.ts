@@ -179,12 +179,14 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
 
     const [, branchTag, branchVersion] = branchRelease.split('/');
     const normalizedBranchVersion = branchVersion.replace("v", '');
-    
-    preid = validProductionBranches.includes(branchTag) ? undefined : branchTag;
+    const isProdRelease = validProductionBranches.includes(branchTag);
+
+    preid = isProdRelease ? undefined : branchTag;
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
 
-    if (specifier === connectVersion) {
-      specifier = semver.inc(specifier, "prerelease", preid) || undefined;
+    if (semver.lte(specifier, connectVersion)) {
+      const releaseType = isProdRelease ? "patch" : "prerelease";
+      specifier = semver.inc(connectVersion, releaseType, preid) || undefined;
     }
   }
 
@@ -200,7 +202,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     process.exit(1);
   }
 
-  if (preReleaseResult.isEmptyRelease) {
+  if (preReleaseResult.isEmptyRelease && !isBranchRelease) {
     console.warn('>>> There are no available changes to release');
     process.exit(0);
   }

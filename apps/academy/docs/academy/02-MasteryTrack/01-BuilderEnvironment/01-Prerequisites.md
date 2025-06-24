@@ -7,24 +7,6 @@ If you've already set up **Git, Node, and pnpm**, your most important step is to
 :::
 ___
 
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Installing node.js 22](#installing-nodejs)
-  - [For Windows](#for-windows)
-  - [For macOS](#for-macos)
-  - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian)
-- [Installing Visual Studio Code](#installing-visual-studio-code)
-  - [For Windows](#for-windows-1)
-  - [For macOS](#for-macos-1)
-  - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian-1)
-- [Install Git](#install-git)
-  - [For Windows](#for-windows-2)
-  - [For macOS](#for-macos-2)
-  - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian-2)
-- [Configure Git](#configure-git-all-systems)
-- [Install Powerhouse CLI](#install-powerhouse-cli)
-- [Verify Installation](#verify-installation)
-
 ## Overview
 
 Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools: 

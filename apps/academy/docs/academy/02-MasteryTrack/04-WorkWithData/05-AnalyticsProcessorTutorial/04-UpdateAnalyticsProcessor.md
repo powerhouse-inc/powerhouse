@@ -1,4 +1,4 @@
-# Update the Analytics Processor
+# Update the analytics processor
 
 Now let's implement our custom analytics processor code to calculate the total value of the asset class on a monthly basis.
 You will likely already be in the desired directory, but if not, navigate to the project directory and open it.

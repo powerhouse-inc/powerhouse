@@ -1,8 +1,8 @@
-# Analytics Processors
+# Analytics processors
 
 An Analytics Processor is an object that can track analytics for operations and state changes on a set of document models. These analytics can be used to generate bespoke dashboards and reports, specific to the type or implementation of the document model.
 
-## Generating an Analytics Processor with the CLI
+## Generating an analytics processor with the CLI
 
 The `ph-cli` utility can be used to generate the scaffolding for an Analytics Processor.
 
@@ -109,7 +109,7 @@ Model-specific code will go where the `console.log` statement currently resides.
 
 > It is best practice to batch insert all updates to the analytics system. In this example, we add all updates to an array of inputs, then insert them all at once. This is optimal over `await`-ing each separate value.
 
-## Learn By Example: RwaAnalyticsProcessor
+## Learn by example: RwaAnalyticsProcessor
 
 In the `reactor-local` package, we have implemented a processor for the `makerdao/rwa-portfolio` document type. This is a document model that tracks MakerDAO's Real World Asset (RWA) portfolio. It was initially generated using the `ph-cli` utility.
 
@@ -216,7 +216,7 @@ With variables:
 }
 ```
 
-## Learn By Example: Document Operations
+## Learn by example: Document operations
 
 The RWA processor example pulls information from operation _inputs_ to insert analytics data. Another use case might be to capture meta-analytics from the states themselves.
 

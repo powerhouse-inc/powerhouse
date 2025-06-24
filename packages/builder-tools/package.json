@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "2.5.0-dev.30",
+  "version": "3.2.0-dev.3",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -87,7 +87,7 @@
     "document-model": "workspace:*",
     "dspot-powerhouse-components": "^1.1.0",
     "es-toolkit": "^1.37.2",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.5",
     "esbuild-plugins-node-modules-polyfill": "^1.7.0",
     "fast-glob": "^3.3.3",
     "graphql": "^16.11.0",

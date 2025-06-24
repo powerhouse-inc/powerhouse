@@ -1,4 +1,4 @@
-# Build a Drive Explorer
+# Build a drive explorer
 
 **Drive Explorers or Drive Apps** enhance how contributors and organizations interact with document models.   
 An 'app-like' experience is created by providing a **custom interface** for working with or exploring the contents of a drive.  
@@ -7,19 +7,19 @@ A 'Drive Explorer or Drive App' offers a tailored application designed around it
 Think of a Drive Explorer as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
 :::
 
-### **Designed for Specific Use Cases**
+### **Designed for specific use cases**
 
 Most Drive Explorers are built by organizations for specific purposes, aligning closely with a document model package or even being part of one. By integrating Drive Apps with document models, organizations can customize user experiences, streamline workflows, and maximize efficiency for their contributors.
 
 Drive Explorers or Drive Apps **bridge the gap between raw data and usability**, unlocking the full potential of document models within the Powerhouse framework.
 
-### **Key Features of Drive Apps**
+### **Key features of drive apps**
 
 - **Custom Views & Organization** – Drive Apps can present data in formats like Kanban boards, list views, or other structured layouts to suit different workflows.
 - **Aggregated Insights** – They can provide high-level summaries of important details across document models, enabling quick decision-making.
 - **Enhanced Interactivity** – Drive Apps can include widgets, data processors, or read models to process and display document data dynamically.
 
-### **Building a Drive App**
+### **Building a drive app**
 
 #### The steps of our tutorial
 
@@ -31,7 +31,6 @@ Here is a **quick overview** of the 3 different steps towards building a Drive A
 Use the `generate drive editor` command to create the basic template structure for your Drive App:
 
 ```bash
-
 ph generate --drive-editor <Drive App>
 ```
 
@@ -40,7 +39,7 @@ ph generate --drive-editor <Drive App>
 After creating your Drive App, update the `manifest.json` file with relevant information:
 The manifest file identifies your project and its components within the Powerhouse ecosystem.
 
-#### Step 3. Customize the Drive App
+#### Step 3. Customize the drive app
 
 Review the generated template and modify it to better suit your document model:
 
@@ -48,7 +47,7 @@ Review the generated template and modify it to better suit your document model:
 2. Add custom views specific to your data model
 3. Implement specialized interactions for your use case
 
-### About the Drive App template
+### About the drive app template
 
 The default template provides a solid foundation. It contains:
 - A tree structure navigation panel
@@ -58,7 +57,7 @@ The default template provides a solid foundation. It contains:
 But the real power comes from tailoring the interface to your specific document models.   
  Now let's implement a specific example for a more complex todo-list then the one we've been working on. 
 
-### Implementation Example: Todo Drive Explorer
+### Implementation example: Todo drive explorer
 
 This example demonstrates how to create a Todo Drive Explorer application using the Powerhouse platform. 
 The application allows users to create and manage todo lists with a visual progress indicator.
@@ -125,7 +124,7 @@ Since you've likely already run through the [document modeling process](/academy
    }
    ```
 
-### Customize the Drive Explorer App
+### Customize the drive explorer app
 
 **1. Remove unnecessary default components:**   
 
@@ -163,7 +162,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
 
    ![Todo Drive Explorer Demo](https://raw.githubusercontent.com/powerhouse-inc/todo-drive-explorer/9a87871e61460e73ddf8635fd756a0cd991306d6/demo.gif)
 
-### **Start Building Your Own Drive Apps, Explorers or Experiences**
+### **Start building your own drive apps, explorers or experiences**
 Congratulations on completing this tutorial! You've successfully built a custom Drive Explorer, enhancing the way users interact with document models.
 
 Now, take a moment to think about the possibilities!

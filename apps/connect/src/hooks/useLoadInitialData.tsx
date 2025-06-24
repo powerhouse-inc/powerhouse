@@ -34,7 +34,8 @@ export const useLoadInitialData = () => {
     async function checkLatestVersion() {
         const result = await isLatestVersion();
         if (result === null) return;
-        if (result.isLatest) {
+        // ignore dev/staging versions
+        if (result.isLatest || result.currentVersion.includes('-')) {
             return true;
         }
 

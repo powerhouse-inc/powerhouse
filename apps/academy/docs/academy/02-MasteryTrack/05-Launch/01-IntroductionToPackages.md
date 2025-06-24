@@ -1,10 +1,10 @@
-# Intro to Packages
+# Introduction to packages
 
 Packages of document models are a core structuring mechanism in the Powerhouse framework, allowing developers to group and manage related document models efficiently. These packages serve as modular collections of document definitions, ensuring consistency, scalability, and reusability across different applications.
 
 By packaging document models together, developers can create well-organized, interoperable sets of data structures that capture the specific needs of various operational processes. Whether used for financial operations, governance, or contributor management, these packages streamline development and integration within Powerhouse's decentralized framework.
 
-### Key Features of Packages
+### Key features of packages
 
 - **Modular Structure** – Packages encapsulate related document models, making it easier to manage and deploy them as a cohesive unit.
 - **Standardized Definitions** – Each document model within a package follows Powerhouse's structured schema approach, ensuring consistency in data representation.
@@ -12,7 +12,7 @@ By packaging document models together, developers can create well-organized, int
 - **Dependency Management** – Developers can define dependencies between document models, ensuring proper relationships and data flows between interconnected components.
 - **Automated Schema Evolution** – Versioning mechanisms allow document models within a package to evolve over time without breaking existing functionality.
 
-### Example Use Cases of Packages
+### Example use cases of packages
 
 - **Finance Package** – A set of document models handling invoices, payments, budgets, and financial reporting. link
 - **Contributor Billing Package** – Defines document models for tracking work, invoicing, and facilitating payments (in both fiat and crypto) for contributors in decentralized organizations. link
@@ -33,9 +33,9 @@ Within a package, you'll find **several key modules**, each serving a distinct r
 
 ---
 
-## **Modules of a Powerhouse Package**
+## Modules of a Powerhouse package
 
-### **1. Document Model**
+### 1. Document model
 
 The **core component** of any package, defining how data is structured and manipulated.
 
@@ -43,14 +43,14 @@ The **core component** of any package, defining how data is structured and manip
 - Serves as the foundation for decentralized workflows.
 - **Example:** An **Invoice** document model might define fields like `issuer`, `recipient`, `amount`, and operations like `ADD_LINE_ITEM` or `MARK_AS_PAID`.
 
-### **2. Document Model Editor**
+### 2. Document model editor
 
 A **UI component** that allows users to **interact with document models visually**.
 
 - Enables users to **create, modify, and manage** documents without coding.
 - Supports multiple editors for a single document model, offering different **UI experiences** tailored to specific roles.
 
-### **3. Scripts**
+### 3. Scripts
 
 **Automated actions** that run on demand or on a schedule.
 
@@ -58,7 +58,7 @@ A **UI component** that allows users to **interact with document models visually
 - Not continuously running—activated manually or at predefined intervals.
 - **Example:** A script that **generates a weekly financial report** from invoice data.
 
-### **4. Processors**
+### 4. Processors
 
 **Event-driven background tasks** that react to document changes.
 
@@ -66,7 +66,7 @@ A **UI component** that allows users to **interact with document models visually
 - Supports real-time **data updates, analytics, and workflow automation**.
 - **Example:** A processor that **monitors new invoices** and updates an **analytics dashboard** in real-time.
 
-### **5. Drive-Apps**
+### 5. Drive-apps
 
 **Custom interfaces** that provide enhanced ways to interact with a package's document models.
 

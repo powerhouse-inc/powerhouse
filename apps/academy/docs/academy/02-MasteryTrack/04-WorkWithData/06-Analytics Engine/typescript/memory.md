@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-# Memory Store
+# Memory store
 
 The `MemoryAnalyticsStore` is an `IAnalyticsStore` implementation that uses a an in-memory database as its storage mechanism. Under the hood, we load a WASM build of Postgres, called [PGlite](https://pglite.dev/).
 

@@ -1,8 +1,8 @@
-# Specify the State Schema
+# Specify the state schema
 
 The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the GraphQL Schema Definition Language (SDL) to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
 
-## Core Concepts
+## Core concepts
 
 ### Types
 At the heart of GraphQL SDL are **types**. Types define the shape of your data. You can define custom object types that represent the entities in your document. For example, in a `ToDoList` document, you might have a `ToDoListState` type and a `ToDoItem` type.
@@ -23,12 +23,13 @@ GraphQL has a set of built-in **scalar types**:
 
 In addition to these standard types, the Powerhouse Document-Engineering system introduces custom scalars that are linked to reusable front-end components. These scalars are tailored for the web3 ecosystem and will be explored in the Component Library section of the documentation.
 
-### Lists and Non-Null
+### Lists and non-null
+
 You can modify types using lists and non-null indicators:
 *   **Lists**: To indicate that a field will return a list of a certain type, you wrap the type in square brackets, e.g., `[ToDoItem!]!`. This means the field `items` in `ToDoListState` will be a list of `ToDoItem` objects.
 *   **Non-Null**: To indicate that a field cannot be null, you add an exclamation mark `!` after the type name, e.g., `String!`. This means that the `text` field of a `ToDoItem` must always have a value. The outer `!` in `[ToDoItem!]!` means the list itself cannot be null (it must be at least an empty list), and the inner `!` on `ToDoItem!` means that every item within that list must also be non-null.
 
-## Example: ToDoList State Schema
+## Example: ToDoList state schema
 
 Let's revisit the `ToDoList` example from the "Define the ToDoList document specification" tutorial.
 Only this time, we'll also add a 'Stats' type. Since we want to keep track of the number of completed To-Do's.
@@ -71,7 +72,7 @@ type ToDoListStats {
     *   `checked: Int!`: The number of to-do items that are marked as completed. This must be an integer and cannot be null.
     *   `unchecked: Int!`: The number of to-do items that are still pending. This also must be an integer and cannot be null.
 
-## Best Practices for Designing Your State Schema
+## Best practices for designing your state schema
 
 1.  **Start Simple, Iterate**: Begin with the core entities and properties. You can always expand and refine your schema as your understanding of the document's requirements grows.
 2.  **Clarity and Explicitness**: Name your types and fields clearly and descriptively. This makes the schema easier to understand and maintain.
@@ -85,12 +86,12 @@ type ToDoListStats {
 
 By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
 
-## Practical Implementation: Defining the State Schema in Connect
+## Practical implementation: defining the state schema in Connect
 
 Now that you understand the concepts behind the state schema, let's put it into practice. This section will guide you through creating a document model specification for the advanced ToDoList example discussed above.
 
 <details>
-<summary>Tutorial: The State Schema Specification</summary> 
+<summary>Tutorial: The state schema specification</summary> 
 
 ### Prerequisites
 
@@ -105,7 +106,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
 
 2.  **Define Document Metadata**:
     -   **Name**: Give your document model a descriptive name, for example, `ToDoList`. **Pay close attention to capitalization, as it influences our code.**
-    -   **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type, for instance, `powerhouse/todolist`.
+    -   **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type: `powerhouse/todolist`.
 
 3.  **Specify the State Schema**:
     -   In the code editor provided, you'll see a template for a GraphQL schema.
@@ -115,6 +116,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
     # The state of our ToDoList
     type ToDoListState {
       items: [ToDoItem!]!
+      stats: ToDoListStats!
     }
 
     # A single to-do item
@@ -141,5 +143,5 @@ By completing these steps, you have successfully specified the data structure fo
 
 </details>
 
-For a complete, working example, you can always refer to the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
+For a complete, working example, you can always have a look at the [Example ToDoList Repository](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository) which contains the full implementation of the concepts discussed in this Mastery Track.
 

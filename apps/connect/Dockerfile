@@ -29,28 +29,25 @@ RUN apk add --no-cache \
 ARG TAG=latest
 ENV TAG=$TAG
 
-
 # Install ph-cmd
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN pnpm add -g ph-cmd@$TAG
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf.template
 
 # Environment variables
 ENV NODE_ENV=production
 ENV PORT=4000
-ENV PH_CONNECT_ROUTER_BASENAME=""
 ENV PH_CONNECT_SENTRY_DSN=""
 ENV PH_CONNECT_SENTRY_ENV=""
 ENV PH_PACKAGES=""
+ENV PH_CONNECT_BASE_PATH="/"
 WORKDIR /app
-RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
-        ph init project --${TAG}; \
-    else \
-        ph init project; \
-    fi
+
+# Create and initialize the project
+RUN ph init project --package-manager pnpm --version ${TAG}
 WORKDIR /app/project
 
 # Copy and set up entrypoint script

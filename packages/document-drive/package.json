@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "2.5.0-dev.30",
+  "version": "3.2.0-dev.3",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -26,7 +26,6 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
-    "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",
@@ -37,7 +36,7 @@
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "npm run clean && prisma generate --no-hints",
+    "prebuild": "npm run clean && prisma generate --no-hints && npm run copy-prisma",
     "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {

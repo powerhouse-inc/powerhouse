@@ -99,14 +99,14 @@ export class ConnectCrypto implements IConnectCrypto {
         const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
         if (loadedKeyPair) {
             this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-            logger.info('Found key pair');
+            logger.debug('Found key pair');
         } else {
             this.#keyPair = await this.#generateECDSAKeyPair();
-            logger.info('Created key pair');
+            logger.debug('Created key pair');
             await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
         }
         const did = await this.#parseDid();
-        logger.info('Connect DID:', did);
+        logger.debug('Connect DID:', did);
         return did;
     }
 

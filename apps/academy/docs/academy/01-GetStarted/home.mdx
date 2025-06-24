@@ -1,5 +1,5 @@
 ---
-title: Get Started
+title: Get started
 slug: /
 sidebar_class_name: category-index-page
 ---
@@ -11,11 +11,11 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 <div className={styles.learningPath}>
   {/* Get Started Card - Full Width */}
   <div className={`${styles.pathCard} ${styles.fullWidth}`}>
-    <div className={styles.cardHeader} style={{ justifyContent: 'center' }}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Flash.svg" alt="" />
-      </div>
-      <h3 className="card-title">Get started</h3>
+    <div className={styles.cardHeader}>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Flash.svg" alt="" className={styles.titleIcon} />
+        Get started
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
@@ -49,13 +49,13 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/BuilderEnvironment.svg" alt="" />
-      </div>
-      <h3 className="card-title">Get Started</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Flash.svg" alt="" className={styles.titleIcon} />
+        Get started
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/GetStarted/CreateNewPowerhouseProject" className="path-button">Build a Todo-list Document Model</a>
+      <a href="/academy/GetStarted/CreateNewPowerhouseProject" className="path-button">Build a todo-list document model</a>
     </div>
   </div>
 
@@ -64,16 +64,16 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   {/* Row 2: Build User Experiences, Builder Track Image, Work with Data */}
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Editor.svg" alt="" />
-      </div>
-      <h3 className="card-title">Build User Experiences</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Editor.svg" alt="" className={styles.titleIcon} />
+        Build user experiences
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/GetStarted/BuildToDoListEditor" className="path-button">Building a Todo-list Editor</a>
-      <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors" className="path-button">Building Document Editors</a>
-      <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer" className="path-button">Building Custom Drive Explorers</a>
-      <a href="/academy/ComponentLibrary/DocumentEngineering" className="path-button">Component Library</a>
+      <a href="/academy/GetStarted/BuildToDoListEditor" className="path-button">Building a todo-list editor</a>
+      <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors" className="path-button">Building document editors</a>
+      <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer" className="path-button">Building custom drive explorers</a>
+      <a href="/academy/ComponentLibrary/DocumentEngineering" className="path-button">Component library</a>
     </div>
   </div>
 
@@ -86,38 +86,37 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   }}>
     <img src="/img/Union.svg" alt="Powerhouse Union" width="250" />
     <div className={styles.masteryTrackTitle}>
-      <h3 className="card-title" style={{ margin: 0 }}>Mastery Track</h3>
+      <h3 className="card-title" style={{ margin: 0 }}>Mastery track</h3>
     </div>
   </div>
 
   <div className={styles.pathCard} style={{ border: '1px solid #4FC86F' }}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Data.svg" alt="" />
-      </div>
-      <h3 className="card-title">Work with Data</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Data.svg" alt="" className={styles.titleIcon} />
+        Work with data
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI" className="path-button">Reading & Writing through the API</a>
-      <a href="/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className="path-button">Create your own Subgraph</a>
-      <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Using the Analytics Engine</a>
-      <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Using the Analytics Engine</a>
+      <a href="/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI" className="path-button">Reading & writing through the API</a>
+      <a href="/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className="path-button">Create your own subgraph</a>
+      <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Using the analytics engine</a>
     </div>
   </div>
 
   {/* Launch Card - Full Width with 3 column buttons - RE-INSERTED */}
   <div className={`${styles.pathCard} ${styles.fullWidth}`}>
-    <div className={styles.cardHeader} style={{ justifyContent: 'center' }}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Launch.svg" alt="" />
-      </div>
-      <h3 className="card-title">Launch</h3>
+    <div className={styles.cardHeader}>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Launch.svg" alt="" className={styles.titleIcon} />
+        Launch
+      </h3>
     </div>
     <div className={styles.cardContent}>
       <div className={styles.buttonContainer}>
-        <a href="/academy/MasteryTrack/Launch/IntroductionToPackages" className="path-button">Intro To Packages</a>
-        <a href="/academy/MasteryTrack/Launch/PublishYourProject" className="path-button">Publish Your Project</a>
-        <a href="/academy/MasteryTrack/Launch/SetupEnvironment" className="path-button">Setup a Cloud Environment</a>
+        <a href="/academy/MasteryTrack/Launch/IntroductionToPackages" className="path-button">Intro to packages</a>
+        <a href="/academy/MasteryTrack/Launch/PublishYourProject" className="path-button">Publish your project</a>
+        <a href="/academy/MasteryTrack/Launch/SetupEnvironment" className="path-button">Setup a cloud environment</a>
       </div>
     </div>
   </div>
@@ -125,38 +124,38 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
   {/* Row 3: Cookbook, Use-cases, Advanced Topics */}
   <div className={styles.pathCard}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Cookbook.svg" alt="" />
-      </div>
-      <h3 className="card-title">Cookbook</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Cookbook.svg" alt="" className={styles.titleIcon} />
+        Cookbook
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/Cookbook" className="path-button">Powerhouse Recipes</a>
+      <a href="/academy/Cookbook" className="path-button">Powerhouse recipes</a>
     </div>
   </div>
 
   {/* Ensure this Use-cases Card block is clean */}
   <div className={styles.pathCard}> {/* New Use-cases Card */}
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Cookbook.svg" alt="Use-cases Icon" />
-      </div>
-      <h3 className="card-title">Use-cases</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Cookbook.svg" alt="Use-cases Icon" className={styles.titleIcon} />
+        Use-cases
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/ExampleUsecases/Chatroom/SetupBuilderEnvironment" className="path-button">Explore Use-cases</a>
+      <a href="/academy/ExampleUsecases/Chatroom/SetupBuilderEnvironment" className="path-button">Explore use-cases</a>
     </div>
   </div>
 
   <div className={styles.pathCard}>
     <div className={styles.cardHeader}>
-      <div className={styles.cardIconWrapper}>
-        <img src="/img/academy/icons/Advanced.svg" alt="" />
-      </div>
-      <h3 className="card-title">Architecture</h3>
+      <h3 className="card-title">
+        <img src="/img/academy/icons/Advanced.svg" alt="" className={styles.titleIcon} />
+        Architecture
+      </h3>
     </div>
     <div className={styles.cardContent}>
-      <a href="/academy/Architecture/PowerhouseArchitecture" className="path-button">Learn More</a>
+      <a href="/academy/Architecture/PowerhouseArchitecture" className="path-button">Learn more</a>
     </div>
   </div>
 </div>

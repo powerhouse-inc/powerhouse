@@ -1,12 +1,12 @@
-# Implement Document Reducers
+# Implement document reducers
 
-## The Heart of Document Logic
+## The heart of document logic
 
 In our journey through Powerhouse Document Model creation, we've defined the "what" – the structure of our data ([State Schema](02-SpecifyTheStateSchema.md)) and the ways it can be changed ([Document Operations](03-SpecifyDocumentOperations.md)). We've also seen how the [Document Model Generator](04-UseTheDocumentModelGenerator.md) translates these specifications into a coded scaffold. Now, we arrive at the "how": implementing **Document Reducers**.
 
 Reducers are the core logic units of your document model. They are the functions that take the current state of your document and an operation (an "action"), and then determine the *new* state of the document. They are the embodiment of your business rules and the engine that drives state transitions in a predictable, auditable, and immutable way.
 
-## Recap: The Journey to Reducer Implementation
+## Recap: The journey to reducer implementation
 
 Before diving into the specifics of writing reducers, let's recall the preceding steps:
 
@@ -16,7 +16,7 @@ Before diving into the specifics of writing reducers, let's recall the preceding
 
 This generated reducer file is our starting point. It will contain function stubs or an object structure expecting your reducer implementations, all typed according to your schema.
 
-## What is a Reducer? The Core Principles
+## What is a reducer? The core principles
 
 In the context of Powerhouse and inspired by patterns like Redux, a reducer is a **pure function** with the following signature (conceptually):
 
@@ -30,7 +30,7 @@ Let's break down its components and principles:
     *   An `input` property (or similar, like `payload`): An object containing the data necessary for the operation, matching the GraphQL `input` type you defined (e.g., `{ id: '1', text: 'Buy groceries' }` for `AddTodoItemInput`).
 *   **`newState`**: The reducer must return a *new* state object representing the state after the operation has been applied. If the operation does not result in a state change, the reducer should return the `currentState` object itself.
 
-### Key Principles Guiding Reducer Implementation:
+### Key principles guiding reducer implementation:
 
 1.  **Purity**:
     *   **Deterministic**: Given the same `currentState` and `action`, a reducer must *always* produce the same `newState`.
@@ -43,7 +43,7 @@ Let's break down its components and principles:
 
 3.  **Single Source of Truth**: The document state managed by reducers is the single source of truth for that document instance. All UI rendering and data queries are derived from this state.
 
-4.  **Delegation to Specific Operation Handlers**:
+4.  **Delegation to specific operation handlers**:
     While you can write one large reducer that uses a `switch` statement or `if/else if` blocks based on `action.type`, Powerhouse's generated code typically encourages a more modular approach. You'll often implement a separate function for each operation, which are then combined into a main reducer object or map. The `ph generate` command usually sets up this structure for you. For example, in your `document-models/to-do-list/src/reducers/to-do-list.ts`, you'll find an object structure like this:
 
     ```typescript
@@ -73,7 +73,7 @@ Let's break down its components and principles:
 
     The `dispatch` parameter is an advanced feature allowing a reducer to trigger subsequent operations. While powerful for complex workflows, it's often not needed for basic operations and can be ignored if unused.
 
-## Implementing Reducer Logic: A Practical Guide
+## Implementing reducer logic: A practical guide
 
 Let's use our familiar `ToDoList` example to illustrate common patterns. For this example, we'll assume our state schema has been updated to include a `stats` object to track the number of total, checked, and unchecked items.
 
@@ -102,7 +102,7 @@ And our action creators (from `../../gen/creators` or `../../gen/operations.js`)
 *   `actions.updateTodoItem({ id: 'item-id', text: 'Updated Task Text', checked: true })`
 *   `actions.deleteTodoItem({ id: 'item-id' })`
 
-### 1. Adding an Item (e.g., `addTodoItemOperation`)
+### 1. Adding an item (e.g., `addTodoItemOperation`)
 
 To add a new item to the `items` array immutably:
 
@@ -125,7 +125,7 @@ addTodoItemOperation(state: ToDoListState, action: /* AddTodoItemActionType */ a
 *   We use the spread operator (`...state`) to copy top-level properties from the old state into the new state object.
 *   For the `items` array, we create a *new* array by spreading the existing `state.items` and then appending the `newItem`.
 
-### 2. Updating an Item (e.g., `updateTodoItemOperation`)
+### 2. Updating an item (e.g., `updateTodoItemOperation`)
 
 To update an existing item in the `items` array immutably:
 
@@ -171,7 +171,7 @@ if (!itemToUpdate) {
 // ... proceed with map
 ```
 
-### 3. Deleting an Item (e.g., `deleteTodoItemOperation`)
+### 3. Deleting an item (e.g., `deleteTodoItemOperation`)
 
 To remove an item from the `items` array immutably:
 
@@ -189,7 +189,7 @@ deleteTodoItemOperation(state: ToDoListState, action: /* DeleteTodoItemActionTyp
 **Explanation**:
 *   We use the `filter` array method, which returns a *new* array containing only the elements for which the callback function returns `true`.
 
-## Leveraging Generated Types
+## Leveraging generated types
 
 As highlighted in [Using the Document Model Generator](04-UseTheDocumentModelGenerator.md), `ph generate` produces TypeScript types for your state (e.g., `ToDoListState`, `ToDoItem`) and the inputs for your operations (e.g., `AddTodoItemInput`, `UpdateTodoItemInput`).
 
@@ -232,16 +232,16 @@ Using these types provides:
 *   **Autocompletion and IntelliSense**: Improved developer experience in your IDE.
 *   **Clearer code**: Types serve as documentation for the expected data structures.
 
-## Practical Implementation: Writing the `ToDoList` Reducers
+## Practical implementation: Writing the `ToDoList` reducers
 
 Now that you understand the principles, let's put them into practice by implementing the reducers for our `ToDoList` document model.
 
 <details>
-<summary>Tutorial: Implementing the ToDoList Reducers</summary>
+<summary>Tutorial: Implementing the ToDoList reducers</summary>
 
 This tutorial assumes you have followed the steps in the previous chapters, especially using `ph generate ToDoList.phdm.zip` to scaffold your document model's code.
 
-### Implement the Operation Reducers
+### Implement the operation reducers
 
 Navigate to `document-models/to-do-list/src/reducers/to-do-list.ts`. The generator will have created a skeleton file. Replace its contents with the following logic.
 
@@ -332,7 +332,7 @@ export const reducer: ToDoListToDoListOperations = {
 
 </details>
 
-## Reducers and the Event Sourcing Model
+## Reducers and the event sourcing model
 
 Every time a reducer processes an operation and returns a new state, Powerhouse records the original operation (the "event") in an append-only log associated with the document instance. The current state of the document is effectively a "fold" or "reduction" of all past events, applied sequentially by the reducers.
 

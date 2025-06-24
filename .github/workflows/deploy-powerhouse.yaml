@@ -5,6 +5,12 @@ on:
     workflows: [Release Branch]
     types:
       - completed
+  push:
+    branches:
+      - staging
+      - production
+      - sky-atlas-staging
+      - sky-atlas-demo
 
 env:
   HUSKY: 0
