@@ -1,8 +1,8 @@
 # Revision history timeline
 
-The timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to implement and customize the timeline functionality in your Powerhouse application.
+The history timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to implement and customize the timeline functionality in your Powerhouse application.
 
-## Enabling the timeline feature
+## How to enable the timeline feature
 
 To enable the timeline feature in your document editor, you need to set `timelineEnabled: true` in your editor module configuration:
 
@@ -23,7 +23,7 @@ export const module: EditorModule<ToDoDocument> = {
 
 This setting enables the timeline button in the document toolbar.
 
-## Implementation options
+## How to implement the timeline feature
 
 ### Default drive explorer
 

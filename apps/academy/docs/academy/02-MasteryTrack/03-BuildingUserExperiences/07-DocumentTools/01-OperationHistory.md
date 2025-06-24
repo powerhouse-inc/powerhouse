@@ -6,8 +6,8 @@ A **document model** in Powerhouse is the core unit for managing business data. 
 - **State schema:** What data the document contains
 - **Operations:** What actions can modify that document
 
-## What is operations history?
-Every time a user edits a document, they do so by submitting a document operation (e.g., `ADD_LINE_ITEM`, `UPDATE_RECIPIENT`). These operations are:
+## What is an operations history?
+Every time a user edits a document, they do so by submitting a document operation or a 'command' in CQRS (e.g., `ADD_LINE_ITEM`, `UPDATE_RECIPIENT`). These operations are:
 
 - **Appended** to the document's history
 - **Immutable** (you never overwrite; you always append)
@@ -33,7 +33,7 @@ UPDATE_DUE_DATE(date: "2025-06-01")
 
 The document's state at any time is the result of running those operations in order.
 
-## Visualizing operations history
+## Visualizing the operations history
 
 ### Revision list and details
 In Connect the Powerhouse UI displays a chronologic list of all applied modifications to the document, each with a unique event ID, state hash, and commit message. You can inspect each revision for signatures and errors.
