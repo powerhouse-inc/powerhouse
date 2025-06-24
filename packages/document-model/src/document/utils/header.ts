@@ -150,7 +150,7 @@ export const createPresignedHeader = (): PHDocumentHeader => {
     createdAtUtcIso: new Date().toISOString(),
     slug: "",
     name: "",
-    branch: "",
+    branch: "main",
     revision: {
       document: 0,
     },

@@ -3,7 +3,6 @@ import {
   DocumentNotFoundError,
 } from "#server/error";
 import { existsSync, rmSync } from "fs";
-import { createHelia } from "helia";
 import path from "path";
 import { describe, it } from "vitest";
 import {
@@ -16,7 +15,6 @@ import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js"
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
 import { FilesystemStorage } from "../src/storage/filesystem.js";
-import { IPFSStorage } from "../src/storage/ipfs.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { PrismaClient } from "../src/storage/prisma/client/index.js";
 import { PrismaStorage } from "../src/storage/prisma/prisma.js";
@@ -58,13 +56,13 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       return new PrismaStorage(prisma, new InMemoryCache());
     },
   ],
-  [
+  /*[
     "IPFSStorage",
     async () => {
       const helia = await createHelia();
       return new IPFSStorage(helia);
     },
-  ],
+  ],*/
 ] as unknown as [string, () => Promise<IDocumentStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {

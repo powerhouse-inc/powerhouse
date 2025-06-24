@@ -206,6 +206,7 @@ export function baseCreateDocument<TDocument extends PHDocument>(
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],
+    attachments: {},
   } as unknown as TDocument;
 }
 

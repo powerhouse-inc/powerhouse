@@ -292,7 +292,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       id: dbDoc.id,
       sig: {
         nonce: "",
-        publicKey: "",
+        publicKey: {},
       },
       documentType: dbDoc.documentType,
       createdAtUtcIso: dbDoc.created.toISOString(),
