@@ -1,3 +1,15 @@
+## 3.2.0-dev.3 (2025-06-24)
+
+### 🩹 Fixes
+
+- moving prisma copy to prebuild so that build failure doesn't cause more build failure ([11df37b55](https://github.com/powerhouse-inc/powerhouse/commit/11df37b55))
+- **connect, builder-tools:** disable external packages in dev mode ([e13243874](https://github.com/powerhouse-inc/powerhouse/commit/e13243874))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.2.0-dev.2 (2025-06-20)
 
 ### 🩹 Fixes

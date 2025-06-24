@@ -1,3 +1,13 @@
+## 3.2.0-dev.3 (2025-06-24)
+
+### 🩹 Fixes
+
+- **connect, builder-tools:** disable external packages in dev mode ([e13243874](https://github.com/powerhouse-inc/powerhouse/commit/e13243874))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.2.0-dev.2 (2025-06-20)
 
 ### 🩹 Fixes
