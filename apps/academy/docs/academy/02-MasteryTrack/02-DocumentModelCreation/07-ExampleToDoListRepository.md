@@ -1,17 +1,17 @@
-# Example: Todo demo package
+# Example: Todo-demo-package
 
 :::info
 
-The ToDo Demo package is maintained by the Powerhouse Team and serves as a reference for testing and introducing new features. It will be continuously updated alongside the accompanying documentation.
+The Todo-demo-package is maintained by the Powerhouse Team and serves as a reference for testing and introducing new features. It will be continuously updated alongside the accompanying documentation.
 
 https://github.com/powerhouse-inc/todo-demo-package
 :::
 
 There are several ways to explore this package:
 
-### Option 1: Rebuild the todo demo package
+### Option 1: Rebuild the Todo-demo-package
 
-The ToDo Demo package and repository are your main reference points during the Mastery Track.  
+The Todo-demo-package and repository are your main reference points during the Mastery Track.  
 Follow the steps in the "Mastery Track – Document Model Creation" chapters to build along with the examples.
 
 ### Option 2: Clone and run the code locally
