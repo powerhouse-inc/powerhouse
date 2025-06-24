@@ -12,7 +12,7 @@ export type UseDriveAnalyticsOptions = {
   to?: string;
   granularity?: AnalyticsGranularity;
   levelOfDetail?: {
-    document?: number;
+    drive?: number;
     operation?: number;
     target?: number;
     actionType?: number;
@@ -37,11 +37,11 @@ export const useDriveAnalytics = (options: UseDriveAnalyticsOptions) => {
   const granularity = options.granularity ?? AnalyticsGranularity.Daily;
 
   const lod = options.levelOfDetail ?? {
-    document: 1,
+    drive: 1,
   };
 
   const selectDrives = options.filters?.driveId?.map((driveId) =>
-    AnalyticsPath.fromString(`document/${driveId}`),
+    AnalyticsPath.fromString(`drive/${driveId}`),
   );
 
   const operations = options.filters?.operation?.map((operation) =>
@@ -57,7 +57,7 @@ export const useDriveAnalytics = (options: UseDriveAnalyticsOptions) => {
   );
 
   const select = {
-    document: selectDrives ?? [AnalyticsPath.fromString("document")],
+    drive: selectDrives ?? [AnalyticsPath.fromString("drive")],
     ...(operations && { operation: operations }),
     ...(targets && { target: targets }),
     ...(actionTypes && { actionType: actionTypes }),

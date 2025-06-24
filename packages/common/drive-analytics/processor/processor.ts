@@ -9,18 +9,28 @@ import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import type { PHDocument } from "document-model";
 
-const CREATE_NODE_ACTIONS = ["ADD_FILE", "ADD_FOLDER", "COPY_NODE"];
-const UPDATE_NODE_ACTIONS = ["UPDATE_FILE", "UPDATE_NODE", "MOVE_NODE"];
-const DELETE_NODE_ACTIONS = ["DELETE_NODE"];
+const CREATE_NODE_ACTIONS = ["ADD_FILE", "ADD_FOLDER"];
+const DUPLICATE_NODE_ACTIONS = ["COPY_NODE"];
+const UPDATE_NODE_ACTIONS = ["UPDATE_FILE", "UPDATE_NODE"];
+const MOVE_NODE_ACTIONS = ["MOVE_NODE"];
+const REMOVE_NODE_ACTIONS = ["DELETE_NODE"];
 
 const NODE_ACTIONS = [
   ...CREATE_NODE_ACTIONS,
+  ...DUPLICATE_NODE_ACTIONS,
   ...UPDATE_NODE_ACTIONS,
-  ...DELETE_NODE_ACTIONS,
+  ...MOVE_NODE_ACTIONS,
+  ...REMOVE_NODE_ACTIONS,
 ];
 
 export type Target = "DRIVE" | "NODE";
-export type ActionType = "CREATE" | "UPDATE" | "DELETE";
+export type ActionType =
+  | "CREATED"
+  | "DUPLICATED"
+  | "REMOVED"
+  | "MOVED"
+  | "UPDATED";
+type NodeActionInput = { id?: string; targetId?: string; srcFolder?: string };
 
 export class DriveAnalyticsProcessor implements IProcessor {
   constructor(
@@ -45,14 +55,14 @@ export class DriveAnalyticsProcessor implements IProcessor {
 
       const firstOp = strand.operations[0];
       const source = AnalyticsPath.fromString(
-        `ph/${strand.documentId}/${strand.branch}/${strand.scope}`,
+        `ph/drive/${strand.documentId}/${strand.branch}/${strand.scope}`,
       );
 
       if (firstOp.index === 0) {
         await this.clearSource(source);
       }
 
-      const { documentId, branch, scope } = strand;
+      const { documentId: driveId, branch, scope } = strand;
 
       const CHUNK_SIZE = 50;
       for (let i = 0; i < strand.operations.length; i += CHUNK_SIZE) {
@@ -67,20 +77,33 @@ export class DriveAnalyticsProcessor implements IProcessor {
             ? "NODE"
             : "DRIVE";
 
+          let targetId = driveId;
+
+          if (target === "NODE") {
+            const operationInput = operation.input as NodeActionInput;
+            targetId =
+              operationInput.id ||
+              operationInput.targetId ||
+              operationInput.srcFolder ||
+              driveId;
+          }
+
           const seriesInput: AnalyticsSeriesInput = {
             source,
             metric: "DriveOperations",
             start: DateTime.fromISO(operation.timestamp),
             value: 1,
             dimensions: {
-              document: AnalyticsPath.fromString(
-                `document/${documentId}/${branch}/${scope}/${revision}`,
+              drive: AnalyticsPath.fromString(
+                `drive/${driveId}/${branch}/${scope}/${revision}`,
               ),
               operation: AnalyticsPath.fromString(
                 `operation/${operation.type}/${operation.index}`,
               ),
-              target: AnalyticsPath.fromString(`target/${target}`),
-              actionType: AnalyticsPath.fromString(`actionType/${actionType}`),
+              target: AnalyticsPath.fromString(`target/${target}/${targetId}`),
+              actionType: AnalyticsPath.fromString(
+                `actionType/${actionType}/${targetId}`,
+              ),
             },
           };
 
@@ -103,12 +126,18 @@ export class DriveAnalyticsProcessor implements IProcessor {
 
   private getActionType(action: string): ActionType {
     if (CREATE_NODE_ACTIONS.includes(action)) {
-      return "CREATE";
+      return "CREATED";
     }
-    if (DELETE_NODE_ACTIONS.includes(action)) {
-      return "DELETE";
+    if (DUPLICATE_NODE_ACTIONS.includes(action)) {
+      return "DUPLICATED";
     }
-    return "UPDATE";
+    if (REMOVE_NODE_ACTIONS.includes(action)) {
+      return "REMOVED";
+    }
+    if (MOVE_NODE_ACTIONS.includes(action)) {
+      return "MOVED";
+    }
+    return "UPDATED";
   }
 
   private async clearSource(source: AnalyticsPath) {
