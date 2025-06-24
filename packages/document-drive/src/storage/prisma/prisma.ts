@@ -286,22 +286,32 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       return acc;
     }, cachedOperations) as OperationsFromDocument<TDocument>;
     const dbDoc = result;
-    const doc = {
+
+    const header: PHDocumentHeader = {
       id: dbDoc.id,
-      created: dbDoc.created.toISOString(),
-      name: dbDoc.name ? dbDoc.name : "",
-      slug: dbDoc.slug ? dbDoc.slug : "",
+      sig: {
+        nonce: "",
+        publicKey: "",
+      },
       documentType: dbDoc.documentType,
+      createdAtUtcIso: dbDoc.created.toISOString(),
+      lastModifiedAtUtcIso: dbDoc.lastModified.toISOString(),
+      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
+      slug: dbDoc.slug ? dbDoc.slug : "",
+      name: dbDoc.name ? dbDoc.name : "",
+      branch: "main",
+    };
+
+    const doc = {
+      header,
       initialState: JSON.parse(
         dbDoc.initialState,
       ) as ExtendedStateFromDocument<TDocument>,
-      state: undefined,
-      lastModified: new Date(dbDoc.lastModified).toISOString(),
       operations: operationsByScope,
       clipboard: [],
-      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
-      meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
       attachments: {},
+      state: undefined,
     };
 
     return doc as unknown as TDocument;

@@ -493,14 +493,16 @@ export function replayDocument<TDocument extends PHDocument>(
       }, document.header.lastModifiedAtUtcIso);
 
   if (header) {
-    //result.header.createdAtUtcIso = header.createdAtUtcIso;
+    result.header = {
+      ...header,
+      revision: result.header.revision,
+      lastModifiedAtUtcIso: lastModified,
+    };
   }
 
   return {
     ...result,
     operations: resultOperations,
-    lastModified,
-    meta: header?.meta ?? {},
   } as TDocument;
 }
 
