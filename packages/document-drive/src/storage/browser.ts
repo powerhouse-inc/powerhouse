@@ -284,7 +284,8 @@ export class BrowserStorage
     }
 
     // Remove from slug manifest if it has a slug
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
     try {
       if (slug) {
         const slugManifest = await this.getSlugManifest();
