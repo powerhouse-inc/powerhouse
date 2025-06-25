@@ -922,14 +922,14 @@ export class BaseDocumentDriveServer
         await this.legacyStorage.addDriveOperations(
           driveId,
           operations,
-          document.header,
+          document,
         );
       } else {
         await this.legacyStorage.addDocumentOperations(
           driveId,
           header.id,
           operations,
-          document.header,
+          document,
         );
       }
     }
@@ -1274,7 +1274,7 @@ export class BaseDocumentDriveServer
     documentId: string,
     callback: (document: PHDocument) => Promise<{
       operations: Operation[];
-      header: PHDocumentHeader;
+      document: PHDocument;
     }>,
   ) {
     if (!this.legacyStorage.addDocumentOperationsWithTransaction) {
@@ -1287,21 +1287,14 @@ export class BaseDocumentDriveServer
           driveId,
           documentId,
           result.operations,
-          result.header,
+          result.document,
         );
       }
     } else {
       await this.legacyStorage.addDocumentOperationsWithTransaction(
         driveId,
         documentId,
-        async (document: PHDocument) => {
-          const result = await callback(document);
-
-          return {
-            operations: result.operations,
-            header: document.header,
-          };
-        },
+        callback,
       );
     }
   }
@@ -1563,7 +1556,7 @@ export class BaseDocumentDriveServer
 
           return {
             operations: result.operationsApplied,
-            header: result.document.header,
+            document: result.document,
           };
         },
       );
@@ -1711,7 +1704,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: PHDocumentHeader;
+      document: PHDocument;
     }>,
   ) {
     if (!this.legacyStorage.addDriveOperationsWithTransaction) {
@@ -1723,7 +1716,7 @@ export class BaseDocumentDriveServer
         await this.legacyStorage.addDriveOperations(
           driveId,
           result.operations,
-          result.header,
+          result.document,
         );
       }
       return result;
@@ -1867,7 +1860,7 @@ export class BaseDocumentDriveServer
 
         return {
           operations: result.operationsApplied,
-          header: result.document.header,
+          document: result.document,
         };
       });
 

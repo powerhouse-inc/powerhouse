@@ -11,12 +11,7 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
-import type {
-  Operation,
-  OperationScope,
-  PHDocument,
-  PHDocumentHeader,
-} from "document-model";
+import type { Operation, OperationScope, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {
   type IDocumentAdminStorage,
@@ -372,19 +367,22 @@ export class BrowserStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const document = await this.get(id);
-    if (!document) {
+    const existingDocument = await this.get(id);
+    if (!existingDocument) {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    const mergedOperations = mergeOperations(document.operations, operations);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
 
     const db = await this.db;
     await db.setItem(this.buildDocumentKey(id), {
+      ...existingDocument,
       ...document,
-      header,
       operations: mergedOperations,
     });
   }
@@ -392,15 +390,18 @@ export class BrowserStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const drive = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations(drive.operations, operations);
+    const existingDocument = await this.get<DocumentDriveDocument>(id);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
     const db = await this.db;
 
     await db.setItem(this.buildDocumentKey(id), {
-      ...drive,
-      header,
+      ...existingDocument,
+      ...document,
       operations: mergedOperations,
     });
   }

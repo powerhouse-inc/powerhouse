@@ -4,7 +4,6 @@ import type {
   Operation,
   OperationFromDocument,
   PHDocument,
-  PHDocumentHeader,
 } from "document-model";
 
 /**
@@ -128,16 +127,18 @@ export interface IDocumentOperationStorage {
     drive: string,
     id: string,
     operations: OperationFromDocument<TDocument>[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     drive: string,
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
-      header: PHDocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getOperationResultingState?(
     drive: string,
     id: string,
@@ -145,6 +146,7 @@ export interface IDocumentOperationStorage {
     scope: string,
     branch: string,
   ): Promise<string | undefined>;
+
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;
@@ -163,15 +165,17 @@ export interface IDriveOperationStorage extends IDocumentOperationStorage {
   addDriveOperations(
     id: string,
     operations: Operation[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: PHDocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getDriveOperationResultingState?(
     drive: string,
     index: number,

@@ -1,8 +1,8 @@
+import { MemoryStorage } from "#storage/memory";
 import {
   BaseAction,
   documentModelDocumentModelModule,
   DocumentModelModule,
-  generateId,
   Operation,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -36,17 +36,31 @@ describe("Drive Operations", () => {
 
   let server: BaseDocumentDriveServer;
   beforeEach(async () => {
-    server = new ReactorBuilder(
-      documentModels,
-    ).build() as unknown as BaseDocumentDriveServer;
+    server = new ReactorBuilder(documentModels)
+      .withStorage(new MemoryStorage())
+      .build() as unknown as BaseDocumentDriveServer;
     await server.initialize();
   });
 
-  const driveId = generateId();
+  let driveId: string;
 
   async function buildDrive() {
-    await server.addDrive({
-      id: driveId,
+    const drive = await server.addDrive({
+      global: { name: "test" },
+      local: {
+        availableOffline: false,
+        sharingType: "PRIVATE",
+        listeners: [],
+        triggers: [],
+      },
+    });
+    driveId = drive.header.id;
+
+    return await server.getDrive(driveId);
+  }
+
+  it("boilerplate", async () => {
+    const a = await server.addDrive({
       global: { name: "test" },
       local: {
         availableOffline: false,
@@ -56,14 +70,14 @@ describe("Drive Operations", () => {
       },
     });
 
-    return await server.getDrive(driveId);
-  }
+    const b = await server.getDrive(a.header.id);
+
+    expect(a).toMatchObject(b);
+  });
 
   it("should not re-apply existing operations", async () => {
     const initialDriveDocument = await buildDrive();
     let pushOperationResult: IOperationResult;
-
-    createDocument();
 
     const client1 = new DriveBasicClient(
       server,

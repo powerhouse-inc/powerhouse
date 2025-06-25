@@ -218,7 +218,8 @@ export function hashDocumentStateForScope(
   },
   scope: OperationScope = "global",
 ) {
-  return hash(stringifyJson(document.state[scope] || ""));
+  const stateString = stringifyJson(document.state[scope] || "");
+  return hash(stateString);
 }
 
 export function readOnly<T>(value: T): Readonly<T> {

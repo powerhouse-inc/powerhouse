@@ -11,7 +11,6 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import {
-  PHDocumentHeader,
   type Operation,
   type OperationScope,
   type PHDocument,
@@ -347,10 +346,10 @@ export class FilesystemStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ) {
-    const document = await this.get(id);
-    if (!document) {
+    const existingDocument = await this.get(id);
+    if (!existingDocument) {
       return Promise.reject(new DocumentNotFoundError(id));
     }
 
@@ -360,8 +359,8 @@ export class FilesystemStorage
     writeFileSync(
       documentPath,
       stringify({
+        ...existingDocument,
         ...document,
-        header,
         operations: mergedOperations,
       }),
       {
@@ -373,11 +372,11 @@ export class FilesystemStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: PHDocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const drive = await this.get<DocumentDriveDocument>(id);
+    const existingDocument = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
-      drive.operations,
+      existingDocument.operations,
       operations,
     );
 
@@ -385,8 +384,8 @@ export class FilesystemStorage
     writeFileSync(
       drivePath,
       stringify({
-        ...drive,
-        header,
+        ...existingDocument,
+        ...document,
         operations: mergedOperations,
       }),
       {
