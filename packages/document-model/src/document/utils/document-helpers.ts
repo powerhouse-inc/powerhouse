@@ -494,12 +494,6 @@ export function removeExistingOperations(
 ) {
   return newOperations.filter((newOperation) => {
     return !operationsHistory.some((historyOperation) => {
-      // If both operations have IDs, compare by ID first
-      if (newOperation.id && historyOperation.id) {
-        return newOperation.id === historyOperation.id;
-      }
-
-      // Otherwise, use the existing logic for backward compatibility
       return (
         (newOperation.type === "NOOP" &&
           newOperation.skip === 0 &&

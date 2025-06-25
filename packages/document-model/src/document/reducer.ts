@@ -485,35 +485,19 @@ export function baseReducer<TDocument extends PHDocument>(
       ).message;
 
       draft.operations[_action.scope][lastOperationIndex].skip = 0;
-    }
 
-    // updates hash and resulting state
-    const lastOperationIndex = newDocument.operations[action.scope].length - 1;
-    const scope = action.scope || "global";
-    const hash =
-      reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-        ? (_action as Operation).hash
-        : hashDocumentStateForScope(newDocument, scope);
-
-    // updates the last operation with the hash of the resulting state
-    const lastOperation = newDocument.operations[scope].at(-1);
-    if (lastOperation) {
-      lastOperation.hash = hash;
-
-      if (reuseOperationResultingState) {
-        lastOperation.resultingState = JSON.stringify(newDocument.state[scope]);
-      }
-
-      // if the action has attachments then adds them to the document
-      if (!isDocumentAction(_action) && _action.attachments) {
-        _action.attachments.forEach((attachment) => {
-          const { hash, ...file } = attachment;
-          if (!newDocument.attachments) {
-            newDocument.attachments = {};
-          }
-          newDocument.attachments[hash] = {
-            ...file,
-          };
+      if (shouldProcessSkipOperation) {
+        draft.state = castDraft({
+          ...document.state,
+        });
+        draft.operations = castDraft({
+          ...document.operations,
+          [_action.scope]: [
+            ...document.operations[_action.scope],
+            {
+              ...draft.operations[_action.scope][lastOperationIndex],
+            },
+          ],
         });
       }
     }
@@ -522,6 +506,37 @@ export function baseReducer<TDocument extends PHDocument>(
   // meta operations are not added to the operations history
   if ([UNDO, REDO, PRUNE].includes(_action.type)) {
     return newDocument;
+  }
+
+  // if reuseHash is true, checks if the action has
+  // an hash and uses it instead of generating it
+  const scope = _action.scope || "global";
+  const hash =
+    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
+      ? (_action as Operation).hash
+      : hashDocumentStateForScope(newDocument, scope);
+
+  // updates the last operation with the hash of the resulting state
+  const lastOperation = newDocument.operations[scope].at(-1);
+  if (lastOperation) {
+    lastOperation.hash = hash;
+
+    if (reuseOperationResultingState) {
+      lastOperation.resultingState = JSON.stringify(newDocument.state[scope]);
+    }
+
+    // if the action has attachments then adds them to the document
+    if (!isDocumentAction(_action) && _action.attachments) {
+      _action.attachments.forEach((attachment) => {
+        const { hash, ...file } = attachment;
+        if (!newDocument.attachments) {
+          newDocument.attachments = {};
+        }
+        newDocument.attachments[hash] = {
+          ...file,
+        };
+      });
+    }
   }
 
   return newDocument;
