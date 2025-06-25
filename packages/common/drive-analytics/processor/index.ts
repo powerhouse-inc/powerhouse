@@ -1,4 +1,4 @@
-import { type IAnalyticsStore } from "@powerhousedao/reactor-api";
+import { type IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
 import { type ProcessorRecord } from "document-drive/processors/types";
 
 import { DriveAnalyticsProcessor } from "./processor.js";
