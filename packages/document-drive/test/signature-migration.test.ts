@@ -122,7 +122,7 @@ describe.each(storageLayers)(
       );
       expect(driveOperation.context).toBeUndefined();
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -186,7 +186,7 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
@@ -263,7 +263,7 @@ describe.each(storageLayers)(
         },
       } as unknown as ActionContext;
 
-      await storage.addDriveOperations(driveId, [driveOperation], drive.header);
+      await storage.addDriveOperations(driveId, [driveOperation], drive);
 
       const storedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
