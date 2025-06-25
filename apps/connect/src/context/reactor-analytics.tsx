@@ -100,7 +100,11 @@ export function DriveAnalyticsProcessor() {
         }
 
         hasRegistered.current = true;
-        registerDriveAnalytics(manager, store.data).catch(logger.error);
+        registerDriveAnalytics(manager, store.data)
+            .then(() => {
+                console.log('Drive analytics processor registered');
+            })
+            .catch(logger.error);
     }, [store.data, manager]);
 
     return null;
@@ -119,7 +123,9 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
             }}
         >
             <DiffAnalyzerProcessor />
-            <DriveAnalyticsProcessor />
+            {connectConfig.analytics.driveAnalyticsEnabled && (
+                <DriveAnalyticsProcessor />
+            )}
             {children}
         </AnalyticsProvider>
     );
