@@ -64,13 +64,13 @@ export function DocumentEditorContainer() {
 
             if (
                 !!selectedNode &&
-                document.name !== '' &&
-                selectedNode.name !== document.name
+                document.header.name !== '' &&
+                selectedNode.name !== document.header.name
             ) {
                 return renameNode(
                     selectedNode.driveId,
                     selectedNode.id,
-                    document.name,
+                    document.header.name,
                 );
             }
         },
@@ -156,7 +156,7 @@ export function DocumentEditorContainer() {
                   }
 
                   const documentModelModule = getDocumentModelModule(
-                      selectedDocument.documentType,
+                      selectedDocument.header.documentType,
                   );
 
                   if (!documentModelModule) {
@@ -166,7 +166,7 @@ export function DocumentEditorContainer() {
 
                   const url = buildDocumentSubgraphUrl(
                       remoteUrl,
-                      selectedDocument.id,
+                      selectedDocument.header.id,
                       documentModelModule.documentModel,
                   );
                   try {

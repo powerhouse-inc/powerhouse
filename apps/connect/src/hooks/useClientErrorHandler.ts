@@ -111,22 +111,22 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
             try {
                 // get local drive by id
                 const drive = documentDrives.find(
-                    drive => drive.id === driveId,
+                    drive => drive.header.id === driveId,
                 );
                 if (!drive) return;
                 await removeTrigger(driveId, trigger.id);
 
                 await renameDrive(
                     driveId,
-                    drive.state.global.name + ` (${drive.id})`,
+                    drive.state.global.name + ` (${drive.header.id})`,
                 );
 
                 await setDriveSharingType(driveId, LOCAL);
 
-                if (trigger.data?.url && drive.slug) {
+                if (trigger.data?.url && drive.header.slug) {
                     const newId = await getDriveIdBySlug(
                         trigger.data.url,
-                        drive.slug,
+                        drive.header.slug,
                     );
                     if (newId) {
                         const urlParts = trigger.data.url.split('/');

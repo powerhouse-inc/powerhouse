@@ -59,7 +59,6 @@ export type {
   CreateState,
   CustomAction,
   DocumentAction,
-  DocumentHeader,
   DocumentModelLib,
   DocumentModelModule,
   DocumentModelUtils,

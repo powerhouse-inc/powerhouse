@@ -1,10 +1,13 @@
 import { type GetDocumentOptions } from 'document-drive';
-import { type PHDocument } from 'document-model';
+import { PHDocumentHeader, type PHDocument } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export type HookState = PHDocument['state'] &
-    Pick<PHDocument, 'documentType' | 'revision' | 'created' | 'lastModified'>;
+    Pick<
+        PHDocumentHeader,
+        'documentType' | 'revision' | 'createdAtUtcIso' | 'lastModifiedAtUtcIso'
+    >;
 
 export interface UseGetDriveDocumentsProps {
     driveId?: string;
@@ -42,10 +45,10 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
             (acc, [documentId, document]) => {
                 acc[documentId] = {
                     ...document.state,
-                    documentType: document.documentType,
-                    revision: document.revision,
-                    created: document.created,
-                    lastModified: document.lastModified,
+                    documentType: document.header.documentType,
+                    revision: document.header.revision,
+                    createdAtUtcIso: document.header.createdAtUtcIso,
+                    lastModifiedAtUtcIso: document.header.lastModifiedAtUtcIso,
                 };
                 return acc;
             },

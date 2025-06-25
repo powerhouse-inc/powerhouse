@@ -38,8 +38,8 @@ export default function Content() {
             (status === 'LOADED' || status === 'ERROR') &&
             !documentDrives.find(
                 d =>
-                    d.id === driveId ||
-                    d.slug === driveId ||
+                    d.header.id === driveId ||
+                    d.header.slug === driveId ||
                     d.state.global.name === driveId,
             )
         ) {

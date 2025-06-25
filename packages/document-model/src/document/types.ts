@@ -170,30 +170,6 @@ export type Meta = {
 };
 
 /**
- * The base attributes of a {@link BaseDocument}.
- *
- * @deprecated Being replaced by {@link PHDocumentHeader} on the state object.
- */
-export type DocumentHeader = {
-  /** The id of the document. */
-  id: string;
-  /** The name of the document. */
-  name: string;
-  /** The slug of the document. */
-  slug: string;
-  /** The number of operations applied to the document. */
-  revision: Record<string, number>;
-  /** The type of the document model. */
-  documentType: string;
-  /** The timestamp of the creation date of the document. */
-  created: string;
-  /** The timestamp of the last change in the document. */
-  lastModified: string;
-  /** The meta data of the document. */
-  meta?: Meta;
-};
-
-/**
  * The attributes stored for a file. Namely, attachments of a document.
  */
 export type Attachment = {
