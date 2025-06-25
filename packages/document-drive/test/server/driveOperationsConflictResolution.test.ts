@@ -121,7 +121,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       return await server.getDrive(driveId);
     }
 
-    it("boilerplate", async () => {
+    it("boilerplate is accurate", async () => {
       const a = await server.addDrive({
         global: { name: "test" },
         local: {
