@@ -1,3 +1,13 @@
+## 3.2.0-dev.4 (2025-06-25)
+
+### 🚀 Features
+
+- added drive analytics processor ([#1607](https://github.com/powerhouse-inc/powerhouse/pull/1607))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
 ## 3.2.0-dev.3 (2025-06-24)
 
 ### 🩹 Fixes
