@@ -58,6 +58,20 @@ async function registerDiffAnalyzer(
     );
 }
 
+async function registerDriveAnalytics(
+    manager: ProcessorManager,
+    analyticsStore: IAnalyticsStore,
+) {
+    const { processorFactory } = await import(
+        '@powerhousedao/common/drive-analytics'
+    );
+
+    return await manager.registerFactory(
+        '@powerhousedao/common/drive-analytics',
+        processorFactory({ analyticsStore }),
+    );
+}
+
 export function DiffAnalyzerProcessor() {
     const store = useAnalyticsStoreAsync();
     const manager = useUnwrappedProcessorManager();
@@ -70,6 +84,27 @@ export function DiffAnalyzerProcessor() {
 
         hasRegistered.current = true;
         registerDiffAnalyzer(manager, store.data).catch(logger.error);
+    }, [store.data, manager]);
+
+    return null;
+}
+
+export function DriveAnalyticsProcessor() {
+    const store = useAnalyticsStoreAsync();
+    const manager = useUnwrappedProcessorManager();
+    const hasRegistered = useRef(false);
+
+    useEffect(() => {
+        if (!store.data || !manager || hasRegistered.current) {
+            return;
+        }
+
+        hasRegistered.current = true;
+        registerDriveAnalytics(manager, store.data)
+            .then(() => {
+                console.log('Drive analytics processor registered');
+            })
+            .catch(logger.error);
     }, [store.data, manager]);
 
     return null;
@@ -88,6 +123,9 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
             }}
         >
             <DiffAnalyzerProcessor />
+            {connectConfig.analytics.driveAnalyticsEnabled && (
+                <DriveAnalyticsProcessor />
+            )}
             {children}
         </AnalyticsProvider>
     );
