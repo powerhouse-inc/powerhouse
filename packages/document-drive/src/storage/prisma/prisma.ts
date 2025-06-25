@@ -594,7 +594,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         })),
       });
 
-      await tx.document.updateMany({
+      await tx.document.update({
         where: {
           id,
         },
@@ -686,14 +686,12 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         }
         result = await callback(document);
 
-        const updatedDocument = result.document;
-        const { operations } = result;
         return this._addDocumentOperations(
           tx,
           drive,
           id,
-          operations,
-          updatedDocument,
+          result.operations,
+          result.document,
         );
       },
       { isolationLevel: "Serializable", maxWait: 10000, timeout: 20000 },
