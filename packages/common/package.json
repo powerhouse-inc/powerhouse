@@ -12,7 +12,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./*": "./dist/*.js"
+    "./*": "./dist/*.js",
+    "./drive-analytics": "./dist/drive-analytics/index.js"
   },
   "types": "./dist/index.d.ts",
   "imports": {

@@ -275,8 +275,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/design-system
       '@powerhousedao/diff-analyzer':
-        specifier: ^0.0.0-dev.7
-        version: 0.0.0-dev.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^0.0.0-dev.8
+        version: 0.0.0-dev.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
@@ -6266,8 +6266,8 @@ packages:
       react: ^18.3.1
       react-dom: ^18.3.1
 
-  '@powerhousedao/diff-analyzer@0.0.0-dev.7':
-    resolution: {integrity: sha512-HRkhFpeSes5RYViS2+d9/kgMo4lwcLls27fveP53ARuZckoW/LwIIbXzPUYcVZjWsgHMmruTlPfVZYze3RTj5g==}
+  '@powerhousedao/diff-analyzer@0.0.0-dev.8':
+    resolution: {integrity: sha512-+K52F6mMiSMUttxY+jXHCBCD7B9ZwJ+3QCj32mOVs9c32CsS63a09GVrt+UI4AscCTs6rX++wkez9Dt1fcKAcg==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -10694,6 +10694,9 @@ packages:
 
   document-model@3.0.2:
     resolution: {integrity: sha512-p0Ek/5aGhvXR8/QiVaZtt7kgALi1f+zOc5V+e/BGIDKbSeLjm3nnSSs8ikenAz1SbjedEXKL4lJlkJAd19/r1g==}
+
+  document-model@3.2.0-dev.3:
+    resolution: {integrity: sha512-FMpoMh/XPJT9Sb+o9Qy3rYpDcxgE5cdox46dsM3yx1mpBFJrTbf1yxu9krtp7mIrYk6DtfqG3+uhYF+yawtq4A==}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -26207,10 +26210,10 @@ snapshots:
       - uploadthing
       - utf-8-validate
 
-  '@powerhousedao/diff-analyzer@0.0.0-dev.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@powerhousedao/diff-analyzer@0.0.0-dev.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@types/luxon': 3.6.2
-      document-model: 2.26.0
+      document-model: 3.2.0-dev.3
       graphql: 16.11.0
       graphql-tag: 2.12.6(graphql@16.11.0)
       luxon: 3.6.1
@@ -32140,6 +32143,16 @@ snapshots:
       zod: 3.25.28
 
   document-model@3.0.2:
+    dependencies:
+      change-case: 5.4.4
+      jszip: 3.10.1
+      mime: 4.0.7
+      mutative: 1.2.0
+      safe-stable-stringify: 2.5.0
+      sha1-uint8array: 0.10.7
+      zod: 3.25.28
+
+  document-model@3.2.0-dev.3:
     dependencies:
       change-case: 5.4.4
       jszip: 3.10.1
