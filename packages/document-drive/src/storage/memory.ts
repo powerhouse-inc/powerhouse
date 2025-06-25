@@ -97,7 +97,8 @@ export class MemoryStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -210,7 +211,8 @@ export class MemoryStorage
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.slug && document.slug.length > 0 ? document.slug : documentId;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }

@@ -188,7 +188,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       throw new DocumentIdValidationError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
