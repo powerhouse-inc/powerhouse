@@ -60,7 +60,7 @@ const [invoiceName, updateInvoiceName] = useDocumentField('docId', 'name')
 ## An overview of currently available hooks
 
 ### 1. Getting or changing data 
-These are tools you (or your devs) can use in your app to get or change data:
+These are tools you can use in your app to get or change data:
 
 <details>
 <summary>`useDrives`, `useDriveById(id)`: Lets you access folders (called "drives").</summary>
