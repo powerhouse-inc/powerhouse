@@ -1635,6 +1635,20 @@ export class BaseDocumentDriveServer
         throw error;
       }
 
+      this.eventEmitter.emit(
+        "documentOperationsAdded",
+        driveId,
+        documentId,
+        operations,
+      );
+
+      this.eventEmitter.emit(
+        "operationsAdded",
+        driveId,
+        documentId,
+        operations,
+      );
+
       return {
         status: "SUCCESS",
         document,
@@ -1924,6 +1938,9 @@ export class BaseDocumentDriveServer
       if (error) {
         throw error;
       }
+
+      this.eventEmitter.emit("driveOperationsAdded", driveId, operations);
+      this.eventEmitter.emit("operationsAdded", driveId, null, operations);
 
       return {
         status: "SUCCESS",
