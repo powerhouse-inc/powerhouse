@@ -1,7 +1,8 @@
 import { type IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
 import { type ProcessorRecord } from "document-drive/processors/types";
 
-import { DriveAnalyticsProcessor } from "./processor.js";
+import { DocumentAnalyticsProcessor } from "./document-processor.js";
+import { DriveAnalyticsProcessor } from "./drive-processor.js";
 
 export const processorFactory =
   (module: { analyticsStore: IAnalyticsStore }) =>
@@ -16,7 +17,18 @@ export const processorFactory =
           documentType: ["powerhouse/document-drive"],
         },
       },
+      {
+        processor: new DocumentAnalyticsProcessor(module.analyticsStore),
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          scope: ["*"],
+          documentType: ["*"],
+        },
+      },
     ];
   };
 
-export * from "./processor.js";
+export * from "./document-processor.js";
+export * from "./drive-processor.js";
+
