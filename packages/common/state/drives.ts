@@ -1,4 +1,3 @@
-import { type SharingType } from "@powerhousedao/design-system";
 import { type DocumentDriveDocument, type Trigger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { type Loadable } from "jotai/vanilla/utils/loadable";
@@ -11,6 +10,7 @@ import {
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
+import { type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
 export function useDrives() {
