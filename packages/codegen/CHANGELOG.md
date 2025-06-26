@@ -1,3 +1,7 @@
+## 3.2.0-staging.0 (2025-06-26)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 3.2.0-dev.5 (2025-06-26)
 
 ### 🚀 Features
