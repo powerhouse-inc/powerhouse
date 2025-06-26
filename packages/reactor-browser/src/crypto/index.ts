@@ -84,13 +84,22 @@ export class ConnectCrypto implements IConnectCrypto {
   async #initialize() {
     const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
     if (loadedKeyPair) {
-      this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-      logger.info("Found key pair");
-    } else {
-      this.#keyPair = await this.#generateECDSAKeyPair();
+      // check algorithm matches
+      if (loadedKeyPair.publicKey.crv?.toLowerCase() === "ed25519") {
+        this.#keyPair = await this.#importKeyPair(loadedKeyPair);
+        logger.info("Found key pair");
+      } else {
+        logger.warn("Key pair algorithm mismatch, discarding key pair");
+      }
+    }
+
+    if (!this.#keyPair) {
+      this.#keyPair = await this.#generateKeyPair();
+
       logger.info("Created key pair");
       await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
     }
+
     const did = await this.#parseDid();
     logger.info("App DID:", did);
     return did;
@@ -101,7 +110,7 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   async regenerateDid() {
-    this.#keyPair = await this.#generateECDSAKeyPair();
+    this.#keyPair = await this.#generateKeyPair();
     await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
   }
 
@@ -123,7 +132,7 @@ export class ConnectCrypto implements IConnectCrypto {
     return did as DID;
   }
 
-  async #generateECDSAKeyPair() {
+  async #generateKeyPair() {
     const subtleCrypto = await this.#subtleCrypto;
     const keyPair = await subtleCrypto.generateKey(
       ConnectCrypto.algorithm,
