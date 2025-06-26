@@ -1,9 +1,9 @@
-# Powerhouse Builder Tooling
+# Powerhouse builder tooling
 
-This page provides an overview of all the builder tooling offered by the Powerhouse ecosystem.
+This page provides an overview of all the builder tooling offered by the Powerhouse ecosystem.   
 This list will be maintained and updated as our toolkit grows.
 
-## Powerhouse Command Line Interface
+## Powerhouse command line interface
 ___
 
 ### Installing the Powerhouse CLI 
@@ -49,7 +49,7 @@ Please be aware that these versions can contain bugs and experimental features t
 
 <summary> How to clean your system of the Powerhouse CLI?</summary>
 
-### Cleaning and Updating ph-cmd
+### Cleaning and updating ph-cmd
 
 If you need to perform a clean reinstallation of the Powerhouse CLI (`ph-cmd`), follow these steps:
 
@@ -83,7 +83,7 @@ This process ensures a clean slate by removing both the CLI tool and its configu
 
 </details>
 
-### The Use Command
+### The use command
 The use command allows you to switch between different environments for your Powerhouse project dependencies.
 
 ```bash
@@ -117,7 +117,7 @@ ph use local /path/to/local/packages
 ph use latest --package-manager pnpm
 ``` 
 
-### The Update Command
+### The update command
 The update command allows you to update your Powerhouse dependencies to their latest versions based on the version ranges specified in your package.json.
 
 ```bash
@@ -145,7 +145,7 @@ ph update --force prod
 ph update --package-manager pnpm
 ```
 
-## **Key Differences**
+## **Key differences**
 
 ### **Use command**
 - For switching between different **environments**.
@@ -172,7 +172,7 @@ The boilerplate includes essential commands with NPM/PNPM scripts for:
 - Building
 - Testing
 
-## Design System
+## Design system
 ___
 The Powerhouse Design System is a collection of reusable front-end components based on GraphQL scalars, including custom scalars specific to the web3 ecosystem. It provides:
 - Consistent UI components across Powerhouse applications
@@ -181,7 +181,7 @@ The Powerhouse Design System is a collection of reusable front-end components ba
 
 We cover some of these topics in our design system documentation. Read more about the [design system here](/academy/ComponentLibrary/DocumentEngineering)
 
-## Reactor Libraries
+## Reactor libraries
 ___
 Reactors are the nodes in the Powerhouse network that handle document storage, conflict resolution, and operation verification. 
 The Reactor Libraries include:
@@ -196,32 +196,32 @@ Handles client-side interactions
 ### Local
 Manages local storage and offline functionality
 
-### Drive App
+### Drive app
 Handles document organization and storage management, but can also be customized to offer specific functionality, categorization, or tailored interfaces for your documents. 
 
-## Code Generators
+## Code generators
 ___
 Powerhouse provides several code generation tools to streamline development:
 
-    ### Document Model Scaffolding
+    ### Document model scaffolding
     Generates the basic structure for new Document Models with the command `ph init` based on the boilerplate. 
 
-    ### Editor Generator
+    ### Editor generator
     Creates template code for Document Model editors with the command `ph generate --editor <name> --document-types <documenttype>`
 
-    ### Drive Editor Generator
+    ### Drive editor generator
     Builds scaffolding for custom Drive interfaces with the command `ph generate --drive-editor <name>`
 
-    ### Subgraph Generator
+    ### Subgraph generator
     Creates GraphQL subgraph templates for data access automatically upon `ph reactor`
 
-    ### Processor Generator
+    ### Processor generator
     Generates processor templates for event handling automatically upon `ph reactor`
 
-    ### Analytics Processor Generator
+    ### Analytics processor generator
     Creates specialized processors for analytics tracking
 
-## Analytics Engine
+## Analytics engine
 ___
 The Analytics Engine is a system that allows tracking and analyzing operations and state changes on Document Models. Features include:
 - Custom dashboard and report generation

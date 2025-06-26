@@ -346,6 +346,7 @@ export interface IBaseDocumentDriveServer {
 
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
+  getDrivesSlugs(): Promise<string[]>;
   addDrive(
     input: DriveInput,
     preferredEditor?: string,

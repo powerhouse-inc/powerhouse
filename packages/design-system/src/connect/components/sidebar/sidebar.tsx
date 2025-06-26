@@ -16,8 +16,8 @@ export interface ConnectSidebarProps
   minWidth?: string;
   headerContent?: React.ReactNode;
   loadingUser?: boolean;
-  onLogin: () => void;
-  onDisconnect: () => void;
+  onLogin: (() => void) | undefined;
+  onDisconnect: (() => void) | undefined;
   etherscanUrl?: string;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }

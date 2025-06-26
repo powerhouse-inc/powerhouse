@@ -1,3 +1,514 @@
+## 3.2.0-dev.4 (2025-06-25)
+
+### 🚀 Features
+
+- added drive analytics processor ([#1607](https://github.com/powerhouse-inc/powerhouse/pull/1607))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 3.2.0-dev.3 (2025-06-24)
+
+### 🩹 Fixes
+
+- moving prisma copy to prebuild so that build failure doesn't cause more build failure ([11df37b55](https://github.com/powerhouse-inc/powerhouse/commit/11df37b55))
+- **connect, builder-tools:** disable external packages in dev mode ([e13243874](https://github.com/powerhouse-inc/powerhouse/commit/e13243874))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 3.2.0-dev.2 (2025-06-20)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** serve files at the root on nginx and enforce trailing slash on <base href> ([3c53390f6](https://github.com/powerhouse-inc/powerhouse/commit/3c53390f6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.2.0-dev.1 (2025-06-19)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** support base paths without ending slash ([1ee6d9d9f](https://github.com/powerhouse-inc/powerhouse/commit/1ee6d9d9f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.2.0-dev.0 (2025-06-18)
+
+### 🚀 Features
+
+- use document model subgraph when clicking on switchboard url button ([24cf6ad94](https://github.com/powerhouse-inc/powerhouse/commit/24cf6ad94))
+
+### 🩹 Fixes
+
+- (wip) remove reactor dependency from useSwitchboard ([88efbf957](https://github.com/powerhouse-inc/powerhouse/commit/88efbf957))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.41 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** add base tag to the start of the head element in the connect prod html ([c84dcd458](https://github.com/powerhouse-inc/powerhouse/commit/c84dcd458))
+- **connect:** remove redirect ([d1605708b](https://github.com/powerhouse-inc/powerhouse/commit/d1605708b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 2.5.0-dev.40 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** nginx config ([db59bb69c](https://github.com/powerhouse-inc/powerhouse/commit/db59bb69c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.39 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** redirect ([6729ec934](https://github.com/powerhouse-inc/powerhouse/commit/6729ec934))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.38 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** redirect to trailing slash ([b3df4e795](https://github.com/powerhouse-inc/powerhouse/commit/b3df4e795))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.37 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** redirect to proper base path ([9a24e5311](https://github.com/powerhouse-inc/powerhouse/commit/9a24e5311))
+- **connect:** added cache control header ([ec9397e57](https://github.com/powerhouse-inc/powerhouse/commit/ec9397e57))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.36 (2025-06-18)
+
+### 🩹 Fixes
+
+- **connect:** assets not found ([92ec79305](https://github.com/powerhouse-inc/powerhouse/commit/92ec79305))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.35 (2025-06-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** use relative path for external-packages.css ([e41a46b94](https://github.com/powerhouse-inc/powerhouse/commit/e41a46b94))
+- **codegen:** removed stray import ([539cd017d](https://github.com/powerhouse-inc/powerhouse/commit/539cd017d))
+- **connect:** nginx base path ([42428c4ae](https://github.com/powerhouse-inc/powerhouse/commit/42428c4ae))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 2.5.0-dev.34 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** added base path for nginx ([fd809c593](https://github.com/powerhouse-inc/powerhouse/commit/fd809c593))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.33 (2025-06-18)
+
+### 🚀 Features
+
+- **reactor:** added repository url to package.json ([662c90e89](https://github.com/powerhouse-inc/powerhouse/commit/662c90e89))
+
+### 🩹 Fixes
+
+- deploy powerhouse to available environments ([a45859a22](https://github.com/powerhouse-inc/powerhouse/commit/a45859a22))
+- deploy not on push to main ([63eef7020](https://github.com/powerhouse-inc/powerhouse/commit/63eef7020))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.32 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** added support for basepath ([1d5d3580f](https://github.com/powerhouse-inc/powerhouse/commit/1d5d3580f))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **connect:** use relative imports and rely on <base href> ([fa9eba139](https://github.com/powerhouse-inc/powerhouse/commit/fa9eba139))
+- **connect,builder-tools,ph-cli:** added support for path argument on ph connect build and preview ([fe049aae8](https://github.com/powerhouse-inc/powerhouse/commit/fe049aae8))
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+- **reactor:** job executor and queue implementations and tests ([c74bbc712](https://github.com/powerhouse-inc/powerhouse/commit/c74bbc712))
+- **reactor:** proof-of-concept benchmarks for queue->event->job execution flow ([c297618b9](https://github.com/powerhouse-inc/powerhouse/commit/c297618b9))
+
+### 🩹 Fixes
+
+- **builder-tools:** enforce trailing slash on base path and read BASE_PATH env variable correctly ([93beeb00c](https://github.com/powerhouse-inc/powerhouse/commit/93beeb00c))
+- **connect:** remove trailing slash from basepath when setting analytics database name ([7901889e2](https://github.com/powerhouse-inc/powerhouse/commit/7901889e2))
+- **connect, design-system:** each list entry should have key field ([bf218c74c](https://github.com/powerhouse-inc/powerhouse/commit/bf218c74c))
+- **ph-cli:** install and uninstall packages with and without version tag ([c2a4ad13f](https://github.com/powerhouse-inc/powerhouse/commit/c2a4ad13f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 2.5.0-dev.30 (2025-06-17)
+
+### 🩹 Fixes
+
+- **codegen:** remove unnecessary docId from subgraph resolvers ([7217cd2d9](https://github.com/powerhouse-inc/powerhouse/commit/7217cd2d9))
+- **connect:** set proper tag on docker build ([598c1b3fb](https://github.com/powerhouse-inc/powerhouse/commit/598c1b3fb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.29 (2025-06-17)
+
+### 🚀 Features
+
+- removed scalars components ([#1574](https://github.com/powerhouse-inc/powerhouse/pull/1574))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 2.5.0-dev.28 (2025-06-16)
+
+### 🚀 Features
+
+- add app skeleton to html at build time ([1882bb820](https://github.com/powerhouse-inc/powerhouse/commit/1882bb820))
+
+### 🩹 Fixes
+
+- **document-drive:** ensure valid slug assignment in BrowserStorage ([891df972a](https://github.com/powerhouse-inc/powerhouse/commit/891df972a))
+
+### 🔥 Performance
+
+- bundle and accessibility improvements ([94ef22345](https://github.com/powerhouse-inc/powerhouse/commit/94ef22345))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
+## 2.5.0-dev.27 (2025-06-16)
+
+### 🚀 Features
+
+- **connect:** eol ([42db87eb0](https://github.com/powerhouse-inc/powerhouse/commit/42db87eb0))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.26 (2025-06-16)
+
+### 🚀 Features
+
+- **connect:** updated readme ([0c34d6cc6](https://github.com/powerhouse-inc/powerhouse/commit/0c34d6cc6))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.25 (2025-06-13)
+
+### 🚀 Features
+
+- start dependent services with switchboard ([188c82c6a](https://github.com/powerhouse-inc/powerhouse/commit/188c82c6a))
+
+### 🩹 Fixes
+
+- **docker:** request write permissions ([29d4d3fd7](https://github.com/powerhouse-inc/powerhouse/commit/29d4d3fd7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.24 (2025-06-13)
+
+### 🚀 Features
+
+- added hostnames in docker compose ([a590eea17](https://github.com/powerhouse-inc/powerhouse/commit/a590eea17))
+- **ci:** build and publish docker images on newly created tags ([ee930c4a4](https://github.com/powerhouse-inc/powerhouse/commit/ee930c4a4))
+- **docker-compose:** work with published images ([9f31b70fb](https://github.com/powerhouse-inc/powerhouse/commit/9f31b70fb))
+
+### 🩹 Fixes
+
+- **switchboard:** entrypoint script ([a50e5eb06](https://github.com/powerhouse-inc/powerhouse/commit/a50e5eb06))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.23 (2025-06-13)
+
+### 🩹 Fixes
+
+- **switchboard:** added semicolons ([ce23c47f0](https://github.com/powerhouse-inc/powerhouse/commit/ce23c47f0))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.22 (2025-06-13)
+
+### 🩹 Fixes
+
+- **ci:** connect deployment ([8ac8e423b](https://github.com/powerhouse-inc/powerhouse/commit/8ac8e423b))
+- **ci:** set proper tags for docker images ([3cab91969](https://github.com/powerhouse-inc/powerhouse/commit/3cab91969))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.21 (2025-06-12)
+
+### 🩹 Fixes
+
+- **builder-tools:** add function to find vite-plugin-node-polyfills directory ([9cba2bf41](https://github.com/powerhouse-inc/powerhouse/commit/9cba2bf41))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 2.5.0-dev.20 (2025-06-12)
+
+### 🚀 Features
+
+- **codegen:** updated editor template ([e2d654238](https://github.com/powerhouse-inc/powerhouse/commit/e2d654238))
+
+### 🩹 Fixes
+
+- --tag option definition on ph init ([2c8ec8823](https://github.com/powerhouse-inc/powerhouse/commit/2c8ec8823))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
+## 2.5.0-dev.19 (2025-06-12)
+
+### 🚀 Features
+
+- **ph-cmd:** support --tag on ph init ([7912ab760](https://github.com/powerhouse-inc/powerhouse/commit/7912ab760))
+
+### 🩹 Fixes
+
+- ph connect build tweaks ([64058dbb6](https://github.com/powerhouse-inc/powerhouse/commit/64058dbb6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.18 (2025-06-12)
+
+### 🚀 Features
+
+- added docker publish workflow ([adf65ef8a](https://github.com/powerhouse-inc/powerhouse/commit/adf65ef8a))
+- **connect:** dockerfile based on ph-cmd install ([548e3228d](https://github.com/powerhouse-inc/powerhouse/commit/548e3228d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.17 (2025-06-12)
+
+### 🚀 Features
+
+- use fixed versions of react to make use of caching ([26d8ebf72](https://github.com/powerhouse-inc/powerhouse/commit/26d8ebf72))
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+- show cookie banner while loading app ([48ad9a8ad](https://github.com/powerhouse-inc/powerhouse/commit/48ad9a8ad))
+- **connect:** update react version ([37c5beb43](https://github.com/powerhouse-inc/powerhouse/commit/37c5beb43))
+
+### 🩹 Fixes
+
+- sync localStorage based hooks with useSyncExternalStore ([be05d434a](https://github.com/powerhouse-inc/powerhouse/commit/be05d434a))
+- **connect:** fix reactor not loaded error ([13e80e4bc](https://github.com/powerhouse-inc/powerhouse/commit/13e80e4bc))
+
+### 🔥 Performance
+
+- **connect:** added compressed avif for background image ([1c31889dd](https://github.com/powerhouse-inc/powerhouse/commit/1c31889dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.16 (2025-06-11)
+
+### 🩹 Fixes
+
+- **ph-cli:** remove connect build dir before building new one ([0b2ef09ee](https://github.com/powerhouse-inc/powerhouse/commit/0b2ef09ee))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.15 (2025-06-11)
+
+### 🩹 Fixes
+
+- **builder-tools:** polyfill process on connect build ([3b1079fe2](https://github.com/powerhouse-inc/powerhouse/commit/3b1079fe2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.14 (2025-06-10)
+
+### 🚀 Features
+
+- improved analytics frontend integration ([269aed50c](https://github.com/powerhouse-inc/powerhouse/commit/269aed50c))
+
+### 🩹 Fixes
+
+- **builder-tools:** added node polyfills to studio build ([1d0fe1949](https://github.com/powerhouse-inc/powerhouse/commit/1d0fe1949))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.13 (2025-06-10)
+
+### 🩹 Fixes
+
+- **ph-cli:** proxy pass to proper switchboard instance ([0cd8a2be0](https://github.com/powerhouse-inc/powerhouse/commit/0cd8a2be0))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.12 (2025-06-10)
+
+### 🩹 Fixes
+
+- **document-drive:** queue strands to be transmitted to internal transmitters to avoid concurrency issues ([685e84483](https://github.com/powerhouse-inc/powerhouse/commit/685e84483))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.11 (2025-06-07)
+
+### 🚀 Features
+
+- **connect:** updated diff-analyzer processor ([ce5d1219f](https://github.com/powerhouse-inc/powerhouse/commit/ce5d1219f))
+
+### 🩹 Fixes
+
+- connect page load improvements ([addbb82d1](https://github.com/powerhouse-inc/powerhouse/commit/addbb82d1))
+- analytics bundling ([5cca0d3bf](https://github.com/powerhouse-inc/powerhouse/commit/5cca0d3bf))
+- **connect:** fixed waitForRenown timeout ([9bd3c4246](https://github.com/powerhouse-inc/powerhouse/commit/9bd3c4246))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.10 (2025-06-06)
+
+### 🚀 Features
+
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### 🩹 Fixes
+
+- **document-drive:** build internal transmitter updates without blocking the event loop ([01ec364b7](https://github.com/powerhouse-inc/powerhouse/commit/01ec364b7))
+- **ph-cli:** duplicate gzip ([f74631ca8](https://github.com/powerhouse-inc/powerhouse/commit/f74631ca8))
+- **ph-cli:** broken ci? ([bff9ca494](https://github.com/powerhouse-inc/powerhouse/commit/bff9ca494))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 2.5.0-dev.9 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** compression with multiple server blocks ([32728ad03](https://github.com/powerhouse-inc/powerhouse/commit/32728ad03))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.8 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** brotli compression on 2nd project ([9fde76a1c](https://github.com/powerhouse-inc/powerhouse/commit/9fde76a1c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.7 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** added acme challenge ([38a20179d](https://github.com/powerhouse-inc/powerhouse/commit/38a20179d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.6 (2025-06-05)
+
+### 🩹 Fixes
+
+- set node 22 in release branch workflow ([b33681938](https://github.com/powerhouse-inc/powerhouse/commit/b33681938))
+- **ph-cli:** ssl in nginx ([5079d5479](https://github.com/powerhouse-inc/powerhouse/commit/5079d5479))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.5 (2025-06-05)
+
+### 🩹 Fixes
+
+- **ph-cli:** duplicate brotli configurations ([32865bf99](https://github.com/powerhouse-inc/powerhouse/commit/32865bf99))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 2.5.0-dev.4 (2025-06-05)
 
 ### 🩹 Fixes

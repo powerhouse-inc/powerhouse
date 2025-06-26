@@ -1,21 +1,22 @@
-# Configure a Drive
+# Configure a drive
 
 A drive in Powerhouse is a container or a wrapper for documents and data. It's a place where you can organize and store your documents and share them with others. This guide will walk you through the process of configuring and managing drives in your Powerhouse environment.   
 
-## Prerequisites
+:::info **Prerequisites**
 
 Before configuring a drive, ensure you have:
 - Powerhouse [CLI installed](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - Access to a Powerhouse instance
 - Appropriate permissions to create and manage drives
+:::
 
-## Understanding Drives
+## Understanding drives
 
-### Local Drives
+### Local drives
 
 A local drive is a container for local documents and data, hosted on your local machine. Technically a drive is just another document model with a list of the documents inside the drive. When you run connect locally with `ph connect` a local drive is automatically added. You can also create a new local drive by clicking **'add drive'** in connect.
 
-### Remote Drives vs. reactors 
+### Remote drives vs. reactors 
 
 Remote drives in Powerhouse allow you to connect to and work with data stored in external systems or cloud services. These drives act as bridges between Powerhouse contributors and/or other data sources, enabling seamless data synchronization. Drives can exist in 3 category locations.
 
@@ -23,7 +24,7 @@ Remote drives in Powerhouse allow you to connect to and work with data stored in
 - **Cloud Storage**: For centralized, scalable data management.
 - **Decentralized Storage**: Such as Ceramic or IPFS, enabling distributed and blockchain-based storage options.
 
-:::tip
+:::tip **Explainer**
 **Powerhouse Reactors** are the nodes in the network that store and synchronise documents & drives , resolve conflicts and rerun operations to verify document event histories. 
 Reactors can be configured for local storage, centralized cloud storage or on a decentralized storage network. 
 
@@ -32,7 +33,7 @@ A reactor allows you to store multiple documents, but also host **drives** & Dri
 
 A drive exists by making use of a reactor and the storagelayer that specific reactor is based on. A reactor is the lower level component that makes synchronisation of documents & drives possible. 
 
-### Drive Apps 
+### Drive apps 
 
 **Drive Explorers** (also known as Drive Apps) are specialized interfaces that enhance how users interact with document models within a drive. As mentioned previously, technically a drive is just another document, with a list of the documents inside the drive. So it is obvious that you can create a custom editor for your drive-document. 
 
@@ -41,7 +42,7 @@ These customized editors are called Drive explorers or Drive Apps. They provide 
 To learn more about building and customizing Drive Explorers, check out our [Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) guide.
 
 
-## Creating a New Drive
+## Creating a new drive
 
 ![Create New Drive](./images/CreateNewDrive.png)
 
@@ -53,14 +54,15 @@ To create a new drive in Powerhouse, follow these steps:
 5. (Optional) Enable the "Make available offline" toggle if you want to keep a local backup of your drive.
 6. Once all options are set, click the "Create new drive" button to finalize and create your drive.
 
-## Adding a New Remote Drive via GraphQL Mutation
+## Adding a new remote drive via graphql mutation
 
 You can also add a new remote drive to your Connect environment programmatically using GraphQL mutations. This is especially useful for automation, scripting, or integrating with external systems.
 
-### Prerequisites
+:::info **Prerequisites**
 - Access to the Switchboard or remote reactor (server node) of your Connect instance.
 - The GraphQL endpoint for your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql/system` (this is a supergraph gateway).
 - Appropriate permissions to perform mutations.
+:::
 
 ### Steps
 1. **Navigate to the GraphQL Playground or use a GraphQL client**
@@ -106,8 +108,6 @@ You can also add a new remote drive to your Connect environment programmatically
      }
    }
    ```
-
-
 
 4. **Construct the Drive URL**
    - Once you have the `id` or `slug`, you can construct the drive URL for Connect:

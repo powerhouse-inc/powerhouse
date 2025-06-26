@@ -2,20 +2,19 @@
 
 ### Installing the Powerhouse CLI 
 :::tip
-The **Powerhouse CLI tool** is the only essential tool to install on this page. Install it with the command below. 
+The **Powerhouse CLI tool** is the only essential tool to install on this page. Install it with the command below.    
+
 You can find all of the commands on this page, similar to what would displayed when using ph --help or ph *command* --help. 
-Use the table of content or the search function to find what you are looking for.
-The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse ecosystem tools by installing them globally using:
+Use the table of content or the search function to find what you are looking for.   
+
+The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse ecosystem tools by installing them globally.
 
 ```bash
 pnpm install -g ph-cmd
 ``` 
  :::
 
-<!-- AUTO-GENERATED-CLI-COMMANDS-START -->
-
-## ph-cmd Commands
-- [Init](#init)
+<!-- AUTO-GENERATED-CLI-COMMANDS-START -->\n<!-- This content is automatically generated. Do not edit directly. -->\n### ph-cmd Commands\n\n- [Init](#init)
 - [Setup Globals](#setup-globals)
 - [Update](#update)
 - [Use](#use)
@@ -229,6 +228,7 @@ Command Overview:
   The Connect build command creates a connect build with the project's local and external packages included.
 
 Options:
+  --base <path> The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
   --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
@@ -244,6 +244,7 @@ Command Overview:
   NOTE: You must run \`ph connect build\` first.
 
 Options:
+  --base <path>          The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --port <port>          The port to run the server on. Default is 4173.
   --open                 Open the browser. Default is true.
@@ -571,13 +572,11 @@ Arguments:
                         - all: Act on all services (default)
 
 Examples:
-  $ ph service                               # List all services (same as 'ph service list all')
-  $ ph service start switchboard             # Start the Switchboard service
-  $ ph service stop connect                  # Stop the Connect service
-  $ ph service start all                     # Start all services
+  $ ph service setup                              # Setup services
+  $ ph service start              # Start the services
+  $ ph service stop                   # Stop the services
   $ ph service status                        # Check status of all services
-  $ ph service startup                       # Configure services to start on system boot
-  $ ph service unstartup                     # Remove services from system startup
+  
 
 Notes:
   - Services are managed using PM2, a process manager for Node.js applications
@@ -703,38 +702,3 @@ Notes:
 ---
 
 *This document was automatically generated from the help text in the codebase.*\n<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
-
-<details>
-<summary> How to make use of different branches? </summary>
-
-When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
-
-| Command | Description |
-|---------|-------------|
-| **pnpm install -g ph-cmd** | Install latest stable version |
-| **pnpm install -g ph-cmd@dev** | Install development version |
-| **pnpm install -g ph-cmd@staging** | Install staging version |
-| **ph init** | Use latest stable version of the boilerplate |
-| **ph init --dev** | Use development version of the boilerplate |
-| **ph init --staging** | Use staging version of the boilerplate |
-| **ph use** | Switch all dependencies to latest production versions |
-| **ph use dev** | Switch all dependencies to development versions |
-| **ph use prod** | Switch all dependencies to production versions |
-
-Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
-</details>
-
-
-the ph connect command now uses three subcommands:
-
-studio (default) — runs connect studio. since this is the default argument, running ph connect still has the same behavior as before,
-
-build — bundles the project's local and external model/editor code and injects the js/css into the already-built connect bundle for deployment,
-
-preview — runs the vite preview server with the output of build for testing purposes,
-
-running ph connect --help now lists the sub-commands. Running ph connect studio --help now shows the help for the studio command, likewise for the other new commands.
-
-This approach avoids redundant build/compilation which is great for minimizing server resource use. The only compilation that runs is the esbuild of the project code (does not need tsc as that is handled separately) and then tailwind for the local project styles. The whole thing takes less than a second, albeit on my macbook.
-
-This should just work with the current boilerplate since these are just new arguments to the existing ph-cli connect command. 

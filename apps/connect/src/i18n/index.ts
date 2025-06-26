@@ -11,13 +11,17 @@ const resources: Resource = {
     },
 };
 
-i18n.use(initReactI18next).init({
-    resources,
-    fallbackLng: 'en',
-    debug: true,
-    interpolation: {
-        escapeValue: false,
-    },
-});
+i18n.use(initReactI18next)
+    .init({
+        resources,
+        fallbackLng: 'en',
+        debug: false,
+        interpolation: {
+            escapeValue: false,
+        },
+    })
+    .catch((e: unknown) => {
+        console.error(e);
+    });
 
 export default i18n;

@@ -1,8 +1,8 @@
-# Revision History Timeline
+# Revision history timeline
 
-The timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to implement and customize the timeline functionality in your Powerhouse application.
+The history timeline feature enables users to view document history and navigate through different revisions of a document. This guide explains how to implement and customize the timeline functionality in your Powerhouse application.
 
-## Enabling the Timeline Feature
+## How to enable the timeline feature
 
 To enable the timeline feature in your document editor, you need to set `timelineEnabled: true` in your editor module configuration:
 
@@ -23,9 +23,20 @@ export const module: EditorModule<ToDoDocument> = {
 
 This setting enables the timeline button in the document toolbar.
 
-## Implementation Options
+:::warning Heads Up! 
+The revision history timeline will only become visible once your document model has some operations or 'history'. 
+Add a few to-do's or some data in the model you are working on and the revision history timeline button in the Document Toolbar will be activated. 
+Click the button to see the timeline expand and see the first history 'candle' appear.
+:::
 
-### Default Drive Explorer
+<figure className="image-container">
+  <img src={require("./images/revision-history-timeline.png").default} alt="revision history timeline" />
+  <figcaption>Once your document has a few operations added to it's history the revision history timeline gets activated.</figcaption>
+</figure>
+
+## How to implement the timeline feature
+
+### Default drive explorer
 
 When using the default drive explorer with `ph connect`, the timeline functionality is handled automatically:
 
@@ -33,7 +44,7 @@ When using the default drive explorer with `ph connect`, the timeline functional
 - The timeline button appears in the toolbar when enabled
 - Users can click on timeline items to view document revisions
 
-### Custom Drive Explorer
+### Custom drive explorer
 
 For custom drive explorers, you need to handle timeline items fetching and user interaction manually. Here's how:
 
@@ -86,7 +97,7 @@ const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | 
 />
 ```
 
-## Handling Timeline Revisions in Document Editor
+## Handling timeline revisions in document editor
 
 In your document editor (e.g., `editors/to-do-list/editor.tsx`), you need to handle the timeline context props:
 

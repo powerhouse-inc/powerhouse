@@ -1,3 +1,30 @@
 {
-  "apps": []
+  "name": "Todo-Demo-Package",
+  "description": "Todo-Demo Package for Powerhouse with Todo Drive App, Todo Document Model, and Timeline Revision History",
+  "category": "Productivity",
+  "publisher": {
+    "name": "Powerhouse",
+    "url": "https://www.powerhouse.inc/"
+  },
+"documentModels": [
+    {
+      "id": "powerhouse/todo",
+      "name": "ToDo"
+    }],
+  "editors": [
+    {
+      "id": "powerhouse/todo-editor",
+      "name": "ToDo Editor",
+      "documentTypes": ["powerhouse/todo"]
+    }
+  ],
+  "apps": [
+    {
+      "id": "todo-drive-explorer",
+      "name": "Todo Drive App",
+      "driveEditor": "todo-drive-explorer"
+    }
+  ],
+  "subgraphs": [],
+  "importScripts": []
 }

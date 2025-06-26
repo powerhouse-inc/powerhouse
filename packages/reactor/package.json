@@ -1,0 +1,40 @@
+{
+  "name": "@powerhousedao/reactor",
+  "version": "3.2.0-dev.4",
+  "description": "",
+  "repository": {
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "imports": {
+    "#*": "./dist/src/*"
+  },
+  "files": [
+    "./dist"
+  ],
+  "scripts": {
+    "build": "pnpm run build:tsc",
+    "build:tsc": "tsc --build",
+    "prebuild": "pnpm run clean",
+    "test": "vitest run",
+    "lint": "eslint",
+    "bench": "vitest bench --run",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.1.2"
+  }
+}

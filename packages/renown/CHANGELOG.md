@@ -1,3 +1,281 @@
+## 3.2.0-dev.4 (2025-06-25)
+
+### 🚀 Features
+
+- added drive analytics processor ([#1607](https://github.com/powerhouse-inc/powerhouse/pull/1607))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval
+
+## 3.2.0-dev.3 (2025-06-24)
+
+### 🩹 Fixes
+
+- **connect, builder-tools:** disable external packages in dev mode ([e13243874](https://github.com/powerhouse-inc/powerhouse/commit/e13243874))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.2.0-dev.2 (2025-06-20)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 3.2.0-dev.1 (2025-06-19)
+
+### 🩹 Fixes
+
+- **connect,builder-tools:** support base paths without ending slash ([1ee6d9d9f](https://github.com/powerhouse-inc/powerhouse/commit/1ee6d9d9f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.2.0-dev.0 (2025-06-18)
+
+### 🚀 Features
+
+- use document model subgraph when clicking on switchboard url button ([24cf6ad94](https://github.com/powerhouse-inc/powerhouse/commit/24cf6ad94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.41 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.40 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.39 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.38 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.37 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.36 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.35 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.34 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.33 (2025-06-18)
+
+### 🩹 Fixes
+
+- deploy not on push to main ([63eef7020](https://github.com/powerhouse-inc/powerhouse/commit/63eef7020))
+- deploy powerhouse to available environments ([a45859a22](https://github.com/powerhouse-inc/powerhouse/commit/a45859a22))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.32 (2025-06-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.31 (2025-06-18)
+
+### 🚀 Features
+
+- **reactor:** initial event-bus implementation with tests and benchmarks ([ef5b3c42e](https://github.com/powerhouse-inc/powerhouse/commit/ef5b3c42e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 2.5.0-dev.30 (2025-06-17)
+
+### 🩹 Fixes
+
+- **connect:** set proper tag on docker build ([598c1b3fb](https://github.com/powerhouse-inc/powerhouse/commit/598c1b3fb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.29 (2025-06-17)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.28 (2025-06-16)
+
+### 🚀 Features
+
+- add app skeleton to html at build time ([1882bb820](https://github.com/powerhouse-inc/powerhouse/commit/1882bb820))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 2.5.0-dev.27 (2025-06-16)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.26 (2025-06-16)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.25 (2025-06-13)
+
+### 🚀 Features
+
+- start dependent services with switchboard ([188c82c6a](https://github.com/powerhouse-inc/powerhouse/commit/188c82c6a))
+
+### 🩹 Fixes
+
+- **docker:** request write permissions ([29d4d3fd7](https://github.com/powerhouse-inc/powerhouse/commit/29d4d3fd7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.24 (2025-06-13)
+
+### 🚀 Features
+
+- added hostnames in docker compose ([a590eea17](https://github.com/powerhouse-inc/powerhouse/commit/a590eea17))
+- **docker-compose:** work with published images ([9f31b70fb](https://github.com/powerhouse-inc/powerhouse/commit/9f31b70fb))
+- **ci:** build and publish docker images on newly created tags ([ee930c4a4](https://github.com/powerhouse-inc/powerhouse/commit/ee930c4a4))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.23 (2025-06-13)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.22 (2025-06-13)
+
+### 🩹 Fixes
+
+- **ci:** set proper tags for docker images ([3cab91969](https://github.com/powerhouse-inc/powerhouse/commit/3cab91969))
+- **ci:** connect deployment ([8ac8e423b](https://github.com/powerhouse-inc/powerhouse/commit/8ac8e423b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.21 (2025-06-12)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.20 (2025-06-12)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.19 (2025-06-12)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.18 (2025-06-12)
+
+### 🚀 Features
+
+- added docker publish workflow ([adf65ef8a](https://github.com/powerhouse-inc/powerhouse/commit/adf65ef8a))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.17 (2025-06-12)
+
+### 🚀 Features
+
+- show app skeleton while loading and accessibility fixes ([4f96e2472](https://github.com/powerhouse-inc/powerhouse/commit/4f96e2472))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 2.5.0-dev.16 (2025-06-11)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.15 (2025-06-11)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.14 (2025-06-10)
+
+### 🚀 Features
+
+- improved analytics frontend integration ([269aed50c](https://github.com/powerhouse-inc/powerhouse/commit/269aed50c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 2.5.0-dev.13 (2025-06-10)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.12 (2025-06-10)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.11 (2025-06-07)
+
+### 🚀 Features
+
+- **connect:** updated diff-analyzer processor ([ce5d1219f](https://github.com/powerhouse-inc/powerhouse/commit/ce5d1219f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 2.5.0-dev.10 (2025-06-06)
+
+### 🚀 Features
+
+- run analytics db on web worker ([ecf79575f](https://github.com/powerhouse-inc/powerhouse/commit/ecf79575f))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 2.5.0-dev.9 (2025-06-05)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.8 (2025-06-05)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.7 (2025-06-05)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 2.5.0-dev.6 (2025-06-05)
+
+### 🩹 Fixes
+
+- set node 22 in release branch workflow ([b33681938](https://github.com/powerhouse-inc/powerhouse/commit/b33681938))
+
+### ❤️ Thank You
+
+- Frank
+
+## 2.5.0-dev.5 (2025-06-05)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 2.5.0-dev.4 (2025-06-05)
 
 ### 🩹 Fixes

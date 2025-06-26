@@ -58,32 +58,42 @@ async function initJwtHandler(server: IDocumentDriveServer) {
 
 // Helper function to wait for renown to be initialized
 async function waitForRenown(): Promise<void> {
-    // Wait for renown status to be 'finished'
-    return new Promise<void>(resolve => {
-        const unsubscribe = observe(get => {
-            try {
-                const status = get(renownStatusAtom);
-                if (status === 'finished' || status === 'error') {
-                    unsubscribe();
-                    resolve();
-                }
-            } catch (err) {
-                // In case of any error during the observation, proceed with reactor initialization
-                console.warn(
-                    'Error observing renown status:',
-                    err instanceof Error ? err.message : 'Unknown error',
-                );
-                unsubscribe();
-                resolve();
-            }
-        }, atomStore);
+    let unsubscribe: (() => void) | undefined;
 
-        // Set a maximum timeout (5 seconds) to avoid blocking indefinitely
-        setTimeout(() => {
-            unsubscribe();
-            console.warn('Timed out waiting for renown to initialize');
-            resolve();
-        }, 5000);
+    // Wait for renown status to be 'finished'
+    return Promise.race([
+        new Promise<void>((resolve, reject) => {
+            unsubscribe = observe(get => {
+                try {
+                    const status = get(renownStatusAtom);
+                    if (status === 'finished' || status === 'error') {
+                        resolve();
+                    }
+                } catch (err) {
+                    // In case of any error during the observation, proceed with reactor initialization
+                    reject(
+                        new Error(
+                            `Error observing renown status: ${
+                                err instanceof Error
+                                    ? err.message
+                                    : 'Unknown error'
+                            }`,
+                        ),
+                    );
+                }
+            }, atomStore);
+            return () => unsubscribe?.();
+        }),
+        new Promise<void>((_, reject) => {
+            // Set a maximum timeout (5 seconds) to avoid blocking indefinitely
+            setTimeout(() => {
+                unsubscribe?.();
+                reject(new Error('Timed out waiting for renown to initialize'));
+            }, 5000);
+        }),
+    ]).catch((error: unknown) => {
+        unsubscribe?.();
+        logger.warn(error);
     });
 }
 

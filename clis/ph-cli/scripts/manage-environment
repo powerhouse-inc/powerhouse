@@ -6,6 +6,12 @@
 PROJECT_NAME=${1:-"global"}
 ACTION=${2:-"status"}
 
+# Get Switchboard port from .env or use default
+if [ -f ".env" ]; then
+    SWITCHBOARD_PORT=$(grep "SWITCHBOARD_PORT=" .env | cut -d'=' -f2)
+fi
+SWITCHBOARD_PORT=${SWITCHBOARD_PORT:-4001}
+
 # =============================================================================
 # OS Detection and Windows Handling
 # =============================================================================
@@ -87,6 +93,7 @@ else
             # Build Connect
             echo "Building Connect..."
             ph connect build
+            sudo rm -rf /var/www/html/${PROJECT_NAME}
             sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
             
             # Enable Nginx site
@@ -95,7 +102,7 @@ else
             # Start Switchboard via PM2
             if ! pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
                 cd $PROJECT_NAME
-                pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
+                pm2 start "pnpm switchboard --port $SWITCHBOARD_PORT" --name "switchboard_${PROJECT_NAME}"
                 pm2 save
             else
                 pm2 start "switchboard_${PROJECT_NAME}"

@@ -51,6 +51,7 @@ Command Overview:
   The Connect build command creates a connect build with the project's local and external packages included.
 
 Options:
+  --base <path> The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
   --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
@@ -67,6 +68,7 @@ Command Overview:
   NOTE: You must run \`ph connect build\` first.
 
 Options:
+  --base <path>          The base path for the app. Default is "/".
   --project-root <path>  The root directory of the project. Default is "process.cwd()".
   --port <port>          The port to run the server on. Default is 4173.
   --open                 Open the browser. Default is true.
@@ -364,13 +366,11 @@ Arguments:
                         - all: Act on all services (default)
 
 Examples:
-  $ ph service                               # List all services (same as 'ph service list all')
-  $ ph service start switchboard             # Start the Switchboard service
-  $ ph service stop connect                  # Stop the Connect service
-  $ ph service start all                     # Start all services
+  $ ph service setup                              # Setup services
+  $ ph service start              # Start the services
+  $ ph service stop                   # Stop the services
   $ ph service status                        # Check status of all services
-  $ ph service startup                       # Configure services to start on system boot
-  $ ph service unstartup                     # Remove services from system startup
+  
 
 Notes:
   - Services are managed using PM2, a process manager for Node.js applications

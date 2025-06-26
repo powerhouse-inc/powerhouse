@@ -1,6 +1,6 @@
 import { CLOUD, PUBLIC, type SharingType } from "#connect";
 import { Icon } from "#powerhouse";
-import { cn } from "#scalars";
+import { cn } from "#ui";
 import { capitalCase } from "change-case";
 import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";

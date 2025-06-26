@@ -44,6 +44,45 @@ export class IPFSStorage
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const ids = [];
+    for (const slug of slugs) {
+      const documentId = this.slugToDocumentId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs = [];
+    for (const id of ids) {
+      const document = await this.get<PHDocument>(id);
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError("Aborted");
+      }
+
+      slugs.push(document.slug);
+    }
+
+    return Promise.resolve(slugs);
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
@@ -76,7 +115,8 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -228,7 +268,8 @@ export class IPFSStorage
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.slug && document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

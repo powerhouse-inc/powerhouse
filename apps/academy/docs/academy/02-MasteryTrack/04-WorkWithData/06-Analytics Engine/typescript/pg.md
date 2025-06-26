@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# Postgres Store
+# Postgres store
 
 The `PostgresAnalyticsStore` is an `IAnalyticsStore` implementation that leverages a Postgres database. It requires some APIs that do not run in a browser, and is intended for server-side applications.
 
@@ -54,7 +54,7 @@ const store = new PostgresAnalyticsStore({
 
 For more details on these optional constructor parameters, see the [Utilities](#utilities) section.
 
-## Raw Queries
+## Raw queries
 
 Though there is no method on `IAnalyticsStore` for running arbitrary queries, the `PostgresAnalyticsStore` implementation provides a `raw(sql: string)` method. This is used only in development, testing, and [benchmarking](https://github.com/powerhouse-inc/analytics-engine/blob/main/benchmarks/src/wasm.ts) situations and is not intended for production use cases.
 

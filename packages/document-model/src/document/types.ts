@@ -192,10 +192,13 @@ export type DocumentHeader = {
 export type Attachment = {
   /** The binary data of the attachment in Base64 */
   data: string;
+
   /** The MIME type of the attachment */
   mimeType: string;
+
   // The extension of the attachment.
   extension?: string | null;
+
   // The file name of the attachment.
   fileName?: string | null;
 };

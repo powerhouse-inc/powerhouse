@@ -1,4 +1,4 @@
-# Database Schema
+# Database schema
 
 ![untitled](../images/dbs.png)
 *Database table structures for the analytics engine.*

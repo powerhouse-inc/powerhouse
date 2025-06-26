@@ -51,7 +51,7 @@ export default tseslint.config(
       "clis/ph-cli/.ph/",
       "packages/document-drive/src/storage/prisma/client/",
       "clis/ph-cli/test/utils.test.ts",
-      "apps/connect/src/external-packages.js"
+      "apps/connect/public/*.js",
     ],
   },
   {

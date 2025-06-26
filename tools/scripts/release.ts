@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
+import semver, { ReleaseType } from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
@@ -22,6 +23,10 @@ type PreReleaseResult = {
   currentTag: string | undefined;
   isUsingOlderVersion: boolean;
 };
+
+// Read connect package.json version
+const connectPackageJson = JSON.parse(fs.readFileSync('apps/connect/package.json', 'utf8'));
+const connectVersion = connectPackageJson.version;
 
 function getVersionFromProjectsVersionData(projectsVersionData: ProjectsVersionData) {
   let version: null | string = null;
@@ -64,13 +69,9 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     result.isUsingCurrentVersion = true;
   }
 
-  // Read connect package.json version
-  const connectPackageJson = JSON.parse(fs.readFileSync('apps/connect/package.json', 'utf8'));
-  const connectVersion = connectPackageJson.version;
-
   result.isUsingOlderVersion = Object.values(projectsVersionData).some((project) => {
     if (!project.newVersion) return false;
-    return project.newVersion < connectVersion;
+    return semver.lt(project.newVersion, connectVersion)
   });
 
   const version = workspaceVersion || getVersionFromProjectsVersionData(projectsVersionData as ProjectsVersionData);
@@ -154,6 +155,19 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
   if (version && tag && /^\d+\.\d+\.\d+$/.test(version)) {
     specifier = `${version}-${tag}.0`;
   }
+
+  if (version && ['patch', 'minor', 'major'].includes(version) && !tag) {
+    const semverObject = semver.parse(connectVersion);
+  
+    if (semverObject && semverObject.prerelease.length > 0) {
+      const currentVersion = `${semverObject.major}.${semverObject.minor}.${semverObject.patch}`;
+      const prerelease = semverObject.prerelease[0] as string;
+      const newVersion = semver.inc(currentVersion, version as ReleaseType) as string;
+
+      specifier = `${newVersion}-${prerelease}.0`;
+      preid = prerelease;
+    }
+  }
   
   const isBranchRelease = branchRelease && branchRelease !== "";
 
@@ -165,9 +179,15 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
 
     const [, branchTag, branchVersion] = branchRelease.split('/');
     const normalizedBranchVersion = branchVersion.replace("v", '');
-    
-    preid = validProductionBranches.includes(branchTag) ? undefined : branchTag;
+    const isProdRelease = validProductionBranches.includes(branchTag);
+
+    preid = isProdRelease ? undefined : branchTag;
     specifier =  preid ? `${normalizedBranchVersion}-${preid}.0` : normalizedBranchVersion;
+
+    if (semver.lte(specifier, connectVersion)) {
+      const releaseType = isProdRelease ? "patch" : "prerelease";
+      specifier = semver.inc(connectVersion, releaseType, preid) || undefined;
+    }
   }
 
   const preReleaseResult = await getPreReleaseResults(specifier, preid);
@@ -182,7 +202,7 @@ async function getPreReleaseResults(specifier?: string, preid?: string) {
     process.exit(1);
   }
 
-  if (preReleaseResult.isEmptyRelease) {
+  if (preReleaseResult.isEmptyRelease && !isBranchRelease) {
     console.warn('>>> There are no available changes to release');
     process.exit(0);
   }

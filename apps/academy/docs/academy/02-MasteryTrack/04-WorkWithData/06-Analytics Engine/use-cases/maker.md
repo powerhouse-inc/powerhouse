@@ -1,4 +1,4 @@
-# Sky Dashboard
+# Sky dashboard
 
 All consumable data for the Sky ecosystem is available through GraphQL API, which allows you to only fetch the data you require.
 
@@ -6,7 +6,7 @@ The API is available in two environments, a developer environment (DEV) and a pr
 
 Both environments are available through Apollo Studio Explorer where the user can find the analytics query and start fetching information from the analytics engine.
 
-### Available Metrics
+### Available metrics
 
 To see which metrics are available to fetch analytics data, use the below query:
 
@@ -87,7 +87,7 @@ The above query will output the following list, which is described in the dropdo
 
 </details>
 
-### Available Dimensions
+### Available dimensions
 
 To see the available dimensions use the query below:
 
@@ -292,7 +292,7 @@ This query will return budget data in MKR for the specified time frame and dimen
 
 By appropriately specifying the currency in your queries, you can tailor the financial analysis to suit the specific needs of your investigation, whether it be transactional stability with DAI or governance dynamics with MKR.
 
-### Examples of Filter Configurations
+### Examples of filter configurations
 
 1. Analyzing MKR Budgets for a Specific Period:
 
@@ -341,7 +341,7 @@ This filter setup is designed to provide an annual overview of actuals and forec
 
 These examples demonstrate how to construct a complete filter object for different types of financial analysis. By properly defining each parameter, users can ensure accurate and relevant data retrieval from the analytics engine.
 
-### Multicurrency Series
+### Multicurrency series
 
 #### Overview
 
@@ -394,7 +394,7 @@ In the future, there could become more metrics available for different purposes,
 
 4. Data Retrieval: The converted data is then retrieved as part of the analytics query, allowing users to analyze financials directly in the currency of their choice.
 
-#### Query Structure
+#### Query structure
 
 The query structure for fetching multicurrency data is similar to the standard analytics query, with the addition of the `multicurrencySeries` field and relevant subfields for specifying the conversion criteria.
 
@@ -447,13 +447,13 @@ query MultiCurrencySeries($filter: MultiCurrencyConversions) {
 
 ```
 
-**Example Use Case**
+#### Example use case
 
 - **Budget Analysis in Different Currencies**: A user can analyze the MakerDAO budget in both MKR and DAI, viewing how the budget figures translate between the governance token and the stablecoin. This can be particularly useful for reports that need to present financial data in a currency that is more widely used or understood by the audience.
 
-#### Writing Queries
+#### Writing queries
 
-Writing queries in the analytics engine involves constructing structured requests to retrieve specific data. Here’s a step-by-step guide to help you write a basic query.
+Writing queries in the analytics engine involves constructing structured requests to retrieve specific data. Here's a step-by-step guide to help you write a basic query.
 
 **Step 1: Understand Your Data Requirements**
 
@@ -465,7 +465,7 @@ Access the analytics engine through a GraphQL interface, like Apollo Studio or a
 
 **Step 3: Start with the Query Structure**
 
-Every query begins with the keyword query, followed by an optional name, and the main query field. In our case, it’s `Analytics`:
+Every query begins with the keyword query, followed by an optional name, and the main query field. In our case, it's `Analytics`:
 
 ```graphql
 query MyAnalyticsQuery {
@@ -535,7 +535,7 @@ query MyAnalyticsQuery($filter: AnalyticsFilter) {
 
 **Step 6: Execute the Query**
 
-Once you have constructed the query, execute it in your GraphQL interface. Ensure that the filter object is passed correctly as a variable. In most interfaces, there’s a separate section or panel where you can define these variables.
+Once you have constructed the query, execute it in your GraphQL interface. Ensure that the filter object is passed correctly as a variable. In most interfaces, there's a separate section or panel where you can define these variables.
 
 **Step 7: Review the Results**
 
@@ -547,7 +547,7 @@ Query writing is often an iterative process. Based on the initial results, you m
 
 By following these steps, you can effectively write and execute queries in the analytics engine, tailoring the data retrieval to your specific analytical needs.
 
-### Query Examples
+### Query examples
 
 Example 1: Fetching Total MakerDAO Actual Expenses and Budget for 2023
 

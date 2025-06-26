@@ -9,6 +9,7 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { mergeOperations } from "#utils/misc";
 import {
   type DocumentHeader,
@@ -56,6 +57,47 @@ export class FilesystemStorage
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const ids: string[] = [];
+    for (const slug of slugs) {
+      const documentId = slugManifest.slugToId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs: string[] = [];
+    for (const id of ids) {
+      const document = await this.get<PHDocument>(id);
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError("Aborted");
+      }
+
+      slugs.push(document.slug);
+    }
+
+    return Promise.resolve(slugs);
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
@@ -75,7 +117,8 @@ export class FilesystemStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.slug && document.slug.length > 0 ? document.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -206,7 +249,8 @@ export class FilesystemStorage
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.slug && document.slug.length > 0 ? document.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();

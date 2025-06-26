@@ -15,6 +15,8 @@
   --ifm-color-primary-lightest: #1A1A1B;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --toc-color: #555; /* Muted black for inactive items */
+  --toc-color-active: #1A1A1B; /* Black for active items */
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
@@ -27,6 +29,8 @@
   --ifm-color-primary-lighter: #ffffff;
   --ifm-color-primary-lightest: #ffffff;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --toc-color: #ccc; /* Light grey for inactive items */
+  --toc-color-active: #ffffff; /* White for active items */
 }
 
 @font-face {
@@ -155,7 +159,6 @@ a {
 
 /* Reset styling for navigation elements, category pages, and utility links */
 .breadcrumbs a,
-.table-of-contents a,
 .pagination-nav a,
 .navbar a,
 .theme-doc-sidebar-container a,
@@ -463,4 +466,41 @@ html[data-theme='dark'] .DocSearch-Hits > *:empty {
 /* Attempt to hide icons in DocCard titles */
 .doc-card-list .card h2 svg {
   display: none !important;
+}
+
+/* Table of Contents Styling */
+.theme-doc-toc-desktop .table-of-contents__link {
+  color: var(--toc-color);
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.2s ease;
+}
+
+.theme-doc-toc-desktop .table-of-contents__link:hover {
+  color: var(--toc-color-active);
+  text-decoration: none;
+}
+
+.theme-doc-toc-desktop .table-of-contents__link--active {
+  color: var(--toc-color-active);
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.image-container {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.image-container img {
+  border-radius: var(--ifm-card-border-radius);
+}
+
+.image-container figcaption {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-style: italic;
 }

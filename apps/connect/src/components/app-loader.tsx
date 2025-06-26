@@ -1,16 +1,25 @@
-import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
-import { lazy } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import '../i18n';
-import '../index.css';
 
-if (import.meta.env.MODE === 'development') {
-    window.documentEditorDebugTools = new DocumentEditorDebugTools();
-} else {
-    serviceWorkerManager.registerServiceWorker(false);
-}
-
+import { AppSkeleton } from './app-skeleton.js';
 const App = lazy(() => import('./app.js'));
+const CookieBanner = lazy(() =>
+    import('./cookie-banner.js').then(m => ({ default: m.CookieBanner })),
+);
 
-const AppLoader = <App />;
+const ModalManager = lazy(() =>
+    import('./modal/modal.js').then(m => ({ default: m.ModalManager })),
+);
 
-export default AppLoader;
+export const AppLoader = (
+    <StrictMode>
+        <Suspense fallback={<AppSkeleton />} name="AppLoader">
+            <App />
+        </Suspense>
+        <Suspense name="CookieBanner">
+            <ModalManager>
+                <CookieBanner />
+            </ModalManager>
+        </Suspense>
+    </StrictMode>
+);

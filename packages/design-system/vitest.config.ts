@@ -8,6 +8,10 @@ export default defineConfig({
     setupFiles: ["./setupTests.js"],
     alias: {
       "#": new URL("./dist/src/", import.meta.url).pathname,
+      "#powerhouse": new URL("./src/powerhouse/", import.meta.url).pathname,
+      "#ui": new URL("./src/ui/", import.meta.url).pathname,
+      "#connect": new URL("./src/connect/", import.meta.url).pathname,
+      "#rwa": new URL("./src/rwa/", import.meta.url).pathname,
     },
   },
 });

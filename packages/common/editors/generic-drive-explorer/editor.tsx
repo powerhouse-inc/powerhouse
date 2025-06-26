@@ -144,7 +144,10 @@ export function Editor(props: DriveEditorProps) {
         )}
         <SearchBar />
       </DriveLayout.Header>
-      <DriveLayout.Content>
+      <DriveLayout.Content
+        {...dropProps}
+        className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+      >
         <FolderView
           sharingType={sharingType}
           onRenameNode={dispatchRenameNode}

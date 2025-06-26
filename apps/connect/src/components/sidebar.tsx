@@ -50,6 +50,7 @@ export default function Sidebar() {
             />
             {connectDebug && (
                 <button
+                    aria-label="Home"
                     id="connect-debug-button"
                     className="ml-6"
                     onClick={() => showDebugSettingsModal()}

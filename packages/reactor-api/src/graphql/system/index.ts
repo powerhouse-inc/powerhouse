@@ -46,7 +46,7 @@ export class SystemSubgraph extends Subgraph {
   resolvers = {
     Query: {
       drives: async () => {
-        return await this.reactor.getDrives();
+        return await this.reactor.getDrivesSlugs();
       },
     },
     Mutation: {

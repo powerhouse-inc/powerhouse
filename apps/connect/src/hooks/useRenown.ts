@@ -1,5 +1,5 @@
-import { type IRenown, type User } from '#services';
 import { atom, useAtom } from 'jotai';
+import { type IRenown, type User } from '../services/renown/index.js';
 import { useConnectCrypto } from './useConnectCrypto.js';
 
 export type RenownStatus = 'idle' | 'loading' | 'finished' | 'error';
@@ -13,7 +13,7 @@ renownAtom.debugLabel = 'renownAtom';
 
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);
-    const [, setRenownStatus] = useAtom(renownStatusAtom);
+    const [renownStatus, setRenownStatus] = useAtom(renownStatusAtom);
     const { did } = useConnectCrypto();
 
     async function initRenown(
@@ -26,7 +26,9 @@ export function useRenown() {
                 setRenownStatus('error');
                 return;
             }
-            const { initRenownBrowser } = await import('#services');
+            const { initRenownBrowser } = await import(
+                '../services/renown/index.js'
+            );
             const renownBrowser = initRenownBrowser(did);
             const renown: IRenown = {
                 user: function (): Promise<User | undefined> {
@@ -56,7 +58,7 @@ export function useRenown() {
         }
     }
 
-    if (!renown) {
+    if (!renown && renownStatus === 'idle') {
         setRenown(initRenown(did));
     }
 

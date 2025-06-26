@@ -4,7 +4,6 @@ import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import ts from "typescript";
 import { type Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
 export function resolvePackage(packageName: string, root = process.cwd()) {
@@ -146,10 +145,13 @@ export function makeImportScriptFromPackages(args: {
       }`);
     }
   }
-
-  const exportStatement = `export default [
+  const exportsString = exports.length
+    ? `
         ${exports.join(",\n")}
-    ];`;
+    `
+    : "";
+
+  const exportStatement = `export default [${exportsString}];`;
 
   const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
 
@@ -195,25 +197,43 @@ export function runShellScriptPlugin(
 }
 
 /**
+ * Shared helper to modify the <head> tag of an HTML file by transforming its contents.
+ */
+async function modifyHtmlHead(
+  pathToHtml: string,
+  contents: string,
+  transform: (html: string, contents: string) => string,
+) {
+  if (!existsSync(pathToHtml)) {
+    throw new Error(`File ${pathToHtml} does not exist.`);
+  }
+  let html = await readFile(pathToHtml, "utf8");
+  html = transform(html, contents);
+  await writeFile(pathToHtml, html, "utf8");
+}
+
+/**
  * Appends the contents to the <head> tag of the index.html file
  */
 export async function appendToHtmlHead(pathToHtml: string, contents: string) {
-  try {
-    if (!existsSync(pathToHtml)) {
-      throw new Error(`File ${pathToHtml} does not exist.`);
-    }
-
-    let html = await readFile(pathToHtml, "utf8");
-
+  return modifyHtmlHead(pathToHtml, contents, (html, contents) => {
     if (!html.includes("</head>")) {
       throw new Error("No </head> tag found in the HTML file.");
     }
+    return html.replace("</head>", `\n${contents}\n</head>`);
+  });
+}
 
-    html = html.replace("</head>", `\n${contents}\n</head>`);
-    await writeFile(pathToHtml, html, "utf8");
-  } catch (error) {
-    console.error("Error appending to HTML head:", error);
-  }
+/**
+ * Prepends the contents to the <head> tag of the index.html file
+ */
+export async function prependToHtmlHead(pathToHtml: string, contents: string) {
+  return modifyHtmlHead(pathToHtml, contents, (html, contents) => {
+    if (!html.includes("</head>")) {
+      throw new Error("No </head> tag found in the HTML file.");
+    }
+    return html.replace("<head>", `<head>\n${contents}\n`);
+  });
 }
 
 export function runTsc(outDir: string) {

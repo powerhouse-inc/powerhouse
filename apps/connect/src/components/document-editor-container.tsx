@@ -17,7 +17,7 @@ import {
 } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useAddOperationToSelectedDocument } from '../store/documents.js';
-import { exportFile } from '../utils/index.js';
+import { exportFile, openUrl } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
 
@@ -106,11 +106,42 @@ export function DocumentEditorContainer() {
     }, [exportDocument, selectedDocument]);
 
     const onOpenSwitchboardLink = useMemo(() => {
-        if (isRemoteDrive.state !== 'hasData') {
-            return undefined;
-        }
-        return isRemoteDrive.data ? () => openSwitchboardLink() : undefined;
-    }, [isRemoteDrive, openSwitchboardLink]);
+        return isRemoteDrive
+            ? async () => {
+                  if (!selectedDocument) {
+                      console.error('No selected document');
+                      return;
+                  }
+
+                  if (!remoteUrl) {
+                      console.error('No remote drive url found');
+                      return;
+                  }
+
+                  const documentModelModule = getDocumentModelModule(
+                      selectedDocument.documentType,
+                  );
+
+                  if (!documentModelModule) {
+                      console.error('No document model found');
+                      return;
+                  }
+
+                  const url = buildDocumentSubgraphUrl(
+                      remoteUrl,
+                      selectedDocument.id,
+                      documentModelModule.documentModel,
+                  );
+                  try {
+                      await openUrl(url);
+                  } catch (e) {
+                      console.error('Error opening switchboard link', e);
+                  }
+              }
+            : undefined;
+    }, [isRemoteDrive, remoteUrl, selectedDocument, getDocumentModelModule]);
+
+    if (!fileNodeDocument) return null;
 
     return (
         <div className="flex h-full flex-col overflow-auto" id="content-view">

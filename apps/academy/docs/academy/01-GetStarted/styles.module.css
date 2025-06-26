@@ -12,9 +12,9 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+  /* max-width: 1200px; */
+  /* margin: 0 auto; */
+  /* padding: 2rem; */
   width: 100%;
   box-sizing: border-box;
 }
@@ -53,30 +53,23 @@
   display: flex;
   align-items: center;
   margin-bottom: 1rem;
-}
-
-.cardIconWrapper {
-  display: flex;
-  align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-right: 0.75rem;
 }
 
 :global(.card-title) {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   margin: 0;
   padding: 0;
   font-size: 1.25rem;
   font-weight: 600;
   line-height: 1.2;
+  gap: 0rem;
 }
 
 :global(.card-title img) {
-  display: inline-flex;
+  margin-top: 2px;
 }
 
 :global(.path-button) {
@@ -96,4 +89,35 @@
 :global(.path-button:hover) {
   background: #ffffff;
   border-color: #d1d5db;
-} 
+}
+
+.masteryTrackTitle {
+  background-color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 2;
+  position: absolute;
+  top: 18px;
+}
+
+:global([data-theme='dark']) .masteryTrackTitle {
+  background-color: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+:global([data-theme='dark']) .pathCard {
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+:global([data-theme='dark']) :global(.path-button) {
+  background: var(--ifm-color-emphasis-100);
+  border-color: var(--ifm-color-emphasis-200);
+  color: var(--ifm-font-color-primary);
+}
+
+:global([data-theme='dark']) :global(.path-button:hover) {
+  background: var(--ifm-color-emphasis-200);
+  border-color: var(--ifm-color-emphasis-300);
+}

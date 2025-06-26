@@ -9,6 +9,7 @@ import {
 import { driveDocumentType } from "#drive-document-model/constants";
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
+import { pascalCase } from "change-case";
 import { RunAsap } from "./run-asap.js";
 
 export const runAsap = RunAsap.runAsap;
@@ -85,14 +86,4 @@ export function isBefore(dateA: Date | string, dateB: Date | string) {
  * "hello_world" -> "HelloWorld"
  * "helloWorld" -> "HelloWorld"
  */
-export function toPascalCase(str: string) {
-  return (
-    str
-      // Split by common separators (space, hyphen, underscore)
-      .split(/[\s-_]+/)
-      // Capitalize first letter of each word
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      // Join words together
-      .join("")
-  );
-}
+export const toPascalCase = pascalCase;

@@ -3,5 +3,15 @@
   "compilerOptions": {
     "resolveJsonModule": true
   },
-  "include": ["tests/*", "index.ts", "playwright.config.ts", "powerhouse.manifest.json"]
+  "include": [
+    "tests/**/*",
+    "index.ts",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "playwright.config.ts",
+    "powerhouse.manifest.json",
+    "document-models/**/*",
+    "editors/**/*",
+    "subgraphs/**/*"
+  ]
 }

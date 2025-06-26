@@ -18,6 +18,8 @@ on:
       verbose:
         type: boolean
         default: false
+  schedule:
+    - cron: '0 2 * * *'
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -57,7 +59,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "pnpm"
           registry-url: https://registry.npmjs.org/
 

@@ -1,6 +1,6 @@
-# Generate the Reactor & Analytics Processor
+# Generate the reactor and analytics processor
 
-### Launch the Reactor
+### Launch the reactor
 
 **First**, navigate to the project directory with `cd rwa-analytics` to start the reactor from the project directory.
 Now open the directory with your code editor with the command `code . `
@@ -24,7 +24,7 @@ Next, launch the reactor by running the following command in your terminal.
 
 As you can see the reactor registered the default system subgraph but also the `d/:drive` subgraph for fetching documents and pushing updates. It also registered the analytics subgraph, which we'll use later for running analytics queries on the document model in the next steps. 
 
-### Generate the Analytics Processor
+### Generate the analytics processor
 **Next** we'll open up a second terminal window and generate the analytics processor.
 Use the following command to generate the analytics processor in a seperate terminal window.
 ```bash
@@ -34,7 +34,7 @@ In your project directory you'll now see the folder 'processors' being created.
 Later we'll see how this processor is actively listening for the operations on a document model.
 Eventually we'll replace the default code of the generated processor with our own custom analytics processor code to listen to specific operations, dimensions and metrics.
 
-### Add data to the document model in the Reactor
+### Add data to the document model in the reactor
 
 Now that we've generated the analytics processor we need to give it some data to listen to.
 For this we've created the local reactor instance, which will represent a node in the Powerhouse network. 
@@ -111,7 +111,7 @@ Click on the 'Save' button to save the transaction.
 
 You'll now see the transaction appear in the transaction table.
 
-### Let's buy & sell some T-bills!
+### Let's buy and sell some T-bills!
 
 Now that we've created the T-bill asset and took out a loan from Sky to purchase it, we can start buying some T-bills. 
 Let's buy 2,500,000 T-bills for $2,490,000 on May 15.
@@ -157,7 +157,7 @@ Your table of transactions should now look like this:
 
 ![RWA Portfolio](./images/Transaction-table.png)
 
-### Verify that the document data is correctly entered & inspect the document history		
+### Verify that the document data is correctly entered and inspect the document history		
 
 Connect offers you with a few ways to inspect the document data and history. Click on the 'revision history' button in the top right corner of your document model in Connect to see the history of your operations on the document model.
 

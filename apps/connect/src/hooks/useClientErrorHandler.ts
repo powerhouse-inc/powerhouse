@@ -1,6 +1,6 @@
 import { useDrives, useReactor } from '@powerhousedao/common';
 import { LOCAL } from '@powerhousedao/design-system';
-import { useSwitchboard } from '@powerhousedao/reactor-browser';
+import { getDriveIdBySlug } from '@powerhousedao/reactor-browser/utils/switchboard';
 import {
     logger,
     type PullResponderTrigger,
@@ -46,10 +46,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     const documentDrives =
         loadableDrives.state === 'hasData' ? (loadableDrives.data ?? []) : [];
 
-    const loadableReactor = useReactor();
-    const reactor =
-        loadableReactor.state === 'hasData' ? loadableReactor.data : undefined;
-    const { getDriveIdBySlug } = useSwitchboard(reactor!);
+    const reactor = useUnwrappedReactor();
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 

@@ -1,4 +1,4 @@
-# Publish Your Package
+# Publish your package
 
 This tutorial is a step by step guide tackling the following topics: 
 1. the process of **building a powerhouse project** 
@@ -116,7 +116,7 @@ These include:
 - `scripts`: A folder containing the scripts you might use.
 - `tests`: A folder containing your unit tests.
 
-### 1.2. Adding Document Models, editors and unit tests
+### 1.2. Adding document models, editors and unit tests
 
 Now that you've set up your directory. 
 Go ahead and add the document models you'd like to add by going through the standard document model building flow:
@@ -145,9 +145,10 @@ This command will **build** the project and create a build directory with the ou
 
 This command will **start a local server** and serve the build output.
 Inspect the build output and verify that the document models are working correctly.
+Instead of `pnpm serve`, we'll be using: 
 
 ```bash
-pnpm serve (Not working yet)
+ph connect
 ```
 
 ### 1.4 Storing your project in a git repository
@@ -202,19 +203,83 @@ If you're publishing a package under a scope (like @your-org/my-package), you mi
 }
 ```
 
-For the actual publishing step, run the following command to publish your project to the npm registry:
+### 2.1 Versioning, tagging, and publishing your package
+
+Before publishing, it's crucial to version your package correctly and tag the release in your Git repository. This helps track changes and allows users to depend on specific versions.
+
+#### 1. Versioning with pnpm
+
+Use the `pnpm version` command to update your package version according to semantic versioning rules (`patch` for bugfixes, `minor` for new features, `major` for breaking changes). This command will:
+- Update the `version` in your `package.json`.
+- Create a Git commit for the version change.
+- Create a Git tag for the new version (e.g., `v1.0.1`).
+
 ```bash
-npm publish
+# For a patch release (e.g., from 1.0.0 to 1.0.1)
+pnpm version patch
+
+# For a minor release (e.g., from 1.0.1 to 1.1.0)
+pnpm version minor
+
+# For a major release (e.g., from 1.1.0 to 2.0.0)
+pnpm version major
+```
+Take note of the new version tag created (e.g., `v1.0.1`), as you'll need it in the next step.
+
+#### 2. Pushing changes to Git
+
+Next, push your commits and the new version tag to your remote Git repository:
+
+```bash
+# Push your current branch (e.g., main or master)
+# Replace 'main' with your default branch name if different
+git push origin main
+
+# Push the specific tag created by pnpm version
+# Replace vX.Y.Z with the actual tag name (e.g., v1.0.1)
+git push origin vX.Y.Z
+```
+The specific tag name (e.g., `v1.0.1`) is usually output by the `pnpm version` command. Pushing the specific tag is recommended to avoid unintentionally pushing other local tags.
+
+Alternatively, to push all new local tags (use with caution):
+```bash
+# git push --tags
 ```
 
-Optionally, if you are publishing a scoped package and you want it public, run:
+#### 3. Understanding Git tags vs. npm distributor tags
+
+It's important to distinguish between Git tags and NPM distributor tags (dist-tags):
+
+-   **Git Tags**: These are markers in your Git repository's history. They are primarily for developers to pinpoint specific release versions in the codebase (e.g., `v1.0.0`, `v1.0.1`). The `pnpm version` command creates these.
+-   **NPM Distributor Tags (dist-tags)**: These are labels used by the NPM registry to point to specific published versions of your package. Common NPM tags include:
+    -   `latest`: This is the default tag. When someone runs `pnpm install my-package`, NPM installs the version tagged as `latest`.
+    -   `beta`, `next`, `alpha`: Often used for pre-release versions.
+    When you publish a package without specifying an NPM tag, it usually gets the `latest` tag by default.
+
+#### 4. Publishing to npm
+
+Now you are ready to publish your package to the NPM registry. Ensure you are logged into NPM (the `npm login` command shown in previous steps should be used, or `pnpm login` which is an alias).
+
 ```bash
-npm publish --access public
+pnpm publish
 ```
+This command will publish the version of your package that is currently specified in your `package.json`. By default, this will also set the `latest` NPM dist-tag for this version.
+
+If your package is scoped (e.g., `@your-org/my-package`) and intended to be public, ensure your `package.json` includes the `publishConfig` shown earlier. If this is not set in `package.json` (and your package is scoped), you might need to use:
+```bash
+pnpm publish --access public
+```
+
+You can also publish a version to a specific NPM dist-tag. For example, to publish a beta version:
+```bash
+# Ensure your package.json version reflects the beta (e.g., 1.1.0-beta.0)
+pnpm publish --tag beta
+```
+This is useful for testing releases before making them `latest`.
 
 Now let's verify that the package(s) get published in the package repository, next to pre-existing packages that you might have been publishing before.
 
-## 3. Deploying the host apps & project.
+## 3. Deploying the host apps and project
 Now that we've installed all the necessary services on our server instance, we can start deploying the host apps & our packaged project from npm.
 
 Install your project package we've published earlier on your local connect (`ph connect`) instance by running the following command:

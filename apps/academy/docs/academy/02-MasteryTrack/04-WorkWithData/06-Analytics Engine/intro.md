@@ -2,7 +2,7 @@
 sidebar_position: 0
 ---
 
-# Getting Started
+# Getting started
 
 ## Introduction
 
@@ -16,7 +16,7 @@ This documentation serves as a guide for Typescript and GraphQL API usage, not l
 
 This system can be broken up into several major systems: **queries**, **engine components** (including filters and aggregation), and **storage**. Each of these systems have detailed documentation, but it is most helpful to start with a holistic understanding of the major pieces of data: series and dimensions.
 
-### Series and Dimensions
+### Series and dimensions
 
 All metrics are collected and stored using only two objects: **AnalyticsSeries** and **AnalyticsDimension**. To be a successful consumer of this system, It is vital to understand the intent of these two pieces of data.
 
@@ -52,7 +52,7 @@ Visually, you can think of series as values running up and down, while dimension
 
 ![6](./images/overview-6.jpg)
 
-### Structure v Reporting
+### Structure vs. reporting
 
 The Series and Dimensions objects give control over how metric data is defined and related. That is, they define the **structure** of data. Three new concepts: Paths, LODs, and granularity, are parameters used to define how the system should _report_ the data.
 
@@ -94,7 +94,7 @@ An LOD greater than the number of parts of the path (in this case, 4 or more) wi
 
 While LODs allow you to aggregate series data across dimensions, _granularity_ refers to how data is aggregated over time. It determines the time span each data point or record covers. Choosing the right granularity is crucial for meaningful analysis, as it affects the interpretation and insights that can be drawn from the data.
 
-#### Available Options
+#### Available options
 
 The analytics engine supports various granularity options, each suitable for different types of analysis:
 
@@ -113,7 +113,7 @@ daily: Offers a day-to-day breakdown, ideal for detailed analysis of daily opera
 
 7. `hourly`: The most granular level, providing insights into hourly fluctuations. Useful in scenarios where short-term data spikes or dips are significant.
 
-#### How Granularity Affects Query Results
+#### How granularity affects query results
 
 - Data Volume: Higher granularity (like hourly or daily) results in a larger volume of data points, providing more detailed insights but potentially leading to more complex analysis. Lower granularity (like annual or total) simplifies the data into fewer, broader data points.
 
@@ -140,7 +140,7 @@ These are high-level definitions of major terms you will need to know.
 
 * **Granularity** - Determines how to aggregate values over time, like "monthly" or "yearly".
 
-## Next Steps
+## Next steps
 
 Next steps depend on use case.
 

@@ -9,13 +9,19 @@ import {
     CookieBanner as PHCookieBanner,
 } from '@powerhousedao/design-system';
 import { Trans, useTranslation } from 'react-i18next';
+import { useAcceptedCookies } from '../hooks/useAcceptedCookies.js';
+import { useCookieBanner } from '../hooks/useCookiebanner.js';
+import i18n from '../i18n';
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
     return cookies.some(cookie => cookie.id === id && cookie.value);
 };
 
 export const CookieBanner = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(undefined, {
+        useSuspense: true,
+        i18n,
+    });
     const { show: showCookiesPolicyModal } = useModal('cookiesPolicy');
     const showBanner = useCookieBanner();
     const setShowBanner = useSetCookieBanner();
@@ -42,11 +48,11 @@ export const CookieBanner = () => {
 
     const handleReject = () => {
         setShowBanner(false);
-        setAcceptedCookies({
+        setAcceptedCookies(() => ({
             analytics: false,
             functional: false,
             marketing: false,
-        });
+        }));
     };
 
     if (!showBanner) {
@@ -67,11 +73,13 @@ export const CookieBanner = () => {
                 >
                     <p className="font-semibold text-gray-500">
                         <Trans
+                            key={'cookieBanner.message'}
                             i18nKey="cookieBanner.message"
                             components={{
                                 a: (
                                     <a
                                         onClick={() => showCookiesPolicyModal()}
+                                        key={'cookieBanner.message-link'}
                                         className="cursor-pointer text-gray-900 hover:underline"
                                     />
                                 ),

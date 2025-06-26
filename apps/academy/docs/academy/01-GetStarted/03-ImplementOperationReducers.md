@@ -1,15 +1,17 @@
-# Implement the Document Model
+# Implement the document model
 
-In this section, we will implement and test the operation reducers for the **ToDoList** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory. 
+In this section, we will implement and test the operation reducers for the **To-do List** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory. 
 
 To export the document model specification, follow the steps in the [Define ToDoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
 
-## Understanding Reducers in Document Models
+## Understanding reducers in document models
 
 Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema.
 
-**Connection to Schema Definition Language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
+:::info
+**Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?   
 The reducers provide the actual implementation of what happens when those operations are performed.
+:::
 
 To import the document model specification into your Powerhouse project, you can either: 
 - Copy and paste the file directly into the root of your Powerhouse project.
@@ -19,10 +21,12 @@ Either step will import the document model specification into your Powerhouse pr
 
 ![vscode image](./images/vscode.png)
 
+## In your project directory
+
 The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well. 
 
 
-To write the operation reducers of the **ToDoList** document model, you need to generate the document model code from the document model specification file you have exported into the Powerhouse project directory.
+To write the operation reducers of the **To-do List** document model, you need to generate the document model code from the document model specification file you have exported into the Powerhouse project directory.
 
 To do this, run the following command in the terminal:
 
@@ -36,7 +40,7 @@ Open the `to-do-list.ts` file and you should see the code that needs to be fille
 
 ![to-do-list ts file](./images/reducers.png)
 
-## Write the Operation Reducers
+## Write the operation reducers
 
 1. Copy and paste the code below into the `to-do-list.ts` file in the `reducers` folder.
 2. Save the file.
@@ -96,7 +100,7 @@ export const reducer: ToDoListToDoListOperations = {
 ```
 </details>
 
-## Write the Operation Reducers Tests
+## Write the operation reducers tests
 
 In order to make sure the operation reducers are working as expected, you need to write tests for them.
 
@@ -107,10 +111,10 @@ Here are the tests for the three operations implemented in the reducers file. Th
 <details>
 <summary>Operation Reducers Tests</summary>
 ```typescript
-import utils from '../../gen/utils';
-import { reducer } from '../../gen/reducer';
-import * as creators from '../../gen/creators';
-import { ToDoListDocument } from '../../gen/types';
+import utils from '../../gen/utils.js';
+import { reducer } from '../../gen/reducer.js';
+import * as creators from '../../gen/creators.js';
+import { ToDoListDocument } from '../../gen/types.js';
 
 // REMARKS:
 // These tests demonstrate the event sourcing principles of our document model.
@@ -188,6 +192,7 @@ Output should be as follows:
    Duration  417ms (transform 79ms, setup 0ms, collect 174ms, tests 12ms, environment 0ms, prepare 158ms)
 ```
 
-If you got the same output, you have successfully implemented the operation reducers and tests for the **ToDoList** document model. Congratulations, you've successfully set up the backbone for a simple **ToDoList** document. 
+If you got the same output, you have successfully implemented the operation reducers and tests for the **To-do List** document model. Congratulations, you've successfully set up the backbone for a simple **To-do List** document. 
 
-In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **ToDoList** document model in action.
+## Up next: To-do list editor
+In the next chapter of this introduction track you will learn how to implement an editor for your document model so you can see a simple user interface for the **To-do List** document model in action.
