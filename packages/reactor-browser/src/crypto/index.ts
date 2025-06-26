@@ -1,4 +1,4 @@
-import { encodeDIDfromHexString } from "did-key-creator";
+import { encodeDIDfromBytes } from "did-key-creator";
 import { childLogger } from "document-drive";
 
 const logger = childLogger(["reactor-browser", "crypto"]);
@@ -11,12 +11,6 @@ export type JwkKeyPair = {
 export interface JsonWebKeyPairStorage {
   loadKeyPair(): Promise<JwkKeyPair | undefined>;
   saveKeyPair(keyPair: JwkKeyPair): Promise<void>;
-}
-
-function ab2hex(ab: ArrayBuffer) {
-  return Array.prototype.map
-    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
-    .join("");
 }
 
 export interface IConnectCrypto {
@@ -96,7 +90,7 @@ export class ConnectCrypto implements IConnectCrypto {
       await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
     }
 
-    const did = await this.#parseDid();
+    const did = await this.#generateDid();
     logger.info("App DID:", did);
     return did;
   }
@@ -111,7 +105,7 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   /**
-   * Parses the DID from the public key.
+   * Generates the DID from the public key.
    *
    * This function was updated to handle Ed25519 keys. The previous
    * implementation used the multicodec for P-256 keys (`p256-pub`) and
@@ -125,7 +119,7 @@ export class ConnectCrypto implements IConnectCrypto {
    * 1. Using the correct multicodec for Ed25519: `ed25519-pub`.
    * 2. Using the raw public key bytes directly without compression.
    */
-  async #parseDid(): Promise<DID> {
+  async #generateDid(): Promise<DID> {
     if (!this.#keyPair) {
       throw new Error("No key pair available");
     }
@@ -136,9 +130,7 @@ export class ConnectCrypto implements IConnectCrypto {
       this.#keyPair.publicKey,
     );
 
-    const multicodecName = "ed25519-pub";
-    const publicKeyHex = ab2hex(publicKeyRaw);
-    const did = encodeDIDfromHexString(multicodecName, publicKeyHex);
+    const did = encodeDIDfromBytes("ed25519-pub", new Uint8Array(publicKeyRaw));
     return did as DID;
   }
 
