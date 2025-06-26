@@ -10,11 +10,8 @@ export type JsonSerializable =
 export type PHDocumentSignatureInfo = {
   /**
    * The public key of the document creator.
-   *
-   * This is generally a JsonWebKey, but there is no shared type for this
-   * between node and the browser.
    **/
-  publicKey: any;
+  publicKey: JsonWebKey;
 
   /** The nonce that was appended to the message to create the signature. */
   nonce: string;

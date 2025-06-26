@@ -14,12 +14,51 @@ import {
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
 import {
+  PublicKeySigner,
   sign,
-  Signer,
   SigningParameters,
   verify,
 } from "../../src/document/utils/header.js";
 import { type CountDocument, countReducer, increment } from "../helpers.js";
+
+/**
+ * A signer that uses a key pair to sign and verify data.
+ */
+class KeyPairSigner extends PublicKeySigner {
+  readonly #privateKey: JsonWebKey;
+
+  #privateCryptoKey: CryptoKey | undefined;
+
+  constructor(publicKey: JsonWebKey, privateKey: JsonWebKey) {
+    super(publicKey);
+
+    this.#privateKey = privateKey;
+  }
+
+  async sign(data: Uint8Array): Promise<Uint8Array> {
+    const subtleCrypto = await this.subtleCrypto;
+    if (!this.#privateCryptoKey) {
+      this.#privateCryptoKey = await subtleCrypto.importKey(
+        "jwk",
+        this.#privateKey,
+        {
+          name: "Ed25519",
+          namedCurve: "Ed25519",
+        },
+        true,
+        ["sign"],
+      );
+    }
+
+    const arrayBuffer = await subtleCrypto.sign(
+      "Ed25519",
+      this.#privateCryptoKey,
+      data.buffer as ArrayBuffer,
+    );
+
+    return new Uint8Array(arrayBuffer);
+  }
+}
 
 describe("Crypto utils", () => {
   beforeAll(() => {
@@ -304,14 +343,11 @@ describe("Crypto utils", () => {
       "verify",
     ]);
 
-    const signer: Signer = {
-      publicKey: keyPair.publicKey,
-      privateKey: keyPair.privateKey,
-    };
+    const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+    const privateKey = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
 
+    const signer = new KeyPairSigner(publicKey, privateKey);
     const signature = await sign(parameters, signer);
-
-    delete signer.privateKey;
 
     await verify(parameters, signature, signer);
   });

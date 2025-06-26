@@ -24,8 +24,13 @@ The special case `header` scope contains a number of key elements:
 
 ```tsx
 export type PHDocumentSignatureInfo = {
-  /** The public key of the document creator. */
-  publicKey: string;
+  /**
+   * The public key of the document creator.
+   *
+   * This is generally a JsonWebKey, but there is no shared type for this
+   * between node and the browser.
+   **/
+  publicKey: any;
 
   /** The nonce that was appended to the message to create the signature. */
   nonce: string;
@@ -39,8 +44,28 @@ export type PHDocumentHeader = {
    **/
   id: string;
 
-  /** Information to verify the document creator. */
+  /**
+   * Information to verify the document creator.
+   *
+   * This is immutable.
+   **/
   sig: PHDocumentSignatureInfo;
+
+  /**
+   * The type of the document.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  documentType: string;
+
+  /**
+   * The timestamp of the creation date of the document, in UTC ISO format.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  createdAtUtcIso: string;
 
   /** The slug of the document. */
   slug: string;
@@ -51,14 +76,18 @@ export type PHDocumentHeader = {
   /** The branch of this document. */
   branch: string;
 
-  /** The type of the document. */
-  documentType: string;
+  /**
+   * The revision of each scope of the document. This object is updated every
+   * time any _other_ scope is updated.
+   */
+  revision: {
+    [scope: string]: number;
+  };
 
-  /** The timestamp of the creation date of the document. */
-  createdAtUtcMs: number;
-
-  /** The timestamp of the last change in the document. */
-  lastModifiedAtUtcMs: number;
+  /**
+   * The timestamp of the last change in the document, in UTC ISO format.
+   **/
+  lastModifiedAtUtcIso: string;
 
   /** Meta information about the document. */
   meta?: {
@@ -72,7 +101,7 @@ export type PHDocumentHeader = {
 
 The `id` is a unique, Ed25519 signature on the header object. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
 
-Cryptographic signatures are generated and verified using the Web Crypto API.
+Cryptographic signatures are generated and verified using the Web Crypto API. See the [signing](./signing.md) document for more information.
 
 This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
 

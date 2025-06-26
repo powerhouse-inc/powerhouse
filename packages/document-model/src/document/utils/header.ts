@@ -1,66 +1,145 @@
 import { PHDocumentHeader } from "#document/ph-types.js";
 import { generateUUID } from "#utils/env";
 
-export class InvalidSignatureError extends Error {
-  constructor(message: string) {
-    super(message);
-
-    this.name = "InvalidSignatureError";
-  }
-}
-
+/**
+ * Parameters used in a document signature.
+ */
 export type SigningParameters = {
   documentType: string;
   createdAtUtcIso: string;
+
+  /**
+   * The nonce can act as both a salt and a typical nonce.
+   */
   nonce: string;
 };
 
-export interface Signer {
-  /** The private key used for signing */
-  privateKey?: CryptoKey;
-
+/**
+ * Describes a signer. This may only have a public key for verification.
+ */
+export interface ISigner {
   /** The corresponding public key */
-  publicKey: CryptoKey;
+  get publicKey(): JsonWebKey;
+
+  /**
+   * Signs data.
+   *
+   * @param data - The data to sign.
+   *
+   * @returns The signature of the data.
+   */
+  sign: (data: Uint8Array) => Promise<Uint8Array>;
+
+  /**
+   * Verifies a signature.
+   *
+   * @param data - The data to verify.
+   * @param signature - The signature to verify.
+   */
+  verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 }
 
 /**
  * Generates a deterministic payload from signing parameters
  */
-const generateStablePayload = (parameters: SigningParameters): string => {
-  // Create a deterministic string representation using string interpolation
-  // This ensures stability across different JavaScript environments
-  const payload = `${parameters.documentType}:${parameters.createdAtUtcIso}:${parameters.nonce}`;
+const generateStablePayload = (parameters: SigningParameters): string =>
+  `${parameters.documentType}:${parameters.createdAtUtcIso}:${parameters.nonce}`;
 
-  return payload;
-};
+/**
+ * A signer that uses a public key to verify data.
+ */
+export class PublicKeySigner implements ISigner {
+  readonly publicKey: JsonWebKey;
 
-const createSignerFromHeader = async (
-  header: PHDocumentHeader,
-): Promise<Signer> => {
-  const publicKey = await crypto.subtle.importKey(
-    "jwk",
-    header.sig.publicKey,
-    {
-      name: "Ed25519",
-      namedCurve: "Ed25519",
-    },
-    true,
-    ["verify"],
-  );
+  protected readonly subtleCrypto: Promise<SubtleCrypto>;
+  protected publicCryptoKey: CryptoKey | undefined;
 
-  return {
-    publicKey,
-  };
-};
-
-export const sign = async (
-  parameters: SigningParameters,
-  signer: Signer,
-): Promise<string> => {
-  if (!signer.privateKey) {
-    throw new Error("Signer private key is required");
+  constructor(publicKey: JsonWebKey) {
+    this.publicKey = publicKey;
+    this.subtleCrypto = this.#initCrypto();
   }
 
+  #initCrypto() {
+    return new Promise<SubtleCrypto>((resolve, reject) => {
+      if (typeof window === "undefined") {
+        import("node:crypto")
+          .then((module) => {
+            resolve(module.webcrypto.subtle as SubtleCrypto);
+          })
+          .catch(reject);
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!window.crypto?.subtle) {
+          reject(new Error("Crypto module not available"));
+        }
+        resolve(window.crypto.subtle);
+      }
+    });
+  }
+
+  async sign(data: Uint8Array): Promise<Uint8Array> {
+    throw new Error("PublicKeySigner only supports verification");
+  }
+
+  async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+    const subtleCrypto = await this.subtleCrypto;
+    if (!this.publicCryptoKey) {
+      this.publicCryptoKey = await subtleCrypto.importKey(
+        "jwk",
+        this.publicKey,
+        {
+          name: "Ed25519",
+          namedCurve: "Ed25519",
+        },
+        true,
+        ["verify"],
+      );
+    }
+
+    let isValid;
+    try {
+      isValid = await subtleCrypto.verify(
+        "Ed25519",
+        this.publicCryptoKey,
+        signature,
+        data,
+      );
+    } catch (error) {
+      throw new Error("invalid signature");
+    }
+
+    if (!isValid) {
+      throw new Error("invalid signature");
+    }
+  }
+}
+
+/**
+ * Creates a signer from a header.
+ *
+ * @param header - The header to create a signer from.
+ *
+ * @returns A signer for the header.
+ */
+const createSignerFromHeader = async (
+  header: PHDocumentHeader,
+): Promise<ISigner> => {
+  return new PublicKeySigner(header.sig.publicKey);
+};
+
+/**
+ * Signs a header. Generally, this is not called directly, but rather through
+ * {@link createSignedHeader}.
+ *
+ * @param parameters - The parameters used to sign the header.
+ * @param signer - The signer of the document.
+ *
+ * @returns The signature of the header.
+ */
+export const sign = async (
+  parameters: SigningParameters,
+  signer: ISigner,
+): Promise<string> => {
   // Generate stable payload
   const payload = generateStablePayload(parameters);
 
@@ -69,23 +148,26 @@ export const sign = async (
   const data = encoder.encode(payload);
 
   // Create signature using Web Crypto API with Ed25519
-  const signature = await crypto.subtle.sign(
-    "Ed25519",
-    signer.privateKey,
-    data,
-  );
+  const signature = await signer.sign(data);
 
   // Convert signature to base64 string for JSON serialization
   const signatureArray = new Uint8Array(signature);
   const signatureBase64 = btoa(String.fromCharCode(...signatureArray));
-
   return signatureBase64;
 };
 
+/**
+ * Verifies a header signature. Generally, this is not called directly, but
+ * rather through {@link validateHeader}.
+ *
+ * @param parameters - The parameters used to sign the header.
+ * @param signature - The signature to verify.
+ * @param signer - The signer of the document.
+ */
 export const verify = async (
   parameters: SigningParameters,
   signature: string,
-  signer: Signer,
+  signer: ISigner,
 ): Promise<void> => {
   // Generate the same stable payload that was signed
   const payload = generateStablePayload(parameters);
@@ -99,24 +181,12 @@ export const verify = async (
     c.charCodeAt(0),
   );
 
-  // Verify signature using Web Crypto API with Ed25519
-  let isValid;
-  try {
-    isValid = await crypto.subtle.verify(
-      "Ed25519",
-      signer.publicKey,
-      signatureBytes,
-      data,
-    );
-  } catch (error) {
-    throw new InvalidSignatureError("Invalid signature");
-  }
-
-  if (!isValid) {
-    throw new InvalidSignatureError("Invalid signature");
-  }
+  await signer.verify(data, signatureBytes);
 };
 
+/**
+ * Validates a header signature.
+ */
 export const validateHeader = async (
   header: PHDocumentHeader,
 ): Promise<void> => {
@@ -134,14 +204,14 @@ export const validateHeader = async (
 };
 
 /**
- * Creates an unsigned header for a document. This header is not valid, but
+ * Creates a header that has yet to be signed. This header is not valid, but
  * can be input into {@link createSignedHeader} to create a signed header.
  *
  * @returns An unsigned header for a document.
  */
-export const createPresignedHeader = (): PHDocumentHeader => {
+export const createUnsignedHeader = (): PHDocumentHeader => {
   return {
-    id: "",
+    id: generateUUID(),
     sig: {
       publicKey: {},
       nonce: "",
@@ -160,41 +230,37 @@ export const createPresignedHeader = (): PHDocumentHeader => {
 };
 
 /**
- * Creates a new, signed header for a document.
+ * Creates a new, signed header for a document. This will replace the id of the
+ * document.
  *
- * @param presignedHeader - The presigned header to created the signed header from.
+ * @param unsignedHeader - The unsigned header to created the signed header from.
  * @param signer - The signer of the document.
  *
  * @returns A new signed header for a document. Some fields are mutable and
  * some are not. See the PHDocumentHeader type for more information.
  */
 export const createSignedHeader = async (
-  presignedHeader: PHDocumentHeader,
+  unsignedHeader: PHDocumentHeader,
   documentType: string,
-  signer: Signer,
+  signer: ISigner,
 ): Promise<PHDocumentHeader> => {
   const parameters: SigningParameters = {
     documentType,
-    createdAtUtcIso: presignedHeader.createdAtUtcIso,
+    createdAtUtcIso: unsignedHeader.createdAtUtcIso,
     nonce: generateUUID(),
   };
 
   const signature = await sign(parameters, signer);
 
-  // use jwk: it is already json and it is self describing. This will allow us
-  // to, for instance, change curves in the future without breaking backwards
-  // compatibility.
-  const publicKey = await crypto.subtle.exportKey("jwk", signer.publicKey);
-
   return {
     // immutable fields
     id: signature,
     sig: {
-      publicKey,
+      publicKey: signer.publicKey,
       nonce: parameters.nonce,
     },
     documentType,
-    createdAtUtcIso: presignedHeader.createdAtUtcIso,
+    createdAtUtcIso: unsignedHeader.createdAtUtcIso,
 
     // mutable fields
     slug: "",
@@ -203,7 +269,7 @@ export const createSignedHeader = async (
     revision: {
       document: 0,
     },
-    lastModifiedAtUtcIso: presignedHeader.lastModifiedAtUtcIso,
+    lastModifiedAtUtcIso: unsignedHeader.lastModifiedAtUtcIso,
     meta: {},
   };
 };
@@ -220,11 +286,11 @@ export const createSignedHeader = async (
  */
 export const createSignedHeaderForSigner = async (
   documentType: string,
-  signer: Signer,
+  signer: ISigner,
 ): Promise<PHDocumentHeader> => {
-  const presignedHeader = createPresignedHeader();
+  const unsignedHeader = createUnsignedHeader();
   const signedHeader = await createSignedHeader(
-    presignedHeader,
+    unsignedHeader,
     documentType,
     signer,
   );

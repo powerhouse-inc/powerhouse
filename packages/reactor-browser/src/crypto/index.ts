@@ -24,9 +24,13 @@ function ab2hex(ab: ArrayBuffer) {
 }
 
 export interface IConnectCrypto {
+  get publicKey(): JsonWebKey;
+
   did: () => Promise<DID>;
   regenerateDid(): Promise<void>;
+
   sign: (data: Uint8Array) => Promise<Uint8Array>;
+  verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 }
 
 export type DID = `did:key:${string}`;
@@ -39,15 +43,16 @@ export class ConnectCrypto implements IConnectCrypto {
   #did: Promise<DID>;
 
   static algorithm: EcKeyAlgorithm = {
-    name: "ECDSA",
-    namedCurve: "P-256",
+    name: "Ed25519",
+    namedCurve: "Ed25519",
   };
 
-  static signAlgorithm = {
-    name: "ECDSA",
-    namedCurve: "P-256",
-    hash: "SHA-256",
-  };
+  get publicKey(): JsonWebKey {
+    if (!this.#keyPair) {
+      throw new Error("No key pair available");
+    }
+    return this.#keyPair.publicKey as JsonWebKey;
+  }
 
   constructor(keyPairStorage: JsonWebKeyPairStorage) {
     this.#keyPairStorage = keyPairStorage;
@@ -168,19 +173,12 @@ export class ConnectCrypto implements IConnectCrypto {
     return (await this.#subtleCrypto).sign(...args);
   };
 
-  // eslint-disable-next-line no-unused-private-class-members
-  #verify = async (
-    ...args: Parameters<SubtleCrypto["verify"]>
-  ): Promise<boolean> => {
-    return (await this.#subtleCrypto).verify(...args);
-  };
-
   async sign(data: Uint8Array): Promise<Uint8Array> {
     if (this.#keyPair?.privateKey) {
       const subtleCrypto = await this.#subtleCrypto;
 
       const arrayBuffer = await subtleCrypto.sign(
-        ConnectCrypto.signAlgorithm,
+        ConnectCrypto.algorithm,
         this.#keyPair.privateKey,
         data.buffer as ArrayBuffer,
       );
@@ -188,6 +186,30 @@ export class ConnectCrypto implements IConnectCrypto {
       return new Uint8Array(arrayBuffer);
     } else {
       throw new Error("No private key available");
+    }
+  }
+
+  async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+    if (this.#keyPair?.publicKey) {
+      const subtleCrypto = await this.#subtleCrypto;
+
+      let isValid;
+      try {
+        isValid = await subtleCrypto.verify(
+          "Ed25519",
+          this.#keyPair.publicKey,
+          signature,
+          data,
+        );
+      } catch (error) {
+        throw new Error("invalid signature");
+      }
+
+      if (!isValid) {
+        throw new Error("invalid signature");
+      }
+    } else {
+      throw new Error("No public key available");
     }
   }
 }
