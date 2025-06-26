@@ -1,3 +1,13 @@
+## 3.1.2 (2025-06-26)
+
+### 🩹 Fixes
+
+- **common,design-system,reactor-browser:** fix drag and drop on generic drive explorer ([61478d01e](https://github.com/powerhouse-inc/powerhouse/commit/61478d01e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.1.1 (2025-06-23)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

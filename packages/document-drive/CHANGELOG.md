@@ -1,3 +1,13 @@
+## 3.1.2 (2025-06-26)
+
+### 🩹 Fixes
+
+- **document-drive:** safer check for document.slug ([4c1d3cacb](https://github.com/powerhouse-inc/powerhouse/commit/4c1d3cacb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.1.1 (2025-06-23)
 
 ### 🩹 Fixes

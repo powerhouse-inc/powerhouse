@@ -1,3 +1,7 @@
+## 3.1.2 (2025-06-26)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 3.1.1 (2025-06-23)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
