@@ -282,8 +282,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/design-system
       '@powerhousedao/diff-analyzer':
-        specifier: ^0.0.0-dev.8
-        version: 0.0.0-dev.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^0.0.0-dev.10
+        version: 0.0.0-dev.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
@@ -6307,8 +6307,8 @@ packages:
       react: ^18.3.1
       react-dom: ^18.3.1
 
-  '@powerhousedao/diff-analyzer@0.0.0-dev.8':
-    resolution: {integrity: sha512-+K52F6mMiSMUttxY+jXHCBCD7B9ZwJ+3QCj32mOVs9c32CsS63a09GVrt+UI4AscCTs6rX++wkez9Dt1fcKAcg==}
+  '@powerhousedao/diff-analyzer@0.0.0-dev.10':
+    resolution: {integrity: sha512-jvd06ZQ9zVD/6Q2bWGrnA9pyqQ0CrrmNW/JCOIEhSj7rRhkFmDWriEvbfOM2Hq37m7rs+e6St4CNqjpPe3asSQ==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -26419,7 +26419,7 @@ snapshots:
       - uploadthing
       - utf-8-validate
 
-  '@powerhousedao/diff-analyzer@0.0.0-dev.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@powerhousedao/diff-analyzer@0.0.0-dev.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@types/luxon': 3.6.2
       document-model: 3.2.0-dev.3

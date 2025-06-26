@@ -50,7 +50,6 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const { useDocumentEditorProps } = useDriveContext();
-  const timelineItems = useTimelineItems(documentId);
 
   const user = context.user as User | undefined;
 
@@ -61,6 +60,8 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     documentModelModule,
     user,
   });
+
+  const timelineItems = useTimelineItems(documentId, document?.created, driveId);
 
   const onExport = useCallback(async () => {
     if (document) {
