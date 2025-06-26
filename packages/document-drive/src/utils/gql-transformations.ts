@@ -1,5 +1,5 @@
-import { DocumentDriveDocument } from "document-drive";
-import { Operation, PHDocument } from "document-model";
+import { type DocumentDriveDocument } from "document-drive";
+import { type Operation, type PHDocument } from "document-model";
 
 export function responseForDrive(drive: DocumentDriveDocument) {
   return {

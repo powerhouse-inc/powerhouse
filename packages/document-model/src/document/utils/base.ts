@@ -1,4 +1,4 @@
-import { PHDocumentHeader } from "#document/ph-types.js";
+import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";

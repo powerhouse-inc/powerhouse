@@ -4,9 +4,9 @@ import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { type DocumentAction } from "./actions/types.js";
 import {
-  PHBaseState,
-  PHDocumentHeader,
-  PHDocumentHistory,
+  type PHBaseState,
+  type PHDocumentHeader,
+  type PHDocumentHistory,
 } from "./ph-types.js";
 import type {
   CreateChildDocumentInput,
@@ -203,12 +203,12 @@ export type FileRegistry = Record<AttachmentRef, Attachment>;
 export type BaseState<TDocumentState, TLocalState> =
   PHBaseState<TDocumentState> & {
     /**
-     * @deprecated Use {@link PHBaseState} `document` instead.
+     * Use {@link PHBaseState} `document` instead.
      */
     global: TDocumentState;
 
     /**
-     * @deprecated Not a requirement for BaseState, but could be in extended states.
+     * Not a requirement for BaseState, but could be in extended states.
      */
     local: TLocalState;
   };

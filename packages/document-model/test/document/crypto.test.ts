@@ -16,7 +16,7 @@ import {
 import {
   PublicKeySigner,
   sign,
-  SigningParameters,
+  type SigningParameters,
   verify,
 } from "../../src/document/utils/header.js";
 import { type CountDocument, countReducer, increment } from "../helpers.js";

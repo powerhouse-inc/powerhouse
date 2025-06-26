@@ -36,7 +36,7 @@ import {
   type Operation,
   type OperationScope,
   type PHDocument,
-  PHDocumentHeader,
+  type PHDocumentHeader,
   attachBranch,
   createPresignedHeader,
   garbageCollect,
@@ -852,9 +852,11 @@ export class BaseDocumentDriveServer
     let header: PHDocumentHeader;
 
     // handle the legacy case where an id is provided
+    // eslint-disable-next-line
     if (input.id && input.id.length > 0) {
       if (input.document) {
         header = document.header;
+        // eslint-disable-next-line
         document.header.id = input.id;
 
         this.logger.warn(
@@ -866,6 +868,7 @@ export class BaseDocumentDriveServer
         );
 
         header = createPresignedHeader();
+        // eslint-disable-next-line
         header.id = input.id;
         header.documentType = input.documentType;
       }

@@ -295,11 +295,13 @@ export async function fetchDocument<TDocument extends PHDocument>(
     : null;
 
   if (result?.document?.attachments) {
+    // eslint-disable-next-line
     document.attachments = result.document.attachments;
   }
 
   return {
     ...result,
+    // eslint-disable-next-line
     document,
   } as GraphQLResult<{
     document: DocumentGraphQLResult<TDocument>;

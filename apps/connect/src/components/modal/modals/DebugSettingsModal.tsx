@@ -56,8 +56,8 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
     console.log('selectedDrive', selectedDrive);
 
     const driveTriggers =
-        documentDrives.find(drive => drive.header.id === selectedDrive)
-            ?.state.local.triggers || [];
+        documentDrives.find(drive => drive.header.id === selectedDrive)?.state
+            .local.triggers || [];
 
     const isEmptyURL = driveUrl === '';
     const disableUrlButtons = !selectedDrive || isEmptyURL;

@@ -1,4 +1,4 @@
-import { PHDocumentHeader } from "./ph-types.js";
+import { type PHDocumentHeader } from "./ph-types.js";
 import { type OperationScope, type PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {

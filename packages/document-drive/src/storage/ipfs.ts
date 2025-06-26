@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @ts-nocheck
 // TODO fix interface errors
 import {
