@@ -1,83 +1,105 @@
-import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
-import { useFileNodeDocument } from '#store';
-import { FILE } from '@powerhousedao/design-system';
 import {
-    useSelectedDriveId,
-    useSelectedNodeId,
-    useSelectedNodeKind,
-    useSelectedParentNodeId,
-    useSetSelectedNodeId,
+    getDriveSharingType,
+    useConfig,
+    useDocuments,
+    useDrives,
+    useModal,
+    useReactor,
+    useSelectedDocument,
+    useSelectedDrive,
+    useSelectedFolder,
+    useSetSelectedDrive,
+    useUnwrappedDrives,
 } from '@powerhousedao/common';
-import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import {
+    HomeScreen,
+    HomeScreenAddDriveItem,
+    HomeScreenItem,
+    Icon,
+} from '@powerhousedao/design-system';
+import { type DocumentDriveDocument } from 'document-drive';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
-import { toast } from '../services/toast.js';
 
+function getDriveIcon(drive: DocumentDriveDocument) {
+    const iconSrc = drive.state.global.icon;
+    const sharingType = getDriveSharingType(drive);
+    if (iconSrc) {
+        return <img src={iconSrc} alt={drive.name} height={32} width={32} />;
+    }
+    if (sharingType === 'LOCAL') {
+        return <Icon name="Hdd" size={32} />;
+    } else {
+        return <Icon name="Server" size={32} />;
+    }
+}
 export default function Content() {
     console.log('rendering content...');
-    const navigate = useNavigate();
-    const { driveId } = useParams();
-    const [documentDrives, , , status] = useDocumentDrives();
-    const selectedDriveId = useSelectedDriveId();
-    const selectedNodeId = useSelectedNodeId();
-    const selectedParentNodeId = useSelectedParentNodeId();
-    const selectedNodeKind = useSelectedNodeKind();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const { addFile } = useDocumentDriveServer();
-    const { fileNodeDocument } = useFileNodeDocument();
-    const firstDriveId = documentDrives[0]?.id;
+    const drives = useUnwrappedDrives();
+    const setSelectedDrive = useSetSelectedDrive();
+    const { show: showAddDriveModal } = useModal('addDrive');
+    const config = useConfig();
+    const loadableReactor = useReactor();
+    const loadableDocuments = useDocuments();
+    const loadableDrives = useDrives();
+    const loadableSelectedDrive = useSelectedDrive();
+    const loadableSelectedFolder = useSelectedFolder();
+    const loadableSelectedDocument = useSelectedDocument();
+    console.log('loadableReactor', loadableReactor);
+    console.log('loadableDocuments', loadableDocuments);
+    console.log('loadableDrives', loadableDrives);
+    console.log('loadableSelectedDrive', loadableSelectedDrive);
+    console.log('loadableSelectedFolder', loadableSelectedFolder);
+    console.log('loadableSelectedDocument', loadableSelectedDocument);
 
-    useEffect(() => {
-        if (!firstDriveId) return;
-        if (selectedDriveId === null && firstDriveId) {
-            setSelectedNodeId(firstDriveId);
-        }
-    }, [selectedDriveId, setSelectedNodeId, firstDriveId]);
+    if (
+        loadableSelectedDocument.state === 'hasData' &&
+        loadableSelectedDocument.data
+    ) {
+        return <DocumentEditorContainer />;
+    }
 
-    useEffect(() => {
-        return window.electronAPI?.handleFileOpen(async file => {
-            if (
-                !selectedDriveId ||
-                !selectedParentNodeId ||
-                selectedNodeKind !== FILE
-            ) {
-                return;
-            }
+    if (
+        loadableSelectedFolder.state === 'hasData' &&
+        loadableSelectedFolder.data
+    ) {
+        return <DriveEditorContainer />;
+    }
 
-            await addFile(
-                file.content,
-                selectedDriveId,
-                file.name,
-                selectedParentNodeId,
-            );
-        });
-    }, [selectedDriveId, selectedParentNodeId, addFile]);
+    if (
+        loadableSelectedDrive.state === 'hasData' &&
+        loadableSelectedDrive.data
+    ) {
+        return <DriveEditorContainer />;
+    }
 
-    // if drives are loaded and route driveId is not found
-    // then redirects to homepage
-    useEffect(() => {
-        if (
-            (status === 'LOADED' || status === 'ERROR') &&
-            !documentDrives.find(
-                d =>
-                    d.id === driveId ||
-                    d.slug === driveId ||
-                    d.state.global.name === driveId,
-            )
-        ) {
-            toast(<p>Drive {driveId} not found</p>, { type: 'warning' });
-            navigate('/');
-        }
-    }, [status, driveId, documentDrives]);
+    if (
+        loadableSelectedDrive.state === 'hasData' &&
+        !loadableSelectedDrive.data
+    ) {
+        return (
+            <HomeScreen>
+                {drives?.map(drive => {
+                    return (
+                        <HomeScreenItem
+                            key={drive.id}
+                            title={drive.name}
+                            description={'Drive Explorer App'}
+                            icon={getDriveIcon(drive)}
+                            onClick={() => {
+                                setSelectedDrive(drive.id);
+                            }}
+                        />
+                    );
+                })}
+                {config.drives.addDriveEnabled && (
+                    <HomeScreenAddDriveItem
+                        onClick={() => showAddDriveModal()}
+                    />
+                )}
+            </HomeScreen>
+        );
+    }
 
-    return (
-        <div className="flex h-full flex-col overflow-auto" id="content-view">
-            {fileNodeDocument ? (
-                <DocumentEditorContainer key={fileNodeDocument.documentId} />
-            ) : selectedDriveId ? (
-                <DriveEditorContainer key={selectedDriveId} />
-            ) : null}
-        </div>
-    );
+    return null;
 }

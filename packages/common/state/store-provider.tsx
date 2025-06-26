@@ -1,33 +1,13 @@
-import { Provider, type WritableAtom } from "jotai";
-import { useHydrateAtoms } from "jotai/utils";
+import { Provider } from "jotai";
+import { DevTools } from "jotai-devtools";
 import { type ReactNode } from "react";
 import { atomStore } from "./store.js";
 
-type AtomValues = Iterable<
-  readonly [WritableAtom<unknown, [any], unknown>, unknown]
->;
-
-export function AtomStoreProvider({
-  atomValues,
-  children,
-}: {
-  atomValues: AtomValues;
-  children: ReactNode;
-}) {
+export function AtomStoreProvider({ children }: { children: ReactNode }) {
   return (
     <Provider store={atomStore}>
-      <AtomsHydrator atomValues={atomValues}>{children}</AtomsHydrator>
+      <DevTools store={atomStore} />
+      {children}
     </Provider>
   );
-}
-
-function AtomsHydrator({
-  atomValues,
-  children,
-}: {
-  atomValues: AtomValues;
-  children: ReactNode;
-}) {
-  useHydrateAtoms(new Map(atomValues));
-  return children;
 }

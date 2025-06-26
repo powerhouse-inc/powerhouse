@@ -4,10 +4,12 @@ import { useConnectCrypto } from './useConnectCrypto.js';
 
 export type RenownStatus = 'idle' | 'loading' | 'finished' | 'error';
 export const renownStatusAtom = atom<RenownStatus>('idle');
+renownStatusAtom.debugLabel = 'renownStatusAtom';
 
 export const renownAtom = atom<Promise<IRenown | undefined> | undefined>(
-    window.renown ? Promise.resolve(window.renown) : undefined,
+    undefined,
 );
+renownAtom.debugLabel = 'renownAtom';
 
 export function useRenown() {
     const [renown, setRenown] = useAtom(renownAtom);

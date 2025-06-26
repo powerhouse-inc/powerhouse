@@ -1,9 +1,5 @@
-import { atom, useAtomValue, useSetAtom } from "jotai";
-
-export const permissionsAtom = atom({
-  isAllowedToCreateDocuments: false,
-  isAllowedToEditDocuments: false,
-});
+import { useAtomValue, useSetAtom } from "jotai";
+import { permissionsAtom } from "./atoms.js";
 
 export function usePermissions() {
   return useAtomValue(permissionsAtom);

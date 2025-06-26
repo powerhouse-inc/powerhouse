@@ -1,15 +1,15 @@
-import {
-    useDocumentAdminStorage,
-    useGetDocumentModelModule,
-    useUnwrappedReactor,
-    useUser,
-} from '#store';
+import { useDocumentAdminStorage, useUser } from '#store';
 import {
     addActionContext,
     loadFile,
     signOperation,
     uploadDocumentOperations,
 } from '#utils';
+import {
+    useDrives,
+    useGetDocumentModelModule,
+    useReactor,
+} from '@powerhousedao/common';
 import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
 import {
     type DocumentDriveAction,
@@ -49,7 +49,6 @@ import {
 import { type Operation, type PHDocument, generateId } from 'document-model';
 import { useCallback, useDebugValue, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
-import { useDocumentDrives } from './useDocumentDrives.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 // TODO this should be added to the document model
@@ -72,19 +71,24 @@ export function useDocumentDriveServer() {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const reactor = useUnwrappedReactor();
+    const loadableReactor = useReactor();
     const storage = useDocumentAdminStorage();
 
     const getDocumentModelModule = useGetDocumentModelModule();
 
-    const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
-        useDocumentDrives();
+    const loadableDrives = useDrives();
 
     const openFile = useCallback(
         async (drive: string, id: string, options?: GetDocumentOptions) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
+
             const document = await reactor.getDocument(drive, id, options);
             if (!document) {
                 throw new Error(
@@ -93,11 +97,16 @@ export function useDocumentDriveServer() {
             }
             return document;
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const getDocumentsIds = useCallback(
         async (driveId: string) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -105,16 +114,23 @@ export function useDocumentDriveServer() {
             const ids = await reactor.getDocuments(driveId);
             return ids;
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const _addDriveOperation = useCallback(
         async (driveId: string, action: DocumentDriveAction) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-
-            let drive = documentDrives.find(drive => drive.id === driveId);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            let drive = drives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -155,7 +171,7 @@ export function useDocumentDriveServer() {
                 }
 
                 if (result.operations.length) {
-                    await refreshDocumentDrives();
+                    // await refreshDocumentDrives();
                 }
 
                 if (result.document && !isDocumentDrive(result.document)) {
@@ -169,14 +185,7 @@ export function useDocumentDriveServer() {
                 return drive;
             }
         },
-        [
-            documentDrives,
-            refreshDocumentDrives,
-            reactor,
-            sign,
-            user,
-            connectDid,
-        ],
+        [loadableDrives, loadableReactor, sign, user, connectDid],
     );
 
     const addDocument = useCallback(
@@ -191,7 +200,11 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            let drive = documentDrives.find(d => d.id === driveId);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            let drive = drives.find(d => d.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -220,7 +233,7 @@ export function useDocumentDriveServer() {
 
             return node;
         },
-        [_addDriveOperation, documentDrives, isAllowedToCreateDocuments],
+        [_addDriveOperation, loadableDrives, isAllowedToCreateDocuments],
     );
 
     const addOperations = useCallback(
@@ -233,11 +246,18 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to edit documents');
             }
 
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
-
-            const drive = documentDrives.find(drive => drive.id === driveId);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            const drive = drives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -251,12 +271,12 @@ export function useDocumentDriveServer() {
                       );
 
             if (result.operations.length) {
-                await refreshDocumentDrives();
+                // await refreshDocumentDrives();
             }
-            refreshDocumentDrives().catch(logger.error);
+            // refreshDocumentDrives().catch(logger.error);
             return result.document;
         },
-        [documentDrives, isAllowedToEditDocuments, reactor],
+        [loadableDrives, isAllowedToEditDocuments, loadableReactor],
     );
 
     const addFile = useCallback(
@@ -269,6 +289,10 @@ export function useDocumentDriveServer() {
             logger.verbose(
                 `addFile(drive: ${drive}, name: ${name}, folder: ${parentFolder})`,
             );
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -296,8 +320,11 @@ export function useDocumentDriveServer() {
                 initialDocument,
             );
 
-            // then add all the operations
-            const driveDocument = documentDrives.find(
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            const driveDocument = drives.find(
                 documentDrive => documentDrive.id === drive,
             );
             const waitForSync =
@@ -321,7 +348,7 @@ export function useDocumentDriveServer() {
             addOperations,
             getDocumentModelModule,
             isAllowedToCreateDocuments,
-            reactor,
+            loadableReactor,
         ],
     );
 
@@ -437,6 +464,10 @@ export function useDocumentDriveServer() {
 
     const handleCopyNode = useCallback(
         async (srcNodeId: string, targetNodeId: string, driveId: string) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -444,7 +475,11 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to copy documents');
             }
 
-            const drive = documentDrives.find(drive => drive.id === driveId);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            const drive = drives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -465,7 +500,7 @@ export function useDocumentDriveServer() {
 
             const result = await reactor.addDriveActions(driveId, copyActions);
             if (result.operations.length) {
-                await refreshDocumentDrives();
+                // await refreshDocumentDrives();
             } else if (result.status !== 'SUCCESS') {
                 logger.error(
                     `Error copying files: ${result.status}`,
@@ -473,12 +508,7 @@ export function useDocumentDriveServer() {
                 );
             }
         },
-        [
-            documentDrives,
-            isAllowedToCreateDocuments,
-            refreshDocumentDrives,
-            reactor,
-        ],
+        [loadableDrives, isAllowedToCreateDocuments, loadableReactor],
     );
 
     const addOperation = useCallback(
@@ -487,11 +517,19 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to edit documents');
             }
 
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === driveId);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            const drive = drives.find(drive => drive.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -503,11 +541,15 @@ export function useDocumentDriveServer() {
             );
             return newDocument.document;
         },
-        [documentDrives, isAllowedToEditDocuments, reactor],
+        [loadableDrives, isAllowedToEditDocuments, loadableReactor],
     );
 
     const addDrive = useCallback(
         async (drive: DriveInput, preferredEditor?: string) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -525,23 +567,27 @@ export function useDocumentDriveServer() {
                 },
                 preferredEditor,
             );
-            await refreshDocumentDrives();
+            // await refreshDocumentDrives();
             return newDrive;
         },
-        [isAllowedToCreateDocuments, refreshDocumentDrives, reactor],
+        [isAllowedToCreateDocuments, loadableReactor],
     );
 
     const addRemoteDrive = useCallback(
         async (url: string, options: RemoteDriveOptions) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
 
             const newDrive = await reactor.addRemoteDrive(url, options);
-            await refreshDocumentDrives();
+            // await refreshDocumentDrives();
             return newDrive;
         },
-        [refreshDocumentDrives, reactor],
+        [loadableReactor],
     );
 
     const deleteDrive = useCallback(
@@ -549,23 +595,26 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete drives');
             }
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === id);
+            if (loadableDrives.state !== 'hasData') {
+                throw new Error('Drives are not loaded');
+            }
+            const drives = loadableDrives.data ?? [];
+            const drive = drives.find(drive => drive.id === id);
             if (!drive) {
                 throw new Error(`Drive with id ${id} not found`);
             }
             await reactor.deleteDrive(id);
-            return refreshDocumentDrives();
+            // return refreshDocumentDrives();
         },
-        [
-            documentDrives,
-            isAllowedToCreateDocuments,
-            refreshDocumentDrives,
-            reactor,
-        ],
+        [loadableDrives, isAllowedToCreateDocuments, loadableReactor],
     );
 
     const renameDrive = useCallback(
@@ -614,6 +663,10 @@ export function useDocumentDriveServer() {
             sharingType: SharingType,
         ): Promise<SyncStatus | undefined> => {
             if (sharingType === LOCAL) return;
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -627,12 +680,16 @@ export function useDocumentDriveServer() {
                 return ERROR;
             }
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const getSyncStatusSync = useCallback(
         (syncId: string, sharingType: SharingType): SyncStatus | undefined => {
             if (sharingType === LOCAL) return;
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -646,38 +703,46 @@ export function useDocumentDriveServer() {
                 return ERROR;
             }
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const onStrandUpdate = useCallback(
         (cb: (update: StrandUpdate) => void) => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
             return reactor.on('strandUpdate', cb);
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const onSyncStatus = useCallback(
         (cb: (driveId: string, status: SyncStatus, error?: Error) => void) => {
+            const emptyUnsub = () => {};
+            if (loadableReactor.state !== 'hasData') {
+                return emptyUnsub;
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return emptyUnsub;
             }
             return reactor.on('syncStatus', cb);
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const clearStorage = useCallback(async () => {
         // reactor may have not loaded yet
-        if (!reactor) {
+        if (loadableReactor.state !== 'hasData') {
             return;
         }
 
         await storage.clear();
-        await refreshDocumentDrives();
-    }, [refreshDocumentDrives, reactor, storage]);
+    }, [loadableReactor, storage]);
 
     const handleRemoveTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
@@ -705,6 +770,10 @@ export function useDocumentDriveServer() {
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
         ): Promise<PullResponderTrigger> => {
+            if (loadableReactor.state !== 'hasData') {
+                throw new Error('Reactor is not loaded');
+            }
+            const reactor = loadableReactor.data;
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -757,7 +826,7 @@ export function useDocumentDriveServer() {
                 type: 'PullResponder',
             };
         },
-        [reactor],
+        [loadableReactor],
     );
 
     const handleAddTrigger = useCallback(
@@ -782,8 +851,6 @@ export function useDocumentDriveServer() {
 
     return useMemo(
         () => ({
-            documentDrives,
-            documentDrivesStatus,
             addDocument,
             openFile,
             addFile,
@@ -824,8 +891,6 @@ export function useDocumentDriveServer() {
             handleCopyNode,
             deleteDrive,
             handleDeleteNode,
-            documentDrives,
-            documentDrivesStatus,
             getSyncStatus,
             getSyncStatusSync,
             handleMoveNode,

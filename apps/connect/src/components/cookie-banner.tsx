@@ -1,10 +1,14 @@
-import { useAcceptedCookies, useCookieBanner } from '#hooks';
+import {
+    useCookieBanner,
+    useModal,
+    useSetAcceptedCookies,
+    useSetCookieBanner,
+} from '@powerhousedao/common';
 import {
     type CookieInput,
     CookieBanner as PHCookieBanner,
 } from '@powerhousedao/design-system';
 import { Trans, useTranslation } from 'react-i18next';
-import { useModal } from './modal/index.js';
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
     return cookies.some(cookie => cookie.id === id && cookie.value);
@@ -12,9 +16,10 @@ const isCookieAccepted = (cookies: CookieInput[], id: string) => {
 
 export const CookieBanner = () => {
     const { t } = useTranslation();
-    const { showModal } = useModal();
-    const [showBanner, setShowBanner] = useCookieBanner();
-    const [, setAcceptedCookies] = useAcceptedCookies();
+    const { show: showCookiesPolicyModal } = useModal('cookiesPolicy');
+    const showBanner = useCookieBanner();
+    const setShowBanner = useSetCookieBanner();
+    const setAcceptedCookies = useSetAcceptedCookies();
 
     const cookiesInput: CookieInput[] = [
         {
@@ -66,9 +71,7 @@ export const CookieBanner = () => {
                             components={{
                                 a: (
                                     <a
-                                        onClick={() =>
-                                            showModal('cookiesPolicy', {})
-                                        }
+                                        onClick={() => showCookiesPolicyModal()}
                                         className="cursor-pointer text-gray-900 hover:underline"
                                     />
                                 ),

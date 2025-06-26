@@ -1,13 +1,5 @@
 import { type BaseProps } from "#editors/utils/index";
-import {
-  useGetSyncStatusSync,
-  useIsAllowedToCreateDocuments,
-  useNodeFolderChildren,
-  useNodeHasFileChildren,
-  useSelectedDriveId,
-  useSelectedNodeId,
-  useSetSelectedNodeId,
-} from "#state";
+
 import {
   FolderItem,
   useDrop,
@@ -20,6 +12,16 @@ import {
 } from "@powerhousedao/design-system";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
+import { useUnwrappedSelectedDocument } from "../../../state/documents.js";
+import { useUnwrappedSelectedDrive } from "../../../state/drives.js";
+import {
+  isFileNodeKind,
+  isFolderNodeKind,
+  useChildNodes,
+  useSetSelectedNode,
+} from "../../../state/nodes.js";
+import { useIsAllowedToCreateDocuments } from "../../../state/permissions.js";
+import { useGetSyncStatusSync } from "../../../state/reactor.js";
 import FileContentView from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 
@@ -44,23 +46,21 @@ export function FolderView(props: IFolderViewProps) {
     onDeleteNode,
   } = props;
   const { t } = useTranslation();
-  const selectedNodeId = useSelectedNodeId();
-  const setSelectedNodeId = useSetSelectedNodeId();
-  const selectedDriveId = useSelectedDriveId();
+  const selectedDrive = useUnwrappedSelectedDrive();
+  const selectedDocument = useUnwrappedSelectedDocument();
+  const setSelectedNode = useSetSelectedNode();
   const { isDropTarget } = useDrop({
-    nodeId: selectedNodeId,
-    driveId: selectedDriveId,
+    nodeId: selectedDocument?.id ?? null,
+    driveId: selectedDrive?.id ?? null,
     nodeKind: "FOLDER",
     onAddFile,
     onCopyNode,
     onMoveNode,
   });
-  const folderNodes = useNodeFolderChildren(selectedNodeId);
-  const hasFileChildren = useNodeHasFileChildren(selectedNodeId);
+  const loadableChildNodes = useChildNodes();
   const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
   const getSyncStatusSync = useGetSyncStatusSync();
-
-  if (!selectedNodeId || !selectedDriveId) {
+  if (!selectedDrive) {
     return null;
   }
 
@@ -79,23 +79,28 @@ export function FolderView(props: IFolderViewProps) {
         })}
         className="mb-4"
       >
-        {folderNodes.length > 0 ? (
-          folderNodes.map((folderNode) => (
-            <FolderItem
-              key={folderNode.id}
-              node={folderNode}
-              isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-              sharingType={sharingType}
-              driveId={selectedDriveId}
-              setSelectedNodeId={setSelectedNodeId}
-              getSyncStatusSync={getSyncStatusSync}
-              onAddFile={onAddFile}
-              onMoveNode={onMoveNode}
-              onCopyNode={onCopyNode}
-              onRenameNode={onRenameNode}
-              onDeleteNode={onDeleteNode}
-            />
-          ))
+        {loadableChildNodes.state === "hasData" &&
+        loadableChildNodes.data?.filter(isFolderNodeKind).length ? (
+          loadableChildNodes.data
+            .filter(isFolderNodeKind)
+            .map((folderNode) => (
+              <FolderItem
+                key={folderNode.id}
+                node={folderNode}
+                isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+                sharingType={sharingType}
+                driveId={selectedDrive.id}
+                setSelectedDocument={(nodeId) =>
+                  setSelectedNode(nodeId ?? undefined)
+                }
+                getSyncStatusSync={getSyncStatusSync}
+                onAddFile={onAddFile}
+                onMoveNode={onMoveNode}
+                onCopyNode={onCopyNode}
+                onRenameNode={onRenameNode}
+                onDeleteNode={onDeleteNode}
+              />
+            ))
         ) : (
           <div className="mb-8 text-sm text-gray-400">
             {t("folderView.sections.folders.empty", {
@@ -112,7 +117,10 @@ export function FolderView(props: IFolderViewProps) {
         <div
           className={twMerge(
             "w-full",
-            hasFileChildren ? "min-h-[400px]" : "min-h-14",
+            loadableChildNodes.state === "hasData" &&
+              loadableChildNodes.data?.filter(isFileNodeKind).length
+              ? "min-h-[400px]"
+              : "min-h-14",
           )}
         >
           <FileContentView

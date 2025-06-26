@@ -1,24 +1,24 @@
 import {
-  ConnectDropdownMenu,
-  defaultFileOptions,
-  DELETE,
-  DUPLICATE,
-  getDocumentIconSrc,
-  type GetSyncStatusSync,
-  NodeInput,
-  type NodeOption,
-  nodeOptionsMap,
-  type OnAddFile,
-  type OnCopyNode,
-  type OnDeleteNode,
-  type OnMoveNode,
-  type OnRenameNode,
-  READ,
-  RENAME,
-  type SetSelectedNodeId,
-  type SharingType,
-  useDrag,
-  WRITE,
+    ConnectDropdownMenu,
+    defaultFileOptions,
+    DELETE,
+    DUPLICATE,
+    getDocumentIconSrc,
+    type GetSyncStatusSync,
+    NodeInput,
+    type NodeOption,
+    nodeOptionsMap,
+    type OnAddFile,
+    type OnCopyNode,
+    type OnDeleteNode,
+    type OnMoveNode,
+    type OnRenameNode,
+    READ,
+    RENAME,
+    type SetSelectedDocument,
+    type SharingType,
+    useDrag,
+    WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
 import type { FileNode } from "document-drive";
@@ -33,7 +33,7 @@ export type FileItemProps = {
   isAllowedToCreateDocuments: boolean;
   customDocumentIconSrc?: string;
   className?: string;
-  setSelectedNodeId: SetSelectedNodeId;
+  setSelectedDocument: SetSelectedDocument;
   getSyncStatusSync: GetSyncStatusSync;
   onRenameNode: OnRenameNode;
   onDeleteNode: OnDeleteNode;
@@ -50,7 +50,7 @@ export function FileItem(props: FileItemProps) {
     customDocumentIconSrc,
     sharingType,
     driveId,
-    setSelectedNodeId,
+    setSelectedDocument,
     getSyncStatusSync,
     onCopyNode,
     onRenameNode,
@@ -110,7 +110,7 @@ export function FileItem(props: FileItemProps) {
   }, []);
 
   const onClick = useCallback(() => {
-    setSelectedNodeId(nodeId);
+    setSelectedDocument(nodeId);
   }, [nodeId]);
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {

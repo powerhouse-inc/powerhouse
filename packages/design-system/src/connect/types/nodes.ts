@@ -50,7 +50,7 @@ export type GetSyncStatusSync = (
   sharingType: SharingType,
 ) => SyncStatus | undefined;
 
-export type SetSelectedNodeId = (nodeId: string | null) => void;
+export type SetSelectedDocument = (nodeId: string | null | undefined) => void;
 export type OnAddDocument = (...args: Parameters<AddDocument>) => void;
 export type OnAddFolder = (...args: Parameters<AddFolder>) => void;
 export type OnAddFile = (...args: Parameters<AddFile>) => void;

@@ -1,47 +1,54 @@
 import { useDocumentDriveServer } from '#hooks';
+import {
+    useModal,
+    useSetSelectedNode,
+    useUnwrappedSelectedDrive,
+    useUnwrappedSelectedFolder,
+} from '@powerhousedao/common';
 import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
-import { useSetSelectedNodeId } from '@powerhousedao/reactor-browser';
-import { type DocumentModelModule, type PHDocument } from 'document-model';
+import { useCallback } from 'react';
 
-export interface CreateDocumentModalProps {
-    open: boolean;
-    documentModel: DocumentModelModule;
-    onClose: () => void;
-}
+export const CreateDocumentModal: React.FC = () => {
+    const { isOpen, props, hide } = useModal('addDocument');
+    const { documentModelId } = props;
 
-export const CreateDocumentModal: React.FC<
-    CreateDocumentModalProps
-> = props => {
-    const { open, onClose, documentModel } = props;
     const { addDocument } = useDocumentDriveServer();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const onCreateDocument = async (
-        driveId: string,
-        name: string,
-        parentFolder?: string,
-        document?: PHDocument,
-    ) => {
-        onClose();
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedFolder = useUnwrappedSelectedFolder();
+    const setSelectedNode = useSetSelectedNode();
+    const onCreateDocument = useCallback(
+        async (name: string) => {
+            if (!selectedDrive?.id) return;
 
-        const node = await addDocument(
-            driveId,
-            name,
-            documentModel.documentModel.id,
-            parentFolder,
-            document,
-        );
+            const node = await addDocument(
+                selectedDrive.id,
+                name,
+                documentModelId,
+                selectedFolder?.id,
+            );
 
-        if (node) {
-            setSelectedNodeId(node.id);
-        }
-    };
+            if (node) {
+                setSelectedNode(node.id);
+            }
+            hide();
+        },
+        [
+            addDocument,
+            selectedDrive?.id,
+            selectedFolder?.id,
+            hide,
+            documentModelId,
+        ],
+    );
+
+    if (!isOpen || !documentModelId) return null;
 
     return (
         <ConnectCreateDocumentModal
-            open={open}
+            open={isOpen}
             onContinue={onCreateDocument}
             onOpenChange={(status: boolean) => {
-                if (!status) return onClose();
+                if (!status) return hide();
             }}
         />
     );

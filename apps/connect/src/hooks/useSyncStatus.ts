@@ -1,3 +1,4 @@
+import { useDrives } from '@powerhousedao/common';
 import { type SharingType } from '@powerhousedao/design-system';
 import { type SyncStatus } from 'document-drive';
 import { useSyncExternalStore } from 'react';
@@ -7,8 +8,8 @@ export function useSyncStatus(
     driveId: string,
     documentId?: string,
 ): SyncStatus | undefined {
-    const { getSyncStatusSync, onSyncStatus, documentDrives } =
-        useDocumentDriveServer();
+    const { getSyncStatusSync, onSyncStatus } = useDocumentDriveServer();
+    const loadableDrives = useDrives();
 
     const syncStatus = useSyncExternalStore(
         onStoreChange => {
@@ -16,6 +17,10 @@ export function useSyncStatus(
             return unsub;
         },
         () => {
+            if (loadableDrives.state !== 'hasData') {
+                return;
+            }
+            const documentDrives = loadableDrives.data ?? [];
             const drive = documentDrives.find(_drive => _drive.id === driveId);
 
             if (!drive) return;

@@ -1,11 +1,10 @@
 import { CookieBanner } from '#components';
-import { ReadModeContextProvider, RootProvider } from '#context';
-import { atoms } from '#store';
+import { RootProvider } from '#context';
+import { useLoadData } from '#hooks';
 import { AtomStoreProvider } from '@powerhousedao/common';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
-import { useAtomValue } from 'jotai';
+import 'jotai-devtools/styles.css';
 import React, { lazy, Suspense } from 'react';
-import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 
 const Router = React.lazy(async () => {
@@ -14,13 +13,10 @@ const Router = React.lazy(async () => {
     return { default: router };
 });
 
-const Preloader = () => {
-    for (const atom of Object.values(atoms)) {
-        useAtomValue(atom);
-    }
-    useProcessorManager();
+function Preloader() {
+    useLoadData();
     return null;
-};
+}
 
 const ReactorAnalyticsProvider = lazy(
     () => import('../context/reactor-analytics.js'),
@@ -28,26 +24,24 @@ const ReactorAnalyticsProvider = lazy(
 
 const App = () => (
     <React.StrictMode>
-        <Suspense fallback={<>{/* TODO loading */}</>}>
-            <AtomStoreProvider atomValues={[]}>
-                <Preloader />
+        <AtomStoreProvider>
+            <Preloader />
+            <Suspense>
                 <WagmiContext>
                     <RootProvider>
-                        <ReadModeContextProvider>
-                            <ReactorAnalyticsProvider>
-                                <ToastContainer
-                                    position="bottom-right"
-                                    containerId="connect"
-                                />
-                                <Router />
-                                <CookieBanner />
-                                <Analytics />
-                            </ReactorAnalyticsProvider>
-                        </ReadModeContextProvider>
+                        <ReactorAnalyticsProvider>
+                            <ToastContainer
+                                position="bottom-right"
+                                containerId="connect"
+                            />
+                            <Router />
+                            <CookieBanner />
+                            <Analytics />
+                        </ReactorAnalyticsProvider>
                     </RootProvider>
                 </WagmiContext>
-            </AtomStoreProvider>
-        </Suspense>
+            </Suspense>
+        </AtomStoreProvider>
     </React.StrictMode>
 );
 

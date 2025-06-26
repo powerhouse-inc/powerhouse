@@ -1,8 +1,10 @@
 import { type Operation, type PHDocument } from "document-model";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 
-import { type IDocumentDriveServer } from "document-drive";
-import { useDocumentDrives } from "./useDocumentDrives.js";
+import {
+  type DocumentDriveDocument,
+  type IDocumentDriveServer,
+} from "document-drive";
 import { useUserPermissions } from "./useUserPermissions.js";
 
 function debounceOperations(
@@ -45,27 +47,20 @@ function debounceOperations(
 }
 
 export type UseAddDebouncedOperationsProps = {
-  driveId: string;
-  documentId: string;
+  drive: DocumentDriveDocument | null | undefined;
+  documentId: string | null | undefined;
 };
 
 export function useAddDebouncedOperations(
   reactor: IDocumentDriveServer | undefined,
   props: UseAddDebouncedOperationsProps,
 ) {
-  const { driveId, documentId } = props;
-  const [documentDrives] = useDocumentDrives(reactor);
-
-  const documentDrivesRef = useRef(documentDrives);
+  const { drive, documentId } = props;
 
   const { isAllowedToEditDocuments } = useUserPermissions() || {
     isAllowedToCreateDocuments: false,
     isAllowedToEditDocuments: false,
   };
-
-  useEffect(() => {
-    documentDrivesRef.current = documentDrives;
-  }, [documentDrives]);
 
   const addOperations = useCallback(
     async (driveId: string, id: string, operations: Operation[]) => {
@@ -77,9 +72,6 @@ export function useAddDebouncedOperations(
         throw new Error("Reactor is not loaded");
       }
 
-      const drive = documentDrivesRef.current.find(
-        (drive) => drive.id === driveId,
-      );
       if (!drive) {
         throw new Error(`Drive with id ${driveId} not found`);
       }
@@ -95,10 +87,16 @@ export function useAddDebouncedOperations(
   );
 
   const addDebouncedOperations = useMemo(() => {
-    return debounceOperations((operations) =>
-      addOperations(driveId, documentId, operations),
-    );
-  }, [addOperations, driveId, documentId]);
+    return debounceOperations((operations) => {
+      if (!drive) {
+        throw new Error("Drive is not loaded");
+      }
+      if (!documentId) {
+        throw new Error("Document ID is not loaded");
+      }
+      return addOperations(drive.id, documentId, operations);
+    });
+  }, [addOperations, drive, documentId]);
 
   return addDebouncedOperations;
 }

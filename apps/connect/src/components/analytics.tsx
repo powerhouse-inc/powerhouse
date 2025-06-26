@@ -1,4 +1,4 @@
-import { useAcceptedCookies, useConnectConfig } from '#hooks';
+import { useAcceptedCookies, useConfig } from '@powerhousedao/common';
 import { useEffect } from 'react';
 
 declare global {
@@ -13,8 +13,8 @@ function gtag(...args: (string | Date)[]) {
 }
 
 const Analytics = () => {
-    const [{ gaTrackingId }] = useConnectConfig();
-    const [{ analytics }] = useAcceptedCookies();
+    const { gaTrackingId } = useConfig();
+    const { analytics } = useAcceptedCookies();
     const useAnalytics = gaTrackingId && analytics;
 
     useEffect(() => {

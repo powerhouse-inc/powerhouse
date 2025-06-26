@@ -1,55 +1,48 @@
 import { useDocumentDriveServer } from '#hooks';
 import {
-    DangerZone as BaseDangerZone,
-    type UiDriveNode,
-} from '@powerhousedao/design-system';
-import { logger } from 'document-drive';
+    unwrapLoadable,
+    useDrives,
+    useDriveSharingType,
+    useModal,
+} from '@powerhousedao/common';
+import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
 import { useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useModal } from '../../modal.js';
 
-export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
-    onRefresh,
-}) => {
-    const { t } = useTranslation();
-    const { clearStorage, deleteDrive } = useDocumentDriveServer();
-    const { showModal } = useModal();
+function useUnwrappedDriveSharingType(driveId: string | null) {
+    const loadableSharingType = useDriveSharingType(driveId);
+    return unwrapLoadable(loadableSharingType)!;
+}
+
+export const DangerZone: React.FC = () => {
+    const { deleteDrive } = useDocumentDriveServer();
+    const loadableDrives = useDrives();
+    const { show: showClearStorageModal } = useModal('clearStorage');
     const navigate = useNavigate();
 
     const handleDeleteDrive = useCallback(
-        async (drive: UiDriveNode) => {
+        async (driveId: string) => {
             navigate('/');
-            await deleteDrive(drive.driveId);
+            await deleteDrive(driveId);
         },
         [deleteDrive, navigate],
     );
 
-    const handleClearStorage = () => {
-        showModal('confirmationModal', {
-            title: t('modals.connectSettings.clearStorage.confirmation.title'),
-            body: t('modals.connectSettings.clearStorage.confirmation.body'),
-            cancelLabel: t('common.cancel'),
-            continueLabel: t(
-                'modals.connectSettings.clearStorage.confirmation.clearButton',
-            ),
-            onContinue: () => {
-                clearStorage()
-                    .then(() => {
-                        // refreshes the page to reload default drive
-                        navigate('/');
-                        onRefresh();
-                    })
-                    .catch(logger.error);
-            },
-            onCancel: () => showModal('settingsModal', { onRefresh }),
-        });
-    };
+    const handleClearStorage = useCallback(() => {
+        showClearStorageModal();
+    }, [showClearStorageModal]);
+
+    if (loadableDrives.state !== 'hasData') {
+        return null;
+    }
+    const documentDrives = loadableDrives.data ?? [];
 
     return (
         <BaseDangerZone
+            drives={documentDrives}
             onDeleteDrive={handleDeleteDrive}
             onClearStorage={handleClearStorage}
+            useDriveSharingType={useUnwrappedDriveSharingType}
         />
     );
 };

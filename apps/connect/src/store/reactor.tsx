@@ -1,6 +1,6 @@
 import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
-import { atomStore } from '@powerhousedao/common';
+import { atomStore, baseDocumentModelModules } from '@powerhousedao/common';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -11,13 +11,8 @@ import {
 import { generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
-import { atomWithLazy, unwrap } from 'jotai/utils';
 import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
 import { renownAtom, renownStatusAtom } from '../hooks/useRenown.js';
-import {
-    documentModelsAtom,
-    subscribeDocumentModels,
-} from './document-model.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     await initJwtHandler(reactor);
@@ -92,20 +87,18 @@ async function waitForRenown(): Promise<void> {
     });
 }
 
-async function createReactor() {
-    await waitForRenown();
+export async function createReactor() {
+    // await waitForRenown();
     // get storage
     const storage = atomStore.get(storageAtom);
 
-    // waits for document models to be loaded
-    const documentModels = await atomStore.get(documentModelsAtom);
-    const server =
+    const reactor =
         (window.electronAPI?.documentDrive as
             | IDocumentDriveServer
             | undefined) ??
-        createBrowserDocumentDriveServer(documentModels, storage);
-    await initReactor(server);
-    return server;
+        createBrowserDocumentDriveServer(baseDocumentModelModules, storage);
+    await initReactor(reactor);
+    return reactor;
 }
 
 export const storageAtom = atom<
@@ -114,60 +107,7 @@ export const storageAtom = atom<
         IDocumentStorage &
         IDocumentAdminStorage
 >(createBrowserStorage(connectConfig.routerBasename));
-export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(() =>
-    createReactor(),
-);
-export const unwrappedReactor = unwrap(reactorAtom);
-
-// blocks rendering until reactor is initialized.
-export const useReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(reactorAtom);
+storageAtom.debugLabel = 'storageAtom';
 
 export const useDocumentAdminStorage = (): IDocumentAdminStorage =>
     useAtomValue(storageAtom);
-
-// will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(unwrappedReactor);
-
-// will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
-export const useAsyncReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(reactorAsyncAtom);
-
-const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
-reactorAsyncAtom.onMount = setAtom => {
-    subscribeReactor(setAtom);
-};
-
-// updates the reactor when the available document models change
-let documentModelsSubscripion: (() => void) | undefined;
-reactorAtom.onMount = setAtom => {
-    if (documentModelsSubscripion) return;
-    setAtom(async prevReactor => {
-        const reactor = await prevReactor;
-
-        if (!documentModelsSubscripion) {
-            documentModelsSubscripion = subscribeDocumentModels(
-                documentModels => {
-                    reactor.setDocumentModelModules(documentModels);
-                },
-            );
-        }
-        return reactor;
-    });
-};
-
-export const subscribeReactor = function (
-    listener: (reactor: IDocumentDriveServer) => void,
-) {
-    // activate the effect on the default store
-    const unobserve = observe(get => {
-        const reactor = get(reactorAtom);
-        reactor.then(listener).catch(e => {
-            throw e;
-        });
-    }, atomStore);
-
-    // Clean up the effect
-    return () => unobserve();
-};

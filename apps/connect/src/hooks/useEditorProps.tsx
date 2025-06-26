@@ -1,10 +1,4 @@
-import { useModal } from '#components';
-import {
-    themeAtom,
-    useFileNodeDocument,
-    useGetDocumentModelModule,
-    useUser,
-} from '#store';
+import { useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -14,10 +8,14 @@ import {
     validateDocument,
 } from '#utils';
 import {
-    useNodeDocumentType,
-    useParentNodeId,
-    useSetSelectedNodeId,
-} from '@powerhousedao/reactor-browser';
+    useGetDocumentModelModule,
+    useModal,
+    useParentFolder,
+    useSetSelectedNode,
+    useTheme,
+    useUnwrappedSelectedDocument,
+    useUnwrappedSelectedDrive,
+} from '@powerhousedao/common';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -28,9 +26,7 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
@@ -48,13 +44,15 @@ export interface EditorProps {
 }
 
 export function useEditorDispatch(
-    nodeId: string | null,
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
-    const documentType = useNodeDocumentType(nodeId);
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedDocument = useUnwrappedSelectedDocument();
+    const documentId = selectedDocument?.id ?? selectedDrive?.id;
+    const documentType = selectedDocument?.documentType;
     const { sign } = useConnectCrypto();
     const getDocumentModelModule = useGetDocumentModelModule();
     const documentModelModule = useMemo(
@@ -62,20 +60,22 @@ export function useEditorDispatch(
         [documentType, getDocumentModelModule],
     );
 
-    const dispatch = useCallback(
-        (action: Action, onErrorCallback?: ActionErrorCallback) => {
-            const callback: DocumentDispatchCallback<PHDocument> = (
-                operation,
-                state,
-            ) => {
-                if (!nodeId) return;
+    const documentDispatchCallback: DocumentDispatchCallback<PHDocument> =
+        useCallback(
+            (operation, state) => {
+                console.log(
+                    'useEditorDispatch callback',
+                    operation,
+                    documentId,
+                );
+                if (!documentId) return;
 
                 const { prevState } = state;
 
                 signOperation(
                     operation,
                     sign,
-                    nodeId,
+                    documentId,
                     prevState,
                     documentModelModule?.reducer,
                     user,
@@ -87,56 +87,48 @@ export function useEditorDispatch(
                         return onAddOperation(op);
                     })
                     .catch(logger.error);
-            };
+            },
+            [documentId, documentModelModule?.reducer, sign, user],
+        );
+
+    const dispatch = useCallback(
+        (action: Action, onErrorCallback?: ActionErrorCallback) => {
+            console.log('useEditorDispatch', action);
 
             documentDispatch(
                 addActionContext(action, connectDid, user),
-                callback,
+                documentDispatchCallback,
                 onErrorCallback,
             );
         },
-        [
-            documentDispatch,
-            connectDid,
-            documentModelModule?.reducer,
-            onAddOperation,
-            nodeId,
-            sign,
-            user,
-        ],
+        [documentDispatch, connectDid, documentDispatchCallback, user],
     );
 
     return dispatch;
 }
 
 export function useEditorProps(
-    document: PHDocument | undefined,
-    nodeId: string | null, 
     documentDispatch: DocumentDispatch<PHDocument>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
-    const { t } = useTranslation();
-    const { showModal } = useModal();
-    const parentNodeId = useParentNodeId(nodeId);
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const theme = useAtomValue(themeAtom);
+    const { show: showExportWithErrorsModal } = useModal('exportWithErrors');
+    const selectedDocument = useUnwrappedSelectedDocument();
+    const parentFolder = useParentFolder(selectedDocument?.id);
+    const setSelectedNode = useSetSelectedNode();
+    const theme = useTheme();
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
 
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-    const { selectedDocument } = useFileNodeDocument();
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
-        !!document &&
-        (document.revision.global > 0 || document.revision.local > 0);
-    const canRedo = !!document?.clipboard.length;
+        selectedDocument &&
+        (selectedDocument.revision.global > 0 ||
+            selectedDocument.revision.local > 0);
+    const canRedo = selectedDocument && !!selectedDocument.clipboard.length;
 
-    const dispatch = useEditorDispatch(
-        nodeId,
-        documentDispatch,
-        onAddOperation,
-    );
+    const dispatch = useEditorDispatch(documentDispatch, onAddOperation);
 
     const handleUndo = useCallback(() => {
         dispatch(undo());
@@ -147,41 +139,23 @@ export function useEditorProps(
     }, [dispatch]);
 
     const onClose = useCallback(() => {
-        setSelectedNodeId(parentNodeId);
-    }, [parentNodeId, setSelectedNodeId]);
+        setSelectedNode(parentFolder);
+    }, [parentFolder, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
             const validationErrors = validateDocument(document);
 
             if (validationErrors.length) {
-                showModal('confirmationModal', {
-                    title: t('modals.exportDocumentWithErrors.title'),
-                    body: (
-                        <div>
-                            <p>{t('modals.exportDocumentWithErrors.body')}</p>
-                            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-                                {validationErrors.map((error, index) => (
-                                    <li key={index}>{error.message}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    ),
-                    cancelLabel: t('common.cancel'),
-                    continueLabel: t('common.export'),
-                    onCancel(closeModal) {
-                        closeModal();
-                    },
-                    onContinue(closeModal) {
-                        closeModal();
-                        return exportFile(document, getDocumentModelModule);
-                    },
+                showExportWithErrorsModal({
+                    document,
+                    validationErrors,
                 });
             } else {
                 return exportFile(document, getDocumentModelModule);
             }
         },
-        [getDocumentModelModule, showModal, t],
+        [getDocumentModelModule, showExportWithErrorsModal],
     );
 
     const onExport = useCallback(() => {

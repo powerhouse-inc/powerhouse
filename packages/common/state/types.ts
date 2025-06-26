@@ -1,6 +1,11 @@
-import type { DocumentDriveDocument, FileNode } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  FileNode,
+  IDocumentDriveServer,
+} from "document-drive";
 import { type EditorProps } from "document-model";
 import { type FC } from "react";
+export type Reactor = IDocumentDriveServer;
 
 export type DriveEditorProps = EditorProps<DocumentDriveDocument> & {
   addFile: (
@@ -21,4 +26,49 @@ export type DriveEditorModule = {
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
   };
+};
+
+export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
+
+export type NodeKind = "DRIVE" | "FOLDER" | "FILE";
+
+export type Theme = "light" | "dark";
+
+export type ConnectConfig = {
+  appVersion: string | undefined;
+  studioMode: boolean;
+  warnOutdatedApp: boolean;
+  routerBasename: string | undefined;
+  analyticsDatabaseName: string | undefined;
+  sentry: {
+    dsn: string | undefined;
+    env: string | undefined;
+    tracing: boolean | undefined;
+  };
+  content: {
+    showSearchBar: boolean;
+    showDocumentModelSelectionSetting: boolean;
+  };
+  drives: {
+    addDriveEnabled: boolean;
+    sections: {
+      LOCAL: {
+        enabled: boolean;
+        allowAdd: boolean;
+        allowDelete: boolean;
+      };
+      CLOUD: {
+        enabled: boolean;
+        allowAdd: boolean;
+        allowDelete: boolean;
+      };
+      PUBLIC: {
+        enabled: boolean;
+        allowAdd: boolean;
+        allowDelete: boolean;
+      };
+    };
+  };
+  gaTrackingId: string | undefined;
+  phCliVersion: string | undefined;
 };

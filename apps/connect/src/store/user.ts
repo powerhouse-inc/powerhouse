@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 let userInit = false;
 
 const userAtom = atom<User | null | undefined>(undefined);
+userAtom.debugLabel = 'userAtom';
 
 export const useUser = () => {
     const [user, setUser] = useAtom(userAtom);

@@ -383,9 +383,14 @@ export type EditorContext = {
   user?: User;
   readMode?: boolean;
   selectedTimelineRevision?: string | number | null;
+  analyticsDatabaseName?: string;
   getDocumentRevision?: (
     options?: GetDocumentOptions,
   ) => Promise<PHDocument> | undefined;
+  getDocumentModelModule?: (
+    documentType: string,
+  ) => DocumentModelModule | undefined;
+  getEditor?: (documentType: string) => EditorModule | null | undefined;
 };
 
 export type ActionErrorCallback = (error: unknown) => void;

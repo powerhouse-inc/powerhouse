@@ -1,4 +1,5 @@
 import connectConfig from '#connect-config';
+import { unwrapLoadable, useProcessorManager } from '@powerhousedao/common';
 import { type IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
@@ -7,7 +8,6 @@ import {
 import { logger } from 'document-drive';
 import { type ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
-import { useUnwrappedProcessorManager } from '../store/processors';
 
 async function registerDiffAnalyzer(
     manager: ProcessorManager,
@@ -25,7 +25,7 @@ async function registerDiffAnalyzer(
 
 export function DiffAnalyzerProcessor() {
     const store = useAnalyticsStore();
-    const manager = useUnwrappedProcessorManager();
+    const manager = useProcessorManager();
     const hasRegistered = useRef(false);
 
     useEffect(() => {

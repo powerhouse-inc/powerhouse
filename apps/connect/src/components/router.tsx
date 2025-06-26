@@ -1,12 +1,11 @@
 import connectConfig from '#connect-config';
-import React, { Suspense } from 'react';
+import React from 'react';
 import {
     type RouteObject,
     RouterProvider,
     createBrowserRouter,
     createMemoryRouter,
 } from 'react-router-dom';
-import { Home } from '../pages/home.js';
 import { AtlasImport } from './demo/atlas-import.js';
 import Root from './root.js';
 
@@ -28,15 +27,11 @@ function createRoutes() {
     const routes: RouteObject[] = [
         {
             path: '/',
-            element: <Home />,
+            element: <Content />,
         },
         {
-            path: 'd?/:driveId?/*?',
-            element: (
-                <Suspense>
-                    <Content />
-                </Suspense>
-            ),
+            path: 'd?/:driveSlug?/:documentSlug?',
+            element: <Content />,
         },
         {
             path: 'import/:documentId',
@@ -47,19 +42,11 @@ function createRoutes() {
     return [
         {
             path: '/',
-            element: (
-                <Suspense>
-                    <Root />
-                </Suspense>
-            ),
+            element: <Root />,
             children: routes,
         },
         {
-            element: (
-                <Suspense>
-                    <Root />
-                </Suspense>
-            ),
+            element: <Root />,
         },
     ];
 }

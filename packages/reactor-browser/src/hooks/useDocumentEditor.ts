@@ -1,4 +1,7 @@
-import { type IDocumentDriveServer } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  type IDocumentDriveServer,
+} from "document-drive";
 import {
   type ActionErrorCallback,
   type ActionFromDocument,
@@ -22,8 +25,7 @@ export type DocumentDispatchCallback<TDocument extends PHDocument> = (
 ) => void;
 
 export type UseDocumentEditorProps<TDocument extends PHDocument> = {
-  driveId: string;
-  nodeId: string;
+  drive: DocumentDriveDocument | undefined;
   document: TDocument | undefined;
   documentModelModule: DocumentModelModule<TDocument>;
   user?: User;
@@ -40,8 +42,7 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
   },
 ) {
   const {
-    nodeId,
-    driveId,
+    drive,
     documentModelModule,
     document: initialDocument,
     user,
@@ -49,12 +50,12 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
     sign,
   } = props;
 
-  const addDebouncedOprations = useAddDebouncedOperations(reactor, {
-    driveId,
-    documentId: nodeId,
+  const addDebouncedOperations = useAddDebouncedOperations(reactor, {
+    drive,
+    documentId: initialDocument?.id,
   });
 
-  const [document, _dispatch, error] = useDocumentDispatch(
+  const [document, _dispatch, error] = useDocumentDispatch<TDocument>(
     documentModelModule.reducer,
     initialDocument,
   );
@@ -67,18 +68,21 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
       operation,
       state,
     ) => {
+      if (!document) {
+        throw new Error("Document is not loaded");
+      }
       const { prevState } = state;
 
       signOperation<TDocument>(
         operation,
         sign,
-        nodeId,
+        document.id,
         prevState,
         documentModelModule.reducer,
         user,
       )
         .then((op) => {
-          return addDebouncedOprations(op);
+          return addDebouncedOperations(op);
         })
         .catch(console.error);
     };

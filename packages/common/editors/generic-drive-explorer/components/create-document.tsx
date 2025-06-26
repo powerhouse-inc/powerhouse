@@ -1,11 +1,8 @@
-import {
-  useDocumentModelModules,
-  useIsAllowedToCreateDocuments,
-  useModal,
-} from "#state";
 import { Button } from "@powerhousedao/design-system";
 import { type DocumentModelModule } from "document-model";
-import { useCallback } from "react";
+import { useUnwrappedDocumentModelModules } from "../../../state/document-model-modules.js";
+import { useModal } from "../../../state/modals.js";
+import { useIsAllowedToCreateDocuments } from "../../../state/permissions.js";
 
 function getDocumentSpec(doc: DocumentModelModule) {
   if ("documentModelState" in doc) {
@@ -16,17 +13,11 @@ function getDocumentSpec(doc: DocumentModelModule) {
 }
 
 export const CreateDocument: React.FC = () => {
-  const documentModelModules = useDocumentModelModules();
+  const documentModelModules = useUnwrappedDocumentModelModules();
   const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
-  const { show } = useModal("addDocument");
-  const onClick = useCallback(
-    (documentModelModule: DocumentModelModule) => {
-      show({ documentModelModule });
-    },
-    [show],
-  );
+  const { show: showAddDocumentModal } = useModal("addDocument");
 
-  if (!isAllowedToCreateDocuments) {
+  if (!isAllowedToCreateDocuments || !documentModelModules) {
     return null;
   }
 
@@ -36,19 +27,25 @@ export const CreateDocument: React.FC = () => {
         New document
       </h3>
       <div className="flex w-full flex-wrap gap-4">
-        {documentModelModules?.map((documentModelModule) => {
-          const spec = getDocumentSpec(documentModelModule);
-          return (
-            <Button
-              key={spec.id}
-              color="light"
-              aria-details={spec.description}
-              onClick={() => onClick(documentModelModule)}
-            >
-              <span className="text-sm">{spec.name}</span>
-            </Button>
-          );
-        })}
+        {documentModelModules
+          .filter((doc) => doc.documentModel.id !== "powerhouse/document-drive")
+          .map((documentModelModule) => {
+            const spec = getDocumentSpec(documentModelModule);
+            return (
+              <Button
+                key={spec.id}
+                color="light"
+                aria-details={spec.description}
+                onClick={() =>
+                  showAddDocumentModal({
+                    documentModelId: documentModelModule.documentModel.id,
+                  })
+                }
+              >
+                <span className="text-sm">{spec.name}</span>
+              </Button>
+            );
+          })}
       </div>
     </div>
   );

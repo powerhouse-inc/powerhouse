@@ -1,16 +1,13 @@
+import { useDocumentDriveServer, useOpenSwitchboardLink } from '#hooks';
 import {
-    useDocumentDriveById,
-    useDocumentDriveServer,
-    useGetDocument,
-    useOpenSwitchboardLink,
-} from '#hooks';
-import { useFileNodeDocument, useGetDocumentModelModule } from '#store';
-import {
-    useSelectedDriveId,
-    useSelectedNodeId,
-    useSelectedNodeName,
-    useSelectedParentNodeId,
-    useSetSelectedNodeId,
+    useDriveIsRemote,
+    useGetDocumentModelModule,
+    useModal,
+    useParentFolder,
+    useSetSelectedNode,
+    useUnwrappedNodes,
+    useUnwrappedSelectedDocument,
+    useUnwrappedSelectedDrive,
 } from '@powerhousedao/common';
 import { type GetDocumentOptions } from 'document-drive';
 import {
@@ -19,160 +16,114 @@ import {
     type PHDocument,
 } from 'document-model';
 import { useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useModal } from '../components/modal/index.js';
+import { useAddOperationToSelectedDocument } from '../store/documents.js';
 import { exportFile } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
 
 export function DocumentEditorContainer() {
-    const { t } = useTranslation();
-    const { showModal } = useModal();
-    const {
-        selectedDocument,
-        fileNodeDocument,
-        setSelectedDocument,
-        addOperationToSelectedDocument,
-    } = useFileNodeDocument();
-    const { renameNode } = useDocumentDriveServer();
-    const selectedNodeId = useSelectedNodeId();
-    const selectedParentNodeId = useSelectedParentNodeId();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const selectedDriveId = useSelectedDriveId();
-    const selectedNodeName = useSelectedNodeName();
-    const { isRemoteDrive } = useDocumentDriveById(selectedDriveId);
+    const { show: showExportWithErrorsModal } = useModal('exportWithErrors');
+    const addOperationToSelectedDocument = useAddOperationToSelectedDocument();
+    const { renameNode, openFile } = useDocumentDriveServer();
+    const selectedDocument = useUnwrappedSelectedDocument();
+    const nodes = useUnwrappedNodes();
+    const parentFolder = useParentFolder(selectedDocument?.id);
+    const setSelectedNode = useSetSelectedNode();
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const isRemoteDrive = useDriveIsRemote(selectedDrive?.id ?? null);
     const openSwitchboardLink = useOpenSwitchboardLink(
-        selectedDriveId,
-        selectedNodeId,
+        selectedDrive?.id ?? null,
+        selectedDocument?.id ?? null,
     );
     const getDocumentModelModule = useGetDocumentModelModule();
 
-    const getDocument = useGetDocument();
-
     const handleAddOperationToSelectedDocument = useCallback(
         async (operation: Operation) => {
-            if (!selectedDocument) {
-                throw new Error('No document selected');
-            }
-            if (!addOperationToSelectedDocument) {
-                throw new Error('No add operation function defined');
-            }
             await addOperationToSelectedDocument(operation);
         },
-        [addOperationToSelectedDocument, selectedDocument],
+        [addOperationToSelectedDocument],
     );
 
     const onDocumentChangeHandler = useCallback(
         (documentId: string, document: PHDocument) => {
-            if (documentId !== fileNodeDocument?.documentId) {
-                return;
-            }
-            setSelectedDocument(document);
-
             if (
-                !!selectedNodeId &&
-                !!selectedDriveId &&
+                selectedDocument?.id &&
+                selectedDrive?.id &&
                 document.name !== '' &&
-                selectedNodeName !== document.name
+                selectedDocument.name !== document.name
             ) {
                 return renameNode(
-                    selectedDriveId,
-                    selectedNodeId,
+                    selectedDrive.id,
+                    selectedDocument.id,
                     document.name,
                 );
             }
         },
-        [
-            fileNodeDocument?.documentId,
-            renameNode,
-            selectedNodeId,
-            selectedNodeName,
-            selectedDriveId,
-            setSelectedDocument,
-        ],
+        [renameNode, selectedDocument?.id, selectedDrive?.id],
     );
 
     const onClose = useCallback(() => {
-        setSelectedNodeId(selectedParentNodeId);
-    }, [setSelectedNodeId, selectedParentNodeId]);
+        setSelectedNode(parentFolder);
+    }, [parentFolder, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
             const validationErrors = validateDocument(document);
 
             if (validationErrors.length) {
-                showModal('confirmationModal', {
-                    title: t('modals.exportDocumentWithErrors.title'),
-                    body: (
-                        <div>
-                            <p>{t('modals.exportDocumentWithErrors.body')}</p>
-                            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-                                {validationErrors.map((error, index) => (
-                                    <li key={index}>{error.message}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    ),
-                    cancelLabel: t('common.cancel'),
-                    continueLabel: t('common.export'),
-                    onCancel(closeModal) {
-                        closeModal();
-                    },
-                    onContinue(closeModal) {
-                        closeModal();
-                        return exportFile(document, getDocumentModelModule);
-                    },
+                showExportWithErrorsModal({
+                    document,
+                    validationErrors,
                 });
             } else {
                 return exportFile(document, getDocumentModelModule);
             }
         },
-        [getDocumentModelModule, showModal, t],
+        [getDocumentModelModule, showExportWithErrorsModal],
     );
 
     const onGetDocumentRevision: EditorContext['getDocumentRevision'] =
         useCallback(
             (options?: GetDocumentOptions) => {
-                if (!selectedNodeId) {
+                if (!selectedDocument?.id) {
                     console.error('No selected node');
                     return Promise.reject(new Error('No selected node'));
                 }
-                if (!selectedDriveId) {
+                if (!selectedDrive?.id) {
                     console.error('No selected drive');
                     return Promise.reject(new Error('No selected drive'));
                 }
-                return getDocument(selectedDriveId, selectedNodeId, options);
+                return openFile(selectedDrive.id, selectedDocument.id, options);
             },
-            [getDocument, selectedDriveId, selectedNodeId],
+            [openFile, selectedDrive?.id, selectedDocument?.id],
         );
 
     const onExport = useCallback(() => {
-        if (selectedDocument) {
-            return exportDocument(selectedDocument);
+        if (!selectedDocument) {
+            return;
         }
+        return exportDocument(selectedDocument);
     }, [exportDocument, selectedDocument]);
 
     const onOpenSwitchboardLink = useMemo(() => {
-        return isRemoteDrive ? () => openSwitchboardLink() : undefined;
+        if (isRemoteDrive.state !== 'hasData') {
+            return undefined;
+        }
+        return isRemoteDrive.data ? () => openSwitchboardLink() : undefined;
     }, [isRemoteDrive, openSwitchboardLink]);
 
-    if (!fileNodeDocument) return null;
-
     return (
-        <div
-            key={fileNodeDocument.documentId}
-            className="flex-1 rounded-2xl bg-gray-50 p-4"
-        >
-            <DocumentEditor
-                fileNodeDocument={fileNodeDocument}
-                document={selectedDocument}
-                onChange={onDocumentChangeHandler}
-                onClose={onClose}
-                onExport={onExport}
-                onGetDocumentRevision={onGetDocumentRevision}
-                onAddOperation={handleAddOperationToSelectedDocument}
-                onOpenSwitchboardLink={onOpenSwitchboardLink}
-            />
+        <div className="flex h-full flex-col overflow-auto" id="content-view">
+            <div className="flex-1 rounded-2xl bg-gray-50 p-4">
+                <DocumentEditor
+                    onChange={onDocumentChangeHandler}
+                    onClose={onClose}
+                    onExport={onExport}
+                    onGetDocumentRevision={onGetDocumentRevision}
+                    onAddOperation={handleAddOperationToSelectedDocument}
+                    onOpenSwitchboardLink={onOpenSwitchboardLink}
+                />
+            </div>
         </div>
     );
 }

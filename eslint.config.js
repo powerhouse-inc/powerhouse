@@ -105,7 +105,7 @@ export default tseslint.config(
       "@typescript-eslint/restrict-plus-operands": "warn",
       "@typescript-eslint/return-await": "warn",
       "@typescript-eslint/no-dynamic-delete": "warn",
-      "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-unnecessary-condition": "warn",
       "@typescript-eslint/no-unnecessary-type-parameters": "warn",

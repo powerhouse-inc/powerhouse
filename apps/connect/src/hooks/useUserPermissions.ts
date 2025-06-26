@@ -1,30 +1,33 @@
+import { usePermissions, useSetPermissions } from '@powerhousedao/common';
+import { useEffect } from 'react';
 import { useAllowList } from './useAllowList.js';
 
 export function useUserPermissions() {
     const allowList = useAllowList();
+    const permissions = usePermissions();
+    const setPermissions = useSetPermissions();
 
-    if (!allowList) {
-        return undefined;
-    }
+    useEffect(() => {
+        if (!allowList) {
+            return;
+        }
 
-    const { allowListType, isAllowed } = allowList;
+        const { allowListType, isAllowed } = allowList;
 
-    if (allowListType === 'arbitrum') {
-        return {
-            isAllowedToCreateDocuments: isAllowed,
-            isAllowedToEditDocuments: true,
-        };
-    }
+        if (allowListType === 'arbitrum') {
+            setPermissions({
+                isAllowedToCreateDocuments: isAllowed,
+                isAllowedToEditDocuments: true,
+            });
+        }
 
-    if (allowListType === 'rwa') {
-        return {
-            isAllowedToCreateDocuments: isAllowed,
-            isAllowedToEditDocuments: isAllowed,
-        };
-    }
+        if (allowListType === 'rwa') {
+            setPermissions({
+                isAllowedToCreateDocuments: isAllowed,
+                isAllowedToEditDocuments: isAllowed,
+            });
+        }
+    }, [allowList]);
 
-    return {
-        isAllowedToCreateDocuments: true,
-        isAllowedToEditDocuments: true,
-    };
+    return permissions;
 }

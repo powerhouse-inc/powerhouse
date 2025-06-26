@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { useConnectConfig, useDocumentDriveServer } from '#hooks';
+import { useDocumentDriveServer } from '#hooks';
 import { serviceWorkerManager } from '#utils';
+import { useConfig, useDrives, useModal } from '@powerhousedao/common';
 import {
     Button,
     Combobox,
@@ -10,23 +11,17 @@ import {
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
-export interface DebugSettingsModalProps {
-    open: boolean;
-    onClose: () => void;
-}
 
 type ComboboxOption = {
     label: string;
     value: string;
 };
 
-export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
-    const [connectConfig] = useConnectConfig();
-    const { open, onClose } = props;
+export const DebugSettingsModal: React.FC = () => {
+    const connectConfig = useConfig();
+    const { isOpen, hide } = useModal('debugSettings');
     const autoRegisterPullResponder =
         localStorage.getItem('AUTO_REGISTER_PULL_RESPONDER') !== 'false';
-
-    console.log('autoRegisterPullResponder', autoRegisterPullResponder);
 
     const [appVersion, setAppVersion] = useState(connectConfig.appVersion);
     const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
@@ -41,23 +36,22 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         label: autoRegisterPullResponder ? 'Enabled' : 'Disabled',
         value: autoRegisterPullResponder ? 'true' : 'false',
     });
-    const {
-        documentDrives,
-        removeTrigger,
-        addTrigger,
-        registerNewPullResponderTrigger,
-    } = useDocumentDriveServer();
+    const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
+        useDocumentDriveServer();
+    const loadableDrives = useDrives();
+
+    if (loadableDrives.state !== 'hasData') {
+        return null;
+    }
+    const documentDrives = loadableDrives.data ?? [];
 
     useEffect(() => {
         serviceWorkerManager.setDebug(serviceWorkerDebugMode.value);
     }, [serviceWorkerDebugMode]);
 
-    console.log('documentDrives', documentDrives);
-    console.log('selectedDrive', selectedDrive);
-
     const driveTriggers =
-        documentDrives.find(drive => drive.id === selectedDrive)
-            ?.state.local.triggers || [];
+        documentDrives.find(drive => drive.id === selectedDrive)?.state.local
+            .triggers || [];
 
     const isEmptyURL = driveUrl === '';
     const disableUrlButtons = !selectedDrive || isEmptyURL;
@@ -106,11 +100,17 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         );
     };
 
+    if (!isOpen) return null;
+
+    console.log('autoRegisterPullResponder', autoRegisterPullResponder);
+    console.log('documentDrives', documentDrives);
+    console.log('selectedDrive', selectedDrive);
+
     return (
         <Modal
-            open={open}
+            open={isOpen}
             onOpenChange={status => {
-                if (!status) return onClose();
+                if (!status) return hide();
             }}
             contentProps={{
                 className: 'rounded-2xl',
@@ -119,7 +119,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
             <div className="w-[700px] rounded-2xl p-6">
                 <div className="mb-6 flex justify-between">
                     <div className="text-xl font-bold">Debug Tools</div>
-                    <button id="close-modal" onClick={() => onClose()}>
+                    <button id="close-modal" onClick={hide}>
                         <Icon name="Xmark" size={28} />
                     </button>
                 </div>

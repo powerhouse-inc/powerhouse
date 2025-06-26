@@ -1,5 +1,5 @@
 import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import '../i18n';
 import '../index.css';
 
@@ -11,10 +11,6 @@ if (import.meta.env.MODE === 'development') {
 
 const App = lazy(() => import('./app.js'));
 
-const AppLoader = (
-    <Suspense>
-        <App />
-    </Suspense>
-);
+const AppLoader = <App />;
 
 export default AppLoader;

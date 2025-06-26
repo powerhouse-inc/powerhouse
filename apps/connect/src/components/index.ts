@@ -11,7 +11,6 @@ export * from './editor-loader.js';
 export * from './editors.js';
 export * from './footer.js';
 export * from './login.js';
-export * from './modal/index.js';
 export * from './ph-logo.js';
 export * from './root.js';
 export * from './search-bar.js';

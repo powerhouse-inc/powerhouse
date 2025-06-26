@@ -15,7 +15,7 @@ import {
   type OnRenameNode,
   READ,
   RENAME,
-  type SetSelectedNodeId,
+  type SetSelectedDocument,
   type SharingType,
   SyncStatusIcon,
   useDrag,
@@ -32,7 +32,7 @@ export type FolderItemProps = {
   isAllowedToCreateDocuments: boolean;
   sharingType: SharingType;
   className?: string;
-  setSelectedNodeId: SetSelectedNodeId;
+  setSelectedDocument: SetSelectedDocument;
   getSyncStatusSync: GetSyncStatusSync;
   onRenameNode: OnRenameNode;
   onDeleteNode: OnDeleteNode;
@@ -48,7 +48,7 @@ export function FolderItem(props: FolderItemProps) {
     isAllowedToCreateDocuments,
     className,
     driveId,
-    setSelectedNodeId,
+    setSelectedDocument,
     getSyncStatusSync,
     onRenameNode,
     onAddFile,
@@ -90,8 +90,8 @@ export function FolderItem(props: FolderItemProps) {
   );
 
   const onClick = useCallback(() => {
-    setSelectedNodeId(nodeId);
-  }, [nodeId, setSelectedNodeId]);
+    setSelectedDocument(nodeId);
+  }, [nodeId, setSelectedDocument]);
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
     [DUPLICATE]: () => {

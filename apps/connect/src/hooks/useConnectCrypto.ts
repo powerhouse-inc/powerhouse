@@ -60,6 +60,7 @@ export function useConnectCrypto(): IConnectCrypto {
 }
 
 const didAtom = atom<DID | undefined>(undefined);
+didAtom.debugLabel = 'didAtom';
 
 export function useConnectDid(): DID | undefined {
     const [did, setDid] = useAtom(didAtom);
@@ -72,7 +73,7 @@ export function useConnectDid(): DID | undefined {
             .then(c => c.did())
             .then(did => setDid(did))
             .catch(logger.error);
-    });
+    }, [did]);
 
     return did;
 }

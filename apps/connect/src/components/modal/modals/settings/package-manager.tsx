@@ -1,6 +1,6 @@
-import { useDocumentDrives } from '#hooks';
 import { addExternalPackage, removeExternalPackage } from '#services';
-import { useExternalPackages, useMutableExternalPackages } from '#store';
+import { useHmr } from '#store';
+import { useDrives, usePhPackages } from '@powerhousedao/common';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
 import { type Manifest } from 'document-model';
@@ -33,12 +33,17 @@ export interface SettingsModalProps {
 }
 
 export const PackageManager: React.FC = () => {
-    const packages = useExternalPackages();
-    const isMutable = useMutableExternalPackages();
-    const [drives] = useDocumentDrives();
+    const loadableExternalPackages = usePhPackages();
+    const hmr = useHmr();
+    const isHmrAvailable = !!hmr;
+    const loadableDrives = useDrives();
     const [reactor, setReactor] = useState('');
 
     const options = useMemo(() => {
+        if (loadableDrives.state !== 'hasData') {
+            return [];
+        }
+        const drives = loadableDrives.data ?? [];
         return drives.reduce<
             { value: string; label: string; disabled: boolean }[]
         >(
@@ -68,7 +73,7 @@ export const PackageManager: React.FC = () => {
                 },
             ],
         );
-    }, [drives]);
+    }, [loadableDrives]);
 
     useEffect(() => {
         setReactor(reactor => {
@@ -82,12 +87,16 @@ export const PackageManager: React.FC = () => {
     }, [reactor, options]);
 
     const packagesInfo = useMemo(() => {
+        if (loadableExternalPackages.state !== 'hasData') {
+            return [];
+        }
+        const externalPackages = loadableExternalPackages.data ?? [];
         return [
-            ...packages.map(pkg =>
+            ...externalPackages.map(pkg =>
                 manifestToDetails(pkg.manifest, pkg.id, true),
             ),
         ];
-    }, [packages]);
+    }, [loadableExternalPackages]);
 
     const handleReactorChange = useCallback(
         (reactor?: string) => setReactor(reactor ?? ''),
@@ -119,7 +128,7 @@ export const PackageManager: React.FC = () => {
 
     return (
         <BasePackageManager
-            mutable={isMutable}
+            mutable={isHmrAvailable}
             reactorOptions={options}
             reactor={reactor}
             packages={packagesInfo}

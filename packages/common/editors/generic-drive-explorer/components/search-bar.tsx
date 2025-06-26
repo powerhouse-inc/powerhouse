@@ -1,4 +1,3 @@
-import { useShouldShowSearchBar } from "#state";
 import {
   ConnectSearchBar,
   type ConnectSearchBarProps,
@@ -6,6 +5,7 @@ import {
 } from "@powerhousedao/design-system";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useShouldShowSearchBar } from "../../../state/config.js";
 
 const defaultFilterItems: ConnectSearchBarProps["filterItems"] = [
   {

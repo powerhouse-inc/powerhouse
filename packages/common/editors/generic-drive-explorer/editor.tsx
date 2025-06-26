@@ -1,10 +1,3 @@
-import {
-  getDriveSharingType,
-  useIsAllowedToCreateDocuments,
-  useSelectedNodePath,
-  useSetSelectedNodeId,
-  type DriveEditorProps,
-} from "#state";
 import { Breadcrumbs } from "@powerhousedao/design-system";
 import {
   addFolder,
@@ -16,6 +9,16 @@ import {
 } from "document-drive";
 import { generateId as _generateId } from "document-model";
 import { useCallback } from "react";
+import { useUnwrappedSelectedDocument } from "../../state/documents.js";
+import { getDriveSharingType } from "../../state/drives.js";
+import { useUnwrappedSelectedFolder } from "../../state/folders.js";
+import {
+  useNodePath,
+  useSetSelectedNode,
+  useUnwrappedNodes,
+} from "../../state/nodes.js";
+import { useIsAllowedToCreateDocuments } from "../../state/permissions.js";
+import { type DriveEditorProps } from "../../state/types.js";
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";
@@ -25,20 +28,23 @@ const generateId = () => _generateId().toString();
 
 export function Editor(props: DriveEditorProps) {
   const { document: drive, dispatch, className, children, addFile } = props;
-  const setSelectedNodeId = useSetSelectedNodeId();
-  const selectedNodePath = useSelectedNodePath();
+  const selectedDocument = useUnwrappedSelectedDocument();
+  const selectedFolder = useUnwrappedSelectedFolder();
+  const nodes = useUnwrappedNodes();
+  const setSelectedNode = useSetSelectedNode();
+  const loadableSelectedNodePath = useNodePath(
+    selectedDocument?.id ?? selectedFolder?.id,
+  );
   const sharingType = getDriveSharingType(drive);
   const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
 
   const dispatchAddFolder = useCallback(
     (name: string, parentFolder?: string | null, id = generateId()) => {
-      const parentFolderId =
-        parentFolder === drive.id ? undefined : parentFolder;
       dispatch(
         addFolder({
           id,
           name,
-          parentFolder: parentFolderId,
+          parentFolder,
         }),
       );
     },
@@ -53,7 +59,7 @@ export function Editor(props: DriveEditorProps) {
   );
 
   const dispatchRenameNode = useCallback(
-    (id: string, name: string) => {
+    (name: string, id: string) => {
       dispatch(updateNode({ id, name }));
     },
     [dispatch],
@@ -108,23 +114,34 @@ export function Editor(props: DriveEditorProps) {
       name?: string,
       parentFolder?: string,
     ) => {
-      const parentFolderId =
-        parentFolder === driveId ? undefined : parentFolder;
-      addFile(file, driveId, name, parentFolderId).catch(console.error);
+      addFile(file, driveId, name, parentFolder)
+        .then((node) => {
+          setSelectedNode(node.id);
+        })
+        .catch(console.error);
     },
     [addFile],
+  );
+
+  const onBreadcrumbSelected = useCallback(
+    (documentId: string) => {
+      setSelectedNode(documentId);
+    },
+    [setSelectedNode],
   );
 
   return (
     <DriveLayout className={className}>
       {children}
       <DriveLayout.Header>
-        <Breadcrumbs
-          breadcrumbs={selectedNodePath}
-          createEnabled={isAllowedToCreateDocuments}
-          onCreate={dispatchAddFolder}
-          onBreadcrumbSelected={setSelectedNodeId}
-        />
+        {loadableSelectedNodePath.state === "hasData" && (
+          <Breadcrumbs
+            breadcrumbs={loadableSelectedNodePath.data ?? []}
+            createEnabled={isAllowedToCreateDocuments}
+            onCreate={dispatchAddFolder}
+            onBreadcrumbSelected={onBreadcrumbSelected}
+          />
+        )}
         <SearchBar />
       </DriveLayout.Header>
       <DriveLayout.Content>

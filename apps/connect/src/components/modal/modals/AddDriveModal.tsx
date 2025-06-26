@@ -1,37 +1,117 @@
-import { useConnectCrypto } from '#hooks';
-import { useApps, useUser } from '#store';
+import { useConnectCrypto, useDocumentDriveServer } from '#hooks';
+import { useUser } from '#store';
+import { useApps, useModal, useSetSelectedDrive } from '@powerhousedao/common';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
+    toast,
 } from '@powerhousedao/design-system';
 import { requestPublicDrive } from 'document-drive';
-type Props = {
-    open: boolean;
-    onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;
-    onAddRemoteDrive: (data: AddRemoteDriveInput) => Promise<void>;
-    onClose: () => void;
-};
+import { t } from 'i18next';
+import { useCallback } from 'react';
 
-export function AddDriveModal(props: Props) {
-    const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
+export function AddDriveModal() {
+    const { isOpen, hide } = useModal('addDrive');
     const user = useUser();
     const apps = useApps();
     const { getBearerToken } = useConnectCrypto();
+    const { addDrive, addRemoteDrive } = useDocumentDriveServer();
+    const setSelectedDrive = useSetSelectedDrive();
+    const onAddLocalDrive = useCallback(
+        async (data: AddLocalDriveInput) => {
+            try {
+                const app = apps.find(a => a.id === data.appId);
+                const newDrive = await addDrive(
+                    {
+                        id: '',
+                        slug: '',
+                        global: {
+                            name: data.name,
+                            icon: null,
+                        },
+                        local: {
+                            availableOffline: data.availableOffline,
+                            sharingType: data.sharingType.toLowerCase(),
+                            listeners: [],
+                            triggers: [],
+                        },
+                    },
+                    app?.driveEditor,
+                );
 
-    async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
-        await onAddLocalDrive(data);
-        onClose();
-    }
+                toast(t('notifications.addDriveSuccess'), {
+                    type: 'connect-success',
+                });
 
-    async function onAddRemoteDriveSubmit(data: AddRemoteDriveInput) {
-        await onAddRemoteDrive(data);
-        onClose();
-    }
+                setSelectedDrive(newDrive.id);
+            } catch (e) {
+                console.error(e);
+            }
+        },
+        [addDrive, setSelectedDrive, t],
+    );
+
+    const onAddRemoteDrive = useCallback(
+        async (data: AddRemoteDriveInput) => {
+            try {
+                const newDrive = await addRemoteDrive(data.url, {
+                    sharingType: data.sharingType,
+                    availableOffline: data.availableOffline,
+                    listeners: [
+                        {
+                            block: true,
+                            callInfo: {
+                                data: data.url,
+                                name: 'switchboard-push',
+                                transmitterType: 'SwitchboardPush',
+                            },
+                            filter: {
+                                branch: ['main'],
+                                documentId: ['*'],
+                                documentType: ['*'],
+                                scope: ['global'],
+                            },
+                            label: 'Switchboard Sync',
+                            listenerId: '1',
+                            system: true,
+                        },
+                    ],
+                    triggers: [],
+                });
+
+                toast(t('notifications.addDriveSuccess'), {
+                    type: 'connect-success',
+                });
+
+                setSelectedDrive(newDrive.id);
+            } catch (e) {
+                console.error(e);
+            }
+        },
+        [addRemoteDrive, setSelectedDrive, t],
+    );
+    const onAddLocalDriveSubmit = useCallback(
+        async (data: AddLocalDriveInput) => {
+            await onAddLocalDrive(data);
+            hide();
+        },
+        [addDrive, hide],
+    );
+
+    const onAddRemoteDriveSubmit = useCallback(
+        async (data: AddRemoteDriveInput) => {
+            await onAddRemoteDrive(data);
+            hide();
+        },
+        [addRemoteDrive, hide],
+    );
+
+    if (!isOpen) return null;
 
     return (
         <ConnectAddLocalDriveModal
-            open={open}
+            open={isOpen}
             onAddLocalDrive={onAddLocalDriveSubmit}
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
@@ -53,7 +133,7 @@ export function AddDriveModal(props: Props) {
                 }
             }}
             onOpenChange={status => {
-                if (!status) return onClose();
+                if (!status) return hide();
             }}
             appOptions={apps}
         />

@@ -8,7 +8,7 @@ import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
   drives: DocumentDriveDocument[];
-  sharingType: SharingType;
+  useDriveSharingType: (driveId: string | null) => SharingType;
   onDeleteDrive: (driveId: string) => void;
   className?: string;
 };
@@ -41,10 +41,10 @@ function ModifyDrives(props: ModifyDrivesProps) {
   );
 }
 
-type DriveListProps = ModifyDrivesProps & {};
+type DriveListProps = ModifyDrivesProps;
 
 function DriveList(props: DriveListProps) {
-  const { className, drives, sharingType, onDeleteDrive } = props;
+  const { className, drives, useDriveSharingType, onDeleteDrive } = props;
   return (
     <div className={className}>
       {drives.map((drive) => (
@@ -53,7 +53,7 @@ function DriveList(props: DriveListProps) {
           key={drive.id}
           drive={drive}
           drives={drives}
-          sharingType={sharingType}
+          useDriveSharingType={useDriveSharingType}
         />
       ))}
     </div>
@@ -61,7 +61,8 @@ function DriveList(props: DriveListProps) {
 }
 
 function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
-  const { drive, className, sharingType, onDeleteDrive } = props;
+  const { drive, className, useDriveSharingType, onDeleteDrive } = props;
+  const sharingType = useDriveSharingType(drive.id);
   const driveName = drive.state.global.name;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const localDriveIcon = <Icon name="Hdd" size={16} className="flex-none" />;

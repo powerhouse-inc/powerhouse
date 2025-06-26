@@ -1,3 +1,4 @@
+import { useModal } from '@powerhousedao/common';
 import {
     Icon,
     SettingsModal as SettingsModalV2,
@@ -5,19 +6,19 @@ import {
 import { t } from 'i18next';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { About } from './settings/about.js';
 import { DangerZone } from './settings/danger-zone.js';
 import { DefaultEditor } from './settings/default-editor.js';
 import { PackageManager } from './settings/package-manager.js';
 
-export interface SettingsModalProps {
-    open: boolean;
-    onClose: () => void;
-    onRefresh: () => void;
-}
+export const SettingsModal: React.FC = () => {
+    const navigate = useNavigate();
+    const { isOpen, hide } = useModal('settings');
 
-export const SettingsModal: React.FC<SettingsModalProps> = props => {
-    const { open, onClose, onRefresh } = props;
+    const onRefresh = useCallback(() => {
+        navigate(0);
+    }, [navigate]);
 
     const tabs = useMemo(
         () => [
@@ -37,7 +38,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
                 id: 'danger-zone',
                 icon: <Icon name="Danger" size={12} className="text-red-900" />,
                 label: <span className="text-red-900">Danger Zone</span>,
-                content: () => <DangerZone onRefresh={onRefresh} />,
+                content: () => <DangerZone />,
             },
             {
                 id: 'about',
@@ -51,14 +52,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = props => {
 
     const handleOpenChange = useCallback(
         (status: boolean) => {
-            if (!status) return onClose();
+            if (!status) return hide();
         },
-        [onClose],
+        [hide],
     );
+
+    if (!isOpen) return null;
 
     return (
         <SettingsModalV2
-            open={open}
+            open={isOpen}
             title={t('modals.connectSettings.title')}
             onOpenChange={handleOpenChange}
             tabs={tabs}

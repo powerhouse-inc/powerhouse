@@ -1,33 +1,24 @@
 import connectConfig from '#connect-config';
-import {
-    useDocumentDriveById,
-    useDocumentDriveServer,
-    useEditorProps,
-    useGetDocument,
-    useShowCreateDocumentModal,
-} from '#hooks';
-import {
-    useAsyncReactor,
-    useDriveEditor,
-    useFileNodeDocument,
-    useFilteredDocumentModels,
-    useGetDocumentModelModule,
-    useGetEditor,
-} from '#store';
+import { useDocumentDriveServer, useEditorProps } from '#hooks';
 import { useDocumentDispatch } from '#utils';
 import {
     GenericDriveExplorer,
-    useSelectedDriveId,
-    useSelectedNodeId,
+    useDriveEditor,
+    useGetDocumentModelModule,
+    useGetEditor,
+    useUnwrappedSelectedDocument,
+    useUnwrappedSelectedDrive,
+    useUnwrappedSelectedFolder,
 } from '@powerhousedao/common';
-import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import {
+    type DocumentDriveDocument,
     driveDocumentModelModule,
     type GetDocumentOptions,
 } from 'document-drive';
 import { type Operation } from 'document-model';
 import { useCallback } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import { useAddOperationsToSelectedDrive } from '../store/documents';
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -39,33 +30,15 @@ function DriveEditorError({ error }: FallbackProps) {
     );
 }
 
-function useSelectedDocumentDrive() {
-    const selectedDriveId = useSelectedDriveId();
-
-    if (!selectedDriveId) {
-        throw new Error('No drive node selected');
-    }
-
-    const documentDrive = useDocumentDriveById(selectedDriveId);
-
-    if (!documentDrive.drive) {
-        throw new Error(`Drive with id "${selectedDriveId}" not found`);
-    }
-
-    return documentDrive.drive;
-}
-
 export function DriveEditorContainer() {
-    const { addOperationToSelectedDrive } = useFileNodeDocument();
-    const documentDrive = useSelectedDocumentDrive();
-    const selectedNodeId = useSelectedNodeId();
-    const selectedDriveId = useSelectedDriveId();
-    const [document, _dispatch, error] = useDocumentDispatch(
+    const addOperationToSelectedDrive = useAddOperationsToSelectedDrive();
+    const { addFile, openFile } = useDocumentDriveServer();
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedDocument = useUnwrappedSelectedDocument();
+    const [, _dispatch, error] = useDocumentDispatch<DocumentDriveDocument>(
         driveDocumentModelModule.reducer,
-        documentDrive,
+        selectedDrive,
     );
-    const reactor = useAsyncReactor();
-
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
             await addOperationToSelectedDrive(operation);
@@ -74,61 +47,49 @@ export function DriveEditorContainer() {
     );
 
     const editorProps = useEditorProps(
-        document,
-        selectedNodeId,
         _dispatch,
         handleAddOperationToSelectedDrive,
     );
-
-    const { addFile, addDocument } = useDocumentDriveServer();
-    const documentModels = useFilteredDocumentModels();
-    const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
-    const getDocument = useGetDocument();
     const getDocumentModelModule = useGetDocumentModelModule();
     const getEditor = useGetEditor();
-
-    const onGetDocumentRevision = useCallback(
-        (documentId: string, options?: GetDocumentOptions) => {
-            if (!selectedNodeId) {
-                console.error('No selected node');
-                return Promise.reject(new Error('No selected node'));
+    const getDocumentRevision = useCallback(
+        (options?: GetDocumentOptions) => {
+            if (!selectedDocument?.id) {
+                console.error('No selected document');
+                return Promise.reject(new Error('No selected document'));
             }
-            if (!selectedDriveId) {
+            if (!selectedDrive?.id) {
                 console.error('No selected drive');
                 return Promise.reject(new Error('No selected drive'));
             }
-            return getDocument(selectedDriveId, documentId, options);
+            return openFile(selectedDrive.id, selectedDocument.id, options);
         },
-        [getDocument, selectedDriveId],
+        [openFile, selectedDrive?.id, selectedDocument?.id],
     );
 
-    const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
-    const showCreateDocumentModal = useShowCreateDocumentModal();
+    const driveEditor = useDriveEditor(selectedDrive?.meta?.preferredEditor);
 
-    if (!document) {
-        return null;
-    }
+    const DriveEditorComponent = GenericDriveExplorer.Component;
 
-    const DriveEditorComponent =
-        driveEditor?.Component ?? GenericDriveExplorer.Component;
+    if (!selectedDrive) return null;
 
     return (
-        <ErrorBoundary fallbackRender={DriveEditorError} key={selectedDriveId}>
-            <DriveEditorComponent
-                key={selectedDriveId}
-                {...editorProps}
-                context={{
-                    ...editorProps.context,
-                    analyticsDatabaseName: connectConfig.analyticsDatabaseName,
-                    getDocumentRevision: onGetDocumentRevision,
-                    getDocumentModelModule,
-                    getEditor,
-                    showCreateDocumentModal,
-                }}
-                onSwitchboardLinkClick={undefined} // TODO
-                document={document}
-                error={error}
-            />
-        </ErrorBoundary>
+        <div className="flex h-full flex-col overflow-auto" id="content-view">
+            <ErrorBoundary fallbackRender={DriveEditorError}>
+                <DriveEditorComponent
+                    {...editorProps}
+                    context={{
+                        ...editorProps.context,
+                        analyticsDatabaseName:
+                            connectConfig.analyticsDatabaseName,
+                        getDocumentRevision,
+                        getDocumentModelModule,
+                    }}
+                    document={selectedDrive}
+                    error={error}
+                    addFile={addFile}
+                />
+            </ErrorBoundary>
+        </div>
     );
 }

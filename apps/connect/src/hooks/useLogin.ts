@@ -1,6 +1,6 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
-import { reactorAtom, useUser } from '#store';
-import { atomStore } from '@powerhousedao/common';
+import { useUser } from '#store';
+import { useReactor } from '@powerhousedao/common';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -10,9 +10,11 @@ import { useRenown } from './useRenown.js';
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
 
 const loginStatusAtom = atom<LoginStatus>('initial');
+loginStatusAtom.debugLabel = 'loginStatusAtom';
 
 export const useLogin = () => {
     const [status, setStatus] = useAtom(loginStatusAtom);
+    const loadableReactor = useReactor();
     const user = useUser();
     const renown = useRenown();
     const { did, getBearerToken } = useConnectCrypto();
@@ -55,14 +57,19 @@ export const useLogin = () => {
                 if (newUser) {
                     setStatus('authorized');
 
-                    atomStore
-                        .get(reactorAtom)
-                        .then(reactor => {
+                    if (
+                        loadableReactor.state === 'hasData' &&
+                        loadableReactor.data
+                    ) {
+                        const reactor = loadableReactor.data;
+                        try {
                             reactor.setGenerateJwtHandler(async driveUrl =>
                                 getBearerToken(driveUrl, newUser.address),
                             );
-                        })
-                        .catch(err => console.error(err));
+                        } catch (error) {
+                            logger.error(error);
+                        }
+                    }
 
                     return newUser;
                 } else {
@@ -85,12 +92,13 @@ export const useLogin = () => {
     const logout = useCallback(async () => {
         setStatus('initial');
         await renown?.logout();
-        atomStore
-            .get(reactorAtom)
-            .then(reactor => {
-                reactor.removeJwtHandler();
-            })
-            .catch(err => console.error(err));
+        if (loadableReactor.state === 'hasData' && loadableReactor.data) {
+            try {
+                loadableReactor.data.removeJwtHandler();
+            } catch (error) {
+                logger.error(error);
+            }
+        }
     }, [renown]);
 
     return useMemo(

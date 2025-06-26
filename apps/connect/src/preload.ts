@@ -12,7 +12,6 @@ import { type IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { platformInfo } from './app/detect-platform.js';
 import type { IConnectCrypto } from './services/crypto/index.js';
 import type { IRenown, User } from './services/renown/types.js';
-import type { Theme } from './store/index.js';
 
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>
@@ -205,7 +204,7 @@ const electronApi = {
             ipcRenderer.off('handleURL', listener);
         };
     },
-    setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
+    setTheme: (theme: 'light' | 'dark') => ipcRenderer.send('theme', theme),
     getSyncStatus: (drive: string) =>
         ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

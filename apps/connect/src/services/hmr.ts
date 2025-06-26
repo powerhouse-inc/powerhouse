@@ -1,4 +1,3 @@
-import { type ExternalPackage } from '#store';
 import type { ViteHotContext } from 'vite/types/hot.js';
 
 export type PackagesUpdate = {
@@ -66,22 +65,4 @@ export async function handlePackageEvents(
     hmr.on('studio:external-package-added', handler);
 
     return hmr.off('studio:external-package-added', handler);
-}
-
-export async function subscribeExternalPackages(
-    callback: (modules: Promise<ExternalPackage[]>) => void,
-) {
-    const hmr = await getHMRModule();
-    const handler = (data: PackagesUpdate) => {
-        const modules = import(
-            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-        ) as Promise<{
-            default: ExternalPackage[];
-        }>;
-        callback(modules.then(m => m.default));
-    };
-    hmr?.on('studio:external-packages-updated', handler);
-    return () => {
-        hmr?.off('studio:external-packages-updated', handler);
-    };
 }

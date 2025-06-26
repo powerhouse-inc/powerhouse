@@ -4,21 +4,23 @@ import {
     useUndoRedoShortcuts,
     useUserPermissions,
 } from '#hooks';
-import {
-    type FileNodeDocument,
-    isSameDocument,
-    themeAtom,
-    useGetDocumentModelModule,
-    useGetEditor,
-    useUser,
-} from '#store';
+import { useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatchCallback,
     signOperation,
     useDocumentDispatch,
 } from '#utils';
-import { getRevisionFromDate, useTimelineItems } from '@powerhousedao/common';
+import {
+    getRevisionFromDate,
+    unwrapLoadable,
+    useDocumentModelModule,
+    useEditorByDocumentType,
+    useModal,
+    useSelectedDocument,
+    useTheme,
+    useTimelineItems,
+} from '@powerhousedao/common';
 import {
     Button,
     DocumentToolbar,
@@ -35,23 +37,11 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
-import {
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
-import { useNavigate } from 'react-router-dom';
 import { EditorLoader } from './editor-loader.js';
-import { useModal } from './modal/index.js';
 
 export type EditorProps<TDocument extends PHDocument = PHDocument> = {
-    fileNodeDocument: FileNodeDocument;
-    document: TDocument | undefined;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
@@ -78,41 +68,35 @@ function FallbackEditorError(props: FallbackProps) {
 
 export const DocumentEditor: React.FC<EditorProps> = props => {
     const {
-        fileNodeDocument,
-        document: initialDocument,
         onClose,
-        onChange,
         onExport,
         onAddOperation,
         onGetDocumentRevision,
         onOpenSwitchboardLink,
     } = props;
-    const documentId = fileNodeDocument?.documentId;
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
-
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const theme = useAtomValue(themeAtom);
+    const theme = useTheme();
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
-
-    const documentType = fileNodeDocument?.documentType;
-    const documentModel = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
+    const loadableSelectedDocument = useSelectedDocument();
+    const unwrappedDocument = unwrapLoadable(loadableSelectedDocument);
+    const documentId = unwrappedDocument?.id;
+    const documentType = unwrappedDocument?.documentType;
+    const revision = unwrappedDocument?.revision;
+    const clipboard = unwrappedDocument?.clipboard;
+    const loadableDocumentModelModule = useDocumentModelModule(documentType);
+    const unwrappedDocumentModelModule = unwrapLoadable(
+        loadableDocumentModelModule,
     );
-
-    const editor = useMemo(
-        () => (documentType ? getEditor(documentType) : undefined),
-        [documentType, getEditor],
-    );
+    const reducer = unwrappedDocumentModelModule?.reducer;
+    const loadableEditorModule = useEditorByDocumentType(documentType);
 
     const [document, _dispatch, error] = useDocumentDispatch(
-        documentModel?.reducer,
-        initialDocument,
+        reducer,
+        unwrappedDocument,
     );
     const context: EditorContext = useMemo(
         () => ({ theme, user }),
@@ -121,31 +105,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     const userPermissions = useUserPermissions();
 
     const timelineItems = useTimelineItems(
-        documentId,
-        initialDocument?.created,
+        unwrappedDocument?.id,
+        unwrappedDocument?.created,
     );
-
-    const currentDocument = useRef({ ...fileNodeDocument, document });
-    useEffect(() => {
-        if (!fileNodeDocument?.documentId || !document) return;
-
-        // if current document ref is undefined or outdated then updates the ref
-        // and doesn't call the onChange callback
-        if (
-            !('documentId' in currentDocument.current) ||
-            currentDocument.current.documentId !== documentId
-        ) {
-            currentDocument.current = { ...fileNodeDocument, document };
-            return;
-        }
-
-        // if the document is different then calls the onChange callback
-        if (!isSameDocument(currentDocument.current.document, document)) {
-            currentDocument.current.document = document;
-            window.documentEditorDebugTools?.setDocument(document);
-            onChange?.(documentId, document);
-        }
-    }, [document, documentId, fileNodeDocument, onChange]);
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
@@ -153,16 +115,17 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                 operation,
                 state,
             ) => {
-                if (!fileNodeDocument?.documentId) return;
-
+                if (!documentId) {
+                    return;
+                }
                 const { prevState } = state;
 
                 signOperation(
                     operation,
                     sign,
-                    fileNodeDocument.documentId,
+                    documentId,
                     prevState,
-                    documentModel?.reducer,
+                    reducer,
                     user,
                 )
                     .then(op => {
@@ -183,11 +146,11 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [
             _dispatch,
             connectDid,
-            documentModel?.reducer,
+            reducer,
             onAddOperation,
-            fileNodeDocument,
             sign,
             user,
+            documentId,
         ],
     );
 
@@ -208,19 +171,8 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         dispatch(redo());
     }, [dispatch]);
 
-    const isLoadingDocument =
-        fileNodeDocument?.status === 'LOADING' || !document;
-    const isLoadingEditor =
-        editor === undefined ||
-        (!!document &&
-            editor &&
-            !editor.documentTypes.includes(document.documentType) &&
-            !editor.documentTypes.includes('*'));
-
-    const canUndo =
-        !!document &&
-        (document.revision.global > 0 || document.revision.local > 0);
-    const canRedo = !!document?.clipboard.length;
+    const canUndo = !!revision && (revision.global > 0 || revision.local > 0);
+    const canRedo = !!clipboard?.length;
     useUndoRedoShortcuts({
         undo: handleUndo,
         redo: handleRedo,
@@ -234,8 +186,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         };
     }, []);
 
-    const navigate = useNavigate();
-    const { showModal } = useModal();
+    const { show: showSettingsModal } = useModal('settings');
 
     const [editorError, setEditorError] = useState<
         | {
@@ -248,13 +199,10 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     >(undefined);
 
     useEffect(() => {
-        if (
-            editorError &&
-            editorError.documentId !== fileNodeDocument?.documentId
-        ) {
+        if (editorError && editorError.documentId !== documentId) {
             setEditorError(undefined);
         }
-    }, [editorError, fileNodeDocument, document]);
+    }, [editorError, documentId]);
 
     const handleEditorError = useCallback(
         (error: Error, info: React.ErrorInfo) => {
@@ -267,22 +215,39 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [documentId],
     );
 
-    if (fileNodeDocument?.status === 'ERROR') {
+    if (loadableSelectedDocument.state === 'loading') {
+        return <EditorLoader message={'Loading document'} />;
+    }
+
+    if (loadableDocumentModelModule.state === 'loading') {
+        return <EditorLoader message={'Loading document model'} />;
+    }
+
+    if (loadableEditorModule.state === 'loading') {
+        return <EditorLoader message={'Loading editor'} />;
+    }
+
+    if (loadableSelectedDocument.state === 'hasError') {
+        console.error(loadableSelectedDocument.error);
         return <EditorError message={'Error loading document'} />;
     }
 
-    if (isLoadingDocument || isLoadingEditor) {
-        const message = isLoadingDocument
-            ? 'Loading document'
-            : 'Loading editor';
-        return <EditorLoader message={message} />;
+    if (loadableDocumentModelModule.state === 'hasError') {
+        console.error(loadableDocumentModelModule.error);
+        return <EditorError message={'Error loading document model'} />;
     }
 
-    if (!fileNodeDocument) {
-        return null;
+    if (loadableEditorModule.state === 'hasError') {
+        console.error(loadableEditorModule.error);
+        return <EditorError message={'Error loading editor'} />;
     }
 
-    if (!documentModel) {
+    if (editorError?.error) {
+        console.error(editorError.error);
+        return <EditorError message={'Error in editor'} />;
+    }
+
+    if (!loadableDocumentModelModule.data) {
         return (
             <EditorError
                 message={
@@ -297,9 +262,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 type="button"
                                 className="cursor-pointer underline"
                                 onClick={() => {
-                                    showModal('settingsModal', {
-                                        onRefresh: () => navigate(0),
-                                    });
+                                    showSettingsModal();
                                 }}
                             >
                                 package manager
@@ -312,7 +275,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         );
     }
 
-    if (editor === null) {
+    if (!loadableEditorModule.data) {
         return (
             <EditorError
                 message={
@@ -327,9 +290,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 type="button"
                                 className="cursor-pointer underline"
                                 onClick={() => {
-                                    showModal('settingsModal', {
-                                        onRefresh: () => navigate(0),
-                                    });
+                                    showSettingsModal();
                                 }}
                             >
                                 package manager
@@ -342,13 +303,21 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         );
     }
 
-    const EditorComponent = editor.Component;
+    if (!loadableSelectedDocument.data) {
+        return <EditorError message={'Document not found'} />;
+    }
+
+    const EditorComponent = loadableEditorModule.data.Component;
     const {
         disableExternalControls,
         documentToolbarEnabled,
         showSwitchboardLink,
         timelineEnabled,
-    } = editor.config || {};
+    } = loadableEditorModule.data.config;
+
+    if (!document) {
+        return <EditorError message={'Document not found'} />;
+    }
 
     const handleSwitchboardLinkClick =
         showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
@@ -361,7 +330,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onClose={onClose}
                         onExport={onExport}
                         onShowRevisionHistory={showRevisionHistory}
-                        title={fileNodeDocument.name || document.name}
+                        title={document.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
@@ -386,60 +355,51 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
             )}
             {revisionHistoryVisible ? (
                 <RevisionHistory
-                    key={documentId}
+                    key={document.id}
                     documentTitle={document.name}
-                    documentId={fileNodeDocument.documentId}
+                    documentId={document.id}
                     globalOperations={document.operations.global}
                     localOperations={document.operations.local}
                     onClose={hideRevisionHistory}
                 />
             ) : (
-                <Suspense fallback={<EditorLoader />}>
-                    <ErrorBoundary
-                        fallbackRender={FallbackEditorError}
-                        key={documentId}
-                        onError={handleEditorError}
-                    >
-                        {!editorError?.error && (
-                            <EditorComponent
-                                key={documentId}
-                                error={error}
-                                context={{
-                                    ...context,
-                                    getDocumentRevision: onGetDocumentRevision,
-                                    readMode: !!selectedTimelineItem,
-                                    selectedTimelineRevision:
-                                        getRevisionFromDate(
-                                            selectedTimelineItem?.startDate,
-                                            selectedTimelineItem?.endDate,
-                                            document.operations.global,
-                                        ),
-                                }}
-                                document={document}
-                                documentNodeName={fileNodeDocument.name}
-                                dispatch={dispatch}
-                                onClose={onClose}
-                                onExport={onExport}
-                                canUndo={canUndo}
-                                canRedo={canRedo}
-                                undo={handleUndo}
-                                redo={handleRedo}
-                                onSwitchboardLinkClick={
-                                    handleSwitchboardLinkClick
-                                }
-                                onShowRevisionHistory={showRevisionHistory}
-                                isAllowedToCreateDocuments={
-                                    userPermissions?.isAllowedToCreateDocuments ??
-                                    false
-                                }
-                                isAllowedToEditDocuments={
-                                    userPermissions?.isAllowedToEditDocuments ??
-                                    false
-                                }
-                            />
-                        )}
-                    </ErrorBoundary>
-                </Suspense>
+                <ErrorBoundary
+                    fallbackRender={FallbackEditorError}
+                    key={document.id}
+                    onError={handleEditorError}
+                >
+                    <EditorComponent
+                        key={document.id}
+                        error={error}
+                        context={{
+                            ...context,
+                            getDocumentRevision: onGetDocumentRevision,
+                            readMode: !!selectedTimelineItem,
+                            selectedTimelineRevision: getRevisionFromDate(
+                                selectedTimelineItem?.startDate,
+                                selectedTimelineItem?.endDate,
+                                document.operations.global,
+                            ),
+                        }}
+                        document={document}
+                        documentNodeName={document.name}
+                        dispatch={dispatch}
+                        onClose={onClose}
+                        onExport={onExport}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        undo={handleUndo}
+                        redo={handleRedo}
+                        onSwitchboardLinkClick={handleSwitchboardLinkClick}
+                        onShowRevisionHistory={showRevisionHistory}
+                        isAllowedToCreateDocuments={
+                            userPermissions?.isAllowedToCreateDocuments ?? false
+                        }
+                        isAllowedToEditDocuments={
+                            userPermissions?.isAllowedToEditDocuments ?? false
+                        }
+                    />
+                </ErrorBoundary>
             )}
         </div>
     );

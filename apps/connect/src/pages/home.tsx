@@ -1,12 +1,11 @@
 import {
-    useConnectConfig,
-    useDocumentDriveServer,
-    useShowAddDriveModal,
-} from '#hooks';
-import { useGetAppNameForEditorId } from '#store';
-import {
     getDriveSharingType,
-    useSetSelectedNodeId,
+    useConfig,
+    useDrives,
+    useGetAppNameForEditorId,
+    useModal,
+    useSetSelectedDrive,
+    useSetSelectedNode,
 } from '@powerhousedao/common';
 import {
     HomeScreen,
@@ -33,33 +32,34 @@ function getDriveIcon(drive: DocumentDriveDocument) {
 
 export function Home() {
     const getAppDescriptionForEditorId = useGetAppNameForEditorId();
-    const showAddDriveModal = useShowAddDriveModal();
-    const { documentDrives } = useDocumentDriveServer();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const [config] = useConnectConfig();
+    const { show: showAddDriveModal } = useModal('addDrive');
+    const loadableDrives = useDrives();
+    const setSelectedDrive = useSetSelectedDrive();
+    const config = useConfig();
     const handleDriveClick = useCallback(
         (driveId: string) => {
-            setSelectedNodeId(driveId);
+            setSelectedDrive(driveId);
         },
-        [setSelectedNodeId],
+        [setSelectedDrive],
     );
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
     }, [showAddDriveModal]);
 
+    if (loadableDrives.state !== 'hasData') {
+        return 'Loading...';
+    }
+    const documentDrives = loadableDrives.data ?? [];
+
     return (
         <HomeScreen>
             {documentDrives.map(drive => {
-                const editorId = drive?.meta?.preferredEditor;
-                const appName = editorId
-                    ? getAppDescriptionForEditorId(editorId)
-                    : undefined;
                 return (
                     <HomeScreenItem
                         key={drive.id}
                         title={drive.name}
-                        description={appName || 'Drive Explorer App'}
+                        description={'Drive Explorer App'}
                         icon={getDriveIcon(drive)}
                         onClick={() => handleDriveClick(drive.id)}
                     />

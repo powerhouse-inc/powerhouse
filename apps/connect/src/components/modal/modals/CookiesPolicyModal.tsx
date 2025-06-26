@@ -1,20 +1,18 @@
+import { useModal } from '@powerhousedao/common';
 import { ReadRequiredModal } from '@powerhousedao/design-system';
 import type React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
-export interface DisclaimerModalProps {
-    open: boolean;
-    onClose: () => void;
-}
-
-export const CookiesPolicyModal: React.FC<DisclaimerModalProps> = props => {
-    const { open, onClose } = props;
+export const CookiesPolicyModal: React.FC = () => {
+    const { isOpen, hide } = useModal('cookiesPolicy');
 
     const { t } = useTranslation();
 
+    if (!isOpen) return null;
+
     return (
         <ReadRequiredModal
-            open={open}
+            open={isOpen}
             header={t('modals.cookiesPolicy.title')}
             body={
                 <Trans
@@ -29,7 +27,7 @@ export const CookiesPolicyModal: React.FC<DisclaimerModalProps> = props => {
             }
             bodyProps={{ className: 'text-left' }}
             closeLabel="Close"
-            onContinue={() => onClose()}
+            onContinue={hide}
             overlayProps={{ style: { zIndex: 10000 } }}
         />
     );

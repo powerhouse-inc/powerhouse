@@ -1,12 +1,11 @@
+import { useLogin } from '#hooks';
 import {
-    useConnectConfig,
-    useDocumentDrives,
-    useLogin,
-    useShowAddDriveModal,
-} from '#hooks';
-import {
-    useSelectedDriveId,
-    useSetSelectedNodeId,
+    unwrapLoadable,
+    useConfig,
+    useDrives,
+    useModal,
+    useSetSelectedDrive,
+    useUnwrappedSelectedDrive,
 } from '@powerhousedao/common';
 import {
     ConnectSidebar,
@@ -14,30 +13,29 @@ import {
     SidebarAddDriveItem,
     SidebarItem,
 } from '@powerhousedao/design-system';
-import { logger } from 'document-drive';
+import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { useNavigate } from 'react-router-dom';
 
 export default function Sidebar() {
-    const { showModal } = useModal();
-    const navigate = useNavigate();
+    const { show: showSettingsModal } = useModal('settings');
+    const { show: showAddDriveModal } = useModal('addDrive');
+    const { show: showDebugSettingsModal } = useModal('debugSettings');
     const { user, openRenown, logout } = useLogin();
-    const [documentDrives] = useDocumentDrives();
-    const setSelectedNodeId = useSetSelectedNodeId();
-    const selectedDriveId = useSelectedDriveId();
-    const [config] = useConnectConfig();
-    const showAddDriveModal = useShowAddDriveModal();
+    const loadableDrives = useDrives();
+    const documentDrives = unwrapLoadable(loadableDrives) ?? [];
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const setSelectedDrive = useSetSelectedDrive();
+    const config = useConfig();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 
     const onClickSettings = () => {
-        showModal('settingsModal', { onRefresh: () => navigate(0) });
+        showSettingsModal();
     };
 
     const onRootClick = useCallback(() => {
-        setSelectedNodeId(null);
-        navigate('/');
-    }, [navigate, setSelectedNodeId]);
+        setSelectedDrive(undefined);
+    }, [setSelectedDrive]);
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
@@ -54,7 +52,7 @@ export default function Sidebar() {
                 <button
                     id="connect-debug-button"
                     className="ml-6"
-                    onClick={() => showModal('debugSettingsModal', {})}
+                    onClick={() => showDebugSettingsModal()}
                 >
                     <img src="settings.png" className="h-5 text-gray-600" />
                 </button>
@@ -63,10 +61,10 @@ export default function Sidebar() {
     );
 
     const handleDriveClick = useCallback(
-        (driveId: string) => {
-            setSelectedNodeId(driveId);
+        (drive: DocumentDriveDocument) => {
+            setSelectedDrive(drive.id);
         },
-        [setSelectedNodeId],
+        [setSelectedDrive],
     );
 
     const etherscanUrl = user?.address
@@ -96,8 +94,8 @@ export default function Sidebar() {
                     <SidebarItem
                         key={index}
                         title={drive.name}
-                        onClick={() => handleDriveClick(drive.id)}
-                        active={selectedDriveId === drive.id}
+                        onClick={() => handleDriveClick(drive)}
+                        active={selectedDrive?.id === drive.id}
                         icon={
                             drive.state.global.icon ? (
                                 <img

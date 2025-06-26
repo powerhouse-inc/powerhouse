@@ -1,22 +1,13 @@
 import IconConnect from '#assets/icons/connect.svg?react';
 import IconLogo from '#assets/icons/logo.svg?react';
-import {
-    isElectron,
-    isMac,
-    useLoadInitialData,
-    useLogin,
-    useNodeNavigation,
-} from '#hooks';
+import { isElectron, isMac, useLogin } from '#hooks';
 import { logger } from 'document-drive';
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { ModalsContainer } from './modal/modals-container.js';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
-    useLoadInitialData();
-    useNodeNavigation();
-
     const navigate = useNavigate();
     const { login } = useLogin();
 
@@ -64,12 +55,10 @@ export default function Root() {
                 role="presentation"
                 tabIndex={0}
             >
-                <Suspense>
-                    <Sidebar />
-                    <div className="relative flex-1 overflow-auto">
-                        <Outlet />
-                    </div>
-                </Suspense>
+                <Sidebar />
+                <div className="relative flex-1 overflow-auto">
+                    <Outlet />
+                </div>
             </div>
         </div>
     );

@@ -34,7 +34,7 @@ export const ReadMode: Story = {
             driveId="drive-id"
             sharingType="LOCAL"
             isAllowedToCreateDocuments={true}
-            setSelectedNodeId={() => {}}
+            setSelectedDocument={() => {}}
             getSyncStatusSync={() => "SYNCING"}
             onRenameNode={() => {}}
             onDeleteNode={() => {}}

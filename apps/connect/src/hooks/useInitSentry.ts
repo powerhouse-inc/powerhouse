@@ -1,4 +1,5 @@
 import config from '#connect-config';
+import { useAcceptedCookies } from '@powerhousedao/common';
 import * as Sentry from '@sentry/react';
 import React, { useEffect } from 'react';
 import {
@@ -7,15 +8,13 @@ import {
     useLocation,
     useNavigationType,
 } from 'react-router-dom';
-import { useAcceptedCookies } from './useAcceptedCookies/index.js';
 
-export function useInitSenty() {
-    const [acceptedCookies] = useAcceptedCookies();
-    const { analytics } = acceptedCookies;
+export function useInitSentry() {
+    const acceptedCookies = useAcceptedCookies();
 
     useEffect(() => {
         const client = Sentry.getClient();
-        if (!analytics) {
+        if (!acceptedCookies.analytics) {
             if (client) {
                 void client.close();
             }
@@ -73,5 +72,5 @@ export function useInitSenty() {
                 return event;
             },
         });
-    }, [analytics]);
+    }, [acceptedCookies.analytics]);
 }

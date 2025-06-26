@@ -1,4 +1,6 @@
-import { drivesToHash, useUserPermissions } from '#hooks';
+import { useUserPermissions } from '#hooks';
+import { useReactor } from '@powerhousedao/common';
+import { drivesToHash } from '@powerhousedao/reactor-browser';
 import {
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
@@ -23,7 +25,6 @@ import {
     useMemo,
     useState,
 } from 'react';
-import { useAsyncReactor } from '../store/reactor.js';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
@@ -155,7 +156,7 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
 
 const ReadModeInstance = new ReadModeContextImpl();
 
-export const ReadModeContext = createContext<IReadModeContext>({
+const ReadModeContext = createContext<IReadModeContext>({
     ...(ReadModeInstance as Omit<IReadModeContext, 'readDrives'>),
     readDrives: [],
 });
@@ -176,20 +177,19 @@ async function getReadDrives(
     ) as ReadDrive[];
 }
 
-export const ReadModeContextProvider: FC<
-    ReadModeContextProviderProps
-> = props => {
-    const reactor = useAsyncReactor();
+const ReadModeContextProvider: FC<ReadModeContextProviderProps> = props => {
+    const loadableReactor = useReactor();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        if (reactor) {
+        if (loadableReactor.state === 'hasData' && loadableReactor.data) {
+            const reactor = loadableReactor.data;
             ReadModeInstance.setDocumentDrive(reactor);
             setReady(true);
         }
-    }, [reactor]);
+    }, [loadableReactor]);
 
     // updates drive access level when user permissions change
     const readMode =
@@ -250,4 +250,4 @@ export const ReadModeContextProvider: FC<
 
     return <ReadModeContext.Provider {...props} value={context} />;
 };
-export const useReadModeContext = () => useContext(ReadModeContext);
+const useReadModeContext = () => useContext(ReadModeContext);

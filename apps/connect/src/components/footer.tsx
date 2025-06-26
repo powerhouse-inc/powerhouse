@@ -1,16 +1,20 @@
-import { useCookieBanner } from '#hooks';
 import { openUrl } from '#utils';
+import {
+    useCookieBanner,
+    useModal,
+    useSetCookieBanner,
+} from '@powerhousedao/common';
 import {
     Footer as DesignSystemFooter,
     FooterLink,
     Icon,
 } from '@powerhousedao/design-system';
 import { Trans } from 'react-i18next';
-import { useModal } from './modal/index.js';
 
 export const Footer = () => {
-    const { showModal } = useModal();
-    const [, setShowCookieBanner] = useCookieBanner();
+    const { show: showDisclaimerModal } = useModal('disclaimer');
+    const showCookieBanner = useCookieBanner();
+    const setShowCookieBanner = useSetCookieBanner();
 
     return (
         <DesignSystemFooter>
@@ -21,7 +25,7 @@ export const Footer = () => {
             >
                 <Trans i18nKey="footer.cookiePolicy" />
             </FooterLink>
-            <FooterLink onClick={() => showModal('disclaimerModal', {})}>
+            <FooterLink onClick={() => showDisclaimerModal()}>
                 <Trans i18nKey="footer.disclaimer" />
             </FooterLink>
             <FooterLink

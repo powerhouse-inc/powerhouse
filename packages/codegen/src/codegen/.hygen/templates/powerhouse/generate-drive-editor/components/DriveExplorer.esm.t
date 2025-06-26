@@ -44,7 +44,7 @@ export function DriveExplorer({
 }: DriveExplorerProps) {
   const { getDocumentRevision } = context;
 
-  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
+  const [selectedNodeId, setSelectedDocument] = useState<string | undefined>();
   const [activeDocumentId, setActiveDocumentId] = useState<
     string | undefined
   >();
@@ -73,7 +73,7 @@ export function DriveExplorer({
 
   const handleNodeSelect = useCallback((node: BaseUiFolderNode) => {
     console.log("Selected node:", node);
-    setSelectedNodeId(node.id);
+    setSelectedDocument(node.id);
   }, []);
 
   const handleFileSelect = useCallback((node: BaseUiFileNode) => {

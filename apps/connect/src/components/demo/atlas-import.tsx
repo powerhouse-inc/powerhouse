@@ -1,7 +1,7 @@
 import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
 import RefreshIcon from '#assets/icons/refresh.svg?react';
 import { useDocumentDriveServer } from '#hooks';
-import { useUnwrappedReactor } from '#store';
+import { useReactor } from '@powerhousedao/common';
 import { Button } from '@powerhousedao/design-system';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -36,7 +36,7 @@ export function AtlasImport() {
     const status = useRef<
         'initial' | 'forking' | 'forked' | 'addingDrive' | 'done' | 'error'
     >('initial');
-    const reactor = useUnwrappedReactor();
+    const loadableReactor = useReactor();
     const { documentId } = useParams();
     const reactorUrl = useReactorUrl();
     const navigate = useNavigate();
@@ -119,7 +119,13 @@ export function AtlasImport() {
     }, [documentId, status]);
 
     useEffect(() => {
-        if (!driveId || !reactor || status.current !== 'forked') return;
+        if (
+            !driveId ||
+            loadableReactor.state !== 'hasData' ||
+            status.current !== 'forked'
+        )
+            return;
+        const reactor = loadableReactor.data;
         status.current = 'addingDrive';
         new Promise<void>(resolve => {
             setTimeout(resolve, 500);
@@ -129,7 +135,7 @@ export function AtlasImport() {
                 status.current = 'error';
                 setError(error);
             });
-    }, [driveId, reactor, status]);
+    }, [driveId, loadableReactor, status]);
 
     return (
         <div className="bg-gray-50 size-full flex justify-center gap-x-4">

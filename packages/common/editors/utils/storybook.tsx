@@ -1,4 +1,3 @@
-import { type DriveEditorProps } from "#state";
 import {
   createDocumentStory,
   type DocumentStory,
@@ -16,6 +15,7 @@ import {
 } from "document-drive";
 import { type ExtendedState, type PartialState } from "document-model";
 import { type ComponentType } from "react";
+import { type DriveEditorProps } from "../../state/types.js";
 
 export function createDriveStory(
   Editor: ComponentType<DriveEditorProps>,

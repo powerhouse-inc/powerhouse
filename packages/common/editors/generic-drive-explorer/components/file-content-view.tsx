@@ -1,12 +1,4 @@
 import {
-  useGetSyncStatusSync,
-  useIsAllowedToCreateDocuments,
-  useNodeFileChildren,
-  useSelectedDriveId,
-  useSelectedNodeId,
-  useSetSelectedNodeId,
-} from "#state";
-import {
   FileItem,
   type OnAddFile,
   type OnCopyNode,
@@ -20,6 +12,14 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileNode } from "document-drive";
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useSelectedDrive } from "../../../state/drives.js";
+import {
+  isFileNodeKind,
+  useChildNodes,
+  useSetSelectedNode,
+} from "../../../state/nodes.js";
+import { useIsAllowedToCreateDocuments } from "../../../state/permissions.js";
+import { useGetSyncStatusSync } from "../../../state/reactor.js";
 
 type Props = {
   sharingType: SharingType;
@@ -48,16 +48,19 @@ export function FileContentView(props: Props) {
     onCopyNode,
     onMoveNode,
   } = props;
-  const selectedNodeId = useSelectedNodeId();
-  const setSelectedNodeId = useSetSelectedNodeId();
-  const selectedDriveId = useSelectedDriveId();
-  const fileNodes = useNodeFileChildren(selectedNodeId);
+  const selectedDrive = useSelectedDrive();
+  const setSelectedNode = useSetSelectedNode();
+  const loadableChildNodes = useChildNodes();
+  const fileNodeCount =
+    loadableChildNodes.state === "hasData"
+      ? (loadableChildNodes.data?.filter(isFileNodeKind).length ?? 0)
+      : 0;
   const isAllowedToCreateDocuments = useIsAllowedToCreateDocuments();
   const getSyncStatusSync = useGetSyncStatusSync();
   const availableWidth = windowSize.innerWidth - USED_SPACE;
 
   const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
-  const rowCount = Math.ceil(fileNodes.length / columnCount);
+  const rowCount = Math.ceil(fileNodeCount / columnCount);
 
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
@@ -84,6 +87,12 @@ export function FileContentView(props: Props) {
     overscan: 5,
   });
 
+  if (loadableChildNodes.state !== "hasData") {
+    return null;
+  }
+
+  const fileNodes = loadableChildNodes.data?.filter(isFileNodeKind) ?? [];
+
   const getItemIndex = (rowIndex: number, columnIndex: number) =>
     rowIndex * columnCount + columnIndex;
 
@@ -92,7 +101,7 @@ export function FileContentView(props: Props) {
     return fileNodes[index] || null;
   };
 
-  if (fileNodes.length === 0) {
+  if (fileNodeCount === 0) {
     return (
       <div className="mb-8 text-sm text-gray-400">
         {t("folderView.sections.documents.empty", {
@@ -105,7 +114,11 @@ export function FileContentView(props: Props) {
   const renderItem = (rowIndex: number, columnIndex: number) => {
     const fileNode = getItem(rowIndex, columnIndex);
 
-    if (!fileNode || !selectedDriveId) {
+    if (
+      !fileNode ||
+      selectedDrive.state !== "hasData" ||
+      !selectedDrive.data?.id
+    ) {
       return null;
     }
 
@@ -120,11 +133,11 @@ export function FileContentView(props: Props) {
           node={fileNode}
           sharingType={sharingType}
           isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-          driveId={selectedDriveId}
+          driveId={selectedDrive.data.id}
           onCopyNode={onCopyNode}
           onMoveNode={onMoveNode}
           getSyncStatusSync={getSyncStatusSync}
-          setSelectedNodeId={setSelectedNodeId}
+          setSelectedDocument={(nodeId) => setSelectedNode(nodeId ?? undefined)}
           onRenameNode={onRenameNode}
           onDeleteNode={onDeleteNode}
           onAddFile={onAddFile}
