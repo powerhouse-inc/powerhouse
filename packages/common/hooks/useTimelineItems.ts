@@ -92,12 +92,13 @@ function metricsToItems(metrics: GroupedPeriodResults): TimelineItem[] {
       const { additions, deletions } = result.rows.reduce(
         (acc, row) => {
           if (
-            (row.dimensions.changes.path as unknown as string) === "changes/add"
+            (row.dimensions.changes.path as unknown as string) ===
+            "ph/diff/changes/add"
           ) {
             acc.additions += row.value;
           } else if (
             (row.dimensions.changes.path as unknown as string) ===
-            "changes/remove"
+            "ph/diff/changes/remove"
           ) {
             acc.deletions += row.value;
           }
@@ -130,6 +131,7 @@ export type UseTimelineItemsResult = UseAnalyticsQueryResult<TimelineItem[]>;
 export const useTimelineItems = (
   documentId?: string,
   startTimestamp?: string,
+  driveId?: string,
 ): UseTimelineItemsResult => {
   const start = startTimestamp
     ? DateTime.fromISO(startTimestamp)
@@ -142,14 +144,15 @@ export const useTimelineItems = (
       granularity: AnalyticsGranularity.Hourly,
       metrics: ["Count"],
       select: {
-        changes: [AnalyticsPath.fromString(`changes`)],
-        document: [AnalyticsPath.fromString(`document/${documentId}`)],
+        changes: [AnalyticsPath.fromString(`ph/diff/changes`)],
+        document: [AnalyticsPath.fromString(`ph/diff/document/${documentId}`)],
       },
       lod: {
-        changes: 2,
+        changes: 4,
       },
     },
     {
+      sources: [AnalyticsPath.fromString(`ph/diff/${driveId}/${documentId}`)],
       select: metricsToItems,
     },
   );

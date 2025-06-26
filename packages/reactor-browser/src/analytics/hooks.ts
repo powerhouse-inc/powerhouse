@@ -36,9 +36,7 @@ function useAnalyticsQueryWrapper<TQueryFnData = unknown, TData = TQueryFnData>(
   const { data: store } = useAnalyticsStoreAsync();
   const { data: engine } = useAnalyticsEngineAsync();
   const enabled =
-    ("enabled" in queryOptions ? queryOptions.enabled : true) &&
-    !!store &&
-    !!engine;
+    "enabled" in queryOptions ? queryOptions.enabled : !!store && !!engine;
 
   return useQuery({
     ...queryOptions,
@@ -70,7 +68,13 @@ function useAnalyticsMutationWrapper<TVariables, TData>(
   return useMutation({
     ...mutationOptions,
     mutationFn: async (value: TVariables) => {
-      const store = await getAnalyticsStore(storeOptions);
+      let store: IAnalyticsStore | null = null;
+      try {
+        store = await getAnalyticsStore(storeOptions);
+      } catch (e) {
+        console.error(e);
+      }
+
       if (!store) {
         throw new Error(
           "No analytics store available. Use within an AnalyticsProvider.",
@@ -84,7 +88,9 @@ function useAnalyticsMutationWrapper<TVariables, TData>(
 export type UseAnalyticsQueryOptions<TData = GroupedPeriodResults> = Omit<
   UseQueryOptions<GroupedPeriodResults, Error, TData>,
   "queryKey" | "queryFn"
->;
+> & {
+  sources?: AnalyticsPath[];
+};
 
 export type UseAnalyticsQueryResult<TData = GroupedPeriodResults> =
   UseQueryResult<TData>;
@@ -94,7 +100,6 @@ export function useAnalyticsQuery<TData = GroupedPeriodResults>(
   options?: UseAnalyticsQueryOptions<TData>,
 ): UseAnalyticsQueryResult<TData> {
   const { data: store } = useAnalyticsStoreAsync();
-  const { data: querySources } = useQuerySources(query);
   const queryClient = useQueryClient();
   const subscriptions = useRef<Array<() => void>>([]);
 
@@ -105,12 +110,17 @@ export function useAnalyticsQuery<TData = GroupedPeriodResults>(
   });
 
   useEffect(() => {
-    if (!querySources?.length || !store) {
+    const selectedPaths = [
+      ...(options?.sources || []),
+      ...Object.values(query.select).flat(),
+    ];
+
+    if (!selectedPaths.length || !store) {
       return;
     }
 
-    querySources.forEach((source) => {
-      const unsub = store.subscribeToSource(source, () => {
+    selectedPaths.forEach((path) => {
+      const unsub = store.subscribeToSource(path, () => {
         return queryClient.invalidateQueries({
           queryKey: ["analytics", "query", query],
         });
@@ -123,7 +133,7 @@ export function useAnalyticsQuery<TData = GroupedPeriodResults>(
       subscriptions.current.forEach((unsub) => unsub());
       subscriptions.current = [];
     };
-  }, [querySources]);
+  }, [query, store, options?.sources]);
 
   return result;
 }

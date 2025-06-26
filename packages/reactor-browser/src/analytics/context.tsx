@@ -93,7 +93,6 @@ export function useAnalyticsStoreOptions() {
 
 export function useCreateAnalyticsStore(options?: CreateStoreOptions) {
   const queryClient = useQueryClient();
-
   useEffect(() => {
     queryClient.setQueryDefaults(analyticsOptionsKey, {
       queryFn: () => options,
@@ -106,7 +105,7 @@ export function useCreateAnalyticsStore(options?: CreateStoreOptions) {
     mutationFn: async () => {
       const store = await createOrGetAnalyticsStore(options);
       queryClient.setQueryDefaults(analyticsStoreKey, {
-        queryFn: () => options,
+        queryFn: () => store,
         staleTime: Infinity,
         gcTime: Infinity,
       });
