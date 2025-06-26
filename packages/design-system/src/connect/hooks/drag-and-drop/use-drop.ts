@@ -10,7 +10,7 @@ type Props = {
 export function useDrop(props: Props) {
   const { uiNode, onAddFile, onCopyNode, onMoveNode } = props;
   const [isDropTarget, setIsDropTarget] = useState(false);
-  const allowedToBeDropTarget = !!uiNode && uiNode.kind !== FILE;
+  const allowedToBeDropTarget = !uiNode || uiNode.kind !== FILE;
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -25,30 +25,33 @@ export function useDrop(props: Props) {
     async (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       event.stopPropagation();
-      if (!uiNode) return;
 
-      const droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
-        Boolean,
-      );
-      if (droppedFiles.length) {
-        for (const file of droppedFiles) {
-          if (file) {
-            await onAddFile(file, uiNode);
+      try {
+        const droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
+          Boolean,
+        );
+        if (droppedFiles.length) {
+          for (const file of droppedFiles) {
+            if (file) {
+              await onAddFile(file, uiNode);
+            }
+          }
+        } else if (uiNode) {
+          const altOrOptionKeyPressed = event.getModifierState("Alt");
+          const data = event.dataTransfer.getData(UI_NODE);
+          const droppedNode = JSON.parse(data) as UiNode;
+
+          if (altOrOptionKeyPressed) {
+            await onCopyNode(droppedNode, uiNode);
+          } else {
+            await onMoveNode(droppedNode, uiNode);
           }
         }
-      } else {
-        const altOrOptionKeyPressed = event.getModifierState("Alt");
-        const data = event.dataTransfer.getData(UI_NODE);
-        const droppedNode = JSON.parse(data) as UiNode;
-
-        if (altOrOptionKeyPressed) {
-          await onCopyNode(droppedNode, uiNode);
-        } else {
-          await onMoveNode(droppedNode, uiNode);
-        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsDropTarget(false);
       }
-
-      setIsDropTarget(false);
     },
     [onAddFile, onCopyNode, onMoveNode, uiNode],
   );

@@ -9,6 +9,7 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations } from "#utils/misc";
 import type { Operation, OperationScope, PHDocument } from "document-model";
@@ -49,6 +50,55 @@ export class BrowserStorage
           : BrowserStorage.DBName,
       }),
     );
+  }
+
+  ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const ids: string[] = [];
+    for (const slug of slugs) {
+      const documentId = slugManifest.slugToId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const slugs: string[] = [];
+    for (const id of ids) {
+      let found = false;
+      for (const [slug, documentId] of Object.entries(slugManifest.slugToId)) {
+        if (documentId === id) {
+          slugs.push(slug);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        throw new DocumentNotFoundError(id);
+      }
+    }
+
+    return Promise.resolve(slugs);
   }
 
   ////////////////////////////////
@@ -232,7 +282,7 @@ export class BrowserStorage
 
     // Remove from slug manifest if it has a slug
     const slug =
-      document.header.slug.length > 0 ? document.header.slug : documentId;
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     try {
       if (slug) {
         const slugManifest = await this.getSlugManifest();

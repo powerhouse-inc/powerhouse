@@ -78,8 +78,16 @@ export function BaseEditor(props: IProps) {
     [addDocument, showCreateDocumentModal, selectedNode?.id],
   );
 
+  const { isDropTarget: isDropTargetFolder, dropProps: dropPropsFolder } =
+    useDrop({
+      uiNode: selectedNode,
+      onAddFile: addFile,
+      onCopyNode: copyNode,
+      onMoveNode: moveNode,
+    });
+
   const { isDropTarget, dropProps } = useDrop({
-    uiNode: selectedNode,
+    uiNode: selectedNode?.kind === "FOLDER" ? selectedNode : null,
     onAddFile: addFile,
     onCopyNode: copyNode,
     onMoveNode: moveNode,
@@ -109,7 +117,10 @@ export function BaseEditor(props: IProps) {
         />
         {showSearchBar && <SearchBar />}
       </DriveLayout.Header>
-      <DriveLayout.Content>
+      <DriveLayout.Content
+        {...dropProps}
+        className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+      >
         <FolderView
           node={selectedNode || driveNode}
           onSelectNode={setSelectedNode}
@@ -119,8 +130,9 @@ export function BaseEditor(props: IProps) {
           onAddFile={addFile}
           onCopyNode={copyNode}
           onMoveNode={moveNode}
-          isDropTarget={isDropTarget}
           isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+          isDropTarget={isDropTargetFolder}
+          {...dropPropsFolder}
         />
       </DriveLayout.Content>
       <DriveLayout.Footer>

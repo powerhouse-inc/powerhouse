@@ -1,4 +1,5 @@
 import { isValidDocumentId, isValidSlug } from "#storage/utils";
+import { AbortError } from "#utils/errors";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   AttachmentInput,
@@ -114,6 +115,59 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const queryOptions: Prisma.DocumentFindManyArgs = {
+      where: {
+        slug: {
+          in: slugs,
+        },
+      },
+      select: {
+        id: true,
+      },
+    };
+
+    const results = await this.db.document.findMany(queryOptions);
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    if (results.length !== slugs.length) {
+      throw new Error("Not all slugs were found");
+    }
+
+    return results.map((doc) => doc.id);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const queryOptions: Prisma.DocumentFindManyArgs = {
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        slug: true,
+      },
+    };
+
+    const results = await this.db.document.findMany(queryOptions);
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    if (results.length !== ids.length) {
+      throw new Error("Not all ids were found");
+    }
+
+    return results.map((doc) => doc.slug ?? "");
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
@@ -134,7 +188,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     }
 
     const slug =
-      document.header.slug.length > 0 ? document.header.slug : documentId;
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }

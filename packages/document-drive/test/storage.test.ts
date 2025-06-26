@@ -677,4 +677,64 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     // TODO
   });
+
+  it("should allow resolving slugs from ids", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    drive.header.slug = "test-drive";
+
+    const driveId = drive.header.id;
+    await storage.create(drive);
+
+    const result = await storage.resolveSlugs([driveId]);
+    expect(result).toEqual([drive.header.slug]);
+  });
+
+  it("should throw an error if any of the slugs are not found", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+    await expect(
+      async () => await storage.resolveSlugs(["not-found"]),
+    ).rejects.toThrow();
+  });
+
+  it("should throw an error if aborted", async ({ expect }) => {
+    const storage = await buildStorage();
+    const drive = createDriveDocument();
+    drive.header.slug = "test-drive";
+
+    const driveId = drive.header.id;
+    await storage.create(drive);
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      async () => await storage.resolveSlugs([driveId], controller.signal),
+    ).rejects.toThrow();
+  });
+
+  it("should allow resolving ids from slugs", async ({ expect }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    drive.header.slug = "test-drive";
+
+    const driveId = drive.header.id;
+    await storage.create(drive);
+
+    const result = await storage.resolveIds([drive.header.slug]);
+    expect(result).toEqual([driveId]);
+  });
+
+  it("should throw an error if any of the ids are not found", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+    await expect(
+      async () => await storage.resolveIds(["not-found"]),
+    ).rejects.toThrow();
+  });
 });

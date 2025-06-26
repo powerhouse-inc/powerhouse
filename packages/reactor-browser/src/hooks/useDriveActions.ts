@@ -6,7 +6,6 @@ import {
   deleteNode,
   generateAddNodeAction,
   generateNodesCopy,
-  isFileNode,
   isFolderNode,
   moveNode,
   updateNode,
@@ -168,9 +167,9 @@ function createDriveActions(
 
   const addFile = async (
     file: File,
-    parentFolder = selectedNode && isFileNode(selectedNode)
-      ? undefined
-      : selectedNode?.id,
+    parentFolder = selectedNode && isFolderNode(selectedNode)
+      ? selectedNode.id
+      : undefined,
     name: string = file.name.replace(/\.zip$/gim, ""),
   ) => {
     const folder = parentFolder ? getNode(parentFolder, drive) : undefined;
