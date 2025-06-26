@@ -6,7 +6,7 @@ The operational processor system aims to provide a standardized, type-safe, and 
 
 **Primary Goals:**
 - Provide a unified interface for operational processors with database integration
-- Enable type-safe database operations using Kysely
+- Enable type-safe database operations using PowerhouseDB
 - Standardize migration management at the project level
 - Simplify processor development by abstracting common database operations
 - Ensure consistent error handling and resource management
@@ -57,16 +57,27 @@ The operational processor system manages several types of data:
 
 ### Persistent Data
 - **Processor-specific tables**: Custom tables defined by each processor for storing processed data
-- **Migration metadata**: Kysely migration tracking for schema versioning
+- **Migration metadata**: PowerhouseDB migration tracking for schema versioning
 - **Health check data**: Operational status and performance metrics
 
 ### Data Flow
-```
-Document Drive → Processor Filter → BaseOperationalProcessor → Kysely Database
-     ↓                ↓                      ↓                    ↓
-  Operations    Filter by type         Business Logic      Persistent Storage
-     ↓                ↓                      ↓                    ↓
-  Metadata      Scope/Branch           Data Processing     Migrations
+```mermaid
+flowchart TD
+    A[Document Drive] --> B[Processor Filter]
+    B --> C[BaseOperationalProcessor]
+    C --> D[PowerhouseDB]
+    
+    A1[Operations] --> A
+    A2[Metadata] --> A
+    
+    B1[Filter by type] --> B
+    B2[Scope/Branch] --> B
+    
+    C1[Business Logic] --> C
+    C2[Data Processing] --> C
+    
+    D1[Persistent Storage] --> D
+    D2[Migrations] --> D
 ```
 
 ### Data Transformations
@@ -94,11 +105,11 @@ This interface provides the contract for all processors, ensuring consistent lif
 #### BaseOperationalProcessor Class
 ```typescript
 abstract class BaseOperationalProcessor<TDatabase = any> implements IProcessor {
-  protected kysely: Promise<Kysely<TDatabase>>;
+  protected powerhouseDb: Promise<PowerhouseDB<TDatabase>>;
   protected readonly operationalStore: Db;
   
   constructor(operationalStore: Db, migrationsPath?: string);
-  protected async getDb(): Promise<Kysely<TDatabase>>;
+  protected async getDb(): Promise<PowerhouseDB<TDatabase>>;
   protected async healthCheck(tableName: string): Promise<boolean>;
 }
 ```
@@ -119,7 +130,20 @@ The factory pattern enables dynamic processor creation with configurable filteri
 
 ### Database Abstractions
 
-#### Kysely Integration
+#### PowerhouseDB Type Alias
+```typescript
+// packages/document-drive/src/processors/types.ts
+import { type Kysely } from "kysely";
+
+/**
+ * PowerhouseDB is the standardized database interface for operational processors.
+ * This abstraction provides type-safe database operations while hiding the underlying
+ * database framework implementation details.
+ */
+export type PowerhouseDB<TDatabase = any> = Kysely<TDatabase>;
+```
+
+#### Database Schema Interface
 ```typescript
 interface Database {
   search_index: {
@@ -132,19 +156,20 @@ interface Database {
 }
 ```
 
-Type-safe database operations through Kysely's query builder, with generated types ensuring compile-time safety.
+Type-safe database operations through PowerhouseDB's query builder, with generated types ensuring compile-time safety.
 
 #### Migration Management
 ```typescript
 // migrations/001-initial-schema.ts
-export async function up(db: Kysely<any>): Promise<void>;
-export async function down(db: Kysely<any>): Promise<void>;
+export async function up(db: PowerhouseDB<any>): Promise<void>;
+export async function down(db: PowerhouseDB<any>): Promise<void>;
 ```
 
 Project-level migrations that are automatically discovered and applied by the base class.
 
 ### Abstraction Benefits
 - **Complexity Hiding**: Database setup, migration management, and connection handling are abstracted away
+- **Framework Independence**: The underlying database framework is hidden behind the PowerhouseDB abstraction
 - **Simplification**: Developers focus on business logic rather than infrastructure concerns
 - **Consistency**: All processors follow the same patterns for error handling and resource management
 - **Testability**: Clear separation of concerns enables easier unit testing of business logic
@@ -193,7 +218,7 @@ The operational processor system primarily operates on internal document drive m
 
 ### Database Performance
 - **Query Optimization**: Complex queries in processor business logic
-  - **Mitigation**: Use Kysely's query builder for optimized SQL generation
+  - **Mitigation**: Use PowerhouseDB's query builder for optimized SQL generation
   - **Monitoring**: Track query execution time and plan analysis
 
 ### Benchmarks Required
