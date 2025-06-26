@@ -1,8 +1,4 @@
-import {
-  compressedKeyInHexfromRaw,
-  encodeDIDfromHexString,
-  rawKeyInHexfromUncompressed,
-} from "did-key-creator";
+import { encodeDIDfromHexString } from "did-key-creator";
 import { childLogger } from "document-drive";
 
 const logger = childLogger(["reactor-browser", "crypto"]);
@@ -114,6 +110,21 @@ export class ConnectCrypto implements IConnectCrypto {
     await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
   }
 
+  /**
+   * Parses the DID from the public key.
+   *
+   * This function was updated to handle Ed25519 keys. The previous
+   * implementation used the multicodec for P-256 keys (`p256-pub`) and
+   * performed key compression, since these keys are not compressed.
+   *
+   * Ed25519 keys use a different multicodec and are already in a compressed
+   * form by design.
+   *
+   * The change involved:
+   *
+   * 1. Using the correct multicodec for Ed25519: `ed25519-pub`.
+   * 2. Using the raw public key bytes directly without compression.
+   */
   async #parseDid(): Promise<DID> {
     if (!this.#keyPair) {
       throw new Error("No key pair available");
@@ -125,10 +136,9 @@ export class ConnectCrypto implements IConnectCrypto {
       this.#keyPair.publicKey,
     );
 
-    const multicodecName = "p256-pub";
-    const rawKey = rawKeyInHexfromUncompressed(ab2hex(publicKeyRaw));
-    const compressedKey = compressedKeyInHexfromRaw(rawKey);
-    const did = encodeDIDfromHexString(multicodecName, compressedKey);
+    const multicodecName = "ed25519-pub";
+    const publicKeyHex = ab2hex(publicKeyRaw);
+    const did = encodeDIDfromHexString(multicodecName, publicKeyHex);
     return did as DID;
   }
 
