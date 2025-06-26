@@ -35,7 +35,7 @@ export function useDocumentById(
   const documents = useDocuments();
   if (!id) return { state: "hasData", data: undefined };
   if (documents.state !== "hasData") return documents;
-  const document = documents.data.find((d) => d?.id === id);
+  const document = documents.data.find((d) => d?.header.id === id);
   return { state: "hasData", data: document };
 }
 
@@ -44,5 +44,5 @@ export function useUnwrappedDocumentById(
 ): PHDocument | undefined {
   const documents = useUnwrappedDocuments();
   if (!id) return undefined;
-  return documents?.find((d) => d?.id === id);
+  return documents?.find((d) => d?.header.id === id);
 }

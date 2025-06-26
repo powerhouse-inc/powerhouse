@@ -39,9 +39,9 @@ export function useInitializeReactor(createReactor: () => Promise<Reactor>) {
           const drives = await Promise.all(
             driveIds.map((id) => reactor.getDrive(id)),
           );
-          const drive = drives.find((d) => d.slug === driveSlug);
+          const drive = drives.find((d) => d.header.slug === driveSlug);
           if (drive) {
-            setSelectedDrive(drive.id);
+            setSelectedDrive(drive.header.id);
           }
         }
       }

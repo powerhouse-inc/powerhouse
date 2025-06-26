@@ -68,7 +68,7 @@ export function useNodePath(
   const selectedDrive = useUnwrappedSelectedDrive();
   if (!nodes || !selectedDrive) return { state: "hasData", data: undefined };
   const driveFolderNode: FolderNode | undefined = {
-    id: selectedDrive.id,
+    id: selectedDrive.header.id,
     name: selectedDrive.state.global.name,
     kind: "FOLDER",
     parentFolder: null,

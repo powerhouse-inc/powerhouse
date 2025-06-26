@@ -88,7 +88,7 @@ export const selectedDriveAtom = atom(
     if (driveId === INITIAL || loadableDrives.state !== "hasData")
       return suspendUntilSet<DocumentDriveDocument | undefined>();
     const drives = loadableDrives.data;
-    return drives.find((drive) => drive.id === driveId);
+    return drives.find((drive) => drive.header.id === driveId);
   },
   (_get, set, driveId: string | undefined) => {
     set(selectedDriveIdAtom, driveId);
@@ -156,7 +156,7 @@ export const documentsAtom = atomWithRefresh(async (get) => {
     return suspendUntilSet<PHDocument[]>();
   const reactor = loadableReactor.data;
   if (!reactor) return [];
-  const driveId = loadableDrive.data?.id;
+  const driveId = loadableDrive.data?.header.id;
   if (!driveId) return [];
   const documentIds = await reactor.getDocuments(driveId);
   const documents = await Promise.all(
@@ -178,7 +178,7 @@ export const selectedDocumentAtom = atom((get) => {
   if (nodeId === INITIAL || loadableDocuments.state !== "hasData")
     return suspendUntilSet<PHDocument | undefined>();
   const documents = loadableDocuments.data;
-  return documents.find((document) => document.id === nodeId);
+  return documents.find((document) => document.header.id === nodeId);
 });
 selectedDocumentAtom.debugLabel = "selectedDocumentAtom";
 

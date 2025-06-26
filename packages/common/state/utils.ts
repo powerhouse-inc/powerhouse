@@ -3,6 +3,7 @@ import {
   type FolderNode,
   type Node,
 } from "document-drive";
+import { PHDocument } from "document-model";
 import { atomWithReducer } from "jotai/utils";
 import { type Loadable } from "jotai/vanilla/utils/loadable";
 import slug from "slug";
@@ -24,7 +25,7 @@ export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
 ) {
   if (!drive) return "";
-  return `/d/${slug(drive.slug)}`;
+  return `/d/${slug(drive.header.slug)}`;
 }
 
 export function makeNodeUrlComponent(node: Node | undefined) {
@@ -58,7 +59,9 @@ export function extractDriveFromPath(path: string): string | null {
   const match = /^\/d\/([^/]+)/.exec(path);
   return match ? match[1] : null;
 }
-export async function getReactorDrives(reactor: Reactor | undefined) {
+export async function getReactorDrives(
+  reactor: Reactor | undefined,
+): Promise<DocumentDriveDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
   const drives = await Promise.all(
@@ -71,7 +74,9 @@ export async function getReactorDrives(reactor: Reactor | undefined) {
   return drives;
 }
 
-export async function getReactorDocuments(reactor: Reactor | undefined) {
+export async function getReactorDocuments(
+  reactor: Reactor | undefined,
+): Promise<PHDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
   const documents = (
@@ -93,7 +98,7 @@ export function makeNodes(drives: DocumentDriveDocument[]): Node[] {
   const nodes: Node[] = [];
   for (const drive of drives) {
     const driveFolderNode: FolderNode = {
-      id: drive.id,
+      id: drive.header.id,
       name: drive.state.global.name,
       kind: "DRIVE",
       parentFolder: null,
@@ -104,7 +109,7 @@ export function makeNodes(drives: DocumentDriveDocument[]): Node[] {
         id: n.id,
         name: n.name,
         kind: n.kind.toUpperCase() as NodeKind,
-        parentFolder: n.parentFolder ?? drive.id,
+        parentFolder: n.parentFolder ?? drive.header.id,
       });
     }
   }

@@ -34,7 +34,7 @@ export function useDriveById(
   const data = loadableDrives.data;
   return {
     state: "hasData",
-    data: data.find((d) => d?.id === id),
+    data: data.find((d) => d?.header.id === id),
   };
 }
 
@@ -43,7 +43,7 @@ export function useUnwrappedDriveById(
 ): DocumentDriveDocument | undefined {
   const drives = useUnwrappedDrives();
   if (!id) return undefined;
-  return drives?.find((d) => d?.id === id);
+  return drives?.find((d) => d?.header.id === id);
 }
 
 export function useSelectedDrive() {
@@ -61,7 +61,7 @@ export function useSetSelectedDrive() {
   return useCallback(
     (driveId: string | undefined, shouldNavigate = true) => {
       setSelectedDrive(driveId);
-      const drive = drives?.find((d) => d.id === driveId);
+      const drive = drives?.find((d) => d.header.id === driveId);
       const newPathname = makeDriveUrlComponent(drive);
       if (typeof window !== "undefined" && shouldNavigate) {
         window.history.pushState(null, "", newPathname);

@@ -691,13 +691,27 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(result).toEqual([drive.header.slug]);
   });
 
-  it("should throw an error if any of the slugs are not found", async ({
+  it("should throw an error if any of the ids are not found", async ({
     expect,
   }) => {
     const storage = await buildStorage();
     await expect(
       async () => await storage.resolveSlugs(["not-found"]),
     ).rejects.toThrow();
+  });
+
+  it("should return the id if any of the slugs are not found", async ({
+    expect,
+  }) => {
+    const storage = await buildStorage();
+
+    const drive = createDriveDocument();
+    drive.header.slug = "";
+    const driveId = drive.header.id;
+    await storage.create(drive);
+
+    const result = await storage.resolveSlugs([drive.header.slug]);
+    expect(result).toEqual([driveId]);
   });
 
   it("should throw an error if aborted", async ({ expect }) => {
