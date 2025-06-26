@@ -671,4 +671,10 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const children = await storage.getChildren(driveId);
     expect(children).toEqual([]);
   });
+
+  it("should be able to upgrade a document stored as a PHDocument v1", async ({
+    expect,
+  }) => {
+    // TODO
+  });
 });

@@ -19,7 +19,7 @@ export type SigningParameters = {
  */
 export interface ISigner {
   /** The corresponding public key */
-  get publicKey(): JsonWebKey;
+  publicKey(): Promise<JsonWebKey>;
 
   /**
    * Signs data.
@@ -49,13 +49,13 @@ const generateStablePayload = (parameters: SigningParameters): string =>
  * A signer that uses a public key to verify data.
  */
 export class PublicKeySigner implements ISigner {
-  readonly publicKey: JsonWebKey;
+  readonly #publicKey: JsonWebKey;
 
   protected readonly subtleCrypto: Promise<SubtleCrypto>;
   protected publicCryptoKey: CryptoKey | undefined;
 
   constructor(publicKey: JsonWebKey) {
-    this.publicKey = publicKey;
+    this.#publicKey = publicKey;
     this.subtleCrypto = this.#initCrypto();
   }
 
@@ -77,6 +77,10 @@ export class PublicKeySigner implements ISigner {
     });
   }
 
+  async publicKey(): Promise<JsonWebKey> {
+    return this.#publicKey;
+  }
+
   async sign(data: Uint8Array): Promise<Uint8Array> {
     throw new Error("PublicKeySigner only supports verification");
   }
@@ -86,7 +90,7 @@ export class PublicKeySigner implements ISigner {
     if (!this.publicCryptoKey) {
       this.publicCryptoKey = await subtleCrypto.importKey(
         "jwk",
-        this.publicKey,
+        this.#publicKey,
         {
           name: "Ed25519",
           namedCurve: "Ed25519",
@@ -251,12 +255,13 @@ export const createSignedHeader = async (
   };
 
   const signature = await sign(parameters, signer);
+  const publicKey = await signer.publicKey();
 
   return {
     // immutable fields
     id: signature,
     sig: {
-      publicKey: signer.publicKey,
+      publicKey,
       nonce: parameters.nonce,
     },
     documentType,

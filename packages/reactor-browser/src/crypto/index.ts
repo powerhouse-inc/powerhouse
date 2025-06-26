@@ -24,8 +24,7 @@ function ab2hex(ab: ArrayBuffer) {
 }
 
 export interface IConnectCrypto {
-  get publicKey(): JsonWebKey;
-
+  publicKey(): Promise<JsonWebKey>;
   did: () => Promise<DID>;
   regenerateDid(): Promise<void>;
 
@@ -47,11 +46,11 @@ export class ConnectCrypto implements IConnectCrypto {
     namedCurve: "Ed25519",
   };
 
-  get publicKey(): JsonWebKey {
+  async publicKey(): Promise<JsonWebKey> {
     if (!this.#keyPair) {
       throw new Error("No key pair available");
     }
-    return this.#keyPair.publicKey as JsonWebKey;
+    return Promise.resolve(this.#keyPair.publicKey as JsonWebKey);
   }
 
   constructor(keyPairStorage: JsonWebKeyPairStorage) {
