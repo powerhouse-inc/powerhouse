@@ -13,7 +13,15 @@ import {
   PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
-import { beforeEach, describe, it, vi, vitest } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  it,
+  vi,
+  vitest,
+} from "vitest";
 import createFetchMock from "vitest-fetch-mock";
 import {
   addFile,
@@ -40,7 +48,6 @@ import { DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
-vitest.useFakeTimers();
 
 const documentModels = [
   documentModelDocumentModelModule,
@@ -117,6 +124,14 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
 }
 
 describe("Read mode methods", () => {
+  beforeAll(() => {
+    vitest.useFakeTimers();
+  });
+
+  afterAll(() => {
+    vitest.useRealTimers();
+  });
+
   beforeEach(() => {
     fetchMocker.resetMocks();
   });
