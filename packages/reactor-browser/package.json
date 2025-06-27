@@ -44,11 +44,14 @@
     "react-dom": "^18.3.1",
     "vite-plugin-node-polyfills": "^0.23.0",
     "vitest": "^3.1.2",
-    "vitest-browser-react": "^0.2.0"
+    "vitest-browser-react": "^0.2.0",
+    "jotai": "^2.10.3"
+
   },
   "peerDependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "jotai": "^2.10.3"
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
@@ -59,7 +62,6 @@
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "jotai": "^2.10.3",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0"
   }

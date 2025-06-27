@@ -1,10 +1,9 @@
 import { type EditorModule } from "document-model";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useCallback } from "react";
 import {
   loadableEditorModulesAtom,
-  preferredDocumentModelEditorIdAtom,
   unwrappedEditorModulesAtom,
 } from "./atoms.js";
 
@@ -22,17 +21,6 @@ export function useEditorById(
   const editor = editors.data?.find((editor) => editor.config.id === id);
   return { state: "hasData", data: editor };
 }
-
-export function useSelectedDefaultDocumentModelEditorId() {
-  return useAtomValue(preferredDocumentModelEditorIdAtom);
-}
-
-export const useSetSelectedDefaultDocumentModelEditorId = () =>
-  useSetAtom(preferredDocumentModelEditorIdAtom);
-export const useSelectedDefaultDocumentModelEditor = () => {
-  const preferredEditorId = useAtomValue(preferredDocumentModelEditorIdAtom);
-  return useEditorById(preferredEditorId);
-};
 
 export function useEditorByDocumentType(
   documentType: string | null | undefined,

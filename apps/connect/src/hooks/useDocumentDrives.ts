@@ -3,7 +3,6 @@ import type { IDocumentDriveServer } from 'document-drive';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { type OperationScope, type PHDocument } from 'document-model';
 import { atom, useAtom } from 'jotai';
-import { atomFamily } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 import { type ClientErrorHandler } from './useClientErrorHandler.js';
 
@@ -11,6 +10,7 @@ import { type ClientErrorHandler } from './useClientErrorHandler.js';
 const documentDrivesAtom = atom(
     new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
+documentDrivesAtom.debugLabel = 'documentDrivesAtomInConnect';
 
 export function documentToHash(drive: PHDocument): string {
     return Object.keys(drive.operations)
@@ -46,11 +46,11 @@ const readWriteDocumentDrivesAtom = (server?: IDocumentDriveServer) => () =>
             });
         },
     );
+readWriteDocumentDrivesAtom.debugLabel = 'readWriteDocumentDrivesAtomInConnect';
 // keeps track of document drives that have been initialized
 export type IDrivesState = 'INITIAL' | 'LOADING' | 'LOADED' | 'ERROR';
-export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
-    atom<IDrivesState>('INITIAL'),
-);
+export const documentDrivesInitialized = atom<IDrivesState>('INITIAL');
+documentDrivesInitialized.debugLabel = 'documentDrivesInitializedInConnect';
 
 // returns an array with the document drives of a
 // server and a method to fetch the document drives
@@ -85,9 +85,7 @@ export function useDocumentDrives() {
 
     // if the server has not been initialized then
     // fetches the drives for the first time
-    const [status, setStatus] = useAtom(
-        documentDrivesInitializedMapAtomFamily(reactor),
-    );
+    const [status, setStatus] = useAtom(documentDrivesInitialized);
 
     if (status === 'INITIAL' && reactor) {
         setStatus('LOADING');

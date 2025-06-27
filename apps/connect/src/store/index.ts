@@ -1,12 +1,8 @@
-import { atom, createStore } from 'jotai';
+import { atom } from 'jotai';
 import { themeAtom } from './theme.js';
 
-export type Store = ReturnType<typeof createStore>;
-
-export const atomStore: Store = createStore();
-
 export const sidebarDisableHoverStyles = atom(false);
-
+sidebarDisableHoverStyles.debugLabel = 'sidebarDisableHoverStylesInConnect';
 export const atoms = {
     themeAtom,
 };

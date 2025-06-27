@@ -1,8 +1,4 @@
-import {
-  type DocumentModelModule,
-  type PHDocument,
-  type ValidationError,
-} from "document-model";
+import { type PHDocument, type ValidationError } from "document-model";
 import { atom, useAtomValue, useSetAtom, type WritableAtom } from "jotai";
 import { useCallback, useMemo } from "react";
 

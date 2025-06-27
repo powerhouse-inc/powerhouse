@@ -10,7 +10,7 @@ import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
-import { atomStore } from './index.js';
+import { atomStore } from '@powerhousedao/common';
 
 export const baseDocumentModels = [
     driveDocumentModelModule,
@@ -49,11 +49,13 @@ export const documentModelsAtom = atom(async get => {
     );
     return result;
 });
+documentModelsAtom.debugLabel = 'documentModelsAtomInConnect';
 
 // blocks rendering until document models are loaded.
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 
 const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
+unrappedDocumentModelsAtom.debugLabel = 'unwrappedDocumentModelsAtomInConnect';
 
 // will return undefined until document models are initialized. Does not block rendering.
 export const useUnwrappedDocumentModelModules = () =>
