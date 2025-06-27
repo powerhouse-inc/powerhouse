@@ -1,4 +1,33 @@
 {
+  "document": {
+    "id": "",
+    "name": "",
+    "extension": "",
+    "description": "",
+    "author": {
+      "name": "",
+      "website": ""
+    },
+    "specifications": [
+      {
+        "version": 1,
+        "changeLog": [],
+        "state": {
+          "global": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          },
+          "local": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          }
+        },
+        "modules": []
+      }
+    ]
+  },
   "global": {
     "id": "powerhouse/todo",
     "name": "ToDoDocument",
@@ -26,12 +55,12 @@
         },
         "modules": [
           {
-            "id": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+            "id": "42a63008-0e7a-43a0-b7fb-94074e5b3b18",
             "name": "base_operations",
             "description": "",
             "operations": [
               {
-                "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+                "id": "c0b09acf-8269-411f-9eb4-6ba6839690c2",
                 "name": "ADD_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n",
@@ -42,7 +71,7 @@
                 "scope": "global"
               },
               {
-                "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+                "id": "e9cc5859-d9fb-4a98-9557-0a29c1cd6320",
                 "name": "UPDATE_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n",
@@ -53,7 +82,7 @@
                 "scope": "global"
               },
               {
-                "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+                "id": "1ded1716-5f1e-4c04-a8ec-86ac8cd240c4",
                 "name": "DELETE_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n",

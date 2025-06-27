@@ -156,13 +156,11 @@ export async function createDocumentAndFillBasicData(
 
 export async function clickDocumentOperationHistory(page: Page) {
   await page
-    .locator(
-      ".flex.h-12.w-full.items-center.justify-between.rounded-xl.border.border-gray-200.bg-slate-50.px-4",
-    )
+    .locator("#document-editor-context > *:first-child > *:first-child")
     .locator("div")
     .last()
     .locator("button") // or whatever element type
-    .nth(1)
+    .nth(0)
     .click();
 }
 
