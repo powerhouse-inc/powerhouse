@@ -488,14 +488,20 @@ html[data-theme='dark'] .DocSearch-Hits > *:empty {
 }
 
 .image-container {
+  box-sizing: border-box;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: var(--ifm-card-border-radius);
-  padding: 1rem;
+  padding: 0.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   margin-bottom: 1.5rem;
+  max-width: calc(var(--ifm-container-width-xl) - 2rem);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .image-container img {
+  width: 100%;
+  height: auto;
   border-radius: var(--ifm-card-border-radius);
 }
 

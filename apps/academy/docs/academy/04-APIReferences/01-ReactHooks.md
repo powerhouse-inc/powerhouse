@@ -27,11 +27,6 @@ Hook names must always start with `use` followed by a capital letter (e.g., `use
 
 It's important to note that a function should only be named and treated as a hook if it actually utilizes one or more built-in React hooks. If a function (even if named `useSomething`) doesn't call any built-in hooks, it behaves like a regular JavaScript function, and making it a "hook" offers no specific React advantages.
 
-For more details, see the official documentation and API references of React:
-- [Reusing Logic with Custom Hooks (react.dev)](https://react.dev/learn/reusing-logic-with-custom-hooks)
-- [Rules of Hooks (react.dev)](https://react.dev/reference/rules/rules-of-hooks)
-- [Powerhouse React Hooks API Reference](docs/academy/APIReferences/ReactHooks)
-
 </details>
 
 The idea is to make the usage of our hooks feel as simple and familiar as using `useState`.   
