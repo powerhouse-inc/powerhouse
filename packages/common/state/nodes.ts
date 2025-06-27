@@ -7,7 +7,7 @@ import {
   setSelectedNodeAtom,
   unwrappedNodesAtom,
 } from "./atoms.js";
-import { useUnwrappedSelectedDrive } from "./drives.js";
+import { useSelectedDrive } from "./drives.js";
 import { useSelectedFolder } from "./folders.js";
 import { type NodeKind } from "./types.js";
 import { extractDriveFromPath, makeNodeUrlComponent } from "./utils.js";
@@ -51,33 +51,32 @@ export function useUnwrappedNodes() {
 
 export function useNodeById(id: string | null | undefined) {
   const unwrappedNodes = useUnwrappedNodes();
-  if (!unwrappedNodes) return undefined;
-  return unwrappedNodes.find((n) => n.id === id);
+  return unwrappedNodes?.find((n) => n.id === id);
 }
 
 export function useParentFolder(id: string | null | undefined) {
   const node = useNodeById(id);
-  if (!node) return undefined;
-  return node.parentFolder ?? undefined;
+  return node?.parentFolder ?? undefined;
 }
 
 export function useNodePath(
   id: string | null | undefined,
 ): Loadable<Node[] | undefined> {
-  const nodes = useUnwrappedNodes();
-  const selectedDrive = useUnwrappedSelectedDrive();
+  const loadableNodes = useNodes();
+  const loadableSelectedDrive = useSelectedDrive();
+  if (loadableSelectedDrive.state !== "hasData") return loadableSelectedDrive;
+  if (loadableNodes.state !== "hasData") return loadableNodes;
+  const nodes = loadableNodes.data;
+  const selectedDrive = loadableSelectedDrive.data;
   if (!nodes || !selectedDrive) return { state: "hasData", data: undefined };
-  const driveFolderNode: FolderNode | undefined = {
+  const driveFolderNode: FolderNode = {
     id: selectedDrive.header.id,
     name: selectedDrive.state.global.name,
     kind: "FOLDER",
     parentFolder: null,
   };
 
-  const path: Node[] = [];
-  if (driveFolderNode) {
-    path.push(driveFolderNode);
-  }
+  const path: Node[] = [driveFolderNode];
   let current = nodes.find((n) => n.id === id);
 
   while (current) {

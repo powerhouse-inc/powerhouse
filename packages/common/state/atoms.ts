@@ -11,50 +11,36 @@ import {
   type PHDocument,
 } from "document-model";
 import { atom } from "jotai";
-import {
-  atomWithRefresh,
-  atomWithStorage,
-  loadable,
-  unwrap,
-} from "jotai/utils";
+import { atomWithRefresh, loadable, unwrap } from "jotai/utils";
 import { isFolderNodeKind } from "./nodes.js";
 import type { PHPackage } from "./ph-packages.js";
-import { type ConnectConfig, type Theme } from "./types.js";
-import { extractNodeFromPath } from "./utils.js";
-
-const INITIAL = "INITIAL";
-
-/* Will suspend until the atom is set elsewhere */
-function suspendUntilSet<T>(): Promise<T> {
-  return new Promise(() => {});
-}
+import { type ConnectConfig, type UnsetAtomValue } from "./types.js";
+import { NOT_SET, suspendUntilSet } from "./utils.js";
 
 /* Reactor */
 
-const baseReactorAtom = atom<IDocumentDriveServer | undefined | typeof INITIAL>(
-  INITIAL,
+const baseReactorAtom = atom<UnsetAtomValue | IDocumentDriveServer | undefined>(
+  NOT_SET,
 );
 baseReactorAtom.debugLabel = "baseReactorAtom";
 export const reactorAtom = atom<Promise<IDocumentDriveServer | undefined>>(
   async (get) => {
     const reactor = get(baseReactorAtom);
-    if (reactor === INITIAL) return suspendUntilSet();
+    if (reactor === NOT_SET) return suspendUntilSet();
     return reactor;
   },
 );
 reactorAtom.debugLabel = "reactorAtom";
-
-export const setReactorAtom = atom(
+export const initializeReactorAtom = atom(
   null,
   (get, set, reactor: IDocumentDriveServer | undefined) => {
     const baseReactor = get(baseReactorAtom);
-    if (baseReactor === INITIAL) {
+    if (baseReactor === NOT_SET) {
       set(baseReactorAtom, reactor);
     }
   },
 );
-setReactorAtom.debugLabel = "setReactorAtom";
-
+initializeReactorAtom.debugLabel = "setReactorAtom";
 export const loadableReactorAtom = loadable(reactorAtom);
 loadableReactorAtom.debugLabel = "loadableReactorAtom";
 export const unwrappedReactorAtom = unwrap(reactorAtom);
@@ -78,14 +64,14 @@ loadableDrivesAtom.debugLabel = "loadableDrivesAtom";
 export const unwrappedDrivesAtom = unwrap(drivesAtom);
 unwrappedDrivesAtom.debugLabel = "unwrappedDrivesAtom";
 
-export const selectedDriveIdAtom = atom<string | undefined>(INITIAL);
+export const selectedDriveIdAtom = atom<string | undefined>(NOT_SET);
 selectedDriveIdAtom.debugLabel = "selectedDriveIdAtom";
 
 export const selectedDriveAtom = atom(
   (get) => {
     const driveId = get(selectedDriveIdAtom);
     const loadableDrives = get(loadableDrivesAtom);
-    if (driveId === INITIAL || loadableDrives.state !== "hasData")
+    if (driveId === NOT_SET || loadableDrives.state !== "hasData")
       return suspendUntilSet<DocumentDriveDocument | undefined>();
     const drives = loadableDrives.data;
     return drives.find((drive) => drive.header.id === driveId);
@@ -116,13 +102,9 @@ loadableNodesAtom.debugLabel = "loadableNodesAtom";
 export const unwrappedNodesAtom = unwrap(nodesAtom);
 unwrappedNodesAtom.debugLabel = "unwrappedNodesAtom";
 
-export const selectedNodeIdAtom = atom<string | undefined>(INITIAL);
+export const selectedNodeIdAtom = atom<string | undefined>(NOT_SET);
 selectedNodeIdAtom.debugLabel = "selectedNodeIdAtom";
-selectedNodeIdAtom.onMount = (setAtom) => {
-  if (typeof window === "undefined") return;
-  const nodeId = extractNodeFromPath(window.location.pathname);
-  setAtom(nodeId);
-};
+
 export const setSelectedNodeAtom = atom(
   null,
   (_get, set, nodeId: string | undefined) => {
@@ -134,7 +116,7 @@ setSelectedNodeAtom.debugLabel = "setSelectedNodeAtom";
 export const selectedFolderAtom = atom((get) => {
   const loadableNodes = get(loadableNodesAtom);
   const nodeId = get(selectedNodeIdAtom);
-  if (nodeId === INITIAL || loadableNodes.state !== "hasData")
+  if (nodeId === NOT_SET || loadableNodes.state !== "hasData")
     return suspendUntilSet<FolderNode | undefined>();
   const nodes = loadableNodes.data;
   const folderNodes = nodes?.filter(isFolderNodeKind);
@@ -155,9 +137,8 @@ export const documentsAtom = atomWithRefresh(async (get) => {
   if (loadableReactor.state !== "hasData" || loadableDrive.state !== "hasData")
     return suspendUntilSet<PHDocument[]>();
   const reactor = loadableReactor.data;
-  if (!reactor) return [];
   const driveId = loadableDrive.data?.header.id;
-  if (!driveId) return [];
+  if (!reactor || !driveId) return [];
   const documentIds = await reactor.getDocuments(driveId);
   const documents = await Promise.all(
     documentIds.map((id) => reactor.getDocument(driveId, id)),
@@ -170,12 +151,10 @@ loadableDocumentsAtom.debugLabel = "loadableDocumentsAtom";
 export const unwrappedDocumentsAtom = unwrap(documentsAtom);
 unwrappedDocumentsAtom.debugLabel = "unwrappedDocumentsAtom";
 
-/* Selected Document */
-
 export const selectedDocumentAtom = atom((get) => {
   const loadableDocuments = get(loadableDocumentsAtom);
   const nodeId = get(selectedNodeIdAtom);
-  if (nodeId === INITIAL || loadableDocuments.state !== "hasData")
+  if (nodeId === NOT_SET || loadableDocuments.state !== "hasData")
     return suspendUntilSet<PHDocument | undefined>();
   const documents = loadableDocuments.data;
   return documents.find((document) => document.header.id === nodeId);
@@ -246,13 +225,6 @@ loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
 export const unwrappedEditorModulesAtom = unwrap(editorModulesAtom);
 unwrappedEditorModulesAtom.debugLabel = "unwrappedEditorModulesAtom";
 
-export const preferredDocumentModelEditorIdAtom = atomWithStorage<string>(
-  "preferredEditorId",
-  "document-model-editor-v2",
-);
-preferredDocumentModelEditorIdAtom.debugLabel =
-  "preferredDocumentModelEditorIdAtom";
-
 /* Processor Manager */
 
 export const processorManagerAtom = atom<ProcessorManager | undefined>(
@@ -301,25 +273,3 @@ export const configAtom = atom<ConnectConfig>({
   phCliVersion: undefined,
 });
 configAtom.debugLabel = "configAtom";
-
-export const acceptedCookiesAtom = atomWithStorage("acceptedCookies", {
-  analytics: false,
-  marketing: false,
-  functional: false,
-});
-acceptedCookiesAtom.debugLabel = "acceptedCookiesAtom";
-
-export const displayCookieBannerAtom = atomWithStorage(
-  "display-cookie-banner",
-  true,
-);
-displayCookieBannerAtom.debugLabel = "displayCookieBannerAtom";
-
-export const themeAtom = atomWithStorage<Theme>("theme", "light");
-themeAtom.debugLabel = "themeAtom";
-
-export const permissionsAtom = atom({
-  isAllowedToCreateDocuments: true,
-  isAllowedToEditDocuments: true,
-});
-permissionsAtom.debugLabel = "permissionsAtom";

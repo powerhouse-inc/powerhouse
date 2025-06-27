@@ -30,11 +30,13 @@ const hmrAvailableAtom = atom(async () => {
     const module = await getHMRModule();
     return typeof module !== 'undefined';
 });
+hmrAvailableAtom.debugLabel = 'hmrAvailableAtom';
 
 export const useMutableExternalPackages = () => useAtomValue(hmrAvailableAtom);
 
 // fetches the initial external packages only when needed
 export const externalPackagesAtom = atomWithLazy(loadExternalPackages);
+externalPackagesAtom.debugLabel = 'externalPackagesAtomInConnect';
 
 // subscribes to changes to the external packages from HMR
 let externalPackagesSubscription: Promise<() => void> | undefined;
@@ -66,6 +68,7 @@ const appsAtom = atom<Promise<App[]>>(async get => {
             .flat(),
     ];
 });
+appsAtom.debugLabel = 'appsAtomInConnect';
 
 export const useApps = () => useAtomValue(appsAtom);
 

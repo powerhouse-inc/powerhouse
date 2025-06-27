@@ -17,6 +17,10 @@ import { type DocumentDriveDocument } from "document-drive";
 import { type DocumentModelModule } from "document-model";
 import type React from "react";
 import { useCallback, useMemo } from "react";
+/* import { useDocuments, useSelectedDocument } from "../../state/documents.js";
+import { useDrives, useSelectedDrive } from "../../state/drives.js";
+import { useSelectedFolder } from "../../state/folders.js";
+import { useReactor } from "../../state/reactor.js"; */
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";
@@ -31,6 +35,20 @@ export type IProps = DriveEditorProps<DocumentDriveDocument> &
   React.HTMLProps<HTMLDivElement>;
 
 export function BaseEditor(props: IProps) {
+  /*   const loadableReactor = useReactor();
+  const loadableDrives = useDrives();
+  const loadableDocuments = useDocuments();
+  const loadableSelectedDrive = useSelectedDrive();
+  const loadableSelectedFolder = useSelectedFolder();
+  const loadableSelectedDocument = useSelectedDocument();
+  console.log("in base editor", {
+    loadableReactor,
+    loadableDrives,
+    loadableDocuments,
+    loadableSelectedDrive,
+    loadableSelectedFolder,
+    loadableSelectedDocument,
+  }); */
   const { document, dispatch, className, children } = props;
 
   const { header: { id: driveId } } = document;

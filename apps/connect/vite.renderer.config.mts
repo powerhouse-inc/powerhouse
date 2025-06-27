@@ -8,8 +8,6 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
-import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -177,7 +175,6 @@ export default defineConfig(({ mode }) => {
                 parserOpts: {
                     plugins: ['decorators'],
                 },
-                plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
             },
         }),
         isProd && buildAppSkeletonPlugin(outDir),

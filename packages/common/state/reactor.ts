@@ -5,14 +5,19 @@ import {
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import {
+  initializeReactorAtom,
   loadableReactorAtom,
   selectedDriveAtom,
-  setReactorAtom,
+  setSelectedNodeAtom,
   unwrappedReactorAtom,
 } from "./atoms.js";
 import { useSyncDrivesAndDocumentsWithReactor } from "./syncing.js";
 import { type Reactor, type SharingType } from "./types.js";
-import { extractDriveFromPath } from "./utils.js";
+import {
+  extractDriveFromPath,
+  extractNodeNameOrSlugOrIdFromPath,
+  makeNodeSlugFromNodeName,
+} from "./utils.js";
 
 export function useReactor() {
   return useAtomValue(loadableReactorAtom);
@@ -23,8 +28,9 @@ export function useUnwrappedReactor() {
 }
 
 export function useInitializeReactor(createReactor: () => Promise<Reactor>) {
+  const setReactor = useSetAtom(initializeReactorAtom);
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
-  const setReactor = useSetAtom(setReactorAtom);
+  const setSelectedNode = useSetAtom(setSelectedNodeAtom);
   const refresh = useSyncDrivesAndDocumentsWithReactor();
 
   useEffect(() => {
@@ -39,10 +45,19 @@ export function useInitializeReactor(createReactor: () => Promise<Reactor>) {
           const drives = await Promise.all(
             driveIds.map((id) => reactor.getDrive(id)),
           );
-          const drive = drives.find((d) => d.header.slug === driveSlug);
-          if (drive) {
-            setSelectedDrive(drive.header.id);
-          }
+          const drive = drives.find(
+            (d) => d.header.slug === driveSlug || d.header.id === driveSlug,
+          );
+          setSelectedDrive(drive?.header.id);
+          const nodeIdOrSlugOrNameFromPath =
+            extractNodeNameOrSlugOrIdFromPath(path);
+          const nodes = drive?.state.global.nodes;
+          const node = nodes?.find(
+            (n) =>
+              n.id === nodeIdOrSlugOrNameFromPath ||
+              makeNodeSlugFromNodeName(n.name) === nodeIdOrSlugOrNameFromPath,
+          );
+          setSelectedNode(node?.id);
         }
       }
 

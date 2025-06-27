@@ -50,7 +50,7 @@ export function useConnectCrypto(): IConnectCrypto {
 }
 
 const didAtom = atom<DID | undefined>(undefined);
-
+didAtom.debugLabel = "didAtomInReactorBrowser";
 export function useConnectDid(): DID | undefined {
   const [did, setDid] = useAtom(didAtom);
 

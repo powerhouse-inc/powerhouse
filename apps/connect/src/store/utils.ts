@@ -12,20 +12,23 @@ export const atomWithStorage = <T>(
     options?: {
         getOnInit?: boolean;
     },
-) =>
-    _atomWithStorage<T>(
+) => {
+    const atom = _atomWithStorage<T>(
         `${namespace}:${key}`,
         initialValue,
         storage ? storage : undefined,
         options,
     );
+    atom.debugLabel = `storageAtom:${namespace}:${key}`;
+    return atom;
+};
 
 export const atomWithStorageCallback = <T>(
     key: string,
     initialValue: T,
     callback: (value: T) => void,
-) =>
-    _atomWithStorage<T>(key, initialValue, {
+) => {
+    const atom = _atomWithStorage<T>(key, initialValue, {
         getItem(key, initialValue) {
             const value = localStorage.getItem(`${namespace}:${key}`);
             return value ? (JSON.parse(value) as T) : initialValue;
@@ -55,3 +58,6 @@ export const atomWithStorageCallback = <T>(
             return () => window.removeEventListener('storage', listener);
         },
     });
+    atom.debugLabel = `storageAtomWithCallback:${namespace}:${key}`;
+    return atom;
+};

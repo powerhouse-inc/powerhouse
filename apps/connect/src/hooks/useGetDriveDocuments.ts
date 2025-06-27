@@ -3,6 +3,10 @@ import { type PHDocumentHeader, type PHDocument } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
+const DELETE_NODE_OPERATION_TYPE = 'DELETE_NODE';
+
+type DeleteOperationInput = { id: string };
+
 export type HookState = PHDocument['state'] &
     Pick<
         PHDocumentHeader,
@@ -19,12 +23,13 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
     const { driveId } = props;
     const [documents, setDocuments] = useState<Record<string, HookState>>({});
 
-    const { getDocumentsIds, onStrandUpdate, openFile } =
+    const { getDocumentsIds, openFile, onOperationsAdded } =
         useDocumentDriveServer();
 
     const fetchDocuments = async (
         _driveId: string,
         _documentIds?: string[],
+        _deletedNodes: string[] = [],
     ) => {
         let documentIds = _documentIds;
 
@@ -59,6 +64,17 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
             ...prevState,
             ...newDocumentsState,
         }));
+
+        if (_deletedNodes.length > 0) {
+            setDocuments(prevState => {
+                const newState = { ...prevState };
+                _deletedNodes.forEach(nodeId => {
+                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                    delete newState[nodeId];
+                });
+                return newState;
+            });
+        }
     };
 
     useEffect(() => {
@@ -68,16 +84,29 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
     }, [driveId]);
 
     useEffect(() => {
-        const removeListener = onStrandUpdate(update => {
-            if (driveId && update.driveId === driveId && update.documentId) {
-                fetchDocuments(driveId, [update.documentId]).catch(
-                    console.error,
-                );
-            }
-        });
+        const removeListener = onOperationsAdded(
+            (driveId, documentId, operations) => {
+                const deletedNodes: string[] = [];
+
+                if (driveId === driveId && !documentId) {
+                    const deletedNodesIds = operations
+                        .filter(op => op.type === DELETE_NODE_OPERATION_TYPE)
+                        .map(op => (op.input as DeleteOperationInput).id);
+
+                    deletedNodes.push(...deletedNodesIds);
+                }
+
+                if (driveId === driveId) {
+                    const docId = documentId ? [documentId] : undefined;
+                    fetchDocuments(driveId, docId, deletedNodes).catch(
+                        console.error,
+                    );
+                }
+            },
+        );
 
         return removeListener;
-    }, [onStrandUpdate, driveId]);
+    }, [onOperationsAdded, driveId]);
 
     return [documents, fetchDocuments] as const;
 }

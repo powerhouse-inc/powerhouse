@@ -683,6 +683,22 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
+    const onOperationsAdded = useCallback(
+        (
+            cb: (
+                driveId: string,
+                documentId: string | null | undefined,
+                operations: Operation[],
+            ) => void,
+        ) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+            return reactor.on('operationsAdded', cb);
+        },
+        [reactor],
+    );
+
     const onSyncStatus = useCallback(
         (cb: (driveId: string, status: SyncStatus, error?: Error) => void) => {
             if (!reactor) {
@@ -835,6 +851,7 @@ export function useDocumentDriveServer() {
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
             getDocumentsIds,
+            onOperationsAdded,
         }),
         [
             reactorLoaded,
@@ -866,6 +883,7 @@ export function useDocumentDriveServer() {
             setDriveSharingType,
             handleUpdateFile,
             getDocumentsIds,
+            onOperationsAdded,
         ],
     );
 }

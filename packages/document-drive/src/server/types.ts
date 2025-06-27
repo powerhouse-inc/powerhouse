@@ -210,6 +210,17 @@ export interface DriveEvents {
   documentModelModules: (documentModelModules: DocumentModelModule[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
+  documentOperationsAdded: (
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+  ) => void;
+  driveOperationsAdded: (driveId: string, operations: Operation[]) => void;
+  operationsAdded: (
+    driveId: string,
+    documentId: string | undefined | null,
+    operations: Operation[],
+  ) => void;
 }
 
 export type PartialRecord<K extends keyof any, T> = {

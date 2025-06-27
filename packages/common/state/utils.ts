@@ -1,26 +1,13 @@
-import {
-  type DocumentDriveDocument,
-  type FolderNode,
-  type Node,
-} from "document-drive";
-import { PHDocument } from "document-model";
-import { atomWithReducer } from "jotai/utils";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
+import { type DocumentDriveDocument, type Node } from "document-drive";
 import slug from "slug";
-import { type NodeKind, type Reactor } from "./types.js";
 
-export function atomWithCompare<Value>(
-  initialValue: Value,
-  areEqual: (prev: Value, next: Value) => boolean,
-) {
-  return atomWithReducer(initialValue, (prev: Value, next: Value) => {
-    if (areEqual(prev, next)) {
-      return prev;
-    }
+export const NOT_SET = "NOT_SET";
 
-    return next;
-  });
+/* Will suspend until the atom is set elsewhere */
+export function suspendUntilSet<T>(): Promise<T> {
+  return new Promise(() => {});
 }
+
 export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
 ) {
@@ -35,9 +22,9 @@ export function makeNodeUrlComponent(node: Node | undefined) {
   return slug(`${nodeName}-${node.id}`);
 }
 
-function extractNodeSlug(path: string): string | null {
+function extractNodeSlug(path: string) {
   const match = /^\/d\/[^/]+\/([^/]+)$/.exec(path);
-  return match ? match[1] : null;
+  return match ? match[1] : undefined;
 }
 function findUuid(input: string | undefined | undefined) {
   if (!input) return undefined;
@@ -55,68 +42,18 @@ export function extractNodeFromPath(path: string) {
   return uuid;
 }
 
+export function extractNodeNameOrSlugOrIdFromPath(path: string) {
+  const nodeSlug = extractNodeSlug(path);
+  const nodeId = findUuid(nodeSlug);
+  if (nodeId) return nodeId;
+  return nodeSlug;
+}
+
 export function extractDriveFromPath(path: string): string | null {
   const match = /^\/d\/([^/]+)/.exec(path);
   return match ? match[1] : null;
 }
-export async function getReactorDrives(
-  reactor: Reactor | undefined,
-): Promise<DocumentDriveDocument[]> {
-  if (!reactor) return [];
-  const driveIds = await reactor.getDrives();
-  const drives = await Promise.all(
-    driveIds.map(async (id) => {
-      const drive = await reactor.getDrive(id);
-      return drive;
-    }),
-  );
-  console.log("getting reactor drives", drives);
-  return drives;
-}
 
-export async function getReactorDocuments(
-  reactor: Reactor | undefined,
-): Promise<PHDocument[]> {
-  if (!reactor) return [];
-  const driveIds = await reactor.getDrives();
-  const documents = (
-    await Promise.all(
-      driveIds.map(async (driveId) => {
-        const documentIds = await reactor.getDocuments(driveId);
-        const documents = await Promise.all(
-          documentIds.map(async (id) => await reactor.getDocument(driveId, id)),
-        );
-        return documents;
-      }),
-    )
-  ).flat();
-  console.log("getting reactor documents", documents);
-  return documents;
-}
-
-export function makeNodes(drives: DocumentDriveDocument[]): Node[] {
-  const nodes: Node[] = [];
-  for (const drive of drives) {
-    const driveFolderNode: FolderNode = {
-      id: drive.header.id,
-      name: drive.state.global.name,
-      kind: "DRIVE",
-      parentFolder: null,
-    };
-    nodes.push(driveFolderNode);
-    for (const n of drive.state.global.nodes) {
-      nodes.push({
-        id: n.id,
-        name: n.name,
-        kind: n.kind.toUpperCase() as NodeKind,
-        parentFolder: n.parentFolder ?? drive.header.id,
-      });
-    }
-  }
-  return nodes;
-}
-
-export function unwrapLoadable<T>(loadable: Loadable<T>) {
-  if (loadable.state !== "hasData") return undefined;
-  return loadable.data;
+export function makeNodeSlugFromNodeName(name: string) {
+  return name.replaceAll(/\s/g, "-");
 }
