@@ -41,7 +41,7 @@
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typescript": "^4.0.1",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.0.2",
+    "@powerhousedao/document-engineering": "^1.15.0",
     "@types/node": "^22.15.17",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",

@@ -60,7 +60,7 @@
     "@hookform/resolvers": "^5.0.1",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.0.2",
+    "@powerhousedao/document-engineering": "^1.15.0",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@prettier/sync": "^0.5.5",
     "@radix-ui/react-checkbox": "^1.2.3",

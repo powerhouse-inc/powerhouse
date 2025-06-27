@@ -113,7 +113,7 @@
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
-    "@powerhousedao/document-engineering": "^1.0.2",
+    "@powerhousedao/document-engineering": "^1.15.0",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.5",
