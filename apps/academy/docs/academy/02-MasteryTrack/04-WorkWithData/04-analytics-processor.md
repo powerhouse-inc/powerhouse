@@ -7,7 +7,7 @@ An Analytics Processor is an object that can track analytics for operations and 
 The `ph-cli` utility can be used to generate the scaffolding for an Analytics Processor.
 
 ```
-npx @powerhousedao/ph-cli generate --processor-type analytics --document-models ./my-document-models
+ph generate -p MyAnalyticsProcessor --processor-type analytics
 ```
 
 This will generate two files: a class that implements `IProcessor` and a `ProcessorFactory` function that creates an instance of your processor. We can start with the factory.
@@ -340,3 +340,91 @@ export class DriveProcessorProcessor implements IProcessor {
   async onDisconnect() {}
 }
 ```
+
+## Learn by example: Contributor Billing
+
+Here we have documented the entire development process for the contributor billing processor.
+
+First, we setup the repository locally.
+
+```
+$ git clone git@github.com:powerhouse-inc/contributor-billing.git
+$ cd contributor-billing
+~/contributor-billing $ pnpm install
+```
+
+Now we can generate an analytics processor, using default settings.
+
+```
+~/contributor-billing $ ph generate -p LineItemProcessor --processor-type analytics
+```
+
+We can see what was generated:
+
+```
+~/contributor-billing $ tree processors
+processors
+├── index.ts
+└── line-item-processor
+    └── index.ts
+```
+
+> Note that `processors/index.ts` will only be created if it does not already exist. In this case, you will be responsible for adding the processor to the `processorFactory` function.
+
+### `IProcessorFactory`
+
+Let's check out the generated `index.ts` file.
+
+```ts
+/**
+ * This is a scaffold file meant for customization.
+ * Delete the file and run the code generator again to have it reset
+ */
+
+import { ProcessorRecord } from "document-drive/processors/types";
+import { LineItemProcessorProcessor } from "./line-item-processor/index.js";
+
+export const processorFactory =
+  (module: any) =>
+  (driveId: string): ProcessorRecord[] => {
+    return [
+      {
+        processor: new LineItemProcessorProcessor(module.analyticsStore),
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          scope: ["*"],
+          documentType: ["*"],
+        },
+      },
+    ];
+  };
+```
+
+This is described in more detail in the [ProcessorFactory](#processorfactory) section, but for our purposes, we only want our processor to run for our document type, so we should change the filter's `documentType`.
+
+```ts
+filter: {
+  branch: ["main"],
+  documentId: ["*"],
+  scope: ["*"],
+  documentType: ["powerhouse/billing-statement"],
+},
+```
+
+### Data Design
+
+Before we get into the meat of the processor, we need to design the data we're going to be working with.
+
+
+
+### `IProcessor`
+
+Now we can open up `line-item-processor/index.ts` to add the custom logic we're looking for. This will be in the `onStrands` function.
+
+```ts
+
+```
+
+
+
