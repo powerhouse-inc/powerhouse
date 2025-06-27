@@ -71,6 +71,7 @@ unwrappedReactorAtom.debugLabel = "unwrappedReactorAtom";
  * Suspends until the reactor is set.
  *
  * Does not provide a direct setter, instead it uses `atomWithRefresh` which will refetch the drives from the reactor when called.
+ * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
 export const drivesAtom = atomWithRefresh(async (get) => {
   const loadableReactor = get(loadableReactorAtom);
@@ -243,6 +244,7 @@ unwrappedSelectedFolderAtom.debugLabel = "unwrappedSelectedFolderAtom";
  * If the selected drive is set as undefined, returns a resolved promise of undefined.
  *
  * Does not provide a setter, instead it uses `atomWithRefresh` which will refetch the documents from the reactor when called.
+ * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
 export const documentsAtom = atomWithRefresh(async (get) => {
   const loadableReactor = get(loadableReactorAtom);
