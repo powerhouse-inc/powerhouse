@@ -13,12 +13,12 @@ import { type Loadable, type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
 /** Returns a loadable of the drives for a reactor. */
-export function useDrives() {
+export function useDrives(): Loadable<DocumentDriveDocument[]> {
   return useAtomValue(loadableDrivesAtom);
 }
 
 /** Returns a resolved promise of the drives for a reactor. */
-export function useUnwrappedDrives() {
+export function useUnwrappedDrives(): DocumentDriveDocument[] | undefined {
   return useAtomValue(unwrappedDrivesAtom);
 }
 
@@ -51,12 +51,14 @@ export function useUnwrappedDriveById(
 }
 
 /** Returns a loadable of the selected drive */
-export function useSelectedDrive() {
+export function useSelectedDrive(): Loadable<
+  DocumentDriveDocument | undefined
+> {
   return useAtomValue(loadableSelectedDriveAtom);
 }
 
 /** Returns a resolved promise of the selected drive */
-export function useUnwrappedSelectedDrive() {
+export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
   return useAtomValue(unwrappedSelectedDriveAtom);
 }
 
