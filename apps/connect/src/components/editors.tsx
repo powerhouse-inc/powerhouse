@@ -123,6 +123,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     const timelineItems = useTimelineItems(
         documentId,
         initialDocument?.created,
+        fileNodeDocument?.driveId,
     );
 
     const currentDocument = useRef({ ...fileNodeDocument, document });

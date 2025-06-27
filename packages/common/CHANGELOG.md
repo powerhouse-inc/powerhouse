@@ -1,3 +1,21 @@
+## 3.2.0-dev.5 (2025-06-26)
+
+### 🚀 Features
+
+- added document analytics processor ([2178e302d](https://github.com/powerhouse-inc/powerhouse/commit/2178e302d))
+- **common:** add atoms library ([dbc8e8b44](https://github.com/powerhouse-inc/powerhouse/commit/dbc8e8b44))
+
+### 🩹 Fixes
+
+- **connect,codegen,common,reactor-browser:** fix analytics query subscription ([6e9729739](https://github.com/powerhouse-inc/powerhouse/commit/6e9729739))
+- **common,design-system,reactor-browser:** fix drag and drop on generic drive explorer ([9b5113e74](https://github.com/powerhouse-inc/powerhouse/commit/9b5113e74))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+- ryanwolhuter
+
 ## 3.2.0-dev.4 (2025-06-25)
 
 ### 🚀 Features

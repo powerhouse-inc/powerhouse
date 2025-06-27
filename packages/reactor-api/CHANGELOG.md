@@ -1,3 +1,20 @@
+## 3.2.0-dev.5 (2025-06-26)
+
+### 🚀 Features
+
+- **common:** add atoms library ([dbc8e8b44](https://github.com/powerhouse-inc/powerhouse/commit/dbc8e8b44))
+
+### 🩹 Fixes
+
+- **connect,codegen,common,reactor-browser:** fix analytics query subscription ([6e9729739](https://github.com/powerhouse-inc/powerhouse/commit/6e9729739))
+- adding id/slug resolution to document storage ([0c611fb1b](https://github.com/powerhouse-inc/powerhouse/commit/0c611fb1b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter
+
 ## 3.2.0-dev.4 (2025-06-25)
 
 ### 🚀 Features
