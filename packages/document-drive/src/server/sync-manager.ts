@@ -83,7 +83,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     const synchronizationUnits: SynchronizationUnit[] = syncUnitsQuery.map(
       (s) => ({
         ...s,
-        lastUpdated: drive.created,
+        lastUpdated: drive.header.createdAtUtcIso,
         revision: -1,
       }),
     );
@@ -233,7 +233,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
       branch,
       documentId,
       documentType,
-      lastUpdated: lastOperation.timestamp ?? document.lastModified,
+      lastUpdated:
+        lastOperation.timestamp ?? document.header.lastModifiedAtUtcIso,
       revision: lastOperation.index ?? 0,
     };
   }
@@ -269,7 +270,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
         : await this.getDocument(driveId, syncUnit.documentId); // TODO replace with getDocumentOperations
 
     this.logger.verbose(
-      `[SYNC DEBUG] Retrieved document ${syncUnit.documentId} with type: ${document.documentType}`,
+      `[SYNC DEBUG] Retrieved document ${syncUnit.documentId} with type: ${document.header.documentType}`,
     );
 
     const operations =
@@ -361,8 +362,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
   }
 
   private _buildDocument(documentStorage: PHDocument): PHDocument {
-    const documentModelModule = this.getDocumentModelModule(
-      documentStorage.documentType,
+    const documentModelModule = this.getDocumentModelModule<PHDocument>(
+      documentStorage.header.documentType,
     );
 
     const operations = garbageCollectDocumentOperations(
@@ -374,7 +375,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       operations,
       documentModelModule.reducer,
       undefined,
-      documentStorage,
+      documentStorage.header,
       undefined,
       {
         checkHashes: true,
@@ -387,7 +388,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     this.documentModelModules = modules;
   }
 
-  private getDocumentModelModule(documentType: string) {
+  private getDocumentModelModule<TDocument>(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
       (m) => m.documentModel.id === documentType,
     );

@@ -379,7 +379,7 @@ export async function startAPI(
 
   // hook up processor manager to drive added event
   reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
-    await processorManager.registerDrive(drive.id);
+    await processorManager.registerDrive(drive.header.id);
   });
 
   // set up subgraph manager

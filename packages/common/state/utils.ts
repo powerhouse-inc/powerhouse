@@ -19,7 +19,7 @@ export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
 ) {
   if (!drive) return "";
-  return `/d/${slug(drive.slug)}`;
+  return `/d/${slug(drive.header.slug)}`;
 }
 
 /** Makes a URL component for a node. */
@@ -112,8 +112,10 @@ async function handleDriveFromUrl(
   const driveSlug = extractDriveFromPath(path);
   const driveIds = await reactor.getDrives();
   const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
-  const drive = drives.find((d) => d.slug === driveSlug || d.id === driveSlug);
-  setSelectedDrive(drive?.id);
+  const drive = drives.find(
+    (d) => d.header.slug === driveSlug || d.header.id === driveSlug,
+  );
+  setSelectedDrive(drive?.header.id);
 
   return drive;
 }

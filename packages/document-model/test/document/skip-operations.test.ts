@@ -25,7 +25,7 @@ describe("skip operations", () => {
       document = wrappedEmptyReducer(document, setName("TEST_2"));
       document = wrappedEmptyReducer(document, setName("TEST_3"));
 
-      expect(document.revision.global).toBe(3);
+      expect(document.header.revision.global).toBe(3);
 
       const ops = mapOperations(document.operations.global);
 
@@ -51,7 +51,7 @@ describe("skip operations", () => {
         ignoreSkipOperations: true,
       });
 
-      expect(document.revision.global).toBe(3);
+      expect(document.header.revision.global).toBe(3);
 
       const ops = mapOperations(document.operations.global);
 
@@ -305,7 +305,6 @@ describe("skip operations", () => {
   describe("replayOperations", () => {
     it("should ignore operation 2, when operation 3 -> (skip=1)", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -332,9 +331,8 @@ describe("skip operations", () => {
         baseCountReducer,
       );
 
-      expect(replayedDoc.state.global.count).toBe(2);
+      expect(replayedDoc.header.revision.global).toBe(3);
 
-      expect(replayedDoc.revision.global).toBe(3);
       expect(replayedDoc.operations.global.length).toBe(2);
       expect(replayedDoc.operations.global).toMatchObject([
         {
@@ -352,7 +350,6 @@ describe("skip operations", () => {
 
     it("should ignore operation 2, 3 and 4, when operation 5 -> (skip=3)", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -380,9 +377,8 @@ describe("skip operations", () => {
         baseCountReducer,
       );
 
-      expect(replayedDoc.state.global.count).toBe(2);
+      expect(replayedDoc.header.revision.global).toBe(5);
 
-      expect(replayedDoc.revision.global).toBe(5);
       expect(replayedDoc.operations.global.length).toBe(2);
       expect(replayedDoc.operations.global).toMatchObject([
         {
@@ -400,7 +396,6 @@ describe("skip operations", () => {
 
     it("should ignore operation 2 and 5, when operation 3 -> (skip=1) and operation 6 -> (skip=1)", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -435,9 +430,8 @@ describe("skip operations", () => {
         baseCountReducer,
       );
 
-      expect(replayedDoc.state.global.count).toBe(4);
+      expect(replayedDoc.header.revision.global).toBe(6);
 
-      expect(replayedDoc.revision.global).toBe(6);
       expect(replayedDoc.operations.global.length).toBe(4);
 
       expect(replayedDoc.operations.global).toMatchObject([
@@ -466,7 +460,6 @@ describe("skip operations", () => {
 
     it("should ignore all the previous operations, when operation 5 -> (skip=4)", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -494,9 +487,8 @@ describe("skip operations", () => {
         baseCountReducer,
       );
 
-      expect(replayedDoc.state.global.count).toBe(1);
+      expect(replayedDoc.header.revision.global).toBe(5);
 
-      expect(replayedDoc.revision.global).toBe(5);
       expect(replayedDoc.operations.global.length).toBe(1);
 
       expect(replayedDoc.operations.global).toMatchObject([
@@ -510,7 +502,6 @@ describe("skip operations", () => {
 
     it("should skip operations when dispatch a new action with an skip value", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 
@@ -550,7 +541,6 @@ describe("skip operations", () => {
 
     it("should not process and skip operation that throws an error", () => {
       const initialState = baseCreateExtendedState<CountDocument>({
-        documentType: "powerhouse/counter",
         state: { global: { count: 0 }, local: { name: "" } },
       });
 

@@ -23,7 +23,7 @@ export async function signOperation<TDocument extends PHDocument>(
     if (!operation.context.signer) return operation;
     if (!reducer) {
         logger.error(
-            `Document model '${document.documentType}' does not have a reducer`,
+            `Document model '${document.header.documentType}' does not have a reducer`,
         );
         return operation;
     }

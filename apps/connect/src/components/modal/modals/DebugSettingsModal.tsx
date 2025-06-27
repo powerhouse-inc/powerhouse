@@ -56,7 +56,8 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
     console.log('selectedDrive', selectedDrive);
 
     const driveTriggers =
-        documentDrives.find(drive => drive.id === selectedDrive)?.state.local
+        documentDrives.find(drive => drive.header.id === selectedDrive)?.state
+            .local
             .triggers || [];
 
     const isEmptyURL = driveUrl === '';
@@ -158,7 +159,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                         }}
                         options={documentDrives.map(drive => ({
                             label: drive.state.global.name,
-                            value: drive.id,
+                            value: drive.header.id,
                         }))}
                     />
                 </div>

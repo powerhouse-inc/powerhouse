@@ -150,7 +150,7 @@ export function DriveEditorContainer() {
         ],
     );
 
-    const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
+    const driveEditor = useDriveEditor(document?.header.meta?.preferredEditor);
 
     if (!document) {
         return null;

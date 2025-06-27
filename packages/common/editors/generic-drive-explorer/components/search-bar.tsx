@@ -1,6 +1,6 @@
 import {
   ConnectSearchBar,
-  ConnectSearchBarProps,
+  type ConnectSearchBarProps,
   Icon,
 } from "@powerhousedao/design-system";
 import { useState } from "react";

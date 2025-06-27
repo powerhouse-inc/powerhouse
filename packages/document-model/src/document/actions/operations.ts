@@ -16,7 +16,7 @@ export function setNameOperation<TDocument extends PHDocument>(
   document: TDocument,
   name: string,
 ) {
-  return { ...document, name };
+  return { ...document, header: { ...document.header, name } };
 }
 
 export function undoOperation<TDocument extends PHDocument>(
@@ -161,7 +161,8 @@ export function pruneOperation<TDocument extends PHDocument>(
     wrappedReducer,
   );
 
-  const { name, state: newState } = newDocument;
+  const newState = newDocument.state;
+  const name = newDocument.header.name;
 
   // the new operation has the index of the first pruned operation
   const loadStateIndex = actionsToKeepStart.length;

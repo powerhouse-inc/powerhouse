@@ -8,7 +8,7 @@ We break PHDocument into four objects:
 
 ```tsx
 {
-  id,        // the document ID
+  header,    // header information
 
 	state,     // plain, serializable object
 	
@@ -18,47 +18,54 @@ We break PHDocument into four objects:
 }
 ```
 
-#### Id
-
-The `id` is a unique, Ed25519 signature of the document header data. It is used to verify the creator of a document to a document id.
-
-This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
-
-See the header section below for more information.
-
-#### State
-
-The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers.
-
-For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
-
-The `header` scope is a "special case" scope that is always populated.
-
-```tsx
-let drive = await client.get<DocumentDriveDocument>("mine");
-
-console.log(`Drive icon: ${drive.state.global.icon}`);
-```
-
-##### Header
+#### Header
 
 The special case `header` scope contains a number of key elements:
 
 ```tsx
-type SignatureInfo = {
-  /** The public key of the document creator. */
-  publicKey: string;
-
-  /** The message that was signed. */
-  message: string;
+export type PHDocumentSignatureInfo = {
+  /**
+   * The public key of the document creator.
+   *
+   * This is generally a JsonWebKey, but there is no shared type for this
+   * between node and the browser.
+   **/
+  publicKey: any;
 
   /** The nonce that was appended to the message to create the signature. */
   nonce: string;
-}
+};
 
-type DocumentHeader = {
-  /** Information to verify the document creator. */
-  sig: SignatureInfo;
+export type PHDocumentHeader = {
+  /**
+   * The id of the document.
+   *
+   * This is a Ed25519 signature and is immutable.
+   **/
+  id: string;
+
+  /**
+   * Information to verify the document creator.
+   *
+   * This is immutable.
+   **/
+  sig: PHDocumentSignatureInfo;
+
+  /**
+   * The type of the document.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  documentType: string;
+
+  /**
+   * The timestamp of the creation date of the document, in UTC ISO format.
+   *
+   * This is used as part of the signature payload and thus, cannot be changed
+   * after the document header has been created.
+   **/
+  createdAtUtcIso: string;
 
   /** The slug of the document. */
   slug: string;
@@ -69,26 +76,78 @@ type DocumentHeader = {
   /** The branch of this document. */
   branch: string;
 
-  /** The type of the document. */
-  documentType: string;
-
-  /** The number of operations applied to the document, per scope. */
-  revisions: {
+  /**
+   * The revision of each scope of the document. This object is updated every
+   * time any _other_ scope is updated.
+   */
+  revision: {
     [scope: string]: number;
   };
-  
-  /** The timestamp of the creation date of the document. */
-  createdAtUtcMs: number;
-  
-  /** The timestamp of the last change in the document. */
-  lastModifiedAtUtcMs: number;
+
+  /**
+   * The timestamp of the last change in the document, in UTC ISO format.
+   **/
+  lastModifiedAtUtcIso: string;
 
   /** Meta information about the document. */
   meta?: {
     /** The preferred editor for the document. */
     preferredEditor?: string;
   };
+};
+```
+
+##### Id
+
+The `id` is a unique, Ed25519 signature on the header object. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
+
+Cryptographic signatures are generated and verified using the Web Crypto API. See the [signing](./signing.md) document for more information.
+
+This has effects on storage mechanisms, as currently the document id is used as a primary key. Because these signatures have a uniform distribution, they make poor lookups for typical btree indexes. A hash index may be used instead, but hash indexes cannot serve as primary keys. Likely, the storage layer will need to either use a secondary index or eat the cost of poor indexing for document ids.
+
+See the header section below for more information.
+
+#### State
+
+The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers. For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
+
+The `header` scope is a "special case" scope that is always populated, and the `document` scope is a default scope used for upgrades and initial scope, but is not necessarily populated.
+
+```tsx
+type BaseDocumentState = {
+  auth: AuthScopeState;
 }
+
+export type PHDocument<TState extends BaseDocumentState> = {
+  header: PHDocumentHeader;
+  state: TState;
+  mutations: PHDocumentMutations<TState>;
+  history: PHDocumentHistory<TState>;
+}
+```
+
+Querying looks like:
+
+```tsx
+let drive = await client.get<DocumentDriveDocument>("mine");
+
+console.log(`Drive icon: ${drive.state.document.icon}`);
+```
+
+Custom document types extend this:
+
+```tsx
+type MyDocumentDocumentState = {
+  title: string;
+}
+
+type MyOtherScopeState = {
+  foo: number;
+}
+
+type MyDocument = PHDocument<MyDocumentDocumentState> & {
+  myOtherScope: MyOtherScopeState;
+};
 ```
 
 #### Mutations

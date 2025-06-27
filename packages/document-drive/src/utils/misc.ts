@@ -18,7 +18,7 @@ export const runAsapAsync = RunAsap.runAsapAsync;
 export function isDocumentDrive(
   document: PHDocument,
 ): document is DocumentDriveDocument {
-  return document.documentType === driveDocumentType;
+  return document.header.documentType === driveDocumentType;
 }
 
 export function mergeOperations<TDocument extends PHDocument>(

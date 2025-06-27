@@ -1,3 +1,4 @@
+import { type PHDocumentHeader } from "./ph-types.js";
 import { type OperationScope, type PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
@@ -14,8 +15,17 @@ export type SynchronizationUnitInput = {
 export type CreateChildDocumentInput<
   TDocument extends PHDocument = PHDocument,
 > = {
-  id: string;
   documentType: string;
+
+  /**
+   * @deprecated In the future we will disallow this. Use the header field instead.
+   */
+  id?: string;
+
+  /**
+   * This is the preferred way to provide an id or other header fields.
+   */
+  header?: PHDocumentHeader;
   document?: TDocument;
   synchronizationUnits: SynchronizationUnitInput[];
 };

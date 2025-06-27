@@ -10,7 +10,7 @@ import {
   type EditorModule,
   type PHDocument,
 } from "document-model";
-import { atom } from "jotai";
+import { atom, type WritableAtom } from "jotai";
 import { atomWithRefresh, loadable, unwrap } from "jotai/utils";
 import { isFolderNodeKind } from "./nodes.js";
 import type { PHPackage } from "./ph-packages.js";
@@ -70,10 +70,15 @@ unwrappedReactorAtom.debugLabel = "unwrappedReactorAtom";
  *
  * Suspends until the reactor is set.
  *
- * Does not provide a direct setter, instead it uses `atomWithRefresh` which will refetch the drives from the reactor when called.
+ * Does not provide a direct setter, isnstead it uses `atomWithRefresh` which will refetch the drives from the reactor when called.
  * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
-export const drivesAtom = atomWithRefresh(async (get) => {
+export const drivesAtom: WritableAtom<
+  Promise<DocumentDriveDocument[]>,
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  [void],
+  void
+> = atomWithRefresh(async (get) => {
   const loadableReactor = get(loadableReactorAtom);
 
   // Suspends until the reactor is set.
@@ -86,7 +91,9 @@ export const drivesAtom = atomWithRefresh(async (get) => {
   if (!reactor) return [];
 
   const driveIds = await reactor.getDrives();
-  const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
+  const drives = (
+    await Promise.all(driveIds.map((id) => reactor.getDrive(id)))
+  ).filter((drive): drive is DocumentDriveDocument => Boolean(drive));
 
   return drives;
 });
@@ -130,7 +137,7 @@ export const selectedDriveAtom = atom(
 
     const drives = loadableDrives.data;
 
-    return drives.find((drive) => drive.id === driveId);
+    return drives.find((drive) => drive.header.id === driveId);
   },
   (_get, set, driveId: string | undefined) => {
     // Updates the baseSelectedDriveIdAtom.
@@ -255,7 +262,7 @@ export const documentsAtom = atomWithRefresh(async (get) => {
     return suspendUntilSet<PHDocument[]>();
 
   const reactor = loadableReactor.data;
-  const driveId = loadableDrive.data?.id;
+  const driveId = loadableDrive.data?.header.id;
 
   // If the reactor or drive id is not set, returns an empty array.
   if (!reactor || !driveId) return [];
@@ -296,7 +303,7 @@ export const selectedDocumentAtom = atom((get) => {
 
   const documents = loadableDocuments.data;
 
-  return documents.find((document) => document.id === nodeId);
+  return documents.find((document) => document.header.id === nodeId);
 });
 selectedDocumentAtom.debugLabel = "selectedDocumentAtom";
 

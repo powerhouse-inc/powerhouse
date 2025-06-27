@@ -22,9 +22,8 @@ export function useMakeUiDriveNode() {
     const makeUiDriveNode = useCallback(
         async (drive: DocumentDriveDocument | ReadDrive) => {
             const isReadDrive = 'readContext' in drive;
-            const id = drive.id;
             const { name, icon } = drive.state.global;
-            const { slug } = drive;
+            const { id, slug } = drive.header;
             const { sharingType: _sharingType, availableOffline } = !isReadDrive
                 ? drive.state.local
                 : { sharingType: PUBLIC, availableOffline: false };

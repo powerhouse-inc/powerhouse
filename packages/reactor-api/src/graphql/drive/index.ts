@@ -18,6 +18,10 @@ import {
   type StrandUpdateGraphQL,
 } from "document-drive";
 import { type Listener } from "document-drive/server/types";
+import {
+  responseForDocument,
+  responseForDrive,
+} from "document-drive/utils/gql-transformations";
 import { type DriveInfo } from "document-drive/utils/graphql";
 import {
   type DocumentModelInput,
@@ -215,7 +219,7 @@ export class DriveSubgraph extends Subgraph {
       return await this.reactor.getDriveIdBySlug(slugOrId);
     } catch {
       const drive = await this.reactor.getDrive(slugOrId);
-      return drive.id;
+      return drive.header.id;
     }
   }
 
@@ -272,13 +276,7 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.getDriveBySlugOrId(ctx.driveId);
 
-        return {
-          id: drive.id,
-          slug: drive.slug,
-          meta: drive.meta,
-          name: drive.state.global.name,
-          icon: drive.state.global.icon ?? undefined,
-        };
+        return responseForDrive(drive);
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
         this.logger.verbose(`documents(drive: ${ctx.driveId})`, args);
@@ -290,6 +288,7 @@ export class DriveSubgraph extends Subgraph {
       document: async (_: unknown, { id }: { id: string }, ctx: Context) => {
         this.logger.verbose(`document(drive: ${ctx.driveId}, id: ${id})`);
         if (!ctx.driveId) throw new Error("Drive ID is required");
+
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
         const document = await (driveId === id
           ? this.reactor.getDrive(driveId)
@@ -297,30 +296,19 @@ export class DriveSubgraph extends Subgraph {
 
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
-          ({ documentModel }) => documentModel.id === document.documentType,
+          ({ documentModel }) =>
+            documentModel.id === document.header.documentType,
         );
+
         const globalState = document.state.global;
-        if (!globalState) throw new Error("Document not found");
+        if (!globalState)
+          throw new Error("Document was found with no global state");
+
         const typeName = pascalCase(
           (dm?.documentModel.name || "").replaceAll("/", " "),
         );
-        const response = {
-          ...document,
-          id,
-          revision: document.revision.global,
-          state: document.state.global,
-          stateJSON: document.state.global,
-          operations: document.operations.global.map((op: Operation) => ({
-            ...op,
-            inputText:
-              typeof op.input === "string"
-                ? op.input
-                : JSON.stringify(op.input),
-          })),
-          initialState: document.initialState.state.global,
-          __typename: typeName,
-        };
-        return response;
+
+        return responseForDocument(document, typeName);
       },
       system: () => ({ sync: {} }),
     },

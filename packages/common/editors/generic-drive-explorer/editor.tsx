@@ -51,7 +51,9 @@ export function BaseEditor(props: IProps) {
   }); */
   const { document, dispatch, className, children } = props;
 
-  const { id: driveId } = document;
+  const {
+    header: { id: driveId },
+  } = document;
   const {
     showSearchBar,
     isAllowedToCreateDocuments,

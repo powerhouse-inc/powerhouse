@@ -13,12 +13,12 @@ import { type Loadable, type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
 /** Returns a loadable of the drives for a reactor. */
-export function useDrives() {
+export function useDrives(): Loadable<DocumentDriveDocument[]> {
   return useAtomValue(loadableDrivesAtom);
 }
 
 /** Returns a resolved promise of the drives for a reactor. */
-export function useUnwrappedDrives() {
+export function useUnwrappedDrives(): DocumentDriveDocument[] | undefined {
   return useAtomValue(unwrappedDrivesAtom);
 }
 
@@ -37,7 +37,7 @@ export function useDriveById(
   const data = loadableDrives.data;
   return {
     state: "hasData",
-    data: data.find((d) => d.id === id),
+    data: data.find((d) => d.header.id === id),
   };
 }
 
@@ -47,16 +47,18 @@ export function useUnwrappedDriveById(
 ): DocumentDriveDocument | undefined {
   const drives = useUnwrappedDrives();
   if (!id) return undefined;
-  return drives?.find((d) => d.id === id);
+  return drives?.find((d) => d.header.id === id);
 }
 
 /** Returns a loadable of the selected drive */
-export function useSelectedDrive() {
+export function useSelectedDrive(): Loadable<
+  DocumentDriveDocument | undefined
+> {
   return useAtomValue(loadableSelectedDriveAtom);
 }
 
 /** Returns a resolved promise of the selected drive */
-export function useUnwrappedSelectedDrive() {
+export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
   return useAtomValue(unwrappedSelectedDriveAtom);
 }
 
@@ -72,7 +74,7 @@ export function useSetSelectedDrive(shouldNavigate = true) {
   return useCallback(
     (driveId: string | undefined, _shouldNavigate = shouldNavigate) => {
       setSelectedDrive(driveId);
-      const drive = drives?.find((d) => d.id === driveId);
+      const drive = drives?.find((d) => d.header.id === driveId);
       const newPathname = makeDriveUrlComponent(drive);
       if (typeof window !== "undefined" && _shouldNavigate) {
         window.history.pushState(null, "", newPathname);

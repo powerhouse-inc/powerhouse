@@ -36,6 +36,14 @@ export function useConnectCrypto(): IConnectCrypto {
         const crypto = await getConnectCrypto();
         return await crypto.sign(data);
       },
+      verify: async (data: Uint8Array, signature: Uint8Array) => {
+        const crypto = await getConnectCrypto();
+        return await crypto.verify(data, signature);
+      },
+      publicKey: async () => {
+        const crypto = await getConnectCrypto();
+        return await crypto.publicKey();
+      },
     }),
     [],
   );

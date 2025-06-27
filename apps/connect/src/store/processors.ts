@@ -11,7 +11,7 @@ async function createProcessorManager() {
 
     // hook up processor manager to drive added event
     reactor.on('driveAdded', async (drive: DocumentDriveDocument) => {
-        await manager.registerDrive(drive.id);
+        await manager.registerDrive(drive.header.id);
     });
 
     return manager;

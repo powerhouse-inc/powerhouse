@@ -118,39 +118,32 @@ export abstract class BaseDocumentClass<
    * Gets the name of the document.
    */
   get name() {
-    return this._document.name;
+    return this._document.header.name;
   }
 
   /**
    * Gets the type of document.
    */
   get documentType() {
-    return this._document.documentType;
+    return this._document.header.documentType;
   }
 
   /**
    * Gets the timestamp of the date the document was created.
    */
   get created() {
-    return this._document.created;
+    return this._document.header.createdAtUtcIso;
   }
 
   /**
    * Gets the timestamp of the date the document was last modified.
    */
   get lastModified() {
-    return this._document.lastModified;
-  }
-
-  /**
-   * Gets the global revision number of the document.
-   */
-  get revision() {
-    return this._document.revision.global;
+    return this._document.header.lastModifiedAtUtcIso;
   }
 
   getRevision(scope: OperationScope) {
-    return this._document.revision[scope];
+    return this._document.header.revision[scope] || 0;
   }
 
   /**

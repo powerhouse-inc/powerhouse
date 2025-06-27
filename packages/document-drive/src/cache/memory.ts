@@ -104,7 +104,7 @@ class InMemoryCache implements ICache {
       return false;
     }
 
-    const slug = drive.slug.length > 0 ? drive.slug : driveId;
+    const slug = drive.header.slug.length > 0 ? drive.header.slug : driveId;
     if (slug) {
       this.slugToDriveId.delete(slug);
     }
@@ -113,7 +113,7 @@ class InMemoryCache implements ICache {
   }
 
   async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
-    const driveId = drive.id;
+    const driveId = drive.header.id;
     this.slugToDriveId.set(slug, driveId);
     this.setDrive(driveId, drive);
   }

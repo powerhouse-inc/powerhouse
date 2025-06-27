@@ -121,7 +121,9 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            let drive = documentDrives.find(drive => drive.id === driveId);
+            let drive = documentDrives.find(
+                drive => drive.header.id === driveId,
+            );
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -198,7 +200,7 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            let drive = documentDrives.find(d => d.id === driveId);
+            let drive = documentDrives.find(d => d.header.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -244,7 +246,9 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === driveId);
+            const drive = documentDrives.find(
+                drive => drive.header.id === driveId,
+            );
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -287,8 +291,10 @@ export function useDocumentDriveServer() {
 
             // first create the file with the initial state of document
             const initialDocument: PHDocument = {
-                ...document.initialState,
+                header: document.header,
+                history: document.history,
                 initialState: document.initialState,
+                state: document.state,
                 operations: {
                     global: [],
                     local: [],
@@ -297,15 +303,18 @@ export function useDocumentDriveServer() {
             };
             const fileNode = await addDocument(
                 drive,
-                name || (typeof file === 'string' ? document.name : file.name),
-                document.documentType,
+                name ||
+                    (typeof file === 'string'
+                        ? document.header.name
+                        : file.name),
+                document.header.documentType,
                 parentFolder,
                 initialDocument,
             );
 
             // then add all the operations
             const driveDocument = documentDrives.find(
-                documentDrive => documentDrive.id === drive,
+                documentDrive => documentDrive.header.id === drive,
             );
             const waitForSync =
                 driveDocument && driveDocument.state.local.listeners.length > 0;
@@ -454,7 +463,7 @@ export function useDocumentDriveServer() {
             if (target.kind === FILE) return;
 
             const drive = documentDrives.find(
-                drive => drive.id === src.driveId,
+                drive => drive.header.id === src.driveId,
             );
 
             if (!drive) return;
@@ -504,7 +513,9 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === driveId);
+            const drive = documentDrives.find(
+                drive => drive.header.id === driveId,
+            );
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -566,7 +577,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === id);
+            const drive = documentDrives.find(drive => drive.header.id === id);
             if (!drive) {
                 throw new Error(`Drive with id ${id} not found`);
             }

@@ -1,3 +1,4 @@
+import { type PHDocumentHeader } from "#document/ph-types.js";
 import {
   type ExtendedStateFromDocument,
   type Reducer,
@@ -8,7 +9,6 @@ import mime from "mime/lite";
 import {
   type Attachment,
   type AttachmentInput,
-  type DocumentHeader,
   type DocumentOperations,
   type PHDocument,
 } from "../types.js";
@@ -25,17 +25,7 @@ export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
 
-  const { id, slug, name, revision, documentType, created, lastModified } =
-    document;
-  const header: DocumentHeader = {
-    id,
-    slug,
-    name,
-    revision,
-    documentType,
-    created,
-    lastModified,
-  };
+  const header = document.header;
   zip.file("header.json", JSON.stringify(header, null, 2));
   zip.file("state.json", JSON.stringify(document.initialState || {}, null, 2));
   zip.file("current-state.json", JSON.stringify(document.state || {}, null, 2));
@@ -89,7 +79,7 @@ export async function baseSaveToFile(
     type: "uint8array",
     streamFiles: true,
   });
-  const fileName = name ?? document.name;
+  const fileName = name ?? document.header.name;
   const fileExtension = `.${extension}.zip`;
 
   return writeFile(
@@ -159,9 +149,9 @@ async function loadFromZip<TDocument extends PHDocument>(
   ) as ExtendedStateFromDocument<TDocument>;
 
   const headerZip = zip.file("header.json");
-  let header: DocumentHeader | undefined = undefined;
+  let header: PHDocumentHeader | undefined = undefined;
   if (headerZip) {
-    header = JSON.parse(await headerZip.async("string")) as DocumentHeader;
+    header = JSON.parse(await headerZip.async("string")) as PHDocumentHeader;
   }
 
   const operationsZip = zip.file("operations.json");
@@ -180,6 +170,9 @@ async function loadFromZip<TDocument extends PHDocument>(
     throw new Error(errorMessages.join("\n"));
   }
 
+  // TODO: There is a race condition here where operations are replayed and do not necessary
+  // result in the same lastModified value. This will be fixed once the header replaces this
+  // information as it is explicitly set below to the saved time.
   let result = replayDocument(
     initialState,
     clearedOperations,
@@ -189,10 +182,11 @@ async function loadFromZip<TDocument extends PHDocument>(
     {},
     options,
   );
+
   if (header) {
     result = {
       ...result,
-      ...header,
+      header,
     };
   }
   return result;

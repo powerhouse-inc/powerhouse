@@ -1,7 +1,6 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type SynchronizationUnitQuery } from "#server/types";
 import type {
-  DocumentHeader,
   Operation,
   OperationFromDocument,
   PHDocument,
@@ -148,16 +147,18 @@ export interface IDocumentOperationStorage {
     drive: string,
     id: string,
     operations: OperationFromDocument<TDocument>[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     drive: string,
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getOperationResultingState?(
     drive: string,
     id: string,
@@ -165,6 +166,7 @@ export interface IDocumentOperationStorage {
     scope: string,
     branch: string,
   ): Promise<string | undefined>;
+
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;
@@ -183,15 +185,17 @@ export interface IDriveOperationStorage extends IDocumentOperationStorage {
   addDriveOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getDriveOperationResultingState?(
     drive: string,
     index: number,

@@ -37,7 +37,7 @@ describe("Event", () => {
       { skip: 1 },
     );
 
-    expect(document.revision.global).toBe(4);
+    expect(document.header.revision.global).toBe(4);
     expect(document.operations.global).toMatchObject([
       {
         type: "TEST",
@@ -89,7 +89,7 @@ describe("Event", () => {
       { skip: 1 },
     );
 
-    expect(document.revision.global).toBe(4);
+    expect(document.header.revision.global).toBe(4);
     expect(document.operations.global).toMatchObject([
       {
         type: "TEST",
@@ -141,7 +141,7 @@ describe("Event", () => {
       scope: "global",
     });
 
-    expect(document.revision.global).toBe(5);
+    expect(document.header.revision.global).toBe(5);
     expect(document.operations.global).toMatchObject([
       {
         type: "TEST",
@@ -191,7 +191,7 @@ describe("Event", () => {
       { skip: 1 },
     );
 
-    expect(document.revision.global).toBe(4);
+    expect(document.header.revision.global).toBe(4);
     expect(document.operations.global).toMatchObject([
       {
         type: "TEST",

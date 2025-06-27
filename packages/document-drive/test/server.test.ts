@@ -240,7 +240,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(result.status).toBe("SUCCESS");
 
     const document = await server.getDocument(driveId, documentId);
-    expect(document.documentType).toBe("powerhouse/document-model");
+    expect(document.header.documentType).toBe("powerhouse/document-model");
     expect(document.state).toStrictEqual(DocumentModelUtils.createState());
 
     const driveDocuments = await server.getDocuments(driveId);
@@ -619,12 +619,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const documentB = await server.getDocument(driveId, document2Id);
 
     // slugs have to change, as they are unique
-    expect(document.slug).not.toBe(documentB.slug);
+    expect(document.header.slug).not.toBe(documentB.header.slug);
 
     // compare everything but the slug + id (which are supposed to be different)
-    const { slug, id, ...rest } = document;
-    const { slug: slugB, id: idB, ...restB } = documentB;
-    expect(rest).toStrictEqual(restB);
+    const a = document.state;
+    const b = documentB.state;
+    expect(a).toStrictEqual(b);
   });
 
   it("adds document operation", async ({ expect }) => {
@@ -788,13 +788,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive.id).toBe(driveId1);
+    expect(drive.header.id).toBe(driveId1);
 
     drive = await server.getDriveBySlug("slug2");
-    expect(drive.id).toBe(driveId2);
+    expect(drive.header.id).toBe(driveId2);
 
     drive = await server.getDriveBySlug("slug3");
-    expect(drive.id).toBe(driveId3);
+    expect(drive.header.id).toBe(driveId3);
   });
 
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
@@ -825,7 +825,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         id: documentId,
         name: "name",
         parentFolder: null,
-        documentType: file!.documentType,
+        documentType: file!.header.documentType,
         document: file,
       },
       ["global"],
@@ -891,7 +891,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(syncUnits).toStrictEqual([
       {
         driveId: driveId,
-        documentId: drive.id,
+        documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
@@ -1069,6 +1069,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     const drive = await server.getDriveBySlug("test-drive");
-    expect(drive.slug).toBe("test-drive");
+    expect(drive.header.slug).toBe("test-drive");
   });
 });

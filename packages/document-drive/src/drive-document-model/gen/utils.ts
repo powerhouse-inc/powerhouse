@@ -1,3 +1,4 @@
+import { driveDocumentType } from "#drive-document-model/constants";
 import {
   CreateDocument,
   CreateExtendedState,
@@ -9,6 +10,7 @@ import {
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
+  generateId,
 } from "document-model";
 import { reducer } from "./reducer.js";
 import {
@@ -40,16 +42,20 @@ const utils: DocumentDriveUtils = {
     };
   },
   createExtendedState(extendedState) {
-    return baseCreateExtendedState(
-      { ...extendedState, documentType: "powerhouse/document-drive" },
-      utils.createState,
-    );
+    return baseCreateExtendedState({ ...extendedState }, utils.createState);
   },
   createDocument(state) {
-    return baseCreateDocument(
+    const document = baseCreateDocument(
       utils.createExtendedState(state),
       utils.createState,
     );
+
+    document.header.documentType = driveDocumentType;
+
+    // for backward compatibility -- but this is NOT a valid document id
+    document.header.id = generateId();
+
+    return document;
   },
   saveToFile(document, path, name) {
     return baseSaveToFile(document, path, "phdd", name);

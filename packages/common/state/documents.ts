@@ -47,7 +47,7 @@ export function useDocumentById<TDocument extends PHDocument = PHDocument>(
 
   if (!id) return { state: "hasData", data: undefined };
 
-  const document = documents.data.find((d) => d.id === id);
+  const document = documents.data.find((d) => d.header.id === id);
   return { state: "hasData", data: document } as Loadable<
     TDocument | undefined
   >;
@@ -59,5 +59,5 @@ export function useUnwrappedDocumentById<
 >(id: string | null | undefined): TDocument | undefined {
   const documents = useUnwrappedDocuments();
   if (!id) return undefined;
-  return documents?.find((d) => d.id === id) as TDocument | undefined;
+  return documents?.find((d) => d.header.id === id) as TDocument | undefined;
 }

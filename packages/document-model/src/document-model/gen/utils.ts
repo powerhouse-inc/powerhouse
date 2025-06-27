@@ -30,6 +30,7 @@ export { fileExtension } from "./constants.js";
 
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
+    document: { ...documentModelState, ...state?.document },
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };
@@ -38,16 +39,16 @@ export const createState: CreateState<DocumentModelDocument> = (state) => {
 export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
   extendedState,
 ) => {
-  return baseCreateExtendedState(
-    { ...extendedState, documentType },
-    createState,
-  );
+  return baseCreateExtendedState({ ...extendedState }, createState);
 };
 
 export const createDocument: CreateDocument<DocumentModelDocument> = (
   state,
 ) => {
-  return baseCreateDocument(createExtendedState(state), createState);
+  const document = baseCreateDocument(createExtendedState(state), createState);
+  document.header.documentType = documentType;
+
+  return document;
 };
 
 export const saveToFile: SaveToFile = (document, path, name) => {

@@ -24,7 +24,7 @@ export function useInitializeProcessorManager() {
       reactor,
     );
     reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
-      await initializedProcessManager.registerDrive(drive.id);
+      await initializedProcessManager.registerDrive(drive.header.id);
     });
     setProcessorManager(initializedProcessManager);
   }, [processorManager, reactor, setProcessorManager]);
