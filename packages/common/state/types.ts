@@ -5,6 +5,7 @@ import type {
 } from "document-drive";
 import { type EditorProps } from "document-model";
 import { type FC } from "react";
+import { type NOT_SET } from "./utils.js";
 export type Reactor = IDocumentDriveServer;
 
 export type DriveEditorProps = EditorProps<DocumentDriveDocument> & {
@@ -72,3 +73,5 @@ export type ConnectConfig = {
   gaTrackingId: string | undefined;
   phCliVersion: string | undefined;
 };
+
+export type UnsetAtomValue = typeof NOT_SET;

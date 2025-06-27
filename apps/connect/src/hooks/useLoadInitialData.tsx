@@ -1,6 +1,8 @@
 import { ReloadConnectToast } from '#components';
 import { useReadModeContext } from '#context';
 import { useDocumentDriveServer, useMakeUiDriveNode } from '#hooks';
+// import { createReactor } from '#store';
+// import { useInitializeReactor } from '@powerhousedao/common';
 import {
     CONFLICT,
     ERROR,
@@ -30,6 +32,7 @@ export const useLoadInitialData = () => {
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
     const [connectConfig] = useConnectConfig();
+    // useInitializeReactor(createReactor);
 
     async function checkLatestVersion() {
         const result = await isLatestVersion();

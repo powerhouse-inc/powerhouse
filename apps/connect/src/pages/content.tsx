@@ -1,5 +1,13 @@
 import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
 import { useFileNodeDocument } from '#store';
+/* import {
+    useReactor,
+    useDocuments,
+    useDrives,
+    useSelectedDocument,
+    useSelectedDrive,
+    useSelectedFolder,
+} from '@powerhousedao/common'; */
 import { FILE } from '@powerhousedao/design-system';
 import { useUiNodesContext } from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
@@ -15,6 +23,21 @@ export default function Content() {
     const { selectedDriveNode, selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
     const { fileNodeDocument } = useFileNodeDocument();
+    /* const loadableReactor = useReactor();
+    const loadableDrives = useDrives();
+    const loadableDocuments = useDocuments();
+    const loadableSelectedDrive = useSelectedDrive();
+    const loadableSelectedFolder = useSelectedFolder();
+    const loadableSelectedDocument = useSelectedDocument();
+
+    console.log('in content', {
+        loadableReactor,
+        loadableDrives,
+        loadableDocuments,
+        loadableSelectedDrive,
+        loadableSelectedFolder,
+        loadableSelectedDocument,
+    }); */
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

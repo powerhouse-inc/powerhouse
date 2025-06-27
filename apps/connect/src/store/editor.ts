@@ -21,7 +21,7 @@ function getEditorsFromModules(modules: DocumentModelLib[]) {
 }
 
 const baseEditorsAtom = atomWithLazy(loadBaseEditors);
-
+baseEditorsAtom.debugLabel = 'baseEditorsAtomInConnect';
 export const editorsAtom = atom(async get => {
     const baseEditors = await get(baseEditorsAtom);
     const externalModules = await get(externalPackagesAtom);
@@ -29,9 +29,12 @@ export const editorsAtom = atom(async get => {
 
     return externalEditors.concat(baseEditors);
 });
+editorsAtom.debugLabel = 'editorsAtomInConnect';
 
 const unwrappedEditorsAtom = unwrap(editorsAtom);
+unwrappedEditorsAtom.debugLabel = 'unwrappedEditorsAtomInConnect';
 const loadableEditorsAtom = loadable(editorsAtom);
+loadableEditorsAtom.debugLabel = 'loadableEditorsAtomInConnect';
 
 // suspends the UI while editors are loading
 export const useEditors = () => {

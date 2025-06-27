@@ -1,9 +1,6 @@
 import { useReadModeContext } from '#context';
 import { documentToHash, useDocumentDriveServer } from '#hooks';
-import {
-    useUiNodesContext,
-    type TUiNodesContext,
-} from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
+import { useUiNodesContext } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { logger } from 'document-drive';
 import {
     hashDocumentStateForScope,
@@ -73,8 +70,11 @@ export type FileNodeDocument =
     | undefined;
 
 const documentCacheAtom = atom(new Map<string, PHDocument>());
+documentCacheAtom.debugLabel = 'documentCacheAtomInConnect';
 
 const singletonFileNodeDocumentAtom = atom<FileNodeDocument>(undefined);
+singletonFileNodeDocumentAtom.debugLabel =
+    'singletonFileNodeDocumentAtomInConnect';
 
 export function isSameDocument(
     prev: PHDocument | undefined,
@@ -134,6 +134,7 @@ const fileNodeDocumentAtom = atom(
         return false;
     },
 );
+fileNodeDocumentAtom.debugLabel = 'fileNodeDocumentAtomInConnect';
 
 const selectedDocumentAtom = atom(
     null,
@@ -148,6 +149,7 @@ const selectedDocumentAtom = atom(
         }
     },
 );
+selectedDocumentAtom.debugLabel = 'selectedDocumentAtomInConnect';
 const useSetSelectedDocument = () => useSetAtom(selectedDocumentAtom);
 
 export function useFileNodeDocument() {
