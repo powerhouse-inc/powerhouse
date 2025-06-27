@@ -4,12 +4,16 @@ import {
   LOCAL,
 } from "@powerhousedao/reactor-browser/uiNodes/constants";
 import {
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
   type UiNode,
 } from "@powerhousedao/reactor-browser/uiNodes/types";
-import { DocumentDriveDocument, isFolderNode, Node } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  isFolderNode,
+  type Node,
+} from "document-drive";
 
 export function sortUiNodesByName(a: UiNode, b: UiNode) {
   return a.name.localeCompare(b.name);

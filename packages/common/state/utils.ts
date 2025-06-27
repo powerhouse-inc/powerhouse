@@ -112,8 +112,10 @@ async function handleDriveFromUrl(
   const driveSlug = extractDriveFromPath(path);
   const driveIds = await reactor.getDrives();
   const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
-  const drive = drives.find((d) => d.slug === driveSlug || d.id === driveSlug);
-  setSelectedDrive(drive?.id);
+  const drive = drives.find(
+    (d) => d.header.slug === driveSlug || d.header.id === driveSlug,
+  );
+  setSelectedDrive(drive?.header.id);
 
   return drive;
 }

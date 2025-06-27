@@ -1,7 +1,7 @@
 import {
-    FileItem,
-    useWindowSize,
-    type BaseUiFileNode,
+  FileItem,
+  useWindowSize,
+  type BaseUiFileNode,
 } from "@powerhousedao/design-system";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import React, { useRef } from "react";

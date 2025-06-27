@@ -136,8 +136,7 @@ export function createDriveStory(
   const story = createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
-    initialState ??
-    {
+    initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
         state: { global: { name: "Powerhouse" }, local: {} },
       }),
@@ -164,12 +163,11 @@ export function createDriveStoryWithUINodes(
   const { meta, CreateDocumentStory } = createDocumentStory(
     Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
-    initialState ??
-      {
-        ...driveDocumentModelModule.utils.createExtendedState({
-          state: { global: { name: "Powerhouse" }, local: {} },
-        }),
-      },
+    initialState ?? {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
+      }),
+    },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
