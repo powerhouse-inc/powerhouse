@@ -1,4 +1,3 @@
-export * from "./config.js";
 export * from "./document-model-modules.js";
 export * from "./documents.js";
 export * from "./drives.js";

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useRefreshDocuments } from "./documents.js";
 import { useRefreshDrives } from "./drives.js";
 
+/** Returns a function that refreshes the drives and documents for a reactor. */
 export function useSyncDrivesAndDocumentsWithReactor() {
   const refreshDrives = useRefreshDrives();
   const refreshDocuments = useRefreshDocuments();
