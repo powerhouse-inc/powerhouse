@@ -6,8 +6,22 @@ import type {
 import { type EditorProps } from "document-model";
 import { type FC } from "react";
 import { type NOT_SET } from "./utils.js";
+
+/** The type for the reactor instance.
+ * Alias for the legacy IDocumentDriveServer type.
+ */
 export type Reactor = IDocumentDriveServer;
 
+/** The type for the unset atom (sentinel) value. */
+export type UnsetAtomValue = typeof NOT_SET;
+
+/** Alias for the Loadable type from Jotai. */
+export { type Loadable } from "jotai/vanilla/utils/loadable";
+
+/** The type for the drive editor props.
+ *
+ * TODO: update so that these props are the same as any other editor and the `addFile` prop is removed.
+ */
 export type DriveEditorProps = EditorProps<DocumentDriveDocument> & {
   addFile: (
     file: string | File,
@@ -31,7 +45,7 @@ export type DriveEditorModule = {
 
 export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
 
-export type NodeKind = "DRIVE" | "FOLDER" | "FILE";
+export type NodeKind = "FOLDER" | "FILE";
 
 export type Theme = "light" | "dark";
 
@@ -73,5 +87,3 @@ export type ConnectConfig = {
   gaTrackingId: string | undefined;
   phCliVersion: string | undefined;
 };
-
-export type UnsetAtomValue = typeof NOT_SET;
