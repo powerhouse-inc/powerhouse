@@ -1,9 +1,7 @@
 import { ReadModeContextProvider, SentryProvider } from '#context';
-import { atomStore } from '#store';
 import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
-import { Provider } from 'jotai';
 import { Suspense } from 'react';
 import ReactorAnalyticsProvider from '../context/reactor-analytics.js';
 import { useRenown } from '../hooks/useRenown.js';
@@ -28,7 +26,7 @@ const PreloadProcessorManager = () => {
 };
 
 const App = () => (
-    <Provider store={atomStore}>
+    <>
         <SentryProvider>
             <WagmiContext>
                 <ReadModeContextProvider>
@@ -49,7 +47,7 @@ const App = () => (
             <PreloadProcessorManager />
             <PreloadRenown />
         </Suspense>
-    </Provider>
+    </>
 );
 
 export default App;

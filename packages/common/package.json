@@ -49,7 +49,8 @@
     "@tanstack/react-virtual": "^3.8.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "react-i18next": "^13.5.0"
+    "react-i18next": "^13.5.0",
+    "slug": "^11.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",

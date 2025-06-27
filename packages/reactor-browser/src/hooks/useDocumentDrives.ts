@@ -1,15 +1,14 @@
-import { useMemo, useCallback } from "react";
 import type { IDocumentDriveServer } from "document-drive";
-import { type DocumentDriveDocument } from "document-drive";
+import { type DocumentDriveDocument, type Trigger } from "document-drive";
 import { atom, useAtom } from "jotai";
-import { atomFamily } from "jotai/utils";
-import { type Trigger } from "document-drive";
+import { useCallback, useMemo } from "react";
 
 import { documentToHash } from "../utils/index.js";
 
 const documentDrivesAtom = atom(
   new Map<IDocumentDriveServer, DocumentDriveDocument[]>(),
 );
+documentDrivesAtom.debugLabel = "documentDrivesAtomInReactorBrowser";
 
 export function drivesToHash(drives: DocumentDriveDocument[]): string {
   return drives.map(documentToHash).join("&");
@@ -37,9 +36,9 @@ const readWriteDocumentDrivesAtom = (server?: IDocumentDriveServer) => () =>
   );
 
 export type IDrivesState = "INITIAL" | "LOADING" | "LOADED" | "ERROR";
-export const documentDrivesInitializedMapAtomFamily = atomFamily(() =>
-  atom<IDrivesState>("INITIAL"),
-);
+export const documentDrivesInitialized = atom<IDrivesState>("INITIAL");
+documentDrivesInitialized.debugLabel =
+  "documentDrivesInitializedInReactorBrowser";
 
 export type ClientErrorHandler = {
   strandsErrorHandler: (
@@ -78,9 +77,7 @@ export function useDocumentDrives(reactor?: IDocumentDriveServer) {
     }
   }, [reactor]);
 
-  const [status, setStatus] = useAtom(
-    documentDrivesInitializedMapAtomFamily(reactor),
-  );
+  const [status, setStatus] = useAtom(documentDrivesInitialized);
 
   if (status === "INITIAL") {
     setStatus("LOADING");

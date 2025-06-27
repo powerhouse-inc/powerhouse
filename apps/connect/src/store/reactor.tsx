@@ -1,5 +1,6 @@
 import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
+import { atomStore } from '@powerhousedao/common';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -17,7 +18,6 @@ import {
     documentModelsAtom,
     subscribeDocumentModels,
 } from './document-model.js';
-import { atomStore } from './index.js';
 
 async function initReactor(reactor: IDocumentDriveServer) {
     await initJwtHandler(reactor);
@@ -102,7 +102,7 @@ async function waitForRenown(): Promise<void> {
     });
 }
 
-async function createReactor() {
+export async function createReactor() {
     await waitForRenown();
     // get storage
     const storage = atomStore.get(storageAtom);
@@ -124,11 +124,13 @@ export const storageAtom = atom<
         IDocumentStorage &
         IDocumentAdminStorage
 >(createBrowserStorage(connectConfig.routerBasename));
+storageAtom.debugLabel = 'storageAtomInConnect';
 export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(() =>
     createReactor(),
 );
+reactorAtom.debugLabel = 'reactorAtomInConnect';
 export const unwrappedReactor = unwrap(reactorAtom);
-
+unwrappedReactor.debugLabel = 'unwrappedReactorInConnect';
 // blocks rendering until reactor is initialized.
 export const useReactor = (): IDocumentDriveServer | undefined =>
     useAtomValue(reactorAtom);
@@ -148,7 +150,7 @@ const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
 reactorAsyncAtom.onMount = setAtom => {
     subscribeReactor(setAtom);
 };
-
+reactorAsyncAtom.debugLabel = 'reactorAsyncAtomInConnect';
 // updates the reactor when the available document models change
 let documentModelsSubscripion: (() => void) | undefined;
 reactorAtom.onMount = setAtom => {

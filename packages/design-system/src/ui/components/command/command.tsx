@@ -136,6 +136,5 @@ export {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandLoading
+  CommandLoading,
 };
-
