@@ -6,10 +6,10 @@ This package provides state management utilities for Powerhouse applications usi
 
 The state management system is built around several key concepts:
 
-- **Reactor**: The main server instance that manages document drives
-- **Drives**: Document drive instances that contain nodes and documents
-- **Nodes**: Items within a drive (files, folders, etc.)
-- **Documents**: The actual document content within nodes
+- **Reactor**: The reactor instance that manages drives and documents
+- **Drives**: Document drive instances that contain nodes
+- **Nodes**: Items within a drive (documents, files, meta entities such as folder, etc.)
+- **Documents**: Documents within a drive, which correspond to nodes
 - **Loadable States**: Async state management with loading, error, and success states
 
 ## Core Hooks
@@ -20,7 +20,7 @@ The state management system is built around several key concepts:
 Returns a loadable of the reactor instance.
 
 #### `useUnwrappedReactor()`
-Returns the unwrapped reactor instance.
+Returns the resolved reactor instance, will be undefined while pending
 
 #### `useInitializeReactor(createReactor, shouldNavigate?)`
 Initializes the reactor by:
@@ -28,9 +28,6 @@ Initializes the reactor by:
 - Setting the selected drive and node from the URL if `shouldNavigate` is true
 - Subscribing to reactor events and refreshing drives/documents when they change
 - Does nothing if the reactor is already initialized
-
-#### `useGetSyncStatusSync()`
-Returns a function that gets the sync status for a given sync ID and sharing type.
 
 ### Drive Management
 
@@ -55,7 +52,7 @@ Returns a loadable of the selected drive.
 #### `useUnwrappedSelectedDrive()`
 Returns a resolved promise of the selected drive.
 
-#### `useSetSelectedDrive(shouldNavigate?)`
+#### `useSetSelectedDrive(driveId, shouldNavigate?)`
 Returns a function that sets the selected drive with a drive ID. If `shouldNavigate` is true, the URL will be updated to the new drive.
 
 #### `useDriveRemoteUrl(driveId)`
@@ -99,7 +96,7 @@ Returns a loadable of the child nodes for the selected drive or folder.
 #### `useNodeKind(id)`
 Returns the kind of a node.
 
-#### `useSetSelectedNode(shouldNavigate?)`
+#### `useSetSelectedNode(nodeId, shouldNavigate?)`
 Returns a function that sets the selected node with a node ID. If `shouldNavigate` is true, the URL will be updated to the new node.
 
 ### Folder Management
@@ -160,14 +157,7 @@ Returns whether a drive is available offline.
 
 - `Reactor`: The reactor instance type (alias for IDocumentDriveServer)
 - `Loadable<T>`: Async state wrapper with loading, error, and success states
-- `SharingType`: Union type of "LOCAL" | "CLOUD" | "PUBLIC"
 - `NodeKind`: Union type of "FOLDER" | "FILE"
-- `ConnectConfig`: Configuration object for Connect application
-
-### Editor Types
-
-- `DriveEditorProps`: Props for drive editor components
-- `DriveEditorModule`: Module definition for drive editors
 
 ## Important Notes
 
@@ -175,14 +165,47 @@ Returns whether a drive is available offline.
 
 ## Usage Example
 
-```typescript
+```tsx
 import { useInitializeReactor, useSelectedDrive, useChildNodes } from '@powerhouse/common/state';
 
 function MyComponent() {
-  const reactor = useInitializeReactor(() => createReactor());
   const selectedDrive = useSelectedDrive();
-  const childNodes = useChildNodes();
-  
   // Use the state...
+
+  if (selectedDrive.state === 'loading') {
+    return <div>Loading drive...</div>
+  }
+
+  if (selectedDrive.state === 'hasError') {
+    // now the `error` field of `selectedDrive` has a value
+    return <MyErrorComponent error={selectedDrive.error} />
+  }
+
+  // since we are only left with the `hasData` possibility for `selectedDrive.state`, 
+  // we know that the `data` field of `selectedDrive` has a value we can render
+  return <MyDriveEditorComponent drive={selectedDrive.data} />
+}
+```
+
+If you know the type of your document, you can get inference of the fields
+
+```ts
+type MyState = {
+  stuff: String[];
+}
+
+type MyDocument = PHDocument<MyState>
+```
+
+```tsx
+function MyDocumentEditor(documentId: string) {
+  const document = useDocumentById<MyDocument>(documentId);
+
+  if (document.state === 'loading') return "...loading";
+  if (document.state === 'hasError') return "Error getting document";
+
+  const stuff = document.data.state.global.stuff;
+
+  return <MyStuff stuff={stuff} />
 }
 ```

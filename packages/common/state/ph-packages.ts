@@ -1,13 +1,12 @@
 import { type DocumentModelLib } from "document-model";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useEffect } from "react";
 import {
   loadablePhPackagesAtom,
   phPackagesAtom,
   unwrappedPhPackagesAtom,
 } from "./atoms.js";
-import { type DriveEditorModule } from "./types.js";
+import { type DriveEditorModule, type Loadable } from "./types.js";
 
 export type PHPackage = DocumentModelLib & { id: string };
 

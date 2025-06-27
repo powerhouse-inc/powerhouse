@@ -5,13 +5,13 @@ import {
   type PHDocument,
 } from "document-model";
 import { useAtomValue } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useCallback } from "react";
 import {
   loadableDocumentModelModulesAtom,
   unwrappedDocumentModelModulesAtom,
 } from "./atoms.js";
 import { type PHPackage } from "./ph-packages.js";
+import { type Loadable } from "./types.js";
 
 export const baseDocumentModelModules = [
   driveDocumentModelModule,
