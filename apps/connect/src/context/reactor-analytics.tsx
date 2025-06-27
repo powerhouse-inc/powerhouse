@@ -122,7 +122,9 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
                     : undefined,
             }}
         >
-            <DiffAnalyzerProcessor />
+            {connectConfig.analytics.diffProcessorEnabled && (
+                <DiffAnalyzerProcessor />
+            )}
             {connectConfig.analytics.driveAnalyticsEnabled && (
                 <DriveAnalyticsProcessor />
             )}

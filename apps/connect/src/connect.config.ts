@@ -56,6 +56,9 @@ const PH_CONNECT_ANALYTICS_DATABASE_NAME =
 const PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED =
     import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED || 'false';
 
+const PH_CONNECT_DIFF_ANALYTICS_ENABLED =
+    import.meta.env.PH_CONNECT_DIFF_ANALYTICS_ENABLED || 'false';
+
 const PH_CONNECT_DRIVE_ANALYTICS_ENABLED =
     import.meta.env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED || 'false';
 
@@ -74,6 +77,7 @@ export default {
         databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
         useWorker: PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED !== 'true',
         driveAnalyticsEnabled: PH_CONNECT_DRIVE_ANALYTICS_ENABLED === 'true',
+        diffProcessorEnabled: PH_CONNECT_DIFF_ANALYTICS_ENABLED === 'true',
     },
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
