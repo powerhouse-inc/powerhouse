@@ -16,7 +16,7 @@ import {
   type UseQueryOptions,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
   getAnalyticsStore,
   useAnalyticsEngineAsync,
@@ -95,13 +95,15 @@ export type UseAnalyticsQueryOptions<TData = GroupedPeriodResults> = Omit<
 export type UseAnalyticsQueryResult<TData = GroupedPeriodResults> =
   UseQueryResult<TData>;
 
+const DEBOUNCE_INTERVAL = 200;
+
 export function useAnalyticsQuery<TData = GroupedPeriodResults>(
   query: AnalyticsQuery,
   options?: UseAnalyticsQueryOptions<TData>,
 ): UseAnalyticsQueryResult<TData> {
   const { data: store } = useAnalyticsStoreAsync();
   const queryClient = useQueryClient();
-  const subscriptions = useRef<Array<() => void>>([]);
+  const sources = options?.sources ?? [];
 
   const result = useAnalyticsQueryWrapper({
     queryKey: ["analytics", "query", query],
@@ -110,30 +112,36 @@ export function useAnalyticsQuery<TData = GroupedPeriodResults>(
   });
 
   useEffect(() => {
-    const selectedPaths = [
-      ...(options?.sources || []),
-      ...Object.values(query.select).flat(),
-    ];
-
-    if (!selectedPaths.length || !store) {
+    if (!sources.length || !store) {
       return;
     }
 
-    selectedPaths.forEach((path) => {
-      const unsub = store.subscribeToSource(path, () => {
-        return queryClient.invalidateQueries({
-          queryKey: ["analytics", "query", query],
-        });
-      });
-      subscriptions.current.push(unsub);
+    const subscriptions = new Array<() => void>();
+    // Debounce invalidateQueries so it's not called too frequently
+    let invalidateTimeout: ReturnType<typeof setTimeout> | null = null;
+    const debouncedInvalidate = () => {
+      if (invalidateTimeout) clearTimeout(invalidateTimeout);
+      invalidateTimeout = setTimeout(() => {
+        queryClient
+          .invalidateQueries({
+            queryKey: ["analytics", "query", query],
+          })
+          .catch((e) => {
+            console.error(e);
+          });
+      }, DEBOUNCE_INTERVAL);
+    };
+
+    sources.forEach((path) => {
+      const unsub = store.subscribeToSource(path, debouncedInvalidate);
+      subscriptions.push(unsub);
     });
 
     // Unsubscribes from store when component unmounts or dependencies change
     return () => {
-      subscriptions.current.forEach((unsub) => unsub());
-      subscriptions.current = [];
+      subscriptions.forEach((unsub) => unsub());
     };
-  }, [query, store, options?.sources]);
+  }, [query, store, sources]);
 
   return result;
 }

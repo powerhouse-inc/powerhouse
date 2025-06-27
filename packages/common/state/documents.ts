@@ -1,6 +1,5 @@
 import { type PHDocument } from "document-model";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import {
   documentsAtom,
   loadableDocumentsAtom,
@@ -8,41 +7,57 @@ import {
   unwrappedDocumentsAtom,
   unwrappedSelectedDocumentAtom,
 } from "./atoms.js";
+import { type Loadable } from "./types.js";
 
+/** Returns a loadable of the documents for a reactor. */
 export function useDocuments() {
   return useAtomValue(loadableDocumentsAtom);
 }
 
-export function useRefreshDocuments() {
-  return useSetAtom(documentsAtom);
-}
-
+/** Returns a resolved promise of the documents for a reactor. */
 export function useUnwrappedDocuments() {
   return useAtomValue(unwrappedDocumentsAtom);
 }
 
-export function useSelectedDocument() {
-  return useAtomValue(loadableSelectedDocumentAtom);
+/** Refreshes the documents for a reactor. */
+export function useRefreshDocuments() {
+  return useSetAtom(documentsAtom);
 }
 
-export function useUnwrappedSelectedDocument() {
-  return useAtomValue(unwrappedSelectedDocumentAtom);
+/** Returns a loadable of the selected document. */
+export function useSelectedDocument<
+  TDocument extends PHDocument = PHDocument,
+>() {
+  return useAtomValue(loadableSelectedDocumentAtom) as Loadable<TDocument>;
 }
 
-export function useDocumentById(
+/** Returns a resolved promise of the selected document. */
+export function useUnwrappedSelectedDocument<
+  TDocument extends PHDocument = PHDocument,
+>() {
+  return useAtomValue(unwrappedSelectedDocumentAtom) as TDocument;
+}
+
+/** Returns a loadable of a document for a reactor by id. */
+export function useDocumentById<TDocument extends PHDocument = PHDocument>(
   id: string | null | undefined,
-): Loadable<PHDocument | undefined> {
+): Loadable<TDocument | undefined> {
   const documents = useDocuments();
-  if (!id) return { state: "hasData", data: undefined };
   if (documents.state !== "hasData") return documents;
-  const document = documents.data.find((d) => d?.header.id === id);
-  return { state: "hasData", data: document };
+
+  if (!id) return { state: "hasData", data: undefined };
+
+  const document = documents.data.find((d) => d.header.id === id);
+  return { state: "hasData", data: document } as Loadable<
+    TDocument | undefined
+  >;
 }
 
-export function useUnwrappedDocumentById(
-  id: string | null | undefined,
-): PHDocument | undefined {
+/** Returns a resolved promise of a document for a reactor by id. */
+export function useUnwrappedDocumentById<
+  TDocument extends PHDocument = PHDocument,
+>(id: string | null | undefined): TDocument | undefined {
   const documents = useUnwrappedDocuments();
   if (!id) return undefined;
-  return documents?.find((d) => d?.header.id === id);
+  return documents?.find((d) => d.header.id === id) as TDocument | undefined;
 }

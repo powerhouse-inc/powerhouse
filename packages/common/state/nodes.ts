@@ -1,6 +1,5 @@
 import { type FileNode, type FolderNode, type Node } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useCallback } from "react";
 import {
   loadableNodesAtom,
@@ -9,22 +8,28 @@ import {
 } from "./atoms.js";
 import { useSelectedDrive } from "./drives.js";
 import { useSelectedFolder } from "./folders.js";
-import { type NodeKind } from "./types.js";
+import { type Loadable, type NodeKind } from "./types.js";
 import { extractDriveFromPath, makeNodeUrlComponent } from "./utils.js";
 
+/** Returns a loadable of the nodes for a reactor. */
 export function useNodes(): Loadable<Node[] | undefined> {
   return useAtomValue(loadableNodesAtom);
 }
 
-export function useSetSelectedNode() {
+/** Returns a function that sets the selected node with a node id.
+ *
+ * If `shouldNavigate` is true, the URL will be updated to the new node.
+ * `shouldNavigate` can be overridden by passing a different value to the callback.
+ */
+export function useSetSelectedNode(shouldNavigate = true) {
   const nodes = useUnwrappedNodes();
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
 
   return useCallback(
-    (nodeId: string | undefined, shouldNavigate = true) => {
+    (nodeId: string | undefined, _shouldNavigate = shouldNavigate) => {
       setSelectedNode(nodeId);
 
-      if (typeof window !== "undefined" && shouldNavigate) {
+      if (typeof window !== "undefined" && _shouldNavigate) {
         const driveSlugFromPath = extractDriveFromPath(
           window.location.pathname,
         );
@@ -45,20 +50,24 @@ export function useSetSelectedNode() {
   );
 }
 
+/** Returns a resolved promise of the nodes for a reactor. */
 export function useUnwrappedNodes() {
   return useAtomValue(unwrappedNodesAtom);
 }
 
+/** Returns a resolved promise of a node for a reactor by id. */
 export function useNodeById(id: string | null | undefined) {
   const unwrappedNodes = useUnwrappedNodes();
   return unwrappedNodes?.find((n) => n.id === id);
 }
 
+/** Returns a resolved promise of the parent folder for a node. */
 export function useParentFolder(id: string | null | undefined) {
   const node = useNodeById(id);
   return node?.parentFolder ?? undefined;
 }
 
+/** Returns a loadable of the path to a node. */
 export function useNodePath(
   id: string | null | undefined,
 ): Loadable<Node[] | undefined> {
@@ -88,6 +97,7 @@ export function useNodePath(
   return { state: "hasData", data: path.reverse() };
 }
 
+/** Returns a loadable of the child nodes for the selected drive or folder. */
 export function useChildNodes(): Loadable<Node[] | undefined> {
   const nodes = useNodes();
   const selectedFolder = useSelectedFolder();
@@ -107,6 +117,7 @@ export function useChildNodes(): Loadable<Node[] | undefined> {
   };
 }
 
+/** Returns the kind of a node. */
 export function useNodeKind(id: string | null | undefined) {
   const unwrappedNodes = useUnwrappedNodes();
   if (!unwrappedNodes) return undefined;
@@ -114,9 +125,13 @@ export function useNodeKind(id: string | null | undefined) {
   if (!node) return undefined;
   return node.kind.toUpperCase() as NodeKind;
 }
+
+/** Sorts nodes by name. */
 export function sortNodesByName<TNode extends Node>(nodes: TNode[]): TNode[] {
   return nodes.toSorted((a, b) => a.name.localeCompare(b.name));
 }
+
+/** Returns whether a node is a file. */
 export function isFileNodeKind(
   node: Node | null | undefined,
 ): node is FileNode {
@@ -124,6 +139,7 @@ export function isFileNodeKind(
   return node.kind.toUpperCase() === "FILE";
 }
 
+/** Returns whether a node is a folder. */
 export function isFolderNodeKind(
   node: Node | null | undefined,
 ): node is FolderNode {

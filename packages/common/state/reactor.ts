@@ -13,54 +13,44 @@ import {
 } from "./atoms.js";
 import { useSyncDrivesAndDocumentsWithReactor } from "./syncing.js";
 import { type Reactor, type SharingType } from "./types.js";
-import {
-  extractDriveFromPath,
-  extractNodeNameOrSlugOrIdFromPath,
-  makeNodeSlugFromNodeName,
-} from "./utils.js";
+import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
 
+/** Returns a loadable of the reactor. */
 export function useReactor() {
   return useAtomValue(loadableReactorAtom);
 }
 
+/** Returns the unwrapped reactor. */
 export function useUnwrappedReactor() {
   return useAtomValue(unwrappedReactorAtom);
 }
 
-export function useInitializeReactor(createReactor: () => Promise<Reactor>) {
+/** Initializes the reactor.
+ *
+ * Creates the reactor and sets the selected drive and node from the URL if `shouldNavigate` is true.
+ * Subscribes to the reactor's events and refreshes the drives and documents when they change.
+ *
+ * If the reactor is already initialized, does nothing.
+ */
+export function useInitializeReactor(
+  createReactor: () => Promise<Reactor>,
+  shouldNavigate = true,
+) {
+  const unwrappedReactor = useUnwrappedReactor();
   const setReactor = useSetAtom(initializeReactorAtom);
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
   const refresh = useSyncDrivesAndDocumentsWithReactor();
 
   useEffect(() => {
+    // If the reactor is already initialized, do nothing.
+    if (unwrappedReactor) return;
+
     async function initializeReactor() {
+      // Create the reactor instance.
       const reactor = await createReactor();
 
-      if (typeof window !== "undefined") {
-        const path = window.location.pathname;
-        const driveSlug = extractDriveFromPath(path);
-        if (driveSlug) {
-          const driveIds = await reactor.getDrives();
-          const drives = await Promise.all(
-            driveIds.map((id) => reactor.getDrive(id)),
-          );
-          const drive = drives.find(
-            (d) => d.header.slug === driveSlug || d.header.id === driveSlug,
-          );
-          setSelectedDrive(drive?.header.id);
-          const nodeIdOrSlugOrNameFromPath =
-            extractNodeNameOrSlugOrIdFromPath(path);
-          const nodes = drive?.state.global.nodes;
-          const node = nodes?.find(
-            (n) =>
-              n.id === nodeIdOrSlugOrNameFromPath ||
-              makeNodeSlugFromNodeName(n.name) === nodeIdOrSlugOrNameFromPath,
-          );
-          setSelectedNode(node?.id);
-        }
-      }
-
+      // Subscribe to the reactor's events.
       reactor.on("syncStatus", (event, status, error) => {
         console.log("syncStatus", event, status, error);
         refresh();
@@ -73,11 +63,21 @@ export function useInitializeReactor(createReactor: () => Promise<Reactor>) {
         console.log("defaultRemoteDrive");
         refresh();
       });
+
+      // Set the reactor instance atom.
       setReactor(reactor);
+
+      // Set the selected drive and node from the URL if `shouldNavigate` is true.
+      await setSelectedDriveAndNodeFromUrl(
+        reactor,
+        setSelectedDrive,
+        setSelectedNode,
+        shouldNavigate,
+      );
     }
 
     initializeReactor().catch(console.error);
-  }, [setReactor, createReactor, refresh]);
+  }, [setReactor, createReactor, refresh, shouldNavigate]);
 }
 
 export function useGetSyncStatusSync() {

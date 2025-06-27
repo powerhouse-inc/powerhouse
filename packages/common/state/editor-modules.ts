@@ -1,11 +1,11 @@
 import { type EditorModule } from "document-model";
 import { useAtomValue } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useCallback } from "react";
 import {
   loadableEditorModulesAtom,
   unwrappedEditorModulesAtom,
 } from "./atoms.js";
+import { type Loadable } from "./types.js";
 
 export function useEditors() {
   const editors = useAtomValue(loadableEditorModulesAtom);

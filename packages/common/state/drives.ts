@@ -1,6 +1,5 @@
 import { type DocumentDriveDocument, type Trigger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { type Loadable } from "jotai/vanilla/utils/loadable";
 import { useCallback } from "react";
 import {
   drivesAtom,
@@ -10,21 +9,25 @@ import {
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
-import { type SharingType } from "./types.js";
+import { type Loadable, type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
+/** Returns a loadable of the drives for a reactor. */
 export function useDrives() {
   return useAtomValue(loadableDrivesAtom);
 }
 
-export function useRefreshDrives() {
-  return useSetAtom(drivesAtom);
-}
-
+/** Returns a resolved promise of the drives for a reactor. */
 export function useUnwrappedDrives() {
   return useAtomValue(unwrappedDrivesAtom);
 }
 
+/** Refreshes the drives for a reactor. */
+export function useRefreshDrives() {
+  return useSetAtom(drivesAtom);
+}
+
+/** Returns a loadable of a drive for a reactor by id. */
 export function useDriveById(
   id: string | null | undefined,
 ): Loadable<DocumentDriveDocument | undefined> {
@@ -38,6 +41,7 @@ export function useDriveById(
   };
 }
 
+/** Returns a resolved promise of a drive for a reactor by id. */
 export function useUnwrappedDriveById(
   id: string | null | undefined,
 ): DocumentDriveDocument | undefined {
@@ -46,24 +50,31 @@ export function useUnwrappedDriveById(
   return drives?.find((d) => d.header.id === id);
 }
 
+/** Returns a loadable of the selected drive */
 export function useSelectedDrive() {
   return useAtomValue(loadableSelectedDriveAtom);
 }
 
+/** Returns a resolved promise of the selected drive */
 export function useUnwrappedSelectedDrive() {
   return useAtomValue(unwrappedSelectedDriveAtom);
 }
 
-export function useSetSelectedDrive() {
+/** Returns a function that sets the selected drive with a drive id.
+ *
+ * If `shouldNavigate` is true, the URL will be updated to the new drive.
+ * `shouldNavigate` can be overridden by passing a different value to the callback.
+ */
+export function useSetSelectedDrive(shouldNavigate = true) {
   const drives = useUnwrappedDrives();
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
 
   return useCallback(
-    (driveId: string | undefined, shouldNavigate = true) => {
+    (driveId: string | undefined, _shouldNavigate = shouldNavigate) => {
       setSelectedDrive(driveId);
       const drive = drives?.find((d) => d.header.id === driveId);
       const newPathname = makeDriveUrlComponent(drive);
-      if (typeof window !== "undefined" && shouldNavigate) {
+      if (typeof window !== "undefined" && _shouldNavigate) {
         window.history.pushState(null, "", newPathname);
       }
     },
@@ -71,6 +82,7 @@ export function useSetSelectedDrive() {
   );
 }
 
+/** Returns a loadable of the remote URL for a drive. */
 export function useDriveRemoteUrl(
   driveId: string | null | undefined,
 ): Loadable<string | undefined> {
@@ -101,6 +113,7 @@ export function useDriveRemoteUrl(
   };
 }
 
+/** Returns a loadable of the pull responder trigger for a drive. */
 export function useDrivePullResponderTrigger(
   driveId: string | null | undefined,
 ): Loadable<Trigger | undefined> {
@@ -119,6 +132,7 @@ export function useDrivePullResponderTrigger(
   };
 }
 
+/** Returns a loadable of the pull responder URL for a drive. */
 export function useDrivePullResponderUrl(
   driveId: string | null | undefined,
 ): Loadable<string | undefined> {
@@ -132,6 +146,7 @@ export function useDrivePullResponderUrl(
   };
 }
 
+/** Returns a loadable of whether a drive is remote. */
 export function useDriveIsRemote(
   driveId: string | null | undefined,
 ): Loadable<boolean> {
@@ -158,6 +173,7 @@ export function useDriveIsRemote(
   };
 }
 
+/** Returns a loadable of the sharing type for a drive. */
 export function useDriveSharingType(
   driveId: string | null | undefined,
 ): Loadable<SharingType | undefined> {
@@ -172,6 +188,7 @@ export function useDriveSharingType(
   };
 }
 
+/** Returns a loadable of whether a drive is available offline. */
 export function useIsDriveAvailableOffline(
   driveId: string | null | undefined,
 ): Loadable<boolean> {
@@ -186,6 +203,7 @@ export function useIsDriveAvailableOffline(
   };
 }
 
+/** Returns the sharing type for a drive. */
 export function getDriveSharingType(
   drive:
     | {
@@ -210,6 +228,7 @@ export function getDriveSharingType(
   return (__sharingType === "PRIVATE" ? "LOCAL" : __sharingType) as SharingType;
 }
 
+/** Returns whether a drive is available offline. */
 export function getDriveAvailableOffline(
   drive:
     | {
