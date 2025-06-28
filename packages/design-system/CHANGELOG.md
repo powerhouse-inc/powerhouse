@@ -1,3 +1,7 @@
+## 3.2.0-dev.7 (2025-06-28)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 3.2.0-dev.6 (2025-06-27)
 
 ### 🚀 Features

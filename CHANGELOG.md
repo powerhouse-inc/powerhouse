@@ -1,3 +1,13 @@
+## 3.2.0-dev.7 (2025-06-28)
+
+### 🚀 Features
+
+- starting to stub out a complete example of the analytics processor ([a84ed2dcf](https://github.com/powerhouse-inc/powerhouse/commit/a84ed2dcf))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.2.0-dev.6 (2025-06-27)
 
 ### 🚀 Features
