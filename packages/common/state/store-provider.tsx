@@ -2,7 +2,15 @@ import { Provider } from "jotai";
 import { DevTools } from "jotai-devtools";
 import "jotai-devtools/styles.css";
 import { type ReactNode } from "react";
+import { useInitializeReactor } from "./reactor.js";
 import { atomStore } from "./store.js";
+import { type Reactor } from "./types.js";
+
+function InitReactor({ reactor }: { reactor: Reactor }) {
+  useInitializeReactor(() => Promise.resolve(reactor));
+
+  return null;
+}
 
 /** Provides the atom store to the app.
  *
@@ -14,10 +22,17 @@ import { atomStore } from "./store.js";
  *
  * Includes the Jotai DevTools for debugging.
  */
-export function AtomStoreProvider({ children }: { children: ReactNode }) {
+export function AtomStoreProvider({
+  reactor,
+  children,
+}: {
+  reactor?: Reactor | undefined;
+  children: ReactNode;
+}) {
   return (
     <Provider store={atomStore}>
       <DevTools store={atomStore} />
+      {reactor && <InitReactor reactor={reactor} />}
       {children}
     </Provider>
   );

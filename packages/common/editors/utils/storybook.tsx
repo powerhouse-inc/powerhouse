@@ -20,6 +20,7 @@ import {
   type DocumentDriveLocalState,
   type DocumentDriveState,
   driveDocumentModelModule,
+  type IDocumentDriveServer,
   type Node,
 } from "document-drive";
 import {
@@ -88,6 +89,7 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        reactor: {} as unknown as IDocumentDriveServer,
         useDocumentEditorProps: () => ({
           dispatch: () => {},
           document: context.args.document,
@@ -136,8 +138,7 @@ export function createDriveStory(
   return createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
-    initialState ??
-    {
+    initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
         state: { global: { name: "Powerhouse" }, local: {} },
       }),
@@ -163,13 +164,12 @@ export function createDriveStoryWithUINodes(
   const { meta, CreateDocumentStory } = createDocumentStory(
     Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
-    initialState ??
-      {
-        ...driveDocumentModelModule.utils.createExtendedState({
-          state: { global: { name: "Powerhouse" }, local: {} },
-        }),
-        id: "powerhouse",
-      },
+    initialState ?? {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
+      }),
+      id: "powerhouse",
+    },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
