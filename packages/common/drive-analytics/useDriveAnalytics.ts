@@ -57,7 +57,7 @@ export const useDriveAnalytics = (options: UseDriveAnalyticsOptions) => {
   );
 
   const select = {
-    drive: selectDrives ?? [AnalyticsPath.fromString("drive")],
+    drive: selectDrives ?? [AnalyticsPath.fromString("ph/drive")],
     ...(operations && { operation: operations }),
     ...(targets && { target: targets }),
     ...(actionTypes && { actionType: actionTypes }),
