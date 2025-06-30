@@ -95,14 +95,14 @@ export class DriveAnalyticsProcessor implements IProcessor {
             value: 1,
             dimensions: {
               drive: AnalyticsPath.fromString(
-                `drive/${driveId}/${branch}/${scope}/${revision}`,
+                `ph/drive/${driveId}/${branch}/${scope}/${revision}`,
               ),
               operation: AnalyticsPath.fromString(
-                `operation/${operation.type}/${operation.index}`,
+                `ph/drive/operation/${operation.type}/${operation.index}`,
               ),
-              target: AnalyticsPath.fromString(`target/${target}/${targetId}`),
+              target: AnalyticsPath.fromString(`ph/drive/target/${target}/${targetId}`),
               actionType: AnalyticsPath.fromString(
-                `actionType/${actionType}/${targetId}`,
+                `ph/drive/actionType/${actionType}/${targetId}`,
               ),
             },
           };
