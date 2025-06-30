@@ -61,13 +61,13 @@ export class DocumentAnalyticsProcessor implements IProcessor {
             value: 1,
             dimensions: {
               drive: AnalyticsPath.fromString(
-                `drive/${driveId}/${branch}/${scope}/${revision}`,
+                `ph/doc/drive/${driveId}/${branch}/${scope}/${revision}`,
               ),
               operation: AnalyticsPath.fromString(
-                `operation/${operation.type}/${operation.index}`,
+                `ph/doc/operation/${operation.type}/${operation.index}`,
               ),
               target: AnalyticsPath.fromString(
-                `target/${driveId}/${target}/${documentId}`,
+                `ph/doc/target/${driveId}/${target}/${documentId}`,
               ),
             },
           };

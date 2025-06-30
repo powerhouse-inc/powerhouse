@@ -41,19 +41,19 @@ export const useDriveAnalytics = (options: UseDriveAnalyticsOptions) => {
   };
 
   const selectDrives = options.filters?.driveId?.map((driveId) =>
-    AnalyticsPath.fromString(`drive/${driveId}`),
+    AnalyticsPath.fromString(`ph/drive/${driveId}`),
   );
 
   const operations = options.filters?.operation?.map((operation) =>
-    AnalyticsPath.fromString(`operation/${operation}`),
+    AnalyticsPath.fromString(`ph/drive/operation/${operation}`),
   );
 
   const targets = options.filters?.target?.map((target) =>
-    AnalyticsPath.fromString(`target/${target}`),
+    AnalyticsPath.fromString(`ph/drive/target/${target}`),
   );
 
   const actionTypes = options.filters?.actionType?.map((actionType) =>
-    AnalyticsPath.fromString(`actionType/${actionType}`),
+    AnalyticsPath.fromString(`ph/drive/actionType/${actionType}`),
   );
 
   const select = {
