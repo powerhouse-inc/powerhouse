@@ -401,7 +401,7 @@ export const processorFactory =
   };
 ```
 
-This is described in more detail in the [ProcessorFactory](#processorfactory) section, but for our purposes, we only want our processor to run for our document type, so we should change the filter's `documentType`.
+This is described in more detail in the [ProcessorFactory](#processorfactory) section, but for our purposes, we only want our processor to run on our document type, so we should update the filter accordingly.
 
 ```ts
 filter: {
@@ -412,15 +412,207 @@ filter: {
 },
 ```
 
-### Data Design
+### Dimension Design
 
-Before we get into the meat of the processor, we need to design the data we're going to be working with.
+Before we get into the meat of the processor, we should be sure to spend some upfront time designing the data we want to query. One way to do this is to start at the end: what do we want to see? In the case of billing statements, we will want to be able to generate reports that show:
 
+- Total spent on headcount vs non-headcount
+- Total spent across all budgets
+- Stacked bar chart of total spent each month, grouped by budget
+- Stacked bar chart of total spent each month, grouped by expense category
+- Total spent each year across all budgets
+- Total spent each year, grouped by budget
+- Total spent per month, grouped by budget
+- Total spent last 30 days, grouped by budget
 
+From here, we can deconstruct the different criteria we would like to group data across:
+
+- time period
+- budget
+- category
+- contributor
+
+The analytics engine gives us a good way to bucket based on time period, so we can focus on the other criteria, which we will specify as _dimensions_. Let's use these dimentions to stub out some of the queries we would want to run, using the `useAnalyticsQuery` hook.
+
+### Query Design
+
+Let's start with "Total spent on headcount vs non-headcount". First, we need to define the time-based criteria.
+
+> Time and Dates can be very confusing. This is why we use the `DateTime` class from `luxon`-- see the [luxon docs](https://moment.github.io/luxon/#/math) for a quickstart.
+
+```ts
+// easy way to get the start and end of the current year
+const start = DateTime.now().startOf("year");
+const end = DateTime.now().endOf("year");
+
+// this means we'll aggregate results across the entire time period
+const granularity = "total";
+```
+
+Next, we want to define the metrics we want to analyze. These are the numerical values we will be aggregating over.
+
+```ts
+// the two numerical values we want to analyze are cash and powt, which are declared separately in the document model
+const metrics = ["Cash", "Powt"];
+```
+
+Now, we can define the dimensions we want to group by. We can imagine that we will have a `contributor` dimension, which will tell us whether or not the contributor is headcount: `/billing-statement/contributor/headcount` or `/billing-statement/contributor/non-headcount`.
+
+> It's best practice to namespace dimensions so that we are sure our data is not colliding with other processors. In this case, we will prepend the `billing-statement` namespace, which is simply a prefix we made up.
+
+```ts
+const totalSpendOnHeadcount = useAnalyticsQuery({
+  start, end, granularity, metrics,
+  select: {
+    contributor: "/billing-statement/contributor"
+  },
+  lod: {
+    contributor: 3,
+  },
+});
+```
+
+It is very important to note that the `lod` parameter is used to specify the level of detail we want to see. In this case, we want to see results grouped by contributor, so we set `lod` to `3`. This means we will get separate metric results for `/billing-statement/contributor/headcount` and `/billing-statement/contributor/non-headcount`.
+
+We can use these same strategies to create queries for the other criteria we want to group by.
+
+```ts
+const totalSpend = useAnalyticsQuery({
+  start,
+  end,
+  granularity: "total", // <--- this means we'll get results for the entire time period
+  metrics: ["Cash", "Powt"],
+  select: {
+    budget: "/billing-statement"
+  },
+  lod: {
+    budget: 0, // <--- this means we'll get all results lumped together
+  },
+});
+
+const monthlySpendByBudget = useAnalyticsQuery({
+  start,
+  end,
+  granularity: "monthly", // <--- this means we'll get results grouped by month
+  metrics: ["Cash", "Powt"],
+  select: {
+    budget: "/billing-statement/budget"
+  },
+  lod: {
+    budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
+  },
+});
+
+const monthlySpendByCategory = useAnalyticsQuery({
+  start,
+  end,
+  granularity: "monthly", // <--- this means we'll get results grouped by month
+  metrics: ["Cash", "Powt"],
+  select: {
+    category: "/billing-statement/category"
+  },
+  lod: {
+    category: 3, // <--- this means we'll get results grouped by "/billing-statement/category/category1", "/billing-statement/category/category2", etc.
+  },
+});
+
+const yearlySpendByBudget = useAnalyticsQuery({
+  start: DateTime.fromObject({ year: 2022 }),
+  end: DateTime.now().endOf("year"),
+  granularity: "yearly", // <--- this means we'll get results grouped by year
+  metrics: ["Cash", "Powt"],
+  select: {
+    budget: "/billing-statement/budget"
+  },
+  lod: {
+    budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
+  },
+});
+
+const monthlySpendByBudget = useAnalyticsQuery({
+  start,
+  end,
+  granularity: "monthly", // <--- this means we'll get results grouped by month
+  metrics: ["Cash", "Powt"],
+  select: {
+    budget: "/billing-statement/budget"
+  },
+  lod: {
+    budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
+  },
+});
+
+const last30DaysSpendByBudget = useAnalyticsQuery({
+  start: DateTime.now().minus({ days: 30 }),
+  end: DateTime.now(),
+  granularity: "day", // <--- this means we'll get results grouped by day
+  metrics: ["Cash", "Powt"],
+  select: {
+    budget: "/billing-statement/budget"
+  },
+  lod: {
+    budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
+  },
+});
+```
+
+### Source Design
+
+The final consideration is the source design. While dimensions and sources both use path syntax, _the paths are unrelated_. That is, a path used in an AnalyticsSeries `source` does not affect a path used in a `dimension`, and vice versa. The `source` attribute of an analytics series is a composable mechanism to track down _where the data came from_.
+
+This turns out to be an important consideration, as when we query data, we will likely also want to subscribe to a set of sources to later update the data.
+
+For instance, say we take our monthly spend by category query:
+
+```ts
+const monthlySpendByCategory = useAnalyticsQuery({
+  start,
+  end,
+  granularity: "monthly", 
+  metrics: ["Cash", "Powt"],
+  select: {
+    category: "/billing-statement/category"
+  },
+  lod: {
+    category: 3,
+  },
+});
+```
+
+This gives us the results we're looking for but, by design, there may be many different `AnalyticsSeries` objects that relate to affect this query. Thus, the hook does not know what to listen to. This is where our `source` design comes in. Generally, we will want to relate analytics by drive and/or document.
+
+```ts
+// this source will match all analytics updates from any document in the drive
+const driveSource = AnalyticsPath.fromString(`billing-statement/${drive.header.id}`);
+
+// this source will match all analytics updates from a specific document in a drive
+const documentSource = AnalyticsPath.fromString(`billing-statement/${drive.header.id}/${document.header.id}`);
+```
+
+```ts
+const { state, data: drive } = useSelectedDrive();
+
+const results = useAnalyticsQuery({
+  start, end,
+  granularity: "monthly", 
+  metrics: ["Cash", "Powt"],
+  select: {
+    category: "/billing-statement/category"
+  },
+  lod: {
+    category: 3,
+  },
+},
+{
+  sources: [
+   `/billing-statement/${drive.header.id}/` 
+  ],
+});
+```
 
 ### `IProcessor`
 
-Now we can open up `line-item-processor/index.ts` to add the custom logic we're looking for. This will be in the `onStrands` function.
+Now that we have designed out our data, we can open up `line-item-processor/index.ts` to add the custom logic we're looking for. This will be in the `onStrands` function.
 
 ```ts
 
