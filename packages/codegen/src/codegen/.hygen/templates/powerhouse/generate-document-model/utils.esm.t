@@ -21,7 +21,7 @@ import { reducer } from './reducer.js';
 
 export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
-//00;a;lioadsf0-==-03940LK#:L$K
+
 const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
