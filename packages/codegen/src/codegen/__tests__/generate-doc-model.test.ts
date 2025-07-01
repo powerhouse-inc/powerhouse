@@ -9,7 +9,10 @@ import { loadDocumentModel } from "../utils.js";
 describe("document model", () => {
   it(
     "should generate a document model",
-    async ({ expect }) => {
+    {
+      timeout: 10000,
+    },
+    async () => {
       const srcPath = path.join(
         process.cwd(),
         "src",
@@ -69,9 +72,6 @@ describe("document model", () => {
       });
 
       await promise;
-    },
-    {
-      timeout: 10000,
     },
   );
 });
