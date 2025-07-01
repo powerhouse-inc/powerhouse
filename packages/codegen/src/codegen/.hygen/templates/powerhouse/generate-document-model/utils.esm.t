@@ -9,7 +9,8 @@ import {
     baseSaveToFile,
     baseSaveToFileHandle,
     baseLoadFromFile,
-    baseLoadFromInput
+    baseLoadFromInput,
+    generateId,
  } from 'document-model';
 import { 
   <%= 'type ' + h.changeCase.pascal(documentType) %>Document,
@@ -20,7 +21,7 @@ import { reducer } from './reducer.js';
 
 export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
-
+//00;a;lioadsf0-==-03940LK#:L$K
 const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
@@ -28,15 +29,22 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
     },
     createExtendedState(extendedState) {
         return baseCreateExtendedState(
-            { ...extendedState, documentType: '<%- documentTypeId %>' },
+            { ...extendedState },
             utils.createState
         );
     },
     createDocument(state) {
-        return baseCreateDocument(
+        const document = baseCreateDocument(
             utils.createExtendedState(state),
             utils.createState
         );
+
+        document.header.documentType = '<%- documentTypeId %>';
+
+        // for backwards compatibility, but this is NOT a valid signed document id
+        document.header.id = generateId();
+
+        return document;
     },
     saveToFile(document, path, name) {
         return baseSaveToFile(document, path, '<%- fileExtension %>', name);

@@ -1,0 +1,117 @@
+{
+    "id": "powerhouse/billing-statement",
+    "name": "Billing Statement",
+    "extension": ".phdm",
+    "description": "The Billing Statement Document Model captures a contributor’s issued charges, with itemized line entries and auto-calculated totals in cash and POWT's.",
+    "author": {
+        "name": "Powerhouse",
+        "website": "https://powerhouse.inc"
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type BillingStatementState {\n  contributor: PHID  # Change to AID when available\n  dateIssued: DateTime!\n  dateDue: DateTime\n  lineItems: [BillingStatementLineItem!]!\n  status: BillingStatementStatus!\n  currency: String!\n  totalCash: Float!\n  totalPowt: Float!\n  notes: String\n}\n\ntype BillingStatementLineItem {\n  id: OID!\n  description: String!\n  quantity: Float!\n  unit: BillingStatementUnit!\n  unitPricePwt: Float!\n  unitPriceCash: Float!\n  totalPricePwt: Float!\n  totalPriceCash: Float!\n  lineItemTag: [BillingStatementTag!]!\n}\n\ntype BillingStatementTag {\n  dimension: String!\n  value: String!\n  label: String\n}\n\nenum BillingStatementStatus {\n  DRAFT\n  ISSUED\n  ACCEPTED\n  REJECTED\n  PAID\n}\n\nenum BillingStatementStatusInput {\n  DRAFT\n  ISSUED\n  ACCEPTED\n  REJECTED\n  PAID\n}\n\nenum BillingStatementUnit {\n  MINUTE\n  HOUR\n  DAY\n  UNIT\n}\n\nenum BillingStatementUnitInput {\n  MINUTE\n  HOUR\n  DAY\n  UNIT\n}\n\n",
+                    "initialValue": "{\n  \"contributor\": \"\",\n  \"dateIssued\": \"2025-06-10T15:42:17.873Z\",\n  \"dateDue\": \"2025-06-10T15:42:17.873Z\",\n  \"lineItems\": [],\n  \"status\": \"DRAFT\",\n  \"currency\": \"\",\n  \"totalCash\": 0,\n  \"totalPowt\": 0,\n  \"notes\": \"\"\n}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "dnNu8Q38g6PEhUWWnwSWA1mTr40=",
+                    "name": "general",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "obKvjYTcH1TKFjSO5DGtmC9HS7w=",
+                            "name": "EDIT_BILLING_STATEMENT",
+                            "description": "",
+                            "schema": "input EditBillingStatementInput {\n  dateIssued: DateTime\n  dateDue: DateTime\n  currency: String\n  notes: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "pkU1fg9dl0SDxHb+294KsqUDMN4=",
+                            "name": "EDIT_CONTRIBUTOR",
+                            "description": "",
+                            "schema": "input EditContributorInput {\n  contributor: PHID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "sAZCp+O/axy6cbtI/rrV0/A5eMw=",
+                            "name": "EDIT_STATUS",
+                            "description": "",
+                            "schema": "input EditStatusInput {\n  status: BillingStatementStatusInput!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "kNoQafB6U1J4Gq8GrcjRyGhrRvg=",
+                    "name": "line_items",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "5s+0/bYYzWZd4rOdj53uQ2orOaE=",
+                            "name": "ADD_LINE_ITEM",
+                            "description": "BillingStatementState.totalCash / .totalPowt will be a sum of the line item values.",
+                            "schema": "input AddLineItemInput {\n  id: OID!\n  description: String!\n  quantity: Float!\n  unit: BillingStatementUnitInput!\n  unitPricePwt: Float!\n  unitPriceCash: Float!\n  totalPricePwt: Float!\n  totalPriceCash: Float!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "iBzTjNAr/a4NsuxZmy821GoN/NE=",
+                            "name": "EDIT_LINE_ITEM",
+                            "description": "BillingStatementState.totalCash / .totalPowt will be a sum of the line item values.",
+                            "schema": "input EditLineItemInput {\n  id: OID!\n  description: String\n  quantity: Float\n  unit: BillingStatementUnitInput\n  unitPricePwt: Float\n  unitPriceCash: Float\n  totalPricePwt: Float\n  totalPriceCash: Float\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                },
+                {
+                    "id": "jg5q35JaHcb5iNDdFkB2xYYNrDU=",
+                    "name": "tags",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "k5kMjZ+cO/7fVOPTvyTZ07XMVEA=",
+                            "name": "EDIT_LINE_ITEM_TAG",
+                            "description": "",
+                            "schema": "input EditLineItemTagInput {\n  lineItemId: OID!\n  dimension: String!\n  value: String!\n  label: String\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
