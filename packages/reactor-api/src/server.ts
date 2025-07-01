@@ -6,13 +6,13 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "#packages/package-manager.js";
-import { type IPackageLoader } from "#packages/types.js";
+import {
+  type IPackageLoader,
+  type IProcessorHostModule,
+} from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import {
-  KnexAnalyticsStore,
-  KnexQueryExecutor,
-} from "@powerhousedao/analytics-engine-knex";
+import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
@@ -33,7 +33,7 @@ import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
 import { type API, type SubgraphClass } from "./types.js";
-import { getDbClient } from "./utils/db.js";
+import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -58,6 +58,10 @@ type Options = {
     | boolean
     | undefined;
   packageLoader?: IPackageLoader;
+  processors?: Record<
+    string,
+    ((module: IProcessorHostModule) => ProcessorFactory)[]
+  >;
 };
 
 const DEFAULT_PORT = 4000;
@@ -84,15 +88,17 @@ function setupGraphQlExplorer(router: express.Router): void {
 /**
  * Initializes the database and analytics store
  */
-function initializeDatabaseAndAnalytics(dbPath: string | undefined): {
-  db: Knex;
-  analyticsStore: IAnalyticsStore;
-} {
+async function initializeDatabaseAndAnalytics(
+  dbPath: string | undefined,
+): Promise<{ db: Knex; analyticsStore: IAnalyticsStore }> {
   const db = getDbClient(dbPath);
-  const analyticsStore = new KnexAnalyticsStore({
-    executor: new KnexQueryExecutor(),
+  const analyticsStore = new PostgresAnalyticsStore({
     knex: db,
-  }) as unknown as IAnalyticsStore;
+  });
+
+  for (const sql of initAnalyticsStoreSql) {
+    await db.raw(sql);
+  }
 
   return { db, analyticsStore };
 }
@@ -313,7 +319,9 @@ export async function startAPI(
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { db, analyticsStore } = initializeDatabaseAndAnalytics(options.dbPath);
+  const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
+    options.dbPath,
+  );
   const module = { db, analyticsStore };
 
   // Initialize package manager
