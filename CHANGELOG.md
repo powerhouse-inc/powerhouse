@@ -1,3 +1,17 @@
+## 3.2.0-staging.2 (2025-07-01)
+
+### 🚀 Features
+
+- **reactor-api,reactor-local:** allow providing processors to be instantiated and enable drive analytics ([1a3800fc2](https://github.com/powerhouse-inc/powerhouse/commit/1a3800fc2))
+
+### 🩹 Fixes
+
+- **reactor-api:** create analytics tables if they don't exist ([bea2eed2f](https://github.com/powerhouse-inc/powerhouse/commit/bea2eed2f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.2.0-staging.1 (2025-07-01)
 
 ### 🚀 Features
