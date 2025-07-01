@@ -81,6 +81,12 @@ jobs:
           git config user.name "Github Actions Bot"
           git config user.email "-"
 
+      - name: Clean up non-dev tags (main branch only)
+        if: github.ref_name == 'main'
+        shell: bash
+        run: |
+          git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+-dev\.[0-9]\+$' | xargs -r git tag -d
+
       - name: Update pkg version and publish to npm
         run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
         shell: bash
