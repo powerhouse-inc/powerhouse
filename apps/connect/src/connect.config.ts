@@ -62,6 +62,9 @@ const PH_CONNECT_DIFF_ANALYTICS_ENABLED =
 const PH_CONNECT_DRIVE_ANALYTICS_ENABLED =
     import.meta.env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED || 'false';
 
+const PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED =
+    import.meta.env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED || 'false';
+
 const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
     ? import.meta.env.LOG_LEVEL
     : 'info';
@@ -78,6 +81,7 @@ export default {
         useWorker: PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED !== 'true',
         driveAnalyticsEnabled: PH_CONNECT_DRIVE_ANALYTICS_ENABLED === 'true',
         diffProcessorEnabled: PH_CONNECT_DIFF_ANALYTICS_ENABLED === 'true',
+        externalProcessorsEnabled: PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED === 'true',
     },
     sentry: {
         dsn: PH_CONNECT_SENTRY_DSN,
