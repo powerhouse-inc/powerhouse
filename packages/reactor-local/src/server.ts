@@ -1,3 +1,4 @@
+import { processorFactory as DriveAnalyticsProcessorFactory } from "@powerhousedao/common/drive-analytics/processor/index";
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
 import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
@@ -31,7 +32,8 @@ const startServer = async (
     ...options,
   };
 
-  process.env.LOG_LEVEL = isLogLevel(logLevel) ? logLevel : "info";
+  process.env.LOG_LEVEL =
+    process.env.LOG_LEVEL || (isLogLevel(logLevel) ? logLevel : "info");
 
   // be aware: this may not log anything if the log level is above debug
   logger.debug(`Setting log level to ${logLevel}.`);
@@ -69,6 +71,9 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
+    processors: {
+      "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
+    },
   });
 
   // add vite middleware after express app is initialized if applicable

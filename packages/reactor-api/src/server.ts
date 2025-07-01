@@ -347,7 +347,10 @@ export async function startAPI(
 
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
-  for (const [packageName, fns] of processors) {
+  for (const [packageName, fns] of [
+    ...processors.entries(),
+    ...Object.entries(options.processors ?? {}),
+  ]) {
     const factories = fns.map((fn) => {
       try {
         return fn(module);
