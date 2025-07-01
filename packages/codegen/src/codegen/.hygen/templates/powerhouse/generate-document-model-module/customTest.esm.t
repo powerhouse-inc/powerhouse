@@ -7,6 +7,7 @@ unless_exists: true
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { generateMock } from '@powerhousedao/codegen';
 import utils from '../../gen/utils.js';
 import {

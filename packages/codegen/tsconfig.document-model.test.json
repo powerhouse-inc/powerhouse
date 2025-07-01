@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/codegen/__tests__/.out/**/*.ts"]
+}
