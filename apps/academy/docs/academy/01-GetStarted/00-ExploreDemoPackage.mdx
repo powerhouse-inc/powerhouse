@@ -1,18 +1,5 @@
 # Explore the demo package
 
-<details>
-<summary>How long will this tutorial take?</summary>
-
-We've designed this "Get Started" track to be as smooth as possible. The time it takes will vary based on your familiarity with modern web development tools.
-
-- **For Experienced Developers** (familiar with TypeScript, React, and CLIs), you can expect to complete the entire four-part tutorial in approximately **1 to 1.5 hours**.
-- **For Developers New to This Stack**, we recommend setting aside **3.5 to 4.5 hours**. This allows for time to understand not just the steps, but the core concepts behind them.
-
-This is just a guideline. The goal is to learn comfortably and build a solid foundation with Powerhouse!
-
-A more theoretical and advanced version of this tutorial can also be found in [Mastery Track - Document Model Creation](../MasteryTrack/DocumentModelCreation/WhatIsADocumentModel).
-</details>
-
 ## Let's get started
 
 To give you a quick idea of how the Powerhouse ecosystem operates on document models and packages, why don't you try installing a package? 
@@ -109,7 +96,55 @@ Here, you'll see that you've installed the `@powerhousedao/todo-demo-package`, w
   <figcaption>The Package Manager showing the installed todo-demo-package.</figcaption>
 </figure>
 
-## Step 4: Log in with Renown
+## Step 4: Create a todo list document
+
+:::tip What is a 'drive' at Powerhouse?
+A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+:::
+
+### 4.1 Create a local todolist app drive
+
+First, let's create a dedicated drive for your to-do lists:
+
+- Click the new drive icon in the interface
+- In the **Drive App** field, select 'To-do Drive App'
+- This creates a specialized drive that's optimized for to-do list documents
+
+### 4.2 Create a todolist document
+
+Now move into the drive you've just created:
+
+- Click the button at the bottom of the page to create a new to-do list document
+- This opens the to-do list editor where you can start managing your tasks
+
+### 4.3 Add a few todos and inspect the document history
+
+- Add a few to-dos that are on your mind
+- You'll see a statistics widget that counts the open to-dos
+- After closing the document, look at the To-do Drive App interface—you'll see that it tracks your tasks and displays a progress bar
+
+<figure className="image-container">
+  <img src={require("./images/TodoDriveApp.png").default} alt="Todo Drive App" />
+  <figcaption>A list of todo's in the custom todo drive app. </figcaption>
+</figure>
+
+A key feature you get with Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when.
+
+<figure className="image-container">
+  <img src={require("./images/OperationsHistoryButton.png").default} alt="Operations History Button" />
+  <figcaption> You can find the button to visit the operations history in the document model toolbar </figcaption>
+</figure>
+
+<figure className="image-container">
+  <img src={require("./images/OperationsHistory.png").default} alt="Operations History" />
+  <figcaption>Example of the operations history for a document, showing all modifications made to it in a list. </figcaption>
+</figure>
+
+Learn more about the [Operations History](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
+
+This is the power of Drive Apps. They offer a customized interface that works well with the different documents inside your drive. Read more about drive apps in the Mastery Track: [Drive Apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
+
+## Step 5: Enable operation signing and verification through Renown
 
 Renown is Powerhouse's **decentralized identity and reputation system** designed to address the challenge of trust within open organizations, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities.
 
@@ -117,16 +152,18 @@ Renown is Powerhouse's **decentralized identity and reputation system** designed
 When signing in with Renown, use an Ethereum or blockchain address that can function as your 'identity', as this address will accrue more experience and history over time.
 :::
 
-### Login flow
-"**Log in with Renown**" is a decentralized authentication flow that enables you to log into applications by signing a credential with your Ethereum wallet. Upon signing in, a Decentralized Identifier (DID) is created based on your Ethereum key. 
+### 5.1 Click the renown icon and connect your eth identity
+
+"**Log in with Renown**" is a decentralized authentication flow that enables you to log into applications by signing a credential with your Ethereum wallet. Upon signing in, a Decentralized Identifier (DID) is created based on your Ethereum key.
 
 <figure className="image-container">
   <img src={require("./images/RenownLogin.png").default} alt="Renown Login" />
   <figcaption>The Renown login screen, prompting for a signature from a wallet.</figcaption>
 </figure>
 
-### Generate a DID to sign operations in Connect
-This DID is then associated with a credential that authorizes a specific Connect instance to act on your behalf. That credential is stored securely on Ceramic, a decentralized data network. When you perform actions through the Powerhouse Connect interface, those operations are signed with the DID and transmitted to Switchboard, which serves as the verifier. 
+### 5.2 Authorize Connect to sign document edits on your behalf
+
+This DID is then associated with a credential that authorizes a specific Connect instance to act on your behalf. That credential is stored securely on Ceramic, a decentralized data network. When you perform actions through the Powerhouse Connect interface, those operations are signed with the DID and transmitted to Switchboard, which serves as the verifier.
 
 <figure className="image-container">
   <img src={require("./images/ConnectAddress.png").default} alt="Connect Address for DID" />
@@ -138,45 +175,17 @@ This DID is then associated with a credential that authorizes a specific Connect
   <figcaption>Confirmation of a successful login with Renown.</figcaption>
 </figure>
 
-### Verifying signatures
-**Switchboard**, our (remote & local) data processing engine, acts as a verifier in the Renown authentication flow. Switchboard checks the validity of the DID and credential, ensuring the operation request is legitimate. This flow is designed to offer a verifiable, cryptographically secure login system that replaces traditional password-based authentication with decentralized identity and signature-based trust.
+### 5.3 Verify the signatures of new operations in the todo list
 
-## Step 5: Create a to-do list and explore the document operations history
+By leveraging this system, every operation or modification made to a document is cryptographically signed by the contributor's Renown identity. This ensures that each change is verifiable, traceable, and attributable to a specific pseudonymous user, providing a robust audit trail for all document activity.
 
-<figure className="image-container">
-  <img src={require("./images/OperationsHistory.png").default} alt="Operations History" />
-  <figcaption>Example of the operations history for a document, showing all modifications made to it in a list. </figcaption>
-</figure>
-
-By leveraging this system, every operation or modification made to a document is cryptographically signed by the contributor's Renown identity. This ensures that each change is verifiable, traceable, and attributable to a specific pseudonymous user, providing a robust audit trail for all document activity. 
-
-A key feature you get with Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when. This ensures every action is traceable and verifiable.
-Learn more about the [Operations History](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
-
-
-### 5.1 Create a to-do list
-
-Now, move back to your local drive and create a to-do list. Add a few to-dos that are on your mind. You'll see a statistics widget that counts the open to-dos.
-
-### 5.2 Create a specific to-do drive app
-
-:::tip What is a 'drive' at Powerhouse?
-A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
-:::
-
-Since your previous to-do list was created inside a local drive with a general-purpose drive explorer, it didn't look particularly special.
-
-- Now let's create a new drive by clicking the new drive icon. In the **Drive App** field, select 'To-do Drive App'.  
-- Now move into the drive you've just created and create a new to-do list by clicking the button at the bottom of the page. 
-- Add a new set of random to-dos
-- After closing the document, look at the To-do Drive App interface. You'll see that it tracks your tasks and displays a progress bar.
+Now, return to your to-do list and make some additional changes. You'll notice that these operations are now signed with your Renown identity, making every action traceable and verifiable in the operations history.
 
 <figure className="image-container">
-  <img src={require("./images/TodoDriveApp.png").default} alt="Operations History" />
-  <figcaption>A list of todo's in the custom todo drive app. </figcaption>
+  <img src={require("./images/OperationsHistorySignature.png").default} alt="Operation History Signature" />
+  <figcaption>Your DID is now signing the operations that are being added to the history.</figcaption>
 </figure>
 
-This is the power of Drive Apps. They offer a customized interface that works well with the different documents inside your drive. Read more about drive apps in the Mastery Track: [Drive Apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
 ## Step 6: Export a document
 
 Export the document as a `.phd` (Powerhouse Document) file using the export button in the document toolbar at the top. In this toolbar, you will find all available functionality for your documents. The `.phd` file can be sent through any of your preferred channels to other users on your network. 

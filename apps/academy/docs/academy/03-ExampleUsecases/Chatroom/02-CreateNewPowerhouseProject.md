@@ -13,7 +13,8 @@ To create a new Powerhouse Document Model Library project, you can use the `ph i
 This command will create a new project in the current directory. You can run the command in the terminal window of your OS or you open the newly installed VSCode and run the command in the terminal window of VSCode.Make sure the terminal reflects the directory where you want to create the new project.
 
 ```bash
-cd your-directory
+mkdir ph-projects
+cd ph-projects
 ```
 This essentially opens that folder and places you in it.
 

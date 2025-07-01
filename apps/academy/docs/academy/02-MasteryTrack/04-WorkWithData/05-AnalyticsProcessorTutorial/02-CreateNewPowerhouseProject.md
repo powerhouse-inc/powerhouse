@@ -16,7 +16,7 @@ Let's start with step 1 & 2 in the next section of the tutorial!
 
 To create a new Powerhouse Document Model Library project, you can use the `ph init` command in your terminal. This command will create a new project in the current directory.
 
-## Create new Powerhouse document model library project
+## Create new Powerhouse document model project
 
 :::info
 This command will create a new project in the current directory.
@@ -24,8 +24,10 @@ You can run the command in the terminal window of your OS or you open the newly 
 You will need VSCode later in the tutorial once you have generated the document model.
 Make sure the terminal reflects the directory where you want to create the new project.
 To open a directory in a terminal, you use the cd command to change your current directory. The cd command takes an argument, usually the name of the folder you want to move to, so the full command is 
+
 ```bash
-cd your-directory
+mkdir ph-projects
+cd ph-projects
 ```
 This essentially opens that folder and places you in it.
 :::

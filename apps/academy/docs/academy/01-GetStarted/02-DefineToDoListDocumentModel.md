@@ -1,4 +1,4 @@
-# Define the to-do list document specification 
+# Write the document specification 
 
 In this tutorial, you will learn how to define the specifications for a **To-do List** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.

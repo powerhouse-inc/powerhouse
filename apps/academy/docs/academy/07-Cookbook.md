@@ -14,7 +14,7 @@ You need to install the Powerhouse CLI (`ph-cmd`) to create and manage Powerhous
 
 ## Prerequisites
 - node.js 22 installed
-- pnpm package manager installed
+- pnpm package manager 10 installed
 - Terminal or command prompt access
 
 ## Solution
@@ -169,7 +169,7 @@ You need to access experimental features, bugfixes, or development versions of P
 
 ## Prerequisites
 - Terminal or command prompt access
-- pnpm package manager installed
+- pnpm package manager 10 installed
 - Node.js 22 installed
 
 ## Solution

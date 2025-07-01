@@ -157,6 +157,21 @@ a {
   color: #003d7a; /* darker blue on hover */
 }
 
+/* Dark mode specific styles for better readability */
+[data-theme='dark'] .docs-doc-page .theme-doc-markdown a,
+[data-theme='dark'] .markdown a,
+[data-theme='dark'] details a,
+[data-theme='dark'] .theme-doc-markdown details a {
+  color: #66b3ff !important; /* lighter blue for dark mode */
+}
+
+[data-theme='dark'] .docs-doc-page .theme-doc-markdown a:hover,
+[data-theme='dark'] .markdown a:hover,
+[data-theme='dark'] details a:hover,
+[data-theme='dark'] .theme-doc-markdown details a:hover {
+  color: #99ccff !important; /* even lighter blue on hover for dark mode */
+}
+
 /* Reset styling for navigation elements, category pages, and utility links */
 .breadcrumbs a,
 .pagination-nav a,
