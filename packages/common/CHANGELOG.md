@@ -1,3 +1,17 @@
+## 3.2.0-dev.8 (2025-07-01)
+
+### 🚀 Features
+
+- **academy:** add Drive Analytics documentation and examples ([daedc28a3](https://github.com/powerhouse-inc/powerhouse/commit/daedc28a3))
+
+### 🩹 Fixes
+
+- added unique prefix to dimensions in drive and document processors ([3722a81c7](https://github.com/powerhouse-inc/powerhouse/commit/3722a81c7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.2.0-dev.7 (2025-06-28)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

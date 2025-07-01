@@ -1,3 +1,13 @@
+## 3.2.0-dev.8 (2025-07-01)
+
+### 🚀 Features
+
+- **academy:** add Drive Analytics documentation and examples ([daedc28a3](https://github.com/powerhouse-inc/powerhouse/commit/daedc28a3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.2.0-dev.7 (2025-06-28)
 
 ### 🚀 Features
