@@ -1,0 +1,129 @@
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar Amount_Percentage
+scalar EmailAddress
+scalar Date
+scalar DateTime
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+type BillingStatementState {
+  contributor: PHID  # Change to AID when available
+  dateIssued: DateTime!
+  dateDue: DateTime
+  lineItems: [BillingStatementLineItem!]!
+  status: BillingStatementStatus!
+  currency: String!
+  totalCash: Float!
+  totalPowt: Float!
+  notes: String
+}
+
+type BillingStatementLineItem {
+  id: OID!
+  description: String!
+  quantity: Float!
+  unit: BillingStatementUnit!
+  unitPricePwt: Float!
+  unitPriceCash: Float!
+  totalPricePwt: Float!
+  totalPriceCash: Float!
+  lineItemTag: [BillingStatementTag!]!
+}
+
+type BillingStatementTag {
+  dimension: String!
+  value: String!
+  label: String
+}
+
+enum BillingStatementStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  REJECTED
+  PAID
+}
+
+enum BillingStatementStatusInput {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  REJECTED
+  PAID
+}
+
+enum BillingStatementUnit {
+  MINUTE
+  HOUR
+  DAY
+  UNIT
+}
+
+enum BillingStatementUnitInput {
+  MINUTE
+  HOUR
+  DAY
+  UNIT
+}
+
+
+
+
+
+# general
+
+input EditBillingStatementInput {
+  dateIssued: DateTime
+  dateDue: DateTime
+  currency: String
+  notes: String
+}
+
+input EditContributorInput {
+  contributor: PHID!
+}
+
+input EditStatusInput {
+  status: BillingStatementStatusInput!
+}
+
+# line_items
+
+input AddLineItemInput {
+  id: OID!
+  description: String!
+  quantity: Float!
+  unit: BillingStatementUnitInput!
+  unitPricePwt: Float!
+  unitPriceCash: Float!
+  totalPricePwt: Float!
+  totalPriceCash: Float!
+}
+
+input EditLineItemInput {
+  id: OID!
+  description: String
+  quantity: Float
+  unit: BillingStatementUnitInput
+  unitPricePwt: Float
+  unitPriceCash: Float
+  totalPricePwt: Float
+  totalPriceCash: Float
+}
+
+# tags
+
+input EditLineItemTagInput {
+  lineItemId: OID!
+  dimension: String!
+  value: String!
+  label: String
+}
