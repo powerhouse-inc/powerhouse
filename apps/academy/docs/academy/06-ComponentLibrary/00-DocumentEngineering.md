@@ -15,6 +15,22 @@ Here are the key points to understand:
 - **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem. 
 :::
 
+## What are Components?
+
+In the context of Powerhouse Builder platform, components can be thought of as reusable elements, or ready-to-use building blocks that help builders implement **document editors & viewers** with little to no effort. An important utility aspect of a component is that it serves its users as a **data input field**, providing structured ways to enter and manipulate information within your document models.
+
+## Document Editors vs Document Viewers
+
+Understanding the relationship between document editors and viewers is crucial for component usage:
+
+**Document Editor**: A specific document type that is used by one or more users to make data entries and update its state. Key utility is the ability to enter data in a structured format, making it a great tool for collaboration within a group of authorized users.
+
+**Document Viewer**: Does not allow modifications. It's a great way to inform about the state of the document type, making it a great tool for providing a broader group or public with transparent insights. Document viewers do not have to match the view of the editor one-to-one - the data presented could be framed as a specific selection, or filtered to provide desired insights.
+
+:::tip Component Behavior in Different Contexts
+The same component that will be used in a document viewer will have a **disabled state** (not allowed to edit documents). Document editors precede document viewers - you would start by creating a document editor and then, if needed, decide which viewer format is useful.
+:::
+
 ## Scalars vs. General UI Components
 
 ### Scalar Components
@@ -38,6 +54,42 @@ This category includes a broader range of UI elements such as simplified version
 
 **Location:** @powerhousedao/document-engineering/ui   
 https://github.com/powerhouse-inc/document-engineering
+
+## Component Types Classification
+
+Inspired by atomic design methodology, Powerhouse classifies components into the following categories:
+
+### Fragment
+The smallest element that combined together makes up a scalar or other simple component.
+**Examples:** Character counter, Checkbox field, Label
+
+### Scalar (Simple Component)
+The simplest component that contains the basic input field for one-dimensional data type (single value).
+**Examples:** Integer, Boolean, String, Powerhouse ID (PHID)
+
+### Complex Component
+Compound component that has an object/array value. It's made up of multiple scalars combined to serve a specific function.
+**Examples:** Sidebar (tree structure navigation component with content-style navigation for hierarchical data)
+
+### Layout Component
+Purpose-specific container for other components like lists of other components, color layouts, sections, etc.
+**Examples:** Homepage section layout
+
+:::info Component Library Philosophy
+The Powerhouse team is building a Component library with a wide range of components embedding best UX practices & key functionality. This library establishes standards and best practices for building documents while fast-tracking the building process through facilitation of the most basic & useful component types.
+:::
+
+## Component Behavior & UX Principles
+
+Besides the ability to input data, components have another crucial utility: they describe the mechanism of user interaction through implementing a defined set of behavior rules. 
+
+**Best Practices for Component Behavior:**
+- Implementing behaviors at a component level is much more efficient than at the document level
+- Good component behavior feels natural to the user and is easily understood
+- Components should be intuitive and not require additional tutorials or explanations
+- Start with the most simple/basic behaviors first, then layer additional behaviors on top
+- Keep behaviors as simple as needed - less is more
+
 
 ## Exploring Components with Storybook
 
