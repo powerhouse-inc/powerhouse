@@ -1,3 +1,15 @@
+## 3.2.0-staging.1 (2025-07-01)
+
+### 🚀 Features
+
+- **academy:** add Drive Analytics documentation and examples ([430ca8fab](https://github.com/powerhouse-inc/powerhouse/commit/430ca8fab))
+- **connect:** use atom store and provider from state library ([d617a1fe2](https://github.com/powerhouse-inc/powerhouse/commit/d617a1fe2))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+- ryanwolhuter
+
 ## 3.2.0-staging.0 (2025-06-26)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

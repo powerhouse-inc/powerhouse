@@ -1,3 +1,13 @@
+## 3.2.0-staging.1 (2025-07-01)
+
+### 🚀 Features
+
+- **connect:** use atom store and provider from state library ([d617a1fe2](https://github.com/powerhouse-inc/powerhouse/commit/d617a1fe2))
+
+### ❤️ Thank You
+
+- ryanwolhuter
+
 ## 3.2.0-staging.0 (2025-06-26)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.

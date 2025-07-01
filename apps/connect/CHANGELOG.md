@@ -1,3 +1,20 @@
+## 3.2.0-staging.1 (2025-07-01)
+
+### 🚀 Features
+
+- pass reactor as prop so custom drive can use new hooks ([13ccef33c](https://github.com/powerhouse-inc/powerhouse/commit/13ccef33c))
+- **connect:** use atom store and provider from state library ([d617a1fe2](https://github.com/powerhouse-inc/powerhouse/commit/d617a1fe2))
+
+### 🩹 Fixes
+
+- **connect:** avoid irrelevant logs ([43dd485c3](https://github.com/powerhouse-inc/powerhouse/commit/43dd485c3))
+- **connect:** added feature flag for diffs analytics ([7bf46a6b5](https://github.com/powerhouse-inc/powerhouse/commit/7bf46a6b5))
+
+### ❤️ Thank You
+
+- acaldas
+- ryanwolhuter
+
 ## 3.2.0-staging.0 (2025-06-26)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

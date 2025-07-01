@@ -1,3 +1,24 @@
+## 3.2.0-staging.1 (2025-07-01)
+
+### 🚀 Features
+
+- **academy:** add Drive Analytics documentation and examples ([430ca8fab](https://github.com/powerhouse-inc/powerhouse/commit/430ca8fab))
+- pass reactor as prop so custom drive can use new hooks ([13ccef33c](https://github.com/powerhouse-inc/powerhouse/commit/13ccef33c))
+- **common:** add reference links ([96ecfc1b4](https://github.com/powerhouse-inc/powerhouse/commit/96ecfc1b4))
+- **common:** add readme ([70c2ae470](https://github.com/powerhouse-inc/powerhouse/commit/70c2ae470))
+- **common:** add doc comments ([feb4b6873](https://github.com/powerhouse-inc/powerhouse/commit/feb4b6873))
+- **connect:** use atom store and provider from state library ([d617a1fe2](https://github.com/powerhouse-inc/powerhouse/commit/d617a1fe2))
+
+### 🩹 Fixes
+
+- added unique prefix to dimensions in drive and document processors ([8cfc1dde3](https://github.com/powerhouse-inc/powerhouse/commit/8cfc1dde3))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+- ryanwolhuter
+
 ## 3.2.0-staging.0 (2025-06-26)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
