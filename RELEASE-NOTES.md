@@ -8,7 +8,10 @@
 
 ### Migration Guide
 
-- This version requires that document models are regenerated. This is to accommodate the `PHDocument` refactor.
+- `PHDocument` changes:
+  - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
+  - `id` and `slug` have been moved from global state to the `header` field of the document. Thus, `document.state.global.id` is now `document.header.id`.
+
 
 ## 🚀 **v3.2.0**
 
