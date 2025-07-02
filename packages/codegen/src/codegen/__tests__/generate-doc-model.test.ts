@@ -24,7 +24,7 @@ describe("document model", () => {
     ".out",
   );
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     // make sure to remove the outPath directory
     await rm(outPath, { recursive: true, force: true });
   });
@@ -95,6 +95,69 @@ describe("document model", () => {
 
       await generateProcessor(
         "test-analytics-processor",
+        ["billing-statement"],
+        {
+          "billing-statement": {
+            name: "BillingStatement",
+            importPath: "../../document-model/billing-statement",
+          },
+        },
+        path.join(outPath, "processors"),
+        path.join(outPath, "document-model"),
+        "analytics",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await compile();
+    },
+  );
+
+  it(
+    "should generate multiple analytics processors with composable factories",
+    {
+      timeout: 10000,
+    },
+    async () => {
+      await generate();
+
+      await generateProcessor(
+        "test-1",
+        ["billing-statement"],
+        {
+          "billing-statement": {
+            name: "BillingStatement",
+            importPath: "../../document-model/billing-statement",
+          },
+        },
+        path.join(outPath, "processors"),
+        path.join(outPath, "document-model"),
+        "analytics",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await generateProcessor(
+        "test-2",
+        ["billing-statement"],
+        {
+          "billing-statement": {
+            name: "BillingStatement",
+            importPath: "../../document-model/billing-statement",
+          },
+        },
+        path.join(outPath, "processors"),
+        path.join(outPath, "document-model"),
+        "analytics",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await generateProcessor(
+        "test-3",
         ["billing-statement"],
         {
           "billing-statement": {
