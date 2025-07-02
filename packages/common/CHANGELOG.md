@@ -1,3 +1,14 @@
+## 3.2.0-staging.3 (2025-07-02)
+
+### 🚀 Features
+
+- updated release-notes.md ([843fcc72d](https://github.com/powerhouse-inc/powerhouse/commit/843fcc72d))
+- add RELEASE-NOTES.md from main branch ([8170e40a3](https://github.com/powerhouse-inc/powerhouse/commit/8170e40a3))
+
+### ❤️ Thank You
+
+- Callme-T
+
 ## 3.2.0-staging.2 (2025-07-01)
 
 ### 🚀 Features

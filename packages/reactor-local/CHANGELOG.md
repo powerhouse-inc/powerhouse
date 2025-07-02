@@ -1,3 +1,19 @@
+## 3.2.0-staging.3 (2025-07-02)
+
+### 🚀 Features
+
+- updated release-notes.md ([843fcc72d](https://github.com/powerhouse-inc/powerhouse/commit/843fcc72d))
+- add RELEASE-NOTES.md from main branch ([8170e40a3](https://github.com/powerhouse-inc/powerhouse/commit/8170e40a3))
+
+### 🩹 Fixes
+
+- **reactor-local:** disable drive-analytics in reactor-local ([f420cc20e](https://github.com/powerhouse-inc/powerhouse/commit/f420cc20e))
+
+### ❤️ Thank You
+
+- Callme-T
+- Guillermo Puente @gpuente
+
 ## 3.2.0-staging.2 (2025-07-01)
 
 ### 🚀 Features
