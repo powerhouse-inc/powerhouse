@@ -1,21 +1,38 @@
 # Release Changelog
-
-## 🚀 **v3.3.0** (PRE-RELEASE)
-
-- Significant `PHDocument` refactor.
-  - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
-  - Introducing signed and unsigned documents. See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
-
-### Migration Guide
-
-- `PHDocument` changes:
-  - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
-  - `id` and `slug` have been moved from global state to the `header` field of the document. Thus, `document.state.global.id` is now `document.header.id`.
-
-
 ## 🚀 **v3.2.0**
 
+✨ **Highlights**
 
+### **Drive Analytics System**
+
+- Introducing an analytics system for drives and documents with dedicated processors for tracking operations, changes, and usage patterns. 
+- Analytics data is automatically collected and stored in dedicated tables, providing insights into document lifecycle and drive activity.
+- New analytics query subscriptions enable real-time monitoring of the data in your drive.
+
+✅ **What to try:** Explore the new Drive Analytics documentation in the Academy to understand how analytics processors work and how to leverage analytics data in your applications. It currently happens though an initial analytics modal with the Sky-Atlas use case. This will later be adapted to the to-do list demo project. 
+
+### **Update of Front-end Architecture & Performance**
+
+- Connect now uses the new Jotai atom store and provider from the state library for better state management and performance. You can now pass the reactor as a prop so a custom drive can use the new hooks. 
+
+✅ **What to try:** Initial documentation about the hooks can be found [here](https://github.com/powerhouse-inc/powerhouse/blob/main/packages/common/state/README.md)
+
+### 🐞 **Bug Fixes**
+
+- Fixed drag and drop functionality in the generic drive explorer
+- Improved document storage with better id/slug resolution
+- Enhanced build process with better Prisma handling and external package management
+- Reduced unnecessary logging and improved subscription performance with debounced refetches
+- Added safer validation for document properties to prevent runtime errors
+- Reimplemented the Switchboard button to open the document model subgraph
+
+### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+
+- **New:** Comprehensive Drive Analytics documentation and tutorial with practical examples
+- Update of the Get Started chapter
+- Update of the Mastery Track - Document Creation Chapter  
+- Update of the Mastery Track - Work with Data - Read & Write with the API chapter
+- Update of the Mastery Track - Work with Data - Analytics Processor
 
 ## 🚀 **v3.1.0**
 
