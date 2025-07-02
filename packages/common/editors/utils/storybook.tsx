@@ -20,6 +20,7 @@ import {
   type DocumentDriveLocalState,
   type DocumentDriveState,
   driveDocumentModelModule,
+  type IDocumentDriveServer,
   type Node,
 } from "document-drive";
 import {
@@ -88,6 +89,7 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        reactor: {} as unknown as IDocumentDriveServer,
         useDocumentEditorProps: () => ({
           dispatch: () => {},
           document: context.args.document,

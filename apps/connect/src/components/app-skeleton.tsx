@@ -68,7 +68,7 @@ export const AppSkeleton = () => {
                     dangerouslySetInnerHTML={{
                         __html: `
                     const baseEl = document.querySelector('base');
-                    const href = baseEl.getAttribute('href');
+                    const href = baseEl?.getAttribute('href');
                     const basePath = href || '/';
                     if (window.location.pathname === basePath) {
                         document.querySelector('.home-screen')?.classList.remove('hidden')

@@ -19,7 +19,55 @@
 
 ## 🚀 **v3.2.0**
 
+✨ **Highlights**
 
+### **Drive Analytics System**
+
+- Introducing an analytics system for drives and documents with dedicated processors for tracking operations, changes, and usage patterns. 
+- Analytics data is automatically collected and stored in dedicated tables, providing insights into document lifecycle and drive activity.
+- New analytics query subscriptions enable real-time monitoring of the data in your drive.
+
+✅ **What to try:** Explore the new Drive Analytics documentation in the Academy to understand how analytics processors work and how to leverage analytics data in your applications. It currently happens though an initial analytics modal with the Sky-Atlas use case. This will later be adapted to the to-do list demo project. 
+
+### **Update of Front-end Architecture & Performance**
+
+- Feature Preview: A new set of hooks were implemented to manage state on a more granular way and avoid unnecessary rerenders. 
+
+✅ **What to try:** Initial documentation about the hooks can be found [here](https://github.com/powerhouse-inc/powerhouse/blob/main/packages/common/state/README.md)
+
+**Feature preview:** The new hooks are not fully integrated into Connect yet, however, they can be used in custom drive editors by wrapping the editor component with the new provider:
+```diff
++import { AtomStoreProvider } from "@powerhousedao/common";
+
+export default function Editor(props: IProps) {
+  return (
++    <AtomStoreProvider reactor={props.context.reactor}> 
+      <DriveContextProvider value={props.context}>
+        <WagmiContext>
+          <BaseEditor {...props} />
+        </WagmiContext>
+      </DriveContextProvider>
++    </AtomStoreProvider>
+  );
+}
+```
+
+### 🐞 **Bug Fixes**
+
+- Fixed drag and drop functionality in the generic drive explorer
+- Improved document storage with better id/slug resolution
+- Enhanced build process with better Prisma handling and external package management
+- Reduced unnecessary logging and improved subscription performance with debounced refetches
+- Added safer validation for document properties to prevent runtime errors
+- Reimplemented the Switchboard button to open the document model subgraph
+
+### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+
+- **New:** Comprehensive Drive Analytics documentation and tutorial with practical examples
+- Update of the Get Started chapter
+- Update of the Mastery Track - Document Creation Chapter  
+- Update of the Mastery Track - Work with Data - Read & Write with the API chapter
+- Update of the Mastery Track - Work with Data - Analytics Processor
 
 ## 🚀 **v3.1.0**
 
@@ -149,3 +197,4 @@ This release brings improvements that make it easier to **work with the Powerhou
 - Starting general spellcheck & consistency in terminology!
 
 Thank you <3
+

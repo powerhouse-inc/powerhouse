@@ -77,7 +77,7 @@ export async function createOrGetAnalyticsStore(
   setGlobal("analytics", analytics);
   analytics
     .then(({ store }) => {
-      logger.debug("Analytics store created", store);
+      logger.verbose("Analytics store created", store);
     })
     .catch((e) => {
       logger.error("Analytics store creation failed", e);
