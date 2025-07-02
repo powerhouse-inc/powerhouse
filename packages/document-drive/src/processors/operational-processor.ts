@@ -1,135 +1,88 @@
 import { type PHDocument } from "document-model";
-import { FileMigrationProvider, Kysely, Migrator } from "kysely";
-import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
-import fs from "node:fs";
-import path from "node:path";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import { type Db, type IProcessor } from "./types.js";
+import { type IOperationalStore, type IProcessor } from "./types.js";
 
 /**
  * PowerhouseDB is the standardized database interface for operational processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  */
-export type PowerhouseDB<TDatabase = any> = Kysely<TDatabase>;
+
+export interface IOperationalProcessor extends IProcessor {
+  initAndUpgrade(namespace: string): Promise<void>;
+}
 
 /**
  * Base class for operational processors that require persistent database storage.
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export abstract class BaseOperationalProcessor<TDatabase = any>
-  implements IProcessor
+export class BaseOperationalProcessor<TDatabaseSchema = unknown>
+  implements IOperationalProcessor
 {
-  protected powerhouseDb: Promise<PowerhouseDB<TDatabase>>;
-  private readonly migrationsPath: string;
+  #namespace: string;
 
   constructor(
-    protected operationalStore: Db,
-    migrationsPath?: string,
+    namespace: string,
+    protected operationalStore: IOperationalStore<TDatabaseSchema>,
   ) {
-    // Determine migrations path - default to project-level migrations
-    if (migrationsPath) {
-      this.migrationsPath = migrationsPath;
-    } else {
-      // Use project-level migrations directory
-      this.migrationsPath = path.join(process.cwd(), "./migrations");
-    }
-
-    this.powerhouseDb = this.initializeDatabase();
+    this.#namespace = namespace;
   }
 
-  /**
-   * Initializes the database connection and runs migrations.
-   * This method is called during construction and should not be called directly.
-   */
-  private async initializeDatabase(): Promise<PowerhouseDB<TDatabase>> {
-    const db = new Kysely<TDatabase>({
-      dialect: new KyselyKnexDialect({
-        knex: this.operationalStore,
-        kyselySubDialect: new PGColdDialect(),
-      }),
-    });
+  get namespace(): string {
+    return this.#namespace;
+  }
 
-    // Check if migrations directory exists
-    if (!fs.existsSync(this.migrationsPath)) {
-      console.warn(`Migrations directory not found: ${this.migrationsPath}`);
-      return db;
-    }
+  static async build(
+    namespace: string,
+    operationalStore: IOperationalStore,
+  ): Promise<BaseOperationalProcessor> {
+    await operationalStore.schema
+      .createSchema(namespace)
+      .ifNotExists()
+      .execute(); // TODO is this needed?
+    const schemaOperationalStore = operationalStore.withSchema(namespace);
+    return new this(namespace, schemaOperationalStore);
+  }
 
-    // Run migrations
-    const migrator = new Migrator({
-      db,
-      provider: new FileMigrationProvider({
-        path: this.migrationsPath,
-      }),
-    });
-
-    const { error, results } = await migrator.migrateToLatest();
-
-    if (error) {
-      console.error("Migration failed:", error);
-      throw new Error(`Migration failed: ${error}`);
-    }
-
-    if (results && results.length > 0) {
-      console.log(
-        `Applied ${results.length} migrations for ${this.constructor.name}`,
-      );
-    }
-
-    return db;
+  async initAndUpgrade(): Promise<void> {
+    // Initializes tables
+    await this.operationalStore.schema
+      .createTable(" TODO ") // TODO
+      .ifNotExists()
+      .execute();
   }
 
   /**
    * Abstract method that derived classes must implement.
    * This is where the business logic for processing document operations should be implemented.
    */
-  abstract onStrands<TDocument extends PHDocument>(
+  onStrands<TDocument extends PHDocument>(
     strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void>;
+  ): Promise<void> {
+    return Promise.reject(new Error("Method not implemented"));
+  }
 
   /**
    * Called when the processor is disconnected. This method cleans up resources
    * and can be overridden by derived classes for additional cleanup.
    */
   async onDisconnect(): Promise<void> {
-    try {
-      const db = await this.powerhouseDb;
-      await db.destroy();
-    } catch (error) {
-      console.error("Error during processor disconnect:", error);
-    }
-  }
-
-  /**
-   * Helper method to get the database instance.
-   * This provides type-safe access to the PowerhouseDB instance.
-   */
-  protected async getDb(): Promise<PowerhouseDB<TDatabase>> {
-    return this.powerhouseDb;
-  }
-
-  /**
-   * Helper method for health checks.
-   * This can be used to verify that the processor's database tables are accessible.
-   */
-  protected async healthCheck(tableName: string): Promise<boolean> {
-    try {
-      const db = await this.powerhouseDb;
-      await db.selectFrom(tableName).limit(1).execute();
-      return true;
-    } catch (error) {
-      console.error(`Health check failed for table ${tableName}:`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Gets the migrations path used by this processor.
-   * This can be useful for debugging or logging purposes.
-   */
-  protected getMigrationsPath(): string {
-    return this.migrationsPath;
+    return Promise.resolve();
   }
 }
+
+/*
+  TODO:
+  - How does the kysely codegen fit into our flow
+    - ph generate processor --operational
+    - Implement initAndUpgrade with table creation
+    - ph generate processor --operational --types ?????
+      - This uses a InMemory pglite instance and runs the processor with an empty namespace 
+      - runs kysely-codegen to instrospect the db and generate the types to a ./types.ts file
+ */
+// import { type schema } from "./types.js";
+
+// class AtlasProcessor extends BaseOperationalProcessor<schema> {
+//   async initAndUpgrade(): Promise<void> {}
+// }
