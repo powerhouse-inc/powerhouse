@@ -132,8 +132,7 @@ reactorAtom.debugLabel = 'reactorAtomInConnect';
 export const unwrappedReactor = unwrap(reactorAtom);
 unwrappedReactor.debugLabel = 'unwrappedReactorInConnect';
 // blocks rendering until reactor is initialized.
-export const useReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(reactorAtom);
+export const useReactor = (): IDocumentDriveServer => useAtomValue(reactorAtom);
 
 export const useDocumentAdminStorage = (): IDocumentAdminStorage =>
     useAtomValue(storageAtom);

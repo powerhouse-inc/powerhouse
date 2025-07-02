@@ -1,6 +1,7 @@
 import {
   type FileNode,
   type GetDocumentOptions,
+  type IDocumentDriveServer,
   type Node,
   type SyncStatus,
 } from "document-drive";
@@ -21,6 +22,9 @@ import type { UiNode } from "../uiNodes/types.js";
 
 export interface DriveEditorContext
   extends Omit<EditorContext, "getDocumentRevision"> {
+  /** Reactor instance */
+  reactor: IDocumentDriveServer;
+
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
 

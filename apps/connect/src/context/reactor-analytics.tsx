@@ -102,7 +102,7 @@ export function DriveAnalyticsProcessor() {
         hasRegistered.current = true;
         registerDriveAnalytics(manager, store.data)
             .then(() => {
-                console.log('Drive analytics processor registered');
+                logger.verbose('Drive analytics processor registered');
             })
             .catch(logger.error);
     }, [store.data, manager]);
