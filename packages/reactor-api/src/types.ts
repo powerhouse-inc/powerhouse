@@ -6,7 +6,7 @@ import { type IPackageManager } from "./packages/types.js";
 import { type Db } from "./utils/db.js";
 
 export type { SubgraphClass } from "./graphql/index.js";
-export type { IPackageLoader, IProcessorHostModule } from "./packages/types.js";
+export type { IPackageLoader } from "./packages/types.js";
 export type { Db } from "./utils/db.js";
 
 export type API = {
