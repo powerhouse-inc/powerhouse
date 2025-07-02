@@ -1,4 +1,22 @@
 # Release Changelog
+
+## 🚀 **v3.3.0** (PRE-RELEASE)
+
+- Significant `PHDocument` refactor.
+  - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
+  - Introducing signed and unsigned documents. See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
+- Processor generator updates.
+  - The analytics processor template now includes a namespace and batch inserts by default.
+  - Analytics factories are now in their own files, allowing for multiple factories to be generated.
+
+### Migration Guide
+
+- `PHDocument` changes:
+  - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
+  - `id` and `slug` have been moved from global state to the `header` field of the document. Thus, `document.state.global.id` is now `document.header.id`.
+- Processor generator updates:
+  - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factroy in place.
+
 ## 🚀 **v3.2.0**
 
 ✨ **Highlights**
@@ -179,3 +197,4 @@ This release brings improvements that make it easier to **work with the Powerhou
 - Starting general spellcheck & consistency in terminology!
 
 Thank you <3
+
