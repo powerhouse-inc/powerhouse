@@ -1,4 +1,3 @@
-import { processorFactory as DriveAnalyticsProcessorFactory } from "@powerhousedao/common/drive-analytics/processor/index";
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
 import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
@@ -71,9 +70,9 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
-    processors: {
-      "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-    },
+    // processors: {
+    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
+    // },
   });
 
   // add vite middleware after express app is initialized if applicable
