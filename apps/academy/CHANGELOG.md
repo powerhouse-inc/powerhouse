@@ -1,3 +1,14 @@
+## 3.2.0-dev.9 (2025-07-02)
+
+### 🩹 Fixes
+
+- updated processor generator and added codegen test for it ([6af3bbcf7](https://github.com/powerhouse-inc/powerhouse/commit/6af3bbcf7))
+- added test to generate and compile a generated document-model ([17bbca3bb](https://github.com/powerhouse-inc/powerhouse/commit/17bbca3bb))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.2.0-dev.8 (2025-07-01)
 
 ### 🚀 Features

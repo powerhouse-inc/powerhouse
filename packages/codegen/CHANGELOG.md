@@ -1,3 +1,18 @@
+## 3.2.0-dev.9 (2025-07-02)
+
+### 🩹 Fixes
+
+- nx should ignore this specific dependency issue, as it's just tests ([693cca500](https://github.com/powerhouse-inc/powerhouse/commit/693cca500))
+- updated processor generator and added codegen test for it ([6af3bbcf7](https://github.com/powerhouse-inc/powerhouse/commit/6af3bbcf7))
+- fixing deprecated it usage ([e9d3bd4d8](https://github.com/powerhouse-inc/powerhouse/commit/e9d3bd4d8))
+- whoops, remove debug compile error ([40f1cc331](https://github.com/powerhouse-inc/powerhouse/commit/40f1cc331))
+- added test to generate and compile a generated document-model ([17bbca3bb](https://github.com/powerhouse-inc/powerhouse/commit/17bbca3bb))
+- adding a test for generating doc models, fixing a couple small pieces ([5f2edc53a](https://github.com/powerhouse-inc/powerhouse/commit/5f2edc53a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 3.2.0-dev.8 (2025-07-01)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
