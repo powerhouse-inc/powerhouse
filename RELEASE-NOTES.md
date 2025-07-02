@@ -13,9 +13,26 @@
 
 ### **Update of Front-end Architecture & Performance**
 
-- Connect now uses the new Jotai atom store and provider from the state library for better state management and performance. You can now pass the reactor as a prop so a custom drive can use the new hooks. 
+- Feature Preview: A new set of hooks were implemented to manage state on a more granular way and avoid unnecessary rerenders. 
 
 ✅ **What to try:** Initial documentation about the hooks can be found [here](https://github.com/powerhouse-inc/powerhouse/blob/main/packages/common/state/README.md)
+
+**Feature preview:** The new hooks are not fully integrated into Connect yet, however, they can be used in custom drive editors by wrapping the editor component with the new provider:
+```diff
++import { AtomStoreProvider } from "@powerhousedao/common";
+
+export default function Editor(props: IProps) {
+  return (
++    <AtomStoreProvider reactor={props.context.reactor}> 
+      <DriveContextProvider value={props.context}>
+        <WagmiContext>
+          <BaseEditor {...props} />
+        </WagmiContext>
+      </DriveContextProvider>
++    </AtomStoreProvider>
+  );
+}
+```
 
 ### 🐞 **Bug Fixes**
 
