@@ -1,11 +1,9 @@
 import { type SubgraphClass } from "#graphql/index.js";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { type ProcessorFactory } from "document-drive/processors/types";
+import {
+  type IProcessorHostModule,
+  type ProcessorFactory,
+} from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
-
-export interface IProcessorHostModule {
-  analyticsStore: IAnalyticsStore;
-}
 
 export interface IPackageLoader {
   loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;

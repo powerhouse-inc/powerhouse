@@ -1,6 +1,15 @@
 import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
+import { type Kysely } from "kysely";
+
+export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
+
+export interface IProcessorHostModule {
+  analyticsStore: IAnalyticsStore;
+  operationalStore: IOperationalStore;
+}
 
 /**
  * Describes an object that can process strands.
