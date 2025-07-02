@@ -4,5 +4,4 @@ append: true
 to: "<%= rootDir %>/index.ts"
 skip_if: "<%= h.changeCase.pascal(name) %>"
 ---
-export * as <%= h.changeCase.pascal(name) %>Processor from "./<%= h.changeCase.param(name)  %>/index.js";
-export { <%= h.changeCase.camel(name) %>ProcessorFactory } from "./<%= h.changeCase.param(name)  %>/factory.js";
+export { <%= h.changeCase.pascal(name) %>Processor } from "./<%= h.changeCase.param(name)  %>/index.js";

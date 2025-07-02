@@ -12,13 +12,24 @@ import { type IProcessorHostModule } from "@powerhousedao/reactor-api";
 
 // Import other processor factories here as they are generated
 
-export const processorFactory = (module: IProcessorHostModule) => (driveId: string): ProcessorRecord[] => {
-  const processors: ProcessorRecord[] = [];
+export const processorFactory = (module: IProcessorHostModule) => {
+  // Initialize all processor factories once with the module
+  const factories: Array<(driveId: string) => ProcessorRecord[]> = [];
   
   // Add all processor factories
   
   // Add other processors here as they are generated
   
-  return processors;
+  // Return the inner function that will be called for each drive
+  return (driveId: string): ProcessorRecord[] => {
+    const processors: ProcessorRecord[] = [];
+    
+    // Call each cached factory with the driveId
+    for (const factory of factories) {
+      processors.push(...factory(driveId));
+    }
+    
+    return processors;
+  };
 }
 

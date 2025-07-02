@@ -1,7 +1,7 @@
 ---
 inject: true
 to: "<%= rootDir %>/factory.ts"
-after: "// Import other processor factories here as they are generated"
+after: "// Import processor factories here as they are generated"
 skip_if: "{ <%= h.changeCase.camel(name) %>ProcessorFactory }"
 ---
-import { <%= h.changeCase.camel(name) %>ProcessorFactory } from "./<%= h.changeCase.param(name) %>/factory.js";
+import { <%= h.changeCase.pascal(name) %>ProcessorFactory } from "./<%= h.changeCase.param(name) %>/factory.js";

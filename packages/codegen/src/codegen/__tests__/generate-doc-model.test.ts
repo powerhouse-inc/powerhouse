@@ -123,7 +123,7 @@ describe("document model", () => {
       await generate();
 
       await generateProcessor(
-        "test-1",
+        "test1",
         ["billing-statement"],
         {
           "billing-statement": {
@@ -140,7 +140,7 @@ describe("document model", () => {
       );
 
       await generateProcessor(
-        "test-2",
+        "test2",
         ["billing-statement"],
         {
           "billing-statement": {
@@ -157,7 +157,7 @@ describe("document model", () => {
       );
 
       await generateProcessor(
-        "test-3",
+        "test3",
         ["billing-statement"],
         {
           "billing-statement": {

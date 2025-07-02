@@ -1,7 +1,7 @@
 ---
 inject: true
 to: "<%= rootDir %>/factory.ts"
-after: "  // Add other processors here as they are generated"
-skip_if: "...<%=h.changeCase.camel(name) %>ProcessorFactory(module)(driveId)"
+after: "  // Add processors here as they are generated"
+skip_if: "<%=h.changeCase.pascal(name) %>ProcessorFactory(module)"
 ---
-  processors.push(...<%= h.changeCase.camel(name) %>ProcessorFactory(module)(driveId));
+  factories.push(<%= h.changeCase.pascal(name) %>ProcessorFactory(module));
