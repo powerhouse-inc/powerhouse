@@ -12,12 +12,26 @@ export type ExtendedDocumentModelLib = DocumentModelLib & {
     processors?: Processors;
 };
 
+export type ExternalProcessor = {
+    packageName: string;
+    processors: Processors;
+};
+
 function getProcessorsFromModules(modules: ExtendedDocumentModelLib[]) {
     return modules
-        .map(module => module.processors)
-        .reduce<Processors[]>((acc, val) => {
-            if (val) {
-                acc = [...acc, val];
+        .map(module => ({
+            packageName: module.manifest.name,
+            processors: module.processors,
+        }))
+        .reduce<ExternalProcessor[]>((acc, val) => {
+            if (val.processors) {
+                acc = [
+                    ...acc,
+                    {
+                        packageName: val.packageName,
+                        processors: val.processors,
+                    },
+                ];
             }
             return acc;
         }, []);

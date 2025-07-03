@@ -144,14 +144,13 @@ export function ExternalProcessors() {
 
         hasRegistered.current = true;
 
-        console.log('>>> registering external processors', externalProcessors);
         let index = 0;
-        for (const processor of externalProcessors) {
+        for (const { packageName, processors } of externalProcessors) {
             registerExternalProcessors(
                 manager,
                 store.data,
-                `external-processor-${index}`,
-                processor,
+                `${packageName}-${index}`,
+                processors,
             ).catch(logger.error);
 
             index++;
@@ -161,7 +160,7 @@ export function ExternalProcessors() {
     return null;
 }
 
-export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
+export function ProcessorManagerProvider({ children }: PropsWithChildren) {
     return (
         <AnalyticsProvider
             options={{
@@ -187,4 +186,4 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     );
 }
 
-export default ReactorAnalyticsProvider;
+export default ProcessorManagerProvider;
