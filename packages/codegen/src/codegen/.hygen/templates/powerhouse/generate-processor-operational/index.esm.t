@@ -4,31 +4,27 @@ force: true
 ---
 import { generateId } from "document-model";
 import type {
-  OperationalProcessor,
   ProcessorOptions,
   ProcessorSetupArgs,
   ProcessorUpdate,
 } from "@powerhousedao/reactor-api";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
+import { OperationalProcessor } from "document-drive/processors/operational-processor.js";
 %><% }); _%>
 <% if(documentTypes.length === 0) { %>import { PHDocument } from "document-model";<% } %>
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends OperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
-  protected processorOptions: ProcessorOptions = {
-    listenerId: generateId(),
-    filter: {
-      branch: ["main"],
-      documentId: ["*"],
-      documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
-      scope: ["global"],
-    },
-    block: false,
-    label: "<%= name %>",
-    system: true,
-  };
+  async initAndUpgrade(): Promise<void> {
+    await this.operationalStore.schema
+      .createTable("index_search_op")
+      .column("id", "integer", { primaryKey: true, autoIncrement: true })
+      .column("documentId", "text", { notNullable: true })
+      .ifNotExists()
+      .execute();
+  }
 
   async onStrands(strands: ProcessorUpdate<DocumentType>[]): Promise<void> {
     if (strands.length === 0) {
@@ -47,14 +43,6 @@ export class <%= pascalName %>Processor extends OperationalProcessor<% if(docume
         });
       }
     }
-  }
-
-  async onSetup(args: ProcessorSetupArgs) {
-    await super.onSetup(args);
-    await this.operationalStore.schema.createTable("index_search_op", (table) => {
-      table.increments("id").primary();
-      table.string("documentId").notNullable();
-    });
   }
 
   async onDisconnect() {}
