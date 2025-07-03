@@ -11,3 +11,5 @@ export * from "@electric-sql/pglite/live";
 export type { PGliteWithLive } from "./provider.js";
 
 export { PGliteAsyncProvider, usePGliteAsync } from "./provider.js";
+export * from "./usePGliteDB.js";
+

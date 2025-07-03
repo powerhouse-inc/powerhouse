@@ -21,7 +21,7 @@ interface PGliteAsyncContextType {
   error: Error | null;
 }
 
-const PGliteAsyncContext = createContext<PGliteAsyncContextType>({
+export const PGliteAsyncContext = createContext<PGliteAsyncContextType>({
   db: null,
   isLoading: false,
   error: null,
