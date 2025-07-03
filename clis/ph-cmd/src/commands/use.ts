@@ -8,6 +8,7 @@ import {
   getProjectInfo,
   installDependency,
   type PackageManager,
+  resolvePackageManagerOptions,
   updateDependencyVersionString,
   withCustomHelp,
 } from "../utils/index.js";
@@ -147,6 +148,9 @@ export type UseOptions = {
   latest?: boolean;
   force?: boolean;
   packageManager?: string;
+  pnpm?: boolean;
+  yarn?: boolean;
+  bun?: boolean;
   useResolved?: boolean;
 };
 
@@ -170,13 +174,18 @@ export const use: CommandActionType<
     );
   }
 
-  const { packageManager, debug } = options;
+  const { debug } = options;
 
   const env = environment as Environment;
 
   if (debug) {
     console.log(">>> options", options);
   }
+
+  const projectInfo = await getProjectInfo();
+  const packageManager =
+    resolvePackageManagerOptions(options) ??
+    getPackageManagerFromLockfile(projectInfo.path);
 
   await updatePackageJson(
     env,
@@ -203,10 +212,10 @@ export function useCommand(program: Command): Command {
     )
     .option("--force", "force environment to use")
     .option("--use-resolved", "Use resolved dependency versions")
-    .option(
-      "--package-manager <packageManager>",
-      "force package manager to use",
-    )
+    .option("--package-manager <packageManager>", "package manager to be used")
+    .option("--pnpm", "Use 'pnpm' as package manager")
+    .option("--yarn", "Use 'yarn' as package manager")
+    .option("--bun", "Use 'bun' as package manager")
     .option("--debug", "Show additional logs");
 
   // Use withCustomHelp instead of withHelpAction and addHelpText

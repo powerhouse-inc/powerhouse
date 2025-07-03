@@ -34,6 +34,31 @@ export const POWERHOUSE_GLOBAL_DIR = path.join(
   PH_GLOBAL_PROJECT_NAME,
 );
 
+export function resolvePackageManagerOptions(options: {
+  packageManager?: string;
+  pnpm?: boolean;
+  yarn?: boolean;
+  bun?: boolean;
+}) {
+  if (options.packageManager) {
+    return options.packageManager;
+  }
+
+  if (options.pnpm) {
+    return "pnpm";
+  }
+
+  if (options.yarn) {
+    return "yarn";
+  }
+
+  if (options.bun) {
+    return "bun";
+  }
+
+  return undefined;
+}
+
 export const packageManagers = {
   bun: {
     installCommand: "bun add {{dependency}}",
@@ -387,7 +412,8 @@ export const createGlobalProject = async (
       interactive: false,
       version: parseVersion(options),
       packageManager:
-        options.packageManager ?? getPackageManagerFromPath(PH_BIN_PATH),
+        resolvePackageManagerOptions(options) ??
+        getPackageManagerFromPath(PH_BIN_PATH),
     });
 
     console.log(
