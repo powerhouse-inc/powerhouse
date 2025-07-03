@@ -8,6 +8,10 @@ import {
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
+import {
+    useExternalProcessors,
+    type Processors,
+} from '../store/external-processors';
 import { useUnwrappedProcessorManager } from '../store/processors';
 
 const logger = childLogger(['reactor-analytics']);
@@ -42,6 +46,18 @@ function createPgLiteFactoryWorker(databaseName: string) {
 
         return pgLiteWorker as unknown as PGlite;
     };
+}
+
+async function registerExternalProcessors(
+    manager: ProcessorManager,
+    analyticsStore: IAnalyticsStore,
+    processorName: string,
+    processorFactory: Processors,
+) {
+    return await manager.registerFactory(
+        processorName,
+        processorFactory({ analyticsStore }),
+    );
 }
 
 async function registerDiffAnalyzer(
@@ -110,6 +126,41 @@ export function DriveAnalyticsProcessor() {
     return null;
 }
 
+export function ExternalProcessors() {
+    const externalProcessors = useExternalProcessors();
+    const store = useAnalyticsStoreAsync();
+    const manager = useUnwrappedProcessorManager();
+    const hasRegistered = useRef(false);
+
+    useEffect(() => {
+        if (
+            !store.data ||
+            !manager ||
+            hasRegistered.current ||
+            externalProcessors.length === 0
+        ) {
+            return;
+        }
+
+        hasRegistered.current = true;
+
+        console.log('>>> registering external processors', externalProcessors);
+        let index = 0;
+        for (const processor of externalProcessors) {
+            registerExternalProcessors(
+                manager,
+                store.data,
+                `external-processor-${index}`,
+                processor,
+            ).catch(logger.error);
+
+            index++;
+        }
+    }, [store.data, manager]);
+
+    return null;
+}
+
 export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
     return (
         <AnalyticsProvider
@@ -127,6 +178,9 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
             )}
             {connectConfig.analytics.driveAnalyticsEnabled && (
                 <DriveAnalyticsProcessor />
+            )}
+            {connectConfig.analytics.externalProcessorsEnabled && (
+                <ExternalProcessors />
             )}
             {children}
         </AnalyticsProvider>
