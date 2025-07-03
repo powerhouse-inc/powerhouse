@@ -229,9 +229,6 @@ importers:
       '@didtools/key-webcrypto':
         specifier: ^0.2.0
         version: 0.2.0
-      '@electric-sql/pglite':
-        specifier: ^0.2.17
-        version: 0.2.17
       '@electron-forge/cli':
         specifier: ^6.1.1
         version: 6.4.2(encoding@0.1.13)(enquirer@2.4.1)
@@ -1405,7 +1402,7 @@ importers:
         specifier: ^2.9.2
         version: 2.11.2(graphql@16.11.0)
       '@electric-sql/pglite':
-        specifier: ^0.2.12
+        specifier: ^0.2.17
         version: 0.2.17
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.5.0
@@ -1534,6 +1531,12 @@ importers:
 
   packages/reactor-browser:
     dependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.2.17
+        version: 0.2.17
+      '@electric-sql/pglite-react':
+        specifier: ^0.2.17
+        version: 0.2.22(@electric-sql/pglite@0.2.17)(react@18.3.1)
       '@powerhousedao/analytics-engine-browser':
         specifier: ^0.6.0
         version: 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))
@@ -1608,7 +1611,7 @@ importers:
         specifier: ^2.9.2
         version: 2.11.2(graphql@16.11.0)
       '@electric-sql/pglite':
-        specifier: ^0.2.12
+        specifier: ^0.2.17
         version: 0.2.17
       '@libsql/client':
         specifier: ^0.14.0
@@ -1749,7 +1752,7 @@ importers:
   test/connect-e2e:
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.2.12
+        specifier: ^0.2.17
         version: 0.2.17
       '@playwright/test':
         specifier: ^1.41.2
@@ -3401,6 +3404,12 @@ packages:
     engines: {bun: '>=1', deno: '>=2', node: '>=16'}
     peerDependencies:
       '@noble/ciphers': ^1.0.0
+
+  '@electric-sql/pglite-react@0.2.22':
+    resolution: {integrity: sha512-Pw/+q1hyZN53y6MTvHPpnGWYzg+ZZs33pDpxnNjVEVmgw2lfHx6U/bHHww4lBuHNfQjzDvRSxXey/xkcb8FoMA==}
+    peerDependencies:
+      '@electric-sql/pglite': 0.3.4
+      react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   '@electric-sql/pglite@0.2.17':
     resolution: {integrity: sha512-qEpKRT2oUaWDH6tjRxLHjdzMqRUGYDnGZlKrnL4dJ77JVMcP2Hpo3NYnOSPKdZdeec57B6QPprCUFg0picx5Pw==}
@@ -21973,6 +21982,11 @@ snapshots:
   '@ecies/ciphers@0.2.3(@noble/ciphers@1.3.0)':
     dependencies:
       '@noble/ciphers': 1.3.0
+
+  '@electric-sql/pglite-react@0.2.22(@electric-sql/pglite@0.2.17)(react@18.3.1)':
+    dependencies:
+      '@electric-sql/pglite': 0.2.17
+      react: 18.3.1
 
   '@electric-sql/pglite@0.2.17': {}
 
