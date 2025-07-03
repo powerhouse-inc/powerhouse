@@ -1,5 +1,5 @@
 import connectConfig from '#connect-config';
-import type { PGlite } from '@electric-sql/pglite';
+import type { PGlite } from '@powerhousedao/reactor-browser/pglite';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
@@ -21,7 +21,7 @@ function createPgLiteFactoryWorker(databaseName: string) {
         const PGWorker = (await import('../workers/pglite-worker.js?worker'))
             .default;
 
-        const { PGliteWorker } = await import('@electric-sql/pglite/worker');
+        const { PGliteWorker } = await import('@powerhousedao/reactor-browser/pglite');
 
         const worker = new PGWorker({
             name: 'pglite-worker',
