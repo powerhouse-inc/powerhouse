@@ -1,8 +1,9 @@
-import type {
-    IdbFs,
-    PGliteWorkerOptions,
+import {
+    type IdbFs,
+    type PGliteWorkerOptions,
+    live,
+    worker,
 } from '@powerhousedao/reactor-browser/pglite';
-import { worker } from '@powerhousedao/reactor-browser/pglite';
 
 interface PGLiteWorkerOptions extends PGliteWorkerOptions {
     meta: {
@@ -26,6 +27,9 @@ worker({
         const db = new PGlite({
             fs: idbFs,
             relaxedDurability: true,
+            extensions: {
+                live,
+            },
         });
 
         return db;
