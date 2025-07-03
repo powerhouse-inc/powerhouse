@@ -5,7 +5,6 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
 } from "../utils/index.js";
-import { version } from "../version.js";
 
 interface PackageJson {
   dependencies?: Record<string, string>;
@@ -15,6 +14,9 @@ interface PackageJson {
 // Custom version handler
 export const customVersionHandler = async () => {
   const projectInfo = await getProjectInfo(undefined, false);
+
+  // @ts-ignore build time version file
+  const { version } = (await import("../version.js")) as { version: string };
 
   console.log("PH CMD version: ", version);
 

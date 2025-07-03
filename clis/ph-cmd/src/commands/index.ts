@@ -18,10 +18,3 @@ export const commands = [
 export default function registerCommands(program: Command) {
   commands.forEach((command) => command(program));
 }
-
-export * from "./help.js";
-export * from "./init.js";
-export * from "./setup-globals.js";
-export * from "./update.js";
-export * from "./use.js";
-export * from "./version.js";
