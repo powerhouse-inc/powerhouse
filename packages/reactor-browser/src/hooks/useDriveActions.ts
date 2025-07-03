@@ -3,7 +3,6 @@ import {
   type DocumentDriveDocument,
   addFolder,
   deleteNode,
-  isFileNode,
   isFolderNode,
   moveNode,
   updateNode,
@@ -124,7 +123,7 @@ function createDriveActions(
   context: IDriveContext,
 ): IDriveActions {
   const drive = document;
-  const driveId = drive.id;
+  const driveId = drive.header.id;
 
   const { selectedNode } = context;
 
@@ -161,9 +160,9 @@ function createDriveActions(
 
   const addFile = async (
     file: File,
-    parentFolder = selectedNode && isFileNode(selectedNode)
-      ? undefined
-      : selectedNode?.id,
+    parentFolder = selectedNode && isFolderNode(selectedNode)
+      ? selectedNode.id
+      : undefined,
     name: string = file.name.replace(/\.zip$/gim, ""),
   ) => {
     const folder = parentFolder ? getNode(parentFolder, drive) : undefined;

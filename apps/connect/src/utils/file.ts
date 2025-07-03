@@ -14,7 +14,7 @@ const downloadFile = async (document: PHDocument) => {
             const link = window.document.createElement('a');
             link.style.display = 'none';
             link.href = URL.createObjectURL(blob);
-            link.download = `${document.name || 'Untitled'}.zip`;
+            link.download = `${document.header.name || 'Untitled'}.zip`;
 
             window.document.body.appendChild(link);
             link.click();
@@ -30,10 +30,12 @@ export async function exportFile(
         documentType: string,
     ) => DocumentModelModule | undefined,
 ) {
-    const documentModelModule = getDocumentModelModule(document.documentType);
+    const documentModelModule = getDocumentModelModule(
+        document.header.documentType,
+    );
     if (!documentModelModule) {
         throw new Error(
-            `Document model not supported: ${document.documentType}`,
+            `Document model not supported: ${document.header.documentType}`,
         );
     }
 
@@ -78,11 +80,11 @@ export async function loadFile(
         { checkHashes: true },
     );
     const documentModelModule = getDocumentModelModule(
-        baseDocument.documentType,
+        baseDocument.header.documentType,
     );
     if (!documentModelModule) {
         throw new Error(
-            `Document "${baseDocument.documentType}" is not supported`,
+            `Document "${baseDocument.header.documentType}" is not supported`,
         );
     }
     return documentModelModule.utils.loadFromInput(path);

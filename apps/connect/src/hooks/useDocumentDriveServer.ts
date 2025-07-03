@@ -85,6 +85,8 @@ export function useDocumentDriveServer() {
     const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
         useDocumentDrives();
 
+    const reactorLoaded = !!reactor;
+
     const openFile = useCallback(
         async (id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
@@ -119,7 +121,9 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            let drive = documentDrives.find(drive => drive.id === driveId);
+            let drive = documentDrives.find(
+                drive => drive.header.id === driveId,
+            );
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
@@ -150,7 +154,7 @@ export function useDocumentDriveServer() {
             );
 
             try {
-                const result = await reactor.queueDriveOperation(
+                const result = await reactor.queueOperation(
                     driveId,
                     signedOperation,
                 );
@@ -201,14 +205,13 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            let drive = documentDrives.find(d => d.id === driveId);
+            let drive = documentDrives.find(d => d.header.id === driveId);
             if (!drive) {
                 throw new Error(`Drive with id ${driveId} not found`);
             }
 
             const documentId = id ?? generateId();
-            const documentModelModule =
-                await getDocumentModelModule(documentType);
+            const documentModelModule = getDocumentModelModule(documentType);
             if (!documentModelModule) {
                 throw new Error(
                     `Document model module for type ${documentType} not found`,
@@ -217,11 +220,17 @@ export function useDocumentDriveServer() {
 
             const newDocument = documentModelModule.utils.createDocument({
                 ...document,
-                id: documentId,
-                name: name,
             });
 
-            await reactor.addDocument(newDocument);
+            // TODO is this needed?
+            newDocument.header.id = documentId;
+            newDocument.header.name = name;
+            newDocument.header.documentType = documentType;
+            await reactor.addDocument({
+                header: newDocument.header,
+                documentType,
+                document: newDocument,
+            });
 
             const action = addFileAction({
                 id: documentId,
@@ -291,8 +300,10 @@ export function useDocumentDriveServer() {
 
             // first create the file with the initial state of document
             const initialDocument: PHDocument = {
-                ...document.initialState,
+                header: document.header,
+                history: document.history,
                 initialState: document.initialState,
+                state: document.state,
                 operations: {
                     global: [],
                     local: [],
@@ -301,15 +312,18 @@ export function useDocumentDriveServer() {
             };
             const fileNode = await addDocument(
                 drive,
-                name || (typeof file === 'string' ? document.name : file.name),
-                document.documentType,
+                name ||
+                    (typeof file === 'string'
+                        ? document.header.name
+                        : file.name),
+                document.header.documentType,
                 parentFolder,
                 initialDocument,
             );
 
             // then add all the operations
             const driveDocument = documentDrives.find(
-                documentDrive => documentDrive.id === drive,
+                documentDrive => documentDrive.header.id === drive,
             );
             const waitForSync =
                 driveDocument && driveDocument.state.local.listeners.length > 0;
@@ -453,7 +467,7 @@ export function useDocumentDriveServer() {
             if (target.kind === FILE) return;
 
             const drive = documentDrives.find(
-                drive => drive.id === src.driveId,
+                drive => drive.header.id === src.driveId,
             );
 
             if (!drive) return;
@@ -491,7 +505,7 @@ export function useDocumentDriveServer() {
                 try {
                     await reactor.addDocument({
                         id: newId,
-                        documentType: document.documentType,
+                        documentType: document.header.documentType,
                         document,
                     });
                 } catch (error) {
@@ -583,7 +597,7 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
 
-            const drive = documentDrives.find(drive => drive.id === id);
+            const drive = documentDrives.find(drive => drive.header.id === id);
             if (!drive) {
                 throw new Error(`Drive with id ${id} not found`);
             }
@@ -685,6 +699,16 @@ export function useDocumentDriveServer() {
                 throw new Error('Reactor is not loaded');
             }
             return reactor.on('strandUpdate', cb);
+        },
+        [reactor],
+    );
+
+    const onOperationsAdded = useCallback(
+        (cb: (documentId: string, operations: Operation[]) => void) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+            return reactor.on('operationsAdded', cb);
         },
         [reactor],
     );
@@ -812,6 +836,7 @@ export function useDocumentDriveServer() {
 
     return useMemo(
         () => ({
+            reactorLoaded,
             documentDrives,
             documentDrivesStatus,
             addDocument,
@@ -840,8 +865,10 @@ export function useDocumentDriveServer() {
             addTrigger: handleAddTrigger,
             registerNewPullResponderTrigger,
             getDocumentsIds,
+            onOperationsAdded,
         }),
         [
+            reactorLoaded,
             addDocument,
             addDrive,
             addFile,
@@ -870,6 +897,7 @@ export function useDocumentDriveServer() {
             setDriveSharingType,
             handleUpdateFile,
             getDocumentsIds,
+            onOperationsAdded,
         ],
     );
 }

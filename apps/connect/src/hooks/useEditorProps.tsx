@@ -132,7 +132,8 @@ export function useEditorProps(
 
     const canUndo =
         !!document &&
-        (document.revision.global > 0 || document.revision.local > 0);
+        (document.header.revision.global > 0 ||
+            document.header.revision.local > 0);
     const canRedo = !!document?.clipboard.length;
 
     const dispatch = useEditorDispatch(node, documentDispatch, onAddOperation);

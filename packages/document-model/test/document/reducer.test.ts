@@ -30,7 +30,7 @@ describe("Base reducer", () => {
       input: {},
       scope: "global",
     });
-    expect(newDocument.revision.global).toBe(1);
+    expect(newDocument.header.revision.global).toBe(1);
   });
 
   it("should update lastModified", async () => {
@@ -45,7 +45,10 @@ describe("Base reducer", () => {
       input: {},
       scope: "global",
     });
-    expect(newDocument.lastModified > document.lastModified).toBe(true);
+    expect(
+      newDocument.header.lastModifiedAtUtcIso >
+        document.header.lastModifiedAtUtcIso,
+    ).toBe(true);
     vi.useRealTimers();
   });
 
@@ -97,7 +100,7 @@ describe("Base reducer", () => {
   it("should set document name", async () => {
     const document = baseCreateDocument();
     const newDocument = wrappedEmptyReducer(document, setName("Document"));
-    expect(newDocument.name).toBe("Document");
+    expect(newDocument.header.name).toBe("Document");
   });
 
   it("should throw error on invalid base action", async () => {
@@ -139,6 +142,7 @@ describe("Base reducer", () => {
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
       const input = action.input as CreateChildDocumentInput;
+      // eslint-disable-next-line
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
     });
@@ -246,7 +250,6 @@ describe("Base reducer", () => {
 
   it("should not throw errors from reducer", () => {
     const initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -262,7 +265,6 @@ describe("Base reducer", () => {
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
     const initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -278,7 +280,6 @@ describe("Base reducer", () => {
 
   it("should include error message into error operation prop", () => {
     const initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -315,7 +316,6 @@ describe("Base reducer", () => {
 
   it("should not include error message in successful operations", () => {
     const initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 

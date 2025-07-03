@@ -9,6 +9,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   packageManagers,
+  resolvePackageManagerOptions,
   withCustomHelp,
   type PackageManager,
 } from "../utils/index.js";
@@ -95,17 +96,20 @@ export type UpdateOptions = {
   force?: string;
   debug?: boolean;
   packageManager?: string;
+  pnpm?: boolean;
+  yarn?: boolean;
+  bun?: boolean;
 };
 
 export const update: CommandActionType<[UpdateOptions]> = async (options) => {
-  const { force, packageManager, debug } = options;
+  const { force, debug } = options;
 
   if (debug) {
     console.log(">>> options", options);
   }
 
   const projectInfo = await getProjectInfo();
-  const pkgManagerName = (packageManager ||
+  const pkgManagerName = (resolvePackageManagerOptions(options) ||
     getPackageManagerFromLockfile(projectInfo.path)) as PackageManager;
 
   const localDependencyPath = getLocalDependencyPath(projectInfo.path);
@@ -170,10 +174,10 @@ export function updateCommand(program: Command): Command {
       "--force <env>",
       "Force update to latest available version for the environment specified (dev, prod, latest)",
     )
-    .option(
-      "--package-manager <packageManager>",
-      "force package manager to use",
-    )
+    .option("--package-manager <packageManager>", "package manager to be used")
+    .option("--pnpm", "Use 'pnpm' as package manager")
+    .option("--yarn", "Use 'yarn' as package manager")
+    .option("--bun", "Use 'bun' as package manager")
     .option("--debug", "Show additional logs");
 
   // Use withCustomHelp instead of withHelpAction and addHelpText

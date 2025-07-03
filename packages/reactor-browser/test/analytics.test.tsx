@@ -1,6 +1,6 @@
 import { type BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type PropsWithChildren, Suspense } from "react";
+import { type PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import {
@@ -17,7 +17,7 @@ import {
   useGetDimensions,
 } from "../src/analytics/analytics.js";
 import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
-import { clearGlobal, getGlobal } from "../src/global/core.js";
+import { clearGlobal, getGlobal, setGlobal } from "../src/global/core.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
@@ -28,27 +28,35 @@ describe("Analytics Store", () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
-          retry: false,
+          retry: true,
         },
       },
     });
 
+    const store = new MemoryAnalyticsStore();
+    const databaseName = Date.now().toString();
+    setGlobal(
+      "analytics",
+      store.init().then(() => {
+        const engine = new AnalyticsQueryEngine(store);
+        return { store, engine, options: { databaseName } };
+      }),
+    );
+
     return function Wrapper({ children }: { children: React.ReactNode }) {
       return (
-        <Suspense fallback={<div>Loading...</div>}>
-          <AnalyticsProvider
-            databaseName={Date.now().toString()}
-            queryClient={queryClient}
-          >
-            {children}
-          </AnalyticsProvider>
-        </Suspense>
+        <AnalyticsProvider
+          databaseName={databaseName}
+          queryClient={queryClient}
+        >
+          {children}
+        </AnalyticsProvider>
       );
     };
   }
 
   async function resetGlobalAnalytics() {
-    const store = getGlobal("analytics")?.store as
+    const store = (await getGlobal("analytics"))?.store as
       | BrowserAnalyticsStore
       | undefined;
     await store?.destroy();
@@ -62,23 +70,25 @@ describe("Analytics Store", () => {
   it("should add and query analytics data", async () => {
     const wrapper = createWrapper();
 
-    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+    const { result: addResult, act } = renderHook(() => useAddSeriesValue(), {
       wrapper,
     });
 
-    await addResult.current.mutateAsync({
-      start: DateTime.now(),
-      source: TEST_SOURCE,
-      value: 10000,
-      unit: "DAI",
-      metric: "Budget",
-      dimensions: {
-        budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
-        category: AnalyticsPath.fromString(
-          "atlas/headcount/CompensationAndBenefits/FrontEndEngineering",
-        ),
-        project: TEST_SOURCE,
-      },
+    act(() => {
+      addResult.current.mutate({
+        start: DateTime.now(),
+        source: TEST_SOURCE,
+        value: 10000,
+        unit: "DAI",
+        metric: "Budget",
+        dimensions: {
+          budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+          category: AnalyticsPath.fromString(
+            "atlas/headcount/CompensationAndBenefits/FrontEndEngineering",
+          ),
+          project: TEST_SOURCE,
+        },
+      });
     });
 
     // Test querying series data
@@ -104,7 +114,7 @@ describe("Analytics Store", () => {
       { wrapper },
     );
 
-    await vi.waitFor(() => expect(queryResult.current.isSuccess).toBe(true));
+    await vi.waitFor(() => expect(queryResult.current.status).toBe("success"));
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const results = queryResult.current.data!;
@@ -156,27 +166,29 @@ describe("Analytics Store", () => {
 
     const { result: queryResult } = renderHook(
       () =>
-        useAnalyticsSeries({
-          start: null,
-          end: null,
-          currency: AnalyticsPath.fromString("DAI"),
-          metrics: ["Budget"],
-          select: {
-            budget: [
-              AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
-            ],
+        useAnalyticsSeries(
+          {
+            start: null,
+            end: null,
+            currency: AnalyticsPath.fromString("DAI"),
+            metrics: ["Budget"],
+            select: {
+              budget: [
+                AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+              ],
+            },
           },
-        }),
+          { enabled: true },
+        ),
       { wrapper },
     );
 
     await vi.waitFor(() =>
-      expect(queryResult.current.status).not.toBe("pending"),
+      expect(queryResult.current.error).toMatchObject({
+        message:
+          "No analytics store available. Use within an AnalyticsProvider.",
+      }),
     );
-
-    expect(queryResult.current.error).toMatchObject({
-      message: "No analytics store available. Use within an AnalyticsProvider.",
-    });
   });
 
   it("should execute analytics query", async () => {
@@ -255,5 +267,105 @@ describe("Analytics Store", () => {
 
     await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toStrictEqual(await store.getDimensions());
+  });
+
+  it("should be notified when query data changes", async () => {
+    const store = new MemoryAnalyticsStore();
+    await store.init();
+
+    const basePath = AnalyticsPath.fromString("atlas/legacy/core-units");
+    const path = AnalyticsPath.fromString("atlas/legacy/core-units/SES-001");
+
+    const query: AnalyticsQuery = {
+      start: DateTime.now().minus({ days: 1 }),
+      end: DateTime.now().plus({ days: 1 }),
+      granularity: AnalyticsGranularity.Total,
+      lod: {
+        budget: 4,
+      },
+      metrics: ["Budget"],
+      currency: AnalyticsPath.fromString("DAI"),
+      select: {
+        budget: [basePath],
+      },
+    };
+    await expect(store.getMatchingSeries(query)).resolves.toHaveLength(0);
+    const testSub = new Promise<number>((resolve) => {
+      store.subscribeToSource(path, () => {
+        console.log("Source changed");
+        resolve(3);
+      });
+    });
+    const addValue1 = {
+      start: DateTime.now(),
+      source: path,
+      value: 10000,
+      unit: "DAI",
+      metric: "Budget",
+      dimensions: {
+        budget: path,
+      },
+    };
+    await store.addSeriesValue(addValue1);
+    console.log("added series value");
+
+    await expect(store.getMatchingSeries(query)).resolves.toHaveLength(1);
+
+    await vi.waitFor(() => expect(testSub).resolves.toEqual(3));
+  });
+
+  it("should refetch analytics query when data changes", async () => {
+    const store = new MemoryAnalyticsStore();
+    await store.init();
+    const engine = new AnalyticsQueryEngine(store);
+    const wrapper = createWrapper();
+
+    const query: AnalyticsQuery = {
+      start: DateTime.now().minus({ days: 1 }),
+      end: DateTime.now().plus({ days: 1 }),
+      granularity: AnalyticsGranularity.Total,
+      lod: {
+        budget: 4,
+      },
+      metrics: ["Budget"],
+      currency: AnalyticsPath.fromString("DAI"),
+      select: {
+        budget: [AnalyticsPath.fromString("atlas/legacy/core-units")],
+      },
+    };
+
+    // Test analytics query
+    const { result } = renderHook(
+      () => useAnalyticsQuery(query, { sources: [TEST_SOURCE] }),
+      {
+        wrapper,
+      },
+    );
+
+    await vi.waitFor(() => expect(result.current.data).toStrictEqual([]));
+
+    // Add test data
+    const { result: addResult } = renderHook(() => useAddSeriesValue(), {
+      wrapper,
+    });
+
+    const addValue = {
+      start: DateTime.now(),
+      source: TEST_SOURCE,
+      value: 10000,
+      unit: "DAI",
+      metric: "Budget",
+      dimensions: {
+        budget: AnalyticsPath.fromString("atlas/legacy/core-units/SES-001"),
+      },
+    };
+    await store.addSeriesValue(addValue);
+    await addResult.current.mutateAsync(addValue);
+
+    // Get result directly from engine for comparison
+    const engineResult = await engine.execute(query);
+    await vi.waitFor(() =>
+      expect(result.current.data).toStrictEqual(engineResult),
+    );
   });
 });

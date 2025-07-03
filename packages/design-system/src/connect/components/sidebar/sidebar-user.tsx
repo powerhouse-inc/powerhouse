@@ -8,7 +8,7 @@ import {
 export interface SidebarUserProps {
   address: `0x${string}`;
   etherscanUrl: string;
-  onDisconnect: () => void;
+  onDisconnect: (() => void) | undefined;
 }
 
 export const SidebarUser: React.FC<SidebarUserProps> = ({

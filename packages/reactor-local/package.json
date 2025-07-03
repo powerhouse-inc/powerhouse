@@ -1,8 +1,12 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "1.27.53-dev.1",
+  "version": "3.3.0-dev.0",
   "main": "dist/server.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -27,6 +31,7 @@
     "@electric-sql/pglite": "^0.2.12",
     "@libsql/client": "^0.14.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
+    "@powerhousedao/common": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
@@ -44,7 +49,6 @@
     "vite": "^6.3.3"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-graphql": "^0.3.0",
     "@powerhousedao/config": "workspace:*",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",

@@ -8,8 +8,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import jotaiDebugLabel from 'jotai/babel/plugin-debug-label';
-import jotaiReactRefresh from 'jotai/babel/plugin-react-refresh';
+import fs from 'node:fs';
 import path from 'node:path';
 import {
     defineConfig,
@@ -24,12 +23,9 @@ import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import clientConfig from './client.config.js';
 import pkg from './package.json' with { type: 'json' };
+import { renderSkeleton } from './scripts/render-skeleton.js';
 
-const staticFiles = [
-    './src/service-worker.ts',
-    './src/external-packages.js',
-    './src/hmr.ts',
-];
+const staticFiles = ['./src/service-worker.ts', './src/hmr.ts'];
 const staticInputs = staticFiles.reduce(
     (acc, file) =>
         Object.assign(acc, {
@@ -40,12 +36,67 @@ const staticInputs = staticFiles.reduce(
         }),
     {},
 );
-const externalAndExclude = [
-    'vite',
-    'vite-envs',
-    'node:crypto',
-    '@electric-sql/pglite',
-];
+const externalAndExclude = ['vite', 'vite-envs', 'node:crypto'];
+
+function buildAppSkeletonPlugin(outDir: string): PluginOption {
+    const chunkMap = new Map<string, string>();
+    return {
+        name: 'vite:build-app-skeleton',
+
+        // isolate app skeleton chunk
+        moduleParsed(info) {
+            const id = info.id;
+
+            for (const imp of info.importedIds) {
+                // If a module is imported from app-skeleton, but is not app-skeleton itself
+                if (
+                    id.includes('app-skeleton.tsx') &&
+                    !imp.includes('app-skeleton')
+                ) {
+                    // Redirect imported file to its own chunk
+                    chunkMap.set(
+                        imp,
+                        `${path.basename(imp, path.extname(imp))}`,
+                    );
+                }
+            }
+        },
+        configResolved(config) {
+            config.build.rollupOptions.output =
+                config.build.rollupOptions.output ?? {};
+            // @ts-ignore
+            config.build.rollupOptions.output.manualChunks = id => {
+                if (chunkMap.has(id)) {
+                    return chunkMap.get(id);
+                }
+                if (id.includes('app-skeleton.tsx')) return 'app-skeleton';
+                return undefined;
+            };
+        },
+        // inject app skeleton html
+        async closeBundle() {
+            try {
+                const skeletonHtml = await renderSkeleton(
+                    path.resolve(outDir, 'assets/app-skeleton.js'),
+                );
+
+                const html = fs.readFileSync(
+                    path.resolve(outDir, 'index.html'),
+                    'utf-8',
+                );
+                fs.writeFileSync(
+                    path.resolve(outDir, 'index.html'),
+                    html.replace(
+                        '<div id="app"></div>',
+                        `<div id="app">${skeletonHtml}</div>`,
+                    ),
+                );
+            } catch (error) {
+                console.error('Failed to inject app skeleton html:\n', error);
+            }
+        },
+    };
+}
 
 export default defineConfig(({ mode }) => {
     const outDir = path.resolve(__dirname, './dist');
@@ -115,7 +166,7 @@ export default defineConfig(({ mode }) => {
         viteLoadExternalPackages(
             false,
             phPackages,
-            path.resolve(__dirname, './src'),
+            path.resolve(__dirname, './public'),
         ),
         tsconfigPaths(),
         react({
@@ -124,9 +175,9 @@ export default defineConfig(({ mode }) => {
                 parserOpts: {
                     plugins: ['decorators'],
                 },
-                plugins: isProd ? [] : [jotaiDebugLabel, jotaiReactRefresh],
             },
         }),
+        isProd && buildAppSkeletonPlugin(outDir),
         svgr(),
         createHtmlPlugin({
             minify: true,
@@ -152,6 +203,12 @@ export default defineConfig(({ mode }) => {
                 authToken,
                 org,
                 project,
+                bundleSizeOptimizations: {
+                    excludeDebugStatements: true,
+                },
+                reactComponentAnnotation: {
+                    enabled: true,
+                },
             }) as PluginOption,
         );
     }
@@ -159,16 +216,26 @@ export default defineConfig(({ mode }) => {
     if (isProd) {
         plugins.push(
             generateImportMapPlugin(outDir, [
-                { name: 'react', provider: 'esm.sh' },
-                { name: 'react-dom', provider: 'esm.sh' },
+                {
+                    name: 'react',
+                    version: pkg.devDependencies.react.replace('^', ''),
+                    provider: 'esm.sh',
+                },
+                {
+                    name: 'react-dom',
+                    version: pkg.devDependencies['react-dom'].replace('^', ''),
+                    provider: 'esm.sh',
+                    dependencies: ['scheduler@0.23.2'],
+                },
             ]),
         );
     }
 
     return {
+        base: './',
         plugins,
         build: {
-            minify: false,
+            minify: true,
             sourcemap: true,
             rollupOptions: {
                 input: {
@@ -180,13 +247,23 @@ export default defineConfig(({ mode }) => {
                         Object.keys(staticInputs).includes(chunk.name)
                             ? `${chunk.name}.js`
                             : 'assets/[name].[hash].js',
+                    chunkFileNames(chunk) {
+                        if (chunk.name === 'app-skeleton') {
+                            return 'assets/app-skeleton.js';
+                        }
+                        return 'assets/[name].[hash].js';
+                    },
                 },
                 external: [...externalAndExclude, ...externalIds],
+                treeshake: 'smallest',
             },
         },
         optimizeDeps: {
             include: ['did-key-creator'],
-            exclude: externalAndExclude,
+            exclude: [...externalAndExclude, '@electric-sql/pglite'],
+        },
+        worker: {
+            format: 'es',
         },
         resolve: {
             alias: {

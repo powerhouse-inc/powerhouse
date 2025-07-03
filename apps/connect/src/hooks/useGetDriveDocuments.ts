@@ -1,10 +1,17 @@
 import { type GetDocumentOptions } from 'document-drive';
-import { type PHDocument } from 'document-model';
+import { type PHDocument, type PHDocumentHeader } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
+const DELETE_NODE_OPERATION_TYPE = 'DELETE_NODE';
+
+type DeleteOperationInput = { id: string };
+
 export type HookState = PHDocument['state'] &
-    Pick<PHDocument, 'documentType' | 'revision' | 'created' | 'lastModified'>;
+    Pick<
+        PHDocumentHeader,
+        'documentType' | 'revision' | 'createdAtUtcIso' | 'lastModifiedAtUtcIso'
+    >;
 
 export interface UseGetDriveDocumentsProps {
     driveId?: string;
@@ -16,12 +23,13 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
     const { driveId } = props;
     const [documents, setDocuments] = useState<Record<string, HookState>>({});
 
-    const { getDocumentsIds, onStrandUpdate, openFile } =
+    const { getDocumentsIds, openFile, onOperationsAdded } =
         useDocumentDriveServer();
 
     const fetchDocuments = async (
         _driveId: string,
         _documentIds?: string[],
+        _deletedNodes: string[] = [],
     ) => {
         let documentIds = _documentIds;
 
@@ -42,10 +50,10 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
             (acc, [documentId, document]) => {
                 acc[documentId] = {
                     ...document.state,
-                    documentType: document.documentType,
-                    revision: document.revision,
-                    created: document.created,
-                    lastModified: document.lastModified,
+                    documentType: document.header.documentType,
+                    revision: document.header.revision,
+                    createdAtUtcIso: document.header.createdAtUtcIso,
+                    lastModifiedAtUtcIso: document.header.lastModifiedAtUtcIso,
                 };
                 return acc;
             },
@@ -56,6 +64,17 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
             ...prevState,
             ...newDocumentsState,
         }));
+
+        if (_deletedNodes.length > 0) {
+            setDocuments(prevState => {
+                const newState = { ...prevState };
+                _deletedNodes.forEach(nodeId => {
+                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                    delete newState[nodeId];
+                });
+                return newState;
+            });
+        }
     };
 
     useEffect(() => {
@@ -65,16 +84,32 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
     }, [driveId]);
 
     useEffect(() => {
-        const removeListener = onStrandUpdate(update => {
-            if (driveId && update.driveId === driveId && update.documentId) {
-                fetchDocuments(driveId, [update.documentId]).catch(
+        if (!driveId) {
+            return;
+        }
+
+        const removeListener = onOperationsAdded((documentId, operations) => {
+            const deletedNodes: string[] = [];
+
+            if (documentId === driveId) {
+                const deletedNodesIds = operations
+                    .filter(op => op.type === DELETE_NODE_OPERATION_TYPE)
+                    .map(op => (op.input as DeleteOperationInput).id);
+
+                deletedNodes.push(...deletedNodesIds);
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (documents[documentId]) {
+                const docId = documentId ? [documentId] : undefined;
+                fetchDocuments(driveId, docId, deletedNodes).catch(
                     console.error,
                 );
             }
         });
 
         return removeListener;
-    }, [onStrandUpdate, driveId]);
+    }, [onOperationsAdded, documents, driveId]);
 
     return [documents, fetchDocuments] as const;
 }

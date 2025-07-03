@@ -8,12 +8,12 @@ import {
     useSyncStatus,
 } from '#hooks';
 import {
-    useAsyncReactor,
     useDriveEditor,
     useFileNodeDocument,
     useFilteredDocumentModels,
     useGetDocumentModelModule,
     useGetEditor,
+    useReactor,
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
@@ -70,7 +70,7 @@ export function DriveEditorContainer() {
         driveDocumentModelModule.reducer,
         documentDrive,
     );
-    const reactor = useAsyncReactor();
+    const reactor = useReactor();
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -133,6 +133,7 @@ export function DriveEditorContainer() {
             useDriveDocumentStates: useGetDriveDocuments,
             useDriveDocumentState,
             addDocument,
+            reactor,
         }),
         [
             reactor,
@@ -146,7 +147,7 @@ export function DriveEditorContainer() {
         ],
     );
 
-    const driveEditor = useDriveEditor(document?.meta?.preferredEditor);
+    const driveEditor = useDriveEditor(document?.header.meta?.preferredEditor);
 
     if (!document) {
         return null;
@@ -166,7 +167,7 @@ export function DriveEditorContainer() {
                 context={{
                     ...editorProps.context,
                     ...driveContext,
-                    analyticsDatabaseName: connectConfig.analyticsDatabaseName,
+                    analyticsDatabaseName: connectConfig.analytics.databaseName,
                     getDocumentRevision: onGetDocumentRevision,
                     getDocumentModelModule,
                     getEditor,

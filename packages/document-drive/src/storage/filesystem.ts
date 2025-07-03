@@ -9,28 +9,22 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
 import {
-  type DocumentHeader,
   type Operation,
   type OperationScope,
   type PHDocument,
 } from "document-model";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "fs";
+import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import {
-  IStorageUnit,
-  IStorageUnitFilter,
   type IDocumentStorage,
   type IDriveOperationStorage,
+  type IStorageUnit,
+  type IStorageUnitFilter,
 } from "./types.js";
 import {
   isValidDocumentId,
@@ -115,7 +109,8 @@ export class FilesystemStorage
       if (!document) continue;
 
       // apply document type filter
-      if (documentTypes && !documentTypes.has(document.documentType)) continue;
+      if (documentTypes && !documentTypes.has(document.header.documentType))
+        continue;
 
       // For each operation scope in the document
       for (const [scope] of Object.entries(document.state)) {
@@ -125,7 +120,7 @@ export class FilesystemStorage
         // Create storage unit for this document+scope combination
         storageUnits.push({
           documentId,
-          documentModelType: document.documentType,
+          documentModelType: document.header.documentType,
           scope,
           branch: "main", // Default branch
         });
@@ -157,26 +152,71 @@ export class FilesystemStorage
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const ids: string[] = [];
+    for (const slug of slugs) {
+      const documentId = slugManifest.slugToId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs: string[] = [];
+    for (const id of ids) {
+      const document = await this.get<PHDocument>(id);
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError("Aborted");
+      }
+
+      slugs.push(document.header.slug);
+    }
+
+    return Promise.resolve(slugs);
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
-  exists(documentId: string): Promise<boolean> {
-    const documentExists = existsSync(this._buildDocumentPath(documentId));
-    return Promise.resolve(documentExists);
+  async exists(documentId: string): Promise<boolean> {
+    try {
+      await fs.access(this._buildDocumentPath(documentId));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async create(document: PHDocument) {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
 
-    const documentPath = this._buildDocumentPath(documentId);
-    if (existsSync(documentPath)) {
+    if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -186,8 +226,9 @@ export class FilesystemStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
-    writeFileSync(documentPath, stringify(document), {
+    document.header.slug = slug;
+    const documentPath = this._buildDocumentPath(documentId);
+    await fs.writeFile(documentPath, stringify(document), {
       encoding: "utf-8",
     });
 
@@ -197,20 +238,22 @@ export class FilesystemStorage
     await this.updateSlugManifest(slugManifest);
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
 
     return Promise.resolve();
   }
 
-  get<TDocument extends PHDocument>(documentId: string): Promise<TDocument> {
+  async get<TDocument extends PHDocument>(
+    documentId: string,
+  ): Promise<TDocument> {
     try {
-      const content = readFileSync(this._buildDocumentPath(documentId), {
+      const content = await fs.readFile(this._buildDocumentPath(documentId), {
         encoding: "utf-8",
       });
 
-      return Promise.resolve(JSON.parse(content) as TDocument);
+      return JSON.parse(content) as TDocument;
     } catch (error) {
       return Promise.reject(new DocumentNotFoundError(documentId));
     }
@@ -253,13 +296,13 @@ export class FilesystemStorage
       try {
         // Read and parse the document
         const document = JSON.parse(
-          readFileSync(this._buildDocumentPath(documentId), {
+          await fs.readFile(this._buildDocumentPath(documentId), {
             encoding: "utf-8",
           }),
         ) as PHDocument;
 
         // Only include documents of the requested type
-        if (document.documentType === documentModelType) {
+        if (document.header.documentType === documentModelType) {
           documentsAndIds.push({ id: documentId, document });
         }
       } catch (error) {
@@ -270,8 +313,8 @@ export class FilesystemStorage
 
     // Sort by creation date first, then by ID (consistent sort order for pagination)
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -307,7 +350,8 @@ export class FilesystemStorage
     // First, find any slug for this document and remove it from the slug manifest
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug?.length > 0 ? document.header.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -335,8 +379,8 @@ export class FilesystemStorage
 
     // finally, delete the specified document
     const documentPath = this._buildDocumentPath(documentId);
-    if (existsSync(documentPath)) {
-      unlinkSync(documentPath);
+    if (await this.exists(documentId)) {
+      await fs.unlink(documentPath);
 
       return Promise.resolve(true);
     }
@@ -436,21 +480,21 @@ export class FilesystemStorage
   async addDocumentOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    document: PHDocument,
   ) {
-    const document = await this.get(id);
-    if (!document) {
+    const existingDocument = await this.get(id);
+    if (!existingDocument) {
       return Promise.reject(new DocumentNotFoundError(id));
     }
 
     const mergedOperations = mergeOperations(document.operations, operations);
 
     const documentPath = this._buildDocumentPath(id);
-    writeFileSync(
+    await fs.writeFile(
       documentPath,
       stringify({
+        ...existingDocument,
         ...document,
-        ...header,
         operations: mergedOperations,
       }),
       {
@@ -462,20 +506,20 @@ export class FilesystemStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const drive = await this.get<DocumentDriveDocument>(id);
+    const existingDocument = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
-      drive.operations,
+      existingDocument.operations,
       operations,
     );
 
     const drivePath = this._buildDocumentPath(id);
-    writeFileSync(
+    await fs.writeFile(
       drivePath,
       stringify({
-        ...drive,
-        ...header,
+        ...existingDocument,
+        ...document,
         operations: mergedOperations,
       }),
       {
@@ -511,7 +555,8 @@ export class FilesystemStorage
             documentType: unit.documentType,
             scope: unit.scope,
             branch: unit.branch,
-            lastUpdated: operations.at(-1)?.timestamp ?? document.created,
+            lastUpdated:
+              operations.at(-1)?.timestamp ?? document.header.createdAtUtcIso,
             revision: operationsToRevision(operations),
           };
         } catch {
@@ -555,7 +600,7 @@ export class FilesystemStorage
   private async getManifest(driveId: string): Promise<DriveManifest> {
     const manifestPath = this._buildManifestPath(driveId);
     try {
-      const content = readFileSync(manifestPath, { encoding: "utf-8" });
+      const content = await fs.readFile(manifestPath, { encoding: "utf-8" });
       return JSON.parse(content) as DriveManifest;
     } catch (error) {
       // Return empty manifest if file doesn't exist
@@ -568,13 +613,17 @@ export class FilesystemStorage
     manifest: DriveManifest,
   ): Promise<void> {
     const manifestPath = this._buildManifestPath(driveId);
-    writeFileSync(manifestPath, stringify(manifest), { encoding: "utf-8" });
+    await fs.writeFile(manifestPath, stringify(manifest), {
+      encoding: "utf-8",
+    });
   }
 
   private async getSlugManifest(): Promise<SlugManifest> {
     const slugManifestPath = this._buildSlugManifestPath();
     try {
-      const content = readFileSync(slugManifestPath, { encoding: "utf-8" });
+      const content = await fs.readFile(slugManifestPath, {
+        encoding: "utf-8",
+      });
       return JSON.parse(content) as SlugManifest;
     } catch (error) {
       // Return empty slug manifest if file doesn't exist
@@ -584,6 +633,8 @@ export class FilesystemStorage
 
   private async updateSlugManifest(manifest: SlugManifest): Promise<void> {
     const slugManifestPath = this._buildSlugManifestPath();
-    writeFileSync(slugManifestPath, stringify(manifest), { encoding: "utf-8" });
+    await fs.writeFile(slugManifestPath, stringify(manifest), {
+      encoding: "utf-8",
+    });
   }
 }

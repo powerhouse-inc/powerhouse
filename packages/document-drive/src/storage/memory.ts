@@ -6,9 +6,9 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
 import {
-  type DocumentHeader,
   type Operation,
   type OperationFromDocument,
   type OperationScope,
@@ -45,6 +45,45 @@ export class MemoryStorage
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const ids = [];
+    for (const slug of slugs) {
+      const documentId = this.slugToDocumentId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs = [];
+    for (const id of ids) {
+      const document = this.documents[id];
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      slugs.push(document.header.slug);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(slugs);
+  }
+
+  ////////////////////////////////
   // IDocumentStorage
   ////////////////////////////////
 
@@ -53,7 +92,7 @@ export class MemoryStorage
   }
 
   create(document: PHDocument) {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -63,7 +102,8 @@ export class MemoryStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -74,7 +114,7 @@ export class MemoryStorage
     }
 
     // store the document and update the slug
-    document.slug = slug;
+    document.header.slug = slug;
     this.documents[documentId] = document;
 
     // add slug to lookup if it exists
@@ -88,7 +128,7 @@ export class MemoryStorage
     }
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: new Set() });
     }
 
@@ -123,7 +163,7 @@ export class MemoryStorage
     nextCursor: string | undefined;
   }> {
     const documentsAndIds = Object.entries(this.documents)
-      .filter(([_, doc]) => doc.documentType === documentModelType)
+      .filter(([_, doc]) => doc.header.documentType === documentModelType)
       .map(([id, doc]) => ({
         id,
         document: doc,
@@ -132,8 +172,8 @@ export class MemoryStorage
     // sort: created first, then id -- similar to prisma's ordinal but not guaranteed
     documentsAndIds.sort((a, b) => {
       // get date objects
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       // if the dates are the same, sort by id
       if (aDate.getTime() === bDate.getTime()) {
@@ -176,7 +216,8 @@ export class MemoryStorage
     // Remove from slug lookup if it has a slug
     const document = this.documents[documentId];
     if (document) {
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug?.length > 0 ? document.header.slug : documentId;
       if (slug && this.slugToDocumentId[slug] === documentId) {
         delete this.slugToDocumentId[slug];
       }
@@ -267,18 +308,21 @@ export class MemoryStorage
   async addDocumentOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const document = await this.get(id);
+    const existingDocument = await this.get(id);
     if (!document) {
       return Promise.reject(new DocumentNotFoundError(id));
     }
 
-    const mergedOperations = mergeOperations(document.operations, operations);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
 
     this.documents[id] = {
+      ...existingDocument,
       ...document,
-      ...header,
       operations: mergedOperations,
     };
   }
@@ -286,7 +330,7 @@ export class MemoryStorage
   async addDriveOperations(
     id: string,
     operations: OperationFromDocument<DocumentDriveDocument>[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
@@ -296,7 +340,7 @@ export class MemoryStorage
 
     this.documents[id] = {
       ...drive,
-      ...header,
+      ...document,
       operations: mergedOperations,
     };
   }
@@ -328,7 +372,8 @@ export class MemoryStorage
             documentType: unit.documentType,
             scope: unit.scope,
             branch: unit.branch,
-            lastUpdated: operations.at(-1)?.timestamp ?? document.created,
+            lastUpdated:
+              operations.at(-1)?.timestamp ?? document.header.createdAtUtcIso,
             revision: operationsToRevision(operations),
           };
         } catch {
@@ -397,7 +442,8 @@ export class MemoryStorage
       if (!document) continue;
 
       // apply document type filter
-      if (documentTypes && !documentTypes.has(document.documentType)) continue;
+      if (documentTypes && !documentTypes.has(document.header.documentType))
+        continue;
 
       // For each operation scope in the document
       for (const [scope] of Object.entries(document.state)) {
@@ -407,7 +453,7 @@ export class MemoryStorage
         // Create storage unit for this document+scope combination
         storageUnits.push({
           documentId,
-          documentModelType: document.documentType,
+          documentModelType: document.header.documentType,
           scope,
           branch: "main", // Default branch
         });

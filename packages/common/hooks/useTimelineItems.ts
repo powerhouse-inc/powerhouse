@@ -1,11 +1,11 @@
-import { type DocumentToolbarProps } from "@powerhousedao/design-system";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
+  type GroupedPeriodResults,
+  type UseAnalyticsQueryResult,
   useAnalyticsQuery,
 } from "@powerhousedao/reactor-browser/analytics";
-import { useMemo } from "react";
 
 const getBarSize = (value: number) => {
   if (value <= 0) return 0;
@@ -19,8 +19,8 @@ const getBarSize = (value: number) => {
 type BarItem = {
   id: string;
   type: "bar";
-  addSize: number;
-  delSize: number;
+  addSize: 0 | 1 | 2 | 3 | 4;
+  delSize: 0 | 1 | 2 | 3 | 4;
   additions: number;
   deletions: number;
   timestamp: string;
@@ -39,122 +39,121 @@ type DividerItem = {
 
 type TimelineItem = BarItem | DividerItem;
 
-type TimelineResult = {
-  isLoading: boolean;
-  data: DocumentToolbarProps["timelineItems"];
-};
+function addItemsDividers(items: BarItem[]): TimelineItem[] {
+  if (!items.length) return [];
+
+  const result: TimelineItem[] = [];
+  items.forEach((item, index) => {
+    result.push(item);
+
+    // Check if there's a next item and if they're not in consecutive hours
+    if (index < items.length - 1) {
+      const currentDate = new Date(item.startDate);
+      const nextDate = new Date(items[index + 1].startDate);
+
+      const currentHour = currentDate.getHours();
+      const nextHour = nextDate.getHours();
+
+      // Get day parts (without time) for comparison
+      const currentDay = currentDate.toDateString();
+      const nextDay = nextDate.toDateString();
+
+      // If different days or non-consecutive hours on the same day
+      if (
+        currentDay !== nextDay ||
+        (currentDay === nextDay && Math.abs(nextHour - currentHour) > 1)
+      ) {
+        result.push({
+          id: `divider-${item.id}-${items[index + 1].id}`,
+          type: "divider" as const,
+          revision: 0,
+        });
+      }
+    }
+  });
+
+  return result;
+}
+
+function metricsToItems(metrics: GroupedPeriodResults): TimelineItem[] {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!metrics) return [];
+
+  const items = metrics
+    .sort((a, b) => {
+      const aDate = new Date(a.start as unknown as Date);
+      const bDate = new Date(b.start as unknown as Date);
+      return aDate.getTime() - bDate.getTime();
+    })
+    .filter((result) => {
+      return result.rows.every((row) => row.value > 0);
+    })
+    .map((result) => {
+      const { additions, deletions } = result.rows.reduce(
+        (acc, row) => {
+          if (
+            (row.dimensions.changes.path as unknown as string) ===
+            "ph/diff/changes/add"
+          ) {
+            acc.additions += row.value;
+          } else if (
+            (row.dimensions.changes.path as unknown as string) ===
+            "ph/diff/changes/remove"
+          ) {
+            acc.deletions += row.value;
+          }
+          return acc;
+        },
+        { additions: 0, deletions: 0 },
+      );
+
+      const startDate = new Date(result.start as unknown as Date);
+
+      return {
+        id: startDate.toISOString(),
+        type: "bar" as const,
+        addSize: getBarSize(additions),
+        delSize: getBarSize(deletions),
+        additions,
+        deletions,
+        timestamp: startDate.toISOString(),
+        startDate: startDate,
+        endDate: new Date(result.end as unknown as Date),
+        revision: 0,
+      } as const;
+    });
+
+  return addItemsDividers(items);
+}
+
+export type UseTimelineItemsResult = UseAnalyticsQueryResult<TimelineItem[]>;
 
 export const useTimelineItems = (
   documentId?: string,
   startTimestamp?: string,
-): TimelineResult => {
+  driveId?: string,
+): UseTimelineItemsResult => {
   const start = startTimestamp
     ? DateTime.fromISO(startTimestamp)
     : DateTime.now().startOf("day");
 
-  const { data: diffResult, isLoading } = useAnalyticsQuery({
-    start,
-    end: DateTime.now().endOf("day"),
-    granularity: AnalyticsGranularity.Hourly,
-    metrics: ["Count"],
-    select: {
-      changes: [AnalyticsPath.fromString(`changes`)],
-      document: [AnalyticsPath.fromString(`document/${documentId}`)],
+  return useAnalyticsQuery<TimelineItem[]>(
+    {
+      start,
+      end: DateTime.now().endOf("day"),
+      granularity: AnalyticsGranularity.Hourly,
+      metrics: ["Count"],
+      select: {
+        changes: [AnalyticsPath.fromString(`ph/diff/changes`)],
+        document: [AnalyticsPath.fromString(`ph/diff/document/${documentId}`)],
+      },
+      lod: {
+        changes: 4,
+      },
     },
-    lod: {
-      changes: 2,
+    {
+      sources: [AnalyticsPath.fromString(`ph/diff/${driveId}/${documentId}`)],
+      select: metricsToItems,
     },
-    currency: AnalyticsPath.fromString(""),
-  });
-
-  // memoize the mapped result to avoid recalculation on rerenders
-  const mappedResult = useMemo(() => {
-    if (!diffResult) return [];
-
-    return diffResult
-      .sort((a, b) => {
-        const aDate = new Date(a.start as unknown as Date);
-        const bDate = new Date(b.start as unknown as Date);
-        return aDate.getTime() - bDate.getTime();
-      })
-      .filter((result) => {
-        return result.rows.every((row) => row.value > 0);
-      })
-      .map((result) => {
-        const { additions, deletions } = result.rows.reduce(
-          (acc, row) => {
-            if (
-              (row.dimensions.changes.path as unknown as string) ===
-              "changes/add"
-            ) {
-              acc.additions += row.value;
-            } else if (
-              (row.dimensions.changes.path as unknown as string) ===
-              "changes/remove"
-            ) {
-              acc.deletions += row.value;
-            }
-            return acc;
-          },
-          { additions: 0, deletions: 0 },
-        );
-
-        const startDate = new Date(result.start as unknown as Date);
-
-        return {
-          id: startDate.toISOString(),
-          type: "bar" as const,
-          addSize: getBarSize(additions),
-          delSize: getBarSize(deletions),
-          additions,
-          deletions,
-          timestamp: startDate.toISOString(),
-          startDate: startDate,
-          endDate: new Date(result.end as unknown as Date),
-          revision: 0,
-        };
-      });
-  }, [diffResult]);
-
-  // memoize the divider insertion to avoid recalculation
-  const resultWithDividers = useMemo(() => {
-    if (!mappedResult.length) return [];
-
-    const result: TimelineItem[] = [];
-    mappedResult.forEach((item, index) => {
-      result.push(item);
-
-      // Check if there's a next item and if they're not in consecutive hours
-      if (index < mappedResult.length - 1) {
-        const currentDate = new Date(item.startDate);
-        const nextDate = new Date(mappedResult[index + 1].startDate);
-
-        const currentHour = currentDate.getHours();
-        const nextHour = nextDate.getHours();
-
-        // Get day parts (without time) for comparison
-        const currentDay = currentDate.toDateString();
-        const nextDay = nextDate.toDateString();
-
-        // If different days or non-consecutive hours on the same day
-        if (
-          currentDay !== nextDay ||
-          (currentDay === nextDay && Math.abs(nextHour - currentHour) > 1)
-        ) {
-          result.push({
-            id: `divider-${item.id}-${mappedResult[index + 1].id}`,
-            type: "divider" as const,
-            revision: 0,
-          });
-        }
-      }
-    });
-
-    return result;
-  }, [mappedResult]);
-
-  return {
-    isLoading,
-    data: resultWithDividers as DocumentToolbarProps["timelineItems"],
-  };
+  );
 };

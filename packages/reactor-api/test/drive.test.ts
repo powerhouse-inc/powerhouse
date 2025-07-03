@@ -50,9 +50,9 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toEqual({
-      id: createdDrive.id,
-      slug: createdDrive.slug,
-      meta: createdDrive.meta,
+      id: createdDrive.header.id,
+      slug: createdDrive.header.slug,
+      meta: createdDrive.header.meta,
       name: createdDrive.state.global.name,
       icon: createdDrive.state.global.icon ?? undefined,
     });
@@ -90,9 +90,9 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toStrictEqual({
-      id: createdDrive.id,
-      slug: createdDrive.slug,
-      meta: createdDrive.meta,
+      id: createdDrive.header.id,
+      slug: createdDrive.header.slug,
+      meta: createdDrive.header.meta,
       name: createdDrive.state.global.name,
       icon: createdDrive.state.global.icon ?? undefined,
     });
@@ -135,9 +135,8 @@ describe("DriveSubgraph", () => {
   });
 
   it("should return document data", async () => {
-    const mockDocumentData = driveDocumentModelModule.utils.createDocument({
-      slug: "test-drive-id",
-    });
+    const mockDocumentData = driveDocumentModelModule.utils.createDocument({});
+    mockDocumentData.header.slug = "test-document-id";
 
     // {
     //   id: "test-document-id",
@@ -150,7 +149,7 @@ describe("DriveSubgraph", () => {
 
     const mockReactor = {
       getDrive: vi.fn(),
-      getDocuments: vi.fn(),
+      getDocuments: vi.fn().mockResolvedValue([mockDocumentData.header.id]),
       getDocument: vi.fn().mockResolvedValue(mockDocumentData),
       getDocumentModelModules: vi.fn().mockReturnValue([
         {
@@ -160,7 +159,7 @@ describe("DriveSubgraph", () => {
       listeners: {
         setListener: vi.fn(),
       },
-      getDriveIdBySlug: vi.fn().mockResolvedValue(mockDocumentData.id),
+      getDriveIdBySlug: vi.fn().mockResolvedValue(mockDocumentData.header.id),
     };
 
     const mockSubgraphArgs = {
@@ -170,25 +169,35 @@ describe("DriveSubgraph", () => {
     const driveSubgraph = new DriveSubgraph(mockSubgraphArgs as any);
 
     const context = {
-      driveId: mockDocumentData.id,
+      driveId: mockDocumentData.header.id,
     };
 
     const document = await (driveSubgraph.resolvers.Query as any)?.document(
       null,
-      { id: mockDocumentData.id },
+      { id: mockDocumentData.header.id },
       context as any,
     );
 
     expect(document).toStrictEqual({
       ...mockDocumentData,
-      revision: mockDocumentData.revision.global,
+      // default
+      revision: {
+        document: 0,
+      },
       state: mockDocumentData.state.global,
       initialState: mockDocumentData.initialState.state.global,
       stateJSON: mockDocumentData.state.global,
       operations: mockDocumentData.operations.global,
       __typename: "",
+
+      // backward compatibility
+      id: mockDocumentData.header.id,
     });
 
-    expect(mockReactor.getDocument).toHaveBeenCalledWith(mockDocumentData.id);
+    expect(mockReactor.getDocuments).toHaveBeenCalledWith(context.driveId);
+
+    expect(mockReactor.getDocument).toHaveBeenCalledWith(
+      mockDocumentData.header.id,
+    );
   });
 });

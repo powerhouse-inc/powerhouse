@@ -16,7 +16,10 @@ const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function run(args: string[], { watch = false, skipFormat = false } = {}) {
+export async function run(
+  args: string[],
+  { watch = false, skipFormat = false } = {},
+) {
   const result = await runner(args, {
     templates: defaultTemplates,
     cwd: process.cwd(),
@@ -147,7 +150,7 @@ export async function generateProcessor(
   name: string,
   documentTypes: string[],
   documentTypesMap: DocumentTypesMap,
-  dir: string,
+  outDir: string,
   documentModelsDir: string,
   type = "analytics",
   { skipFormat = false } = {},
@@ -163,7 +166,7 @@ export async function generateProcessor(
       "--pascalName",
       pascalCase(name),
       "--root-dir",
-      dir,
+      outDir,
       "--document-types",
       documentTypes.join(","),
       "--document-types-map",

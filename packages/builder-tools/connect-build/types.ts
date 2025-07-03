@@ -1,5 +1,7 @@
 /** Options for building Connect with a given project's local and external packages included */
 export type ConnectBuildOptions = {
+  /** The base path for the app, defaults to "/" */
+  base?: string;
   /** The root directory of the project, defaults to `process.cwd()` */
   projectRoot?: string;
   /** The name of the assets directory, defaults to DEFAULT_ASSETS_DIR_NAME */
@@ -14,6 +16,8 @@ export type ConnectBuildOptions = {
 
 /** Options for previewing a built Connect project */
 export type ConnectPreviewOptions = {
+  /** The base path for the app, defaults to "/" */
+  base?: string;
   /** The root directory of the project, defaults to `process.cwd()` */
   projectRoot?: string;
   /** The port to run the server on, defaults to 4173 (vite preview default) */

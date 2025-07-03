@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it } from "vitest";
 import { type ExtendedStateFromDocument } from "#document/types.js";
 import {
   baseCreateDocument,
@@ -6,6 +5,7 @@ import {
   replayOperations,
 } from "#document/utils/base.js";
 import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   baseCountReducer,
   type CountDocument,
@@ -19,7 +19,6 @@ describe("Document Operation ID", () => {
 
   beforeEach(() => {
     initialState = baseCreateExtendedState<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 

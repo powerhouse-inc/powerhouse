@@ -25,7 +25,7 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Switchboard",
     imageSrc: require("@site/static/img/switchboard.png").default,
-    docPath: "/docs/academy/AdvancedTutorial/WorkWithData/ReadingAndWritingThroughTheAPI",
+    docPath: "/docs/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI",
     description: <>Get access to the open API interface with Switchboard</>,
   },
   {
@@ -41,7 +41,7 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Renown",
     imageSrc: require("@site/static/img/renown.png").default,
-    docPath: "/docs/academy/AdvancedTutorial/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+    docPath: "/docs/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
     description: (
       <>
         Dive into the customizable reputation system 
@@ -123,10 +123,10 @@ export default function HomepageFeatures() {
               <div className={styles.cardIconWrapper}>
                 <img src="/img/academy/icons/Book.svg" alt="" />
               </div>
-              <h3 className={styles.cardTitle}>Book of Powerhouse</h3>
+              <h3 className={styles.cardTitle}>New Link</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/bookofpowerhouse/Overview" className={styles.pathButton}>The Vision of Powerhouse</a>
+              <a href="@callmeT" className={styles.pathButton}>The Vision of Powerhouse</a>
             </div>
           </div>
 
@@ -138,7 +138,7 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Create</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/academy/GetStarted/ToDoList/CreateNewPowerhouseProject" className={styles.pathButton}>Build a Todo-list Document Model</a>
+              <a href="/docs/academy/GetStarted/CreateNewPowerhouseProject" className={styles.pathButton}>Build a Todo-list Document Model</a>
             </div>
           </div>
 
@@ -163,9 +163,9 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Build User Experiences</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="/docs/academy/GetStarted/ToDoList/BuildToDoListEditor" className={styles.pathButton}>Building a Todo-list Editor</a>
-              <a href="/docs/academy/BuildingUserExperiences/BuildingBeautifulDocumentEditors" className={styles.pathButton}>Building Beautiful Document Editors</a>
-              <a href="/docs/academy/AdvancedTutorial/BuildingUserExperiences/BuildingADriveExplorer" className={styles.pathButton}>Building Custom Drive Explorers</a>
+              <a href="/docs/academy/GetStarted/BuildToDoListEditor" className={styles.pathButton}>Building a Todo-list Editor</a>
+              <a href="/docs/academy/BuildingUserExperiences/BuildingDocumentEditors" className={styles.pathButton}>Building Beautiful Document Editors</a>
+              <a href="/docs/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer" className={styles.pathButton}>Building Custom Drive Explorers</a>
             </div>
           </div>
 
@@ -200,8 +200,8 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Work with Data</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="//docs/academy/AdvancedTutorial/WorkWithData/ReadingAndWritingThroughTheAPI" className={styles.pathButton}>Reading & Writing through the API</a>
-              <a href="/docs/academy/AdvancedTutorial/WorkWithData/WorkingWithSubgraphs" className={styles.pathButton}>Create your own Subgraph</a>
+              <a href="//docs/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI" className={styles.pathButton}>Reading & Writing through the API</a>
+              <a href="/docs/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className={styles.pathButton}>Create your own Subgraph</a>
               <a href="/docs/academy/WorkWithData/Analytics Engine/intro" className={styles.pathButton}>Using the Analytics Engine</a>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function HomepageFeatures() {
             </div>
             <div className={styles.cardContent}>
               <div className={styles.buttonContainer}>
-                <a href="/docs/academy/AdvancedTutorial/Launch/PublishYourProject" className={styles.pathButton}>Package & Publish</a>
+                <a href="/docs/academy/MasteryTrack/Launch/PublishYourProject" className={styles.pathButton}>Package & Publish</a>
                 <a href="/docs/academy/Launch/LaunchYourBackend" className={styles.pathButton}>Launch Back-end</a>
                 <a href="/docs/academy/Launch/LaunchYourFrontend" className={styles.pathButton}>Launch Front-end</a>
               </div>

@@ -1,14 +1,19 @@
 {
   "name": "@powerhousedao/common",
-  "version": "1.10.54-dev.1",
+  "version": "3.3.0-dev.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
     "/dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "exports": {
     ".": "./dist/index.js",
-    "./*": "./dist/*.js"
+    "./*": "./dist/*.js",
+    "./drive-analytics": "./dist/drive-analytics/index.js"
   },
   "types": "./dist/index.d.ts",
   "imports": {
@@ -31,6 +36,10 @@
   },
   "peerDependencies": {
     "@powerhousedao/reactor-browser": "workspace:*",
+    "jotai": "^2.12.5",
+    "jotai-devtools": "^0.12.0",
+    "jotai-effect": "^2.0.4",
+    "jotai-optics": "^0.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -40,7 +49,8 @@
     "@tanstack/react-virtual": "^3.8.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "react-i18next": "^13.5.0"
+    "react-i18next": "^13.5.0",
+    "slug": "^11.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
@@ -49,10 +59,15 @@
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^22.15.17",
     "@types/react": "^18.3.18",
+    "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "document-model": "workspace:*",
+    "jotai": "^2.12.5",
+    "jotai-devtools": "^0.12.0",
+    "jotai-effect": "^2.0.4",
+    "jotai-optics": "^0.4.0",
     "package-manager-detector": "^0.2.8",
     "postcss": "^8.5.1",
     "react": "^18.3.1",
@@ -60,7 +75,7 @@
     "storybook-mock-date-decorator": "^2.0.6",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.9",
-    "tsx": "^4.19.2",
+    "tsx": "^4.20.3",
     "uuid": "^11.0.5",
     "vite": "^6.3.3",
     "vitest": "^3.1.2",

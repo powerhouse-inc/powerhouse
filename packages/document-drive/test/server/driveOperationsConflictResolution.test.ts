@@ -1,11 +1,18 @@
+import { BrowserStorage } from "#storage/browser";
+import { FilesystemStorage } from "#storage/filesystem";
+import { PrismaClient } from "#storage/prisma/client/index";
+import { PrismaStorage } from "#storage/prisma/prisma";
+import { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
 import {
   BaseAction,
   documentModelDocumentModelModule,
   DocumentModelModule,
-  generateId,
   Operation,
 } from "document-model";
+import { existsSync, rmSync } from "fs";
+import path from "path";
 import { beforeEach, describe, expect, it } from "vitest";
+import { InMemoryCache, MemoryStorage } from "../../index.js";
 import {
   addFolder,
   copyNode,
@@ -30,308 +37,172 @@ function sortNodes(nodes: Node[]) {
   return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
-describe("Drive Operations", () => {
-  const documentModels = [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as DocumentModelModule[];
+/**
+ * Currently we do not have good standalone tests for operations storage. The
+ * storage tests in storage.test.ts test the IDocumentStorage interface, which
+ * is not the same.
+ *
+ * We should test these in isolation.
+ */
+const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
+  ["Memory Storage", () => Promise.resolve(new MemoryStorage())],
+  [
+    "File System Storage",
+    () => {
+      const basePath = path.join(__dirname, "test-storage");
 
-  let server: IDocumentDriveServer;
-  beforeEach(async () => {
-    server = new ReactorBuilder(documentModels).build();
-    await server.initialize();
-  });
+      // delete the base path
+      if (existsSync(basePath)) {
+        rmSync(basePath, { recursive: true, force: true });
+      }
 
-  const driveId = generateId();
-
-  async function buildDrive() {
-    await server.addDrive({
-      id: driveId,
-      global: { name: "test" },
-      local: {
-        availableOffline: false,
-        sharingType: "PRIVATE",
-        listeners: [],
-        triggers: [],
-      },
-    });
-
-    return await server.getDrive(driveId);
-  }
-
-  it("should not re-apply existing operations", async () => {
-    const initialDriveDocument = await buildDrive();
-    let pushOperationResult: IOperationResult;
-
-    createDocument();
-
-    const client1 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const client2 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    client2.dispatchDriveAction(addFolder({ id: "2", name: "test2" }));
-    pushOperationResult = await client2.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    await client1.syncDocument();
-    expect(client1.getUnsyncedOperations()).toMatchObject([]);
-
-    const syncedOperations = client1.getDocument().operations
-      .global as Operation<DocumentDriveAction | BaseAction<string, unknown>>[];
-    client1.setUnsyncedOperations(syncedOperations);
-
-    pushOperationResult = await client1.pushOperationsToServer();
-
-    const drive = await server.getDrive(driveId);
-
-    expect(drive.state.global.nodes.length).toBe(2);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "test1" },
-      { id: "2", name: "test2" },
-    ]);
-    expect(drive.operations.global.length).toBe(2);
-    expect(drive.operations.global).toMatchObject([
-      {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
-        index: 1,
-        skip: 1,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "2", name: "test2" },
-        scope: "global",
-        index: 2,
-        skip: 0,
-      },
-    ]);
-  });
-
-  it("should resolve conflicts when 5 clients are pushing changes to the same drive", async () => {
-    const initialDriveDocument = await buildDrive();
-    let pushOperationResult: IOperationResult;
-
-    createDocument();
-
-    const client1 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const client2 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const client3 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const client4 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const client5 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    // Client1 Add folder and push to server
-    client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Client2 Add folder and push to server
-    client2.dispatchDriveAction(addFolder({ id: "2", name: "test2" }));
-    pushOperationResult = await client2.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Client1 sync with server
-    await client1.syncDocument();
-    expect(client1.getUnsyncedOperations()).toMatchObject([]);
-
-    // Clien1 push already synced operations to server (this should not create new operations in the server document)
-    const syncedOperations = client1.getDocument().operations
-      .global as Operation<DocumentDriveAction | BaseAction<string, unknown>>[];
-
-    client1.setUnsyncedOperations(syncedOperations);
-    pushOperationResult = await client1.pushOperationsToServer();
-
-    // Client3 sync with server
-    await client3.syncDocument();
-
-    // Client3 add folder and push to server
-    client3.dispatchDriveAction(addFolder({ id: "3", name: "test3" }));
-    pushOperationResult = await client3.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Client4 sync with server (partially syncs at this point)
-    await client4.syncDocument();
-
-    // Client3 add folder and push to server
-    client3.dispatchDriveAction(addFolder({ id: "4", name: "test4" }));
-    pushOperationResult = await client3.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Client4 add folder and push to server
-    client4.dispatchDriveAction(addFolder({ id: "5", name: "test5" }));
-    pushOperationResult = await client4.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Client5 add folder and push to server
-    client5.dispatchDriveAction(addFolder({ id: "6", name: "test6" }));
-    pushOperationResult = await client5.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Check if the operations are in the server
-    const drive = await server.getDrive(driveId);
-
-    expect(drive.state.global.nodes.length).toBe(6);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "test1" },
-      { id: "2", name: "test2" },
-      { id: "3", name: "test3" },
-      { id: "4", name: "test4" },
-      { id: "5", name: "test5" },
-      { id: "6", name: "test6" },
-    ]);
-    expect(drive.operations.global.slice(-6)).toMatchObject([
-      {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
-        index: 7,
-        skip: 7,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "2", name: "test2" },
-        scope: "global",
-        index: 8,
-        skip: 0,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "3", name: "test3" },
-        scope: "global",
-        index: 9,
-        skip: 0,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "4", name: "test4" },
-        scope: "global",
-        index: 10,
-        skip: 0,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "5", name: "test5" },
-        scope: "global",
-        index: 11,
-        skip: 0,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "6", name: "test6" },
-        scope: "global",
-        index: 12,
-        skip: 0,
-      },
-    ]);
-  });
-
-  it("Should not throw an error when adding the same folder twice (same client)", async () => {
-    const initialDriveDocument = await buildDrive();
-    let pushOperationResult: IOperationResult;
-
-    createDocument();
-
-    const client1 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
-
-    const addFolderAction = addFolder({
-      id: "1",
-      name: "test1",
-    });
-    client1.dispatchDriveAction(addFolderAction);
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    client1.dispatchDriveAction(addFolderAction);
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    expect(client1.getDocument().operations.global.length).toBe(2);
-    expect(client1.getDocument().operations.global[1]).toMatchObject({
-      type: "ADD_FOLDER",
-      index: 1,
-      skip: 0,
-      input: { id: "1", name: "test1" },
-      error: "Node with id 1 already exists!",
-    });
-
-    const drive = await server.getDrive(driveId);
-
-    expect(drive.state.global.nodes.length).toBe(1);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "test1" },
-    ]);
-    expect(drive.operations.global.length).toBe(2);
-    expect(drive.operations.global).toMatchObject([
-      {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        error: undefined,
-        index: 0,
-        skip: 0,
-      },
-      {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
-        index: 1,
-        skip: 0,
-        error: "Node with id 1 already exists!",
-      },
-    ]);
-  });
-
-  it(
-    "Should not throw an error when adding the same folder twice (2 clients)",
-    { retry: 10 },
+      return Promise.resolve(new FilesystemStorage(basePath));
+    },
+  ],
+  [
+    "Browser Storage",
     async () => {
+      const storage = new BrowserStorage();
+      await storage.clear();
+      return storage;
+    },
+  ],
+  [
+    "PrismaStorage",
+    async () => {
+      const prisma = new PrismaClient();
+      await prisma.$executeRawUnsafe('DELETE FROM "Attachment";');
+      await prisma.$executeRawUnsafe('DELETE FROM "Operation";');
+      await prisma.$executeRawUnsafe('DELETE FROM "Document";');
+      await prisma.$executeRawUnsafe('DELETE FROM "DriveDocument";');
+      await prisma.$executeRawUnsafe('DELETE FROM "Drive";');
+
+      return new PrismaStorage(prisma as any, new InMemoryCache());
+    },
+  ],
+  /*[
+    "IPFSStorage",
+    async () => {
+      const helia = await createHelia();
+      return new IPFSStorage(helia);
+    },
+  ],*/
+] as unknown as [string, () => Promise<IDocumentStorage>][];
+
+describe.each(storageImplementations)("%s", async (_, buildStorage) => {
+  describe("Drive Operations", () => {
+    const documentModels = [
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ] as DocumentModelModule[];
+
+    let server: IDocumentDriveServer;
+    beforeEach(async () => {
+      const storage = await buildStorage();
+
+      server = new ReactorBuilder(documentModels)
+        .withStorage(storage as unknown as IDriveOperationStorage)
+        .build();
+      await server.initialize();
+    });
+
+    let driveId: string;
+
+    async function buildDrive() {
+      const drive = await server.addDrive({
+        global: { name: "test" },
+        local: {
+          availableOffline: false,
+          sharingType: "PRIVATE",
+          listeners: [],
+          triggers: [],
+        },
+      });
+      driveId = drive.header.id;
+
+      return await server.getDrive(driveId);
+    }
+
+    it("boilerplate is accurate", async () => {
+      const a = await server.addDrive({
+        global: { name: "test" },
+        local: {
+          availableOffline: false,
+          sharingType: "PRIVATE",
+          listeners: [],
+          triggers: [],
+        },
+      });
+
+      const b = await server.getDrive(a.header.id);
+
+      expect(a).toMatchObject(b);
+    });
+
+    it("should not re-apply existing operations", async () => {
+      const initialDriveDocument = await buildDrive();
+      let pushOperationResult: IOperationResult;
+
+      const client1 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
+
+      const client2 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
+
+      client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      client2.dispatchDriveAction(addFolder({ id: "2", name: "test2" }));
+      pushOperationResult = await client2.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      await client1.syncDocument();
+      expect(client1.getUnsyncedOperations()).toMatchObject([]);
+
+      const syncedOperations = client1.getDocument().operations
+        .global as Operation<
+        DocumentDriveAction | BaseAction<string, unknown>
+      >[];
+      client1.setUnsyncedOperations(syncedOperations);
+
+      pushOperationResult = await client1.pushOperationsToServer();
+
+      const drive = await server.getDrive(driveId);
+
+      expect(drive.state.global.nodes.length).toBe(2);
+      expect(drive.state.global.nodes).toMatchObject([
+        { id: "1", name: "test1" },
+        { id: "2", name: "test2" },
+      ]);
+      expect(drive.operations.global.length).toBe(2);
+      expect(drive.operations.global).toMatchObject([
+        {
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+          index: 1,
+          skip: 1,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "2", name: "test2" },
+          scope: "global",
+          index: 2,
+          skip: 0,
+        },
+      ]);
+    });
+
+    it("should resolve conflicts when 5 clients are pushing changes to the same drive", async () => {
       const initialDriveDocument = await buildDrive();
       let pushOperationResult: IOperationResult;
 
@@ -351,39 +222,166 @@ describe("Drive Operations", () => {
         documentDriveReducer,
       );
 
-      client1.dispatchDriveAction(
-        addFolder({
-          id: "1",
-          name: "test1",
-        }),
+      const client3 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
       );
+
+      const client4 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
+
+      const client5 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
+
+      // Client1 Add folder and push to server
+      client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
       pushOperationResult = await client1.pushOperationsToServer();
       expect(pushOperationResult.status).toBe("SUCCESS");
-      expect(client1.getDocument().operations.global.length).toBe(1);
-      expect(client1.getDocument().operations.global[0]).toMatchObject({
-        type: "ADD_FOLDER",
-        index: 0,
-        skip: 0,
-        input: { id: "1", name: "test1" },
-        error: undefined,
-      });
 
-      client2.dispatchDriveAction(
-        addFolder({
-          id: "1",
-          name: "test2",
-        }),
-      );
+      // Client2 Add folder and push to server
+      client2.dispatchDriveAction(addFolder({ id: "2", name: "test2" }));
       pushOperationResult = await client2.pushOperationsToServer();
       expect(pushOperationResult.status).toBe("SUCCESS");
 
-      expect(client2.getDocument().operations.global.length).toBe(1);
-      expect(client2.getDocument().operations.global[0]).toMatchObject({
+      // Client1 sync with server
+      await client1.syncDocument();
+      expect(client1.getUnsyncedOperations()).toMatchObject([]);
+
+      // Clien1 push already synced operations to server (this should not create new operations in the server document)
+      const syncedOperations = client1.getDocument().operations
+        .global as Operation<
+        DocumentDriveAction | BaseAction<string, unknown>
+      >[];
+
+      client1.setUnsyncedOperations(syncedOperations);
+      pushOperationResult = await client1.pushOperationsToServer();
+
+      // Client3 sync with server
+      await client3.syncDocument();
+
+      // Client3 add folder and push to server
+      client3.dispatchDriveAction(addFolder({ id: "3", name: "test3" }));
+      pushOperationResult = await client3.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      // Client4 sync with server (partially syncs at this point)
+      await client4.syncDocument();
+
+      // Client3 add folder and push to server
+      client3.dispatchDriveAction(addFolder({ id: "4", name: "test4" }));
+      pushOperationResult = await client3.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      // Client4 add folder and push to server
+      client4.dispatchDriveAction(addFolder({ id: "5", name: "test5" }));
+      pushOperationResult = await client4.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      // Client5 add folder and push to server
+      client5.dispatchDriveAction(addFolder({ id: "6", name: "test6" }));
+      pushOperationResult = await client5.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      // Check if the operations are in the server
+      const drive = await server.getDrive(driveId);
+
+      expect(drive.state.global.nodes.length).toBe(6);
+      expect(drive.state.global.nodes).toMatchObject([
+        { id: "1", name: "test1" },
+        { id: "2", name: "test2" },
+        { id: "3", name: "test3" },
+        { id: "4", name: "test4" },
+        { id: "5", name: "test5" },
+        { id: "6", name: "test6" },
+      ]);
+      expect(drive.operations.global.slice(-6)).toMatchObject([
+        {
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+          index: 7,
+          skip: 7,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "2", name: "test2" },
+          scope: "global",
+          index: 8,
+          skip: 0,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "3", name: "test3" },
+          scope: "global",
+          index: 9,
+          skip: 0,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "4", name: "test4" },
+          scope: "global",
+          index: 10,
+          skip: 0,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "5", name: "test5" },
+          scope: "global",
+          index: 11,
+          skip: 0,
+        },
+        {
+          type: "ADD_FOLDER",
+          input: { id: "6", name: "test6" },
+          scope: "global",
+          index: 12,
+          skip: 0,
+        },
+      ]);
+    });
+
+    it("Should not throw an error when adding the same folder twice (same client)", async () => {
+      const initialDriveDocument = await buildDrive();
+      let pushOperationResult: IOperationResult;
+
+      createDocument();
+
+      const client1 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
+
+      const addFolderAction = addFolder({
+        id: "1",
+        name: "test1",
+      });
+      client1.dispatchDriveAction(addFolderAction);
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      client1.dispatchDriveAction(addFolderAction);
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      expect(client1.getDocument().operations.global.length).toBe(2);
+      expect(client1.getDocument().operations.global[1]).toMatchObject({
         type: "ADD_FOLDER",
-        index: 0,
+        index: 1,
         skip: 0,
-        input: { id: "1", name: "test2" },
-        error: undefined,
+        input: { id: "1", name: "test1" },
+        error: "Node with id 1 already exists!",
       });
 
       const drive = await server.getDrive(driveId);
@@ -392,190 +390,274 @@ describe("Drive Operations", () => {
       expect(drive.state.global.nodes).toMatchObject([
         { id: "1", name: "test1" },
       ]);
-
       expect(drive.operations.global.length).toBe(2);
       expect(drive.operations.global).toMatchObject([
         {
           type: "ADD_FOLDER",
           input: { id: "1", name: "test1" },
-          error: undefined,
-          index: 1,
-          skip: 1,
+          index: 0,
+          skip: 0,
         },
         {
           type: "ADD_FOLDER",
-          input: { id: "1", name: "test2" },
+          input: { id: "1", name: "test1" },
           scope: "global",
-          index: 2,
+          index: 1,
           skip: 0,
           error: "Node with id 1 already exists!",
         },
       ]);
-    },
-  );
+    });
 
-  // TODO: This test is flaky.
-  it("should resolve conflicts without duplicate ids when copy folders", async () => {
-    return;
+    it(
+      "Should not throw an error when adding the same folder twice (2 clients)",
+      { retry: 10 },
+      async () => {
+        const initialDriveDocument = await buildDrive();
+        let pushOperationResult: IOperationResult;
 
-    let idCounter = 0;
-    const generateId = () => {
-      idCounter++;
-      return `${idCounter}`;
-    };
+        createDocument();
 
-    const initialDriveDocument = await buildDrive();
-    let pushOperationResult: IOperationResult;
+        const client1 = new DriveBasicClient(
+          server,
+          driveId,
+          initialDriveDocument,
+          documentDriveReducer,
+        );
 
-    createDocument();
+        const client2 = new DriveBasicClient(
+          server,
+          driveId,
+          initialDriveDocument,
+          documentDriveReducer,
+        );
 
-    const client1 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
+        client1.dispatchDriveAction(
+          addFolder({
+            id: "1",
+            name: "test1",
+          }),
+        );
+        pushOperationResult = await client1.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe("SUCCESS");
+        expect(client1.getDocument().operations.global.length).toBe(1);
+        expect(client1.getDocument().operations.global[0]).toMatchObject({
+          type: "ADD_FOLDER",
+          index: 0,
+          skip: 0,
+          input: { id: "1", name: "test1" },
+          error: undefined,
+        });
 
-    const client2 = new DriveBasicClient(
-      server,
-      driveId,
-      initialDriveDocument,
-      documentDriveReducer,
-    );
+        client2.dispatchDriveAction(
+          addFolder({
+            id: "1",
+            name: "test2",
+          }),
+        );
+        pushOperationResult = await client2.pushOperationsToServer();
+        expect(pushOperationResult.status).toBe("SUCCESS");
 
-    const idFolder1 = generateId();
-    const idFolder2 = generateId();
+        expect(client2.getDocument().operations.global.length).toBe(1);
+        expect(client2.getDocument().operations.global[0]).toMatchObject({
+          type: "ADD_FOLDER",
+          index: 0,
+          skip: 0,
+          input: { id: "1", name: "test2" },
+          error: undefined,
+        });
 
-    expect(idFolder1).toBe("1");
-    expect(idFolder2).toBe("2");
+        const drive = await server.getDrive(driveId);
 
-    // Add folders in client 1 and push to server
+        expect(drive.state.global.nodes.length).toBe(1);
+        expect(drive.state.global.nodes).toMatchObject([
+          { id: "1", name: "test1" },
+        ]);
 
-    client1.dispatchDriveAction(addFolder({ id: idFolder1, name: "1" }));
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    client1.dispatchDriveAction(
-      addFolder({
-        id: idFolder2,
-        name: "2",
-        parentFolder: idFolder1,
-      }),
-    );
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
-
-    // Sync client 2 with server
-    await client2.syncDocument();
-
-    // Copy folder 1 to root in client 1 and push to server
-    const copyNodesInput = generateNodesCopy(
-      {
-        srcId: idFolder1,
-        targetName: "1",
-        targetParentFolder: undefined,
+        expect(drive.operations.global.length).toBe(2);
+        expect(drive.operations.global).toMatchObject([
+          {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            error: undefined,
+            index: 1,
+            skip: 1,
+          },
+          {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test2" },
+            scope: "global",
+            index: 2,
+            skip: 0,
+            error: "Node with id 1 already exists!",
+          },
+        ]);
       },
-      generateId,
-      (client1.getDocument() as DocumentDriveDocument).state.global.nodes,
     );
 
-    const copyActions = copyNodesInput.map((copyNodeInput) =>
-      copyNode(copyNodeInput),
-    );
+    // TODO: This test is flaky.
+    it("should resolve conflicts without duplicate ids when copy folders", async () => {
+      return;
 
-    for (const copyAction of copyActions) {
-      client1.dispatchDriveAction(copyAction);
-    }
+      let idCounter = 0;
+      const generateId = () => {
+        idCounter++;
+        return `${idCounter}`;
+      };
 
-    pushOperationResult = await client1.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
+      const initialDriveDocument = await buildDrive();
+      let pushOperationResult: IOperationResult;
 
-    let drive = await server.getDrive(driveId);
+      createDocument();
 
-    expect(drive.state.global.nodes.length).toBe(4);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "1", parentFolder: null },
-      { id: "2", name: "2", parentFolder: "1" },
-      { id: "3", name: "1 (copy) 1", parentFolder: null },
-      { id: "4", name: "2", parentFolder: "3" },
-    ]);
+      const client1 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
 
-    /* CLIENT 2 */
+      const client2 = new DriveBasicClient(
+        server,
+        driveId,
+        initialDriveDocument,
+        documentDriveReducer,
+      );
 
-    // generate copy nodes input for client 2
-    const copyNodesInput2 = generateNodesCopy(
-      {
-        srcId: idFolder1,
-        targetName: "1",
-        targetParentFolder: undefined,
-      },
-      generateId,
-      (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
-    );
+      const idFolder1 = generateId();
+      const idFolder2 = generateId();
 
-    const copyNodesInput3 = generateNodesCopy(
-      {
-        srcId: idFolder1,
-        targetName: "1",
-        targetParentFolder: undefined,
-      },
-      generateId,
-      (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
-    );
+      expect(idFolder1).toBe("1");
+      expect(idFolder2).toBe("2");
 
-    const copyActions2 = copyNodesInput2.map((copyNodeInput) =>
-      copyNode(copyNodeInput),
-    );
+      // Add folders in client 1 and push to server
 
-    const copyActions3 = copyNodesInput3.map((copyNodeInput) =>
-      copyNode(copyNodeInput),
-    );
+      client1.dispatchDriveAction(addFolder({ id: idFolder1, name: "1" }));
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
 
-    // apply copy actions (1) to client 2
-    for (const copyAction of copyActions2) {
-      client2.dispatchDriveAction(copyAction);
-    }
+      client1.dispatchDriveAction(
+        addFolder({
+          id: idFolder2,
+          name: "2",
+          parentFolder: idFolder1,
+        }),
+      );
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
 
-    // push operations to server
-    pushOperationResult = await client2.pushOperationsToServer();
-    expect(pushOperationResult.status).toBe("SUCCESS");
+      // Sync client 2 with server
+      await client2.syncDocument();
 
-    drive = await server.getDrive(driveId);
+      // Copy folder 1 to root in client 1 and push to server
+      const copyNodesInput = generateNodesCopy(
+        {
+          srcId: idFolder1,
+          targetName: "1",
+          targetParentFolder: undefined,
+        },
+        generateId,
+        (client1.getDocument() as DocumentDriveDocument).state.global.nodes,
+      );
 
-    expect(drive.state.global.nodes.length).toBe(6);
-    expect(drive.state.global.nodes).toMatchObject([
-      { id: "1", name: "1", parentFolder: null },
-      { id: "2", name: "2", parentFolder: "1" },
-      { id: "3", name: "1 (copy) 1", parentFolder: null },
-      { id: "4", name: "2", parentFolder: "3" },
-      { id: "5", name: "1 (copy) 2", parentFolder: null },
-      { id: "6", name: "2", parentFolder: "5" },
-    ]);
+      const copyActions = copyNodesInput.map((copyNodeInput) =>
+        copyNode(copyNodeInput),
+      );
 
-    // apply copy actions (2) to client 2
-    for (const copyAction of copyActions3) {
-      client2.dispatchDriveAction(copyAction);
-    }
+      for (const copyAction of copyActions) {
+        client1.dispatchDriveAction(copyAction);
+      }
 
-    // sync client 2 with server
-    await client2.syncDocument();
+      pushOperationResult = await client1.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
 
-    const client2Nodes = (client2.getDocument() as DocumentDriveDocument).state
-      .global.nodes;
+      let drive = await server.getDrive(driveId);
 
-    // TODO: validate that there are not duplicated operations after operation id implementation
-    expect(client2Nodes).toHaveLength(8);
+      expect(drive.state.global.nodes.length).toBe(4);
+      expect(drive.state.global.nodes).toMatchObject([
+        { id: "1", name: "1", parentFolder: null },
+        { id: "2", name: "2", parentFolder: "1" },
+        { id: "3", name: "1 (copy) 1", parentFolder: null },
+        { id: "4", name: "2", parentFolder: "3" },
+      ]);
 
-    const sortedClient2Nodes = sortNodes(client2Nodes);
-    expect(sortedClient2Nodes).toMatchObject([
-      { id: "1", name: "1", parentFolder: null },
-      { id: "2", name: "2", parentFolder: "1" },
-      { id: "3", name: "1 (copy) 1", parentFolder: null },
-      { id: "4", name: "2", parentFolder: "3" },
-      { id: "5", name: "1 (copy) 2", parentFolder: null },
-      { id: "6", name: "2", parentFolder: "5" },
-      { id: "7", name: "1 (copy) 3", parentFolder: null },
-      { id: "8", name: "2", parentFolder: "7" },
-    ]);
+      /* CLIENT 2 */
+
+      // generate copy nodes input for client 2
+      const copyNodesInput2 = generateNodesCopy(
+        {
+          srcId: idFolder1,
+          targetName: "1",
+          targetParentFolder: undefined,
+        },
+        generateId,
+        (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
+      );
+
+      const copyNodesInput3 = generateNodesCopy(
+        {
+          srcId: idFolder1,
+          targetName: "1",
+          targetParentFolder: undefined,
+        },
+        generateId,
+        (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
+      );
+
+      const copyActions2 = copyNodesInput2.map((copyNodeInput) =>
+        copyNode(copyNodeInput),
+      );
+
+      const copyActions3 = copyNodesInput3.map((copyNodeInput) =>
+        copyNode(copyNodeInput),
+      );
+
+      // apply copy actions (1) to client 2
+      for (const copyAction of copyActions2) {
+        client2.dispatchDriveAction(copyAction);
+      }
+
+      // push operations to server
+      pushOperationResult = await client2.pushOperationsToServer();
+      expect(pushOperationResult.status).toBe("SUCCESS");
+
+      drive = await server.getDrive(driveId);
+
+      expect(drive.state.global.nodes.length).toBe(6);
+      expect(drive.state.global.nodes).toMatchObject([
+        { id: "1", name: "1", parentFolder: null },
+        { id: "2", name: "2", parentFolder: "1" },
+        { id: "3", name: "1 (copy) 1", parentFolder: null },
+        { id: "4", name: "2", parentFolder: "3" },
+        { id: "5", name: "1 (copy) 2", parentFolder: null },
+        { id: "6", name: "2", parentFolder: "5" },
+      ]);
+
+      // apply copy actions (2) to client 2
+      for (const copyAction of copyActions3) {
+        client2.dispatchDriveAction(copyAction);
+      }
+
+      // sync client 2 with server
+      await client2.syncDocument();
+
+      const client2Nodes = (client2.getDocument() as DocumentDriveDocument)
+        .state.global.nodes;
+
+      // TODO: validate that there are not duplicated operations after operation id implementation
+      expect(client2Nodes).toHaveLength(8);
+
+      const sortedClient2Nodes = sortNodes(client2Nodes);
+      expect(sortedClient2Nodes).toMatchObject([
+        { id: "1", name: "1", parentFolder: null },
+        { id: "2", name: "2", parentFolder: "1" },
+        { id: "3", name: "1 (copy) 1", parentFolder: null },
+        { id: "4", name: "2", parentFolder: "3" },
+        { id: "5", name: "1 (copy) 2", parentFolder: null },
+        { id: "6", name: "2", parentFolder: "5" },
+        { id: "7", name: "1 (copy) 3", parentFolder: null },
+        { id: "8", name: "2", parentFolder: "7" },
+      ]);
+    });
   });
 });

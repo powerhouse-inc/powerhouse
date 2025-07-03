@@ -19,7 +19,12 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
         className,
       )}
     >
-      <button className="" onClick={onClick} type="button">
+      <button
+        aria-label="Home"
+        className={onClick ? "cursor-pointer" : "cursor-wait"}
+        onClick={onClick}
+        type="button"
+      >
         <Icon className="text-gray-600" name="ConnectSmall" size={24} />
       </button>
     </SidebarHeader>

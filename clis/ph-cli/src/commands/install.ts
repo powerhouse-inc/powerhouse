@@ -63,21 +63,27 @@ export const install: CommandActionType<
 
   // Parse package names to extract version/tag
   const parsedDependencies = dependencies.map((dep) => {
-    const parts = dep.split("@");
-    let packageName = dep;
-    let version = undefined;
-
-    if (parts.length > 1 && !dep.startsWith("@")) {
-      packageName = parts.slice(0, parts.length - 1).join("@");
-      version = parts[parts.length - 1];
-    } else if (parts.length > 2 && dep.startsWith("@")) {
-      packageName = `@${parts[1]}`;
-      version = parts[2];
+    // Handle scoped packages (@org/package[@version])
+    if (dep.startsWith("@")) {
+      const matches = /^(@[^/]+\/[^@]+)(?:@(.+))?$/.exec(dep);
+      if (!matches) {
+        throw new Error(`Invalid scoped package name format: ${dep}`);
+      }
+      return {
+        name: matches[1],
+        version: matches[2] || "latest",
+        full: dep,
+      };
     }
 
+    // Handle regular packages (package[@version])
+    const matches = /^([^@]+)(?:@(.+))?$/.exec(dep);
+    if (!matches) {
+      throw new Error(`Invalid package name format: ${dep}`);
+    }
     return {
-      name: packageName,
-      version: version,
+      name: matches[1],
+      version: matches[2] || "latest",
       full: dep,
     };
   });

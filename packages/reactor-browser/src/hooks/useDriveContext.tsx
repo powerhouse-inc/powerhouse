@@ -1,4 +1,9 @@
-import { type FileNode, type Node, type SyncStatus } from "document-drive";
+import {
+  type FileNode,
+  type IDocumentDriveServer,
+  type Node,
+  type SyncStatus,
+} from "document-drive";
 import {
   type Action,
   type ActionErrorCallback,
@@ -15,6 +20,9 @@ import { type HookState } from "./document-state.js";
  * for managing document drive functionality.
  */
 export interface IDriveContext {
+  /** Reactor instance */
+  reactor: IDocumentDriveServer;
+
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
 

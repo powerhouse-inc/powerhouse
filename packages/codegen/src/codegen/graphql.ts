@@ -58,13 +58,14 @@ export const zodConfig: Record<string, unknown> = {
 
 export function schemaConfig(
   name: string,
-  dir: string,
+  inDir: string,
+  outDir: string,
 ): CodegenConfig["generates"] {
   return {
-    [`${dir}/${name}/gen/schema/types.ts`]: {
+    [`${outDir}/${name}/gen/schema/types.ts`]: {
       schema: [
         {
-          [`${dir}/${name}/schema.graphql`]: {
+          [`${inDir}/${name}/schema.graphql`]: {
             skipGraphQLImport: false,
           },
         },
@@ -72,8 +73,8 @@ export function schemaConfig(
       plugins: ["typescript"],
       config: tsConfig,
     },
-    [`${dir}/${name}/gen/schema/zod.ts`]: {
-      schema: `${dir}/${name}/schema.graphql`,
+    [`${outDir}/${name}/gen/schema/zod.ts`]: {
+      schema: `${inDir}/${name}/schema.graphql`,
       plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
       config: zodConfig,
     },
@@ -82,10 +83,10 @@ export function schemaConfig(
 
 export const generateSchema = (
   model: string,
-  dir: string,
-  { watch = false, skipFormat = false } = {},
+  inDir: string,
+  { watch = false, skipFormat = false, outDir = inDir } = {},
 ) => {
-  const documentModelConfig = schemaConfig(model, dir);
+  const documentModelConfig = schemaConfig(model, inDir, outDir);
 
   const config: CodegenConfig = {
     overwrite: true,
@@ -99,14 +100,14 @@ export const generateSchema = (
 };
 
 export const generateSchemas = (
-  dir: string,
-  { watch = false, skipFormat = false } = {},
+  inDir: string,
+  { watch = false, skipFormat = false, outDir = inDir } = {},
 ) => {
-  const documentModels = getDirectories(dir);
+  const documentModels = getDirectories(inDir);
   const documentModelConfigs = documentModels.reduce(
     (obj, model) => ({
       ...obj,
-      ...schemaConfig(model, dir),
+      ...schemaConfig(model, inDir, outDir),
     }),
     {},
   );

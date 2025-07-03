@@ -16,6 +16,10 @@ import {
 import { type DocumentDriveDocument } from "document-drive";
 import type React from "react";
 import { useMemo } from "react";
+/* import { useDocuments, useSelectedDocument } from "../../state/documents.js";
+import { useDrives, useSelectedDrive } from "../../state/drives.js";
+import { useSelectedFolder } from "../../state/folders.js";
+import { useReactor } from "../../state/reactor.js"; */
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";
@@ -30,9 +34,25 @@ export type IProps = DriveEditorProps<DocumentDriveDocument> &
   React.HTMLProps<HTMLDivElement>;
 
 export function BaseEditor(props: IProps) {
+  /*   const loadableReactor = useReactor();
+  const loadableDrives = useDrives();
+  const loadableDocuments = useDocuments();
+  const loadableSelectedDrive = useSelectedDrive();
+  const loadableSelectedFolder = useSelectedFolder();
+  const loadableSelectedDocument = useSelectedDocument();
+  console.log("in base editor", {
+    loadableReactor,
+    loadableDrives,
+    loadableDocuments,
+    loadableSelectedDrive,
+    loadableSelectedFolder,
+    loadableSelectedDocument,
+  }); */
   const { document, dispatch, className, children } = props;
 
-  const { id: driveId } = document;
+  const {
+    header: { id: driveId },
+  } = document;
   const {
     showSearchBar,
     isAllowedToCreateDocuments,
@@ -53,7 +73,6 @@ export function BaseEditor(props: IProps) {
   );
 
   const {
-    addDocument,
     addFile,
     addFolder,
     renameNode,
@@ -63,8 +82,16 @@ export function BaseEditor(props: IProps) {
     duplicateNode,
   } = useDriveActionsWithUiNodes(document, dispatch);
 
+  const { isDropTarget: isDropTargetFolder, dropProps: dropPropsFolder } =
+    useDrop({
+      uiNode: selectedNode,
+      onAddFile: addFile,
+      onCopyNode: copyNode,
+      onMoveNode: moveNode,
+    });
+
   const { isDropTarget, dropProps } = useDrop({
-    uiNode: selectedNode,
+    uiNode: selectedNode?.kind === "FOLDER" ? selectedNode : null,
     onAddFile: addFile,
     onCopyNode: copyNode,
     onMoveNode: moveNode,
@@ -94,7 +121,10 @@ export function BaseEditor(props: IProps) {
         />
         {showSearchBar && <SearchBar />}
       </DriveLayout.Header>
-      <DriveLayout.Content>
+      <DriveLayout.Content
+        {...dropProps}
+        className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+      >
         <FolderView
           node={selectedNode || driveNode}
           onSelectNode={setSelectedNode}
@@ -104,8 +134,9 @@ export function BaseEditor(props: IProps) {
           onAddFile={addFile}
           onCopyNode={copyNode}
           onMoveNode={moveNode}
-          isDropTarget={isDropTarget}
           isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+          isDropTarget={isDropTargetFolder}
+          {...dropPropsFolder}
         />
       </DriveLayout.Content>
       <DriveLayout.Footer>

@@ -1,9 +1,13 @@
 {
   "name": "document-drive",
-  "version": "1.29.14-dev.1",
+  "version": "3.3.0-dev.0",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
@@ -22,7 +26,6 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
-    "postbuild": "npm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",
@@ -33,7 +36,7 @@
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
-    "prebuild": "npm run clean && prisma generate --no-hints",
+    "prebuild": "npm run clean && prisma generate --no-hints && npm run copy-prisma",
     "prelint:nx": "prisma generate --no-hints"
   },
   "optionalDependencies": {

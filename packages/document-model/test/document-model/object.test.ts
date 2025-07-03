@@ -6,7 +6,7 @@ describe("DocumentModel Class", () => {
     const model = new DocumentModelClass();
     expect(model.name).toBe("");
     expect(model.documentType).toBe("powerhouse/document-model");
-    expect(model.revision).toBe(0);
+    expect(model.getRevision("global")).toBe(0);
     expect(model.operations.global.length).toBe(0);
 
     expect(model.state.global.id).toBe("");

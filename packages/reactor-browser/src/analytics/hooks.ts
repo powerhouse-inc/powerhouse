@@ -14,52 +14,96 @@ import {
   useQueryClient,
   type UseMutationOptions,
   type UseQueryOptions,
+  type UseQueryResult,
 } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
-  analyticsStoreKey,
-  useAnalyticsEngine,
-  useAnalyticsStore,
+  getAnalyticsStore,
+  useAnalyticsEngineAsync,
+  useAnalyticsStoreAsync,
+  useAnalyticsStoreOptions,
 } from "./context.js";
 
-function useAnalyticsQueryWrapper<TData>(
-  options: Omit<UseQueryOptions<TData, Error, TData>, "queryFn"> & {
+function useAnalyticsQueryWrapper<TQueryFnData = unknown, TData = TQueryFnData>(
+  options: Omit<UseQueryOptions<TQueryFnData, Error, TData>, "queryFn"> & {
     queryFn: (analytics: {
       store: IAnalyticsStore;
       engine: AnalyticsQueryEngine;
-    }) => Promise<TData> | TData;
+    }) => Promise<TQueryFnData> | TQueryFnData;
   },
 ) {
   const { queryFn, ...queryOptions } = options;
-  const store = useAnalyticsStore();
-  const engine = useAnalyticsEngine();
+  const { data: store } = useAnalyticsStoreAsync();
+  const { data: engine } = useAnalyticsEngineAsync();
+  const enabled =
+    "enabled" in queryOptions ? queryOptions.enabled : !!store && !!engine;
 
   return useQuery({
     ...queryOptions,
-    queryFn: () => {
+    enabled,
+    queryFn: async () => {
       if (!store || !engine) {
         throw new Error(
           "No analytics store available. Use within an AnalyticsProvider.",
         );
       }
-      return queryFn({ store, engine });
+      return await queryFn({ store, engine });
     },
   });
 }
 
-type UseAnalyticsQueryOptions = Omit<
-  UseQueryOptions<GroupedPeriodResults>,
-  "queryKey" | "queryFn"
->;
-
-export function useAnalyticsQuery(
-  query: AnalyticsQuery,
-  options?: UseAnalyticsQueryOptions,
+function useAnalyticsMutationWrapper<TVariables, TData>(
+  options: Omit<UseMutationOptions<TData, Error, TVariables>, "mutationFn"> & {
+    mutationFn: (
+      variables: TVariables,
+      context: {
+        store: IAnalyticsStore;
+      },
+    ) => Promise<TData> | TData;
+  },
 ) {
-  const store = useAnalyticsStore();
-  const { data: querySources } = useQuerySources(query);
+  const { mutationFn, ...mutationOptions } = options;
+  const storeOptions = useAnalyticsStoreOptions();
+
+  return useMutation({
+    ...mutationOptions,
+    mutationFn: async (value: TVariables) => {
+      let store: IAnalyticsStore | null = null;
+      try {
+        store = await getAnalyticsStore(storeOptions);
+      } catch (e) {
+        console.error(e);
+      }
+
+      if (!store) {
+        throw new Error(
+          "No analytics store available. Use within an AnalyticsProvider.",
+        );
+      }
+      return await mutationFn(value, { store });
+    },
+  });
+}
+
+export type UseAnalyticsQueryOptions<TData = GroupedPeriodResults> = Omit<
+  UseQueryOptions<GroupedPeriodResults, Error, TData>,
+  "queryKey" | "queryFn"
+> & {
+  sources?: AnalyticsPath[];
+};
+
+export type UseAnalyticsQueryResult<TData = GroupedPeriodResults> =
+  UseQueryResult<TData>;
+
+const DEBOUNCE_INTERVAL = 200;
+
+export function useAnalyticsQuery<TData = GroupedPeriodResults>(
+  query: AnalyticsQuery,
+  options?: UseAnalyticsQueryOptions<TData>,
+): UseAnalyticsQueryResult<TData> {
+  const { data: store } = useAnalyticsStoreAsync();
   const queryClient = useQueryClient();
-  const subscriptions = useRef<Array<() => void>>([]);
+  const sources = options?.sources ?? [];
 
   const result = useAnalyticsQueryWrapper({
     queryKey: ["analytics", "query", query],
@@ -68,25 +112,36 @@ export function useAnalyticsQuery(
   });
 
   useEffect(() => {
-    if (!querySources?.length || !store) {
+    if (!sources.length || !store) {
       return;
     }
 
-    querySources.forEach((source) => {
-      const unsub = store.subscribeToSource(source, () => {
-        return queryClient.invalidateQueries({
-          queryKey: ["analytics", "query", query],
-        });
-      });
-      subscriptions.current.push(unsub);
+    const subscriptions = new Array<() => void>();
+    // Debounce invalidateQueries so it's not called too frequently
+    let invalidateTimeout: ReturnType<typeof setTimeout> | null = null;
+    const debouncedInvalidate = () => {
+      if (invalidateTimeout) clearTimeout(invalidateTimeout);
+      invalidateTimeout = setTimeout(() => {
+        queryClient
+          .invalidateQueries({
+            queryKey: ["analytics", "query", query],
+          })
+          .catch((e) => {
+            console.error(e);
+          });
+      }, DEBOUNCE_INTERVAL);
+    };
+
+    sources.forEach((path) => {
+      const unsub = store.subscribeToSource(path, debouncedInvalidate);
+      subscriptions.push(unsub);
     });
 
     // Unsubscribes from store when component unmounts or dependencies change
     return () => {
-      subscriptions.current.forEach((unsub) => unsub());
-      subscriptions.current = [];
+      subscriptions.forEach((unsub) => unsub());
     };
-  }, [querySources]);
+  }, [query, store, sources]);
 
   return result;
 }
@@ -113,29 +168,10 @@ export type UseAddSeriesValueOptions = Omit<
 >;
 
 export function useAddSeriesValue(options?: UseAddSeriesValueOptions) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  return useAnalyticsMutationWrapper({
     mutationKey: ["analytics", "addSeries"],
-    mutationFn: async (value: AnalyticsSeriesInput) => {
-      try {
-        const store = await queryClient.ensureQueryData<IAnalyticsStore>({
-          queryKey: analyticsStoreKey,
-          staleTime: Infinity,
-        });
-
-        return await store.addSeriesValue(value);
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message.includes("Missing queryFn")
-        ) {
-          throw new Error(
-            "No analytics store available. Use within an AnalyticsProvider.",
-          );
-        }
-        throw error;
-      }
+    mutationFn: async (value, { store }) => {
+      return await store.addSeriesValue(value);
     },
     ...options,
   });
@@ -153,16 +189,9 @@ export type UseClearSeriesBySourceOptions = Omit<
 export function useClearSeriesBySource(
   options?: UseClearSeriesBySourceOptions,
 ) {
-  const store = useAnalyticsStore();
-
-  return useMutation({
+  return useAnalyticsMutationWrapper({
     mutationKey: ["analytics", "clearSeries"],
-    mutationFn: ({ source, cleanUpDimensions }) => {
-      if (!store) {
-        throw new Error(
-          "No analytics store available. Use within an AnalyticsProvider.",
-        );
-      }
+    mutationFn: async ({ source, cleanUpDimensions }, { store }) => {
       return store.clearSeriesBySource(source, cleanUpDimensions);
     },
     ...options,
@@ -177,16 +206,9 @@ export type UseClearEmptyAnalyticsDimensionsOptions = Omit<
 export function useClearEmptyAnalyticsDimensions(
   options?: UseClearEmptyAnalyticsDimensionsOptions,
 ) {
-  const store = useAnalyticsStore();
-
-  return useMutation({
+  return useAnalyticsMutationWrapper({
     mutationKey: ["analytics", "clearEmptyDimensions"],
-    mutationFn: () => {
-      if (!store) {
-        throw new Error(
-          "No analytics store available. Use within an AnalyticsProvider.",
-        );
-      }
+    mutationFn: async (_, { store }) => {
       return store.clearEmptyAnalyticsDimensions();
     },
     ...options,
@@ -199,16 +221,9 @@ export type UseAddSeriesValuesOptions = Omit<
 >;
 
 export function useAddSeriesValues(options?: UseAddSeriesValuesOptions) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  return useAnalyticsMutationWrapper({
     mutationKey: ["analytics", "addSeriesValues"],
-    mutationFn: async (values: AnalyticsSeriesInput[]) => {
-      const store = await queryClient.ensureQueryData<IAnalyticsStore>({
-        queryKey: analyticsStoreKey,
-        staleTime: Infinity,
-      });
-
+    mutationFn: async (values, { store }) => {
       return store.addSeriesValues(values);
     },
     ...options,

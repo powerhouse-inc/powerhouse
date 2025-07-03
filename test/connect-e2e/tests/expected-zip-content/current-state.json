@@ -1,0 +1,102 @@
+{
+  "document": {
+    "id": "",
+    "name": "",
+    "extension": "",
+    "description": "",
+    "author": {
+      "name": "",
+      "website": ""
+    },
+    "specifications": [
+      {
+        "version": 1,
+        "changeLog": [],
+        "state": {
+          "global": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          },
+          "local": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          }
+        },
+        "modules": []
+      }
+    ]
+  },
+  "global": {
+    "id": "powerhouse/todo",
+    "name": "ToDoDocument",
+    "extension": ".phdm",
+    "description": "ToDo Document Model",
+    "author": {
+      "name": "Powerhouse",
+      "website": "https://www.powerhouse.inc"
+    },
+    "specifications": [
+      {
+        "version": 1,
+        "changeLog": [],
+        "state": {
+          "global": {
+            "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+            "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+            "examples": []
+          },
+          "local": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          }
+        },
+        "modules": [
+          {
+            "id": "42a63008-0e7a-43a0-b7fb-94074e5b3b18",
+            "name": "base_operations",
+            "description": "",
+            "operations": [
+              {
+                "id": "c0b09acf-8269-411f-9eb4-6ba6839690c2",
+                "name": "ADD_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              },
+              {
+                "id": "e9cc5859-d9fb-4a98-9557-0a29c1cd6320",
+                "name": "UPDATE_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              },
+              {
+                "id": "1ded1716-5f1e-4c04-a8ec-86ac8cd240c4",
+                "name": "DELETE_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "local": {}
+}

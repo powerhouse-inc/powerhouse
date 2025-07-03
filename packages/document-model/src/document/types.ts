@@ -3,6 +3,11 @@ import { type DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
 import { type DocumentAction } from "./actions/types.js";
+import {
+  type PHBaseState,
+  type PHDocumentHeader,
+  type PHDocumentHistory,
+} from "./ph-types.js";
 import type {
   CreateChildDocumentInput,
   Signal,
@@ -163,37 +168,18 @@ export type Meta = {
 };
 
 /**
- * The base attributes of a {@link BaseDocument}.
- */
-export type DocumentHeader = {
-  /** The id of the document. */
-  id: string;
-  /** The name of the document. */
-  name: string;
-  /** The slug of the document. */
-  slug: string;
-  /** The number of operations applied to the document. */
-  revision: Record<OperationScope, number>;
-  /** The type of the document model. */
-  documentType: string;
-  /** The timestamp of the creation date of the document. */
-  created: string;
-  /** The timestamp of the last change in the document. */
-  lastModified: string;
-  /** The meta data of the document. */
-  meta?: Meta;
-};
-
-/**
  * The attributes stored for a file. Namely, attachments of a document.
  */
 export type Attachment = {
   /** The binary data of the attachment in Base64 */
   data: string;
+
   /** The MIME type of the attachment */
   mimeType: string;
+
   // The extension of the attachment.
   extension?: string | null;
+
   // The file name of the attachment.
   fileName?: string | null;
 };
@@ -212,17 +198,23 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type BaseState<TGlobalState, TLocalState> = {
-  global: TGlobalState;
-  local: TLocalState;
-};
+export type BaseState<TDocumentState, TLocalState> =
+  PHBaseState<TDocumentState> & {
+    /**
+     * Use {@link PHBaseState} `document` instead.
+     */
+    global: TDocumentState;
 
-export type PartialState<TGlobalOrLocalState> =
-  | TGlobalOrLocalState
-  | Partial<TGlobalOrLocalState>;
+    /**
+     * Not a requirement for BaseState, but could be in extended states.
+     */
+    local: TLocalState;
+  };
+
+export type PartialState<TState> = TState | Partial<TState>;
 
 export type CreateState<TDocument extends PHDocument> = (
-  state?: Partial<
+  state?: PartialState<
     BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
@@ -270,9 +262,10 @@ export type CreateDocument<TDocument extends BaseDocument<any, any, any>> = (
   createState?: CreateState<TDocument>,
 ) => TDocument;
 
-export type ExtendedState<TGlobalState, TLocalState> = DocumentHeader & {
+export type ExtendedState<TDocumentState, TLocalState> = {
   /** The document model specific state. */
-  state: BaseState<TGlobalState, TLocalState>;
+  state: BaseState<TDocumentState, TLocalState>;
+
   /** The index of document attachments. */
   attachments?: FileRegistry;
 };
@@ -316,13 +309,21 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<TGlobalState, TLocalState, TAction extends Action> =
-  /** The document model specific state. */
-  ExtendedState<TGlobalState, TLocalState> & {
+export type BaseDocument<
+  TDocumentState,
+  TLocalState,
+  TAction extends Action,
+> = {
+  /** The header of the document. */
+  header: PHDocumentHeader;
+
+  /** The history of the document. */
+  history: PHDocumentHistory;
+} & ExtendedState<TDocumentState, TLocalState> & {
     /** The operations history of the document. */
     operations: DocumentOperations<TAction>;
     /** The initial state of the document, enabling replaying operations. */
-    initialState: ExtendedState<TGlobalState, TLocalState>;
+    initialState: ExtendedState<TDocumentState, TLocalState>;
     /** A list of undone operations */
     clipboard: Operation<TAction>[];
   };
@@ -483,8 +484,15 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 export type ValidationError = { message: string; details: object };
 
 type ExtractPHDocumentGenerics<T> =
-  T extends BaseDocument<infer State, infer LocalState, infer Action>
-    ? { state: State; localState: LocalState; action: Action }
+  T extends BaseDocument<infer DocumentState, infer LocalState, infer Action>
+    ? {
+        documentState: DocumentState;
+        action: Action;
+
+        // deprecated
+        globalState: DocumentState;
+        localState: LocalState;
+      }
     : never;
 
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
@@ -497,38 +505,35 @@ export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   documentModel: DocumentModelState;
 };
 
-export type GlobalStateFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = ExtractPHDocumentGenerics<TDocument>["state"];
+export type DocumentStateFromDocument<TDocument extends PHDocument> =
+  ExtractPHDocumentGenerics<TDocument>["documentState"];
 
-export type LocalStateFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = ExtractPHDocumentGenerics<TDocument>["localState"];
+export type GlobalStateFromDocument<TDocument extends PHDocument> =
+  ExtractPHDocumentGenerics<TDocument>["globalState"];
 
-export type BaseStateFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = BaseState<
-  GlobalStateFromDocument<TDocument>,
+export type LocalStateFromDocument<TDocument extends PHDocument> =
+  ExtractPHDocumentGenerics<TDocument>["localState"];
+
+export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
+  DocumentStateFromDocument<TDocument>,
   LocalStateFromDocument<TDocument>
 >;
 
-export type ExtendedStateFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = ExtendedState<
-  GlobalStateFromDocument<TDocument>,
-  LocalStateFromDocument<TDocument>
->;
+export type ExtendedStateFromDocument<TDocument extends PHDocument> =
+  ExtendedState<
+    PartialState<DocumentStateFromDocument<TDocument>>,
+    PartialState<LocalStateFromDocument<TDocument>>
+  >;
 
-export type ActionFromDocument<TDocument extends BaseDocument<any, any, any>> =
+export type ActionFromDocument<TDocument extends PHDocument> =
   ExtractPHDocumentGenerics<TDocument>["action"];
 
-export type OperationFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = Operation<ActionFromDocument<TDocument>>;
+export type OperationFromDocument<TDocument extends PHDocument> = Operation<
+  ActionFromDocument<TDocument>
+>;
 
-export type OperationsFromDocument<
-  TDocument extends BaseDocument<any, any, any>,
-> = DocumentOperations<ActionFromDocument<TDocument>>;
+export type OperationsFromDocument<TDocument extends PHDocument> =
+  DocumentOperations<ActionFromDocument<TDocument>>;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

@@ -22,6 +22,7 @@ import { FilesystemStorage } from "../src/storage/filesystem.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { PrismaClient } from "../src/storage/prisma/client/index.js";
 
+import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
 import { PrismaStorage } from "../src/storage/prisma/prisma.js";
 import {
   IDocumentStorage,
@@ -98,6 +99,14 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
   });
 
+  function createDocumentModelWithId(id: string) {
+    return {
+      documentType: "powerhouse/document-model",
+      document: documentModelDocumentModelModule.utils.createDocument(),
+      header: createUnsignedHeader(id, "powerhouse/document-model"),
+    };
+  }
+
   it("adds drive to server", async ({ expect }) => {
     const driveId = generateId();
     const server = new ReactorBuilder(documentModels)
@@ -145,9 +154,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({ id: documentId }),
-    );
+    await server.addDocument(createDocumentModelWithId(documentId));
 
     await server.addDrive({
       id: driveId,
@@ -228,9 +235,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({ id: documentId }),
-    );
+    await server.addDocument(createDocumentModelWithId(documentId));
     await expect(
       (storage as IDocumentStorage).getChildren(driveId),
     ).resolves.toStrictEqual([]);
@@ -257,7 +262,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     ).resolves.toStrictEqual([documentId]);
 
     const document = await server.getDocument(documentId);
-    expect(document.documentType).toBe("powerhouse/document-model");
+    expect(document.header.documentType).toBe("powerhouse/document-model");
     expect(document.state).toStrictEqual(DocumentModelUtils.createState());
 
     const driveDocuments = await server.getDocuments(driveId);
@@ -331,11 +336,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(storage)
       .build();
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: documentId,
-      }),
-    );
+    await server.addDocument(createDocumentModelWithId(documentId));
 
     await server.addDrive({
       id: driveId,
@@ -467,11 +468,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
-    const document = documentModelDocumentModelModule.utils.createDocument({
-      id: documentId,
-    });
+    const newDocument = createDocumentModelWithId(documentId);
+    const document = newDocument.document;
 
-    await server.addDocument(document);
+    await server.addDocument(newDocument);
 
     drive = reducer(
       drive,
@@ -562,10 +562,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
 
-    const document = documentModelDocumentModelModule.utils.createDocument({
-      id: documentId,
-    });
-    await server.addDocument(document);
+    const newDocument = createDocumentModelWithId(documentId);
+    const document = newDocument.document;
+
+    await server.addDocument(newDocument);
 
     let drive = await server.getDrive(driveId);
     drive = reducer(
@@ -642,16 +642,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: document1Id,
-      }),
-    );
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: document2Id,
-      }),
-    );
+    await server.addDocument(createDocumentModelWithId(document1Id));
+    await server.addDocument(createDocumentModelWithId(document2Id));
 
     await server.addDrive({
       id: driveId,
@@ -710,29 +702,21 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const documentB = await server.getDocument(document2Id);
 
     // slugs have to change, as they are unique
-    expect(document.slug).not.toBe(documentB.slug);
+    expect(document.header.slug).not.toBe(documentB.header.slug);
 
     // compare everything but the slug + id (which are supposed to be different)
     const {
-      slug,
-      id,
-      initialState: { id: initialId1, slug: initialSlug1, ...initialState },
+      header: { slug, id, ...restHeader },
       ...rest
     } = document;
     const {
-      slug: slug2,
-      id: id2,
-      initialState: { id: initialId2, slug: initialSlug2, ...initialStateB },
-      ...restB
+      header: { slug: slug2, id: id2, ...restHeader2 },
+      ...rest2
     } = documentB;
-    expect(rest).toStrictEqual(restB);
-    expect(initialState).toStrictEqual(initialStateB);
-    expect(initialId1).toBe(document1Id);
+    expect(rest).toStrictEqual(rest2);
+    expect(restHeader).toStrictEqual(restHeader2);
     expect(id).toBe(document1Id);
     expect(slug).toBe(document1Id);
-    expect(initialSlug1).toBe(document1Id);
-    expect(initialId2).toBe(document2Id);
-    expect(initialSlug2).toBe(document2Id);
     expect(id2).toBe(document2Id);
     expect(slug2).toBe(document2Id);
   });
@@ -760,11 +744,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: documentId,
-      }),
-    );
+    await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
     drive = reducer(
@@ -893,13 +873,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive.id).toBe(driveId1);
+    expect(drive.header.id).toBe(driveId1);
 
     drive = await server.getDriveBySlug("slug2");
-    expect(drive.id).toBe(driveId2);
+    expect(drive.header.id).toBe(driveId2);
 
     drive = await server.getDriveBySlug("slug3");
-    expect(drive.id).toBe(driveId3);
+    expect(drive.header.id).toBe(driveId3);
   });
 
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
@@ -924,12 +904,16 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
     const documentId = generateId();
-    await server.addDocument({ ...file!, id: documentId });
+    await server.addDocument({
+      documentType: file!.header.documentType,
+      document: file!,
+      header: createUnsignedHeader(documentId, file!.header.documentType),
+    });
     const action = actions.addFile({
       id: documentId,
       name: "name",
       parentFolder: null,
-      documentType: file!.documentType,
+      documentType: file!.header.documentType,
     });
     const result = await server.addAction(driveId, action);
     expect(result.status).toBe("SUCCESS");
@@ -969,11 +953,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: documentId,
-      }),
-    );
+    await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
     drive = reducer(
@@ -998,7 +978,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const syncUnits = await syncManager.getSynchronizationUnits(driveId);
     expect(syncUnits).toStrictEqual([
       {
-        documentId: drive.id,
+        documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
@@ -1158,6 +1138,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     const drive = await server.getDriveBySlug("test-drive");
-    expect(drive.slug).toBe("test-drive");
+    expect(drive.header.slug).toBe("test-drive");
   });
 });

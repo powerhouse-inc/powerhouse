@@ -11,6 +11,9 @@ export type SetupGlobalsOptions = {
   dev?: boolean;
   staging?: boolean;
   packageManager?: string;
+  pnpm?: boolean;
+  yarn?: boolean;
+  bun?: boolean;
 };
 
 export const setupGlobals: CommandActionType<
@@ -32,10 +35,10 @@ export function setupGlobalsCommand(program: Command): Command {
     )
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
-    .option(
-      "--package-manager <packageManager>",
-      "force package manager to use",
-    );
+    .option("--package-manager <packageManager>", "package manager to be used")
+    .option("--pnpm", "Use 'pnpm' as package manager")
+    .option("--yarn", "Use 'yarn' as package manager")
+    .option("--bun", "Use 'bun' as package manager");
 
   // Use withCustomHelp instead of withHelpAction and addHelpText
   return withCustomHelp<[string | undefined, SetupGlobalsOptions]>(

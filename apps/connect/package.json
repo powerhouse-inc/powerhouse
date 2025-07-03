@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "1.0.28-dev.1",
+    "version": "3.3.0-dev.0",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
@@ -18,12 +18,12 @@
     "author": "acaldas@powerhouse.inc",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+        "url": "https://github.com/powerhouse-inc/powerhouse"
     },
     "bugs": {
-        "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+        "url": "https://github.com/powerhouse-inc/powerhouse/issues"
     },
-    "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
+    "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
     "scripts": {
         "build:tsc": "tsc --build",
         "start": "electron-forge start",
@@ -42,15 +42,18 @@
         "dev:nocache": "rm -rf node_modules/.vite && rm -rf node_modules/.cache && npm run dev",
         "prebuild": "npm run clean && tsc --build --noEmit",
         "build": "NODE_OPTIONS=--max-old-space-size=6144 vite build -c vite.renderer.config.mts",
-        "preview:web": "vite preview -c vite.renderer.config.mts",
+        "preview": "vite preview -c vite.renderer.config.mts",
         "e2e": "playwright test",
         "cy:open": "cypress open",
         "build:service-worker": "tsc --build ./tsconfig.sw.json",
         "clean": "rimraf dist",
-        "clean:node_modules": "rimraf node_modules"
+        "clean:node_modules": "rimraf node_modules",
+        "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
+        "docker:run": "docker run -it -p 4000:4000 -v $(realpath ../../../monorepo):/monorepo -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf.template -e PH_USE_LOCAL=true -e PH_CONNECT_BASE_PATH=/develop/powerhouse/connect -e PORT=4000 connect-test-dev"
     },
     "devDependencies": {
         "@didtools/key-webcrypto": "^0.2.0",
+        "@electric-sql/pglite": "^0.2.17",
         "@electron-forge/cli": "^6.1.1",
         "@electron-forge/maker-deb": "^6.1.1",
         "@electron-forge/maker-rpm": "^6.1.1",
@@ -65,7 +68,7 @@
         "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
-        "@powerhousedao/diff-analyzer": "^0.0.0-dev.4",
+        "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@renown/sdk": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
@@ -99,11 +102,10 @@
         "jotai": "^2.1.0",
         "jotai-effect": "^1.1.6",
         "localforage": "^1.10.0",
-        "lz-string": "^1.5.0",
         "playwright": "^1.41.2",
         "playwright-core": "^1.41.2",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
         "react-error-boundary": "^4.0.11",
         "react-hotkeys-hook": "^4.5.0",
         "react-i18next": "^13.5.0",

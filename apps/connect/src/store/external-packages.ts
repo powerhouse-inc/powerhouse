@@ -1,3 +1,4 @@
+import connectConfig from '#connect-config';
 import { getHMRModule, subscribeExternalPackages } from '#services';
 import { type DriveEditorModule } from '@powerhousedao/reactor-browser';
 import { type App, type DocumentModelLib } from 'document-model';
@@ -6,29 +7,43 @@ import { atomWithLazy } from 'jotai/utils';
 import { useCallback, useMemo } from 'react';
 
 export type ExternalPackage = DocumentModelLib & { id: string };
+export type ExternalPackagesModule = { default?: ExternalPackage[] };
 
-function loadExternalPackages() {
-    return import('../external-packages.js')
-        .catch(e => console.error(e))
-        .then(module => (module?.default ?? []) as ExternalPackage[]);
+const externalPackagesUrl =
+    connectConfig.routerBasename + 'external-packages.js';
+const externalPackagesEnabled = import.meta.env.PROD;
+
+async function loadExternalPackages() {
+    try {
+        if (!externalPackagesEnabled) return [];
+        const module = (await import(
+            /* @vite-ignore */ externalPackagesUrl
+        )) as ExternalPackagesModule;
+        return module.default ?? [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 }
 
 const hmrAvailableAtom = atom(async () => {
     const module = await getHMRModule();
     return typeof module !== 'undefined';
 });
+hmrAvailableAtom.debugLabel = 'hmrAvailableAtom';
 
 export const useMutableExternalPackages = () => useAtomValue(hmrAvailableAtom);
 
 // fetches the initial external packages only when needed
 export const externalPackagesAtom = atomWithLazy(loadExternalPackages);
+externalPackagesAtom.debugLabel = 'externalPackagesAtomInConnect';
 
 // subscribes to changes to the external packages from HMR
-let externalPackagesSubscripion: Promise<() => void> | undefined;
+let externalPackagesSubscription: Promise<() => void> | undefined;
 externalPackagesAtom.onMount = setAtom => {
-    if (externalPackagesSubscripion) return;
+    if (externalPackagesSubscription) return;
 
-    externalPackagesSubscripion = subscribeExternalPackages(
+    externalPackagesSubscription = subscribeExternalPackages(
         externalPackages => {
             setAtom(externalPackages);
         },
@@ -53,6 +68,7 @@ const appsAtom = atom<Promise<App[]>>(async get => {
             .flat(),
     ];
 });
+appsAtom.debugLabel = 'appsAtomInConnect';
 
 export const useApps = () => useAtomValue(appsAtom);
 

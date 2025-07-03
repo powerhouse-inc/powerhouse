@@ -122,7 +122,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
 
     const timelineItems = useTimelineItems(
         documentId,
-        initialDocument?.created,
+        initialDocument?.header.createdAtUtcIso,
     );
 
     const currentDocument = useRef({ ...fileNodeDocument, document });
@@ -214,12 +214,13 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         editor === undefined ||
         (!!document &&
             editor &&
-            !editor.documentTypes.includes(document.documentType) &&
+            !editor.documentTypes.includes(document.header.documentType) &&
             !editor.documentTypes.includes('*'));
 
     const canUndo =
         !!document &&
-        (document.revision.global > 0 || document.revision.local > 0);
+        (document.header.revision.global > 0 ||
+            document.header.revision.local > 0);
     const canRedo = !!document?.clipboard.length;
     useUndoRedoShortcuts({
         undo: handleUndo,
@@ -361,7 +362,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onClose={onClose}
                         onExport={onExport}
                         onShowRevisionHistory={showRevisionHistory}
-                        title={fileNodeDocument.name || document.name}
+                        title={fileNodeDocument.name || document.header.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
@@ -387,14 +388,14 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
             {revisionHistoryVisible ? (
                 <RevisionHistory
                     key={documentId}
-                    documentTitle={document.name}
+                    documentTitle={document.header.name}
                     documentId={fileNodeDocument.documentId}
                     globalOperations={document.operations.global}
                     localOperations={document.operations.local}
                     onClose={hideRevisionHistory}
                 />
             ) : (
-                <Suspense fallback={<EditorLoader />}>
+                <Suspense fallback={<EditorLoader />} name="EditorLoader">
                     <ErrorBoundary
                         fallbackRender={FallbackEditorError}
                         key={documentId}

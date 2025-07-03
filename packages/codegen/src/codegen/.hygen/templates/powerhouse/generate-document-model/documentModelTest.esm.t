@@ -7,6 +7,7 @@ unless_exists: true
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import utils, { initialGlobalState, initialLocalState } from '../../gen/utils.js';
 
 describe('<%= h.changeCase.title(documentType) %> Document Model', () => {
@@ -14,7 +15,7 @@ describe('<%= h.changeCase.title(documentType) %> Document Model', () => {
         const document = utils.createDocument();
 
         expect(document).toBeDefined();
-        expect(document.documentType).toBe('<%- documentTypeId %>');
+        expect(document.header.documentType).toBe('<%- documentTypeId %>');
     });
 
     it('should create a new <%= h.changeCase.title(documentType) %> document with a valid initial state', () => {

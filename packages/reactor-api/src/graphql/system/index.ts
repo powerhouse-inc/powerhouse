@@ -46,7 +46,7 @@ export class SystemSubgraph extends Subgraph {
   resolvers = {
     Query: {
       drives: async () => {
-        return await this.reactor.getDrives();
+        return await this.reactor.getDrivesSlugs();
       },
     },
     Mutation: {
@@ -73,20 +73,23 @@ export class SystemSubgraph extends Subgraph {
             throw new GraphQLError("Forbidden");
           }
 
-          const { name, icon, ...driveInput } = args;
+          const { name, icon, preferredEditor, ...driveInput } = args;
 
-          const drive = await this.reactor.addDrive({
-            ...driveInput,
-            global: { name, icon },
-            local: {},
-          });
+          const drive = await this.reactor.addDrive(
+            {
+              ...driveInput,
+              global: { name, icon },
+              local: {},
+            },
+            preferredEditor,
+          );
 
           const driveAdded = {
-            id: drive.id,
-            slug: drive.slug,
+            id: drive.header.id,
+            slug: drive.header.slug,
             name: drive.state.global.name,
             icon: drive.state.global.icon,
-            preferredEditor: drive.meta?.preferredEditor,
+            preferredEditor: drive.header.meta?.preferredEditor,
           };
           logger.info("Drive added", driveAdded);
 

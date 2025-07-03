@@ -67,7 +67,9 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       const retrievedDocument = await cache.getDocument(documentId);
 
       expect(retrievedDocument).toBeDefined();
-      expect(retrievedDocument?.documentType).toBe(document.documentType);
+      expect(retrievedDocument?.header.documentType).toBe(
+        document.header.documentType,
+      );
     });
 
     it("should return undefined when getting a non-existent document", async ({
@@ -113,7 +115,9 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       const retrievedDrive = await cache.getDrive(driveId);
 
       expect(retrievedDrive).toBeDefined();
-      expect(retrievedDrive?.documentType).toBe(drive.documentType);
+      expect(retrievedDrive?.header.documentType).toBe(
+        drive.header.documentType,
+      );
     });
 
     it("should return undefined when getting a non-existent drive", async ({
@@ -128,10 +132,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
     it("should delete a drive", async ({ expect }) => {
       const drive = createDriveDocument();
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
       // Set slug for slug deletion logic
-      drive.slug = "test-slug";
+      drive.header.slug = "test-slug";
 
       await cache.setDrive(driveId, drive);
       const deletionResult = await cache.deleteDrive(driveId);
@@ -157,17 +161,17 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     it("should set and get a drive by slug", async ({ expect }) => {
       const slug = "test-slug";
       const drive = createDriveDocument();
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
-      drive.id = driveId;
-      drive.slug = slug;
+      drive.header.id = driveId;
+      drive.header.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       const retrievedDrive = await cache.getDriveBySlug(slug);
 
       expect(retrievedDrive).toBeDefined();
-      expect(retrievedDrive?.id).toBe(driveId);
-      expect(retrievedDrive?.slug).toBe(slug);
+      expect(retrievedDrive?.header.id).toBe(driveId);
+      expect(retrievedDrive?.header.slug).toBe(slug);
     });
 
     it("should return undefined when getting a non-existent drive by slug", async ({
@@ -183,7 +187,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     it("should delete a drive by slug", async ({ expect }) => {
       const slug = "slug-to-delete";
       const drive = createDriveDocument();
-      drive.slug = slug;
+      drive.header.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       const deletionResult = await cache.deleteDriveBySlug(slug);
@@ -211,10 +215,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     }) => {
       const slug = "test-slug";
       const drive = createDriveDocument();
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
       // Set slug for consistency
-      drive.slug = slug;
+      drive.header.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
 
@@ -223,9 +227,11 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       expect(retrievedDriveBySlug).toBeDefined();
       expect(retrievedDriveById).toBeDefined();
-      expect(retrievedDriveById?.id).toBe(driveId);
-      expect(retrievedDriveById?.slug).toBe(slug);
-      expect(retrievedDriveBySlug?.id).toBe(retrievedDriveById?.id);
+      expect(retrievedDriveById?.header.id).toBe(driveId);
+      expect(retrievedDriveById?.header.slug).toBe(slug);
+      expect(retrievedDriveBySlug?.header.id).toBe(
+        retrievedDriveById?.header.id,
+      );
     });
 
     it("should make drive inaccessible by slug after deleting by ID", async ({
@@ -233,10 +239,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     }) => {
       const slug = "test-slug";
       const drive = createDriveDocument();
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
       // Set slug for slug deletion logic
-      drive.slug = slug;
+      drive.header.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
       await cache.deleteDrive(driveId);
@@ -255,10 +261,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       const driveId = documentId;
 
       const document = createDocumentModelDocument();
-      document.id = documentId;
+      document.header.id = documentId;
 
       const drive = createDriveDocument();
-      drive.id = driveId;
+      drive.header.id = driveId;
 
       await cache.setDocument(documentId, document);
       await cache.setDrive(driveId, drive);
@@ -268,8 +274,12 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
       expect(retrievedDocument).toBeDefined();
       expect(retrievedDrive).toBeDefined();
-      expect(retrievedDocument?.documentType).toBe(document.documentType);
-      expect(retrievedDrive?.documentType).toBe(drive.documentType);
+      expect(retrievedDocument?.header.documentType).toBe(
+        document.header.documentType,
+      );
+      expect(retrievedDrive?.header.documentType).toBe(
+        drive.header.documentType,
+      );
     });
   });
 });

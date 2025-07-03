@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "@powerhousedao/codegen",
+  "sourceRoot": "packages/codegen/src",
+  "projectType": "library",
+  "implicitDependencies": ["!document-drive", "!@powerhousedao/reactor-api"],
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "test": {
+      "dependsOn": [
+        {
+          "target": "build",
+          "params": "ignore",
+          "projects": ["document-drive", "@powerhousedao/reactor-api"]
+        },
+        "^build"
+      ]
+    }
+  }
+}

@@ -1,3 +1,7 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/powerhouse-inc/powerhouse)
+
+---
+
 # Powerhouse Monorepo 
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
@@ -7,6 +11,7 @@ This repository uses pnpm workspaces and Nx to manage a monorepo with multiple p
 -   [How to Run this Repo](#clone-repo)
 -   [Linking Dependencies Between Projects and Packages](#linking-deps)
 -   [Adding a New Package or App](#add-new-package)
+-   [Using Docker](#using-docker)
 -   [How to contribute to this project](#how-to-contribute)
 
 ## How to Run this Repo <a id="clone-repo"></a>
@@ -121,6 +126,67 @@ To link a dependency into a project, add it to your package.json and point the d
     ```
 
 9. Trigger future releases directly from GitHub Actions.
+
+## Using Docker
+
+This project can be run using Docker and Docker Compose. The `docker-compose.yml` file in the root directory defines the services and their configurations.
+
+### Prerequisites
+
+- Docker Engine (version 20.10.0 or later)
+- Docker Compose (version 2.0.0 or later)
+
+### Basic Usage
+
+1. Build and start all services:
+    ```bash
+    docker compose up
+    ```
+
+2. Run in detached mode (background):
+    ```bash
+    docker compose up -d
+    ```
+
+3. View running containers:
+    ```bash
+    docker compose ps
+    ```
+
+4. View logs:
+    ```bash
+    docker compose logs -f
+    ```
+
+5. Stop all services:
+    ```bash
+    docker compose down
+    ```
+
+### Working with Individual Services
+
+The `docker-compose.yml` file defines multiple services. You can work with individual services by specifying the service name:
+
+```bash
+# Start a specific service
+docker compose up switchboard    # Start the Switchboard service
+docker compose up connect       # Start the Connect service
+
+# View logs for a specific service
+docker compose logs -f switchboard    # View Switchboard logs
+docker compose logs -f connect       # View Connect logs
+
+# Rebuild a specific service
+docker compose up -d --build switchboard    # Rebuild and start Switchboard
+docker compose up -d --build connect       # Rebuild and start Connect
+```
+
+### Development Tips
+
+- Use `docker compose up --build` to ensure you're running with the latest changes
+- The `docker-compose.yml` file includes development-specific configurations
+- Environment variables can be configured in the `.env` file
+- For production deployments, use the `docker-compose.prod.yml` configuration
 
 ## How to contribute to this project <a id="how-to-contribute"></a>
 

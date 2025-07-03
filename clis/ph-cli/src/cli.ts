@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import registerCommands from "./commands/index.js";
-import { version } from "./version.js";
 
 const program = new Command();
 
@@ -10,9 +9,13 @@ program
   .description(
     "The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
   )
-  .version(version)
   .allowUnknownOption(true)
   .option("--verbose, --debug", "Enable debug mode");
+
+// @ts-ignore build time version file
+import("./version.js")
+  .then(({ version }: { version: string }) => program.version(version))
+  .catch((error: unknown) => console.error("Error loading version", error));
 
 registerCommands(program);
 

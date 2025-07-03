@@ -1,4 +1,5 @@
 import { type PHReducer } from "#document/types.js";
+import { generateUUID } from "#utils/env";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,
@@ -12,7 +13,52 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
+import {
+  PublicKeySigner,
+  sign,
+  type SigningParameters,
+  verify,
+} from "../../src/document/utils/header.js";
 import { type CountDocument, countReducer, increment } from "../helpers.js";
+
+/**
+ * A signer that uses a key pair to sign and verify data.
+ */
+class KeyPairSigner extends PublicKeySigner {
+  readonly #privateKey: JsonWebKey;
+
+  #privateCryptoKey: CryptoKey | undefined;
+
+  constructor(publicKey: JsonWebKey, privateKey: JsonWebKey) {
+    super(publicKey);
+
+    this.#privateKey = privateKey;
+  }
+
+  async sign(data: Uint8Array): Promise<Uint8Array> {
+    const subtleCrypto = await this.subtleCrypto;
+    if (!this.#privateCryptoKey) {
+      this.#privateCryptoKey = await subtleCrypto.importKey(
+        "jwk",
+        this.#privateKey,
+        {
+          name: "Ed25519",
+          namedCurve: "Ed25519",
+        },
+        true,
+        ["sign"],
+      );
+    }
+
+    const arrayBuffer = await subtleCrypto.sign(
+      "Ed25519",
+      this.#privateCryptoKey,
+      data.buffer as ArrayBuffer,
+    );
+
+    return new Uint8Array(arrayBuffer);
+  }
+}
 
 describe("Crypto utils", () => {
   beforeAll(() => {
@@ -25,7 +71,6 @@ describe("Crypto utils", () => {
 
   it("should build signature with empty previousState", () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -63,7 +108,6 @@ describe("Crypto utils", () => {
 
   it("should build signature with previousState", () => {
     let document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -120,7 +164,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -184,7 +227,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -245,7 +287,6 @@ describe("Crypto utils", () => {
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -288,5 +329,26 @@ describe("Crypto utils", () => {
       },
     );
     expect(verified).toBe(false);
+  });
+
+  it("should sign and verify id", async () => {
+    const parameters: SigningParameters = {
+      documentType: "powerhouse/counter",
+      createdAtUtcIso: new Date().toISOString(),
+      nonce: generateUUID(),
+    };
+
+    const keyPair = await crypto.subtle.generateKey("Ed25519", true, [
+      "sign",
+      "verify",
+    ]);
+
+    const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+    const privateKey = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+
+    const signer = new KeyPairSigner(publicKey, privateKey);
+    const signature = await sign(parameters, signer);
+
+    await verify(parameters, signature, signer);
   });
 });

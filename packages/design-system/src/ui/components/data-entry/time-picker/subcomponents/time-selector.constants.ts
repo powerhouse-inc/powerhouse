@@ -1,4 +1,0 @@
-export const SCROLL_TIMEOUT_MS = 200;
-export const BOTTOM_THRESHOLD_OFFSET = 20;
-export const TOP_THRESHOLD_OFFSET = 20;
-export const CENTERING_TIMEOUT_MS = 10;

@@ -4,12 +4,16 @@ import {
   LOCAL,
 } from "@powerhousedao/reactor-browser/uiNodes/constants";
 import {
-  UiDriveNode,
-  UiFileNode,
-  UiFolderNode,
+  type UiDriveNode,
+  type UiFileNode,
+  type UiFolderNode,
   type UiNode,
 } from "@powerhousedao/reactor-browser/uiNodes/types";
-import { DocumentDriveDocument, isFolderNode, Node } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  isFolderNode,
+  type Node,
+} from "document-drive";
 
 export function sortUiNodesByName(a: UiNode, b: UiNode) {
   return a.name.localeCompare(b.name);
@@ -24,9 +28,8 @@ export function makeUiNode(
   drive: DocumentDriveDocument,
   withChildren: boolean,
 ): UiNode {
-  const id = drive.id;
+  const { id, slug } = drive.header;
   const { name, icon, nodes } = drive.state.global;
-  const { slug } = drive;
   const { sharingType: _sharingType, availableOffline } = drive.state.local;
   const __sharingType = _sharingType?.toUpperCase();
   const sharingType = __sharingType === "PRIVATE" ? LOCAL : __sharingType;

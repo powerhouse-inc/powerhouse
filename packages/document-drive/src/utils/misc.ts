@@ -10,6 +10,7 @@ import { driveDocumentType } from "#drive-document-model/constants";
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
 import { type ListenerRevision } from "#server/types";
+import { pascalCase } from "change-case";
 import { RunAsap } from "./run-asap.js";
 
 export const runAsap = RunAsap.runAsap;
@@ -18,7 +19,7 @@ export const runAsapAsync = RunAsap.runAsapAsync;
 export function isDocumentDrive(
   document: PHDocument,
 ): document is DocumentDriveDocument {
-  return document.documentType === driveDocumentType;
+  return document.header.documentType === driveDocumentType;
 }
 
 export function mergeOperations<TDocument extends PHDocument>(
@@ -75,6 +76,13 @@ export function isBefore(dateA: Date | string, dateB: Date | string) {
   return new Date(dateA) < new Date(dateB);
 }
 
+export function operationsToRevision(
+  operations: Pick<Operation, "index">[] | undefined,
+): ListenerRevision["revision"] {
+  const lastOperation = operations?.at(-1);
+  return lastOperation ? lastOperation.index + 1 : 0;
+}
+
 /**
  * Converts a string to PascalCase
  * @param {string} str - The input string to convert
@@ -86,21 +94,4 @@ export function isBefore(dateA: Date | string, dateB: Date | string) {
  * "hello_world" -> "HelloWorld"
  * "helloWorld" -> "HelloWorld"
  */
-export function toPascalCase(str: string) {
-  return (
-    str
-      // Split by common separators (space, hyphen, underscore)
-      .split(/[\s-_]+/)
-      // Capitalize first letter of each word
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      // Join words together
-      .join("")
-  );
-}
-
-export function operationsToRevision(
-  operations: Pick<Operation, "index">[] | undefined,
-): ListenerRevision["revision"] {
-  const lastOperation = operations?.at(-1);
-  return lastOperation ? lastOperation.index + 1 : 0;
-}
+export const toPascalCase = pascalCase;

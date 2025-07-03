@@ -18,6 +18,7 @@ import {
   type OperationFromDocument,
   type OperationScope,
   type PHDocument,
+  type PHDocumentHeader,
   type ReducerOptions,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
@@ -65,11 +66,29 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
   accessLevel?: RemoteDriveAccessLevel;
 };
 
-export type CreateDocumentInput<TDocument extends PHDocument> = {
+/**
+ * @deprecated In the future we will disallow this. Use the header field instead.
+ */
+export type LegacyCreateDocumentInputId = {
+  /**
+   * @deprecated In the future we will disallow this. Use the header field instead.
+   */
   id: string;
+};
+
+export type CreateDocumentInput<TDocument extends PHDocument> = {
   documentType: string;
   document?: TDocument;
-};
+} &
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  (| LegacyCreateDocumentInputId
+    | {
+        /**
+         * This is the preferred way to provide an id or other header fields.
+         */
+        header?: PHDocumentHeader;
+      }
+  );
 
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
@@ -214,6 +233,12 @@ export interface DriveEvents {
   documentModelModules: (documentModelModules: DocumentModelModule[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
+  documentOperationsAdded: (
+    documentId: string,
+    operations: Operation[],
+  ) => void;
+  driveOperationsAdded: (driveId: string, operations: Operation[]) => void;
+  operationsAdded: (documentId: string, operations: Operation[]) => void;
 }
 
 export type PartialRecord<K extends keyof any, T> = {
@@ -304,7 +329,7 @@ export type RemoveOldRemoteDrivesOption =
     };
 
 export type DocumentDriveServerOptions = {
-  defaultDrives: {
+  defaultDrives?: {
     loadOnInit?: boolean; // defaults to true
     remoteDrives?: Array<DefaultRemoteDriveInput>;
     removeOldRemoteDrives?: RemoveOldRemoteDrivesOption;
@@ -350,6 +375,7 @@ export interface IBaseDocumentDriveServer {
 
   setDocumentModelModules(models: DocumentModelModule[]): void;
   getDrives(): Promise<string[]>;
+  getDrivesSlugs(): Promise<string[]>;
   addDrive(
     input: DriveInput,
     preferredEditor?: string,
@@ -365,7 +391,9 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
-  getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]>;
+  getDriveIdBySlug(
+    slug: string,
+  ): Promise<DocumentDriveDocument["header"]["id"]>;
 
   addDocument<TDocument extends PHDocument>(
     input: CreateDocumentInput<TDocument>,
@@ -530,7 +558,7 @@ export type DriveUpdateErrorHandler = (
 export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
-  removeDrive(driveId: DocumentDriveDocument["id"]): Promise<void>;
+  removeDrive(driveId: DocumentDriveDocument["header"]["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
   setListener(driveId: string, listener: Listener): Promise<void>;

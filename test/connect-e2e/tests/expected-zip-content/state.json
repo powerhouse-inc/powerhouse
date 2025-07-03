@@ -1,0 +1,63 @@
+{
+  "state": {
+    "document": {
+      "id": "",
+      "name": "",
+      "extension": "",
+      "description": "",
+      "author": {
+        "name": "",
+        "website": ""
+      },
+      "specifications": [
+        {
+          "version": 1,
+          "changeLog": [],
+          "state": {
+            "global": {
+              "schema": "",
+              "initialValue": "",
+              "examples": []
+            },
+            "local": {
+              "schema": "",
+              "initialValue": "",
+              "examples": []
+            }
+          },
+          "modules": []
+        }
+      ]
+    },
+    "global": {
+      "id": "",
+      "name": "",
+      "extension": "",
+      "description": "",
+      "author": {
+        "name": "",
+        "website": ""
+      },
+      "specifications": [
+        {
+          "version": 1,
+          "changeLog": [],
+          "state": {
+            "global": {
+              "schema": "",
+              "initialValue": "",
+              "examples": []
+            },
+            "local": {
+              "schema": "",
+              "initialValue": "",
+              "examples": []
+            }
+          },
+          "modules": []
+        }
+      ]
+    },
+    "local": {}
+  }
+}

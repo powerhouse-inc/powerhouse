@@ -9,7 +9,7 @@ import {
 export const validateDocument = (document: PHDocument) => {
     const errors: ValidationError[] = [];
 
-    if (document.documentType !== 'powerhouse/document-model') {
+    if (document.header.documentType !== 'powerhouse/document-model') {
         return errors;
     }
 
@@ -46,7 +46,7 @@ export const validateDocument = (document: PHDocument) => {
             ...acc,
             ...validateStateSchemaName(
                 specs.state[scope].schema,
-                doc.name || doc.state.global?.name || '',
+                doc.header.name || doc.state.global?.name || '',
                 !isGlobalScope ? scope : '',
                 !isGlobalScope,
             ).map(err => ({

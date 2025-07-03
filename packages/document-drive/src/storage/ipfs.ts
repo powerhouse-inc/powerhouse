@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @ts-nocheck
 // TODO fix interface errors
 import {
@@ -14,10 +15,10 @@ import { type SynchronizationUnitQuery } from "#server/types";
 import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
 import {
-  type DocumentHeader,
   type Operation,
   type OperationScope,
   type PHDocument,
+  type PHDocumentHeader,
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
@@ -35,12 +36,51 @@ interface SlugManifest {
 }
 
 export class IPFSStorage
-  implements IDocumentOperationStorage, IDocumentStorage
+  implements IDriveStorage, IDocumentOperationStorage, IDocumentStorage
 {
   private fs: MFS;
 
   constructor(helia: Helia) {
     this.fs = mfs(helia);
+  }
+
+  ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const ids = [];
+    for (const slug of slugs) {
+      const documentId = this.slugToDocumentId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugs = [];
+    for (const id of ids) {
+      const document = await this.get<PHDocument>(id);
+      if (!document) {
+        throw new DocumentNotFoundError(id);
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError("Aborted");
+      }
+
+      slugs.push(document.slug);
+    }
+
+    return Promise.resolve(slugs);
   }
 
   ////////////////////////////////
@@ -76,7 +116,8 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -86,7 +127,7 @@ export class IPFSStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
     await this.fs.writeBytes(
       new TextEncoder().encode(stringify(document)),
       this._buildDocumentPath(documentId),
@@ -97,7 +138,7 @@ export class IPFSStorage
     await this.updateSlugManifest(slugManifest);
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
@@ -178,7 +219,7 @@ export class IPFSStorage
         const document = JSON.parse(content) as PHDocument;
 
         // Only include documents of the requested type
-        if (document.documentType === documentModelType) {
+        if (document.header.documentType === documentModelType) {
           documentsAndIds.push({ id: documentId, document });
         }
       } catch (error) {
@@ -189,8 +230,8 @@ export class IPFSStorage
 
     // Sort by creation date first, then by ID
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -228,7 +269,8 @@ export class IPFSStorage
     // Remove from slug manifest if it has a slug
     try {
       const document = await this.get<PHDocument>(documentId);
-      const slug = document.slug.length > 0 ? document.slug : documentId;
+      const slug =
+        document.header.slug?.length > 0 ? document.header.slug : documentId;
 
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -343,7 +385,7 @@ export class IPFSStorage
     drive: string,
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const document = await this.get<TDocument>(id);
     if (!document) {
@@ -354,7 +396,7 @@ export class IPFSStorage
 
     await this.create(id, {
       ...document,
-      ...header,
+      header,
       operations: mergedOperations,
     });
     await this.addChild(drive, id);
@@ -383,7 +425,7 @@ export class IPFSStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    header: PHDocumentHeader,
   ): Promise<void> {
     const drive = await this.getDrive(id);
     const mergedOperations = mergeOperations<DocumentDriveDocument>(
@@ -393,7 +435,7 @@ export class IPFSStorage
 
     await this.create(id, {
       ...drive,
-      ...header,
+      header,
       operations: mergedOperations,
     });
   }

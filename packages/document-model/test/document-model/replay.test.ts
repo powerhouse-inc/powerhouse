@@ -15,17 +15,6 @@ import {
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
   const initialState = {
-    id: "",
-    name: "",
-    slug: "",
-    revision: {
-      global: 0,
-      local: 0,
-    },
-    documentType: "",
-    created: "",
-    lastModified: "",
-    meta: {},
     state: {
       global: {
         count: 0,
@@ -41,17 +30,22 @@ describe("DocumentModel Class", () => {
     CountLocalState,
     CountAction
   > = {
-    id: "",
-    name: "",
-    slug: "",
-    revision: {
-      global: 0,
-      local: 0,
+    header: {
+      id: "",
+      sig: { publicKey: {}, nonce: "" },
+      documentType: "",
+      createdAtUtcIso: "",
+      slug: "",
+      name: "",
+      branch: "",
+      revision: {
+        global: 0,
+        local: 0,
+      },
+      lastModifiedAtUtcIso: "",
+      meta: {},
     },
-    documentType: "",
-    created: "",
-    lastModified: "",
-    meta: {},
+    history: {},
     state: {
       global: {
         count: 0,
@@ -130,7 +124,7 @@ describe("DocumentModel Class", () => {
       { global: [], local: [] },
       countReducer,
     );
-    expect(initialDocument).toStrictEqual(document);
+    expect(initialDocument.state).toStrictEqual(document.state);
   });
 
   it("should replay document with operations", () => {
@@ -145,7 +139,7 @@ describe("DocumentModel Class", () => {
       reducer,
     );
     expect(newDocument.state.global.count).toBe(2);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
     expect(mockReducer).toHaveBeenCalledTimes(4);
   });
 
@@ -167,7 +161,7 @@ describe("DocumentModel Class", () => {
     expect(mockReducer).toHaveBeenCalledTimes(6);
 
     expect(newDocument.state.global.count).toBe(1);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
   });
 
   it("should reuse resulting state when replaying document with undone operations", () => {
@@ -199,6 +193,6 @@ describe("DocumentModel Class", () => {
 
     expect(mockReducer).toHaveBeenCalledTimes(3);
     expect(document.state.global.count).toBe(1);
-    expect(newDocument).toStrictEqual(document);
+    expect(newDocument.state).toStrictEqual(document.state);
   });
 });

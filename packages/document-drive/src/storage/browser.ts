@@ -9,21 +9,17 @@ import {
   DocumentSlugValidationError,
 } from "#server/error";
 import { type SynchronizationUnitQuery } from "#server/types";
+import { AbortError } from "#utils/errors";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
-import type {
-  DocumentHeader,
-  Operation,
-  OperationScope,
-  PHDocument,
-} from "document-model";
+import type { Operation, OperationScope, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {
-  IStorageUnit,
-  IStorageUnitFilter,
   type IDocumentAdminStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
+  type IStorageUnit,
+  type IStorageUnitFilter,
 } from "./types.js";
 import {
   isValidDocumentId,
@@ -117,7 +113,8 @@ export class BrowserStorage
       if (!document) continue;
 
       // apply document type filter
-      if (documentTypes && !documentTypes.has(document.documentType)) continue;
+      if (documentTypes && !documentTypes.has(document.header.documentType))
+        continue;
 
       // For each operation scope in the document
       for (const [scope] of Object.entries(document.state)) {
@@ -127,7 +124,7 @@ export class BrowserStorage
         // Create storage unit for this document+scope combination
         storageUnits.push({
           documentId,
-          documentModelType: document.documentType,
+          documentModelType: document.header.documentType,
           scope,
           branch: "main", // Default branch
         });
@@ -159,6 +156,55 @@ export class BrowserStorage
   }
 
   ////////////////////////////////
+  // IDocumentView
+  ////////////////////////////////
+  async resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const ids: string[] = [];
+    for (const slug of slugs) {
+      const documentId = slugManifest.slugToId[slug];
+      if (!documentId) {
+        throw new DocumentNotFoundError(slug);
+      }
+
+      ids.push(documentId);
+    }
+
+    return Promise.resolve(ids);
+  }
+
+  async resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]> {
+    const slugManifest = await this.getSlugManifest();
+
+    if (signal?.aborted) {
+      throw new AbortError("Aborted");
+    }
+
+    const slugs: string[] = [];
+    for (const id of ids) {
+      let found = false;
+      for (const [slug, documentId] of Object.entries(slugManifest.slugToId)) {
+        if (documentId === id) {
+          slugs.push(slug);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        throw new DocumentNotFoundError(id);
+      }
+    }
+
+    return Promise.resolve(slugs);
+  }
+
+  ////////////////////////////////
   // IDocumentAdminStorage
   ////////////////////////////////
 
@@ -181,7 +227,7 @@ export class BrowserStorage
   }
 
   async create(document: PHDocument): Promise<void> {
-    const documentId = document.id;
+    const documentId = document.header.id;
     if (!isValidDocumentId(documentId)) {
       throw new DocumentIdValidationError(documentId);
     }
@@ -192,7 +238,10 @@ export class BrowserStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug && document.header.slug.length > 0
+        ? document.header.slug
+        : documentId;
     if (!isValidSlug(slug)) {
       throw new DocumentSlugValidationError(slug);
     }
@@ -203,7 +252,7 @@ export class BrowserStorage
       throw new DocumentAlreadyExistsError(documentId);
     }
 
-    document.slug = slug;
+    document.header.slug = slug;
     await db.setItem(this.buildDocumentKey(documentId), document);
 
     // Update the slug manifest if the document has a slug
@@ -220,7 +269,7 @@ export class BrowserStorage
     }
 
     // temporary: initialize an empty manifest for new drives
-    if (document.documentType === "powerhouse/document-drive") {
+    if (document.header.documentType === "powerhouse/document-drive") {
       this.updateDriveManifest(documentId, { documentIds: [] });
     }
   }
@@ -277,7 +326,7 @@ export class BrowserStorage
 
       try {
         const document = await db.getItem<PHDocument>(key);
-        if (!document || document.documentType !== documentModelType) {
+        if (!document || document.header.documentType !== documentModelType) {
           continue;
         }
 
@@ -289,8 +338,8 @@ export class BrowserStorage
 
     // Sort by creation date, then by ID
     documentsAndIds.sort((a, b) => {
-      const aDate = new Date(a.document.created);
-      const bDate = new Date(b.document.created);
+      const aDate = new Date(a.document.header.createdAtUtcIso);
+      const bDate = new Date(b.document.header.createdAtUtcIso);
 
       if (aDate.getTime() === bDate.getTime()) {
         return a.id.localeCompare(b.id);
@@ -335,7 +384,8 @@ export class BrowserStorage
     }
 
     // Remove from slug manifest if it has a slug
-    const slug = document.slug.length > 0 ? document.slug : documentId;
+    const slug =
+      document.header.slug?.length > 0 ? document.header.slug : documentId;
     try {
       if (slug) {
         const slugManifest = await this.getSlugManifest();
@@ -460,19 +510,22 @@ export class BrowserStorage
   async addDocumentOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const document = await this.get(id);
-    if (!document) {
+    const existingDocument = await this.get(id);
+    if (!existingDocument) {
       throw new Error(`Document with id ${id} not found`);
     }
 
-    const mergedOperations = mergeOperations(document.operations, operations);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
 
     const db = await this.db;
     await db.setItem(this.buildDocumentKey(id), {
+      ...existingDocument,
       ...document,
-      ...header,
       operations: mergedOperations,
     });
   }
@@ -480,15 +533,18 @@ export class BrowserStorage
   async addDriveOperations(
     id: string,
     operations: Operation<DocumentDriveAction>[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void> {
-    const drive = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations(drive.operations, operations);
+    const existingDocument = await this.get<DocumentDriveDocument>(id);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
     const db = await this.db;
 
     await db.setItem(this.buildDocumentKey(id), {
-      ...drive,
-      ...header,
+      ...existingDocument,
+      ...document,
       operations: mergedOperations,
     });
   }
@@ -519,7 +575,8 @@ export class BrowserStorage
             documentType: unit.documentType,
             scope: unit.scope,
             branch: unit.branch,
-            lastUpdated: operations.at(-1)?.timestamp ?? document.created,
+            lastUpdated:
+              operations.at(-1)?.timestamp ?? document.header.createdAtUtcIso,
             revision: operationsToRevision(operations),
           };
         } catch {

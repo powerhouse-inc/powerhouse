@@ -1,7 +1,8 @@
 import { ReloadConnectToast } from '#components';
 import { useReadModeContext } from '#context';
 import { useDocumentDriveServer, useMakeUiDriveNode } from '#hooks';
-import { useAsyncReactor } from '#store';
+// import { createReactor } from '#store';
+// import { useInitializeReactor } from '@powerhousedao/common';
 import {
     CONFLICT,
     ERROR,
@@ -22,20 +23,22 @@ import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const { documentDrives, onSyncStatus } = useDocumentDriveServer();
+    const { reactorLoaded, documentDrives, onSyncStatus } =
+        useDocumentDriveServer();
     const { driveNodes, setDriveNodes } = useUiNodesContext();
     const prevDrivesState = useRef([...driveNodes]);
     const drivesWithError = useRef<UiDriveNode[]>([]);
     const [, , serverSubscribeUpdates] = useDocumentDrives();
     const { readDrives } = useReadModeContext();
     const clientErrorHandler = useClientErrorHandler();
-    const reactor = useAsyncReactor();
     const [connectConfig] = useConnectConfig();
+    // useInitializeReactor(createReactor);
 
     async function checkLatestVersion() {
         const result = await isLatestVersion();
         if (result === null) return;
-        if (result.isLatest) {
+        // ignore dev/staging versions
+        if (result.isLatest || result.currentVersion.includes('-')) {
             return true;
         }
 
@@ -151,11 +154,11 @@ export const useLoadInitialData = () => {
     }, [documentDrives, readDrives, updateUiDriveNodes]);
 
     useEffect(() => {
-        if (!reactor) {
+        if (!reactorLoaded) {
             return;
         }
 
         const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
         return unsub;
-    }, [reactor, documentDrives, onSyncStatus, updateUiDriveNodes]);
+    }, [reactorLoaded, documentDrives, onSyncStatus, updateUiDriveNodes]);
 };

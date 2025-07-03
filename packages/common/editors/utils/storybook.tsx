@@ -20,6 +20,7 @@ import {
   type DocumentDriveLocalState,
   type DocumentDriveState,
   driveDocumentModelModule,
+  type IDocumentDriveServer,
   type Node,
 } from "document-drive";
 import {
@@ -88,6 +89,7 @@ const DriveContextDecorator: Decorator<
   return (
     <DriveContextProvider
       value={{
+        reactor: {} as unknown as IDocumentDriveServer,
         useDocumentEditorProps: () => ({
           dispatch: () => {},
           document: context.args.document,
@@ -133,19 +135,19 @@ export function createDriveStory(
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
 } {
-  return createDocumentStory(
+  const story = createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
-    initialState ??
-    {
+    initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
         state: { global: { name: "Powerhouse" }, local: {} },
       }),
-      id: "powerhouse",
     },
     additionalStoryArgs,
     [DriveContextDecorator, ...(decorators ?? [])],
   );
+  story.meta.id = "powerhouse";
+  return story;
 }
 
 export function createDriveStoryWithUINodes(
@@ -163,16 +165,15 @@ export function createDriveStoryWithUINodes(
   const { meta, CreateDocumentStory } = createDocumentStory(
     Editor as EditorStoryComponent<DocumentDriveDocument>,
     driveDocumentModelModule.reducer,
-    initialState ??
-      {
-        ...driveDocumentModelModule.utils.createExtendedState({
-          state: { global: { name: "Powerhouse" }, local: {} },
-        }),
-        id: "powerhouse",
-      },
+    initialState ?? {
+      ...driveDocumentModelModule.utils.createExtendedState({
+        state: { global: { name: "Powerhouse" }, local: {} },
+      }),
+    },
     additionalStoryArgs,
     [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
   );
+  meta.id = "powerhouse";
 
   return {
     meta: meta as Meta<typeof Editor>,

@@ -4,19 +4,25 @@ import {
     type RouteObject,
     RouterProvider,
     createBrowserRouter,
-    createMemoryRouter,
 } from 'react-router-dom';
-import { Home } from '../pages/home.js';
-import { AtlasImport } from './demo/atlas-import.js';
-import Root from './root.js';
 
+const Home = React.lazy(() =>
+    import('../pages/home.js').then(m => ({ default: m.Home })),
+);
 const Content = React.lazy(() => import('../pages/content.js'));
+const Root = React.lazy(() => import('./root.js'));
 
-async function createRouter(routes: RouteObject[]) {
-    const isPackaged = await window.electronAPI?.isPackaged();
-    const createRouter = isPackaged ? createMemoryRouter : createBrowserRouter;
-    return createRouter(routes, {
-        basename: connectConfig.routerBasename,
+const AtlasImport = React.lazy(() =>
+    import('./demo/atlas-import.js').then(m => ({ default: m.AtlasImport })),
+);
+
+const routerBasename = connectConfig.routerBasename.endsWith('/')
+    ? connectConfig.routerBasename.slice(0, -1)
+    : connectConfig.routerBasename;
+
+function createRouter(routes: RouteObject[]) {
+    return createBrowserRouter(routes, {
+        basename: routerBasename,
         future: {
             v7_fetcherPersist: true,
             v7_relativeSplatPath: true,
@@ -27,50 +33,46 @@ async function createRouter(routes: RouteObject[]) {
 function createRoutes() {
     const routes: RouteObject[] = [
         {
-            path: '/',
-            element: <Home />,
+            index: true,
+            element: (
+                <Suspense name="Home">
+                    <Home />
+                </Suspense>
+            ),
         },
         {
             path: 'd?/:driveId?/*?',
             element: (
-                <Suspense>
+                <Suspense name="Drive">
                     <Content />
                 </Suspense>
             ),
         },
         {
             path: 'import/:documentId',
-            element: <AtlasImport />,
+            element: (
+                <Suspense name="AtlasImport">
+                    <AtlasImport />
+                </Suspense>
+            ),
         },
     ];
 
     return [
         {
-            path: '/',
             element: (
-                <Suspense>
+                <Suspense name="RouteRoot">
                     <Root />
                 </Suspense>
             ),
             children: routes,
         },
-        {
-            element: (
-                <Suspense>
-                    <Root />
-                </Suspense>
-            ),
-        },
     ];
 }
 
 const routes = createRoutes();
+const router = createRouter(routes);
 
-const RouterAsync = async () => {
-    const router = await createRouter(routes);
-
-    const Router = () => <RouterProvider router={router} />;
-    return Router;
+export const Router = () => {
+    return <RouterProvider router={router} />;
 };
-
-export default RouterAsync;

@@ -137,8 +137,9 @@ export default class SynchronizationManager implements ISynchronizationManager {
       scope,
       branch,
       documentId,
-      documentType: document.documentType,
-      lastUpdated: lastOperation?.timestamp ?? document.lastModified,
+      documentType: document.header.documentType,
+      lastUpdated:
+        lastOperation?.timestamp ?? document.header.lastModifiedAtUtcIso,
       revision: operationsToRevision(operations),
     };
   }
@@ -154,7 +155,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     const document = await this.getDocument(syncId.documentId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Retrieved document ${document.id} with type: ${document.documentType}`,
+      `[SYNC DEBUG] Retrieved document ${document.header.id} with type: ${document.header.documentType}`,
     );
 
     const operations =
@@ -225,8 +226,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
   }
 
   private _buildDocument(documentStorage: PHDocument): PHDocument {
-    const documentModelModule = this.getDocumentModelModule(
-      documentStorage.documentType,
+    const documentModelModule = this.getDocumentModelModule<PHDocument>(
+      documentStorage.header.documentType,
     );
 
     const operations = garbageCollectDocumentOperations(
@@ -238,7 +239,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       operations,
       documentModelModule.reducer,
       undefined,
-      documentStorage,
+      documentStorage.header,
       undefined,
       {
         checkHashes: true,
@@ -251,7 +252,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     this.documentModelModules = modules;
   }
 
-  private getDocumentModelModule(documentType: string) {
+  private getDocumentModelModule<TDocument>(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
       (m) => m.documentModel.id === documentType,
     );
@@ -324,7 +325,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
     );
 
     if (shouldUpdateStatus) {
-      const newstatus = Object.entries(status).reduce((acc, [key, _status]) => {
+      const newStatus = Object.entries(status).reduce((acc, [key, _status]) => {
         return {
           ...acc,
           // do not replace initial_syncing if it has not finished yet
@@ -338,17 +339,17 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
       const previousCombinedStatus =
         this.getCombinedSyncUnitStatus(syncUnitStatus);
-      const newCombinedStatus = this.getCombinedSyncUnitStatus(newstatus);
+      const newCombinedStatus = this.getCombinedSyncUnitStatus(newStatus);
 
-      this.syncStatus.set(syncUnitId, newstatus);
+      this.syncStatus.set(syncUnitId, newStatus);
 
       if (previousCombinedStatus !== newCombinedStatus && this.eventEmitter) {
         this.eventEmitter.emit(
           "syncStatus",
           syncUnitId.documentId,
-          this.getCombinedSyncUnitStatus(newstatus),
+          this.getCombinedSyncUnitStatus(newStatus),
           error,
-          newstatus,
+          newStatus,
           syncUnitId.scope,
           syncUnitId.branch,
         );

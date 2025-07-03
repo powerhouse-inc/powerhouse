@@ -1,7 +1,6 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type SynchronizationUnitQuery } from "#server/types";
 import type {
-  DocumentHeader,
   Operation,
   OperationFromDocument,
   PHDocument,
@@ -58,6 +57,26 @@ export interface IStorageUnitStorage {
  * Describes the storage interface for documents.
  */
 export interface IDocumentStorage extends IStorageUnitStorage {
+  /**
+   * Resolves a list of ids from a list of slugs.
+   *
+   * > TODO: This function is part of the future IDocumentView interface.
+   *
+   * @param slugs - Required, the list of document slugs
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The parallel list of slugs
+   */
+  resolveIds(slugs: string[], signal?: AbortSignal): Promise<string[]>;
+
+  /**
+   * Resolves a list of slugs from a list of ids.
+   *
+   * @param ids - Required, the list of document ids
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The parallel list of ids
+   */
+  resolveSlugs(ids: string[], signal?: AbortSignal): Promise<string[]>;
+
   /**
    * Returns true if and only if the document exists.
    *
@@ -174,21 +193,24 @@ export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
     id: string,
     operations: OperationFromDocument<TDocument>[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getOperationResultingState?(
     id: string,
     index: number,
     scope: string,
     branch: string,
   ): Promise<string | undefined>;
+
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;
@@ -208,15 +230,17 @@ export interface IDriveOperationStorage extends IDocumentOperationStorage {
   addDriveOperations(
     id: string,
     operations: Operation[],
-    header: DocumentHeader,
+    document: PHDocument,
   ): Promise<void>;
+
   addDriveOperationsWithTransaction?(
     drive: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ): Promise<void>;
+
   getDriveOperationResultingState?(
     drive: string,
     index: number,

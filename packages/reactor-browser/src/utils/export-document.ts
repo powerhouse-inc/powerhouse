@@ -14,7 +14,7 @@ export const exportDocument = async (
     const link = window.document.createElement("a");
     link.style.display = "none";
     link.href = URL.createObjectURL(blob);
-    link.download = `${name || document.name || "Untitled"}${ext}.zip`;
+    link.download = `${name || document.header.name || "Untitled"}${ext}.zip`;
 
     window.document.body.appendChild(link);
     link.click();

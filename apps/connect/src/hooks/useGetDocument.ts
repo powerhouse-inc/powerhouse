@@ -1,10 +1,13 @@
 import { type GetDocumentOptions } from 'document-drive';
-import { type PHDocument } from 'document-model';
+import { type PHDocumentHeader, type PHDocument } from 'document-model';
 import { useCallback } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export type HookState = PHDocument['state'] &
-    Pick<PHDocument, 'documentType' | 'revision' | 'created' | 'lastModified'>;
+    Pick<
+        PHDocumentHeader,
+        'documentType' | 'revision' | 'createdAtUtcIso' | 'lastModifiedAtUtcIso'
+    >;
 
 export interface UseGetDriveDocumentsProps {
     documentIds?: string[];

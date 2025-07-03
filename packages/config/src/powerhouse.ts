@@ -22,13 +22,17 @@ export type PowerhousePackage = {
 };
 
 export type PowerhouseConfig = {
+  // required
+  logLevel: LogLevel;
   documentModelsDir: string;
   editorsDir: string;
   processorsDir: string;
   subgraphsDir: string;
   importScriptsDir: string;
-  interactive?: boolean;
   skipFormat: boolean;
+
+  // optional
+  interactive?: boolean;
   watch?: boolean;
   reactor?: {
     port?: number;
@@ -64,7 +68,6 @@ export type PowerhouseConfig = {
     openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
-  logLevel: LogLevel;
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";

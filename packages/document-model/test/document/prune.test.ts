@@ -18,7 +18,6 @@ import {
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: {
         global: { count: 0 },
         local: { name: "" },
@@ -31,9 +30,9 @@ describe("PRUNE operation", () => {
     newDocument = countReducer(newDocument, increment());
     newDocument = countReducer(newDocument, prune(0, 4));
 
-    expect(newDocument.name).toBe("Document");
+    expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
-    expect(newDocument.revision.global).toBe(2);
+    expect(newDocument.header.revision.global).toBe(2);
     expect(mapOperations(newDocument.operations.global)).toStrictEqual([
       {
         ...loadState(
@@ -48,7 +47,7 @@ describe("PRUNE operation", () => {
       },
       { ...increment(), index: 1, skip: 0 },
     ]);
-    expect(newDocument.documentType).toBe("powerhouse/counter");
+    expect(newDocument.header.documentType).toBe("powerhouse/counter");
     expect(newDocument.initialState.state.global).toStrictEqual({
       count: 0,
     });
@@ -57,7 +56,6 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune last 3 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, increment());
@@ -67,9 +65,9 @@ describe("PRUNE operation", () => {
     newDocument = countReducer(newDocument, increment());
     newDocument = countReducer(newDocument, prune(2));
 
-    expect(newDocument.name).toBe("Document");
+    expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
-    expect(newDocument.revision.global).toBe(3);
+    expect(newDocument.header.revision.global).toBe(3);
     expect(mapOperations(newDocument.operations.global)).toStrictEqual([
       { ...increment(), index: 0, skip: 0 },
       { ...setName("Document"), index: 1, skip: 0 },
@@ -85,7 +83,7 @@ describe("PRUNE operation", () => {
         skip: 0,
       },
     ]);
-    expect(newDocument.documentType).toBe("powerhouse/counter");
+    expect(newDocument.header.documentType).toBe("powerhouse/counter");
     expect(newDocument.initialState.state.global).toStrictEqual({
       count: 0,
     });
@@ -94,7 +92,6 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune 2 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, increment());
@@ -104,9 +101,9 @@ describe("PRUNE operation", () => {
     newDocument = countReducer(newDocument, increment());
     newDocument = countReducer(newDocument, prune(2, 4));
 
-    expect(newDocument.name).toBe("Document");
+    expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
-    expect(newDocument.revision.global).toBe(4);
+    expect(newDocument.header.revision.global).toBe(4);
     expect(mapOperations(newDocument.operations.global)).toStrictEqual([
       { ...increment(), index: 0, skip: 0 },
       { ...setName("Document"), index: 1, skip: 0 },
@@ -123,7 +120,7 @@ describe("PRUNE operation", () => {
       },
       { ...increment(), index: 3, skip: 0 },
     ]);
-    expect(newDocument.documentType).toBe("powerhouse/counter");
+    expect(newDocument.header.documentType).toBe("powerhouse/counter");
     expect(newDocument.initialState.state.global).toStrictEqual({
       count: 0,
     });
@@ -132,7 +129,6 @@ describe("PRUNE operation", () => {
 
   it.skip("should undo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
     let newDocument = countReducer(document, increment());
@@ -143,9 +139,9 @@ describe("PRUNE operation", () => {
     newDocument = countReducer(newDocument, prune(1, 5));
     newDocument = countReducer(newDocument, undo(1));
 
-    expect(newDocument.name).toBe("");
+    expect(newDocument.header.name).toBe("");
     expect(newDocument.state.global.count).toBe(1);
-    expect(newDocument.revision.global).toBe(3);
+    expect(newDocument.header.revision.global).toBe(3);
     expect(mapOperations(newDocument.operations.global)).toMatchObject([
       { ...increment(), index: 0, skip: 0 },
       { type: "NOOP", input: {}, index: 1, skip: 0, scope: "global" },
@@ -163,7 +159,7 @@ describe("PRUNE operation", () => {
       index: 1,
       skip: 0,
     });
-    expect(newDocument.documentType).toBe("powerhouse/counter");
+    expect(newDocument.header.documentType).toBe("powerhouse/counter");
     expect(newDocument.initialState.state.global).toStrictEqual({
       count: 0,
     });
@@ -172,7 +168,6 @@ describe("PRUNE operation", () => {
 
   it.skip("should redo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>({
-      documentType: "powerhouse/counter",
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
@@ -185,9 +180,9 @@ describe("PRUNE operation", () => {
     newDocument = countReducer(newDocument, undo(1));
     newDocument = countReducer(newDocument, redo(1));
 
-    expect(newDocument.name).toBe("Document");
+    expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
-    expect(newDocument.revision.global).toBe(4);
+    expect(newDocument.header.revision.global).toBe(4);
     expect(mapOperations(newDocument.operations.global)).toMatchObject([
       { ...increment(), index: 0, skip: 0 },
       { type: "NOOP", input: {}, index: 1, skip: 0, scope: "global" },
@@ -205,7 +200,7 @@ describe("PRUNE operation", () => {
       },
     ]);
     expect(newDocument.clipboard.length).toBe(0);
-    expect(newDocument.documentType).toBe("powerhouse/counter");
+    expect(newDocument.header.documentType).toBe("powerhouse/counter");
     expect(newDocument.initialState.state.global).toStrictEqual({
       count: 0,
     });

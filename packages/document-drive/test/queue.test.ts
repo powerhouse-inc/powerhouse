@@ -8,6 +8,7 @@ import {
 import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
 import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
+import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
 import InMemoryCache from "../src/cache/memory.js";
 import { addListener } from "../src/drive-document-model/gen/creators.js";
 import {
@@ -101,8 +102,8 @@ describe.each(queueLayers)(
         );
         promisses.push(
           queue
-            ? server.queueOperations(drive.id, drive.operations.global)
-            : server.addOperations(drive.id, drive.operations.global),
+            ? server.queueOperations(drive.header.id, drive.operations.global)
+            : server.addOperations(drive.header.id, drive.operations.global),
         );
       }
       return Promise.all(promisses);
@@ -121,19 +122,25 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive.id;
+      const driveId = drive.header.id;
+      const documentType = documentModelDocumentModelModule.documentModel.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: documentId,
           name: "file 1",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType,
         }),
       ]);
 
-      const document = createDocumentModelDocument({ id: documentId });
-      await server.addDocument(document);
+      const document = createDocumentModelDocument();
+      const header = createUnsignedHeader(documentId, documentType);
+      await server.addDocument({
+        document,
+        documentType,
+        header,
+      });
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -192,22 +199,24 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive.id;
+      const driveId = drive.header.id;
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
+      const documentType = documentModelDocumentModelModule.documentModel.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: fileId,
           name: "file 1",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType,
         }),
       ]);
 
-      const document = createDocumentModelDocument({ id: fileId });
-      await server.addDocument(document);
+      const document = createDocumentModelDocument();
+      const header = createUnsignedHeader(fileId, documentType);
+      await server.addDocument({ document, documentType, header });
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -298,10 +307,14 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       let drive = await createDrive(server);
-      const driveId = drive.id;
+      const driveId = drive.header.id;
 
       const document = createDocumentModelDocument();
-      await server.addDocument(document);
+
+      await server.addDocument({
+        document,
+        documentType: documentModelDocumentModelModule.documentModel.id,
+      });
 
       // first doc op
       const mutation = buildOperation(
@@ -322,7 +335,7 @@ describe.each(queueLayers)(
       );
 
       // add file op
-      const nodeId = document.id;
+      const nodeId = document.header.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFile({
           id: nodeId,
@@ -431,7 +444,7 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       const drive = await createDrive(server);
-      const driveId = drive.id;
+      const driveId = drive.header.id;
       const action = addListener({
         listener: {
           block: true,

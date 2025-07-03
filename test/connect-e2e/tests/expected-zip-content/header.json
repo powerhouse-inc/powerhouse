@@ -1,0 +1,18 @@
+{
+  "id": "b221840a-6229-4e1e-b01f-6b3b72e591bc",
+  "sig": {
+    "publicKey": {},
+    "nonce": ""
+  },
+  "documentType": "powerhouse/document-model",
+  "createdAtUtcIso": "2025-06-27T18:07:11.979Z",
+  "slug": "b221840a-6229-4e1e-b01f-6b3b72e591bc",
+  "name": "",
+  "branch": "main",
+  "revision": {
+    "document": 0,
+    "global": 24
+  },
+  "lastModifiedAtUtcIso": "2025-06-27T18:07:14.369Z",
+  "meta": {}
+}

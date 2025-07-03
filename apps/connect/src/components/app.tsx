@@ -1,56 +1,53 @@
-import { CookieBanner } from '#components';
-import { ReadModeContextProvider, RootProvider } from '#context';
-import { atoms, atomStore } from '#store';
+import { ReadModeContextProvider, SentryProvider } from '#context';
+import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
-import { Provider, useAtomValue } from 'jotai';
-import React, { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import ReactorAnalyticsProvider from '../context/reactor-analytics.js';
+import { useRenown } from '../hooks/useRenown.js';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
+import { Router } from './router.js';
 
-const Router = React.lazy(async () => {
-    const createRouterComponent = await import('./router.js');
-    const router = await createRouterComponent.default();
-    return { default: router };
-});
+if (import.meta.env.MODE === 'development') {
+    window.documentEditorDebugTools = new DocumentEditorDebugTools();
+} else {
+    serviceWorkerManager.registerServiceWorker(false);
+}
 
-const Preloader = () => {
-    for (const atom of Object.values(atoms)) {
-        useAtomValue(atom);
-    }
+const PreloadRenown = () => {
+    useRenown();
+    return null;
+};
+
+const PreloadProcessorManager = () => {
     useProcessorManager();
     return null;
 };
 
-const ReactorAnalyticsProvider = lazy(
-    () => import('../context/reactor-analytics.js'),
-);
-
 const App = () => (
-    <React.StrictMode>
-        <Suspense fallback={<>{/* TODO loading */}</>}>
-            <Provider store={atomStore}>
-                <Preloader />
-                <WagmiContext>
-                    <RootProvider>
-                        <ReadModeContextProvider>
-                            <ReactorAnalyticsProvider>
-                                <ToastContainer
-                                    position="bottom-right"
-                                    containerId="connect"
-                                />
-                                <UiNodesContextProvider>
-                                    <Router />
-                                    <CookieBanner />
-                                    <Analytics />
-                                </UiNodesContextProvider>
-                            </ReactorAnalyticsProvider>
-                        </ReadModeContextProvider>
-                    </RootProvider>
-                </WagmiContext>
-            </Provider>
+    <>
+        <SentryProvider>
+            <WagmiContext>
+                <ReadModeContextProvider>
+                    <ReactorAnalyticsProvider>
+                        <ToastContainer
+                            position="bottom-right"
+                            containerId="connect"
+                        />
+                        <UiNodesContextProvider>
+                            <Router />
+                            <Analytics />
+                        </UiNodesContextProvider>
+                    </ReactorAnalyticsProvider>
+                </ReadModeContextProvider>
+            </WagmiContext>
+        </SentryProvider>
+        <Suspense>
+            <PreloadProcessorManager />
+            <PreloadRenown />
         </Suspense>
-    </React.StrictMode>
+    </>
 );
 
 export default App;

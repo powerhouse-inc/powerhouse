@@ -8,7 +8,7 @@ import {
 import { createDocument } from "#drive-document-model/gen/utils";
 import {
   type ActionJob,
-  DocumentJob,
+  type DocumentJob,
   type IQueueManager,
   type Job,
   type OperationJob,
@@ -37,12 +37,13 @@ import {
 } from "document-drive";
 import {
   type Action,
-  type DocumentHeader,
   type DocumentModelModule,
   type Operation,
   type OperationScope,
   type PHDocument,
+  type PHDocumentHeader,
   attachBranch,
+  createPresignedHeader,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -53,10 +54,12 @@ import {
   reshuffleByTimestamp,
   skipHeaderOperations,
   sortOperations,
+  validateHeader,
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
 import { type SignalResult } from "../../../document-model/src/document/signal.js";
+import { createUnsignedHeader } from "../../../document-model/src/document/utils/header.js";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
@@ -149,13 +152,18 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const newDocument = documentModelModule.utils.createDocument({
+      const document = documentModelModule.utils.createDocument({
         ...initialState,
-        id: documentId,
       });
+      const header = createUnsignedHeader(documentId, documentType);
+      document.header.id = header.id;
       try {
         const createdDocument = await this.createDocument(
-          newDocument,
+          {
+            document,
+            documentType,
+            header,
+          },
           options?.source ?? { type: "local" },
         );
         return {
@@ -194,7 +202,7 @@ export class BaseDocumentDriveServer
 
   // internal state
   private triggerMap = new Map<
-    DocumentDriveDocument["id"],
+    PHDocumentHeader["id"],
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
@@ -481,7 +489,7 @@ export class BaseDocumentDriveServer
     const drive = await this.getDrive(driveId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.slug}"`,
+      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.header.slug}"`,
     );
 
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
@@ -516,7 +524,7 @@ export class BaseDocumentDriveServer
         await this.listenerManager
           .setListener(driveId, {
             block: zodListener.block,
-            driveId: drive.id,
+            driveId: drive.header.id,
             filter: {
               branch: zodListener.filter.branch ?? [],
               documentId: zodListener.filter.documentId ?? [],
@@ -596,8 +604,6 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
-      id: input.id,
-      slug: input.slug,
       state: {
         global: {
           icon: input.global.icon ?? null,
@@ -607,9 +613,19 @@ export class BaseDocumentDriveServer
       },
     });
 
-    document.meta = {
-      preferredEditor: preferredEditor,
-    };
+    if (input.id && input.id.length > 0) {
+      document.header.id = input.id;
+    }
+
+    if (input.slug && input.slug.length > 0) {
+      document.header.slug = input.slug;
+    }
+
+    if (preferredEditor) {
+      document.header.meta = {
+        preferredEditor: preferredEditor,
+      };
+    }
 
     await this.documentStorage.create(document);
 
@@ -617,7 +633,7 @@ export class BaseDocumentDriveServer
       await this.cache.deleteDriveBySlug(input.slug);
     }
 
-    await this._initializeDrive(document.id);
+    await this._initializeDrive(document.header.id);
 
     this.eventEmitter.emit("driveAdded", document);
 
@@ -710,6 +726,12 @@ export class BaseDocumentDriveServer
     return drives;
   }
 
+  // TODO: paginate, move into IReactorClient eventually
+  async getDrivesSlugs() {
+    const drives = await this.getDrives();
+    return this.documentStorage.resolveSlugs(drives);
+  }
+
   async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {
@@ -756,17 +778,17 @@ export class BaseDocumentDriveServer
     }
   }
 
-  async getDriveIdBySlug(slug: string): Promise<DocumentDriveDocument["id"]> {
+  async getDriveIdBySlug(slug: string): Promise<string> {
     try {
       const drive = await this.cache.getDriveBySlug(slug);
       if (drive) {
-        return drive.id;
+        return drive.header.id;
       }
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
     const driveStorage = await this.documentStorage.getBySlug(slug);
-    return driveStorage.id;
+    return driveStorage.header.id;
   }
 
   async getDocument<TDocument extends PHDocument>(
@@ -846,9 +868,10 @@ export class BaseDocumentDriveServer
     // if a document was provided then checks if it's valid
     let state = undefined;
     if (input.document) {
-      if (input.documentType !== input.document.documentType) {
+      if (input.documentType !== input.document.header.documentType) {
         throw new Error(`Provided document is not ${input.documentType}`);
       }
+
       const doc = this._buildDocument(input.document);
       state = doc.state;
     }
@@ -857,18 +880,56 @@ export class BaseDocumentDriveServer
     const document =
       input.document ??
       this.getDocumentModelModule(input.documentType).utils.createDocument({
-        id: input.id,
         state,
       });
 
+    // get the header
+    let header: PHDocumentHeader;
+
+    // handle the legacy case where an id is provided
+    if ("id" in input && input.id) {
+      if (input.document) {
+        header = document.header;
+
+        document.header.id = input.id;
+
+        this.logger.warn(
+          "Assigning an id to a document is deprecated. Use the header field instead.",
+        );
+      } else {
+        this.logger.warn(
+          "Creating a document with an id is deprecated. Use the header field instead.",
+        );
+
+        header = createPresignedHeader(input.id, input.documentType);
+      }
+    } else if ("header" in input && input.header) {
+      // validate the header passed in
+      await validateHeader(input.header);
+
+      header = input.header;
+    } else {
+      // otherwise, generate a header
+      header = createPresignedHeader(undefined, input.documentType);
+    }
+
     if (preferredEditor) {
-      const meta = document.meta ?? {};
+      const meta = header.meta ?? {};
       meta.preferredEditor = preferredEditor;
-      document.meta = meta;
+      header.meta = meta;
     }
 
     // stores document information
-    await this.documentStorage.create(document);
+    const documentStorage: PHDocument = {
+      header,
+      history: document.history,
+      operations: document.operations,
+      initialState: document.initialState,
+      clipboard: [],
+      state: state ?? document.state,
+    };
+
+    await this.documentStorage.create(documentStorage);
 
     // TODO set initial state for document sync units
     // if (source.type === "trigger") {
@@ -895,13 +956,13 @@ export class BaseDocumentDriveServer
     if (operations.length) {
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
-          document.id,
+          document.header.id,
           operations,
           document,
         );
       } else {
         await this.legacyStorage.addDocumentOperations(
-          input.id,
+          document.header.id,
           operations,
           document,
         );
@@ -1093,7 +1154,7 @@ export class BaseDocumentDriveServer
     }
 
     const documentModelModule = this.getDocumentModelModule<TDocument>(
-      documentStorage.documentType,
+      documentStorage.header.documentType,
     );
 
     const revisionOperations =
@@ -1110,7 +1171,7 @@ export class BaseDocumentDriveServer
       operations,
       documentModelModule.reducer,
       undefined,
-      documentStorage,
+      documentStorage.header,
       undefined,
       {
         ...options,
@@ -1127,7 +1188,7 @@ export class BaseDocumentDriveServer
     skipHashValidation = false,
   ) {
     const documentModelModule = this.getDocumentModelModule(
-      document.documentType,
+      document.header.documentType,
     );
 
     const signalResults: SignalResult[] = [];
@@ -1229,7 +1290,7 @@ export class BaseDocumentDriveServer
     documentId: string,
     callback: (document: PHDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ) {
     if (!this.legacyStorage.addDocumentOperationsWithTransaction) {
@@ -1241,7 +1302,7 @@ export class BaseDocumentDriveServer
         await this.legacyStorage.addDocumentOperations(
           documentId,
           result.operations,
-          result.header,
+          result.document,
         );
       }
     } else {
@@ -1256,9 +1317,19 @@ export class BaseDocumentDriveServer
     input: CreateDocumentInput<TDocument>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    const exists = await this.documentStorage.exists(input.id);
+    const id =
+      "header" in input
+        ? input.header?.id
+        : "id" in input
+          ? input.id
+          : input.document?.header.id;
+    if (!id) {
+      throw new Error("Document id is required", { cause: input });
+    }
+
+    const exists = await this.documentStorage.exists(id);
     if (exists) {
-      throw new DocumentAlreadyExistsError(input.id);
+      throw new DocumentAlreadyExistsError(id);
     }
 
     // add listeners first
@@ -1289,7 +1360,7 @@ export class BaseDocumentDriveServer
     // now queue the job
     try {
       jobId = await this.queueManager.addJob({
-        documentId: input.id,
+        documentId: id,
         documentType: input.documentType,
         initialState: input.document,
         options,
@@ -1544,8 +1615,7 @@ export class BaseDocumentDriveServer
 
         return {
           operations: result.operationsApplied,
-          header: result.document,
-          newState: document.state,
+          document: result.document,
         };
       });
 
@@ -1558,7 +1628,7 @@ export class BaseDocumentDriveServer
         for (const operation of operationsApplied) {
           const syncUnit: SynchronizationUnit = {
             documentId,
-            documentType: document.documentType,
+            documentType: document.header.documentType,
             scope: operation.scope,
             branch: "main", // TODO: handle branches
             revision: operation.index + 1,
@@ -1665,6 +1735,10 @@ export class BaseDocumentDriveServer
         throw error;
       }
 
+      this.eventEmitter.emit("documentOperationsAdded", documentId, operations);
+
+      this.eventEmitter.emit("operationsAdded", documentId, operations);
+
       return {
         status: "SUCCESS",
         document,
@@ -1704,7 +1778,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     callback: (document: DocumentDriveDocument) => Promise<{
       operations: Operation[];
-      header: DocumentHeader;
+      document: PHDocument;
     }>,
   ) {
     if (!this.legacyStorage.addDriveOperationsWithTransaction) {
@@ -1716,7 +1790,7 @@ export class BaseDocumentDriveServer
         await this.legacyStorage.addDriveOperations(
           driveId,
           result.operations,
-          result.header,
+          result.document,
         );
       }
       return result;
@@ -1859,7 +1933,7 @@ export class BaseDocumentDriveServer
 
         return {
           operations: result.operationsApplied,
-          header: result.document,
+          document: result.document,
         };
       });
 
@@ -1903,7 +1977,7 @@ export class BaseDocumentDriveServer
             [
               {
                 documentId: driveId,
-                documentType: document.documentType,
+                documentType: document.header.documentType,
                 scope: "global",
                 branch: "main",
                 lastUpdated: lastOperation.timestamp,
@@ -1953,6 +2027,9 @@ export class BaseDocumentDriveServer
         throw error;
       }
 
+      this.eventEmitter.emit("driveOperationsAdded", driveId, operations);
+      this.eventEmitter.emit("operationsAdded", driveId, operations);
+
       return {
         status: "SUCCESS",
         document,
@@ -1985,7 +2062,9 @@ export class BaseDocumentDriveServer
     actions: TAction[],
   ): Operation<TAction>[] {
     const operations: Operation<TAction>[] = [];
-    const { reducer } = this.getDocumentModelModule(documentId.documentType);
+    const { reducer } = this.getDocumentModelModule(
+      documentId.header.documentType,
+    );
     for (const action of actions) {
       documentId = reducer(documentId, action);
       const operation = documentId.operations[action.scope].slice().pop();

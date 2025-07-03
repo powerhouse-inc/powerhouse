@@ -41,7 +41,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     private delegate: IServerDelegateDrivesManager,
     options?: Pick<DocumentDriveServerOptions, "defaultDrives">,
   ) {
-    if (options?.defaultDrives.remoteDrives) {
+    if (options?.defaultDrives?.remoteDrives) {
       for (const defaultDrive of options.defaultDrives.remoteDrives) {
         this.defaultRemoteDrives.set(defaultDrive.url, {
           ...defaultDrive,
@@ -51,7 +51,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     }
 
     this.removeOldRemoteDrivesConfig = options?.defaultDrives
-      .removeOldRemoteDrives || {
+      ?.removeOldRemoteDrives || {
       strategy: "preserve-all",
     };
   }
@@ -85,9 +85,9 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
           drive.state.local.listeners.length > 0 ||
           drive.state.local.triggers.length > 0,
       )
-      .filter((drive) => !driveIdsToPreserve.includes(drive.id));
+      .filter((drive) => !driveIdsToPreserve.includes(drive.header.id));
 
-    const driveIds = drivesToRemove.map((drive) => drive.id);
+    const driveIds = drivesToRemove.map((drive) => drive.header.id);
 
     if (removeStrategy === "detach") {
       await this.detachDrivesById(driveIds);
@@ -180,7 +180,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
               drive.state.local.listeners.length > 0 ||
               drive.state.local.triggers.length > 0,
           )
-          .map((drive) => drive.id);
+          .map((drive) => drive.header.id);
 
         await this.removeDrivesById(drivesToRemove);
         break;

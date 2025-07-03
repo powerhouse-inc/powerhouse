@@ -1,4 +1,5 @@
-import { generateUUID, hash } from "#utils/env";
+import { type PHDocumentHeader } from "#document/ph-types.js";
+import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -18,7 +19,6 @@ import {
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
-  type DocumentHeader,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
   type ExtendedState,
@@ -40,6 +40,7 @@ import {
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
+import { createUnsignedHeader } from "./header.js";
 
 export function isNoopOperation<
   TOp extends {
@@ -175,20 +176,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
-  const id = initialState?.id ?? generateUUID();
   return {
-    name: "",
-    documentType: "",
-    revision: {
-      global: 0,
-      local: 0,
-    },
-    created: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-    attachments: {},
-    ...initialState,
-    id: id,
-    slug: initialState?.slug ?? id,
     state:
       createState?.(initialState?.state) ??
       ((initialState?.state ?? {
@@ -198,6 +186,10 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   };
 }
 
+/**
+ * Important note: it is the responsibility of the caller to set the document type
+ * on the header.
+ */
 export function baseCreateDocument<TDocument extends PHDocument>(
   initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
   createState?: CreateState<TDocument>,
@@ -206,11 +198,15 @@ export function baseCreateDocument<TDocument extends PHDocument>(
     initialState,
     createState,
   );
+
+  const header = createUnsignedHeader();
   return {
     ...state,
+    header,
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],
+    attachments: {},
   } as unknown as TDocument;
 }
 
@@ -222,7 +218,8 @@ export function hashDocumentStateForScope(
   },
   scope: OperationScope = "global",
 ) {
-  return hash(stringifyJson(document.state[scope] || ""));
+  const stateString = stringifyJson(document.state[scope] || "");
+  return hash(stateString);
 }
 
 export function readOnly<T>(value: T): Readonly<T> {
@@ -298,9 +295,10 @@ export function getDocumentLastModified(document: PHDocument) {
   const sortedOperations = sortOperations(
     Object.values(document.operations).flat(),
   );
-  const timestamp =
-    sortedOperations.at(-1)?.timestamp || document.initialState.lastModified;
-  return timestamp;
+
+  return (
+    sortedOperations.at(-1)!.timestamp || document.header.lastModifiedAtUtcIso
+  );
 }
 
 // Runs the operations on the initial data using the
@@ -311,7 +309,7 @@ export function replayOperations<TDocument extends PHDocument>(
   clearedOperations: OperationsFromDocument<TDocument>,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
-  header?: DocumentHeader,
+  header?: PHDocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReducerOptions,
@@ -352,7 +350,7 @@ export function replayDocument<TDocument extends PHDocument>(
   operations: DocumentOperations,
   reducer: Reducer<TDocument>,
   dispatch?: SignalDispatch,
-  header?: DocumentHeader,
+  header?: PHDocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
 ): TDocument {
@@ -410,7 +408,7 @@ export function replayDocument<TDocument extends PHDocument>(
   // builds a new document from the initial data
   const document = baseCreateDocument(documentState);
   if (header?.slug) {
-    document.slug = header.slug;
+    document.header.slug = header.slug;
   }
   document.initialState = initialState;
   document.operations = initialOperations;
@@ -483,19 +481,30 @@ export function replayDocument<TDocument extends PHDocument>(
   );
 
   // gets the last modified timestamp from the latest operation
-  const lastModified = Object.values(resultOperations).reduce((acc, curr) => {
-    const operation = curr.at(-1);
-    if (operation && operation.timestamp > acc) {
-      acc = operation.timestamp;
-    }
-    return acc;
-  }, initialState.lastModified);
+  const lastModified = header
+    ? header.lastModifiedAtUtcIso
+    : Object.values(resultOperations).reduce((acc, curr) => {
+        const operation = curr.at(-1);
+        if (operation) {
+          if (operation.timestamp > acc) {
+            return operation.timestamp;
+          }
+        }
+
+        return acc;
+      }, document.header.lastModifiedAtUtcIso);
+
+  if (header) {
+    result.header = {
+      ...header,
+      revision: result.header.revision,
+      lastModifiedAtUtcIso: lastModified,
+    };
+  }
 
   return {
     ...result,
     operations: resultOperations,
-    lastModified,
-    meta: header?.meta ?? {},
   } as TDocument;
 }
 

@@ -38,7 +38,8 @@ export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
-export { applyMixins, BaseDocumentClass } from "#document/object.js";
+export { BaseDocumentClass, applyMixins } from "#document/object.js";
+export type { PHDocumentHeader } from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,
@@ -58,7 +59,6 @@ export type {
   CreateState,
   CustomAction,
   DocumentAction,
-  DocumentHeader,
   DocumentModelLib,
   DocumentModelModule,
   DocumentModelUtils,
@@ -80,11 +80,11 @@ export type {
   Operation,
   OperationFromDocument,
   OperationScope,
-  OperationsFromDocument,
   OperationSignatureContext,
-  PartialState,
+  OperationsFromDocument,
   PHDocument,
   PHReducer,
+  PartialState,
   Reducer,
   ReducerOptions,
   SaveToFile,
@@ -118,6 +118,10 @@ export {
   baseSaveToFileHandle,
   createZip,
 } from "#document/utils/file.js";
+export {
+  createUnsignedHeader as createPresignedHeader,
+  validateHeader,
+} from "#document/utils/header.js";
 
 export {
   validateInitialState,

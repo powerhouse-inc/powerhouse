@@ -1,0 +1,392 @@
+#!/usr/bin/env bash
+
+# =============================================================================
+# Configuration
+# =============================================================================
+TARGET_TAG=${1:-"latest"}
+PROJECT_NAME=${2:-"global"}
+
+# Function to find an available port
+find_available_port() {
+    local port=4001
+    while netstat -tuln | grep -q ":$port "; do
+        port=$((port + 1))
+    done
+    echo $port
+}
+
+# =============================================================================
+# OS Detection and Windows Handling
+# =============================================================================
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    if [ -f "$0.ps1" ]; then
+        powershell -ExecutionPolicy Bypass -File "$0.ps1" -TARGET_TAG "$TARGET_TAG"
+    else
+        echo "Error: Windows setup script (setup-environment.ps1) not found"
+        exit 1
+    fi
+else
+    # =============================================================================
+    # Package Installation
+    # =============================================================================
+    sudo apt install -y postgresql postgresql-contrib nginx libnginx-mod-http-brotli-static libnginx-mod-http-brotli-filter
+    sudo sed -i 's/# gzip_vary/gzip_vary/; s/# gzip_proxied/gzip_proxied/; s/# gzip_comp_level/gzip_comp_level/; s/# gzip_buffers/gzip_buffers/; s/# gzip_http_version/gzip_http_version/; s/# gzip_types/gzip_types/' /etc/nginx/nginx.conf
+
+    # =============================================================================
+    # Interactive Package Installation
+    # =============================================================================
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Package Installation"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    while true; do
+        read -p "Enter package name to install (or press Enter to skip): " package_name
+        if [ -z "$package_name" ]; then
+            break
+        fi
+        ph install "$package_name"
+    done
+
+    # =============================================================================
+    # Connect Build
+    # =============================================================================
+    ph connect build
+    cp -r .ph/connect-build/dist /var/www/html/$PROJECT_NAME
+
+    # =============================================================================
+    # Database Configuration
+    # =============================================================================
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Database Configuration"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Choose database type:"
+    echo "1) Local PostgreSQL database"
+    echo "2) Remote PostgreSQL database"
+    read -p "Enter your choice (1 or 2): " db_choice
+
+    if [ "$db_choice" = "1" ]; then
+        echo "Setting up local PostgreSQL database..."
+        
+        # Generate database credentials
+        DB_PASSWORD="powerhouse"
+        DB_USER="powerhouse"
+        # Convert to lowercase, replace dots with underscores, replace special chars with underscore, ensure starts with letter
+        DB_NAME="powerhouse_$(echo "${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/\./_/g' | sed 's/[^a-z0-9]/_/g' | sed 's/^[^a-z]/p_/' | cut -c1-63)"
+        
+        # Check if database already exists
+        if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+            echo "Database $DB_NAME already exists"
+            read -p "Do you want to recreate it? (y/n): " recreate_db
+            if [ "$recreate_db" = "y" ]; then
+                sudo -u postgres psql -c "DROP DATABASE $DB_NAME;"
+            else
+                echo "Using existing database"
+            fi
+        fi
+        
+        # Create database and user if they don't exist
+        sudo -u postgres psql << EOF
+DO
+\$do\$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$DB_USER') THEN
+      CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
+   END IF;
+END
+\$do\$;
+
+CREATE DATABASE $DB_NAME OWNER $DB_USER;
+GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
+EOF
+        
+        # Configure PostgreSQL
+        sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" /etc/postgresql/*/main/postgresql.conf
+        
+        # Set DATABASE_URL for local database
+        DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME"
+        
+        echo "Local database configured successfully!"
+        echo "Database URL: $DATABASE_URL"
+        echo "Please save these credentials securely!"
+    else
+        echo "Enter remote PostgreSQL URL (format: postgresql://user:password@host:port/db)"
+        echo "Example: postgresql://powerhouse:password@db.example.com:5432/powerhouse"
+        read -p "DATABASE_URL: " DATABASE_URL
+    fi
+
+    # Save DATABASE_URL to .env file
+    echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a .env
+
+    # =============================================================================
+    # SSL Configuration
+    # =============================================================================
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  SSL Configuration"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # Find an available port for Switchboard
+    SWITCHBOARD_PORT=$(find_available_port)
+    echo "Using port $SWITCHBOARD_PORT for Switchboard"
+
+    # Save Switchboard port to configuration
+    echo "SWITCHBOARD_PORT=$SWITCHBOARD_PORT" | sudo tee -a .env
+
+    # Add compression settings to nginx.conf if not exists
+    if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf || ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
+        echo "Adding compression settings to nginx.conf..."
+        # Find the http block in nginx.conf
+        if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf; then
+            sudo sed -i '/http {/a \    # Brotli compression\n    brotli on;\n    brotli_comp_level 6;\n    brotli_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;\n    brotli_static on;' /etc/nginx/nginx.conf
+        fi
+        if ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
+            sudo sed -i '/http {/a \    # Gzip compression\n    gzip on;\n    gzip_vary on;\n    gzip_proxied any;\n    gzip_comp_level 6;\n    gzip_buffers 16 8k;\n    gzip_http_version 1.1;\n    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss;' /etc/nginx/nginx.conf
+        fi
+    else
+        echo "Compression settings already present in nginx.conf"
+    fi
+
+    
+
+    echo "Choose SSL configuration:"
+    echo "1) Let's Encrypt certificates for domains"
+    echo "2) Self-signed certificate for machine hostname"
+    read -p "Enter your choice (1 or 2): " ssl_choice
+
+    if [ "$ssl_choice" = "1" ]; then
+        # Install certbot
+        sudo apt install -y certbot python3-certbot-nginx
+        
+        # =============================================================================
+        # Domain Setup
+        # =============================================================================
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  Domain Setup"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        read -p "Enter Connect domain (e.g. connect.google.com): " connect_domain
+        read -p "Enter Switchboard domain (e.g. switchboard.google.com): " switchboard_domain
+        read -p "Enter admin email for Let's Encrypt notifications: " admin_email
+
+        echo "Using domains:"
+        echo "Connect: $connect_domain"
+        echo "Switchboard: $switchboard_domain"
+
+        # Create initial Nginx configuration for certbot
+        echo "Creating initial Nginx configuration..."
+        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+server {
+    listen 80;
+    server_name $connect_domain $switchboard_domain;
+    
+    location / {
+        root /var/www/html/$PROJECT_NAME;
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
+EOF
+
+        # Enable the site
+        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
+        sudo rm -f /etc/nginx/sites-enabled/default
+
+        # Test Nginx configuration
+        sudo nginx -t
+
+        # Restart Nginx to apply changes
+        sudo systemctl restart nginx
+
+        # Obtain SSL certificates
+        echo "Obtaining SSL certificates..."
+        sudo certbot --nginx -d $connect_domain --non-interactive --agree-tos --email $admin_email --redirect
+        sudo certbot --nginx -d $switchboard_domain --non-interactive --agree-tos --email $admin_email --redirect
+
+        # Wait for certbot to finish and certificates to be installed
+        sleep 5
+
+        # Check if certificates were installed
+        if [ ! -f "/etc/letsencrypt/live/$connect_domain/fullchain.pem" ] || [ ! -f "/etc/letsencrypt/live/$switchboard_domain/fullchain.pem" ]; then
+            echo "Error: SSL certificates were not installed properly"
+            echo "Please check the certbot logs at /var/log/letsencrypt/letsencrypt.log"
+            exit 1
+        fi
+
+        # Update Nginx configuration with proper SSL settings
+        echo "Updating Nginx configuration with SSL settings..."
+        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+server {
+    listen 80;
+    server_name $connect_domain $switchboard_domain;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name $connect_domain;
+    
+    ssl_certificate /etc/letsencrypt/live/$connect_domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$connect_domain/privkey.pem;
+    
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    if (\$http_x_forwarded_proto = "http") {
+        return 301 https://\$server_name\$request_uri;
+    }
+    
+    location / {
+        root /var/www/html/$PROJECT_NAME;
+        try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache";
+        add_header X-Forwarded-Proto \$scheme;
+        add_header X-Forwarded-Host \$host;
+        add_header X-Forwarded-Port \$server_port;
+    }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name $switchboard_domain;
+    
+    ssl_certificate /etc/letsencrypt/live/$switchboard_domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$switchboard_domain/privkey.pem;
+    
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    
+    location / {
+        proxy_pass http://localhost:$SWITCHBOARD_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+}
+EOF
+
+        # Test and reload Nginx configuration
+        sudo nginx -t && sudo systemctl reload nginx
+
+        # Set up automatic renewal
+        echo "Setting up automatic certificate renewal..."
+        sudo systemctl enable certbot.timer
+        sudo systemctl start certbot.timer
+
+    else
+        # Get machine hostname
+        hostname=$(hostname)
+        
+        # Generate self-signed certificate
+        echo "Generating self-signed certificate for $hostname..."
+        sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /etc/ssl/private/$hostname.key \
+            -out /etc/ssl/certs/$hostname.crt \
+            -subj "/CN=$hostname" \
+            -addext "subjectAltName = DNS:$hostname"
+
+        # Create Nginx configuration for self-signed
+        echo "Creating Nginx configuration..."
+        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+server {
+    listen 80;
+    server_name $hostname;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name $hostname;
+    
+    ssl_certificate /etc/ssl/certs/$hostname.crt;
+    ssl_certificate_key /etc/ssl/private/$hostname.key;
+    
+    location /connect {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /switchboard {
+        proxy_pass http://localhost:$SWITCHBOARD_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+        # Enable the site
+        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
+        sudo rm -f /etc/nginx/sites-enabled/default
+
+        # Test Nginx configuration
+        sudo nginx -t
+    fi
+
+    # =============================================================================
+    # Database Schema Setup
+    # =============================================================================
+    pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
+
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  Environment setup complete!"
+    echo "  Use 'ph service start' to start services"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+fi 
