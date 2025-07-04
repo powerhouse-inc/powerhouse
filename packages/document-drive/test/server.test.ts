@@ -1,5 +1,6 @@
 import {
   ActionContext,
+  createPresignedHeader,
   DocumentModelDocument,
   documentModelDocumentModelModule,
   generateId,
@@ -21,8 +22,6 @@ import { BrowserStorage } from "../src/storage/browser.js";
 import { FilesystemStorage } from "../src/storage/filesystem.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { PrismaClient } from "../src/storage/prisma/client/index.js";
-
-import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
 import { PrismaStorage } from "../src/storage/prisma/prisma.js";
 import {
   IDocumentStorage,
@@ -99,11 +98,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
   });
 
-  function createDocumentModelWithId(id: string) {
+  function createDocumentModelWithId(id: string): DocumentModelDocument {
     return {
-      documentType: "powerhouse/document-model",
-      document: documentModelDocumentModelModule.utils.createDocument(),
-      header: createUnsignedHeader(id, "powerhouse/document-model"),
+      ...documentModelDocumentModelModule.utils.createDocument(),
+      header: createPresignedHeader(
+        id,
+        documentModelDocumentModelModule.documentModel.id,
+      ),
     };
   }
 
@@ -468,10 +469,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
-    const newDocument = createDocumentModelWithId(documentId);
-    const document = newDocument.document;
+    const document = createDocumentModelWithId(documentId);
 
-    await server.addDocument(newDocument);
+    await server.addDocument(document);
 
     drive = reducer(
       drive,
@@ -562,10 +562,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
 
-    const newDocument = createDocumentModelWithId(documentId);
-    const document = newDocument.document;
+    const document = createDocumentModelWithId(documentId);
 
-    await server.addDocument(newDocument);
+    await server.addDocument(document);
 
     let drive = await server.getDrive(driveId);
     drive = reducer(
@@ -905,9 +904,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     const documentId = generateId();
     await server.addDocument({
-      documentType: file!.header.documentType,
-      document: file!,
-      header: createUnsignedHeader(documentId, file!.header.documentType),
+      ...file!,
+      header: createPresignedHeader(documentId, file!.header.documentType),
     });
     const action = actions.addFile({
       id: documentId,
@@ -996,7 +994,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     ]);
 
     const storageUnits = await storage.findStorageUnitsBy({}, 10);
-    expect(storageUnits.units).toHaveLength(4);
+    expect(storageUnits.units).toHaveLength(5);
   });
 
   it("should store all operation attributes", async ({ expect }) => {

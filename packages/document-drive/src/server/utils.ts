@@ -5,6 +5,7 @@ import type {
   PHDocument,
 } from "document-model";
 import {
+  type CreateDocumentInput,
   type RevisionsFilter,
   type StrandUpdate,
   type SynchronizationUnitId,
@@ -99,4 +100,47 @@ export function compareSyncUnits(
     a.scope === b.scope &&
     a.branch === b.branch
   );
+}
+
+export function resolveCreateDocumentInput<TDocument extends PHDocument>(
+  input: CreateDocumentInput<TDocument>,
+) {
+  return {
+    id: resolveCreateDocumentInputId(input),
+    documentType: resolveCreateDocumentInputDocumentType(input),
+    document: resolveCreateDocumentInputDocument(input),
+  };
+}
+
+export function resolveCreateDocumentInputId(
+  input: CreateDocumentInput<PHDocument>,
+) {
+  if ("id" in input) {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    return input.id;
+  } else if ("header" in input) {
+    return input.header.id;
+  } else if ("document" in input) {
+    return input.document.header.id;
+  } else {
+    return undefined;
+  }
+}
+
+export function resolveCreateDocumentInputDocumentType(
+  input: CreateDocumentInput<PHDocument>,
+) {
+  if ("documentType" in input) {
+    return input.documentType;
+  } else if ("header" in input) {
+    return input.header.documentType;
+  } else {
+    return input.document.header.documentType;
+  }
+}
+
+export function resolveCreateDocumentInputDocument<
+  TDocument extends PHDocument,
+>(input: CreateDocumentInput<TDocument>) {
+  return "document" in input ? input.document : undefined;
 }

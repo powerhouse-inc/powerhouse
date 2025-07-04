@@ -49,16 +49,12 @@ describe("processOperations", () => {
   const driveId = generateId();
   const documentId = generateId();
   function createDocumentModel() {
-    const document = documentModelDocumentModelModule.utils.createDocument();
-    const header = createPresignedHeader(
-      documentId,
-      "powerhouse/document-model",
-    );
-    document.header = header;
     return {
-      documentType: document.header.documentType,
-      document,
-      header,
+      ...documentModelDocumentModelModule.utils.createDocument(),
+      header: createPresignedHeader(
+        documentId,
+        documentModelDocumentModelModule.documentModel.id,
+      ),
     };
   }
 

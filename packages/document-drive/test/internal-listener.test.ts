@@ -107,11 +107,7 @@ describe("Internal Listener", () => {
       document.header.documentType,
     );
     document.header = header;
-    await server.addDocument({
-      document,
-      header,
-      documentType: document.header.documentType,
-    });
+    await server.addDocument(document);
 
     const action = DriveActions.addFile({
       id: documentId,

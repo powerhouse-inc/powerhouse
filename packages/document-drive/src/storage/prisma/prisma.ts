@@ -321,6 +321,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           meta: document.header.meta
             ? JSON.stringify(document.header.meta)
             : undefined,
+          scopes: Object.keys(document.state),
         },
       });
     } catch (e) {
@@ -732,6 +733,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         data: {
           lastModified: document.header.lastModifiedAtUtcIso,
           revision: JSON.stringify(document.header.revision),
+          scopes: Object.keys(document.state),
         },
       });
 
@@ -876,6 +878,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       revision: number;
     }[]
   > {
+    if (units.length === 0) {
+      return [];
+    }
+
     const documentTypes = await this.db.document.findMany({
       where: {
         id: { in: [...new Set(units.map((unit) => unit.documentId)).keys()] },

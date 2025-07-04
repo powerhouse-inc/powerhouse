@@ -68,7 +68,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobAdded",
       wrapErrorHandler(async (job) => {
-        this.logger.debug("Added job", job);
+        this.logger.verbose("Added job", job);
         await this.processNextJob();
       }),
     );
@@ -76,7 +76,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobStarted",
       wrapErrorHandler(async (job) => {
-        this.logger.debug("Started job", job.jobId);
+        this.logger.verbose("Started job", job.jobId);
         this.runningJobs.push(job);
         await this.processNextJob();
       }),
@@ -85,7 +85,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobCompleted",
       wrapErrorHandler(async (job, result) => {
-        this.logger.debug("Completed job", job.jobId);
+        this.logger.verbose("Completed job", job.jobId);
         await this.handleJobCompleted(job, result);
       }),
     );

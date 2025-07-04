@@ -97,7 +97,11 @@ import {
   type SyncUnitStatusObject,
   type SynchronizationUnit,
 } from "./types.js";
-import { filterOperationsByRevision, isAtRevision } from "./utils.js";
+import {
+  filterOperationsByRevision,
+  isAtRevision,
+  resolveCreateDocumentInput,
+} from "./utils.js";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
@@ -155,7 +159,7 @@ export class BaseDocumentDriveServer
         ...initialState,
       });
       const header = createPresignedHeader(documentId, documentType);
-      document.header.id = header.id;
+
       try {
         const createdDocument = await this.createDocument(
           {
@@ -592,10 +596,14 @@ export class BaseDocumentDriveServer
   }
 
   addDocument<TDocument extends PHDocument>(
-    input: CreateDocumentInput<TDocument>,
+    document: TDocument,
     preferredEditor?: string,
   ): Promise<TDocument> {
-    return this.createDocument(input, { type: "local" }, preferredEditor);
+    return this.createDocument(
+      { document },
+      { type: "local" },
+      preferredEditor,
+    );
   }
 
   async addDrive(
@@ -864,21 +872,27 @@ export class BaseDocumentDriveServer
     source: StrandUpdateSource,
     preferredEditor?: string,
   ): Promise<TDocument> {
+    const { documentType, document: inputDocument } =
+      resolveCreateDocumentInput(input);
+
     // if a document was provided then checks if it's valid
     let state = undefined;
-    if (input.document) {
-      if (input.documentType !== input.document.header.documentType) {
-        throw new Error(`Provided document is not ${input.documentType}`);
+    if (inputDocument) {
+      if (
+        "documentType" in input &&
+        documentType !== inputDocument.header.documentType
+      ) {
+        throw new Error(`Provided document is not ${documentType}`);
       }
 
-      const doc = this._buildDocument(input.document);
+      const doc = this._buildDocument(inputDocument);
       state = doc.state;
     }
 
     // if no document was provided then create a new one
     const document =
-      input.document ??
-      this.getDocumentModelModule(input.documentType).utils.createDocument({
+      inputDocument ??
+      this.getDocumentModelModule(documentType).utils.createDocument({
         state,
       });
 
@@ -887,7 +901,7 @@ export class BaseDocumentDriveServer
 
     // handle the legacy case where an id is provided
     if ("id" in input && input.id) {
-      if (input.document) {
+      if (inputDocument) {
         header = document.header;
 
         document.header.id = input.id;
@@ -900,16 +914,37 @@ export class BaseDocumentDriveServer
           "Creating a document with an id is deprecated. Use the header field instead.",
         );
 
-        header = createPresignedHeader(input.id, input.documentType);
+        header = createPresignedHeader(input.id, documentType);
       }
-    } else if ("header" in input && input.header) {
+    } else if ("header" in input) {
       // validate the header passed in
       await validateHeader(input.header);
 
       header = input.header;
+    } else if (inputDocument?.header) {
+      if (!inputDocument.header.id) {
+        throw new Error("Document header id is required");
+      }
+      if (!inputDocument.header.documentType) {
+        throw new Error("Document header documentType is required");
+      }
+      if (!inputDocument.header.createdAtUtcIso) {
+        throw new Error("Document header createdAtUtcIso is required");
+      }
+
+      if (!inputDocument.header.sig.nonce) {
+        this.logger.warn(
+          "Creating a document with an unsigned id is deprecated. Use createSignedHeaderForSigner.",
+        );
+        // throw new Error("Document header sig nonce is required"); TODO: uncomment when ready to enforce signed documents
+      } else {
+        await validateHeader(inputDocument.header);
+      }
+
+      header = inputDocument.header;
     } else {
       // otherwise, generate a header
-      header = createPresignedHeader(undefined, input.documentType);
+      header = createPresignedHeader(undefined, documentType);
     }
 
     if (preferredEditor) {
@@ -925,6 +960,7 @@ export class BaseDocumentDriveServer
       operations: document.operations,
       initialState: document.initialState,
       clipboard: [],
+      attachments: document.attachments,
       state: state ?? document.state,
     };
 
@@ -955,13 +991,13 @@ export class BaseDocumentDriveServer
     if (operations.length) {
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
-          document.header.id,
+          header.id,
           operations,
           document,
         );
       } else {
         await this.legacyStorage.addDocumentOperations(
-          document.header.id,
+          header.id,
           operations,
           document,
         );
@@ -1316,14 +1352,12 @@ export class BaseDocumentDriveServer
     input: CreateDocumentInput<TDocument>,
     options?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    const id =
-      "header" in input
-        ? input.header?.id
-        : "id" in input
-          ? input.id
-          : input.document?.header.id;
+    const { id, documentType, document } = resolveCreateDocumentInput(input);
     if (!id) {
       throw new Error("Document id is required", { cause: input });
+    }
+    if (!documentType) {
+      throw new Error("Document type is required", { cause: input });
     }
 
     const exists = await this.documentStorage.exists(id);
@@ -1360,8 +1394,8 @@ export class BaseDocumentDriveServer
     try {
       jobId = await this.queueManager.addJob({
         documentId: id,
-        documentType: input.documentType,
-        initialState: input.document,
+        documentType,
+        initialState: document,
         options,
       });
     } catch (error) {

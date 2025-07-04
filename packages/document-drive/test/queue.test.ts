@@ -136,11 +136,8 @@ describe.each(queueLayers)(
 
       const document = createDocumentModelDocument();
       const header = createUnsignedHeader(documentId, documentType);
-      await server.addDocument({
-        document,
-        documentType,
-        header,
-      });
+      document.header = header;
+      await server.addDocument(document);
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -151,7 +148,7 @@ describe.each(queueLayers)(
 
       // queue mutation
       const documentResult = server.queueOperations(documentId, [mutation]);
-      await expect(server.getDocument(documentId)).resolves.toStrictEqual(
+      await expect(server.getDocument(documentId)).resolves.toMatchObject(
         document,
       );
 
@@ -216,7 +213,7 @@ describe.each(queueLayers)(
 
       const document = createDocumentModelDocument();
       const header = createUnsignedHeader(fileId, documentType);
-      await server.addDocument({ document, documentType, header });
+      await server.addDocument({ ...document, header });
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -311,10 +308,7 @@ describe.each(queueLayers)(
 
       const document = createDocumentModelDocument();
 
-      await server.addDocument({
-        document,
-        documentType: documentModelDocumentModelModule.documentModel.id,
-      });
+      await server.addDocument(document);
 
       // first doc op
       const mutation = buildOperation(

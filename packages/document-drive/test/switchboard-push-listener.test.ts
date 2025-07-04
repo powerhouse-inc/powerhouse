@@ -127,10 +127,7 @@ describe("SwitchboardPush Listener", () => {
 
     const document = documentModelDocumentModelModule.utils.createDocument();
     const documentId = document.header.id;
-    await server.addDocument({
-      document,
-      documentType: document.header.documentType,
-    });
+    await server.addDocument(document);
 
     const action = DriveActions.addFile({
       id: documentId,

@@ -69,26 +69,32 @@ export type RemoteDriveOptions = DocumentDriveLocalState & {
 /**
  * @deprecated In the future we will disallow this. Use the header field instead.
  */
-export type LegacyCreateDocumentInputId = {
+export type LegacyCreateDocumentInput = {
   /**
    * @deprecated In the future we will disallow this. Use the header field instead.
    */
   id: string;
+  documentType: string;
 };
 
-export type CreateDocumentInput<TDocument extends PHDocument> = {
+export type CreateDocumentInputWithDocument<TDocument extends PHDocument> = {
+  document: TDocument;
+};
+
+export type CreateDocumentInputWithHeader = {
+  header: PHDocumentHeader;
+};
+
+export type CreateDocumentInputWithDocumentId = {
   documentType: string;
-  document?: TDocument;
-} &
+};
+
+export type CreateDocumentInput<TDocument extends PHDocument> =
   // eslint-disable-next-line @typescript-eslint/no-deprecated
-  (| LegacyCreateDocumentInputId
-    | {
-        /**
-         * This is the preferred way to provide an id or other header fields.
-         */
-        header?: PHDocumentHeader;
-      }
-  );
+  | LegacyCreateDocumentInput
+  | CreateDocumentInputWithDocument<TDocument>
+  | CreateDocumentInputWithHeader
+  | CreateDocumentInputWithDocumentId;
 
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
@@ -396,7 +402,7 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DocumentDriveDocument["header"]["id"]>;
 
   addDocument<TDocument extends PHDocument>(
-    input: CreateDocumentInput<TDocument>,
+    input: TDocument,
     preferredEditor?: string,
   ): Promise<TDocument>;
   deleteDocument(documentId: string): Promise<void>;
