@@ -2,31 +2,27 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { generateId } from "document-model";
-import type {
-  ProcessorOptions,
-  ProcessorSetupArgs,
-  ProcessorUpdate,
-} from "@powerhousedao/reactor-api";
+import { BaseOperationalProcessor } from "document-drive/processors/operational-processor";
+import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
-import { OperationalProcessor } from "document-drive/processors/operational-processor.js";
 %><% }); _%>
 <% if(documentTypes.length === 0) { %>import { PHDocument } from "document-model";<% } %>
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
-export class <%= pascalName %>Processor extends OperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+export class <%= pascalName %>Processor extends BaseOperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
 
   async initAndUpgrade(): Promise<void> {
     await this.operationalStore.schema
-      .createTable("index_search_op")
-      .column("id", "integer", { primaryKey: true, autoIncrement: true })
-      .column("documentId", "text", { notNullable: true })
+      .createTable("todo") // TODO
+      .addColumn("id", "varchar")
       .ifNotExists()
       .execute();
   }
 
-  async onStrands(strands: ProcessorUpdate<DocumentType>[]): Promise<void> {
+  async onStrands(
+    strands: InternalTransmitterUpdate<DocumentType>[],
+  ): Promise<void> {
     if (strands.length === 0) {
       return;
     }
@@ -38,9 +34,12 @@ export class <%= pascalName %>Processor extends OperationalProcessor<% if(docume
 
       for (const operation of strand.operations) {
         console.log(">>> ", operation.type);
-        await this.operationalStore("index_search_op").insert({
-          documentId: strand.documentId,
-        });
+        await this.operationalStore
+          .insertInto("todo")
+          .values({
+            id: strand.documentId,
+          })
+          .execute();
       }
     }
   }
