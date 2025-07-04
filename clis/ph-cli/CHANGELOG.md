@@ -1,3 +1,13 @@
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🩹 Fixes
+
+- **ph-cli,ph-cmd:** avoid lint error when import generated version file ([59fbddb3f](https://github.com/powerhouse-inc/powerhouse/commit/59fbddb3f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features

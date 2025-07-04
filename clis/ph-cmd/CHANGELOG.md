@@ -1,3 +1,17 @@
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🚀 Features
+
+- **ph-cmd:** support shorthand package manager flags and fallback to lockfile resolver on ph use ([b915ccae6](https://github.com/powerhouse-inc/powerhouse/commit/b915ccae6))
+
+### 🩹 Fixes
+
+- **ph-cli,ph-cmd:** avoid lint error when import generated version file ([59fbddb3f](https://github.com/powerhouse-inc/powerhouse/commit/59fbddb3f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features

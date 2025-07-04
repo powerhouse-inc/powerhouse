@@ -1,3 +1,13 @@
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🩹 Fixes
+
+- **document-drive:** use async fs methods to avoid blocking the event loop ([795c486e4](https://github.com/powerhouse-inc/powerhouse/commit/795c486e4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features

@@ -1,3 +1,15 @@
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🚀 Features
+
+- renamed reactor-analytics to processor-manager ([22e7b245a](https://github.com/powerhouse-inc/powerhouse/commit/22e7b245a))
+- **connect:** enable external processors ([274ca7251](https://github.com/powerhouse-inc/powerhouse/commit/274ca7251))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features
