@@ -1,5 +1,5 @@
 import { type GetDocumentOptions } from 'document-drive';
-import { type PHDocumentHeader, type PHDocument } from 'document-model';
+import { type PHDocument, type PHDocumentHeader } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
@@ -40,7 +40,7 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
         const getDocumentsPromise = documentIds.map<
             Promise<[string, PHDocument]>
         >(async documentId => {
-            const document = await openFile(_driveId, documentId);
+            const document = await openFile(documentId);
             return [documentId, document];
         });
 
@@ -84,29 +84,32 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
     }, [driveId]);
 
     useEffect(() => {
-        const removeListener = onOperationsAdded(
-            (driveId, documentId, operations) => {
-                const deletedNodes: string[] = [];
+        if (!driveId) {
+            return;
+        }
 
-                if (driveId === driveId && !documentId) {
-                    const deletedNodesIds = operations
-                        .filter(op => op.type === DELETE_NODE_OPERATION_TYPE)
-                        .map(op => (op.input as DeleteOperationInput).id);
+        const removeListener = onOperationsAdded((documentId, operations) => {
+            const deletedNodes: string[] = [];
 
-                    deletedNodes.push(...deletedNodesIds);
-                }
+            if (documentId === driveId) {
+                const deletedNodesIds = operations
+                    .filter(op => op.type === DELETE_NODE_OPERATION_TYPE)
+                    .map(op => (op.input as DeleteOperationInput).id);
 
-                if (driveId === driveId) {
-                    const docId = documentId ? [documentId] : undefined;
-                    fetchDocuments(driveId, docId, deletedNodes).catch(
-                        console.error,
-                    );
-                }
-            },
-        );
+                deletedNodes.push(...deletedNodesIds);
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (documents[documentId]) {
+                const docId = documentId ? [documentId] : undefined;
+                fetchDocuments(driveId, docId, deletedNodes).catch(
+                    console.error,
+                );
+            }
+        });
 
         return removeListener;
-    }, [onOperationsAdded, driveId]);
+    }, [onOperationsAdded, documents, driveId]);
 
     return [documents, fetchDocuments] as const;
 }

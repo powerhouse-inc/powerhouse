@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import { describe, it } from "vitest";
 import {
   DocumentModelDocument,
@@ -7,6 +8,7 @@ import {
 import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
 import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
+import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
 import InMemoryCache from "../src/cache/memory.js";
 import { addListener } from "../src/drive-document-model/gen/creators.js";
 import {
@@ -20,8 +22,7 @@ import {
 } from "../src/drive-document-model/gen/reducer.js";
 import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { generateAddNodeAction } from "../src/drive-document-model/src/utils.js";
-import { BaseQueueManager } from "../src/queue/base.js";
+import { EventQueueManager } from "../src/queue/event.js";
 import { IQueueManager } from "../src/queue/types.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import {
@@ -39,7 +40,8 @@ const documentModels = [
 ] as DocumentModelModule[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
-  ["Memory Queue", () => Promise.resolve(new BaseQueueManager())],
+  // ["Memory Queue", () => Promise.resolve(new BaseQueueManager(3))],
+  ["Memory Event Queue", () => Promise.resolve(new EventQueueManager(2))],
   /*[
     "Redis Queue",
     async () => {
@@ -87,37 +89,27 @@ describe.each(queueLayers)(
       drive: DocumentDriveDocument,
       queue = true,
     ) => {
-      const promisses: Promise<IOperationResult<DocumentDriveDocument>>[] = [];
+      const promisses: Promise<IOperationResult>[] = [];
       for (let i = 0; i < ADD_OPERATIONS_TO_DRIVE; i++) {
         const id = generateId();
         drive = reducer(
           drive,
-          generateAddNodeAction(
-            drive.state.global,
-            {
-              id,
-              name: id,
-              documentType: documentModelDocumentModelModule.documentModel.id,
-            },
-            ["global", "local"],
-          ),
+          addFile({
+            id,
+            name: id,
+            documentType: documentModelDocumentModelModule.documentModel.id,
+          }),
         );
         promisses.push(
           queue
-            ? server.queueDriveOperations(
-                drive.header.id,
-                drive.operations.global,
-              )
-            : server.addDriveOperations(
-                drive.header.id,
-                drive.operations.global,
-              ),
+            ? server.queueOperations(drive.header.id, drive.operations.global)
+            : server.addOperations(drive.header.id, drive.operations.global),
         );
       }
       return Promise.all(promisses);
     };
 
-    it("block document queue until ADD_FILE is processed", async ({
+    it("does not block document queue until ADD_FILE is processed", async ({
       expect,
     }) => {
       const documentId = generateId();
@@ -131,20 +123,21 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
 
       const driveId = drive.header.id;
+      const documentType = documentModelDocumentModelModule.documentModel.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: documentId,
           name: "file 1",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
-          synchronizationUnits: [
-            { syncId: "1", scope: "global", branch: "main" },
-          ],
+          documentType,
         }),
       ]);
 
       const document = createDocumentModelDocument();
+      const header = createUnsignedHeader(documentId, documentType);
+      document.header = header;
+      await server.addDocument(document);
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -154,18 +147,13 @@ describe.each(queueLayers)(
       );
 
       // queue mutation
-      const documentResult = server.queueOperations(driveId, documentId, [
-        mutation,
-      ]);
-      await expect(
-        server.getDocument(driveId, documentId),
-      ).rejects.toThrowError(`Document with id ${documentId} not found`);
+      const documentResult = server.queueOperations(documentId, [mutation]);
+      await expect(server.getDocument(documentId)).resolves.toMatchObject(
+        document,
+      );
 
       // now queue add file
-      const results = await server.queueDriveOperations(
-        driveId,
-        driveOperations,
-      );
+      const results = await server.queueOperations(driveId, driveOperations);
 
       const errors = [results, await documentResult].filter((r) => !!r.error);
       if (errors.length) {
@@ -188,14 +176,10 @@ describe.each(queueLayers)(
           kind: "file",
           parentFolder: folderId,
           documentType: documentModelDocumentModelModule.documentModel.id,
-          synchronizationUnits: [
-            { syncId: "1", scope: "global", branch: "main" },
-          ],
         }),
       ]);
 
       const docModelDocument = (await server.getDocument(
-        driveId,
         documentId,
       )) as DocumentModelDocument;
       expect(docModelDocument.state.global.name).toBe("foo");
@@ -216,20 +200,20 @@ describe.each(queueLayers)(
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
+      const documentType = documentModelDocumentModelModule.documentModel.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: fileId,
           name: "file 1",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
-          synchronizationUnits: [
-            { syncId: "1", scope: "global", branch: "main" },
-          ],
+          documentType,
         }),
       ]);
 
       const document = createDocumentModelDocument();
+      const header = createUnsignedHeader(fileId, documentType);
+      await server.addDocument({ ...document, header });
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
         document,
@@ -238,10 +222,13 @@ describe.each(queueLayers)(
         }),
       );
 
-      const results = await Promise.all([
-        server.queueOperations(driveId, fileId, [mutation]),
-        server.queueDriveOperations(driveId, driveOperations),
-        server.queueDriveOperations(driveId, [
+      const results = [
+        server.queueOperations(fileId, [mutation]),
+        server.queueOperations(driveId, driveOperations),
+      ];
+      await setTimeout();
+      results.push(
+        server.queueOperations(driveId, [
           buildOperation(
             reducer,
             drive,
@@ -251,9 +238,9 @@ describe.each(queueLayers)(
             }),
           ),
         ]),
-      ]);
+      );
 
-      const errors = results
+      const errors = (await Promise.all(results))
         .flat()
         .filter((r) => !!(r as IOperationResult).error);
       if (errors.length) {
@@ -276,9 +263,6 @@ describe.each(queueLayers)(
             kind: "file",
             parentFolder: folderId,
             documentType: documentModelDocumentModelModule.documentModel.id,
-            synchronizationUnits: [
-              { syncId: "1", scope: "global", branch: "main" },
-            ],
           }),
           expect.objectContaining({
             id: folderId2,
@@ -296,14 +280,20 @@ describe.each(queueLayers)(
         drive.state.global.nodes.findIndex((n) => n.id === folderId),
       );
 
+      // add folder 2 operation has to be processed before add folder 1
+      expect(
+        drive.state.global.nodes.findIndex((n) => n.id === folderId2),
+      ).toBeGreaterThan(
+        drive.state.global.nodes.findIndex((n) => n.id === folderId),
+      );
+
       const docModelDocument = (await server.getDocument(
-        driveId,
         fileId,
       )) as DocumentModelDocument;
       expect(docModelDocument.state.global.name).toBe("foo");
     });
 
-    it("it blocks a document queue when the drive queue processes a delete node operation", async ({
+    it("does not block a document queue when the drive queue processes a delete node operation", async ({
       expect,
     }) => {
       const queue = await buildQueue();
@@ -317,6 +307,8 @@ describe.each(queueLayers)(
       const driveId = drive.header.id;
 
       const document = createDocumentModelDocument();
+
+      await server.addDocument(document);
 
       // first doc op
       const mutation = buildOperation(
@@ -337,44 +329,41 @@ describe.each(queueLayers)(
       );
 
       // add file op
+      const nodeId = document.header.id;
       const driveOperations = buildOperations(reducer, drive, [
         addFile({
-          id: "file 1",
+          id: nodeId,
           name: "file 1",
           parentFolder: "folder 1",
           documentType: documentModelDocumentModelModule.documentModel.id,
-          synchronizationUnits: [
-            { syncId: "1", scope: "global", branch: "main" },
-          ],
         }),
       ]);
 
       // queue addFile and first doc op
       const results1 = await Promise.all([
-        server.queueDriveOperations(driveId, driveOperations),
-        server.queueOperations(driveId, "file 1", [mutation]),
+        server.queueOperations(driveId, driveOperations),
+        server.queueOperations(nodeId, [mutation]),
       ]);
 
       const errors = results1
         .flat()
         .filter((r) => !!(r as IOperationResult).error);
-      if (errors.length) {
-        errors.forEach((error) => console.error(error));
-      }
-
+      expect(errors.length).toBe(0);
       // delete node op
       drive = await server.getDrive(driveId);
       const deleteNodeOps = buildOperations(documentDriveReducer, drive, [
-        deleteNode({ id: "file 1" }),
+        deleteNode({ id: nodeId }),
       ]);
 
       // queue delete node op
-      await server.queueDriveOperations(driveId, deleteNodeOps);
+      await server.queueOperations(driveId, deleteNodeOps);
       // ==> receives deleteNode and addFile operation?
 
       await expect(
-        server.queueOperations(driveId, "file 1", [mutation2]),
-      ).rejects.toThrowError("Queue is deleted");
+        server.queueOperations(nodeId, [mutation2]),
+      ).resolves.toMatchObject({
+        document: { state: { global: { name: "bar" } } },
+      });
 
       drive = await server.getDrive(driveId);
       expect(drive.state.global.nodes).toStrictEqual([]);
@@ -469,7 +458,7 @@ describe.each(queueLayers)(
           system: true,
         },
       });
-      const result = await server.queueDriveAction(driveId, action);
+      const result = await server.queueAction(driveId, action);
       const drive2 = await server.getDrive(driveId);
 
       expect(drive2.state.local.listeners.length).toBe(1);

@@ -14,9 +14,8 @@ import {
   useUiNodesContext,
 } from "@powerhousedao/reactor-browser/hooks/useUiNodesContext";
 import { type DocumentDriveDocument } from "document-drive";
-import { type DocumentModelModule } from "document-model";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 /* import { useDocuments, useSelectedDocument } from "../../state/documents.js";
 import { useDrives, useSelectedDrive } from "../../state/drives.js";
 import { useSelectedFolder } from "../../state/folders.js";
@@ -74,7 +73,6 @@ export function BaseEditor(props: IProps) {
   );
 
   const {
-    addDocument,
     addFile,
     addFolder,
     renameNode,
@@ -83,20 +81,6 @@ export function BaseEditor(props: IProps) {
     copyNode,
     duplicateNode,
   } = useDriveActionsWithUiNodes(document, dispatch);
-
-  const onCreateDocument = useCallback(
-    async (documentModel: DocumentModelModule) => {
-      const { name } = await showCreateDocumentModal(documentModel);
-      const document = documentModel.utils.createDocument();
-      await addDocument(
-        name,
-        documentModel.documentModel.name,
-        document,
-        selectedNode?.id,
-      );
-    },
-    [addDocument, showCreateDocumentModal, selectedNode?.id],
-  );
 
   const { isDropTarget: isDropTargetFolder, dropProps: dropPropsFolder } =
     useDrop({
@@ -159,7 +143,7 @@ export function BaseEditor(props: IProps) {
         {isAllowedToCreateDocuments && (
           <CreateDocument
             documentModels={documentModels}
-            createDocument={onCreateDocument}
+            createDocument={showCreateDocumentModal}
           />
         )}
       </DriveLayout.Footer>

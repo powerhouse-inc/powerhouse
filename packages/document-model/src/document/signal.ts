@@ -1,33 +1,18 @@
-import { type PHDocumentHeader } from "./ph-types.js";
-import { type OperationScope, type PHDocument } from "./types.js";
+import { type PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;
   input: TInput;
 }
 
-export type SynchronizationUnitInput = {
-  syncId: string;
-  scope: OperationScope;
-  branch: string;
+export type ISignalResult<TTYpe, TInput, TResult> = {
+  signal: { type: TTYpe; input: TInput };
+  result: TResult;
 };
 
-export type CreateChildDocumentInput<
-  TDocument extends PHDocument = PHDocument,
-> = {
+export type CreateChildDocumentInput = {
+  id: string;
   documentType: string;
-
-  /**
-   * @deprecated In the future we will disallow this. Use the header field instead.
-   */
-  id?: string;
-
-  /**
-   * This is the preferred way to provide an id or other header fields.
-   */
-  header?: PHDocumentHeader;
-  document?: TDocument;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CreateChildDocumentSignal = ISignal<
@@ -47,7 +32,6 @@ export type DeleteChildDocumentSignal = ISignal<
 export type CopyChildDocumentInput = {
   id: string;
   newId: string;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type CopyChildDocumentSignal = ISignal<
@@ -57,7 +41,32 @@ export type CopyChildDocumentSignal = ISignal<
 
 export type Signal =
   | CreateChildDocumentSignal
-  | DeleteChildDocumentSignal
-  | CopyChildDocumentSignal;
+  | CopyChildDocumentSignal
+  | DeleteChildDocumentSignal;
 
 export type SignalDispatch = (signal: Signal) => void;
+
+export type SignalResult =
+  | ISignalResult<
+      CreateChildDocumentSignal["type"],
+      CreateChildDocumentSignal["input"],
+      PHDocument
+    >
+  | ISignalResult<
+      CopyChildDocumentSignal["type"],
+      CopyChildDocumentSignal["input"],
+      boolean
+    >
+  | ISignalResult<
+      DeleteChildDocumentSignal["type"],
+      DeleteChildDocumentSignal["input"],
+      PHDocument
+    >;
+
+export type SignalResults = {
+  CREATE_CHILD_DOCUMENT: PHDocument;
+  COPY_CHILD_DOCUMENT: PHDocument;
+  DELETE_CHILD_DOCUMENT: boolean;
+};
+
+export type SignalType<T extends Signal> = T["type"];

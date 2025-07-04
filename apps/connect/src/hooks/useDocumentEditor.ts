@@ -24,7 +24,7 @@ export function useDocumentEditor(props: DocumentEditorProps) {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
 
-    const doc = useDocument(reactor, { documentId, driveId, documentType });
+    const doc = useDocument(reactor, { documentId, documentType });
 
     const documentEditorProps = useDocumentEditorProps(reactor, {
         nodeId: documentId,

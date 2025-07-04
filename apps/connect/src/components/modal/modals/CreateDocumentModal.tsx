@@ -54,7 +54,6 @@ export const CreateDocumentModal: React.FC<
                 parentFolder: selectedParentNode.id,
                 driveId: selectedParentNode.driveId,
                 syncStatus: selectedParentNode.syncStatus,
-                synchronizationUnits: [],
                 sharingType: selectedParentNode.sharingType,
             });
         }

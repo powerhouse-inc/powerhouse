@@ -1,11 +1,10 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true
+    "composite": true,
+    "types": ["node"]
   },
-  "files": [
-    "src/custom.d.ts"
-  ],
+  "files": ["src/custom.d.ts"],
   "references": [
     {
       "path": "tsconfig.lib.json"

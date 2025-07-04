@@ -135,7 +135,8 @@ describe("DriveSubgraph", () => {
   });
 
   it("should return document data", async () => {
-    const mockDocumentData = driveDocumentModelModule.utils.createDocument();
+    const mockDocumentData = driveDocumentModelModule.utils.createDocument({});
+    mockDocumentData.header.slug = "test-document-id";
 
     // {
     //   id: "test-document-id",
@@ -148,7 +149,7 @@ describe("DriveSubgraph", () => {
 
     const mockReactor = {
       getDrive: vi.fn(),
-      getDocuments: vi.fn(),
+      getDocuments: vi.fn().mockResolvedValue([mockDocumentData.header.id]),
       getDocument: vi.fn().mockResolvedValue(mockDocumentData),
       getDocumentModelModules: vi.fn().mockReturnValue([
         {
@@ -158,7 +159,7 @@ describe("DriveSubgraph", () => {
       listeners: {
         setListener: vi.fn(),
       },
-      getDriveIdBySlug: vi.fn().mockResolvedValue("test-drive-id"),
+      getDriveIdBySlug: vi.fn().mockResolvedValue(mockDocumentData.header.id),
     };
 
     const mockSubgraphArgs = {
@@ -168,7 +169,7 @@ describe("DriveSubgraph", () => {
     const driveSubgraph = new DriveSubgraph(mockSubgraphArgs as any);
 
     const context = {
-      driveId: "test-drive-id",
+      driveId: mockDocumentData.header.id,
     };
 
     const document = await (driveSubgraph.resolvers.Query as any)?.document(
@@ -193,8 +194,9 @@ describe("DriveSubgraph", () => {
       id: mockDocumentData.header.id,
     });
 
+    expect(mockReactor.getDocuments).toHaveBeenCalledWith(context.driveId);
+
     expect(mockReactor.getDocument).toHaveBeenCalledWith(
-      context.driveId,
       mockDocumentData.header.id,
     );
   });

@@ -33,7 +33,7 @@ export function useDocumentsState(args: {
       const ids = documentIds ?? (await reactor.getDocuments(driveId));
       const statesByDocumentId: Record<string, HookState> = {};
       for (const id of ids) {
-        const document = await reactor.getDocument(driveId, id, options);
+        const document = await reactor.getDocument(id, options);
         statesByDocumentId[id] = {
           ...document.state,
           documentType: document.header.documentType,
@@ -60,7 +60,6 @@ export function useDocumentsState(args: {
         return;
 
       const updatedDocument = await reactor.getDocument(
-        driveId,
         update.documentId,
         options,
       );

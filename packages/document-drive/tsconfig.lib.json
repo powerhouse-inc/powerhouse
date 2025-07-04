@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+  },
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../codegen"
+    }
+  ],
+  "include": ["src", "index.ts"],
+}

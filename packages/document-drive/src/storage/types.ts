@@ -6,10 +6,57 @@ import type {
   PHDocument,
 } from "document-model";
 
+export type IStorageUnit = {
+  /** The id of the document. If '*' then select all. */
+  documentId: string;
+  /** The type of the document model. If '*' then select all. */
+  documentModelType: string;
+  /** The scope of the document. If '*' then select all. */
+  scope: string;
+  /** The branch of the document. If '*' then select all. */
+  branch: string;
+};
+
+export type IStorageUnitFilter = {
+  /** The ids of the parent documents. If '*' then select all. */
+  parentId?: string[];
+  /** The ids of the documents. If '*' then select all. */
+  documentId?: string[];
+  /** The types of the document models. If '*' then select all. */
+  documentModelType?: string[];
+  /** The scopes of the documents. If '*' then select all. */
+  scope?: string[];
+  /** The branches of the documents. If '*' then select all. */
+  branch?: string[];
+};
+
+// values either have a set of values or null if there are no restrictions
+export type ResolvedStorageUnitFilter = Required<{
+  [K in keyof IStorageUnitFilter]: Set<string> | null;
+}>;
+
+export interface IStorageUnitStorage {
+  /**
+   * Finds storage units based on the provided filter.
+   *
+   * @param filter - The filter to apply.
+   * @param limit - The maximum number of documents to return.
+   * @param cursor - The cursor to start the search from.
+   */
+  findStorageUnitsBy: (
+    filter: IStorageUnitFilter,
+    limit: number,
+    cursor?: string,
+  ) => Promise<{
+    units: IStorageUnit[];
+    nextCursor?: string;
+  }>;
+}
+
 /**
  * Describes the storage interface for documents.
  */
-export interface IDocumentStorage {
+export interface IDocumentStorage extends IStorageUnitStorage {
   /**
    * Resolves a list of ids from a list of slugs.
    *
@@ -144,14 +191,12 @@ export interface IDocumentAdminStorage extends IDocumentStorage {
  */
 export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
-    drive: string,
     id: string,
     operations: OperationFromDocument<TDocument>[],
     document: PHDocument,
   ): Promise<void>;
 
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
-    drive: string,
     id: string,
     callback: (document: TDocument) => Promise<{
       operations: OperationFromDocument<TDocument>[];
@@ -160,7 +205,6 @@ export interface IDocumentOperationStorage {
   ): Promise<void>;
 
   getOperationResultingState?(
-    drive: string,
     id: string,
     index: number,
     scope: string,
@@ -170,6 +214,7 @@ export interface IDocumentOperationStorage {
   getSynchronizationUnitsRevision(units: SynchronizationUnitQuery[]): Promise<
     {
       documentId: string;
+      documentType: string;
       scope: string;
       branch: string;
       lastUpdated: string;

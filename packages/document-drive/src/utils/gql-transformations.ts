@@ -1,5 +1,9 @@
 import { type DocumentDriveDocument } from "document-drive";
-import { type Operation, type PHDocument } from "document-model";
+import {
+  type Operation,
+  type PHDocument,
+  type PHDocumentHeader,
+} from "document-model";
 
 export function responseForDrive(drive: DocumentDriveDocument) {
   return {
@@ -11,14 +15,23 @@ export function responseForDrive(drive: DocumentDriveDocument) {
   };
 }
 
+export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
+  id: string;
+  revision: number;
+  __typename: string;
+  state: unknown;
+  initialState: unknown;
+  stateJSON: unknown;
+  operations: Operation[];
+};
+
 export function responseForDocument(
   document: PHDocument,
   typeName: string,
-): any {
+): PHDocumentGQL {
   return {
-    ...document,
-    id: document.header.id,
-    revision: document.header.revision,
+    ...document.header,
+    revision: document.header.revision.global,
     state: document.state.global,
     stateJSON: document.state.global,
     operations: document.operations.global.map((op: Operation) => ({
