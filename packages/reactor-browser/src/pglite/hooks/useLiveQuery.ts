@@ -13,6 +13,7 @@ export function useLiveQuery<Schema, T = unknown>(
   queryCallback: (db: Kysely<Schema>) => QueryCallbackReturnType,
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
+  const [queryLoading, setQueryLoading] = useState(true);
 
   const pglite = usePGliteDB();
   const operationalDB = useOperationalDB<Schema>();
@@ -26,6 +27,7 @@ export function useLiveQuery<Schema, T = unknown>(
 
       live = pglite.db.live.query(sql, [], (result) => {
         setResult(result);
+        setQueryLoading(false);
       });
     }
 
@@ -35,7 +37,7 @@ export function useLiveQuery<Schema, T = unknown>(
   }, [operationalDB.db, pglite.db, queryCallback]);
 
   return {
-    isLoading: pglite.isLoading || operationalDB.isLoading,
+    isLoading: pglite.isLoading || operationalDB.isLoading || queryLoading,
     error: pglite.error || operationalDB.error,
     result,
   } as const;
