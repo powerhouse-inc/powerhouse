@@ -1,24 +1,27 @@
 // TODO: remove this
-import { useOperationalQuery } from '@powerhousedao/reactor-browser/pglite';
-
-type DataBase = {
-    AnalyticsSeries: { id: string };
-};
+import { createTypedQuery } from '@powerhousedao/reactor-browser/pglite';
 
 const selectAllDataSql = `
 SELECT * FROM test_table
 `;
 
-export function useTestOperationalQuery() {
-    const result = useOperationalQuery<DataBase>(db => {
-        db.selectFrom('AnalyticsSeries').selectAll().compile();
+type TestDatabase = {
+    test_table: {
+        id: number;
+        name: string;
+    };
+};
 
-        return {
-            sql: selectAllDataSql,
-            parameters: [],
-            query: {},
-            queryId: '123',
-        };
+const useTypedQuery = createTypedQuery<TestDatabase>();
+
+export function useTestOperationalQuery() {
+    // const pglite = usePGliteDB();
+    // const result = pglite.db?.live?.query(selectAllDataSql, [], result => {
+    //     console.log('>>> result', result);
+    // });
+
+    const result = useTypedQuery(db => {
+        return db.selectFrom('test_table').selectAll().compile();
     });
 
     console.log('>>> result', result);

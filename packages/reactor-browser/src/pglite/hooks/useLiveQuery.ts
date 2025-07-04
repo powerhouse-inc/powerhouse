@@ -7,21 +7,22 @@ import { useEffect, useState } from "react";
 import { useOperationalDB } from "./useOperationalDB.js";
 import { usePGliteDB } from "./usePGlite.js";
 
-type OperationalQueryCallback<Schema> = (db: Kysely<Schema>) => CompiledQuery;
-
-export const useOperationalQuery = <Schema>(
-  queryCallback: OperationalQueryCallback<Schema>,
-) => {
-  const [result, setResult] = useState<LiveQueryResults<unknown> | null>(null);
+export function useLiveQuery<Schema, T = unknown>(
+  queryCallback: (db: Kysely<Schema>) => CompiledQuery<T>,
+) {
+  const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
 
   const pglite = usePGliteDB();
   const operationalDB = useOperationalDB<Schema>();
 
   useEffect(() => {
-    let live: Promise<LiveQuery<unknown> | null> = Promise.resolve(null);
+    let live: Promise<LiveQuery<T> | null> = Promise.resolve(null);
 
     if (operationalDB.db && pglite.db) {
-      const { sql } = queryCallback(operationalDB.db);
+      const compiledQuery = queryCallback(operationalDB.db);
+      const { sql } = compiledQuery;
+
+      console.log(">>> pglite:hook", pglite);
 
       live = pglite.db.live.query(sql, [], (result) => {
         setResult(result);
@@ -31,11 +32,11 @@ export const useOperationalQuery = <Schema>(
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [operationalDB.db, pglite.db]);
+  }, [operationalDB.db, pglite.db, queryCallback]);
 
   return {
     isLoading: pglite.isLoading || operationalDB.isLoading,
     error: pglite.error || operationalDB.error,
     result,
-  };
-};
+  } as const;
+}
