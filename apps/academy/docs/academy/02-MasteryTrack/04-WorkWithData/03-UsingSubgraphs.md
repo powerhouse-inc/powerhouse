@@ -1,4 +1,4 @@
-# Working with subgraphs
+# Using Subgraphs
 
 This tutorial will demonstrate how to create and customize a subgraph using our To-do List project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
@@ -60,7 +60,7 @@ Loaded templates: node_modules/@powerhousedao/codegen/dist/codegen/.hygen/templa
 2. The subgraph was automatically registered in your project's registry
 3. Basic boilerplate code was generated with an example query
 
-If we now run 'phreactor' we will see the new subgraph being registered during the startup of the Reactor.
+If we now run `ph reactor` we will see the new subgraph being registered during the startup of the Reactor.
   > Registered /todolist subgraph.
 
 ## 2. Customizing your subgraph with a schema
@@ -70,7 +70,7 @@ Now that we've generated our subgraph, let's open it and define the schema insid
 ### 2.1 Define the schema
 
 Here we define the schema (typeDefs) which defines the structure of your queries and mutations.
-For educational purposes we will define a simple query that mimics the functionality of the todoList interface (or editor): 
+For educational purposes we will define a simple query that mimics the functionality of the To-do List interface (or editor): 
 - Returns the total number of todo's
 - The number of todo's that are checked
 - The number of todo's that are not checked

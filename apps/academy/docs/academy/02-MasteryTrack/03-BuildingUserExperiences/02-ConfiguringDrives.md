@@ -66,7 +66,7 @@ You can also add a new remote drive to your Connect environment programmatically
   `bash
   ph reactor
   `
-- The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql/system` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs).
+- The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql/system` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/MasteryTrack/WorkWithData/UsingSubgraphs).
 - Appropriate permissions to perform mutations.
 :::
 
@@ -143,6 +143,6 @@ This approach allows you to automate drive creation and integration with other s
 You've now experienced the use of GraphQL to modify or read data captured in Powerhouse for the first time. 
 You can now either continue with:
 - User interfaces and [build a custom drive experiences](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) 
-- Keep playing with data and the [Switchboard API](/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI)
+- Keep playing with data and the [Switchboard API](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 
 Enjoy!
