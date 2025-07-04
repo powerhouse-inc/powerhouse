@@ -1,5 +1,6 @@
 // TODO: remove this
 import { createTypedQuery } from '@powerhousedao/reactor-browser/pglite';
+import { useEffect, useState } from 'react';
 
 const selectAllDataSql = `
 SELECT * FROM test_table
@@ -15,16 +16,35 @@ type TestDatabase = {
 const useTypedQuery = createTypedQuery<TestDatabase>();
 
 export function useTestOperationalQuery() {
-    // const pglite = usePGliteDB();
-    // const result = pglite.db?.live?.query(selectAllDataSql, [], result => {
-    //     console.log('>>> result', result);
+    // Example of static query (no parameters)
+    // const staticResult = useTypedQuery(db => {
+    //     return db.selectFrom('test_table').selectAll().compile();
     // });
 
-    const result = useTypedQuery(db => {
-        return db.selectFrom('test_table').selectAll().compile();
-    });
+    // Example of parameterized query - no need for manual useMemo anymore!
 
-    console.log('>>> result', result);
+    const [id, setId] = useState(1);
 
-    return result;
+    useEffect(() => {
+        setTimeout(() => {
+            setId(2);
+        }, 5000);
+    }, []);
+
+    const parameterizedResult = useTypedQuery(
+        (db, params) => {
+            return db
+                .selectFrom('test_table')
+                .selectAll()
+                .where('id', '=', params.id)
+                .compile();
+        },
+        { id },
+    );
+
+    // console.log('>>> static result', staticResult);
+    console.log('>>> parameterized result', parameterizedResult);
+
+    // For this example, return the parameterized result
+    return parameterizedResult;
 }
