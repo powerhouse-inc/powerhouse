@@ -8,7 +8,7 @@ unless_exists: true
  */
 
 import { type ProcessorRecord } from "document-drive/processors/types";
-import { type IProcessorHostModule } from "@powerhousedao/reactor-api";
+import { type IProcessorHostModule } from "document-drive/processors/types";
 
 // Import other processor factories here as they are generated
 
