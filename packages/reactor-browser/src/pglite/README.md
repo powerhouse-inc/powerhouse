@@ -16,8 +16,14 @@ This package provides a set of utilities and hooks for working with PGlite datab
   - [3. Use It in Your Component](#3-use-it-in-your-component)
 - [API Reference](#api-reference)
   - [createTypedQuery<Schema>()](#createtypedqueryschema)
+  - [Static Queries (no parameters)](#static-queries-no-parameters)
+  - [Parameterized Queries](#parameterized-queries)
   - [Query Callback](#query-callback)
   - [Return Value](#return-value)
+- [Dynamic Parameters](#dynamic-parameters)
+  - [Basic Parameterized Query](#basic-parameterized-query)
+  - [Parameters That Change Over Time](#parameters-that-change-over-time)
+  - [Automatic Memoization](#automatic-memoization)
 - [Usage Examples](#usage-examples)
   - [Basic Query](#basic-query)
   - [Query with Conditions](#query-with-conditions)
@@ -26,6 +32,7 @@ This package provides a set of utilities and hooks for working with PGlite datab
 - [Component Usage](#component-usage)
 - [Advanced Features](#advanced-features)
   - [Automatic Optimization](#automatic-optimization)
+  - [Smart Parameter Memoization](#smart-parameter-memoization)
   - [Type Safety](#type-safety)
   - [Loading States](#loading-states)
 - [Best Practices](#best-practices)
@@ -57,6 +64,8 @@ This package provides a set of utilities and hooks for working with PGlite datab
 - ⚡ **Automatic optimization** to prevent infinite re-renders
 - 🎯 **Simple API** that abstracts away complexity
 - 📦 **Flexible query format** - works with compiled queries or simple SQL strings
+- 🔄 **Dynamic parameters** - queries update automatically when parameters change
+- 🧠 **Smart memoization** - prevents unnecessary re-renders with deep parameter comparison
 
 ## Quick Start
 
@@ -89,10 +98,27 @@ const useTypedQuery = createTypedQuery<MyDatabase>();
 ### 3. Use It in Your Component
 
 ```typescript
+// Static query (no parameters)
 export function useUserList() {
   const result = useTypedQuery(db => {
     return db.selectFrom('users').selectAll().compile();
   });
+
+  return result;
+}
+
+// Dynamic query with parameters
+export function useUserById(userId: number) {
+  const result = useTypedQuery(
+    (db, params) => {
+      return db
+        .selectFrom('users')
+        .selectAll()
+        .where('id', '=', params.userId)
+        .compile();
+    },
+    { userId }
+  );
 
   return result;
 }
@@ -102,18 +128,34 @@ export function useUserList() {
 
 ### `createTypedQuery<Schema>()`
 
-Creates a typed query hook for your database schema.
+Creates a typed query hook for your database schema with support for both static and dynamic parameterized queries.
 
-**Returns:** A hook function that accepts a query callback and returns live query results.
+**Returns:** A hook function with two overloads - one for static queries and one for parameterized queries.
+
+#### Static Queries (no parameters)
+
+```typescript
+useQuery(queryCallback: (db: Kysely<Schema>) => QueryCallbackReturnType): QueryResult
+```
+
+#### Parameterized Queries
+
+```typescript
+useQuery(
+  queryCallback: (db: Kysely<Schema>, parameters: TParams) => QueryCallbackReturnType,
+  parameters: TParams
+): QueryResult
+```
 
 #### Query Callback
 
-The callback function receives a Kysely database instance and must return an object with a `sql` property.
+The callback function receives a Kysely database instance and optionally parameters. It must return an object with `sql` and optional `parameters` properties.
 
 ```typescript
-type QueryCallbackReturnType = { sql: string };
-
-type QueryCallback<Schema> = (db: Kysely<Schema>) => QueryCallbackReturnType;
+type QueryCallbackReturnType = { 
+  sql: string;
+  parameters?: readonly unknown[];
+};
 ```
 
 #### Return Value
@@ -124,6 +166,81 @@ type QueryCallback<Schema> = (db: Kysely<Schema>) => QueryCallbackReturnType;
   error: Error | null;   // Any error that occurred
   result: LiveQueryResults<T> | null; // Query results (live updates)
 }
+```
+
+## Dynamic Parameters
+
+One of the key features is support for dynamic parameters that automatically update your queries when they change.
+
+### Basic Parameterized Query
+
+```typescript
+export function useUserById(userId: number) {
+  const result = useTypedQuery(
+    (db, params) => {
+      return db
+        .selectFrom('users')
+        .selectAll()
+        .where('id', '=', params.userId)
+        .compile();
+    },
+    { userId } // Query updates when userId changes
+  );
+
+  return result;
+}
+```
+
+### Parameters That Change Over Time
+
+```typescript
+export function useSearchResults() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [category, setCategory] = useState('all');
+
+  // Query automatically updates when searchTerm or category changes
+  const result = useTypedQuery(
+    (db, params) => {
+      let query = db.selectFrom('products').selectAll();
+      
+      if (params.searchTerm) {
+        query = query.where('name', 'like', `%${params.searchTerm}%`);
+      }
+      
+      if (params.category !== 'all') {
+        query = query.where('category', '=', params.category);
+      }
+      
+      return query.compile();
+    },
+    { searchTerm, category }
+  );
+
+  return { result, setSearchTerm, setCategory };
+}
+```
+
+### Automatic Memoization
+
+Parameters are automatically memoized using deep comparison, so you don't need to wrap them in `useMemo`:
+
+```typescript
+// ✅ This works perfectly - no manual memoization needed
+const parameters = {
+  userId: user.id,
+  status: 'active',
+  limit: 10
+};
+
+const result = useTypedQuery((db, params) => {
+  return db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', params.userId)
+    .where('status', '=', params.status)
+    .limit(params.limit)
+    .compile();
+}, parameters);
 ```
 
 ## Usage Examples
@@ -146,13 +263,16 @@ const useUsers = () => {
 const useUserById = (userId: number) => {
   const useTypedQuery = createTypedQuery<MyDatabase>();
   
-  return useTypedQuery(db => {
-    return db
-      .selectFrom('users')
-      .selectAll()
-      .where('id', '=', userId)
-      .compile();
-  });
+  return useTypedQuery(
+    (db, params) => {
+      return db
+        .selectFrom('users')
+        .selectAll()
+        .where('id', '=', params.userId)
+        .compile();
+    },
+    { userId }
+  );
 };
 ```
 
@@ -233,13 +353,46 @@ export function UserList() {
 
 ### Automatic Optimization
 
-The hook automatically handles query optimization to prevent infinite re-renders:
+The hook automatically handles query optimization to prevent infinite re-renders, including smart parameter memoization:
 
 ```typescript
-// ✅ This is automatically optimized - no useCallback needed
+// ✅ Static queries - automatically optimized
 const result = useTypedQuery(db => {
   return db.selectFrom('users').selectAll().compile();
 });
+
+// ✅ Parameterized queries - parameters are automatically memoized
+const parameters = { status: 'active', limit: 10 };
+const result = useTypedQuery((db, params) => {
+  return db
+    .selectFrom('users')
+    .selectAll()
+    .where('status', '=', params.status)
+    .limit(params.limit)
+    .compile();
+}, parameters);
+```
+
+### Smart Parameter Memoization
+
+Parameters are automatically memoized using deep comparison, preventing unnecessary re-renders:
+
+```typescript
+// ✅ These won't cause re-renders (same content)
+const params1 = { id: 1, name: 'john' };
+const params2 = { id: 1, name: 'john' };
+
+// ✅ This will cause a re-render (different content)
+const params3 = { id: 2, name: 'john' };
+
+// ✅ No manual useMemo needed!
+const result = useTypedQuery((db, params) => {
+  return db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', params.id)
+    .compile();
+}, { id: userId, name: userName }); // Updates only when userId or userName changes
 ```
 
 ### Type Safety
@@ -335,21 +488,36 @@ const useEverything = () => useTypedQuery(db =>
 
 ### Common Issues
 
-1. **Infinite re-renders**: The hook automatically prevents this, but ensure you're not passing changing dependencies.
+1. **Infinite re-renders**: The hook automatically prevents this with smart parameter memoization. Parameters are compared by content, not reference.
 
-2. **Type errors**: Make sure your callback returns an object with a `sql` property.
+2. **Type errors**: Make sure your callback returns an object with a `sql` property and optional `parameters` array.
 
 3. **No data**: Check that your database is properly initialized and contains data.
+
+4. **Parameters not updating**: Ensure parameter objects have different content, not just different references.
 
 ### Debug Tips
 
 ```typescript
-// Add logging to debug your queries
+// Debug static queries
 const result = useTypedQuery(db => {
   const compiled = db.selectFrom('users').selectAll().compile();
   console.log('Query SQL:', compiled.sql);
   return compiled;
 });
+
+// Debug parameterized queries
+const result = useTypedQuery((db, params) => {
+  console.log('Query parameters:', params);
+  const compiled = db
+    .selectFrom('users')
+    .selectAll()
+    .where('id', '=', params.userId)
+    .compile();
+  console.log('Query SQL:', compiled.sql);
+  console.log('SQL parameters:', compiled.parameters);
+  return compiled;
+}, { userId });
 ```
 
 ## Hooks API Reference
