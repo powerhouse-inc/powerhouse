@@ -5,7 +5,8 @@ import {
     useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
 import {
-    PGliteAsyncProvider,
+    live,
+    useSetPGliteDB,
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { childLogger } from 'document-drive';
@@ -44,6 +45,9 @@ function createPgLiteFactoryWorker(databaseName: string) {
         const pgLiteWorker = new PGliteWorker(worker, {
             meta: {
                 databaseName,
+            },
+            extensions: {
+                live,
             },
         });
 
@@ -170,6 +174,40 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
         ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
         : undefined;
 
+    const setPGliteDB = useSetPGliteDB();
+
+    // Initialize and handle PGlite factory
+    useEffect(() => {
+        if (!pgLiteFactory) {
+            // If no factory, set to not loading with null db
+            setPGliteDB({
+                db: null,
+                isLoading: false,
+                error: null,
+            });
+            return;
+        }
+
+        // Resolve the factory
+        pgLiteFactory()
+            .then(db => {
+                setPGliteDB({
+                    db,
+                    isLoading: false,
+                    error: null,
+                });
+            })
+            .catch((err: unknown) => {
+                const error =
+                    err instanceof Error ? err : new Error(String(err));
+                setPGliteDB({
+                    db: null,
+                    isLoading: false,
+                    error,
+                });
+            });
+    }, []);
+
     const content = (
         <>
             {connectConfig.analytics.diffProcessorEnabled && (
@@ -192,9 +230,7 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
                 pgLiteFactory: pgLiteFactory,
             }}
         >
-            <PGliteAsyncProvider pgLiteFactory={pgLiteFactory}>
-                {content}
-            </PGliteAsyncProvider>
+            {content}
         </AnalyticsProvider>
     );
 }

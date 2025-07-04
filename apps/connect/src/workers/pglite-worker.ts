@@ -24,7 +24,7 @@ worker({
 
         const idbFs: IdbFs = new IdbFs(databaseName);
         // Create and return a PGlite instance
-        const db = new PGlite({
+        const db = PGlite.create({
             fs: idbFs,
             relaxedDurability: true,
             extensions: {
