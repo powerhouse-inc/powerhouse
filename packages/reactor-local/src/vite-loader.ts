@@ -1,11 +1,13 @@
 import {
   type IPackageLoader,
-  type IProcessorHostModule,
   isSubgraphClass,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import { childLogger } from "document-drive";
-import { type ProcessorFactory } from "document-drive/processors/types";
+import {
+  type IProcessorHostModule,
+  type ProcessorFactory,
+} from "document-drive/processors/types";
 import { type DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";

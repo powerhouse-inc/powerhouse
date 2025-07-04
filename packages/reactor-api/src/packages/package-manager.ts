@@ -1,7 +1,10 @@
 import { getConfig } from "@powerhousedao/config/utils";
 import { type SubgraphClass } from "@powerhousedao/reactor-api";
 import { childLogger, driveDocumentModelModule } from "document-drive";
-import { type ProcessorFactory } from "document-drive/processors/types";
+import {
+  type IProcessorHostModule,
+  type ProcessorFactory,
+} from "document-drive/processors/types";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -12,7 +15,6 @@ import type {
   IPackageLoader,
   IPackageManager,
   IPackageManagerOptions,
-  IProcessorHostModule,
   PackageManagerResult,
 } from "./types.js";
 export function getUniqueDocumentModels(

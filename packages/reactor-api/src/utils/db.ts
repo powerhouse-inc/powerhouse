@@ -1,10 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
 import knex, { type Knex } from "knex";
 import ClientPgLite from "knex-pglite";
+import { Kysely } from "kysely";
+import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
 
-export type Db = Knex;
+export type Db = Kysely<any>;
 
 function isPG(connectionString: string) {
   if (connectionString.startsWith("postgresql://")) {
@@ -13,9 +15,10 @@ function isPG(connectionString: string) {
   return false;
 }
 
-export function getDbClient(
-  connectionString: string | undefined = undefined,
-): Db {
+export function getDbClient(connectionString: string | undefined = undefined): {
+  db: Db;
+  knex: Knex;
+} {
   const isPg = connectionString && isPG(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
   const connection = isPg
@@ -30,10 +33,20 @@ export function getDbClient(
       fs.mkdirSync(dirPath, { recursive: true });
     }
   }
-  return knex({
+
+  const knexInstance = knex({
     client,
     connection,
   });
+
+  const kyselyInstance = new Kysely({
+    dialect: new KyselyKnexDialect({
+      knex: knexInstance,
+      kyselySubDialect: new PGColdDialect(),
+    }),
+  });
+
+  return { db: kyselyInstance, knex: knexInstance };
 }
 
 export const initAnalyticsStoreSql = [
