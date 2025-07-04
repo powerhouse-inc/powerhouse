@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/factory.ts"
 force: true
 ---
 import { type ProcessorRecord } from "document-drive/processors/types";
-import { type IProcessorHostModule } from "@powerhousedao/reactor-api";
+import { type IProcessorHostModule } from "document-drive/processors/types";
 import { <%= pascalName %>Processor } from "./index.js";
 
 export const <%= h.changeCase.pascal(name) %>ProcessorFactory = (module: IProcessorHostModule) => (driveId: string): ProcessorRecord[] => {
