@@ -7,6 +7,7 @@ import {
 import {
     live,
     useSetPGliteDB,
+    type PGlite,
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { childLogger } from 'document-drive';
@@ -53,7 +54,7 @@ function createPgLiteFactoryWorker(databaseName: string) {
 
         await pgLiteWorker.waitReady;
 
-        return pgLiteWorker as unknown as PGliteWithLive;
+        return pgLiteWorker as unknown as PGlite;
     };
 }
 
@@ -192,7 +193,7 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
         pgLiteFactory()
             .then(db => {
                 setPGliteDB({
-                    db,
+                    db: db as unknown as PGliteWithLive,
                     isLoading: false,
                     error: null,
                 });
@@ -227,7 +228,7 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
         <AnalyticsProvider
             options={{
                 databaseName: connectConfig.analytics.databaseName,
-                pgLiteFactory: pgLiteFactory,
+                pgLiteFactory,
             }}
         >
             {content}
