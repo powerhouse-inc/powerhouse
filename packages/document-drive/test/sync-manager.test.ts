@@ -36,17 +36,17 @@ describe("Synchronization Manager with memory adapters", () => {
     await storage.create(drive);
 
     const syncUnit = await syncManager.getSynchronizationUnit({
-      documentId: drive.id,
+      documentId: drive.header.id,
       scope: "global",
       branch: "main",
     });
 
     expect(syncUnit).toStrictEqual({
-      documentId: drive.id,
+      documentId: drive.header.id,
       documentType: "powerhouse/document-drive",
       scope: "global",
       branch: "main",
-      lastUpdated: drive.lastModified,
+      lastUpdated: drive.header.lastModifiedAtUtcIso,
       revision: 0,
     });
   });
@@ -57,17 +57,17 @@ describe("Synchronization Manager with memory adapters", () => {
     await storage.create(document);
 
     const syncUnit = await syncManager.getSynchronizationUnit({
-      documentId: document.id,
+      documentId: document.header.id,
       scope: "global",
       branch: "main",
     });
 
     expect(syncUnit).toStrictEqual({
-      documentId: document.id,
+      documentId: document.header.id,
       documentType: "powerhouse/document-model",
       scope: "global",
       branch: "main",
-      lastUpdated: document.lastModified,
+      lastUpdated: document.header.lastModifiedAtUtcIso,
       revision: 0,
     });
   });
@@ -83,22 +83,22 @@ describe("Synchronization Manager with memory adapters", () => {
       DriveActions.addFolder({ id: generateId(), name: "Test" }),
     );
     await storage.addDocumentOperations(
-      newDrive.id,
+      newDrive.header.id,
       newDrive.operations.global,
       newDrive,
     );
     const syncUnit = await syncManager.getSynchronizationUnit({
-      documentId: drive.id,
+      documentId: drive.header.id,
       scope: "global",
       branch: "main",
     });
 
     expect(syncUnit).toStrictEqual({
-      documentId: drive.id,
+      documentId: drive.header.id,
       documentType: "powerhouse/document-drive",
       scope: "global",
       branch: "main",
-      lastUpdated: newDrive.lastModified,
+      lastUpdated: newDrive.header.lastModifiedAtUtcIso,
       revision: 1,
     });
   });
@@ -115,31 +115,37 @@ describe("Synchronization Manager with memory adapters", () => {
     drive = DocumentDrive.reducer(
       drive,
       DriveActions.addFile({
-        id: document.id,
+        id: document.header.id,
         name: "Document",
-        documentType: document.documentType,
+        documentType: document.header.documentType,
       }),
     );
-    await storage.addDriveOperations(drive.id, drive.operations.global, drive);
-    await storage.addChild(drive.id, document.id);
+    await storage.addDriveOperations(
+      drive.header.id,
+      drive.operations.global,
+      drive,
+    );
+    await storage.addChild(drive.header.id, document.header.id);
 
-    const syncUnits = await syncManager.getSynchronizationUnits(drive.id);
+    const syncUnits = await syncManager.getSynchronizationUnits(
+      drive.header.id,
+    );
 
     expect(syncUnits).toStrictEqual([
       {
-        documentId: drive.id,
+        documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
-        lastUpdated: drive.lastModified,
+        lastUpdated: drive.header.lastModifiedAtUtcIso,
         revision: 1,
       },
       {
-        documentId: document.id,
+        documentId: document.header.id,
         documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
-        lastUpdated: document.lastModified,
+        lastUpdated: document.header.lastModifiedAtUtcIso,
         revision: 0,
       },
     ]);
@@ -229,21 +235,24 @@ describe("Synchronization Manager with memory adapters", () => {
     ];
 
     // Update document with operations
-    await storage.addDocumentOperations(document.id, docOperations, {
+    await storage.addDocumentOperations(document.header.id, docOperations, {
       ...document,
-      lastModified: new Date("2025-01-02").toISOString(),
+      header: {
+        ...document.header,
+        lastModifiedAtUtcIso: new Date("2025-01-02").toISOString(),
+      },
     });
 
     // Get all operations
     const allOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       {},
     );
     expect(allOps).toHaveLength(2);
 
     // Get operations after a specific revision
     const laterOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       { fromRevision: 1 },
     );
     expect(laterOps).toHaveLength(1);
@@ -251,7 +260,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     // Get operations with a limit
     const limitedOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       { limit: 1 },
     );
     expect(limitedOps).toHaveLength(1);
@@ -275,7 +284,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     // Getting sync unit for non-existent document scope should return undefined
     const result = await syncManager.getSynchronizationUnit({
-      documentId: document.id,
+      documentId: document.header.id,
       scope: "non-existent",
       branch: "main",
     });
@@ -328,14 +337,17 @@ describe("Synchronization Manager with memory adapters", () => {
       },
     ];
 
-    await storage.addDocumentOperations(document.id, docOperations, {
+    await storage.addDocumentOperations(document.header.id, docOperations, {
       ...document,
-      lastModified: new Date("2025-01-03").toISOString(),
+      header: {
+        ...document.header,
+        lastModifiedAtUtcIso: new Date("2025-01-03").toISOString(),
+      },
     });
 
     // Filter by timestamp only
     const sinceOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       { since: new Date("2025-01-02T00:00:00.000Z").toISOString() },
     );
     expect(sinceOps).toHaveLength(2);
@@ -344,7 +356,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     // Filter by both timestamp and revision
     const combinedOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       {
         since: new Date("2025-01-02T00:00:00.000Z").toISOString(),
         fromRevision: 2,
@@ -355,7 +367,7 @@ describe("Synchronization Manager with memory adapters", () => {
 
     // Empty operations when no matches
     const noOps = await syncManager.getOperationData(
-      { documentId: document.id, scope: "global", branch: "main" },
+      { documentId: document.header.id, scope: "global", branch: "main" },
       { since: new Date("2025-01-04T00:00:00.000Z").toISOString() },
     );
     expect(noOps).toHaveLength(0);

@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import { addFile } from "#drive-document-model/gen/creators";
 import { BaseDocumentDriveServer } from "#server/base-server";
+import { createPresignedHeader } from "document-model";
 import { undo } from "../../../document-model/src/document/actions/creators.js";
 import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
@@ -47,6 +48,19 @@ describe("processOperations", () => {
 
   const driveId = generateId();
   const documentId = generateId();
+  function createDocumentModel() {
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    const header = createPresignedHeader(
+      documentId,
+      "powerhouse/document-model",
+    );
+    document.header = header;
+    return {
+      documentType: document.header.documentType,
+      document,
+      header,
+    };
+  }
 
   async function buildFile(initialOperations: Action[] = []) {
     await server.addDrive({
@@ -61,9 +75,7 @@ describe("processOperations", () => {
     });
     const drive = await server.getDrive(driveId);
 
-    await server.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({ id: documentId }),
-    );
+    await server.addDocument(createDocumentModel());
 
     await server.addDriveOperation(
       driveId,
@@ -115,7 +127,7 @@ describe("processOperations", () => {
     ]);
 
     const result = await server._processOperations(
-      document.id,
+      document.header.id,
       document,
       operations,
     );
@@ -143,7 +155,7 @@ describe("processOperations", () => {
     ]);
 
     const result = await server._processOperations(
-      document.id,
+      document.header.id,
       document,
       operations,
     );
@@ -171,7 +183,7 @@ describe("processOperations", () => {
     ]);
 
     const result = await server._processOperations(
-      document.id,
+      document.header.id,
       document,
       operations,
     );
@@ -210,7 +222,7 @@ describe("processOperations", () => {
     ]);
 
     const result = await server._processOperations(
-      document.id,
+      document.header.id,
       document,
       operations,
     );
@@ -249,7 +261,7 @@ describe("processOperations", () => {
     ];
 
     const result = await server._processOperations(
-      document.id,
+      document.header.id,
       document,
       operations,
     );
@@ -301,7 +313,7 @@ describe("processOperations", () => {
     ];
 
     const result = await server._processOperations(
-      documentId,
+      document.header.id,
       document,
       operations,
     );
@@ -335,7 +347,7 @@ describe("processOperations", () => {
     ];
 
     const result = await server._processOperations(
-      documentId,
+      document.header.id,
       document,
       operations,
     );

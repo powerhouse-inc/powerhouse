@@ -5,6 +5,7 @@ import { IQueueManager } from "#queue/types";
 import { ReactorBuilder } from "#server/builder";
 import { MemoryStorage } from "#storage/memory";
 import {
+  createPresignedHeader,
   documentModelDocumentModelModule,
   DocumentModelModule,
   generateId,
@@ -25,7 +26,13 @@ const BENCH_OPTIONS: BenchOptions = {
 
 describe("Process Operations", () => {
   const driveId = generateId();
-  const drive = driveDocumentModelModule.utils.createDocument({ id: driveId });
+  const driveDocument = driveDocumentModelModule.utils.createDocument();
+  const header = createPresignedHeader(
+    driveId,
+    driveDocument.header.documentType,
+  );
+  const drive = driveDocumentModelModule.utils.createDocument();
+  drive.header = header;
   const operations = buildOperations(
     driveDocumentModelModule.reducer,
     drive,
@@ -52,7 +59,7 @@ describe("Process Operations", () => {
         name: drive.state.global.name,
         icon: drive.state.global.icon,
       },
-      slug: drive.slug,
+      slug: drive.header.slug,
       local: drive.state.local,
     });
 

@@ -1,4 +1,9 @@
-import { DocumentModelModule, generateId, setModelName } from "document-model";
+import {
+  createPresignedHeader,
+  DocumentModelModule,
+  generateId,
+  setModelName,
+} from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import * as DriveActions from "../src/drive-document-model/gen/creators.js";
 import { ReactorBuilder } from "../src/server/builder.js";
@@ -86,9 +91,9 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenCalledWith([
       {
         branch: "main",
-        documentId: drive.id,
+        documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
-        driveId: drive.id,
+        driveId: drive.header.id,
         operations: [],
         scope: "global",
         state: {},
@@ -96,10 +101,17 @@ describe("Internal Listener", () => {
     ]);
 
     const documentId = generateId();
-    const document = documentModelDocumentModelModule.utils.createDocument({
-      id: documentId,
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    const header = createPresignedHeader(
+      documentId,
+      document.header.documentType,
+    );
+    document.header = header;
+    await server.addDocument({
+      document,
+      header,
+      documentType: document.header.documentType,
     });
-    await server.addDocument(document);
 
     const action = DriveActions.addFile({
       id: documentId,
@@ -112,9 +124,9 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenCalledWith([
       {
         branch: "main",
-        documentId: drive.id,
+        documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
-        driveId: driveId,
+        driveId: drive.header.id,
         operations: [
           {
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
@@ -154,9 +166,9 @@ describe("Internal Listener", () => {
       },
       {
         branch: "main",
-        documentId: document.id,
+        documentId: document.header.id,
         documentType: "powerhouse/document-model",
-        driveId: driveId,
+        driveId: drive.header.id,
         operations: [],
         scope: "global",
         state: {},

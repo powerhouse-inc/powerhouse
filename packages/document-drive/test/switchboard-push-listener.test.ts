@@ -117,19 +117,20 @@ describe("SwitchboardPush Listener", () => {
     expect(
       listenerManager
         ?.getListenerState(driveId, listener.listenerId)
-        .syncUnits.getAllByDocumentId(driveId),
+        .syncUnits.getAllByDocumentId(drive.header.id),
     ).toStrictEqual([
       [
-        { branch: "main", documentId: drive.id, scope: "global" },
+        { branch: "main", documentId: drive.header.id, scope: "global" },
         { listenerRev: 0, lastUpdated: expectUTCTimestamp(expect) },
       ],
     ]);
 
-    const documentId = generateId();
-    const document = documentModelDocumentModelModule.utils.createDocument({
-      id: documentId,
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+    await server.addDocument({
+      document,
+      documentType: document.header.documentType,
     });
-    await server.addDocument(document);
 
     const action = DriveActions.addFile({
       id: documentId,
@@ -144,10 +145,10 @@ describe("SwitchboardPush Listener", () => {
       expect(
         listenerManager
           ?.getListenerState(driveId, listener.listenerId)
-          .syncUnits.getAllByDocumentId(driveId),
+          .syncUnits.getAllByDocumentId(drive.header.id),
       ).toStrictEqual([
         [
-          { branch: "main", documentId: drive.id, scope: "global" },
+          { branch: "main", documentId: drive.header.id, scope: "global" },
           { listenerRev: 1, lastUpdated: expectUTCTimestamp(expect) },
         ],
       ]),

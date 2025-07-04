@@ -42,6 +42,7 @@ import {
   type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
+  type SignalResult,
   attachBranch,
   createPresignedHeader,
   garbageCollect,
@@ -58,8 +59,6 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
-import { type SignalResult } from "../../../document-model/src/document/signal.js";
-import { createUnsignedHeader } from "../../../document-model/src/document/utils/header.js";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
@@ -155,7 +154,7 @@ export class BaseDocumentDriveServer
       const document = documentModelModule.utils.createDocument({
         ...initialState,
       });
-      const header = createUnsignedHeader(documentId, documentType);
+      const header = createPresignedHeader(documentId, documentType);
       document.header.id = header.id;
       try {
         const createdDocument = await this.createDocument(
