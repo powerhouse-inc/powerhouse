@@ -6,10 +6,7 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "#packages/package-manager.js";
-import {
-  type IPackageLoader,
-  type IProcessorHostModule,
-} from "#packages/types.js";
+import { type IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
@@ -22,11 +19,13 @@ import {
 } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
+  type IOperationalStore,
+  type IProcessorHostModule,
   type IProcessorManager,
   type ProcessorFactory,
 } from "document-drive/processors/types";
 import express, { type Express } from "express";
-import { type Knex } from "knex";
+import { type Kysely } from "kysely";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
@@ -90,14 +89,14 @@ function setupGraphQlExplorer(router: express.Router): void {
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
-): Promise<{ db: Knex; analyticsStore: IAnalyticsStore }> {
-  const db = getDbClient(dbPath);
+): Promise<{ db: Kysely<any>; analyticsStore: IAnalyticsStore }> {
+  const { db, knex } = getDbClient(dbPath);
   const analyticsStore = new PostgresAnalyticsStore({
-    knex: db,
+    knex,
   });
 
   for (const sql of initAnalyticsStoreSql) {
-    await db.raw(sql);
+    await knex.raw(sql);
   }
 
   return { db, analyticsStore };
@@ -109,7 +108,7 @@ async function initializeDatabaseAndAnalytics(
 async function setupGraphQLManager(
   app: Express,
   reactor: IDocumentDriveServer,
-  db: Knex,
+  db: Kysely<any>,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
   auth?: {
@@ -162,7 +161,10 @@ function setupEventListeners(
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
-  module: { db: Knex; analyticsStore: IAnalyticsStore },
+  module: {
+    operationalStore: IOperationalStore;
+    analyticsStore: IAnalyticsStore;
+  },
 ): void {
   pkgManager.onDocumentModelsChange(async (documentModels) => {
     const uniqueModels = getUniqueDocumentModels(
@@ -185,7 +187,12 @@ function setupEventListeners(
     for (const [packageName, fns] of processors) {
       await processorManager.unregisterFactory(packageName);
 
-      const factories = fns.map((fn) => fn(module));
+      const factories = fns.map((fn) =>
+        fn({
+          analyticsStore: module.analyticsStore,
+          operationalStore: module.operationalStore,
+        }),
+      );
 
       await processorManager.registerFactory(packageName, (driveId: string) =>
         factories.map((factory) => factory(driveId)).flat(),
@@ -322,7 +329,7 @@ export async function startAPI(
   const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module = { db, analyticsStore };
+  const module = { operationalStore: db, analyticsStore };
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
@@ -353,7 +360,10 @@ export async function startAPI(
   ]) {
     const factories = fns.map((fn) => {
       try {
-        return fn(module);
+        return fn({
+          analyticsStore: module.analyticsStore,
+          operationalStore: module.operationalStore,
+        });
       } catch (e) {
         logger.error(
           `Error initializing processor factory for package ${packageName}:`,
