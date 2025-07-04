@@ -8,3 +8,5 @@ export { IdbFs, PGlite } from "@electric-sql/pglite";
 export * from "@electric-sql/pglite/live";
 
 export * from "./hooks/index.js";
+export * from "./utils/index.js";
+
