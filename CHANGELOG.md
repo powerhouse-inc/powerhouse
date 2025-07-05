@@ -1,3 +1,14 @@
+## 3.3.0-dev.2 (2025-07-05)
+
+### 🩹 Fixes
+
+- **academy:** using the api ([833f1edde](https://github.com/powerhouse-inc/powerhouse/commit/833f1edde))
+- **academy:** graphql at powerhouse update ([fea4eae24](https://github.com/powerhouse-inc/powerhouse/commit/fea4eae24))
+
+### ❤️ Thank You
+
+- Callme-T
+
 ## 3.3.0-dev.1 (2025-07-04)
 
 ### 🚀 Features
