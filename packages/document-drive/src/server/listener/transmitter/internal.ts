@@ -34,6 +34,7 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   branch: string;
   operations: InternalOperationUpdate<TDocument>[];
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
+  documentType: string;
 };
 
 export class InternalTransmitter implements ITransmitter {
@@ -61,6 +62,7 @@ export class InternalTransmitter implements ITransmitter {
       number,
       GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
     >();
+
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
       if (state) {
@@ -117,9 +119,16 @@ export class InternalTransmitter implements ITransmitter {
       const updates = [];
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
+        const document = await (strand.documentId
+          ? this.drive.getDocument<PHDocument>(
+              strand.driveId,
+              strand.documentId,
+            )
+          : this.drive.getDrive(strand.driveId));
         const state = operations.at(-1)?.state ?? {};
         updates.push({
           ...strand,
+          documentType: document.header.documentType,
           operations,
           state,
         });

@@ -103,6 +103,7 @@ describe("Internal Listener", () => {
       branch: "main",
       documentId: driveId,
       driveId,
+      documentType: "powerhouse/document-drive",
       operations: [
         {
           hash: expect.any(String) as string,

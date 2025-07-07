@@ -11,6 +11,7 @@ import {
 } from "document-drive/server/types";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";
+import { type OperationalProcessor } from "./operational-processor.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([
@@ -95,6 +96,11 @@ export class ProcessorManager implements IProcessorManager {
     }
 
     for (const { filter, processor } of processors) {
+      if ((processor as OperationalProcessor).initAndUpgrade) {
+        await (processor as OperationalProcessor).initAndUpgrade();
+      } else {
+        console.log(processor.constructor.name);
+      }
       const id = generateId();
       const listener: Listener = {
         driveId,
