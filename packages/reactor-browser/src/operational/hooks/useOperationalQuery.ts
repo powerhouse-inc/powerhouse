@@ -4,7 +4,6 @@ import {
 } from "@electric-sql/pglite/live";
 import { type Kysely } from "kysely";
 import { useEffect, useState } from "react";
-import { usePGliteDB } from "../../pglite/hooks/usePGlite.js";
 import { useOperationalStore } from "./useOperationalStore.js";
 
 export type QueryCallbackReturnType = {
@@ -12,7 +11,7 @@ export type QueryCallbackReturnType = {
   parameters?: readonly unknown[];
 };
 
-export function useLiveQuery<Schema, T = unknown, TParams = undefined>(
+export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
   queryCallback: (
     db: Kysely<Schema>,
     parameters?: TParams,
@@ -22,17 +21,16 @@ export function useLiveQuery<Schema, T = unknown, TParams = undefined>(
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);
 
-  const pglite = usePGliteDB();
-  const operationalDB = useOperationalStore<Schema>();
+  const operationalStore = useOperationalStore<Schema>();
 
   useEffect(() => {
     let live: Promise<LiveQuery<T> | null> = Promise.resolve(null);
 
-    if (operationalDB.db && pglite.db) {
-      const compiledQuery = queryCallback(operationalDB.db, parameters);
+    if (operationalStore.db) {
+      const compiledQuery = queryCallback(operationalStore.db, parameters);
       const { sql, parameters: queryParameters } = compiledQuery;
 
-      live = pglite.db.live.query(
+      live = operationalStore.db.live.query(
         sql,
         queryParameters ? [...queryParameters] : [],
         (result) => {
@@ -45,11 +43,11 @@ export function useLiveQuery<Schema, T = unknown, TParams = undefined>(
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [operationalDB.db, pglite.db, queryCallback, parameters]);
+  }, [operationalStore.db, queryCallback, parameters]);
 
   return {
-    isLoading: pglite.isLoading || operationalDB.isLoading || queryLoading,
-    error: pglite.error || operationalDB.error,
+    isLoading: operationalStore.isLoading || queryLoading,
+    error: operationalStore.error,
     result,
   } as const;
 }

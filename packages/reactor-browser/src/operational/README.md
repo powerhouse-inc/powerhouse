@@ -143,7 +143,7 @@ useQuery(
 
 #### Query Callback
 
-The callback function receives a Kysely database instance and optionally parameters. It must return an object with `sql` and optional `parameters` properties.
+The callback function receives an Enhanced Kysely database instance and optionally parameters. It must return an object with `sql` and optional `parameters` properties.
 
 ```typescript
 type QueryCallbackReturnType = { 
@@ -369,7 +369,7 @@ const result = useTypedQuery((db, params) => {
 
 ### Smart Parameter Memoization
 
-Parameters are automatically memoized using deep comparison, preventing unnecessary re-renders:
+Parameters are automatically memoized using deep comparison with `lodash.isequal`, preventing unnecessary re-renders and query re-executions:
 
 ```typescript
 // ✅ These won't cause re-renders (same content)
@@ -388,6 +388,11 @@ const result = useTypedQuery((db, params) => {
     .compile();
 }, { id: userId, name: userName }); // Updates only when userId or userName changes
 ```
+
+**Internal Implementation:**
+- Uses `useStableParams()` utility with deep equality comparison
+- Callback functions are automatically memoized when parameters change
+- Prevents infinite re-renders even with complex nested parameter objects
 
 ### Type Safety
 
@@ -520,7 +525,7 @@ const result = useTypedQuery((db, params) => {
 
 #### `useOperationalStore<Schema>()`
 
-Returns a Kysely-wrapped database instance with full type safety for your schema.
+Returns an enhanced Kysely-wrapped database instance with full type safety for your schema and live query capabilities.
 
 ```typescript
 const { db, isLoading, error } = useOperationalStore<MySchema>();
@@ -529,15 +534,28 @@ const { db, isLoading, error } = useOperationalStore<MySchema>();
 **Returns:**
 ```typescript
 {
-  db: Kysely<Schema> | null;    // Type-safe Kysely database instance
-  isLoading: boolean;           // True while database is initializing
-  error: Error | null;          // Any initialization error
+  db: EnhancedKysely<Schema> | null;    // Type-safe Kysely database instance with live capabilities
+  isLoading: boolean;                   // True while database is initializing
+  error: Error | null;                  // Any initialization error
 }
+```
+
+**Types:**
+```typescript
+// Enhanced Kysely instance with live query support
+type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
+
+// Query callback return type for operational queries
+type QueryCallbackReturnType = {
+  sql: string;
+  parameters?: readonly unknown[];
+};
+```
 ```
 
 **Usage:**
 ```typescript
-import { useOperationalStore } from '@powerhousedao/reactor-browser/operational';
+import { useOperationalStore, type EnhancedKysely } from '@powerhousedao/reactor-browser/operational';
 
 type MyDatabase = {
   users: {
@@ -552,6 +570,7 @@ function DatabaseOperations() {
   const createUser = async (name: string) => {
     if (!db) return;
     
+    // db is EnhancedKysely<MyDatabase> with both Kysely methods and live capabilities
     await db
       .insertInto('users')
       .values({ name })
@@ -566,16 +585,17 @@ function DatabaseOperations() {
 }
 ```
 
-#### `useLiveQuery<Schema, T>()`
+#### `useOperationalQuery<Schema, T, TParams>()`
 
-Lower-level hook for creating live queries with manual control over the query callback.
+Lower-level hook for creating live queries with manual control over the query callback and parameter support.
 
 ```typescript
-const { result, isLoading, error } = useLiveQuery<Schema, T>(queryCallback);
+const { result, isLoading, error } = useOperationalQuery<Schema, T, TParams>(queryCallback, parameters);
 ```
 
 **Parameters:**
-- `queryCallback: (db: Kysely<Schema>) => { sql: string }` - Function that returns a query with SQL
+- `queryCallback: (db: EnhancedKysely<Schema>, parameters?: TParams) => QueryCallbackReturnType` - Function that returns a query with SQL and optional parameters
+- `parameters?: TParams` - Optional parameters for the query
 
 **Returns:**
 ```typescript
@@ -588,10 +608,10 @@ const { result, isLoading, error } = useLiveQuery<Schema, T>(queryCallback);
 
 **Usage:**
 ```typescript
-import { useLiveQuery } from '@powerhousedao/reactor-browser/operational';
+import { useOperationalQuery } from '@powerhousedao/reactor-browser/operational';
 
 function UserCount() {
-  const { result, isLoading, error } = useLiveQuery<MyDatabase, { count: number }>(
+  const { result, isLoading, error } = useOperationalQuery<MyDatabase, { count: number }>(
     (db) => db.selectFrom('users').select(db.fn.count('id').as('count')).compile()
   );
   
@@ -610,18 +630,46 @@ Creates a typed query hook for your database schema with automatic optimization 
 
 **Already documented in detail above.** This is the main utility for creating type-safe live queries.
 
+### Exported Types
+
+The package exports several useful types for advanced use cases:
+
+```typescript
+import { 
+  type EnhancedKysely,
+  type QueryCallbackReturnType,
+  type IOperationalStore 
+} from '@powerhousedao/reactor-browser/operational';
+
+// Enhanced Kysely instance with live capabilities
+type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
+
+// Query callback return type
+type QueryCallbackReturnType = {
+  sql: string;
+  parameters?: readonly unknown[];
+};
+
+// Operational store interface
+interface IOperationalStore<Schema> {
+  db: EnhancedKysely<Schema> | null;
+  isLoading: boolean;
+  error: Error | null;
+}
+```
+
 ## Hook Relationships
 
 Understanding how the hooks work together:
 
 1. **PGlite Layer** - `usePGliteDB()` provides the raw PGlite database instance
-2. **`useOperationalStore()`** - Wraps the PGlite instance with Kysely for type safety
-3. **`useLiveQuery()`** - Uses both layers internally to provide live query functionality
-4. **`createTypedQuery()`** - Uses `useLiveQuery()` internally with additional optimizations
+2. **`useOperationalStore()`** - Wraps the PGlite instance with Enhanced Kysely for type safety and live capabilities
+3. **`useOperationalQuery()`** - Uses the operational store to provide live query functionality
+4. **`createTypedQuery()`** - Uses `useOperationalQuery()` internally with additional optimizations and parameter memoization
 
 ```typescript
 // The relationship flow:
-PGlite Layer → useOperationalStore() → useLiveQuery() → createTypedQuery()
+PGlite Layer → useOperationalStore() → useOperationalQuery() → createTypedQuery()
 ```
 
 ## For Low-Level Database Operations

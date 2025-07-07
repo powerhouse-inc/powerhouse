@@ -85,8 +85,6 @@ const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   </button>
 );
 
-export const ToastContainer: React.FC<ToastContainerProps> = (props) => {
-  console.log("ToastContainer");
-
-  return <RToastContainer closeButton={CloseButton} {...props} />;
-};
+export const ToastContainer: React.FC<ToastContainerProps> = (props) => (
+  <RToastContainer closeButton={CloseButton} {...props} />
+);

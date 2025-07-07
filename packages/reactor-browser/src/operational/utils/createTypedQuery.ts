@@ -5,8 +5,8 @@ import { useCallback, useMemo, useRef } from "react";
 
 import {
   type QueryCallbackReturnType,
-  useLiveQuery,
-} from "../hooks/useLiveQuery.js";
+  useOperationalQuery,
+} from "../hooks/useOperationalQuery.js";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {
@@ -77,7 +77,7 @@ export function createTypedQuery<Schema>() {
     // Memoize the callback to prevent infinite loops, updating when parameters change
     const memoizedCallback = useCallback(queryCallback, [stableParams]);
 
-    return useLiveQuery<Schema, InferredResult, TParams>(
+    return useOperationalQuery<Schema, InferredResult, TParams>(
       memoizedCallback,
       stableParams,
     ) as {
