@@ -2,15 +2,24 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { BaseOperationalProcessor } from "document-drive/processors/operational-processor";
+import { OperationalProcessor, type OperationalProcessorFilter } from "document-drive/processors/operational-processor";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
 %><% }); _%>
-<% if(documentTypes.length === 0) { %>import { PHDocument } from "document-model";<% } %>
+<% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
-export class <%= pascalName %>Processor extends BaseOperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+export class <%= pascalName %>Processor extends OperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+
+  get filter(): OperationalProcessorFilter {
+    return {
+      branch: ["main"],
+      documentId: ["*"],
+      documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
+      scope: ["global"],
+    }
+  }
 
   async initAndUpgrade(): Promise<void> {
     await this.operationalStore.schema
