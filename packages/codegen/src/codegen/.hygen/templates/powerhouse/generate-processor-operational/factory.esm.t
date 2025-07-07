@@ -11,7 +11,7 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
   return [
     {
       processor,
-      filter: processor.processorOptions.filter,
+      filter: processor.filter,
     },
   ];
 }
