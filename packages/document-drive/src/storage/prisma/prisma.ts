@@ -553,7 +553,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
   async delete(documentId: string): Promise<boolean> {
     try {
-      // delete out of drives
+      // delete out of drives if document is a drive
       await this.db.drive.deleteMany({
         where: {
           driveDocuments: {
@@ -577,6 +577,13 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       const result = await this.db.document.deleteMany({
         where: {
           id: documentId,
+        },
+      });
+
+      // delete document from drives
+      await this.db.driveDocument.deleteMany({
+        where: {
+          documentId,
         },
       });
 

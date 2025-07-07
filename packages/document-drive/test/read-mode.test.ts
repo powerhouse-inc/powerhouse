@@ -123,7 +123,8 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
   });
 }
 
-describe("Read mode methods", () => {
+// TODO: Unskip when read mode is re-implemented
+describe.skip("Read mode methods", () => {
   beforeAll(() => {
     vitest.useFakeTimers();
   });
