@@ -17,7 +17,6 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { Button } from '@powerhousedao/design-system';
 import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
 import { makeDriveDocumentStateHook } from '@powerhousedao/reactor-browser/hooks/document-state';
 import { type IDriveContext } from '@powerhousedao/reactor-browser/hooks/useDriveContext';
@@ -30,8 +29,6 @@ import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
-import { useTableTest } from '../hooks/useTableTest.js';
-// import { useTestOperationalQuery } from '../hooks/useTestOperationalQuery.js';
 import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
@@ -74,11 +71,6 @@ export function DriveEditorContainer() {
         documentDrive,
     );
     const reactor = useReactor();
-
-    // TODO: remove this
-    const { createTestTable, insertRandomData, selectAllData, updateId2Name } =
-        useTableTest();
-    // useTestOperationalQuery();
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -173,21 +165,6 @@ export function DriveEditorContainer() {
             fallbackRender={DriveEditorError}
             key={selectedDriveNode?.id}
         >
-            {/* TODO: remove this */}
-            <div>
-                <Button onClick={createTestTable} type="button">
-                    Create Test Table
-                </Button>
-                <Button onClick={insertRandomData} type="button">
-                    Insert Random Data
-                </Button>
-                <Button onClick={selectAllData} type="button">
-                    Select All Data
-                </Button>
-                <Button onClick={updateId2Name} type="button">
-                    Update Id 2 Name
-                </Button>
-            </div>
             <DriveEditorComponent
                 key={selectedDriveNode?.id}
                 {...editorProps}

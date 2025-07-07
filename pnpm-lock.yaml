@@ -1448,7 +1448,7 @@ importers:
         version: 0.25.0
       drizzle-orm:
         specifier: ^0.34.1
-        version: 0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.4)(@types/react@18.3.23)(knex@3.1.0(pg@8.16.2)(sqlite3@5.1.7))(pg@8.16.2)(prisma@5.17.0)(react@18.3.1)(sqlite3@5.1.7)
+        version: 0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.4)(@types/react@18.3.23)(knex@3.1.0(pg@8.16.2)(sqlite3@5.1.7))(kysely@0.28.2)(pg@8.16.2)(prisma@5.17.0)(react@18.3.1)(sqlite3@5.1.7)
       ethers:
         specifier: ^6.0.8
         version: 6.14.4(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1561,6 +1561,15 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      kysely:
+        specifier: ^0.28.2
+        version: 0.28.2
+      kysely-pglite-dialect:
+        specifier: ^1.1.1
+        version: 1.1.1(@electric-sql/pglite@0.2.17)(kysely@0.28.2)
+      lodash.isequal:
+        specifier: ^4.5.0
+        version: 4.5.0
       luxon:
         specifier: ^3.6.1
         version: 3.6.1
@@ -1568,6 +1577,9 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0
     devDependencies:
+      '@types/lodash.isequal':
+        specifier: ^4.5.8
+        version: 4.5.8
       '@types/luxon':
         specifier: ^3.6.2
         version: 3.6.2
@@ -8051,6 +8063,9 @@ packages:
   '@types/keyv@3.1.4':
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
 
+  '@types/lodash.isequal@4.5.8':
+    resolution: {integrity: sha512-uput6pg4E/tj2LGxCZo9+y27JNyB2OZuuI/T5F+ylVDYuqICLG2/ktjxx0v6GvVntAf8TvEzeQLcV0ffRirXuA==}
+
   '@types/lodash@4.17.19':
     resolution: {integrity: sha512-NYqRyg/hIQrYPT9lbOeYc3kIRabJDn/k4qQHIXUpx88CBDww2fD15Sg5kbXlW86zm2XEW4g0QxkTI3/Kfkc7xQ==}
 
@@ -13548,7 +13563,6 @@ packages:
     resolution: {integrity: sha512-Quz3MvAwHxVYNXsOByL7xI5EB2WYOeFswqaHIA3qOK3isRWTxiplBEocmmru6XmxDB2L7jDNYtYA4FyimoAFEw==}
     engines: {node: '>=8.17.0'}
     hasBin: true
-    bundledDependencies: []
 
   jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
@@ -13645,6 +13659,16 @@ packages:
   kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
 
+  kysely-pglite-dialect@1.1.1:
+    resolution: {integrity: sha512-WZxLbrqe+tAVv6eWKwt2OOpVfdQUPGGt6amFbLGSsKwODUt1RKqvuNdu02dOC2Kz0LebRnl/h+J5zY01WKDOGA==}
+    peerDependencies:
+      '@electric-sql/pglite': ^0.2.0
+      kysely: '>=0.23.0'
+
+  kysely@0.28.2:
+    resolution: {integrity: sha512-4YAVLoF0Sf0UTqlhgQMFU9iQECdah7n+13ANkiuVfRvlK+uI0Etbgd7bVP36dKlG+NXWbhGua8vnGt+sdhvT7A==}
+    engines: {node: '>=18.0.0'}
+
   latest-version@7.0.0:
     resolution: {integrity: sha512-KvNT4XqAMzdcL6ka6Tl3i2lYeFDgXNCuIX+xNx6ZMVR1dFq+idXd9FLKNMOIx0t9mJ9/HudyX4oZWXZQ0UJHeg==}
     engines: {node: '>=14.16'}
@@ -13673,6 +13697,7 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -13862,6 +13887,10 @@ packages:
 
   lodash.isboolean@3.0.3:
     resolution: {integrity: sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==}
+
+  lodash.isequal@4.5.0:
+    resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
+    deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
 
   lodash.isinteger@4.0.4:
     resolution: {integrity: sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==}
@@ -28619,6 +28648,10 @@ snapshots:
     dependencies:
       '@types/node': 22.15.33
 
+  '@types/lodash.isequal@4.5.8':
+    dependencies:
+      '@types/lodash': 4.17.19
+
   '@types/lodash@4.17.19': {}
 
   '@types/long@4.0.2': {}
@@ -30310,6 +30343,14 @@ snapshots:
   available-typed-arrays@1.0.7:
     dependencies:
       possible-typed-array-names: 1.1.0
+
+  axios@1.10.0:
+    dependencies:
+      follow-redirects: 1.15.9(debug@4.3.7)
+      form-data: 4.0.3
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
 
   axios@1.10.0(debug@4.4.1):
     dependencies:
@@ -32331,7 +32372,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.4)(@types/react@18.3.23)(knex@3.1.0(pg@8.16.2)(sqlite3@5.1.7))(pg@8.16.2)(prisma@5.17.0)(react@18.3.1)(sqlite3@5.1.7):
+  drizzle-orm@0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.4)(@types/react@18.3.23)(knex@3.1.0(pg@8.16.2)(sqlite3@5.1.7))(kysely@0.28.2)(pg@8.16.2)(prisma@5.17.0)(react@18.3.1)(sqlite3@5.1.7):
     optionalDependencies:
       '@electric-sql/pglite': 0.2.17
       '@libsql/client': 0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -32340,6 +32381,7 @@ snapshots:
       '@types/pg': 8.15.4
       '@types/react': 18.3.23
       knex: 3.1.0(pg@8.16.2)(sqlite3@5.1.7)
+      kysely: 0.28.2
       pg: 8.16.2
       prisma: 5.17.0
       react: 18.3.1
@@ -34653,7 +34695,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.9(debug@4.4.1)
+      follow-redirects: 1.15.9(debug@4.3.7)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -36003,6 +36045,13 @@ snapshots:
 
   kolorist@1.8.0: {}
 
+  kysely-pglite-dialect@1.1.1(@electric-sql/pglite@0.2.17)(kysely@0.28.2):
+    dependencies:
+      '@electric-sql/pglite': 0.2.17
+      kysely: 0.28.2
+
+  kysely@0.28.2: {}
+
   latest-version@7.0.0:
     dependencies:
       package-json: 8.1.1
@@ -36258,6 +36307,8 @@ snapshots:
   lodash.includes@4.3.0: {}
 
   lodash.isboolean@3.0.3: {}
+
+  lodash.isequal@4.5.0: {}
 
   lodash.isinteger@4.0.4: {}
 
@@ -37710,7 +37761,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.10.0(debug@4.4.1)
+      axios: 1.10.0
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -37762,7 +37813,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.10.0(debug@4.4.1)
+      axios: 1.10.0
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
