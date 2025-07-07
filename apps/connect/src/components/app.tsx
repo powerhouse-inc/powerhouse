@@ -7,6 +7,7 @@ import ProcessorManagerProvider from '../context/processor-manager.js';
 import { useRenown } from '../hooks/useRenown.js';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
+import { PGLiteTest } from './PGLiteTest.js';
 import { Router } from './router.js';
 
 if (import.meta.env.MODE === 'development') {
@@ -31,6 +32,7 @@ const App = () => (
             <WagmiContext>
                 <ReadModeContextProvider>
                     <ProcessorManagerProvider>
+                        <PGLiteTest />
                         <ToastContainer
                             position="bottom-right"
                             containerId="connect"

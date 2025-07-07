@@ -1,7 +1,7 @@
 import { type PGliteWithLive } from "@electric-sql/pglite/live";
 import { useEffect, useState } from "react";
 
-export const PGLITE_UPDATE_EVENT = "pglite-update";
+export const PGLITE_UPDATE_EVENT = "ph:pglite-update";
 
 export interface PGliteState {
   db: PGliteWithLive | null;
@@ -17,12 +17,12 @@ const defaultPGliteState: PGliteState = {
 
 export const usePGliteDB = () => {
   const [state, setState] = useState<PGliteState>(
-    () => window.pglite ?? defaultPGliteState,
+    () => window.powerhouse?.pglite ?? defaultPGliteState,
   );
 
   useEffect(() => {
     const handlePgliteUpdate = () =>
-      setState(window.pglite ?? defaultPGliteState);
+      setState(window.powerhouse?.pglite ?? defaultPGliteState);
 
     window.addEventListener(PGLITE_UPDATE_EVENT, handlePgliteUpdate);
 
@@ -35,10 +35,15 @@ export const usePGliteDB = () => {
 
 export const useSetPGliteDB = () => {
   const setPGliteState = (pglite: Partial<PGliteState>) => {
-    const currentState = window.pglite ?? defaultPGliteState;
-    window.pglite = {
-      ...currentState,
-      ...pglite,
+    const currentPowerhouse = window.powerhouse ?? {};
+    const currentPGliteState = window.powerhouse?.pglite ?? defaultPGliteState;
+
+    window.powerhouse = {
+      ...currentPowerhouse,
+      pglite: {
+        ...currentPGliteState,
+        ...pglite,
+      },
     };
     window.dispatchEvent(new CustomEvent(PGLITE_UPDATE_EVENT));
   };
@@ -52,9 +57,3 @@ export const usePGlite = () => {
 
   return [pglite, setPGlite];
 };
-
-declare global {
-  interface Window {
-    pglite?: PGliteState;
-  }
-}

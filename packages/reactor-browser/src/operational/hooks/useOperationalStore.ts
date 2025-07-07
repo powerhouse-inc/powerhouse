@@ -2,18 +2,18 @@ import { type PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";
-import { usePGliteDB } from "./usePGlite.js";
+import { usePGliteDB } from "../../pglite/hooks/usePGlite.js";
 
-export interface OperationalDB<Schema> {
+export interface OperationalStore<Schema> {
   db: Kysely<Schema> | null;
   isLoading: boolean;
   error: Error | null;
 }
 
-export const useOperationalDB = <Schema>() => {
+export const useOperationalStore = <Schema>() => {
   const pglite = usePGliteDB();
 
-  const operationalDB = useMemo<OperationalDB<Schema>>(() => {
+  const operationalDB = useMemo<OperationalStore<Schema>>(() => {
     if (!pglite.db || pglite.isLoading || pglite.error) {
       return {
         db: null,

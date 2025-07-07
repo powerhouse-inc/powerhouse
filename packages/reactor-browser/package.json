@@ -19,6 +19,7 @@
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
     "./pglite": "./dist/src/pglite/index.js",
+    "./operational": "./dist/src/operational/index.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {
@@ -35,6 +36,7 @@
     "install:playwright": "playwright install"
   },
   "devDependencies": {
+    "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
@@ -64,6 +66,9 @@
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "kysely": "^0.28.2",
+    "kysely-pglite-dialect": "^1.1.1",
+    "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0"
   }

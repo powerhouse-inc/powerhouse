@@ -1,11 +1,11 @@
 import {
-    type LiveQuery,
-    type LiveQueryResults,
+  type LiveQuery,
+  type LiveQueryResults,
 } from "@electric-sql/pglite/live";
 import { type Kysely } from "kysely";
 import { useEffect, useState } from "react";
-import { useOperationalDB } from "./useOperationalDB.js";
-import { usePGliteDB } from "./usePGlite.js";
+import { usePGliteDB } from "../../pglite/hooks/usePGlite.js";
+import { useOperationalStore } from "./useOperationalStore.js";
 
 export type QueryCallbackReturnType = {
   sql: string;
@@ -23,7 +23,7 @@ export function useLiveQuery<Schema, T = unknown, TParams = undefined>(
   const [queryLoading, setQueryLoading] = useState(true);
 
   const pglite = usePGliteDB();
-  const operationalDB = useOperationalDB<Schema>();
+  const operationalDB = useOperationalStore<Schema>();
 
   useEffect(() => {
     let live: Promise<LiveQuery<T> | null> = Promise.resolve(null);

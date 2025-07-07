@@ -12,6 +12,12 @@ const selectAllDataSql = `
 SELECT * FROM test_table
 `;
 
+const updateId2NameSql = `
+UPDATE test_table
+SET name = 'updated2'
+WHERE id = 2
+`;
+
 export function useTableTest() {
     const pglite = usePGliteDB();
 
@@ -48,9 +54,18 @@ export function useTableTest() {
         console.log('>>> selected all data', result);
     }, [pglite.db]);
 
+    const updateId2Name = useCallback(async () => {
+        if (!pglite.db) {
+            throw new Error('No database found');
+        }
+
+        await pglite.db.exec(updateId2NameSql);
+    }, [pglite.db]);
+
     return {
         createTestTable,
         insertRandomData,
         selectAllData,
+        updateId2Name,
     };
 }

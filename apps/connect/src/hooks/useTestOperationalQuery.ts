@@ -1,5 +1,5 @@
 // TODO: remove this
-import { createTypedQuery } from '@powerhousedao/reactor-browser/pglite';
+import { createTypedQuery } from '@powerhousedao/reactor-browser/operational';
 import { useEffect, useState } from 'react';
 
 const selectAllDataSql = `

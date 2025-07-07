@@ -31,7 +31,7 @@ import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useGetDriveDocuments } from '../hooks/useGetDriveDocuments.js';
 import { useTableTest } from '../hooks/useTableTest.js';
-import { useTestOperationalQuery } from '../hooks/useTestOperationalQuery.js';
+// import { useTestOperationalQuery } from '../hooks/useTestOperationalQuery.js';
 import { useModal } from './modal/index.js';
 
 function DriveEditorError({ error }: FallbackProps) {
@@ -76,8 +76,9 @@ export function DriveEditorContainer() {
     const reactor = useReactor();
 
     // TODO: remove this
-    const { createTestTable, insertRandomData, selectAllData } = useTableTest();
-    useTestOperationalQuery();
+    const { createTestTable, insertRandomData, selectAllData, updateId2Name } =
+        useTableTest();
+    // useTestOperationalQuery();
 
     const handleAddOperationToSelectedDrive = useCallback(
         async (operation: Operation) => {
@@ -182,6 +183,9 @@ export function DriveEditorContainer() {
                 </Button>
                 <Button onClick={selectAllData} type="button">
                     Select All Data
+                </Button>
+                <Button onClick={updateId2Name} type="button">
+                    Update Id 2 Name
                 </Button>
             </div>
             <DriveEditorComponent
