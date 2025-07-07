@@ -1,3 +1,4 @@
+import { type ListenerFilter } from "#drive-document-model/module";
 import { type PHDocument } from "document-model";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import { type IOperationalStore, type IProcessor } from "./types.js";
@@ -7,9 +8,10 @@ import { type IOperationalStore, type IProcessor } from "./types.js";
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  */
-
+export type OperationalProcessorFilter = ListenerFilter;
 export interface IOperationalProcessor extends IProcessor {
   initAndUpgrade(namespace: string): Promise<void>;
+  filter: OperationalProcessorFilter;
 }
 
 /**
@@ -17,26 +19,35 @@ export interface IOperationalProcessor extends IProcessor {
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export class BaseOperationalProcessor<TDatabaseSchema = unknown>
+export class OperationalProcessor<TDatabaseSchema = unknown>
   implements IOperationalProcessor
 {
-  #namespace: string;
-
   constructor(
-    namespace: string,
-    protected operationalStore: IOperationalStore<TDatabaseSchema>,
-  ) {
-    this.#namespace = namespace;
+    protected _namespace: string,
+    protected _operationalStore: IOperationalStore<TDatabaseSchema>,
+  ) {}
+
+  get filter(): OperationalProcessorFilter {
+    return {
+      branch: ["main"],
+      documentId: ["*"],
+      documentType: ["*"],
+      scope: ["global"],
+    };
   }
 
   get namespace(): string {
-    return this.#namespace;
+    return this.namespace;
+  }
+
+  get operationalStore(): IOperationalStore<TDatabaseSchema> {
+    return this._operationalStore;
   }
 
   static async build(
     namespace: string,
     operationalStore: IOperationalStore,
-  ): Promise<BaseOperationalProcessor> {
+  ): Promise<OperationalProcessor> {
     await operationalStore.schema
       .createSchema(namespace)
       .ifNotExists()
@@ -83,6 +94,6 @@ export class BaseOperationalProcessor<TDatabaseSchema = unknown>
  */
 // import { type schema } from "./types.js";
 
-// class AtlasProcessor extends BaseOperationalProcessor<schema> {
+// class AtlasProcessor extends OperationalProcessor<schema> {
 //   async initAndUpgrade(): Promise<void> {}
 // }
