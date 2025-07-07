@@ -952,7 +952,7 @@ export class BaseDocumentDriveServer
     const documentStorage: PHDocument = {
       header,
       history: document.history,
-      operations: document.operations,
+      operations: { global: [], local: [] },
       initialState: document.initialState,
       clipboard: [],
       attachments: document.attachments,

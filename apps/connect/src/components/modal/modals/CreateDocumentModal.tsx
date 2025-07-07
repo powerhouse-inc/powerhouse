@@ -3,6 +3,7 @@ import { makeNodeSlugFromNodeName } from '#utils';
 import {
     CreateDocumentModal as ConnectCreateDocumentModal,
     FILE,
+    FOLDER,
     type TDocumentType,
     type UiDriveNode,
     type UiFolderNode,
@@ -42,7 +43,9 @@ export const CreateDocumentModal: React.FC<
             selectedParentNode.driveId,
             documentName || `New ${documentModel.documentModel.name}`,
             documentModel.documentModel.id,
-            selectedParentNode.id,
+            selectedParentNode.kind === FOLDER
+                ? selectedParentNode.id
+                : undefined,
         );
 
         if (node) {

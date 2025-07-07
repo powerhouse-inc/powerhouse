@@ -8,7 +8,7 @@ import {
 import { type EditorDispatch } from "document-model";
 import { useMemo } from "react";
 import { FILE } from "../uiNodes/constants.js";
-import type { UiFileNode, UiNode } from "../uiNodes/types.js";
+import type { UiNode } from "../uiNodes/types.js";
 import { type IDriveActions, useDriveActions } from "./useDriveActions.js";
 import { type IDriveContext, useDriveContext } from "./useDriveContext.js";
 import { useUiNodesContext } from "./useUiNodesContext.js";
@@ -18,13 +18,15 @@ function toNode(uiNode: UiNode): Node {
     throw new Error("Cannot convert drive node to regular node");
   }
 
-  const { id, name, parentFolder, kind } = uiNode;
+  const { id, name, parentFolder: uiParentFolder, kind, driveId } = uiNode;
+
+  // if parent folder is driveId then set it to null
+  const parentFolder = uiParentFolder === driveId ? null : uiParentFolder;
+
   if (kind === "FOLDER") {
     return { id, name, parentFolder, kind: "folder" } satisfies FolderNode;
   } else {
-    // Remove after ts reset is fixed
-
-    const fileNode = uiNode as UiFileNode;
+    const fileNode = uiNode;
     return {
       id,
       name,

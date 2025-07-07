@@ -20,8 +20,11 @@ import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
 import type { UiNode } from "../uiNodes/types.js";
 
-export interface DriveEditorContext
-  extends Omit<EditorContext, "getDocumentRevision"> {
+/**
+ * Interface representing the context values provided by the host application
+ * for managing document drive functionality.
+ */
+export interface IDriveContext {
   /** Reactor instance */
   reactor: IDocumentDriveServer;
 
@@ -33,7 +36,6 @@ export interface DriveEditorContext
 
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-
   /** Currently selected node (file/folder) in the drive */
   selectedNode: Node | null;
 
@@ -73,7 +75,18 @@ export interface DriveEditorContext
     documentType: string,
     parentFolder?: string,
     document?: PHDocument,
+    id?: string,
   ) => Promise<FileNode>;
+
+  /**
+   * Copies a node to a new location, along with all it's descendants if it's a folder
+   * @param sourceId - ID of the node to copy
+   * @param targetFolderId - Optional ID of the target folder
+   */
+  copyNode: (
+    sourceId: string,
+    targetFolderId: string | undefined,
+  ) => Promise<void>;
 
   /**
    * Shows a modal for creating a new document
@@ -131,7 +144,11 @@ export interface DriveEditorContext
     driveId: string;
     documentId: string;
   }) => PHDocument["state"] | undefined;
+}
 
+export interface DriveEditorContext
+  extends IDriveContext,
+    Omit<EditorContext, "getDocumentRevision"> {
   /**
    * Retrieves a document from a specific revision
    * @param documentId - ID of the document to retrieve

@@ -63,6 +63,7 @@ export function DriveEditorContainer() {
         setSelectedNode,
         selectedNode,
         selectedParentNode,
+        getNodeById,
     } = useUiNodesContext();
     const { addOperationToSelectedDrive } = useFileNodeDocument();
     const documentDrive = useSelectedDocumentDrive();
@@ -103,7 +104,7 @@ export function DriveEditorContainer() {
         [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
     );
 
-    const { addFile, addDocument } = useDocumentDriveServer();
+    const { addFile, addDocument, copyNode } = useDocumentDriveServer();
     const documentModels = useFilteredDocumentModels();
     const useDriveDocumentState = makeDriveDocumentStateHook(reactor);
     const getDocument = useGetDocument();
@@ -117,6 +118,20 @@ export function DriveEditorContainer() {
             },
             [getDocument],
         );
+
+    const handleCopyNode = useCallback(
+        (sourceId: string, targetFolderId: string | undefined) => {
+            const sourceNode = getNodeById(sourceId);
+            if (!sourceNode) {
+                throw new Error(`Source node with id "${sourceId}" not found`);
+            }
+            const targetNode = targetFolderId
+                ? getNodeById(targetFolderId)
+                : null;
+            return copyNode(sourceNode, targetNode);
+        },
+        [getNodeById, copyNode],
+    );
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -133,6 +148,7 @@ export function DriveEditorContainer() {
             useDriveDocumentStates: useGetDriveDocuments,
             useDriveDocumentState,
             addDocument,
+            copyNode: handleCopyNode,
             reactor,
         }),
         [
@@ -143,6 +159,7 @@ export function DriveEditorContainer() {
             setSelectedNode,
             addFile,
             addDocument,
+            copyNode,
             showCreateDocumentModal,
         ],
     );

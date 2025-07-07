@@ -111,6 +111,9 @@ const DriveContextDecorator: Decorator<
         addDocument() {
           throw new Error("addDocument not implemented");
         },
+        copyNode() {
+          throw new Error("copyNode not implemented");
+        },
         showCreateDocumentModal(documentModel: DocumentModelModule) {
           return Promise.resolve();
         },

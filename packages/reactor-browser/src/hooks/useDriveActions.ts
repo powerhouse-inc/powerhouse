@@ -13,8 +13,8 @@ import {
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
+import { type IDriveContext } from "../types/drive-editor.js";
 import { type UiNode } from "../uiNodes/types.js";
-import { type IDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();
 
@@ -216,26 +216,7 @@ function createDriveActions(
       throw new Error(`Source node with id "${sourceId}" not found`);
     }
 
-    // TODO: new document nodes need to be created in the reactor
-    throw new Error("Copy node is not implemented yet");
-
-    // const copyNodesInput = generateNodesCopy(
-    //   {
-    //     srcId: sourceId,
-    //     targetParentFolder: target?.id,
-    //     targetName: source.name,
-    //   },
-    //   generateId,
-    //   drive.state.global.nodes,
-    // );
-
-    // const copyActions = copyNodesInput.map((copyNodeInput) =>
-    //   copyNode(copyNodeInput),
-    // );
-
-    // for (const copyAction of copyActions) {
-    //   dispatch(copyAction); // TODO support batching dispatch
-    // }
+    await context.copyNode(sourceId, targetFolderId);
   };
 
   const duplicateNode = async (sourceId: string) => {
@@ -243,7 +224,6 @@ function createDriveActions(
     if (!node) {
       throw new Error(`Node with id "${sourceId}" not found`);
     }
-
     await handleCopyNode(node.id, node.parentFolder || undefined);
   };
 

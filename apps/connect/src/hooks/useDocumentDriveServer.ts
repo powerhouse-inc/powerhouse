@@ -458,7 +458,7 @@ export function useDocumentDriveServer() {
     );
 
     const handleCopyNode = useCallback(
-        async (src: UiNode, target: UiNode) => {
+        async (src: UiNode, target: UiNode | null) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
             }
@@ -466,7 +466,7 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to copy documents');
             }
 
-            if (target.kind === FILE) return;
+            if (target?.kind === FILE) return;
 
             const drive = documentDrives.find(
                 drive => drive.header.id === src.driveId,
@@ -478,7 +478,7 @@ export function useDocumentDriveServer() {
             const copyNodesInput = generateNodesCopy(
                 {
                     srcId: src.id,
-                    targetParentFolder: target.id,
+                    targetParentFolder: target?.parentFolder,
                     targetName: src.name,
                 },
                 node => {
@@ -515,6 +515,7 @@ export function useDocumentDriveServer() {
                             ...document.header,
                             id: newHeader.id,
                             sig: newHeader.sig,
+                            slug: newHeader.id,
                         },
                     };
                     await reactor.addDocument(newDocument);

@@ -90,7 +90,7 @@ export function generateNodesCopy(
     srcId: node.id,
     targetId: getNewNodeId(node),
     targetName: node.name,
-    targetParentFolder: node.parentFolder ? getNewNodeId(node) : null,
+    targetParentFolder: node.parentFolder ? ids[node.parentFolder] : null,
   }));
 
   return copyNodesInput;
