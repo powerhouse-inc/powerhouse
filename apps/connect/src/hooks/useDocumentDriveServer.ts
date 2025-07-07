@@ -52,7 +52,12 @@ import {
     type GetDocumentOptions,
     type Listener,
 } from 'document-drive/server/types';
-import { type Operation, type PHDocument, generateId } from 'document-model';
+import {
+    type Operation,
+    type PHDocument,
+    createPresignedHeader,
+    generateId,
+} from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useDocumentDrives } from './useDocumentDrives.js';
@@ -221,16 +226,13 @@ export function useDocumentDriveServer() {
             const newDocument = documentModelModule.utils.createDocument({
                 ...document,
             });
-
-            // TODO is this needed?
-            newDocument.header.id = documentId;
-            newDocument.header.name = name;
-            newDocument.header.documentType = documentType;
-            await reactor.addDocument({
-                header: newDocument.header,
+            newDocument.header = createPresignedHeader(
+                documentId,
                 documentType,
-                document: newDocument,
-            });
+            );
+            newDocument.header.name = name;
+
+            await reactor.addDocument(newDocument);
 
             const action = addFileAction({
                 id: documentId,
@@ -503,11 +505,19 @@ export function useDocumentDriveServer() {
                     continue;
                 }
                 try {
-                    await reactor.addDocument({
-                        id: newId,
-                        documentType: document.header.documentType,
-                        document,
-                    });
+                    const newHeader = createPresignedHeader(
+                        newId,
+                        document.header.documentType,
+                    );
+                    const newDocument = {
+                        ...document,
+                        header: {
+                            ...document.header,
+                            id: newHeader.id,
+                            sig: newHeader.sig,
+                        },
+                    };
+                    await reactor.addDocument(newDocument);
                 } catch (error) {
                     logger.error('Error copying document', oldId, error);
                 }

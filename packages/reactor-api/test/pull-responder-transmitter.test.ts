@@ -14,7 +14,7 @@ import {
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDriveHandlers } from "./drive-handlers.js";
-import { expectUUID } from "./utils.js";
+import { expectUUID, getDocumentScopeIndexes } from "./utils.js";
 
 const remoteUrl = "http://test.com/d/test";
 
@@ -65,7 +65,7 @@ describe("Pull Responder Transmitter", () => {
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
 
-    server = setupServer(...createDriveHandlers(reactor, drive.id));
+    server = setupServer(...createDriveHandlers(reactor, drive.header.id));
     server.listen({ onUnhandledRequest: "error" });
   });
 
@@ -121,7 +121,10 @@ describe("Pull Responder Transmitter", () => {
 
     await vi.waitFor(async () => {
       const drive = await reactor.getDrive(driveId);
-      expect(drive.revision).toStrictEqual({ global: 1, local: 0 });
+      expect(getDocumentScopeIndexes(drive)).toStrictEqual({
+        global: 0,
+        local: -1,
+      });
       expect(drive.state.global).toStrictEqual(result.document?.state.global);
     });
 
@@ -139,31 +142,34 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const documentId = generateId();
-    const document = await remoteReactor.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: documentId,
-      }),
-    );
+    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const documentId = newDocument.header.id;
+    const document = await remoteReactor.addDocument(newDocument);
 
     const result = await remoteReactor.queueAction(
       driveId,
       addFile({
         id: documentId,
         name: "test",
-        documentType: document.documentType,
+        documentType: document.header.documentType,
       }),
     );
 
     await vi.waitFor(async () => {
       const drive = await reactor.getDrive(driveId);
-      expect(drive.revision).toStrictEqual({ global: 1, local: 0 });
+      expect(getDocumentScopeIndexes(drive)).toStrictEqual({
+        global: 0,
+        local: -1,
+      });
       expect(drive.state.global).toStrictEqual(result.document?.state.global);
     });
 
     await vi.waitFor(async () => {
       const document = await reactor.getDocument(documentId);
-      expect(document.revision).toStrictEqual({ global: 0, local: 0 });
+      expect(getDocumentScopeIndexes(document)).toStrictEqual({
+        global: -1,
+        local: -1,
+      });
       expect(document.state.global).toStrictEqual(document?.state.global);
     });
 
@@ -181,12 +187,9 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const documentId = generateId();
-    const document = await remoteReactor.addDocument(
-      documentModelDocumentModelModule.utils.createDocument({
-        id: documentId,
-      }),
-    );
+    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const documentId = newDocument.header.id;
+    const document = await remoteReactor.addDocument(newDocument);
     const result = await remoteReactor.queueAction(
       documentId,
       documentModelDocumentModelModule.actions.setAuthorName({
@@ -199,13 +202,16 @@ describe("Pull Responder Transmitter", () => {
       addFile({
         id: documentId,
         name: "test",
-        documentType: document.documentType,
+        documentType: document.header.documentType,
       }),
     );
 
     await vi.waitFor(async () => {
       const document = await reactor.getDocument(documentId);
-      expect(document.revision).toStrictEqual({ global: 1, local: 0 });
+      expect(getDocumentScopeIndexes(document)).toStrictEqual({
+        global: 0,
+        local: -1,
+      });
       expect(document.state.global).toStrictEqual(
         result.document?.state.global,
       );

@@ -178,12 +178,9 @@ describe("DriveSubgraph", () => {
       context as any,
     );
 
-    expect(document).toStrictEqual({
-      ...mockDocumentData,
+    expect(document).toMatchObject({
+      ...mockDocumentData.header,
       // default
-      revision: {
-        document: 0,
-      },
       state: mockDocumentData.state.global,
       initialState: mockDocumentData.initialState.state.global,
       stateJSON: mockDocumentData.state.global,
@@ -191,6 +188,7 @@ describe("DriveSubgraph", () => {
       __typename: "",
 
       // backward compatibility
+      revision: mockDocumentData.header.revision.global,
       id: mockDocumentData.header.id,
     });
 

@@ -19,6 +19,7 @@ import {
   type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
+  type PHDocumentMeta,
   type ReducerOptions,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
@@ -403,7 +404,7 @@ export interface IBaseDocumentDriveServer {
 
   addDocument<TDocument extends PHDocument>(
     input: TDocument,
-    preferredEditor?: string,
+    meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   deleteDocument(documentId: string): Promise<void>;
 

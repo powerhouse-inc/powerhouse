@@ -39,7 +39,7 @@ export {
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
-export type { PHDocumentHeader } from "#document/ph-types.js";
+export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,

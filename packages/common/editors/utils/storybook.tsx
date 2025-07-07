@@ -112,9 +112,7 @@ const DriveContextDecorator: Decorator<
           throw new Error("addDocument not implemented");
         },
         showCreateDocumentModal(documentModel: DocumentModelModule) {
-          return Promise.resolve({
-            name: `New ${documentModel.documentModel.name}`,
-          });
+          return Promise.resolve();
         },
       }}
     >

@@ -42,6 +42,7 @@ import {
   type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
+  type PHDocumentMeta,
   type SignalResult,
   attachBranch,
   createPresignedHeader,
@@ -158,16 +159,16 @@ export class BaseDocumentDriveServer
       const document = documentModelModule.utils.createDocument({
         ...initialState,
       });
+      // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
+      document.header.id = documentId;
+      document.header.sig = header.sig;
 
       try {
         const createdDocument = await this.createDocument(
-          {
-            document,
-            documentType,
-            header,
-          },
+          { document },
           options?.source ?? { type: "local" },
+          initialState?.header.meta,
         );
         return {
           status: "SUCCESS",
@@ -597,13 +598,9 @@ export class BaseDocumentDriveServer
 
   addDocument<TDocument extends PHDocument>(
     document: TDocument,
-    preferredEditor?: string,
+    meta?: PHDocumentMeta,
   ): Promise<TDocument> {
-    return this.createDocument(
-      { document },
-      { type: "local" },
-      preferredEditor,
-    );
+    return this.createDocument({ document }, { type: "local" }, meta);
   }
 
   async addDrive(
@@ -870,7 +867,7 @@ export class BaseDocumentDriveServer
   protected async createDocument<TDocument extends PHDocument>(
     input: CreateDocumentInput<TDocument>,
     source: StrandUpdateSource,
-    preferredEditor?: string,
+    meta?: PHDocumentMeta,
   ): Promise<TDocument> {
     const { documentType, document: inputDocument } =
       resolveCreateDocumentInput(input);
@@ -947,10 +944,8 @@ export class BaseDocumentDriveServer
       header = createPresignedHeader(undefined, documentType);
     }
 
-    if (preferredEditor) {
-      const meta = header.meta ?? {};
-      meta.preferredEditor = preferredEditor;
-      header.meta = meta;
+    if (meta) {
+      header.meta = { ...header.meta, ...meta };
     }
 
     // stores document information
