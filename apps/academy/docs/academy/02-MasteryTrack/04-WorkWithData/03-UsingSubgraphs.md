@@ -19,9 +19,9 @@ A subgraph in Powerhouse is a **GraphQL-based modular data component** that exte
 
 ### Subgraphs consist of
 
-- **A schema** – Which defines the GraphQL Queries and Mutations.
-- **Resolvers** – Which handle data fetching and logic.
-- **Context Fields** – Additional metadata that helps in resolving data efficiently.
+- **A schema** — Which defines the GraphQL Queries and Mutations.
+- **Resolvers** — Which handle data fetching and logic.
+- **Context Fields** — Additional metadata that helps in resolving data efficiently.
 
 #### Additionally, context fields allow resolvers to access extra information, such as:
 - **User authentication** (e.g., checking if a user is an admin).
@@ -40,30 +40,30 @@ context: {
 
 ## 1. How to generate a subgraph
 
-Lets start by generating a new subgraph. For our tutorial we will create a new subgraph within our To-do List project.   
+Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our To-do List project.   
 Open your project and start your terminal.
 The Powerhouse toolkit provides a command-line utility to create new subgraphs easily.   
 
 ```bash title="Run the following command to generate a new subgraph"
-ph generate --subgraph <to-do-list-subgraph>
+ph generate --subgraph to-do-list
 ```
 
 ```bash title="Expected Output"
 Loaded templates: node_modules/@powerhousedao/codegen/dist/codegen/.hygen/templates
-       FORCED: ./subgraphs/to-do-list-subgraph/index.ts
+       FORCED: ./subgraphs/to-do-list/index.ts
      skipped: ./subgraphs/index.ts
       inject: ./subgraphs/index.ts
 ```
 
 ### What happened?
-1. A new subgraph was created in `./subgraphs/to-do-list-subgraph/`
+1. A new subgraph was created in `./subgraphs/to-do-list/`
 2. The subgraph was automatically registered in your project's registry
 3. Basic boilerplate code was generated with an example query
 
 If we now run `ph reactor` we will see the new subgraph being registered during the startup of the Reactor.
   > Registered /todolist subgraph.
 
-Alternatively, when you are running a local reactor with `ph reactor` a series of subgraphs will automatically get registered, amongst those one for the available document models in your Powerhouse project. 
+Alternatively, when you are running a local reactor with `ph reactor`, a series of subgraphs will automatically get registered, among those, one for the available document models in your Powerhouse project. 
 
 ```
 Initializing Subgraph Manager...
@@ -120,29 +120,76 @@ Now let's create a subgraph that provides enhanced querying capabilities for our
 ```typescript
 export const typeDefs = `
   type Query {
+    # Dashboard-style summary query - returns high-level metrics
+    # Similar to ToDoListStats from document model but optimized for quick queries
     todoList: TodoListSummary
+    
+    # Filtered list query - lets you get items by completion status
+    # More flexible than the basic document model - can filter checked/unchecked
     todoItems(checked: Boolean): [TodoItem!]!
+    
+    # Count-only query - when you just need numbers, not full data
+    # Faster than getting full list when you only need totals for dashboards
     todoItemsCount(checked: Boolean): Int!
   }
 
+  # This mirrors ToDoListStats from the document model
+  # But it's a "view" optimized for summary reports and dashboards
   type TodoListSummary {
-    total: Int!
-    checked: Int!
-    unchecked: Int!
+    total: Int!     # Total number of items
+    checked: Int!   # Number of completed items  
+    unchecked: Int! # Number of pending items
   }
 
+  # This matches the ToDoItem from the document model
+  # Same data structure, but accessed through subgraph queries for filtering
   type TodoItem {
-    id: ID!
-    text: String!
-    checked: Boolean!
+    id: ID!          # Unique identifier
+    text: String!    # The task description
+    checked: Boolean! # Completion status
   }
 `;
 ```
 
+
+
+#### Understanding Resolvers
+
+Before diving into the technical implementation, let's understand why these three different query types matter for your product.
+Think of resolvers as custom API endpoints that are automatically created based on what your users actually need to know about your data.
+
+ When someone asks your system a question through GraphQL, the resolver:
+
+1. **Understands the request** - "The customer wants unchecked items"
+2. **Knows where to get the data** - "I need to check the todo_items database table"  
+3. **Applies the right filters** - "Only get items where checked = false"
+4. **Returns the answer** - "Here are the 5 unchecked items"
+
+**The three resolvers serve different business needs:**
+
+- **`todoList` Resolver - The Dashboard**
+  - **Business value**: Perfect for executive dashboards or KPI displays
+  - **Use case**: "We have 150 total tasks, 89 completed, 61 pending"
+  - **Users**: Executives, managers, anyone needing high-level metrics
+
+- **`todoItems` Resolver - The Detailed List**  
+  - **Business value**: Great for operational views where people need to see actual tasks
+  - **Use case**: "Show me all pending tasks" or "Show me everything"
+  - **Users**: Workers, operators, anyone who needs to act on specific items
+
+- **`todoItemsCount` Resolver - The Counter**
+  - **Business value**: Super fast for analytics or when you only need numbers
+  - **Use case**: "How many completed tasks do we have?" → "47"
+  - **Users**: Analysts, automated systems, performance dashboards
+
+**Why this architecture matters:**
+- **Performance**: Count queries are much faster than getting full lists when you only need numbers
+- **User Experience**: Different resolvers serve different user needs efficiently
+- **Flexibility**: Users can ask for exactly what they need, nothing more, nothing less
+
 **Step 2: Create resolvers in `subgraphs/to-do-list/resolvers.ts`:**
 
 ```typescript
-// subgraphs/to-do-list/resolvers.ts
 // subgraphs/to-do-list/resolvers.ts
 interface SubgraphInstance {
   operationalStore: any;
@@ -196,35 +243,48 @@ import { typeDefs } from './schema.js';
 import { createResolvers } from './resolvers.js';
 
 export default class ToDoListSubgraph {
+  // Define the API endpoint where this subgraph will be accessible
+  // Users can query this at: http://localhost:4001/graphql/to-do-list
   path = '/to-do-list';
   
+  // GraphQL schema definition (what queries are available)
   typeDefs = typeDefs;
+  
+  // Query handlers (how to fetch the data)
   resolvers: any;
+  
+  // Database interface (injected by Powerhouse framework)
   operationalStore: any;
   
   constructor() {
+    // Connect the resolvers to this subgraph instance
+    // This gives resolvers access to the database through this.operationalStore
     this.resolvers = createResolvers(this);
   }
 
+  // Called once when the subgraph starts up
   async onSetup() {
     await this.createOperationalTables();
   }
 
+  // Create the database tables we need for storing todo items
   async createOperationalTables() {
     await this.operationalStore.schema.createTableIfNotExists(
-      "todo_items",
+      "todo_items", // Table name
       (table: any) => {
-        table.string("id").primary();
-        table.string("text").notNullable();
-        table.boolean("checked").defaultTo(false);
-        table.timestamp("created_at").defaultTo(this.operationalStore.fn.now());
-        table.timestamp("updated_at").defaultTo(this.operationalStore.fn.now());
+        table.string("id").primary();           // Unique identifier for each todo item
+        table.string("text").notNullable();     // The actual todo task text
+        table.boolean("checked").defaultTo(false); // Completion status (unchecked by default)
+        table.timestamp("created_at").defaultTo(this.operationalStore.fn.now()); // When item was created
+        table.timestamp("updated_at").defaultTo(this.operationalStore.fn.now()); // When item was last modified
       }
     );
   }
 
+  // Event processor: Keeps subgraph data synchronized with document model changes
+  // When users add/update/delete todos in Connect, this method handles the updates
   async process(event: any) {
-    // Handle To-do List document operations
+    // Handle new todo item creation
     if (event.type === "ADD_TODO_ITEM") {
       await this.operationalStore.insert("todo_items", {
         id: event.input.id,
@@ -237,12 +297,13 @@ export default class ToDoListSubgraph {
       console.log(`Added todo item: ${event.input.text}`);
     }
     
+    // Handle todo item updates (text changes, checking/unchecking)
     if (event.type === "UPDATE_TODO_ITEM") {
       const updateData: any = {
-        updated_at: new Date()
+        updated_at: new Date() // Always update the timestamp
       };
       
-      // Only update fields that were provided
+      // Only update fields that were actually changed
       if (event.input.text !== undefined) {
         updateData.text = event.input.text;
       }
@@ -257,6 +318,7 @@ export default class ToDoListSubgraph {
       console.log(`Updated todo item: ${event.input.id}`);
     }
     
+    // Handle todo item deletion
     if (event.type === "DELETE_TODO_ITEM") {
       await this.operationalStore.delete("todo_items")
         .where("id", event.input.id);
@@ -266,11 +328,6 @@ export default class ToDoListSubgraph {
   }
 }
 ```
-
-**What this schema provides:**
-- `todoList`: Returns statistics about all to-do items (total, checked, unchecked counts)
-- `todoItems`: Returns a list of to-do items, optionally filtered by checked status
-- `todoItemsCount`: Returns just the count of items, optionally filtered by checked status
 
 ### 2.3 Understanding the Implementation
 
@@ -287,70 +344,72 @@ export default class ToDoListSubgraph {
 - Resolvers that fetch and filter todo items from the operational store
 - Event processing to keep the subgraph data synchronized with document model changes
 
-### 2.4 Connect to Document Model Events (Processor Integration)
+### 2.4 Understanding the Document Model Event Integration
 
-To make our subgraph truly useful, we need to connect it to the actual To-do List document model events. This ensures that when users interact with To-do List documents through Connect, the subgraph data stays synchronized.
+Notice that our `index.ts` file already includes a `process` method - this is the **processor integration** that keeps our subgraph synchronized with To-do List document model events. When users interact with To-do List documents through Connect, this method automatically handles the updates.
 
-Add this processor integration to your subgraph:
+**How the existing processor integration works:**
 
+The `process` method in our `index.ts` file handles three types of document model events:
+
+**1. Adding new todo items:**
 ```typescript
-async process(event) {
-  // Handle To-do List document operations
-  if (event.type === "ADD_TODO_ITEM") {
-    await this.operationalStore.insert("todo_items", {
-      id: event.input.id,
-      text: event.input.text,
-      checked: false,
-      created_at: new Date(),
-      updated_at: new Date()
-    });
-    
-    console.log(`Added todo item: ${event.input.text}`);
-  }
-  
-  if (event.type === "UPDATE_TODO_ITEM") {
-    const updateData = {
-      updated_at: new Date()
-    };
-    
-    // Only update fields that were provided
-    if (event.input.text !== undefined) {
-      updateData.text = event.input.text;
-    }
-    if (event.input.checked !== undefined) {
-      updateData.checked = event.input.checked;
-    }
-    
-    await this.operationalStore.update("todo_items")
-      .where("id", event.input.id)
-      .update(updateData);
-    
-    console.log(`Updated todo item: ${event.input.id}`);
-  }
-  
-  if (event.type === "DELETE_TODO_ITEM") {
-    await this.operationalStore.delete("todo_items")
-      .where("id", event.input.id);
-    
-    console.log(`Deleted todo item: ${event.input.id}`);
-  }
+if (event.type === "ADD_TODO_ITEM") {
+  await this.operationalStore.insert("todo_items", {
+    id: event.input.id,
+    text: event.input.text,
+    checked: false,
+    created_at: new Date(),
+    updated_at: new Date()
+  });
 }
 ```
 
-**What this processor does:**
-- Listens for document model operations (`ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`)
-- Updates the operational store in real-time when these operations occur
-- Provides console logging for debugging
-- Maintains data consistency between the document model and the subgraph
+**2. Updating existing items:**
+```typescript
+if (event.type === "UPDATE_TODO_ITEM") {
+  // Only update fields that were actually changed
+  const updateData = { updated_at: new Date() };
+  if (event.input.text !== undefined) updateData.text = event.input.text;
+  if (event.input.checked !== undefined) updateData.checked = event.input.checked;
+  
+  await this.operationalStore.update("todo_items")
+    .where("id", event.input.id)
+    .update(updateData);
+}
+```
+
+**3. Deleting items:**
+```typescript
+if (event.type === "DELETE_TODO_ITEM") {
+  await this.operationalStore.delete("todo_items")
+    .where("id", event.input.id);
+}
+```
+
+**The integration happens automatically:**
+1. **User action**: Someone adds a todo item in Connect
+2. **Document model**: Processes the `ADD_TODO_ITEM` operation  
+3. **Framework routing**: Powerhouse automatically calls your subgraph's `process` method
+4. **Subgraph response**: Your `process` method updates the operational store
+5. **Query availability**: Users can now query the updated data via GraphQL
 
 ### 2.5 Summary of What We've Built
 
-- **Added two main queries**: `todoList` for statistics and `todoItems` for item lists
-- **Created an operational table** `todo_items` to store the todo items with proper schema
-- **Added resolvers** to fetch and filter todo items from the operational store
-- **Implemented event processing** to keep the subgraph data synchronized with document model changes
-- **The todoItems query accepts an optional checked parameter** to filter items by their completion status
-- **The todoList query returns the full statistics** including total, checked, and unchecked counts
+Our complete To-do List subgraph includes:
+
+- **GraphQL schema** (`schema.ts`): Defines `todoList`, `todoItems`, and `todoItemsCount` queries
+- **Resolvers** (`resolvers.ts`): Handle data fetching and filtering from the operational store
+- **Main subgraph class** (`index.ts`): Coordinates everything and includes:
+  - **Operational table creation**: Sets up the `todo_items` table with proper schema
+  - **Event processing**: The `process` method keeps subgraph data synchronized with document model changes
+  - **Real-time updates**: Automatically handles `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, and `DELETE_TODO_ITEM` events
+
+**Key features:**
+- **Filtering capability**: The `todoItems` query accepts an optional `checked` parameter
+- **Performance optimization**: The `todoItemsCount` query returns just numbers when you don't need full data
+- **Real-time synchronization**: Changes in Connect immediately appear in subgraph queries
+- **Complete statistics**: The `todoList` query returns total, checked, and unchecked counts
 
 ## 3. Testing the To-do List Subgraph
 
@@ -485,7 +544,7 @@ This demonstrates the real-time synchronization between the document model and t
 
 ## 4. Working with the supergraph or gateway
 
-A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data
+A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
 
 ### 4.1 Key concepts
 
@@ -503,7 +562,7 @@ A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs,
 
 ### 4.3 Use the Powerhouse supergraph
 
-The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To get to the endpoint open your localhost by starting the reactor and adding `graphql` to the end of the url. The following commands explain how you can test & try the supergraph. 
+The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To access the endpoint, start the reactor and navigate to the URL with `graphql` appended. The following commands explain how you can test & try the supergraph. 
 
 - Start the reactor:
 
@@ -517,7 +576,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
   http://localhost:4001/graphql
   ```
 
-The supergraph allows to both query & mutate data from the same endpoint. 
+The supergraph allows you to both query & mutate data from the same endpoint. 
 
 **Example: Using the supergraph with To-do List documents**
 
@@ -639,7 +698,7 @@ To integrate with them, register them via the Reactor API.
 
 ### Future enhancements
 
-Bridge Processors and Subgraphs – Currently, there's a gap in how processors and subgraphs interact. Powerhouse might improve this in future updates.
+Bridge Processors and Subgraphs — Currently, there's a gap in how processors and subgraphs interact. Powerhouse might improve this in future updates.
 
 
 
