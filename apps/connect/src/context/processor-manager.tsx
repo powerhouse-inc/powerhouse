@@ -1,10 +1,15 @@
 import connectConfig from '#connect-config';
-import type { PGlite } from '@electric-sql/pglite';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
     useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
+import {
+    live,
+    useSetPGliteDB,
+    type PGlite,
+    type PGliteWithLive,
+} from '@powerhousedao/reactor-browser/pglite';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
@@ -21,7 +26,9 @@ function createPgLiteFactoryWorker(databaseName: string) {
         const PGWorker = (await import('../workers/pglite-worker.js?worker'))
             .default;
 
-        const { PGliteWorker } = await import('@electric-sql/pglite/worker');
+        const { PGliteWorker } = await import(
+            '@powerhousedao/reactor-browser/pglite'
+        );
 
         const worker = new PGWorker({
             name: 'pglite-worker',
@@ -39,6 +46,9 @@ function createPgLiteFactoryWorker(databaseName: string) {
         const pgLiteWorker = new PGliteWorker(worker, {
             meta: {
                 databaseName,
+            },
+            extensions: {
+                live,
             },
         });
 
@@ -161,17 +171,46 @@ export function ExternalProcessors() {
 }
 
 export function ProcessorManagerProvider({ children }: PropsWithChildren) {
-    return (
-        <AnalyticsProvider
-            options={{
-                databaseName: connectConfig.analytics.databaseName,
-                pgLiteFactory: connectConfig.analytics.useWorker
-                    ? createPgLiteFactoryWorker(
-                          connectConfig.analytics.databaseName,
-                      )
-                    : undefined,
-            }}
-        >
+    const pgLiteFactory = connectConfig.analytics.useWorker
+        ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
+        : undefined;
+
+    const setPGliteDB = useSetPGliteDB();
+
+    // Initialize and handle PGlite factory
+    useEffect(() => {
+        if (!pgLiteFactory) {
+            // If no factory, set to not loading with null db
+            setPGliteDB({
+                db: null,
+                isLoading: false,
+                error: null,
+            });
+            return;
+        }
+
+        // Resolve the factory
+        pgLiteFactory()
+            .then(db => {
+                setPGliteDB({
+                    db: db as unknown as PGliteWithLive,
+                    isLoading: false,
+                    error: null,
+                });
+            })
+            .catch((err: unknown) => {
+                const error =
+                    err instanceof Error ? err : new Error(String(err));
+                setPGliteDB({
+                    db: null,
+                    isLoading: false,
+                    error,
+                });
+            });
+    }, []);
+
+    const content = (
+        <>
             {connectConfig.analytics.diffProcessorEnabled && (
                 <DiffAnalyzerProcessor />
             )}
@@ -182,6 +221,17 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
                 <ExternalProcessors />
             )}
             {children}
+        </>
+    );
+
+    return (
+        <AnalyticsProvider
+            options={{
+                databaseName: connectConfig.analytics.databaseName,
+                pgLiteFactory,
+            }}
+        >
+            {content}
         </AnalyticsProvider>
     );
 }
