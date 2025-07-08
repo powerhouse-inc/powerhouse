@@ -1,3 +1,13 @@
+## 3.3.0-dev.3 (2025-07-08)
+
+### 🚀 Features
+
+- added operational hooks and utils in reactor-browser ([216f7d03d](https://github.com/powerhouse-inc/powerhouse/commit/216f7d03d))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.3.0-dev.2 (2025-07-05)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
