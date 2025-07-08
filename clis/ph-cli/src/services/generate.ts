@@ -9,6 +9,7 @@ import {
   generateSubgraph,
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/utils";
+import path from "path";
 
 export type GenerateOptions = {
   interactive?: boolean;
@@ -95,7 +96,10 @@ export async function startGenerate(
     await generateImportScript(command.importScriptName, config);
   } else if (command.migrationFile) {
     const { migrationFile, schemaFile } = command;
-    await generateDBSchema({ migrationFile, schemaFile });
+    await generateDBSchema({
+      migrationFile: path.join(process.cwd(), migrationFile),
+      schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
+    });
   } else if (filePath) {
     await generateFromFile(filePath, config);
   } else {
