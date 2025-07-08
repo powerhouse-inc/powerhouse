@@ -1,5 +1,6 @@
 import {
   generate as generateCode,
+  generateDBSchema,
   generateDriveEditor,
   generateEditor,
   generateFromFile,
@@ -24,6 +25,8 @@ export type GenerateOptions = {
   importScript?: string;
   file?: string;
   driveEditor?: string;
+  migrationFile?: string;
+  schemaFile?: string;
 };
 
 export async function startGenerate(
@@ -59,6 +62,8 @@ export async function startGenerate(
     importScriptName: options.importScript,
     driveEditor: !!options.driveEditor,
     driveEditorName: options.driveEditor,
+    migrationFile: options.migrationFile,
+    schemaFile: options.schemaFile,
   };
 
   if (command.driveEditor) {
@@ -88,6 +93,9 @@ export async function startGenerate(
     await generateSubgraph(command.subgraphName, options.file || null, config);
   } else if (command.importScript && command.importScriptName) {
     await generateImportScript(command.importScriptName, config);
+  } else if (command.migrationFile) {
+    const { migrationFile, schemaFile } = command;
+    await generateDBSchema({ migrationFile, schemaFile });
   } else if (filePath) {
     await generateFromFile(filePath, config);
   } else {
