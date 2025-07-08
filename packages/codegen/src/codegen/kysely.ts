@@ -1,19 +1,6 @@
 import { generateId } from "document-model";
-import { Kysely, type Migration } from "kysely";
+import { Kysely } from "kysely";
 import { Codegen, KyselyPGlite } from "kysely-pglite";
-
-interface IGenerateOptions {
-  camelCase?: boolean;
-  excludePattern?: string;
-  includePattern?: string;
-  outFile?: string;
-  print?: boolean;
-  runtimeEnums?: boolean;
-  schema?: string;
-  transformer?: Transformer;
-  typeOnlyImports?: boolean;
-  verify?: boolean;
-}
 
 export interface IOptions {
   migrationFile: string;
@@ -29,7 +16,9 @@ export async function generateDBSchema({
   const db = new Kysely({ dialect });
 
   try {
-    const migration = (await import(migrationFile)) as Migration;
+    const migration = (await import(migrationFile)) as {
+      up: (db: Kysely<any>) => Promise<void>;
+    };
     await migration.up(db);
   } catch (error: unknown) {
     console.error("Error running migration:", error);
@@ -42,7 +31,6 @@ export async function generateDBSchema({
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     db: db as any,
     outFile: schemaFile,
-    print: true,
   });
 
   console.log(`Types generated at ${schemaFile}`);
