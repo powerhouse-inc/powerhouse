@@ -18,6 +18,7 @@ import {
   generateDocumentModel,
 } from "./hygen.js";
 import { loadDocumentModel } from "./utils.js";
+export { generateDBSchema } from "./kysely.js";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
