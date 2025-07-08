@@ -2,7 +2,7 @@ import { type ListenerFilter } from "#drive-document-model/module";
 import { type PHDocument } from "document-model";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import { type IOperationalStore, type IProcessor } from "./types.js";
-
+export * from "kysely";
 /**
  * PowerhouseDB is the standardized database interface for operational processors.
  * This abstraction provides type-safe database operations while hiding the underlying
