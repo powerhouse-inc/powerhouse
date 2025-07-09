@@ -129,7 +129,7 @@ Finally there is the onStrands method. Here you can update your operational data
 ph generate --subgraph <subgraph-name>
 ```
 
-open ./subgraphs/<subgraph-name>/index.ts
+open ```./subgraphs/<subgraph-name>/index.ts```
 
 define the following:
 
