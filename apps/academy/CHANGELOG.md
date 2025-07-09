@@ -1,3 +1,7 @@
+## 3.3.0-dev.5 (2025-07-09)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.4 (2025-07-09)
 
 ### 🚀 Features

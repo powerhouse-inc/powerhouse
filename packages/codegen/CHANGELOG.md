@@ -1,3 +1,13 @@
+## 3.3.0-dev.5 (2025-07-09)
+
+### 🩹 Fixes
+
+- **codegen:** proper import path for document types ([11352d4ae](https://github.com/powerhouse-inc/powerhouse/commit/11352d4ae))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 3.3.0-dev.4 (2025-07-09)
 
 ### 🚀 Features
