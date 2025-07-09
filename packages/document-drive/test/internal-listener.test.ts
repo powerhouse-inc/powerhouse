@@ -213,6 +213,7 @@ describe("Internal Listener", () => {
         branch: "main",
         documentId,
         driveId,
+        documentType: "powerhouse/document-model",
         operations: [
           {
             hash: "nWKpqR6ns0l8C/Khwrl+SyKy0sA=",
@@ -246,6 +247,7 @@ describe("Internal Listener", () => {
         branch: "main",
         documentId,
         driveId,
+        documentType: "powerhouse/document-model",
         operations: [
           {
             hash: "s7RBcer0JqjSGvNb12gqpeeJGRY=",
