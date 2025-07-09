@@ -2,9 +2,10 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/migrations.ts"
 force: true
 ---
-import { sql, type Kysely } from "kysely";
+import { type DB } from "./schema.js";
+import { type IOperationalStore } from "document-drive/processors/types"
 
-export async function up(db: Kysely<any>): Promise<void> {
+export async function up(db: IOperationalStore<DB>): Promise<void> {
   // Create table 
   await db.schema
     .createTable("todo")
@@ -20,7 +21,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   console.log(tables);
 }
 
-export async function down(db: Kysely<any>): Promise<void> {
+export async function down(db: IOperationalStore<DB>): Promise<void> {
   // drop table
   await db.schema.dropTable("todo").execute();
 }
