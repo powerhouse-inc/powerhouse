@@ -1,3 +1,20 @@
+## 3.3.0-dev.4 (2025-07-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** added generate schema command ([9a5e921fb](https://github.com/powerhouse-inc/powerhouse/commit/9a5e921fb))
+- **document-drive:** initial work on BaseOperationalProcessor ([40fe0ec2f](https://github.com/powerhouse-inc/powerhouse/commit/40fe0ec2f))
+
+### 🩹 Fixes
+
+- **document-drive:** operational processor cleanup ([e6d0a96b6](https://github.com/powerhouse-inc/powerhouse/commit/e6d0a96b6))
+- **reactor-api, reactor-local:** build issues ([927192aff](https://github.com/powerhouse-inc/powerhouse/commit/927192aff))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 3.3.0-dev.3 (2025-07-08)
 
 ### 🚀 Features
