@@ -4,6 +4,11 @@ import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
 import { type Kysely } from "kysely";
 
+/**
+ * The standardized relational database interface for operational processors.
+ * This abstraction provides type-safe database operations while hiding the underlying
+ * database framework implementation details.
+ */
 export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
 
 export interface IProcessorHostModule {
