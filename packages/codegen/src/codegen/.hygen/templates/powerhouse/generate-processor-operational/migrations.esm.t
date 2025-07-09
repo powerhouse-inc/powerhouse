@@ -16,9 +16,6 @@ export async function up(db: IOperationalStore<DB>): Promise<void> {
     ])
     .ifNotExists()
     .execute();
-
-  const tables = await db.introspection.getTables();
-  console.log(tables);
 }
 
 export async function down(db: IOperationalStore<DB>): Promise<void> {
