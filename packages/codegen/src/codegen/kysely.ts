@@ -1,4 +1,3 @@
-import { generateId } from "document-model";
 import { Kysely } from "kysely";
 import { Codegen, KyselyPGlite } from "kysely-pglite";
 
@@ -11,8 +10,7 @@ export async function generateDBSchema({
   migrationFile,
   schemaFile,
 }: IOptions) {
-  const dataDir = `memory://${generateId()}`;
-  const { dialect } = new KyselyPGlite({ dataDir });
+  const { dialect } = new KyselyPGlite("memory://");
   const db = new Kysely({ dialect });
 
   try {
