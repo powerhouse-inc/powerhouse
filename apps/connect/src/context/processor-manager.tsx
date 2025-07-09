@@ -4,6 +4,7 @@ import {
     AnalyticsProvider,
     useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
+import { useOperationalStore } from '@powerhousedao/reactor-browser/operational';
 import {
     live,
     useSetPGliteDB,
@@ -12,6 +13,7 @@ import {
 } from '@powerhousedao/reactor-browser/pglite';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
+import { type IOperationalStore } from 'document-drive/processors/types';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
 import {
     useExternalProcessors,
@@ -61,12 +63,13 @@ function createPgLiteFactoryWorker(databaseName: string) {
 async function registerExternalProcessors(
     manager: ProcessorManager,
     analyticsStore: IAnalyticsStore,
+    operationalStore: IOperationalStore,
     processorName: string,
     processorFactory: Processors,
 ) {
     return await manager.registerFactory(
         processorName,
-        processorFactory({ analyticsStore }),
+        processorFactory({ analyticsStore, operationalStore }),
     );
 }
 
@@ -139,6 +142,7 @@ export function DriveAnalyticsProcessor() {
 export function ExternalProcessors() {
     const externalProcessors = useExternalProcessors();
     const store = useAnalyticsStoreAsync();
+    const operationalStore = useOperationalStore();
     const manager = useUnwrappedProcessorManager();
     const hasRegistered = useRef(false);
 
@@ -147,7 +151,8 @@ export function ExternalProcessors() {
             !store.data ||
             !manager ||
             hasRegistered.current ||
-            externalProcessors.length === 0
+            externalProcessors.length === 0 ||
+            !operationalStore.db
         ) {
             return;
         }
@@ -159,13 +164,14 @@ export function ExternalProcessors() {
             registerExternalProcessors(
                 manager,
                 store.data,
+                operationalStore.db,
                 `${packageName}-${index}`,
                 processors,
             ).catch(logger.error);
 
             index++;
         }
-    }, [store.data, manager]);
+    }, [store.data, manager, operationalStore]);
 
     return null;
 }
