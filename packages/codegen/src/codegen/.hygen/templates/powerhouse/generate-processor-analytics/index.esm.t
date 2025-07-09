@@ -40,8 +40,6 @@ export class <%= pascalName %>Processor implements IProcessor {
       }
 
       for (const operation of strand.operations) {
-        console.log(">>> ", operation.type);
-
         // this.inputs.push( ... );
       }
     }
