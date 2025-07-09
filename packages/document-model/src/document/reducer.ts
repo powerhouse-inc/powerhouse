@@ -117,7 +117,7 @@ function updateOperations<TDocument extends PHDocument>(
   const operations: Operation[] = document.operations[scope].slice();
   let operationId: string | undefined;
 
-  const latestOperation = operations.at(-1);
+  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
 
   let nextIndex = reuseLastOperationIndex
