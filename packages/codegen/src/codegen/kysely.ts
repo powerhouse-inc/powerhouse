@@ -1,6 +1,7 @@
 import { Kysely, type Migration } from "kysely";
 import { Codegen, KyselyPGlite } from "kysely-pglite";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { transform } from "sucrase";
 
 export interface IOptions {
@@ -36,12 +37,13 @@ export async function generateDBSchema({
     throw error;
   }
   const codegen = new Codegen(dialect);
+
+  const outFile = schemaFile ?? resolve(migrationFile, "../schema.ts");
   // TODO: Do not pass in outFile, so we can replace the kysely import
   await codegen.generate({
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     db: db as any,
-    outFile: schemaFile,
-    logger: undefined,
+    outFile,
   });
-  console.log(`Schema types generated at ${schemaFile}`);
+  console.log(`Schema types generated at ${outFile}`);
 }
