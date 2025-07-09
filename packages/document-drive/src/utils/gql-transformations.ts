@@ -18,7 +18,11 @@ export function responseForDocument(
   return {
     ...document,
     id: document.header.id,
-    revision: document.header.revision,
+    createdAt: document.header.createdAtUtcIso,
+    lastModified: document.header.lastModifiedAtUtcIso,
+    documentType: document.header.documentType,
+    name: document.header.name,
+    revision: document.header.revision.global || 0,
     state: document.state.global,
     stateJSON: document.state.global,
     operations: document.operations.global.map((op: Operation) => ({
