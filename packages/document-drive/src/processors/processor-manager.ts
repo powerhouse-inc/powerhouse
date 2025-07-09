@@ -89,7 +89,7 @@ export class ProcessorManager implements IProcessorManager {
     // don't let the factory throw, we want to continue with the rest of the processors
     let processors: ProcessorRecord[] = [];
     try {
-      processors = factory(driveId);
+      processors = await factory(driveId);
     } catch (e) {
       this.logger.error(`Error creating processors for drive ${driveId}:`, e);
       return;
