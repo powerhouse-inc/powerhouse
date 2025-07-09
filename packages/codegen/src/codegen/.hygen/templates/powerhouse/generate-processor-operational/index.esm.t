@@ -2,6 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
+import { type IOperationalStore } from "document-drive/processors/types";
 import { OperationalProcessor, type OperationalProcessorFilter } from "document-drive/processors/operational-processor";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { up } from "./migrations.js";
@@ -24,7 +25,7 @@ export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
   }
 
   async initAndUpgrade(): Promise<void> {
-    await up(this.operationalStore);
+    await up(this.operationalStore as IOperationalStore);
   }
 
   async onStrands(

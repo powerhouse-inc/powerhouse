@@ -19,10 +19,9 @@ ph generate --processor todo-processor --processor-type operational --document-t
 in the migrations.ts file in your processor directory you can find the up and down methods which are being executed when the processor gets installed or removed. 
 
 ```ts
-import { type DB } from "./schema.js";
 import { type IOperationalStore } from "document-drive/processors/types"
 
-export async function up(db: IOperationalStore<DB>): Promise<void> {
+export async function up(db: IOperationalStore): Promise<void> {
   // Create table
   await db.schema
     .createTable("todo")
@@ -36,7 +35,7 @@ export async function up(db: IOperationalStore<DB>): Promise<void> {
   console.log(tables);
 }
 
-export async function down(db: IOperationalStore<DB>): Promise<void> {
+export async function down(db: IOperationalStore): Promise<void> {
   // drop table
   await db.schema.dropTable("todo").execute();
 }
