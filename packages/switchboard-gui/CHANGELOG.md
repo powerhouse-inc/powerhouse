@@ -1,3 +1,7 @@
+## 3.3.0-staging.0 (2025-07-10)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.9 (2025-07-10)
 
 ### 🩹 Fixes
