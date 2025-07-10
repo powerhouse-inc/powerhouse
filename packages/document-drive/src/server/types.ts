@@ -2,6 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
+  type LegacyAddFileAction,
   type ListenerCallInfo,
   type ListenerFilter,
   type Trigger,
@@ -409,6 +410,16 @@ export interface IBaseDocumentDriveServer {
   deleteDocument(documentId: string): Promise<void>;
 
   getDocuments(parentId: string): Promise<string[]>;
+
+  /**
+   * @deprecated Use getDocument(documentId, options) instead. This method will be removed in the future.
+   */
+  getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    documentId: string,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument>;
+
   getDocument<TDocument extends PHDocument>(
     documentId: string,
     options?: GetDocumentOptions,
@@ -509,6 +520,15 @@ export interface IBaseDocumentDriveServer {
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use addAction(documentId, action, options) method instead. This method will be removed in the future.
+   */
+  addAction(
+    driveId: string,
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   addAction(
     documentId: string,
     action: Action,
@@ -521,10 +541,20 @@ export interface IBaseDocumentDriveServer {
   ): Promise<IOperationResult>;
 
   /**
+   * @deprecated Use the {@link addAction} method with a {@link AddFileAction} and call {@link addDocument} if the document needs to be created.
+   */
+  addDriveAction(
+    driveId: string,
+    action: LegacyAddFileAction,
+    options?: AddOperationOptions,
+  ): Promise<DriveOperationResult>;
+
+  /**
    * @deprecated Use the {@link addAction} method instead.
    */
   addDriveAction(
     driveId: string,
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;

@@ -294,10 +294,13 @@ export class DriveSubgraph extends Subgraph {
         if (!ctx.driveId) throw new Error("Drive ID is required");
 
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
-        const driveDocuments = await this.reactor.getDocuments(driveId);
 
-        if (!driveDocuments.includes(id)) {
-          throw new GraphQLError("Document is not part of this drive");
+        if (id !== driveId) {
+          const driveDocuments = await this.reactor.getDocuments(driveId);
+
+          if (!driveDocuments.includes(id)) {
+            throw new GraphQLError("Document is not part of this drive");
+          }
         }
         const document = await this.reactor.getDocument(id);
 

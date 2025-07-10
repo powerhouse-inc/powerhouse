@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 // TODO remove this when drive methods are deleted
+import { type AddFileAction } from "#drive-document-model/gen/actions";
 import {
   removeListener,
   removeTrigger,
   setSharingType,
 } from "#drive-document-model/gen/creators";
 import { createDocument } from "#drive-document-model/gen/utils";
+import { type LegacyAddFileAction } from "#drive-document-model/module";
 import {
   type ActionJob,
   type DocumentJob,
@@ -791,11 +793,35 @@ export class BaseDocumentDriveServer
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
+
     const driveStorage = await this.documentStorage.getBySlug(slug);
     return driveStorage.header.id;
   }
 
-  async getDocument<TDocument extends PHDocument>(
+  /**
+   * @deprecated Use getDocument(documentId, options) instead. This method will be removed in the future.
+   */
+  getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    documentId: string,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument>;
+  getDocument<TDocument extends PHDocument>(
+    documentId: string,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument>;
+  getDocument<TDocument extends PHDocument>(
+    driveId: string,
+    documentId?: string | GetDocumentOptions,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument> | Promise<TDocument> {
+    const id = typeof documentId === "string" ? documentId : driveId;
+    const resolvedOptions =
+      typeof documentId === "object" ? documentId : options;
+    return this._getDocument<TDocument>(id, resolvedOptions);
+  }
+
+  private async _getDocument<TDocument extends PHDocument>(
     documentId: string,
     options?: GetDocumentOptions,
   ): Promise<TDocument> {
@@ -2104,7 +2130,45 @@ export class BaseDocumentDriveServer
     return operations;
   }
 
-  async addAction(
+  /**
+   * @deprecated Use addAction(documentId, action, options) instead. This method will be removed in the future.
+   */
+  addAction(
+    driveId: string,
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addAction(
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addAction(
+    driveIdOrDocumentId: string,
+    documentIdOrAction: string | Action,
+    actionOrOptions?: Action | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
+  ): Promise<IOperationResult> {
+    let documentId: string;
+    let action: Action;
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrAction === "string") {
+      // Deprecated overload: (driveId, documentId, action, options)
+      documentId = documentIdOrAction;
+      action = actionOrOptions as Action;
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, action, options)
+      documentId = driveIdOrDocumentId;
+      action = documentIdOrAction;
+      options = actionOrOptions as AddOperationOptions | undefined;
+    }
+    return this._addAction(documentId, action, options);
+  }
+
+  private async _addAction(
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
@@ -2130,12 +2194,75 @@ export class BaseDocumentDriveServer
     return this.processOperations(documentId, operations, options);
   }
 
+  /**
+   * @deprecated Use the {@link addAction} method instead with a {@link AddFileAction} and call {@link addDocument} if the document needs to be created.
+   */
   async addDriveAction(
     driveId: string,
+    action: LegacyAddFileAction,
+    options?: AddOperationOptions,
+  ): Promise<DriveOperationResult>;
+  /**
+   * @deprecated Use the {@link addAction} method instead.
+   */
+  async addDriveAction(
+    driveId: string,
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
     action: DocumentDriveAction | Action,
     options?: AddOperationOptions,
+  ): Promise<DriveOperationResult>;
+  /**
+   * @deprecated Use the {@link addAction} method instead.
+   */
+  async addDriveAction(
+    driveId: string,
+
+    action: LegacyAddFileAction | DocumentDriveAction | Action,
+    options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
+    if ("synchronizationUnits" in (action as LegacyAddFileAction).input) {
+      return this._legacyAddFileAction(
+        driveId,
+        action as LegacyAddFileAction,
+        options,
+      );
+    }
+
     return this.addDriveActions(driveId, [action], options);
+  }
+
+  private async _legacyAddFileAction(
+    driveId: string,
+    action: LegacyAddFileAction,
+    options?: AddOperationOptions,
+  ): Promise<DriveOperationResult> {
+    // create document before adding it to the drive
+    const document = this.getDocumentModelModule(
+      action.input.documentType,
+    ).utils.createDocument({ ...action.input.document });
+    document.header.id = action.input.id;
+    document.header.name = action.input.name;
+    document.header.documentType = action.input.documentType;
+    await this.createDocument(
+      { document },
+      options?.source || { type: "local" },
+    );
+
+    // create updated version of the ADD_FILE action
+    const newAction: AddFileAction = {
+      ...action,
+      input: {
+        id: action.input.id,
+        documentType: document.header.documentType,
+        name: action.input.name,
+        parentFolder: action.input.parentFolder,
+      },
+    };
+    return (await this.addAction(
+      driveId,
+      newAction,
+      options,
+    )) as IOperationResult<DocumentDriveDocument>;
   }
 
   async addDriveActions(
