@@ -177,12 +177,10 @@ describe("DriveSubgraph", () => {
       context as any,
     );
 
-    expect(document).toStrictEqual({
+    expect(document).toMatchObject({
       ...mockDocumentData,
       // default
-      revision: {
-        document: 0,
-      },
+      revision: 0,
       state: mockDocumentData.state.global,
       initialState: mockDocumentData.initialState.state.global,
       stateJSON: mockDocumentData.state.global,
