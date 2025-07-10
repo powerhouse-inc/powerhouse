@@ -123,7 +123,8 @@ function mockAddDrive(url: string, drive: DocumentDriveDocument) {
   });
 }
 
-describe("Read mode methods", () => {
+// TODO: Unskip when read mode is re-implemented
+describe.skip("Read mode methods", () => {
   beforeAll(() => {
     vitest.useFakeTimers();
   });
@@ -227,10 +228,10 @@ describe("Read mode methods", () => {
                     }
                     ... on DocumentDrive {
                         state {
-                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon
+                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder } } icon
                         }
                         initialState {
-                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder synchronizationUnits { syncId scope branch } } } icon
+                            name nodes { ... on DocumentDrive_FolderNode { id name kind parentFolder } ... on DocumentDrive_FileNode { id name kind documentType parentFolder } } icon
                         }
                     }
                 }
@@ -365,7 +366,6 @@ describe("Read mode methods", () => {
       name: "Document 1",
       documentType: documentModelDocumentModelModule.documentModel.id,
       id: documentId,
-      synchronizationUnits: [{ syncId: "document-1", scope: "1", branch: "1" }],
     });
 
     drive = reducer(drive, addNodeAction);

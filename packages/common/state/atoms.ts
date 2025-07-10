@@ -269,7 +269,7 @@ export const documentsAtom = atomWithRefresh(async (get) => {
 
   const documentIds = await reactor.getDocuments(driveId);
   const documents = await Promise.all(
-    documentIds.map((id) => reactor.getDocument(driveId, id)),
+    documentIds.map((id) => reactor.getDocument(id)),
   );
 
   return documents;

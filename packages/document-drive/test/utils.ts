@@ -1,5 +1,6 @@
 import { driveDocumentModelModule } from "#drive-document-model/module";
 import { type BaseDocumentDriveServer } from "#server/base-server";
+import { IDocumentDriveServer } from "#server/types";
 import {
   type Action,
   type ActionFromDocument,
@@ -102,7 +103,6 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
 
   async pushOperationsToServer() {
     const result = await this.server.addOperations(
-      this.driveId,
       this.documentId,
       this.unsyncedOperations,
     );
@@ -117,17 +117,13 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
   async syncDocument() {
     this.clearUnsyncedOperations();
 
-    const remoteDocument = await this.server.getDocument(
-      this.driveId,
-      this.documentId,
-    );
+    const remoteDocument = await this.server.getDocument(this.documentId);
 
     const remoteDocumentOperations = Object.values(
       remoteDocument.operations,
     ).flat();
 
     const result = await this.server._processOperations(
-      this.driveId,
       this.documentId,
       this.document,
       remoteDocumentOperations,
@@ -155,7 +151,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
   private unsyncedOperations: Operation[] = [];
 
   constructor(
-    private server: BaseDocumentDriveServer,
+    private server: IDocumentDriveServer,
     private driveId: string,
     private document: TDocument,
     private reducer: PHReducer<TDocument>,
@@ -178,7 +174,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
   }
 
   async pushOperationsToServer() {
-    const result = await this.server.addDriveOperations(
+    const result = await this.server.addOperations(
       this.driveId,
       this.unsyncedOperations,
     );
@@ -199,12 +195,9 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
       remoteDocument.operations,
     ).flat();
 
-    const result = await this.server._processOperations(
-      this.driveId,
-      undefined,
-      this.document,
-      remoteDocumentOperations,
-    );
+    const result = await (
+      this.server as unknown as BaseDocumentDriveServer
+    )._processOperations(this.driveId, this.document, remoteDocumentOperations);
 
     this.document = result.document as TDocument;
     return this.document;

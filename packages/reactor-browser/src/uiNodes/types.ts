@@ -1,4 +1,4 @@
-import { type Maybe, type SynchronizationUnitInput } from "document-model";
+import { type Maybe } from "document-model";
 import {
   type DRIVE,
   type driveLocations,
@@ -25,7 +25,6 @@ export type UiFileNode = {
   parentFolder: string;
   driveId: string;
   syncStatus: SyncStatus | undefined;
-  synchronizationUnits: SynchronizationUnitInput[];
   sharingType: SharingType;
 };
 
@@ -64,7 +63,6 @@ export type FileNode = {
   kind: string;
   name: string;
   parentFolder: Maybe<string>;
-  synchronizationUnits: SynchronizationUnitInput[];
 };
 
 export type FolderNode = {

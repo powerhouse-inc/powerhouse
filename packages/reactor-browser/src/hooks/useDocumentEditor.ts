@@ -41,7 +41,6 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
 ) {
   const {
     nodeId,
-    driveId,
     documentModelModule,
     document: initialDocument,
     user,
@@ -50,7 +49,6 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
   } = props;
 
   const addDebouncedOprations = useAddDebouncedOperations(reactor, {
-    driveId,
     documentId: nodeId,
   });
 

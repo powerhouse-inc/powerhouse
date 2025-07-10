@@ -2,10 +2,7 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   addFolder,
-  copyNode,
   deleteNode,
-  generateAddNodeAction,
-  generateNodesCopy,
   isFolderNode,
   moveNode,
   updateNode,
@@ -16,8 +13,8 @@ import {
   generateId as _generateId,
 } from "document-model";
 import { useMemo } from "react";
+import { type IDriveContext } from "../types/drive-editor.js";
 import { type UiNode } from "../uiNodes/types.js";
-import { type IDriveContext } from "./useDriveContext.js";
 
 const generateId = () => _generateId().toString();
 
@@ -151,18 +148,14 @@ function createDriveActions(
     parentFolder?: string,
     id = generateId(),
   ) => {
-    const action = generateAddNodeAction(
-      drive.state.global,
-      {
-        id,
-        name,
-        parentFolder: parentFolder ?? null,
-        documentType,
-        document,
-      },
-      ["global"],
+    await context.addDocument(
+      driveId,
+      name,
+      documentType,
+      parentFolder,
+      document,
+      id,
     );
-    dispatch(action);
   };
 
   const addFile = async (
@@ -223,23 +216,7 @@ function createDriveActions(
       throw new Error(`Source node with id "${sourceId}" not found`);
     }
 
-    const copyNodesInput = generateNodesCopy(
-      {
-        srcId: sourceId,
-        targetParentFolder: target?.id,
-        targetName: source.name,
-      },
-      generateId,
-      drive.state.global.nodes,
-    );
-
-    const copyActions = copyNodesInput.map((copyNodeInput) =>
-      copyNode(copyNodeInput),
-    );
-
-    for (const copyAction of copyActions) {
-      dispatch(copyAction); // TODO support batching dispatch
-    }
+    await context.copyNode(sourceId, targetFolderId);
   };
 
   const duplicateNode = async (sourceId: string) => {
@@ -247,7 +224,6 @@ function createDriveActions(
     if (!node) {
       throw new Error(`Node with id "${sourceId}" not found`);
     }
-
     await handleCopyNode(node.id, node.parentFolder || undefined);
   };
 

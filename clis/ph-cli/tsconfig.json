@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true
+    "composite": true,
+    "types": ["node"]
   },
   "files": [],
   "references": [

@@ -17,6 +17,12 @@ export type PHDocumentSignatureInfo = {
   nonce: string;
 };
 
+/** Meta information about the document. */
+export type PHDocumentMeta = {
+  /** The preferred editor for the document. */
+  preferredEditor?: string;
+};
+
 export type PHDocumentHeader = {
   /**
    * The id of the document.
@@ -71,10 +77,7 @@ export type PHDocumentHeader = {
   lastModifiedAtUtcIso: string;
 
   /** Meta information about the document. */
-  meta?: {
-    /** The preferred editor for the document. */
-    preferredEditor?: string;
-  };
+  meta?: PHDocumentMeta;
 };
 
 export type PHBaseState<TDocumentState = JsonSerializable> = {

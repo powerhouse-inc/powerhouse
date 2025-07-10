@@ -21,7 +21,6 @@ import type {
   SetDriveIconInput,
   SetDriveNameInput,
   SetSharingTypeInput,
-  SynchronizationUnit,
   TransmitterType,
   Trigger,
   TriggerType,
@@ -55,12 +54,10 @@ export const TriggerTypeSchema = z.enum(["PullResponder"]);
 
 export function AddFileInputSchema(): z.ZodObject<Properties<AddFileInput>> {
   return z.object({
-    document: z.unknown().nullish(),
     documentType: z.string(),
     id: z.string(),
     name: z.string(),
     parentFolder: z.string().nullish(),
-    synchronizationUnits: z.array(SynchronizationUnitSchema()),
   });
 }
 
@@ -93,7 +90,6 @@ export function AddTriggerInputSchema(): z.ZodObject<
 export function CopyNodeInputSchema(): z.ZodObject<Properties<CopyNodeInput>> {
   return z.object({
     srcId: z.string(),
-    synchronizationUnits: z.array(SynchronizationUnitSchema()).nullish(),
     targetId: z.string(),
     targetName: z.string().nullish(),
     targetParentFolder: z.string().nullish(),
@@ -139,7 +135,6 @@ export function FileNodeSchema(): z.ZodObject<Properties<FileNode>> {
     kind: z.string(),
     name: z.string(),
     parentFolder: z.string().nullable(),
-    synchronizationUnits: z.array(SynchronizationUnitSchema()),
   });
 }
 
@@ -255,17 +250,6 @@ export function SetSharingTypeInputSchema(): z.ZodObject<
 > {
   return z.object({
     type: z.string(),
-  });
-}
-
-export function SynchronizationUnitSchema(): z.ZodObject<
-  Properties<SynchronizationUnit>
-> {
-  return z.object({
-    __typename: z.literal("SynchronizationUnit").optional(),
-    branch: z.string(),
-    scope: z.string(),
-    syncId: z.string(),
   });
 }
 

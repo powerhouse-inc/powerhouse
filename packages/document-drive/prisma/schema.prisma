@@ -30,7 +30,7 @@ model Document {
   documentType        String
   meta                String?
   synchronizationUnits SynchronizationUnit[]
-  driveDocuments      DriveDocument[]
+  scopes              String[]
 }
 
 // Model to map the many-to-many relationship between drives and documents
@@ -38,7 +38,6 @@ model DriveDocument {
   driveId     String
   documentId  String
   drive       Drive     @relation(fields: [driveId], references: [id], onDelete: Cascade)
-  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@id([driveId, documentId])
   @@index([driveId])
