@@ -61,7 +61,8 @@ export class GraphQLManager {
     }
 
     this.coreRouter.use(cors());
-    this.coreRouter.use(bodyParser.json());
+    this.coreRouter.use(bodyParser.json({ limit: "50mb" }));
+    this.coreRouter.use(bodyParser.urlencoded({ limit: "50mb" }));
 
     this.app.use("/", (req, res, next) => this.coreRouter(req, res, next));
     this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
