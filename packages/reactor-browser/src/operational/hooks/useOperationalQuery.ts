@@ -20,25 +20,28 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);
+  const [error, setError] = useState<Error | undefined>(undefined);
 
   const operationalStore = useOperationalStore<Schema>();
 
   useEffect(() => {
-    let live: Promise<LiveQuery<T> | null> = Promise.resolve(null);
+    setError(undefined);
 
-    if (operationalStore.db) {
-      const compiledQuery = queryCallback(operationalStore.db, parameters);
-      const { sql, parameters: queryParameters } = compiledQuery;
-
-      live = operationalStore.db.live.query(
-        sql,
-        queryParameters ? [...queryParameters] : [],
-        (result) => {
-          setResult(result);
-          setQueryLoading(false);
-        },
-      );
+    if (!operationalStore.db) {
+      return;
     }
+
+    const compiledQuery = queryCallback(operationalStore.db, parameters);
+    const { sql, parameters: queryParameters } = compiledQuery;
+
+    const live = operationalStore.db.live
+      .query<T>(sql, queryParameters ? [...queryParameters] : [], (result) => {
+        setResult(result);
+        setQueryLoading(false);
+      })
+      .catch((error: unknown) => {
+        setError(error instanceof Error ? error : new Error(error as string));
+      });
 
     return () => {
       void live.then((l) => l?.unsubscribe());
@@ -47,7 +50,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
 
   return {
     isLoading: operationalStore.isLoading || queryLoading,
-    error: operationalStore.error,
+    error: error || operationalStore.error,
     result,
   } as const;
 }
