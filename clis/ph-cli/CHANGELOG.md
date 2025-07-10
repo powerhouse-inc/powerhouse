@@ -1,3 +1,17 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.3.0-dev.5 (2025-07-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

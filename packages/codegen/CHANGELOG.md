@@ -1,3 +1,20 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+- **codegen:** use inmemory pglite instance to generate db schema types ([93b075965](https://github.com/powerhouse-inc/powerhouse/commit/93b075965))
+- **codegen:** replaced kysely with OperationalStore ([b8def2efd](https://github.com/powerhouse-inc/powerhouse/commit/b8def2efd))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 3.3.0-dev.5 (2025-07-09)
 
 ### 🩹 Fixes

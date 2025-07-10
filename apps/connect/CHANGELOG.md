@@ -1,3 +1,19 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- initialize external processors with operationalStore ([532cb1bbd](https://github.com/powerhouse-inc/powerhouse/commit/532cb1bbd))
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+
 ## 3.3.0-dev.5 (2025-07-09)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

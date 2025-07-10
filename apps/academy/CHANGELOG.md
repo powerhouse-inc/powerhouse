@@ -1,3 +1,19 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- **academy:** build ([88681db3d](https://github.com/powerhouse-inc/powerhouse/commit/88681db3d))
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 3.3.0-dev.5 (2025-07-09)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
