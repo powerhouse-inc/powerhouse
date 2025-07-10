@@ -32,6 +32,11 @@ function operationalStoreToQueryBuilder<TSchema>(
   };
 }
 
+export type OperationalProcessorClass<TSchema> = (new (
+  ...args: any[]
+) => OperationalProcessor<TSchema>) &
+  typeof OperationalProcessor<TSchema>;
+
 /**
  * Base class for operational processors that require a relational database storage.
  * This class abstracts database initialization, migration management, and resource cleanup,
@@ -50,7 +55,7 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
    * This method can be overridden by derived classes to provide a custom namespace.
    */
   static getNamespace(driveId: string): string {
-    return `${this.name}-${driveId}`;
+    return `${this.name}_${driveId.replaceAll("-", "_")}`;
   }
 
   static query<TSchema>(

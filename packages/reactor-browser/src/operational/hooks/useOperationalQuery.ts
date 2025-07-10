@@ -1,7 +1,4 @@
-import {
-  type LiveQuery,
-  type LiveQueryResults,
-} from "@electric-sql/pglite/live";
+import { type LiveQueryResults } from "@electric-sql/pglite/live";
 import { type Kysely } from "kysely";
 import { useEffect, useState } from "react";
 import { useOperationalStore } from "./useOperationalStore.js";
@@ -26,6 +23,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
 
   useEffect(() => {
     setError(undefined);
+    setQueryLoading(true);
 
     if (!operationalStore.db) {
       return;
@@ -40,6 +38,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
         setQueryLoading(false);
       })
       .catch((error: unknown) => {
+        setQueryLoading(false);
         setError(error instanceof Error ? error : new Error(error as string));
       });
 
