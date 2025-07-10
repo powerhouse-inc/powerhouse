@@ -1,3 +1,13 @@
+## 3.3.0-dev.7 (2025-07-10)
+
+### 🩹 Fixes
+
+- **reactor-api:** update document exopect revision ([#1680](https://github.com/powerhouse-inc/powerhouse/pull/1680))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 3.3.0-dev.6 (2025-07-10)
 
 ### 🚀 Features

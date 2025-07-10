@@ -1,3 +1,7 @@
+## 3.3.0-dev.7 (2025-07-10)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.6 (2025-07-10)
 
 ### 🚀 Features
