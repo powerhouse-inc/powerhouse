@@ -1,3 +1,7 @@
+## 3.3.0-dev.8 (2025-07-10)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.7 (2025-07-10)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.

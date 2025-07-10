@@ -1,3 +1,14 @@
+## 3.3.0-dev.8 (2025-07-10)
+
+### 🩹 Fixes
+
+- **codegen:** update codegen with new header changes ([a933f1829](https://github.com/powerhouse-inc/powerhouse/commit/a933f1829))
+- **codegen:** fix broken test ([4135c4174](https://github.com/powerhouse-inc/powerhouse/commit/4135c4174))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.3.0-dev.7 (2025-07-10)
 
 ### 🩹 Fixes
