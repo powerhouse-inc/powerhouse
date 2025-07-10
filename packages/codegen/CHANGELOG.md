@@ -1,3 +1,13 @@
+## 3.3.0-dev.9 (2025-07-10)
+
+### 🩹 Fixes
+
+- force release ([8185a3b37](https://github.com/powerhouse-inc/powerhouse/commit/8185a3b37))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.3.0-dev.8 (2025-07-10)
 
 ### 🩹 Fixes
