@@ -115,7 +115,7 @@ describe("Internal Listener", () => {
       documentType: "powerhouse/document-model",
     });
 
-    const result = await server.addDriveAction(driveId, action);
+    const result = await server.addAction(driveId, action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
     expect(transmitFn).toHaveBeenCalledWith([
       {

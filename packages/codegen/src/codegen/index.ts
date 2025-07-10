@@ -18,6 +18,7 @@ import {
   generateDocumentModel,
 } from "./hygen.js";
 import { loadDocumentModel } from "./utils.js";
+export { generateDBSchema } from "./kysely.js";
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
@@ -54,7 +55,7 @@ export type DocumentTypesMap = Record<
 // returns map of document model id to document model name in pascal case and import path
 async function getDocumentTypesMap(
   dir: string,
-  pathOrigin = "../../../",
+  pathOrigin = "../../",
 ): Promise<DocumentTypesMap> {
   const documentTypesMap: DocumentTypesMap = {};
 

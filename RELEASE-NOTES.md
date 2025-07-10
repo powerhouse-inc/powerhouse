@@ -13,9 +13,10 @@
 
 - `PHDocument` changes:
   - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
-  - `id` and `slug` have been moved from global state to the `header` field of the document. Thus, `document.state.global.id` is now `document.header.id`.
+  - Document metadata fields (like `id`, `slug`, `documentType`, `created`, `lastModified`, etc) have been moved to a `header` field of the document. Thus, `document.id` is now `document.header.id`.
+  - `created` and `lastModified` have been renamed to `createdAtUtcIso` and `lastModifiedUtcIso` respectively.
 - Processor generator updates:
-  - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factroy in place.
+  - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factory in place.
 
 ## 🚀 **v3.2.0**
 
@@ -23,25 +24,26 @@
 
 ### **Drive Analytics System**
 
-- Introducing an analytics system for drives and documents with dedicated processors for tracking operations, changes, and usage patterns. 
+- Introducing an analytics system for drives and documents with dedicated processors for tracking operations, changes, and usage patterns.
 - Analytics data is automatically collected and stored in dedicated tables, providing insights into document lifecycle and drive activity.
 - New analytics query subscriptions enable real-time monitoring of the data in your drive.
 
-✅ **What to try:** Explore the new Drive Analytics documentation in the Academy to understand how analytics processors work and how to leverage analytics data in your applications. It currently happens though an initial analytics modal with the Sky-Atlas use case. This will later be adapted to the to-do list demo project. 
+✅ **What to try:** Explore the new Drive Analytics documentation in the Academy to understand how analytics processors work and how to leverage analytics data in your applications. It currently happens though an initial analytics modal with the Sky-Atlas use case. This will later be adapted to the to-do list demo project.
 
 ### **Update of Front-end Architecture & Performance**
 
-- Feature Preview: A new set of hooks were implemented to manage state on a more granular way and avoid unnecessary rerenders. 
+- Feature Preview: A new set of hooks were implemented to manage state on a more granular way and avoid unnecessary rerenders.
 
 ✅ **What to try:** Initial documentation about the hooks can be found [here](https://github.com/powerhouse-inc/powerhouse/blob/main/packages/common/state/README.md)
 
 **Feature preview:** The new hooks are not fully integrated into Connect yet, however, they can be used in custom drive editors by wrapping the editor component with the new provider:
+
 ```diff
 +import { AtomStoreProvider } from "@powerhousedao/common";
 
 export default function Editor(props: IProps) {
   return (
-+    <AtomStoreProvider reactor={props.context.reactor}> 
++    <AtomStoreProvider reactor={props.context.reactor}>
       <DriveContextProvider value={props.context}>
         <WagmiContext>
           <BaseEditor {...props} />
@@ -65,7 +67,7 @@ export default function Editor(props: IProps) {
 
 - **New:** Comprehensive Drive Analytics documentation and tutorial with practical examples
 - Update of the Get Started chapter
-- Update of the Mastery Track - Document Creation Chapter  
+- Update of the Mastery Track - Document Creation Chapter
 - Update of the Mastery Track - Work with Data - Read & Write with the API chapter
 - Update of the Mastery Track - Work with Data - Analytics Processor
 
@@ -77,7 +79,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 
 - We have a simplified and optimized script to guide a builder through the setup of his cloud environment with connect & switchboard services.
 
-✅ **What to try:** Try to run the `ph service setup` flow on a cloud instance on AWS or digital ocean and install a @powerhousedao/todo-demo-package. 
+✅ **What to try:** Try to run the `ph service setup` flow on a cloud instance on AWS or digital ocean and install a @powerhousedao/todo-demo-package.
 
 [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/SetupEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/SetupEnvironment)
 
@@ -90,40 +92,28 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 ### Configure an Allowlist and add Authorization for Switchboard
 
 - Read how to add Authorization to your drive
-    - [https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization)
+  - [https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization)
 - Or try to configure your environment
-    - [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment)
-    
-    ### It’s now possible to disable the Create New Drive button in Connect.
-    
-    - We have introduced PH_CONNECT_DISABLE_ADD_DRIVE=true/false env var in connect.
+  - [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment)
+  ### It’s now possible to disable the Create New Drive button in Connect.
+  - We have introduced PH_CONNECT_DISABLE_ADD_DRIVE=true/false env var in connect.
     configure your environment [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment)
-    
-    ---
-    
-    ### Find your document scalars in the stand-alone Document-Engineering
-    
-    - [https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering](https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering)
-    
-    ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot. 
-    
-    ---
-    
-    ### Performance improvements in Connect
-    
-    - We’ve optimised the way components render & avoid rerenders which results in a faster, snappier app.
-    - Optimized the initial loading of Connect for an improved UX
-    
-    ---
-    
-    ### Updates on [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
-    
-    - Academy moved to the monorepo! So you have more access to code context when writing documentation. 👌
-    - We’ve updated the landing page getting you directly to the ‘Get started’ section & Tutorial
-    - Still confused how to create a drive via mutations? 
+  ***
+  ### Find your document scalars in the stand-alone Document-Engineering
+  - [https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering](https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering)
+  ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
+  ***
+  ### Performance improvements in Connect
+  - We’ve optimised the way components render & avoid rerenders which results in a faster, snappier app.
+  - Optimized the initial loading of Connect for an improved UX
+  ***
+  ### Updates on [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+  - Academy moved to the monorepo! So you have more access to code context when writing documentation. 👌
+  - We’ve updated the landing page getting you directly to the ‘Get started’ section & Tutorial
+  - Still confused how to create a drive via mutations?
     ‘Configure a drive’ is now available to help you out. [https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
-    - New educational content is present inside the ‘Mastery track’ guiding you through the advanced ToDoList Demo. [https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
-    - The first page inside our API references chapter is now automatically updated with all the latest available commands for the Powerhouse CLI 
+  - New educational content is present inside the ‘Mastery track’ guiding you through the advanced ToDoList Demo. [https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+  - The first page inside our API references chapter is now automatically updated with all the latest available commands for the Powerhouse CLI
     [https://staging.powerhouse.academy/academy/APIReferences/PowerhouseCLI](https://staging.powerhouse.academy/academy/APIReferences/PowerhouseCLI)
 
 ---
@@ -141,8 +131,8 @@ This release brings improvements that make it easier to **work with the Powerhou
 - You’ll notice clearer help messages when you run `ph help` or `ph {command} --help` (e.g. `ph init --help`). We’ve redesigned the help output to be **more readable and useful right from your terminal.**
 - Running `ph --version` now shows **additional context about your CLI installation** to help debug or verify your setup.
 
-👉 **View the latest commands documentation here: [COMMANDS.md on GitHub](./clis/ph-cli/COMMANDS.md) 
-(Soon on academy too)** 
+👉 **View the latest commands documentation here: [COMMANDS.md on GitHub](./clis/ph-cli/COMMANDS.md)
+(Soon on academy too)**
 
 ✅ **What to try:** Run `ph help` or `ph init --help` and see the improved help output. Check out the online docs if you prefer reading in markdown!
 
@@ -163,7 +153,7 @@ This release brings improvements that make it easier to **work with the Powerhou
 - We’ve made the SDL parsing and schema validation **safer and more reliable**, reducing cryptic GraphQL errors in the editor, to make document model definition a bit more reliable.
 - A drive editor refactor for `DriveEditorContainer` and `DriveExplorer` inside Drive Explorer nowsupport dynamic document model and editor module injection. Giving you a smoother custom drive editor experience.
 
-✅ **What to try:** Open a document in Studio mode and test schema edits or validation—error handling should feel more predictable/not brick your document model. 
+✅ **What to try:** Open a document in Studio mode and test schema edits or validation—error handling should feel more predictable/not brick your document model.
 
 ---
 
@@ -197,4 +187,3 @@ This release brings improvements that make it easier to **work with the Powerhou
 - Starting general spellcheck & consistency in terminology!
 
 Thank you <3
-

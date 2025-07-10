@@ -1,3 +1,94 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- initialize external processors with operationalStore ([532cb1bbd](https://github.com/powerhouse-inc/powerhouse/commit/532cb1bbd))
+- **academy:** build ([88681db3d](https://github.com/powerhouse-inc/powerhouse/commit/88681db3d))
+- **codegen:** replaced kysely with OperationalStore ([b8def2efd](https://github.com/powerhouse-inc/powerhouse/commit/b8def2efd))
+- **codegen:** use inmemory pglite instance to generate db schema types ([93b075965](https://github.com/powerhouse-inc/powerhouse/commit/93b075965))
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+- **document-drive:** return missing fields in document query ([ab00dc3c1](https://github.com/powerhouse-inc/powerhouse/commit/ab00dc3c1))
+- **document-model:** sort operations before retrieving the latest operation ([3fafac2a6](https://github.com/powerhouse-inc/powerhouse/commit/3fafac2a6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.5 (2025-07-09)
+
+### 🩹 Fixes
+
+- **codegen:** proper import path for document types ([11352d4ae](https://github.com/powerhouse-inc/powerhouse/commit/11352d4ae))
+
+### ❤️ Thank You
+
+- Frank
+
+## 3.3.0-dev.4 (2025-07-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** added generate schema command ([9a5e921fb](https://github.com/powerhouse-inc/powerhouse/commit/9a5e921fb))
+- **document-drive:** initial work on BaseOperationalProcessor ([40fe0ec2f](https://github.com/powerhouse-inc/powerhouse/commit/40fe0ec2f))
+
+### 🩹 Fixes
+
+- **codegen:** imports and instantiation ([37e6ae9ab](https://github.com/powerhouse-inc/powerhouse/commit/37e6ae9ab))
+- **codegen:** schema generation ([378a666b2](https://github.com/powerhouse-inc/powerhouse/commit/378a666b2))
+- **document-drive:** operational processor cleanup ([e6d0a96b6](https://github.com/powerhouse-inc/powerhouse/commit/e6d0a96b6))
+- **reactor-api, reactor-local:** build issues ([927192aff](https://github.com/powerhouse-inc/powerhouse/commit/927192aff))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 3.3.0-dev.3 (2025-07-08)
+
+### 🚀 Features
+
+- added operational hooks and utils in reactor-browser ([216f7d03d](https://github.com/powerhouse-inc/powerhouse/commit/216f7d03d))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.2 (2025-07-05)
+
+### 🩹 Fixes
+
+- **academy:** using the api ([833f1edde](https://github.com/powerhouse-inc/powerhouse/commit/833f1edde))
+- **academy:** graphql at powerhouse update ([fea4eae24](https://github.com/powerhouse-inc/powerhouse/commit/fea4eae24))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🚀 Features
+
+- renamed reactor-analytics to processor-manager ([22e7b245a](https://github.com/powerhouse-inc/powerhouse/commit/22e7b245a))
+- **connect:** enable external processors ([274ca7251](https://github.com/powerhouse-inc/powerhouse/commit/274ca7251))
+- **ph-cmd:** support shorthand package manager flags and fallback to lockfile resolver on ph use ([b915ccae6](https://github.com/powerhouse-inc/powerhouse/commit/b915ccae6))
+
+### 🩹 Fixes
+
+- **document-drive:** use async fs methods to avoid blocking the event loop ([795c486e4](https://github.com/powerhouse-inc/powerhouse/commit/795c486e4))
+- **ph-cli,ph-cmd:** avoid lint error when import generated version file ([59fbddb3f](https://github.com/powerhouse-inc/powerhouse/commit/59fbddb3f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features

@@ -175,6 +175,10 @@ Options:
                         
   -d, --drive-editor <name> Generate a drive editor with the specified name.
 
+  --migration-file <path> Path to the migration file when running 'ph generate
+    
+  --schema-file <path> Path to the output file. Defaults to 'schema.ts' at the same directory of the migration file.
+
 Examples:
   $ ph generate                                                     # Generate code using defaults
   $ ph generate my-document-model.zip                               # Generate from a specific model zip file
@@ -185,6 +189,7 @@ Examples:
   $ ph generate --drive-editor custom-drive-explorer                # Generate a custom drive editor
   $ ph generate -s MySubgraph                                       # Generate with a specific subgraph
   $ ph generate --skip-format                                       # Generate without formatting
+  $ ph generate --migration-file ./migrations.ts                    # Generate types for an Operational Processor
 ```
 
 ## Inspect

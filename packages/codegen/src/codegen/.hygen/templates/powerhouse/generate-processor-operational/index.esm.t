@@ -2,35 +2,35 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
-import { generateId } from "document-model";
-import type {
-  OperationalProcessor,
-  ProcessorOptions,
-  ProcessorSetupArgs,
-  ProcessorUpdate,
-} from "@powerhousedao/reactor-api";
+import { type IOperationalStore } from "document-drive/processors/types";
+import { OperationalProcessor, type OperationalProcessorFilter } from "document-drive/processors/operational-processor";
+import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { up } from "./migrations.js";
+import { type DB } from "./schema.js";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
 %><% }); _%>
-<% if(documentTypes.length === 0) { %>import { PHDocument } from "document-model";<% } %>
+<% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
-export class <%= pascalName %>Processor extends OperationalProcessor<% if(documentTypes.length) { %><DocumentType><% } %> {
+export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
 
-  protected processorOptions: ProcessorOptions = {
-    listenerId: generateId(),
-    filter: {
+  get filter(): OperationalProcessorFilter {
+    return {
       branch: ["main"],
       documentId: ["*"],
       documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
       scope: ["global"],
-    },
-    block: false,
-    label: "<%= name %>",
-    system: true,
-  };
+    }
+  }
 
-  async onStrands(strands: ProcessorUpdate<DocumentType>[]): Promise<void> {
+  async initAndUpgrade(): Promise<void> {
+    await up(this.operationalStore as IOperationalStore);
+  }
+
+  async onStrands(
+    strands: InternalTransmitterUpdate<DocumentType>[],
+  ): Promise<void> {
     if (strands.length === 0) {
       return;
     }
@@ -42,19 +42,15 @@ export class <%= pascalName %>Processor extends OperationalProcessor<% if(docume
 
       for (const operation of strand.operations) {
         console.log(">>> ", operation.type);
-        await this.operationalStore("index_search_op").insert({
-          documentId: strand.documentId,
-        });
+        await this.operationalStore
+          .insertInto("todo")
+          .values({
+            task: strand.documentId,
+            status: true,
+          })
+          .execute();
       }
     }
-  }
-
-  async onSetup(args: ProcessorSetupArgs) {
-    await super.onSetup(args);
-    await this.operationalStore.schema.createTable("index_search_op", (table) => {
-      table.increments("id").primary();
-      table.string("documentId").notNullable();
-    });
   }
 
   async onDisconnect() {}

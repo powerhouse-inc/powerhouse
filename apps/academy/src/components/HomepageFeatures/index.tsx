@@ -25,7 +25,7 @@ const FeatureList: FeatureItem[] = [
   {
     title: "Switchboard",
     imageSrc: require("@site/static/img/switchboard.png").default,
-    docPath: "/docs/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI",
+    docPath: "/docs/academy/MasteryTrack/WorkWithData/UsingTheAPI",
     description: <>Get access to the open API interface with Switchboard</>,
   },
   {
@@ -200,7 +200,7 @@ export default function HomepageFeatures() {
               <h3 className={styles.cardTitle}>Work with Data</h3>
             </div>
             <div className={styles.cardContent}>
-              <a href="//docs/academy/MasteryTrack/WorkWithData/ReadingAndWritingThroughTheAPI" className={styles.pathButton}>Reading & Writing through the API</a>
+              <a href="//docs/academy/MasteryTrack/WorkWithData/UsingTheAPI" className={styles.pathButton}>Reading & Writing through the API</a>
               <a href="/docs/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className={styles.pathButton}>Create your own Subgraph</a>
               <a href="/docs/academy/WorkWithData/Analytics Engine/intro" className={styles.pathButton}>Using the Analytics Engine</a>
             </div>

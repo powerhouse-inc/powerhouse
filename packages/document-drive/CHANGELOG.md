@@ -1,3 +1,64 @@
+## 3.3.0-dev.6 (2025-07-10)
+
+### 🚀 Features
+
+- **codegen:** support loading migration typescript file ([d3cc1957b](https://github.com/powerhouse-inc/powerhouse/commit/d3cc1957b))
+
+### 🩹 Fixes
+
+- **document-drive:** return missing fields in document query ([ab00dc3c1](https://github.com/powerhouse-inc/powerhouse/commit/ab00dc3c1))
+- **codegen,ph-cli:** make schema-file optional and updated generate help text ([adad303a8](https://github.com/powerhouse-inc/powerhouse/commit/adad303a8))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+
+## 3.3.0-dev.5 (2025-07-09)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.4 (2025-07-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** added generate schema command ([9a5e921fb](https://github.com/powerhouse-inc/powerhouse/commit/9a5e921fb))
+- **document-drive:** initial work on BaseOperationalProcessor ([40fe0ec2f](https://github.com/powerhouse-inc/powerhouse/commit/40fe0ec2f))
+
+### 🩹 Fixes
+
+- **document-drive:** operational processor cleanup ([e6d0a96b6](https://github.com/powerhouse-inc/powerhouse/commit/e6d0a96b6))
+- **reactor-api, reactor-local:** build issues ([927192aff](https://github.com/powerhouse-inc/powerhouse/commit/927192aff))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 3.3.0-dev.3 (2025-07-08)
+
+### 🚀 Features
+
+- added operational hooks and utils in reactor-browser ([216f7d03d](https://github.com/powerhouse-inc/powerhouse/commit/216f7d03d))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.2 (2025-07-05)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.1 (2025-07-04)
+
+### 🩹 Fixes
+
+- **document-drive:** use async fs methods to avoid blocking the event loop ([795c486e4](https://github.com/powerhouse-inc/powerhouse/commit/795c486e4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.0 (2025-07-02)
 
 ### 🚀 Features

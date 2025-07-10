@@ -3,7 +3,7 @@ import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
 import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Suspense } from 'react';
-import ReactorAnalyticsProvider from '../context/reactor-analytics.js';
+import ProcessorManagerProvider from '../context/processor-manager.js';
 import { useRenown } from '../hooks/useRenown.js';
 import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
@@ -30,7 +30,7 @@ const App = () => (
         <SentryProvider>
             <WagmiContext>
                 <ReadModeContextProvider>
-                    <ReactorAnalyticsProvider>
+                    <ProcessorManagerProvider>
                         <ToastContainer
                             position="bottom-right"
                             containerId="connect"
@@ -39,7 +39,7 @@ const App = () => (
                             <Router />
                             <Analytics />
                         </UiNodesContextProvider>
-                    </ReactorAnalyticsProvider>
+                    </ProcessorManagerProvider>
                 </ReadModeContextProvider>
             </WagmiContext>
         </SentryProvider>

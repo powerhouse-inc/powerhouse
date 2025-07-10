@@ -1,6 +1,20 @@
 import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
+import { type Kysely } from "kysely";
+
+/**
+ * The standardized relational database interface for operational processors.
+ * This abstraction provides type-safe database operations while hiding the underlying
+ * database framework implementation details.
+ */
+export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
+
+export interface IProcessorHostModule {
+  analyticsStore: IAnalyticsStore;
+  operationalStore: IOperationalStore;
+}
 
 /**
  * Describes an object that can process strands.

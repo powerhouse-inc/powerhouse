@@ -40,6 +40,11 @@ export function generateCommand(program: Command) {
     .option(
       "-d, --drive-editor <name>",
       "Generate a drive editor with the specified name",
+    )
+    .option("--migration-file <path>", "Path to the migration file")
+    .option(
+      "--schema-file <path>",
+      "Path to the output file. Defaults to './schema.ts'",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting

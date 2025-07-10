@@ -188,7 +188,7 @@ describe("DriveSubgraph", () => {
       __typename: "",
 
       // backward compatibility
-      revision: mockDocumentData.header.revision.global,
+      revision: mockDocumentData.header.revision.global || 0,
       id: mockDocumentData.header.id,
     });
 

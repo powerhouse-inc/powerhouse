@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "3.3.0-dev.0",
+  "version": "3.3.0-dev.6",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -18,6 +18,8 @@
   "exports": {
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
+    "./pglite": "./dist/src/pglite/index.js",
+    "./operational": "./dist/src/operational/index.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {
@@ -34,25 +36,28 @@
     "install:playwright": "playwright install"
   },
   "devDependencies": {
+    "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.4.1",
     "@vitest/browser": "^3.1.2",
+    "jotai": "^2.10.3",
     "playwright": "^1.51.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite-plugin-node-polyfills": "^0.23.0",
     "vitest": "^3.1.2",
-    "vitest-browser-react": "^0.2.0",
-    "jotai": "^2.10.3"
+    "vitest-browser-react": "^0.2.0"
   },
   "peerDependencies": {
+    "jotai": "^2.10.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "jotai": "^2.10.3"
+    "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "@electric-sql/pglite-react": "^0.2.17",
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/analytics-engine-knex": "^0.6.0",
@@ -61,6 +66,9 @@
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "kysely": "^0.28.2",
+    "kysely-pglite-dialect": "^1.1.1",
+    "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0"
   }

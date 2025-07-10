@@ -1,9 +1,10 @@
-# Read and write through the API
+# Using the API
 
 ## Introduction to Switchboard
 
-**Switchboard** is the API interface that allows developers and data engineers to get access to data collected through document models in Connect and Fusion.
-After structurally capturing the desired data from your formalized business processes, it can be used to build insightful experiences in external websites, drive widgets, or create specific reports and dashboards in Fusion.
+**Switchboard** is the API interface that enables developers and data engineers to access data captured through document models in Connect and Fusion.
+
+Once you've structured and captured data from your business processes, Switchboard allows you to leverage that data to build insightful experiences in external websites, create interactive drive widgets, or generate detailed reports and dashboards in Fusion.
 
 :::tip Using your document's state schema
 Since your document models are defined with a GraphQL schema, you can use the same objects and fields in your queries and mutations to retrieve or write data from and to your documents.
@@ -39,10 +40,10 @@ This will return a URL to access the Reactor.
 
 ### Adding a remote drive or Reactor to Connect
 
-If the remote drive or Reactor isn't present yet in Connect, you can add it by clicking the (+) button in the Connect drive navigation and using the localhost URL to add a new drive with its underlying reactor. Usually, this is http://localhost:4001/d/powerhouse.
+If the remote drive or Reactor isn't present yet in Connect, you can add it by clicking the (+) 'Create New Drive' button in the Connect drive navigation and using the localhost URL to add a new drive with its underlying reactor. Usually, this is http://localhost:4001/d/powerhouse.
 
 Get access to an **organization's drive** instances by adding their drive to your Connect Drive navigation tree view with the help of the correct drive URL.
-Click the (+) to add a public drive. To add a new drive, you'll have to know the correct public URL of the drive. Read more about [configuring drives](/academy/Architecture/WorkingWithTheReactor).
+Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'll have to know the correct public URL of the drive. Read more about [configuring drives](/academy/Architecture/WorkingWithTheReactor).
 
 <figure className="image-container">
   <img src={require("./images/AddNewDriveURL.png").default} alt="Add a drive through an URL" />
@@ -92,7 +93,7 @@ Copy this ID to use it in the Switchboard API.
   <figcaption>You can copy your Document ID from your operations history.</figcaption>
 </figure>
 
-When you navigate to your Switchboard endpoint (e.g., http://localhost:4001/graphql/system, https://switchboard.phd/graphql/system, or a custom domain), you can use this document ID to query the state of your document.
+When you navigate to your Switchboard endpoint by adding **`/graphql/system`** to the end of your URL. (e.g., http://localhost:4001/graphql/system, https://switchboard.phd/graphql/system, or add it to a custom domain), you can use this document ID to query the state of your document.
 The documentation on the left-hand side of the Apollo Sandbox will show you all the different fields that are available to query.
 
 <figure className="image-container">
@@ -128,7 +129,7 @@ It extracts common metadata fields such as **id**, **name**, **documentType**, *
 
 ### Get the state of the document
 
-Once you've found your document via any of the three options, you'll be able to query its state.
+Once you've found your document via any of the three options above, you'll be able to query its state.
 
 In the previous step, we queried for document metadata. Now let's query for the actual content of the document state.
 
@@ -229,5 +230,8 @@ After performing a write mutation, you can verify that the change was successful
 
 1.  **Query the document state again:** Rerun the `getDocument` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
+
+
+### Summary
 
 This ability to programmatically read from and write to documents via the GraphQL API is a powerful feature of Powerhouse. It unlocks countless possibilities for integrating your structured data into other applications, building automated workflows, and creating rich, data-driven user experiences.

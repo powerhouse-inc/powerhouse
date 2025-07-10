@@ -18,6 +18,10 @@ export function responseForDrive(drive: DocumentDriveDocument) {
 export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
   id: string;
   revision: number;
+  // @deprecated
+  createdAt: string;
+  // @deprecated
+  lastModified: string;
   __typename: string;
   state: unknown;
   initialState: unknown;
@@ -31,7 +35,13 @@ export function responseForDocument(
 ): PHDocumentGQL {
   return {
     ...document.header,
-    revision: document.header.revision.global,
+    ...document,
+    id: document.header.id,
+    createdAt: document.header.createdAtUtcIso,
+    lastModified: document.header.lastModifiedAtUtcIso,
+    documentType: document.header.documentType,
+    name: document.header.name,
+    revision: document.header.revision.global || 0,
     state: document.state.global,
     stateJSON: document.state.global,
     operations: document.operations.global.map((op: Operation) => ({

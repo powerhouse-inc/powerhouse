@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "3.3.0-dev.0",
+  "version": "3.3.0-dev.6",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -58,6 +58,7 @@
     "graphql-request": "^6.1.0",
     "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
+    "kysely": "^0.28.2",
     "localforage": "^1.10.0",
     "lru-cache": "^11.1.0",
     "nanoevents": "^9.0.0",
@@ -70,6 +71,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/node": "^22.15.17",
     "@types/uuid": "^9.0.8",
     "@vitest/coverage-v8": "^3.1.2",

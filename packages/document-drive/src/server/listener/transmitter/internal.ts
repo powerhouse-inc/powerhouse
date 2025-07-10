@@ -63,6 +63,7 @@ export class InternalTransmitter implements ITransmitter {
       number,
       GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
     >();
+
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
       if (state) {
@@ -118,9 +119,11 @@ export class InternalTransmitter implements ITransmitter {
       const updates = [];
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
+        const document = await this.drive.getDocument(strand.documentId);
         const state = operations.at(-1)?.state ?? {};
         updates.push({
           ...strand,
+          documentType: document.header.documentType,
           operations,
           state,
         });
