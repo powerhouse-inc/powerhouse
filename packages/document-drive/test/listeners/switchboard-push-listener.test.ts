@@ -5,16 +5,16 @@ import {
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import * as DriveActions from "../src/drive-document-model/gen/creators.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { SwitchboardPushTransmitter } from "../src/server/listener/transmitter/switchboard-push.js";
+import * as DriveActions from "../../src/drive-document-model/gen/creators.js";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
+import { SwitchboardPushTransmitter } from "../../src/server/listener/transmitter/switchboard-push.js";
 import {
   Listener,
   ListenerRevision,
   StrandUpdate,
-} from "../src/server/types.js";
-import { expectUTCTimestamp } from "./utils.js";
+} from "../../src/server/types.js";
+import { expectUTCTimestamp } from "../utils.js";
 
 vi.mock(import("graphql-request"), async (importOriginal) => {
   const originalModule = await importOriginal();

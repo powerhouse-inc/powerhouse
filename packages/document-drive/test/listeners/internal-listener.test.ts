@@ -5,15 +5,15 @@ import {
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
-import * as DriveActions from "../src/drive-document-model/gen/creators.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { InternalTransmitter } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils.js";
+import * as DriveActions from "../../src/drive-document-model/gen/creators.js";
+import { ReactorBuilder } from "../../src/server/builder.js";
+import { InternalTransmitter } from "../../src/server/listener/transmitter/internal.js";
+import { expectUTCTimestamp, expectUUID } from "../utils.js";
 
 import { IProcessor } from "#processors/types";
 import { documentModelDocumentModelModule } from "document-model";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { Listener } from "../src/server/types.js";
+import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
+import { Listener } from "../../src/server/types.js";
 
 describe("Internal Listener", () => {
   const documentModels = [

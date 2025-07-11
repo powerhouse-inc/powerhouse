@@ -30,6 +30,7 @@ import {
   type OperationError,
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
+import { type IListenerStorage } from "./listener/storage/types.js";
 import {
   type ITransmitter,
   type StrandUpdateSource,
@@ -363,6 +364,7 @@ export type GetStrandsOptions = {
 
 export type ListenerManagerOptions = {
   sequentialUpdates?: boolean;
+  storage?: IListenerStorage;
 };
 
 export const DefaultListenerManagerOptions = {
@@ -596,7 +598,7 @@ export interface IListenerManager {
   initialize(handler: DriveUpdateErrorHandler): Promise<void>;
 
   removeDrive(driveId: DocumentDriveDocument["header"]["id"]): Promise<void>;
-  driveHasListeners(driveId: string): boolean;
+  driveHasListeners(driveId: string): Promise<boolean>;
 
   setListener(driveId: string, listener: Listener): Promise<void>;
   removeListener(driveId: string, listenerId: string): Promise<boolean>;
@@ -638,7 +640,7 @@ export type ListenerStatus =
   | "CONFLICT"
   | "ERROR";
 
-export type SynchronizationUnitMap = ISyncUnitMap<SyncronizationUnitState>;
+export type SynchronizationUnitMap = ISyncUnitMap<SynchronizationUnitState>;
 
 export interface ListenerState {
   driveId: string;
@@ -649,7 +651,7 @@ export interface ListenerState {
   listenerStatus: ListenerStatus;
 }
 
-export interface SyncronizationUnitState {
+export interface SynchronizationUnitState {
   listenerRev: number;
   lastUpdated: string;
 }
