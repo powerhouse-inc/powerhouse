@@ -16,25 +16,66 @@ export class RelationalListenerStorage implements IListenerStorage {
 
   async init(): Promise<void> {}
 
-  async *getParents(): AsyncIterableIterator<string> {
-    const rows = await this.db
-      .selectFrom("listener")
-      .select("parent_id")
-      .distinct()
-      .execute();
-    for (const row of rows) {
-      yield row.parent_id;
+  async *getParents(params?: {
+    pageSize?: number;
+    cursor?: string;
+  }): AsyncIterableIterator<string> {
+    for await (const page of this.getParentsPages(params)) {
+      for (const id of page) yield id;
     }
   }
 
-  async *getListeners(parentId: string): AsyncIterableIterator<string> {
-    const rows = await this.db
-      .selectFrom("listener")
-      .select("listener_id")
-      .where("parent_id", "=", parentId)
-      .execute();
-    for (const row of rows) {
-      yield row.listener_id;
+  async *getParentsPages(params?: {
+    pageSize?: number;
+    cursor?: string;
+  }): AsyncIterableIterator<string[]> {
+    const pageSize = params?.pageSize ?? 100;
+    let cursor: string | undefined = params?.cursor;
+    while (true) {
+      let query = this.db.selectFrom("listener").select("parent_id").distinct();
+      if (cursor) {
+        query = query.where("parent_id", ">", cursor);
+      }
+      query = query.orderBy("parent_id").limit(pageSize);
+      const rows = await query.execute();
+      if (rows.length === 0) break;
+      const page = rows.map((row) => row.parent_id);
+      yield page;
+      if (rows.length < pageSize) break;
+      cursor = page.at(-1);
+    }
+  }
+
+  async *getListeners(
+    parentId: string,
+    params?: { pageSize?: number; cursor?: string },
+  ): AsyncIterableIterator<string> {
+    for await (const page of this.getListenersPages(parentId, params)) {
+      for (const id of page) yield id;
+    }
+  }
+
+  async *getListenersPages(
+    parentId: string,
+    params?: { pageSize?: number; cursor?: string },
+  ): AsyncIterableIterator<string[]> {
+    const pageSize = params?.pageSize ?? 100;
+    let cursor: string | undefined = params?.cursor;
+    while (true) {
+      let query = this.db
+        .selectFrom("listener")
+        .select("listener_id")
+        .where("parent_id", "=", parentId);
+      if (cursor) {
+        query = query.where("listener_id", ">", cursor);
+      }
+      query = query.orderBy("listener_id").limit(pageSize);
+      const rows = await query.execute();
+      if (rows.length === 0) break;
+      const page = rows.map((row) => row.listener_id);
+      yield page;
+      if (rows.length < pageSize) break;
+      cursor = page.at(-1);
     }
   }
 
