@@ -1,4 +1,5 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
+import { type OperationalProcessorClass } from "document-drive/processors/operational-processor";
 import { type CompiledQuery, type Kysely } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
@@ -20,11 +21,14 @@ function useStableParams<T>(params: T): T {
   }, [params]);
 }
 
-export function createTypedQuery<Schema>() {
+export function createTypedQuery<TSchema>(
+  ProcessorClass: OperationalProcessorClass<TSchema>,
+) {
   // Overload for queries without parameters
   function useQuery<
-    TQueryBuilder extends (db: Kysely<Schema>) => QueryCallbackReturnType,
+    TQueryBuilder extends (db: Kysely<TSchema>) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
   ): {
     isLoading: boolean;
@@ -38,10 +42,11 @@ export function createTypedQuery<Schema>() {
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<Schema>,
+      db: Kysely<TSchema>,
       parameters: TParams,
     ) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
     parameters: TParams,
   ): {
@@ -55,10 +60,11 @@ export function createTypedQuery<Schema>() {
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<Schema>,
+      db: Kysely<TSchema>,
       parameters?: TParams,
     ) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
     parameters?: TParams,
   ): {
@@ -77,7 +83,9 @@ export function createTypedQuery<Schema>() {
     // Memoize the callback to prevent infinite loops, updating when parameters change
     const memoizedCallback = useCallback(queryCallback, [stableParams]);
 
-    return useOperationalQuery<Schema, InferredResult, TParams>(
+    return useOperationalQuery<TSchema, InferredResult, TParams>(
+      ProcessorClass,
+      driveId,
       memoizedCallback,
       stableParams,
     ) as {

@@ -1,4 +1,5 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
+import type { OperationalProcessorClass } from "document-drive/processors/operational-processor";
 import { type Kysely } from "kysely";
 import { useEffect, useState } from "react";
 import { useOperationalStore } from "./useOperationalStore.js";
@@ -9,6 +10,8 @@ export type QueryCallbackReturnType = {
 };
 
 export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
+  ProcessorClass: OperationalProcessorClass<Schema>,
+  driveId: string,
   queryCallback: (
     db: Kysely<Schema>,
     parameters?: TParams,
@@ -19,7 +22,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
-  const operationalStore = useOperationalStore<Schema>();
+  const operationalStore = useOperationalStore<any>();
 
   useEffect(() => {
     setError(undefined);
@@ -29,7 +32,13 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
       return;
     }
 
-    const compiledQuery = queryCallback(operationalStore.db, parameters);
+    // Get namespace from processor class
+    const namespace = ProcessorClass.getNamespace(driveId);
+
+    // Create namespaced database
+    const db = operationalStore.db.withSchema(namespace) as Kysely<Schema>;
+
+    const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;
 
     const live = operationalStore.db.live
@@ -45,7 +54,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [operationalStore.db, queryCallback, parameters]);
+  }, [operationalStore.db, ProcessorClass, driveId, queryCallback, parameters]);
 
   return {
     isLoading: operationalStore.isLoading || queryLoading,
