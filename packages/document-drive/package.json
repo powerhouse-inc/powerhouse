@@ -37,7 +37,8 @@
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prebuild:tsc": "prisma generate --no-hints",
     "prebuild": "npm run clean && prisma generate --no-hints && npm run copy-prisma",
-    "prelint:nx": "prisma generate --no-hints"
+    "prelint:nx": "prisma generate --no-hints",
+    "scripts:generate-listener-schema": "npx kysely-pglite ./src/server/listener/storage/relational/migrations --outFile ./src/server/listener/storage/relational/schema.ts"
   },
   "optionalDependencies": {
     "@prisma/client": "5.17.0",
@@ -78,6 +79,7 @@
     "@vitest/coverage-v8": "^3.1.2",
     "copyfiles": "^2.4.1",
     "fake-indexeddb": "^5.0.2",
+    "kysely-pglite": "^0.6.1",
     "msw": "^2.3.1",
     "typescript": "^5.7.3",
     "vite": "^6.3.3",
