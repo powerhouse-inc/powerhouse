@@ -5,17 +5,18 @@ force: true
 import { type IOperationalStore } from "document-drive/processors/types";
 import { OperationalProcessor, type OperationalProcessorFilter } from "document-drive/processors/operational-processor";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { up } from "./migrations.js";
-import { type DB } from "./schema.js";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
 %><% }); _%>
 <% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
+import { up } from "./migrations.js";
+import { type DB } from "./schema.js";
+
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
 
-  get filter(): OperationalProcessorFilter {
+  override get filter(): OperationalProcessorFilter {
     return {
       branch: ["main"],
       documentId: ["*"],
@@ -24,11 +25,11 @@ export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
     }
   }
 
-  async initAndUpgrade(): Promise<void> {
+  override async initAndUpgrade(): Promise<void> {
     await up(this.operationalStore as IOperationalStore);
   }
 
-  async onStrands(
+  override async onStrands(
     strands: InternalTransmitterUpdate<DocumentType>[],
   ): Promise<void> {
     if (strands.length === 0) {
@@ -41,7 +42,6 @@ export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
       }
 
       for (const operation of strand.operations) {
-        console.log(">>> ", operation.type);
         await this.operationalStore
           .insertInto("todo")
           .values({

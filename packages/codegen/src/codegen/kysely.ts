@@ -27,7 +27,7 @@ export async function generateDBSchema({
   migrationFile,
   schemaFile,
 }: IOptions) {
-  const { dialect } = new KyselyPGlite("memory://");
+  const { dialect } = new KyselyPGlite();
   const db = new Kysely({ dialect });
   try {
     const migration = await loadMigration(migrationFile);

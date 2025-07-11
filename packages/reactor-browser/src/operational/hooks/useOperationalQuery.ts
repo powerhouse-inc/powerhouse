@@ -1,7 +1,5 @@
-import {
-  type LiveQuery,
-  type LiveQueryResults,
-} from "@electric-sql/pglite/live";
+import { type LiveQueryResults } from "@electric-sql/pglite/live";
+import type { OperationalProcessorClass } from "document-drive/processors/operational-processor";
 import { type Kysely } from "kysely";
 import { useEffect, useState } from "react";
 import { useOperationalStore } from "./useOperationalStore.js";
@@ -12,6 +10,8 @@ export type QueryCallbackReturnType = {
 };
 
 export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
+  ProcessorClass: OperationalProcessorClass<Schema>,
+  driveId: string,
   queryCallback: (
     db: Kysely<Schema>,
     parameters?: TParams,
@@ -20,34 +20,45 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);
+  const [error, setError] = useState<Error | undefined>(undefined);
 
-  const operationalStore = useOperationalStore<Schema>();
+  const operationalStore = useOperationalStore<any>();
 
   useEffect(() => {
-    let live: Promise<LiveQuery<T> | null> = Promise.resolve(null);
+    setError(undefined);
+    setQueryLoading(true);
 
-    if (operationalStore.db) {
-      const compiledQuery = queryCallback(operationalStore.db, parameters);
-      const { sql, parameters: queryParameters } = compiledQuery;
-
-      live = operationalStore.db.live.query(
-        sql,
-        queryParameters ? [...queryParameters] : [],
-        (result) => {
-          setResult(result);
-          setQueryLoading(false);
-        },
-      );
+    if (!operationalStore.db) {
+      return;
     }
+
+    // Get namespace from processor class
+    const namespace = ProcessorClass.getNamespace(driveId);
+
+    // Create namespaced database
+    const db = operationalStore.db.withSchema(namespace) as Kysely<Schema>;
+
+    const compiledQuery = queryCallback(db, parameters);
+    const { sql, parameters: queryParameters } = compiledQuery;
+
+    const live = operationalStore.db.live
+      .query<T>(sql, queryParameters ? [...queryParameters] : [], (result) => {
+        setResult(result);
+        setQueryLoading(false);
+      })
+      .catch((error: unknown) => {
+        setQueryLoading(false);
+        setError(error instanceof Error ? error : new Error(error as string));
+      });
 
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [operationalStore.db, queryCallback, parameters]);
+  }, [operationalStore.db, ProcessorClass, driveId, queryCallback, parameters]);
 
   return {
     isLoading: operationalStore.isLoading || queryLoading,
-    error: operationalStore.error,
+    error: error || operationalStore.error,
     result,
   } as const;
 }
