@@ -6,13 +6,82 @@ export class InMemoryListenerStorage implements IListenerStorage {
 
   async init(): Promise<void> {}
 
-  async *getParents() {
-    yield* this.listeners.keys();
+  async *getParents(params?: {
+    pageSize?: number;
+    cursor?: string;
+  }): AsyncIterableIterator<string> {
+    for await (const page of this.getParentsPages(params)) {
+      for (const id of page) yield id;
+    }
   }
 
-  async *getListeners(parentId: string): AsyncIterableIterator<string> {
+  async *getParentsPages(params?: {
+    pageSize?: number;
+    cursor?: string;
+  }): AsyncIterableIterator<string[]> {
+    const pageSize = params?.pageSize ?? 100;
+    let it = this.listeners.keys();
+
+    // Advance iterator to just after the cursor, if provided
+    if (params?.cursor) {
+      let found = false;
+      for (const key of it) {
+        if (key === params.cursor) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        // Cursor not found, start from beginning
+        it = this.listeners.keys();
+      }
+    }
+
+    while (true) {
+      const batch = Array.from(it.take(pageSize));
+      if (batch.length === 0) break;
+      yield batch;
+    }
+  }
+
+  async *getListeners(
+    parentId: string,
+    params?: { pageSize?: number; cursor?: string },
+  ): AsyncIterableIterator<string> {
+    for await (const page of this.getListenersPages(parentId, params)) {
+      for (const id of page) yield id;
+    }
+  }
+
+  async *getListenersPages(
+    parentId: string,
+    params?: { pageSize?: number; cursor?: string },
+  ): AsyncIterableIterator<string[]> {
     const map = this.listeners.get(parentId);
-    yield* map ? map.keys() : [];
+    if (!map) return;
+    const pageSize = params?.pageSize ?? 100;
+    let it = map.keys();
+
+    // Advance iterator to just after the cursor, if provided
+    if (params?.cursor) {
+      let found = false;
+      for (const key of it) {
+        if (key === params.cursor) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        // Cursor not found, start from beginning
+        it = map.keys();
+      }
+    }
+
+    while (true) {
+      const batch = Array.from(it.take(pageSize));
+      if (batch.length === 0) break;
+      yield batch;
+    }
   }
 
   async getListener(

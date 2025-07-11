@@ -50,6 +50,85 @@ describe.each(storageAdapters)("%s", async (_, buildStorage) => {
     );
   });
 
+  test("should support paged and flattened async generators for getParents and getListeners", async () => {
+    const storage = await buildStorage();
+    // Add 3 parents, each with 5 listeners
+    const parents = ["a", "b", "c"];
+    const listenersPerParent = 5;
+    for (const parentId of parents) {
+      for (let i = 0; i < listenersPerParent; ++i) {
+        await storage.addListener(parentId, `l${i}`, {
+          driveId: parentId,
+          block: false,
+          callInfo: {
+            data: `url${i}`,
+            name: "n",
+            transmitterType: "SwitchboardPush",
+          },
+          filter: {
+            branch: ["main"],
+            documentId: ["*"],
+            documentType: ["*"],
+            scope: ["global"],
+          },
+          label: "lbl",
+          listenerId: `l${i}`,
+          system: false,
+        });
+      }
+    }
+
+    // getParents (flattened)
+    const gotParents = [];
+    for await (const p of storage.getParents()) gotParents.push(p);
+    expect(gotParents.sort()).toStrictEqual(parents.sort());
+
+    // getParentsPages (paged, pageSize = 2)
+    const pagedParents: string[] = [];
+    for await (const page of storage.getParentsPages({ pageSize: 2 }))
+      pagedParents.push(...page);
+    expect(pagedParents.sort()).toStrictEqual(parents.sort());
+
+    // getParentsPages with cursor
+    const firstPage = (await storage.getParentsPages({ pageSize: 1 }).next())
+      .value;
+    const cursor = firstPage[0];
+    const restPages: string[] = [];
+    for await (const page of storage.getParentsPages({ pageSize: 2, cursor }))
+      restPages.push(...page);
+    expect([cursor, ...restPages].sort()).toStrictEqual(parents.sort());
+
+    // getListeners (flattened) for parent 'a'
+    const gotListeners = [];
+    for await (const l of storage.getListeners("a")) gotListeners.push(l);
+    expect(gotListeners.sort()).toStrictEqual(["l0", "l1", "l2", "l3", "l4"]);
+
+    // getListenersPages (paged, pageSize = 2) for parent 'a'
+    const pagedListeners: string[] = [];
+    for await (const page of storage.getListenersPages("a", { pageSize: 2 }))
+      pagedListeners.push(...page);
+    expect(pagedListeners.sort()).toStrictEqual(["l0", "l1", "l2", "l3", "l4"]);
+
+    // getListenersPages with cursor for parent 'a'
+    const firstListenerPage = (
+      await storage.getListenersPages("a", { pageSize: 1 }).next()
+    ).value;
+    const listenerCursor = firstListenerPage[0];
+    const restListenerPages: string[] = [];
+    for await (const page of storage.getListenersPages("a", {
+      pageSize: 2,
+      cursor: listenerCursor,
+    }))
+      restListenerPages.push(...page);
+    expect([listenerCursor, ...restListenerPages].sort()).toStrictEqual([
+      "l0",
+      "l1",
+      "l2",
+      "l3",
+      "l4",
+    ]);
+  });
+
   test("should get listeners for a parentId", async () => {
     const storage = await buildStorage();
     const listenerA: Listener = {
