@@ -16,7 +16,22 @@ export interface IOperationalProcessor<TDatabaseSchema = unknown>
   initAndUpgrade(): Promise<void>;
 }
 
-export type ExtractProcessorSchema<TProcessor extends OperationalProcessor> =
+export async function createNamespacedStore<T>(
+  namespace: string,
+  db: IOperationalStore,
+): Promise<IOperationalStore<ExtractProcessorSchema<T>>> {
+  await db.schema.createSchema(namespace).ifNotExists().execute();
+  const schemaOperationalStore = db.withSchema(namespace);
+  return schemaOperationalStore as IOperationalStore<ExtractProcessorSchema<T>>;
+}
+
+export function isOperationalProcessor(
+  p: IProcessor,
+): p is IOperationalProcessor {
+  return OperationalProcessor.is(p);
+}
+
+export type ExtractProcessorSchema<TProcessor> =
   TProcessor extends OperationalProcessor<infer TSchema> ? TSchema : never;
 
 function operationalStoreToQueryBuilder<TSchema>(
@@ -37,6 +52,8 @@ export type OperationalProcessorClass<TSchema> = (new (
 ) => OperationalProcessor<TSchema>) &
   typeof OperationalProcessor<TSchema>;
 
+const IS_OPERATIONAL_PROCESSOR = Symbol.for("ph.IS_OPERATIONAL_PROCESSOR");
+
 /**
  * Base class for operational processors that require a relational database storage.
  * This class abstracts database initialization, migration management, and resource cleanup,
@@ -47,8 +64,23 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
 {
   constructor(
     protected _namespace: string,
+    protected _filter: OperationalProcessorFilter,
     protected operationalStore: IOperationalStore<TDatabaseSchema>,
   ) {}
+
+  static [IS_OPERATIONAL_PROCESSOR] = true;
+
+  static is(p: unknown): p is OperationalProcessor {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    let proto = Object.getPrototypeOf(p);
+    while (proto) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (proto.constructor?.[IS_OPERATIONAL_PROCESSOR]) return true;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      proto = Object.getPrototypeOf(proto);
+    }
+    return false;
+  }
 
   /**
    * Returns the namespace for a given drive id.
@@ -72,47 +104,11 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
   }
 
   /**
-   * Builds a new instance of the processor.
-   */
-  static async build<TProcessor extends OperationalProcessor>(
-    driveId: string,
-    operationalStore: IOperationalStore,
-  ): Promise<TProcessor> {
-    // Creates a namespace for the provided drive id
-    const namespace = this.getNamespace(driveId);
-
-    // Creates the schema for the namespace if it doesn't exist
-    await operationalStore.schema
-      .createSchema(namespace)
-      .ifNotExists()
-      .execute();
-
-    // This method is meant to be called on subclasses
-    const ProcessorClass = this as unknown as {
-      new (
-        namespace: string,
-        operationalStore: IOperationalStore<ExtractProcessorSchema<TProcessor>>,
-      ): TProcessor;
-    };
-
-    // Instantiates the subclass with the namespace and schema operational store
-    const schemaOperationalStore = operationalStore.withSchema(
-      namespace,
-    ) as IOperationalStore<ExtractProcessorSchema<TProcessor>>;
-    return new ProcessorClass(namespace, schemaOperationalStore);
-  }
-
-  /**
    * Returns the filter for the processor.
    * This method can be overridden by derived classes to provide a custom filter.
    */
   get filter(): OperationalProcessorFilter {
-    return {
-      branch: ["main"],
-      documentId: ["*"],
-      documentType: ["*"],
-      scope: ["global"],
-    };
+    return this._filter;
   }
 
   /**
