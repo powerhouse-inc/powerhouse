@@ -32,11 +32,11 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
       return;
     }
 
-    // Get namespace from processor class
-    const namespace = ProcessorClass.getNamespace(driveId);
-
-    // Create namespaced database
-    const db = operationalStore.db.withSchema(namespace) as Kysely<Schema>;
+    // Use processor's query method to get namespaced database
+    const db = ProcessorClass.query(
+      driveId,
+      operationalStore.db,
+    ) as Kysely<Schema>;
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;
