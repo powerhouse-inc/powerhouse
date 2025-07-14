@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { type IOperationalStore } from "document-drive/processors/types";
-import { OperationalProcessor, type OperationalProcessorFilter } from "document-drive/processors/operational-processor";
+import { OperationalProcessor } from "document-drive/processors/operational-processor";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
@@ -15,14 +15,9 @@ import { type DB } from "./schema.js";
 type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends OperationalProcessor<DB> {
-
-  override get filter(): OperationalProcessorFilter {
-    return {
-      branch: ["main"],
-      documentId: ["*"],
-      documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
-      scope: ["global"],
-    }
+  static override getNamespace(driveId: string): string {
+    // Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`
+    return super.getNamespace(driveId);
   }
 
   override async initAndUpgrade(): Promise<void> {

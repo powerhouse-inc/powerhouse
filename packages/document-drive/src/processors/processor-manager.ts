@@ -11,7 +11,7 @@ import {
 } from "document-drive/server/types";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";
-import { type IOperationalProcessor } from "./operational-processor.js";
+import { isOperationalProcessor } from "./operational-processor.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([
@@ -19,6 +19,7 @@ export class ProcessorManager implements IProcessorManager {
     "processor-manager",
   ]);
 
+  private processorsByDrive = new Map<string, ProcessorRecord[]>();
   private idToFactory = new Map<string, ProcessorFactory>();
   private identifierToListeners = new Map<string, Listener[]>();
 
@@ -89,6 +90,12 @@ export class ProcessorManager implements IProcessorManager {
       this.identifierToListeners.set(identifier, listeners);
     }
 
+    let driveProcessors = this.processorsByDrive.get(driveId);
+    if (!driveProcessors) {
+      driveProcessors = [];
+      this.processorsByDrive.set(driveId, driveProcessors);
+    }
+
     // don't let the factory throw, we want to continue with the rest of the processors
     let processors: ProcessorRecord[] = [];
     try {
@@ -99,9 +106,27 @@ export class ProcessorManager implements IProcessorManager {
     }
 
     for (const { filter, processor } of processors) {
-      if ("initAndUpgrade" in processor) {
-        await (processor as IOperationalProcessor).initAndUpgrade();
+      const isOperational = isOperationalProcessor(processor);
+
+      // check for duplicated namespaces
+      if (
+        isOperational &&
+        driveProcessors.some(
+          (p) =>
+            isOperationalProcessor(p.processor) &&
+            p.processor.namespace === processor.namespace,
+        )
+      ) {
+        this.logger.warn(
+          `Processor with namespace '${processor.namespace}' already registered for drive '${driveId}'.`,
+        );
+        continue;
       }
+
+      if (isOperational) {
+        await processor.initAndUpgrade();
+      }
+
       const id = generateId();
       const listener: Listener = {
         driveId,
@@ -116,6 +141,7 @@ export class ProcessorManager implements IProcessorManager {
       await this.listeners.setListener(driveId, listener);
 
       listeners.push(listener);
+      driveProcessors.push({ filter, processor });
     }
   }
 }
