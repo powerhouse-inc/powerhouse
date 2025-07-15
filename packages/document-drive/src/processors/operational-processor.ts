@@ -1,4 +1,5 @@
 import { type ListenerFilter } from "#drive-document-model/module";
+import { hash } from "#utils/hash";
 import { type PHDocument } from "document-model";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import {
@@ -16,12 +17,15 @@ export interface IOperationalProcessor<TDatabaseSchema = unknown>
   initAndUpgrade(): Promise<void>;
 }
 
-export async function createNamespacedStore<T>(
+export async function createNamespacedDb<T>(
   namespace: string,
   db: IOperationalStore,
 ): Promise<IOperationalStore<ExtractProcessorSchema<T>>> {
   await db.schema.createSchema(namespace).ifNotExists().execute();
-  const schemaOperationalStore = db.withSchema(namespace);
+
+  // hash the namespace to avoid too long namespaces
+  const hashValue = await hash(namespace);
+  const schemaOperationalStore = db.withSchema(hashValue);
   return schemaOperationalStore as IOperationalStore<ExtractProcessorSchema<T>>;
 }
 
