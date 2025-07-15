@@ -1,3 +1,13 @@
+## 3.3.0-dev.10 (2025-07-15)
+
+### 🩹 Fixes
+
+- **codegen:** remove sucrase dependency and update schema gen ([9d3efd2ec](https://github.com/powerhouse-inc/powerhouse/commit/9d3efd2ec))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
 ## 3.3.0-dev.9 (2025-07-10)
 
 ### 🩹 Fixes
