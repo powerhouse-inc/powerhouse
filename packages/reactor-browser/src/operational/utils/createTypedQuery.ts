@@ -1,12 +1,15 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
-import { type OperationalProcessorClass } from "document-drive/processors/operational-processor";
-import { type CompiledQuery, type Kysely } from "kysely";
+import {
+  type IOperationalQueryBuilder,
+  type OperationalProcessorClass,
+} from "document-drive/processors/operational-processor";
+import { type CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
-
 import {
   type QueryCallbackReturnType,
   useOperationalQuery,
+  type UseOperationalQueryOptions,
 } from "../hooks/useOperationalQuery.js";
 
 // Custom hook for parameter memoization
@@ -26,7 +29,9 @@ export function createTypedQuery<TSchema>(
 ) {
   // Overload for queries without parameters
   function useQuery<
-    TQueryBuilder extends (db: Kysely<TSchema>) => QueryCallbackReturnType,
+    TQueryBuilder extends (
+      db: IOperationalQueryBuilder<TSchema>,
+    ) => QueryCallbackReturnType,
   >(
     driveId: string,
     queryCallback: TQueryBuilder,
@@ -42,13 +47,14 @@ export function createTypedQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<TSchema>,
+      db: IOperationalQueryBuilder<TSchema>,
       parameters: TParams,
     ) => QueryCallbackReturnType,
   >(
     driveId: string,
     queryCallback: TQueryBuilder,
     parameters: TParams,
+    options?: UseOperationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -60,13 +66,14 @@ export function createTypedQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<TSchema>,
+      db: IOperationalQueryBuilder<TSchema>,
       parameters?: TParams,
     ) => QueryCallbackReturnType,
   >(
     driveId: string,
     queryCallback: TQueryBuilder,
     parameters?: TParams,
+    options?: UseOperationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -88,6 +95,7 @@ export function createTypedQuery<TSchema>(
       driveId,
       memoizedCallback,
       stableParams,
+      options,
     ) as {
       isLoading: boolean;
       error: Error | null;
