@@ -48,7 +48,7 @@ export async function generateDBSchema({
 
     console.log(`Schema types generated at ${outFile}`);
   } catch (error) {
-    console.error("Error running kysely-pglite CLI:", error);
+    console.error("Error running migration:", error);
     throw error;
   }
 }
