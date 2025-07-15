@@ -117,7 +117,7 @@ export class ProcessorManager
 
     // Get total drives for tracking
     const driveIds = await this.drive.getDrives();
-    const totalDrives = driveIds?.length ?? 0;
+    const totalDrives = (driveIds ?? []).length;
 
     // iterate over all factories and create listeners
     for (const [identifier, factory] of this.idToFactory) {

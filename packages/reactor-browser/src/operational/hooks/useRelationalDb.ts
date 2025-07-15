@@ -15,6 +15,7 @@ export interface IRelationalDb<Schema> {
   db: EnhancedKysely<Schema> | null;
   isLoading: boolean;
   error: Error | null;
+  dbReady: boolean;
 }
 
 // Custom initializer that creates enhanced Kysely instance with live capabilities
@@ -40,6 +41,7 @@ export const useRelationalDb = <Schema>() => {
         db: null,
         isLoading: pglite.isLoading,
         error: pglite.error,
+        dbReady: pglite.dbReady,
       };
     }
 
@@ -49,6 +51,7 @@ export const useRelationalDb = <Schema>() => {
       db,
       isLoading: false,
       error: null,
+      dbReady: pglite.dbReady,
     };
   }, [pglite]);
 

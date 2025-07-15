@@ -14,7 +14,11 @@ import {
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
-import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { useEffect, useMemo, useRef, type PropsWithChildren } from 'react';
+import {
+    ProcessorReadinessStatus,
+    useProcessorReadiness,
+} from '../hooks/useProcessorReadiness';
 import {
     useExternalProcessors,
     type Processors,
@@ -165,7 +169,7 @@ export function ExternalProcessors() {
                 manager,
                 store.data,
                 RelationalDb.db,
-                `${packageName}-${index}`,
+                `external:${packageName}-${index}`,
                 processors,
             ).catch(logger.error);
 
@@ -177,13 +181,29 @@ export function ExternalProcessors() {
 }
 
 export function ProcessorManagerProvider({ children }: PropsWithChildren) {
-    const pgLiteFactory = connectConfig.analytics.useWorker
-        ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
-        : undefined;
+    const pgLiteFactory = useMemo(() => {
+        return connectConfig.analytics.useWorker
+            ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
+            : undefined;
+    }, []);
 
     const setPGliteDB = useSetPGliteDB();
+    const manager = useUnwrappedProcessorManager();
 
-    // Initialize and handle PGlite factory
+    // Use the processor readiness hook
+    const processorStatus = useProcessorReadiness(manager);
+
+    useEffect(() => {
+        if (
+            processorStatus === ProcessorReadinessStatus.Success ||
+            processorStatus === ProcessorReadinessStatus.Failed
+        ) {
+            setPGliteDB({
+                dbReady: true,
+            });
+        }
+    }, [processorStatus]);
+
     useEffect(() => {
         if (!pgLiteFactory) {
             // If no factory, set to not loading with null db
