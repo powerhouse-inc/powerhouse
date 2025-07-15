@@ -1,6 +1,9 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
-import type { OperationalProcessorClass } from "document-drive/processors/operational-processor";
-import { type Kysely } from "kysely";
+import {
+  createNamespacedQueryBuilder,
+  type IOperationalQueryBuilder,
+  type OperationalProcessorClass,
+} from "document-drive/processors/operational-processor";
 import { useEffect, useState } from "react";
 import { useOperationalStore } from "./useOperationalStore.js";
 
@@ -9,14 +12,20 @@ export type QueryCallbackReturnType = {
   parameters?: readonly unknown[];
 };
 
+export type UseOperationalQueryOptions = {
+  // Whether to hash the namespace to avoid namespace size limit. True by default
+  hashNamespace?: boolean;
+};
+
 export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
   ProcessorClass: OperationalProcessorClass<Schema>,
   driveId: string,
   queryCallback: (
-    db: Kysely<Schema>,
+    db: IOperationalQueryBuilder<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
+  options?: UseOperationalQueryOptions,
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);
@@ -33,10 +42,12 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
     }
 
     // Use processor's query method to get namespaced database
-    const db = ProcessorClass.query(
+    const db = createNamespacedQueryBuilder(
+      ProcessorClass,
       driveId,
       operationalStore.db,
-    ) as Kysely<Schema>;
+      options,
+    );
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;

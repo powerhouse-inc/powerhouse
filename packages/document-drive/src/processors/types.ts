@@ -2,7 +2,7 @@ import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
-import { type Kysely, type QueryCreator } from "kysely";
+import { type Kysely } from "kysely";
 
 /**
  * The standardized relational database interface for operational processors.
@@ -10,19 +10,6 @@ import { type Kysely, type QueryCreator } from "kysely";
  * database framework implementation details.
  */
 export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
-
-export type IOperationalQueryMethods =
-  | "selectFrom"
-  | "selectNoFrom"
-  | "with"
-  | "withRecursive";
-
-export type IOperationalQueryBuilder<Schema = unknown> = Pick<
-  QueryCreator<Schema>,
-  IOperationalQueryMethods
-> & {
-  withSchema: (schema: string) => IOperationalQueryBuilder<Schema>;
-};
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;

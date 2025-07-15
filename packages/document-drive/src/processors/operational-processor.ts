@@ -1,12 +1,22 @@
 import { type ListenerFilter } from "#drive-document-model/module";
 import { hash } from "#utils/hash";
 import { type PHDocument } from "document-model";
+import { type QueryCreator } from "kysely";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import {
-  type IOperationalQueryBuilder,
-  type IOperationalStore,
-  type IProcessor,
-} from "./types.js";
+import { type IOperationalStore, type IProcessor } from "./types.js";
+
+export type IOperationalQueryMethods =
+  | "selectFrom"
+  | "selectNoFrom"
+  | "with"
+  | "withRecursive";
+
+export type IOperationalQueryBuilder<Schema = unknown> = Pick<
+  QueryCreator<Schema>,
+  IOperationalQueryMethods
+> & {
+  withSchema: (schema: string) => IOperationalQueryBuilder<Schema>;
+};
 
 export type OperationalProcessorFilter = ListenerFilter;
 export interface IOperationalProcessor<TDatabaseSchema = unknown>
@@ -20,13 +30,31 @@ export interface IOperationalProcessor<TDatabaseSchema = unknown>
 export async function createNamespacedDb<T>(
   namespace: string,
   db: IOperationalStore,
+  options?: {
+    hashNamespace?: boolean; // defaults to true
+  },
 ): Promise<IOperationalStore<ExtractProcessorSchema<T>>> {
-  await db.schema.createSchema(namespace).ifNotExists().execute();
-
   // hash the namespace to avoid too long namespaces
-  const hashValue = await hash(namespace);
+  const hashNamespace = options?.hashNamespace ?? true;
+  const hashValue = hashNamespace ? hash(namespace) : namespace;
+  await db.schema.createSchema(hashValue).ifNotExists().execute();
   const schemaOperationalStore = db.withSchema(hashValue);
   return schemaOperationalStore as IOperationalStore<ExtractProcessorSchema<T>>;
+}
+
+export function createNamespacedQueryBuilder<Schema>(
+  processor: OperationalProcessorClass<Schema>,
+  driveId: string,
+  db: IOperationalStore,
+  options?: {
+    hashNamespace?: boolean; // defaults to true
+  },
+): IOperationalQueryBuilder<Schema> {
+  const namespace = processor.getNamespace(driveId);
+  const hashNamespace = options?.hashNamespace ?? true;
+  const hashValue = hashNamespace ? hash(namespace) : namespace;
+  const namespacedDb = db.withSchema(hashValue) as IOperationalStore<Schema>;
+  return operationalStoreToQueryBuilder(namespacedDb);
 }
 
 export function isOperationalProcessor(
@@ -95,16 +123,11 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
   }
 
   static query<TSchema>(
-    this: (new (...args: any[]) => OperationalProcessor<TSchema>) &
-      typeof OperationalProcessor<TSchema>,
+    this: OperationalProcessorClass<TSchema>,
     driveId: string,
-    operationalStore: IOperationalStore<any>,
+    db: IOperationalStore<any>,
   ): IOperationalQueryBuilder<TSchema> {
-    const namespace = this.getNamespace(driveId);
-    const schemaStore = operationalStore.withSchema(
-      namespace,
-    ) as IOperationalStore<TSchema>;
-    return operationalStoreToQueryBuilder(schemaStore);
+    return createNamespacedQueryBuilder(this, driveId, db);
   }
 
   /**

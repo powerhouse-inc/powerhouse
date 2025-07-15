@@ -1,26 +1,38 @@
-export function hash(str: string) {
-  // Get the string as arraybuffer.
-  const buffer = new TextEncoder().encode(str);
-  return crypto.subtle.digest("SHA-256", buffer).then(function (hash) {
-    return hex(hash);
-  });
+export type HashAlgorithms = "MurmurHash";
+
+export function hash(
+  str: string,
+  length = 12,
+  algorithm: HashAlgorithms = "MurmurHash",
+) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (algorithm === "MurmurHash") {
+    const hash = murmurHash64(str);
+    return toBase62(hash, length);
+  } else {
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+    throw new Error(`Unsupported hashing algorithm: ${algorithm}`);
+  }
 }
 
-function hex(buffer: ArrayBuffer) {
-  let digest = "";
-  const view = new DataView(buffer);
-  for (let i = 0; i < view.byteLength; i += 4) {
-    // We use getUint32 to reduce the number of iterations (notice the `i += 4`)
-    const value = view.getUint32(i);
-    // toString(16) will transform the integer into the corresponding hex string
-    // but will remove any initial "0"
-    const stringValue = value.toString(16);
-    // One Uint32 element is 4 bytes or 8 hex chars (it would also work with 4
-    // chars for Uint16 and 2 chars for Uint8)
-    const padding = "00000000";
-    const paddedValue = (padding + stringValue).slice(-padding.length);
-    digest += paddedValue;
+// MurmurHash64 implementation
+function murmurHash64(input: string): bigint {
+  let h = 0xcbf29ce484222325n; // FNV-1a 64-bit offset basis
+  const prime = 0x100000001b3n;
+  for (let i = 0; i < input.length; i++) {
+    h ^= BigInt(input.charCodeAt(i));
+    h *= prime;
   }
+  return h & 0xffffffffffffffffn; // 64-bit mask
+}
 
-  return digest;
+function toBase62(num: bigint, length = 12): string {
+  const chars =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let out = "";
+  while (num > 0n && out.length < length) {
+    out = chars[Number(num % 62n)] + out;
+    num /= 62n;
+  }
+  return out.padStart(length, "0");
 }
