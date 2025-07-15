@@ -168,8 +168,11 @@ export default (
 
     ipcMain.handle('documentDrive:clearStorage', async () => {
         // delete all drives so events are emitted
-        for (const drive of await documentDrive.getDrives()) {
-            await documentDrive.deleteDrive(drive);
+        const drives = await documentDrive.getDrives();
+        if (drives) {
+            for (const drive of drives) {
+                await documentDrive.deleteDrive(drive);
+            }
         }
 
         // clear everything else

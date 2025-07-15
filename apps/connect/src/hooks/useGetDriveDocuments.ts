@@ -1,5 +1,5 @@
 import { type GetDocumentOptions } from 'document-drive';
-import { type PHDocumentHeader, type PHDocument } from 'document-model';
+import { type PHDocument, type PHDocumentHeader } from 'document-model';
 import { useEffect, useState } from 'react';
 import { useDocumentDriveServer } from './useDocumentDriveServer';
 
@@ -35,6 +35,10 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
 
         if (!documentIds || documentIds.length === 0) {
             documentIds = await getDocumentsIds(_driveId);
+        }
+
+        if (!documentIds) {
+            return;
         }
 
         const getDocumentsPromise = documentIds.map<

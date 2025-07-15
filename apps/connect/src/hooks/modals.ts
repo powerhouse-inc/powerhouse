@@ -50,9 +50,10 @@ export function useShowAddDriveModal() {
                     type: 'connect-success',
                 });
 
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
+                if (newDrive) {
+                    const newDriveNode = await makeUiDriveNode(newDrive);
+                    setSelectedNode(newDriveNode);
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -92,9 +93,10 @@ export function useShowAddDriveModal() {
                     type: 'connect-success',
                 });
 
-                const newDriveNode = await makeUiDriveNode(newDrive);
-
-                setSelectedNode(newDriveNode);
+                if (newDrive) {
+                    const newDriveNode = await makeUiDriveNode(newDrive);
+                    setSelectedNode(newDriveNode);
+                }
             } catch (e) {
                 console.error(e);
             }

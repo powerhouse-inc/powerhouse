@@ -68,12 +68,16 @@ export function useDocumentDrives() {
         const documentDrives: DocumentDriveDocument[] = [];
         try {
             const driveIds = await reactor.getDrives();
-            for (const id of driveIds) {
-                try {
-                    const drive = await reactor.getDrive(id);
-                    documentDrives.push(drive);
-                } catch (error) {
-                    logger.error(error);
+            if (driveIds) {
+                for (const id of driveIds) {
+                    try {
+                        const drive = await reactor.getDrive(id);
+                        if (drive) {
+                            documentDrives.push(drive);
+                        }
+                    } catch (error) {
+                        logger.error(error);
+                    }
                 }
             }
         } catch (error) {
