@@ -1,7 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import '../i18n';
 
-import { AtomStoreProvider } from '@powerhousedao/common';
+import { AtomStoreProvider } from '@powerhousedao/state';
 import { AppSkeleton } from './app-skeleton.js';
 
 const App = lazy(() => import('./app.js'));

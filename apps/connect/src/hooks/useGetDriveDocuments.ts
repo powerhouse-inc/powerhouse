@@ -37,7 +37,7 @@ export function useGetDriveDocuments(props: UseGetDriveDocumentsProps) {
             documentIds = await getDocumentsIds(_driveId);
         }
 
-        const getDocumentsPromise = documentIds.map<
+        const getDocumentsPromise = documentIds!.map<
             Promise<[string, PHDocument]>
         >(async documentId => {
             const document = await openFile(_driveId, documentId);

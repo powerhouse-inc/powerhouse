@@ -29,6 +29,9 @@
     },
     {
       "path": "../reactor-browser"
+    },
+    {
+      "path": "../state"
     }
   ]
 }

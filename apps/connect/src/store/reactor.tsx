@@ -1,6 +1,6 @@
 import connectConfig from '#connect-config';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
-import { atomStore } from '@powerhousedao/common';
+import { atomStore } from '@powerhousedao/state';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -29,7 +29,7 @@ async function initReactor(reactor: IDocumentDriveServer) {
     }
 
     const drives = await reactor.getDrives();
-    if (!drives.length && connectConfig.drives.sections.LOCAL.enabled) {
+    if (!drives?.length && connectConfig.drives.sections.LOCAL.enabled) {
         return reactor
             .addDrive({
                 id: generateId(),

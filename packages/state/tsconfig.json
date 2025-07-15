@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+    ],
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "resolveJsonModule": true
+  },
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/document-model"
+    }
+  ]
+}

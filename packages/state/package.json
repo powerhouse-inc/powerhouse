@@ -1,0 +1,46 @@
+{
+  "name": "@powerhousedao/state",
+  "version": "3.3.0-dev.10",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "scripts": {
+    "build:tsc": "tsc --build",
+    "lint": "eslint"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/slug": "^5.0.9",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "jotai": "^2.12.5",
+    "jotai-devtools": "^0.12.0",
+    "jotai-effect": "^2.0.4",
+    "jotai-optics": "^0.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "peerDependencies": {
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "jotai": "^2.12.5",
+    "jotai-devtools": "^0.12.0",
+    "jotai-effect": "^2.0.4",
+    "jotai-optics": "^0.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "slug": "^11.0.0"
+  }
+}

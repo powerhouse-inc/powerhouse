@@ -50,6 +50,10 @@ export function useShowAddDriveModal() {
                     type: 'connect-success',
                 });
 
+                if (!newDrive) {
+                    return;
+                }
+
                 const newDriveNode = await makeUiDriveNode(newDrive);
 
                 setSelectedNode(newDriveNode);
@@ -91,6 +95,10 @@ export function useShowAddDriveModal() {
                 toast(t('notifications.addDriveSuccess'), {
                     type: 'connect-success',
                 });
+
+                if (!newDrive) {
+                    return;
+                }
 
                 const newDriveNode = await makeUiDriveNode(newDrive);
 

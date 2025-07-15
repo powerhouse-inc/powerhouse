@@ -65,6 +65,7 @@
         "@playwright/test": "^1.41.2",
         "@powerhousedao/builder-tools": "workspace:*",
         "@powerhousedao/common": "workspace:*",
+        "@powerhousedao/state": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
         "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",

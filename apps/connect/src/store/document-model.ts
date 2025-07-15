@@ -10,7 +10,7 @@ import { atom, useAtomValue } from 'jotai';
 import { observe } from 'jotai-effect';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
-import { atomStore } from '@powerhousedao/common';
+import { atomStore } from '@powerhousedao/state';
 
 export const baseDocumentModels = [
     driveDocumentModelModule,
