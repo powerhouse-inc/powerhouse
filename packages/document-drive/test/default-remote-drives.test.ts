@@ -425,8 +425,8 @@ describe("remove old drives", () => {
     let docDrive1 = await server.getDrive(drive1.id);
     let docDrive2 = await server.getDrive(drive2.id);
 
-    expectPublicDrive(docDrive1);
-    expectPublicDrive(docDrive2);
+    expectPublicDrive(docDrive1!);
+    expectPublicDrive(docDrive2!);
 
     await server.initialize();
 
@@ -435,10 +435,10 @@ describe("remove old drives", () => {
     const docDrive3 = await server.getDrive(drive3.id);
     const docDrive4 = await server.getDrive(drive4.id);
 
-    expectDetachedDrive(docDrive1);
-    expectDetachedDrive(docDrive2);
-    expectPublicDrive(docDrive3);
-    expectPublicDrive(docDrive4);
+    expectDetachedDrive(docDrive1!);
+    expectDetachedDrive(docDrive2!);
+    expectPublicDrive(docDrive3!);
+    expectPublicDrive(docDrive4!);
   });
 
   it("should detach remote drives by url", async () => {
@@ -458,8 +458,8 @@ describe("remove old drives", () => {
     let docDrive1 = await server.getDrive(drive1.id);
     let docDrive2 = await server.getDrive(drive2.id);
 
-    expectPublicDrive(docDrive1);
-    expectPublicDrive(docDrive2);
+    expectPublicDrive(docDrive1!);
+    expectPublicDrive(docDrive2!);
 
     await server.initialize();
 
@@ -468,10 +468,10 @@ describe("remove old drives", () => {
     const docDrive3 = await server.getDrive(drive3.id);
     const docDrive4 = await server.getDrive(drive4.id);
 
-    expectDetachedDrive(docDrive1);
-    expectDetachedDrive(docDrive2);
-    expectPublicDrive(docDrive3);
-    expectPublicDrive(docDrive4);
+    expectDetachedDrive(docDrive1!);
+    expectDetachedDrive(docDrive2!);
+    expectPublicDrive(docDrive3!);
+    expectPublicDrive(docDrive4!);
   });
 
   it("should preserve only remote drives specified when 'preserve-by-id-and-detach' strategy is used", async () => {
@@ -491,8 +491,8 @@ describe("remove old drives", () => {
     let docDrive3 = await server.getDrive(drive3.id);
     let docDrive4 = await server.getDrive(drive4.id);
 
-    expectPublicDrive(docDrive3);
-    expectPublicDrive(docDrive4);
+    expectPublicDrive(docDrive3!);
+    expectPublicDrive(docDrive4!);
 
     await server.initialize();
 
@@ -501,10 +501,10 @@ describe("remove old drives", () => {
     const docDrive1 = await server.getDrive(drive1.id);
     const docDrive2 = await server.getDrive(drive2.id);
 
-    expectPublicDrive(docDrive1);
-    expectPublicDrive(docDrive2);
-    expectDetachedDrive(docDrive3);
-    expectDetachedDrive(docDrive4);
+    expectPublicDrive(docDrive1!);
+    expectPublicDrive(docDrive2!);
+    expectDetachedDrive(docDrive3!);
+    expectDetachedDrive(docDrive4!);
   });
 
   it("should preserve only remote drives specified when 'preserve-by-url-and-detach' strategy is used", async () => {
@@ -524,8 +524,8 @@ describe("remove old drives", () => {
     let docDrive3 = await server.getDrive(drive3.id);
     let docDrive4 = await server.getDrive(drive4.id);
 
-    expectPublicDrive(docDrive3);
-    expectPublicDrive(docDrive4);
+    expectPublicDrive(docDrive3!);
+    expectPublicDrive(docDrive4!);
 
     await server.initialize();
 
@@ -534,9 +534,9 @@ describe("remove old drives", () => {
     const docDrive1 = await server.getDrive(drive1.id);
     const docDrive2 = await server.getDrive(drive2.id);
 
-    expectPublicDrive(docDrive1);
-    expectPublicDrive(docDrive2);
-    expectDetachedDrive(docDrive3);
-    expectDetachedDrive(docDrive4);
+    expectPublicDrive(docDrive1!);
+    expectPublicDrive(docDrive2!);
+    expectDetachedDrive(docDrive3!);
+    expectDetachedDrive(docDrive4!);
   });
 });

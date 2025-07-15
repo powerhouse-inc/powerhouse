@@ -39,6 +39,9 @@ export class ProcessorManager implements IProcessorManager {
 
     // iterate over all drives and register the factory
     const driveIds = await this.drive.getDrives();
+    if (!driveIds) {
+      return;
+    }
     for (const driveId of driveIds) {
       await this.createProcessors(driveId, identifier, factory);
     }

@@ -83,6 +83,7 @@ export class SystemSubgraph extends Subgraph {
             },
             preferredEditor,
           );
+          if (!drive) throw new Error("Drive not added");
 
           const driveAdded = {
             id: drive.header.id,

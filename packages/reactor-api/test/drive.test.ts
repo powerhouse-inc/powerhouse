@@ -50,11 +50,11 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toEqual({
-      id: createdDrive.header.id,
-      slug: createdDrive.header.slug,
-      meta: createdDrive.header.meta,
-      name: createdDrive.state.global.name,
-      icon: createdDrive.state.global.icon ?? undefined,
+      id: createdDrive!.header.id,
+      slug: createdDrive!.header.slug,
+      meta: createdDrive!.header.meta,
+      name: createdDrive!.state.global.name,
+      icon: createdDrive!.state.global.icon ?? undefined,
     });
     expect(reactorSpy).toHaveBeenCalledWith(context.driveId);
   });
@@ -90,11 +90,11 @@ describe("DriveSubgraph", () => {
     );
 
     expect(drive).toStrictEqual({
-      id: createdDrive.header.id,
-      slug: createdDrive.header.slug,
-      meta: createdDrive.header.meta,
-      name: createdDrive.state.global.name,
-      icon: createdDrive.state.global.icon ?? undefined,
+      id: createdDrive!.header.id,
+      slug: createdDrive!.header.slug,
+      meta: createdDrive!.header.meta,
+      name: createdDrive!.state.global.name,
+      icon: createdDrive!.state.global.icon ?? undefined,
     });
     expect(getBySlugSpy).toHaveBeenCalledWith("test-drive");
     expect(getByIdSpy).toHaveBeenCalledWith(driveId);

@@ -84,9 +84,9 @@ export class InternalTransmitter implements ITransmitter {
         : this.drive.getDrive(strand.driveId, getDocumentOptions));
 
       if (index < 0) {
-        stateByIndex.set(index, document.initialState.state[strand.scope]);
+        stateByIndex.set(index, document?.initialState.state[strand.scope]);
       } else {
-        stateByIndex.set(index, document.state[strand.scope]);
+        stateByIndex.set(index, document?.state[strand.scope]);
       }
       return stateByIndex.get(index);
     };
@@ -125,6 +125,9 @@ export class InternalTransmitter implements ITransmitter {
               strand.documentId,
             )
           : this.drive.getDrive(strand.driveId));
+        if (!document) {
+          continue;
+        }
         const state = operations.at(-1)?.state ?? {};
         updates.push({
           ...strand,

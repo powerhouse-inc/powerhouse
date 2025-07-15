@@ -231,7 +231,7 @@ export class BaseDocumentDriveServer
     });
 
     try {
-      await this.defaultDrivesManager.removeOldremoteDrives();
+      await this.defaultDrivesManager.removeOldRemoteDrives();
     } catch (error) {
       this.logger.error(error);
     }
@@ -802,7 +802,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ): Promise<TDocument> {
+  ): Promise<TDocument | undefined> {
     let cachedDocument: TDocument | undefined;
     try {
       cachedDocument = await this.cache.getDocument<TDocument>(documentId); // TODO support GetDocumentOptions
@@ -1210,6 +1210,9 @@ export class BaseDocumentDriveServer
             handler = () =>
               this.getDocument(driveId, signal.input.id).then(
                 (documentToCopy) => {
+                  if (!documentToCopy) {
+                    return;
+                  }
                   const doc = {
                     ...documentToCopy,
                     header: {
@@ -1327,7 +1330,7 @@ export class BaseDocumentDriveServer
       const newOperation = operations.find(
         (op) =>
           !op.id ||
-          !document.operations[op.scope].find(
+          !document?.operations[op.scope].find(
             (existingOp) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
@@ -2009,9 +2012,12 @@ export class BaseDocumentDriveServer
   }
 
   private _buildOperations<TAction extends Action = Action>(
-    documentId: PHDocument,
+    documentId: PHDocument | undefined,
     actions: TAction[],
   ): Operation<TAction>[] {
+    if (!documentId) {
+      return [];
+    }
     const operations: Operation<TAction>[] = [];
     const { reducer } = this.getDocumentModelModule(
       documentId.header.documentType,
