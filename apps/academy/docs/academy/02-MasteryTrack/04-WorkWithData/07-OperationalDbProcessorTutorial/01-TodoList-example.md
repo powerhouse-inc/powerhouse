@@ -171,7 +171,13 @@ resolvers = {
     Query: {
       todoList: {
         resolve: async (parent, args, context, info) => {
-          const todoList = await TodoProcessor.query(args.driveId ?? "powerhouse", this.operationalStore.selectFrom("todo")).selectAll().execute();
+          const todoList = await TodoProcessor.query(
+              args.driveId ?? "powerhouse", 
+              this.operationalStore
+          )
+            .selectFrom("todo")
+            .selectAll()
+            .execute();
           return todoList
         },
       },
@@ -190,7 +196,7 @@ resolvers = {
   `;
   ``` 
 
-  
+
   ### useOperationalStore Hook
 
   ..... 
