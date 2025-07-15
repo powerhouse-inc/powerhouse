@@ -7,7 +7,7 @@ import {
   type IProcessorHostModule
 } from "document-drive/processors/types";
 import {
-  createNamespacedStore,
+  createNamespacedDb,
   type OperationalProcessorFilter,
 } from "document-drive/processors/operational-processor";
 import { <%= pascalName %>Processor } from "./index.js";
@@ -25,7 +25,7 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
   };
 
   // Create a namespaced store for the processor
-  const store = await createNamespacedStore<<%= pascalName %>Processor>(
+  const store = await createNamespacedDb<<%= pascalName %>Processor>(
     namespace,
     module.operationalStore,
   );
