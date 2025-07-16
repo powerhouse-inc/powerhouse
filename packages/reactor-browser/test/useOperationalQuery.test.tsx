@@ -5,8 +5,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   type IOperationalQueryBuilder,
-  OperationalProcessor,
-} from "document-drive/processors/operational-processor";
+  RelationalDbProcessor,
+} from "document-drive/processors/relational-db-processor";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { type PHDocument } from "document-model";
 import { type Generated } from "kysely";
@@ -26,14 +26,14 @@ vi.mock("react", () => ({
 }));
 
 // Mock operational store for all tests
-vi.mock("../src/operational/hooks/useOperationalStore.js", () => ({
-  useOperationalStore: vi.fn(),
+vi.mock("../src/operational/hooks/useRelationalDb.js", () => ({
+  useRelationalDb: vi.fn(),
 }));
 
 // Mock createNamespacedQueryBuilder for integration tests
-vi.mock("document-drive/processors/operational-processor", async () => {
+vi.mock("document-drive/processors/relational-db-processor", async () => {
   const actual = await vi.importActual(
-    "document-drive/processors/operational-processor",
+    "document-drive/processors/relational-db-processor",
   );
   return {
     ...actual,
@@ -42,17 +42,17 @@ vi.mock("document-drive/processors/operational-processor", async () => {
 });
 
 // Mock the useOperationalQuery hook for unit tests
-vi.mock("../src/operational/hooks/useOperationalQuery.js", () => ({
-  useOperationalQuery: vi.fn(),
+vi.mock("../src/operational/hooks/useRelationalQuery.js", () => ({
+  useRelationalQuery: vi.fn(),
 }));
 
-import { createNamespacedQueryBuilder } from "document-drive/processors/operational-processor";
-import { useOperationalQuery } from "../src/operational/hooks/useOperationalQuery.js";
-import { useOperationalStore } from "../src/operational/hooks/useOperationalStore.js";
+import { createNamespacedQueryBuilder } from "document-drive/processors/relational-db-processor";
+import { useRelationalDb } from "../src/operational/hooks/useRelationalDb.js";
+import { useRelationalQuery } from "../src/operational/hooks/useRelationalQuery.js";
 import { createTypedQuery } from "../src/operational/utils/createTypedQuery.js";
 
-const mockUseOperationalQuery = vi.mocked(useOperationalQuery);
-const mockUseOperationalStore = vi.mocked(useOperationalStore);
+const mockUseRelationalQuery = vi.mocked(useRelationalQuery);
+const mockUseRelationalDb = vi.mocked(useRelationalDb);
 const mockCreateNamespacedQueryBuilder = vi.mocked(
   createNamespacedQueryBuilder,
 );
@@ -68,7 +68,7 @@ interface TestSchema {
 }
 
 // Create a fake processor class for testing
-class TestTodoProcessor extends OperationalProcessor<TestSchema> {
+class TestTodoProcessor extends RelationalDbProcessor<TestSchema> {
   static getNamespace(driveId: string): string {
     return `test_todos_${driveId.replaceAll("-", "_")}`;
   }
@@ -95,7 +95,7 @@ describe("createTypedQuery - Unit Tests (Mocked)", () => {
     vi.clearAllMocks();
 
     // Default mock implementation with proper LiveQueryResults structure
-    mockUseOperationalQuery.mockReturnValue({
+    mockUseRelationalQuery.mockReturnValue({
       isLoading: false,
       error: null,
       result: { rows: [], fields: [] },
@@ -119,7 +119,7 @@ describe("createTypedQuery - Unit Tests (Mocked)", () => {
     useQuery(testDriveId, queryCallback);
 
     // Verify the correct processor class was passed
-    expect(mockUseOperationalQuery).toHaveBeenCalledWith(
+    expect(mockUseRelationalQuery).toHaveBeenCalledWith(
       TestTodoProcessor,
       testDriveId,
       expect.any(Function), // memoized callback
@@ -146,7 +146,7 @@ describe("createTypedQuery - Unit Tests (Mocked)", () => {
     useQuery(testDriveId, queryCallback, parameters);
 
     // Verify parameters were passed
-    expect(mockUseOperationalQuery).toHaveBeenCalledWith(
+    expect(mockUseRelationalQuery).toHaveBeenCalledWith(
       TestTodoProcessor,
       testDriveId,
       expect.any(Function), // memoized callback
@@ -170,7 +170,7 @@ describe("createTypedQuery - Unit Tests (Mocked)", () => {
     useQuery(testDriveId, queryCallback, parameters, options);
 
     // Verify options were passed
-    expect(mockUseOperationalQuery).toHaveBeenCalledWith(
+    expect(mockUseRelationalQuery).toHaveBeenCalledWith(
       TestTodoProcessor,
       testDriveId,
       expect.any(Function), // memoized callback
@@ -189,7 +189,7 @@ describe("createTypedQuery - Unit Tests (Mocked)", () => {
       },
     };
 
-    mockUseOperationalQuery.mockReturnValue(mockResult);
+    mockUseRelationalQuery.mockReturnValue(mockResult);
 
     const useQuery = createTypedQuery(TestTodoProcessor);
     const queryCallback = (db: IOperationalQueryBuilder<TestSchema>) => {
@@ -215,7 +215,7 @@ describe("createTypedQuery - Integration Tests (Real Implementation)", () => {
     vi.clearAllMocks();
 
     // Reset useOperationalQuery to use real implementation for these tests
-    mockUseOperationalQuery.mockImplementation(
+    mockUseRelationalQuery.mockImplementation(
       (ProcessorClass, driveId, queryCallback, parameters, options) => {
         // This simulates the real useOperationalQuery behavior
         if (!mockOperationalStore.db || !mockOperationalStore.dbReady) {
@@ -297,7 +297,7 @@ describe("createTypedQuery - Integration Tests (Real Implementation)", () => {
       dbReady: true,
     };
 
-    mockUseOperationalStore.mockReturnValue(mockOperationalStore);
+    mockUseRelationalDb.mockReturnValue(mockOperationalStore);
     mockCreateNamespacedQueryBuilder.mockReturnValue(mockDb);
   });
 
@@ -364,7 +364,7 @@ describe("createTypedQuery - Integration Tests (Real Implementation)", () => {
     // Test with database not ready
     mockOperationalStore.dbReady = false;
     mockOperationalStore.isLoading = true;
-    mockUseOperationalStore.mockReturnValue(mockOperationalStore);
+    mockUseRelationalDb.mockReturnValue(mockOperationalStore);
 
     const useQuery = createTypedQuery(TestTodoProcessor);
     const queryCallback = (db: IOperationalQueryBuilder<TestSchema>) => {
@@ -382,7 +382,7 @@ describe("createTypedQuery - Integration Tests (Real Implementation)", () => {
     const testError = new Error("Database connection failed");
     mockOperationalStore.error = testError;
     mockOperationalStore.db = null;
-    mockUseOperationalStore.mockReturnValue(mockOperationalStore);
+    mockUseRelationalDb.mockReturnValue(mockOperationalStore);
 
     const useQuery = createTypedQuery(TestTodoProcessor);
     const queryCallback = (db: IOperationalQueryBuilder<TestSchema>) => {

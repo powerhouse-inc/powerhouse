@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { PGlite } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
-import { OperationalProcessor } from "document-drive/processors/operational-processor";
+import { RelationalDbProcessor } from "document-drive/processors/relational-db-processor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Simple test schema
@@ -26,7 +26,7 @@ const testTodos = [
 ];
 
 // Simple test processor
-class TestTodoProcessor extends OperationalProcessor<TestSchema> {
+class TestTodoProcessor extends RelationalDbProcessor<TestSchema> {
   protected initialState: TestSchema = {
     todos: [] as any,
   };
