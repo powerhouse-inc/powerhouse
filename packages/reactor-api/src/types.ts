@@ -20,5 +20,5 @@ export type API = {
 
 export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
-  RelationalDb: IRelationalDb;
+  relationalDb: IRelationalDb;
 };

@@ -162,7 +162,7 @@ function setupEventListeners(
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
   module: {
-    RelationalDb: IRelationalDb;
+    relationalDb: IRelationalDb;
     analyticsStore: IAnalyticsStore;
   },
 ): void {
@@ -190,7 +190,7 @@ function setupEventListeners(
       const factories = fns.map((fn) =>
         fn({
           analyticsStore: module.analyticsStore,
-          RelationalDb: module.RelationalDb,
+          relationalDb: module.relationalDb,
         }),
       );
 
@@ -333,7 +333,7 @@ export async function startAPI(
   const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module = { RelationalDb: db, analyticsStore };
+  const module: IProcessorHostModule = { relationalDb: db, analyticsStore };
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
@@ -366,7 +366,7 @@ export async function startAPI(
       try {
         return fn({
           analyticsStore: module.analyticsStore,
-          RelationalDb: module.RelationalDb,
+          relationalDb: module.relationalDb,
         });
       } catch (e) {
         logger.error(

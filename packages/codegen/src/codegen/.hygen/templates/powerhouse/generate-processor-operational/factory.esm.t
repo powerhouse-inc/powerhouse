@@ -27,7 +27,7 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
   // Create a namespaced store for the processor
   const store = await createNamespacedDb<<%= pascalName %>Processor>(
     namespace,
-    module.RelationalDb,
+    module.relationalDb,
   );
 
   // Create the processor

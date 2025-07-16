@@ -13,7 +13,7 @@ export type IRelationalDb<Schema = unknown> = Kysely<Schema>;
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
-  RelationalDb: IRelationalDb;
+  relationalDb: IRelationalDb;
 }
 
 /**

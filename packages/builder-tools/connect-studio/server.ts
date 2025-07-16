@@ -241,9 +241,5 @@ function generateAllowedPaths(projectRoot: string): string[] {
 
   // Remove duplicates
   const uniquePaths = [...new Set(allowedPaths)];
-
-  // Log only the final allowed paths
-  console.log("📁 Vite allowed paths:", uniquePaths);
-
   return uniquePaths;
 }

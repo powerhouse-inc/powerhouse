@@ -97,7 +97,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
   constructor(
     protected _namespace: string,
     protected _filter: RelationalDbProcessorFilter,
-    protected RelationalDb: IRelationalDb<TDatabaseSchema>,
+    protected relationalDb: IRelationalDb<TDatabaseSchema>,
   ) {}
 
   static [IS_OPERATIONAL_PROCESSOR] = true;
@@ -146,7 +146,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
   }
 
   get query(): IOperationalQueryBuilder<TDatabaseSchema> {
-    return RelationalDbToQueryBuilder(this.RelationalDb);
+    return RelationalDbToQueryBuilder(this.relationalDb);
   }
 
   /**

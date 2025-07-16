@@ -9,7 +9,7 @@ import { externalPackagesAtom } from './external-packages.js';
 
 export type Processors = (module: {
     analyticsStore: IAnalyticsStore;
-    RelationalDb: IRelationalDb;
+    relationalDb: IRelationalDb;
 }) => (driveId: string) => ProcessorRecord[];
 
 export type ExtendedDocumentModelLib = DocumentModelLib & {

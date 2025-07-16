@@ -26,13 +26,13 @@ export type ISubgraph = {
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
   reactor: IDocumentDriveServer;
-  RelationalDb: Db;
+  relationalDb: Db;
   onSetup?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
   reactor: IDocumentDriveServer;
-  RelationalDb: Db;
+  relationalDb: Db;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
   path?: string;

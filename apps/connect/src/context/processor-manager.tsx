@@ -63,13 +63,13 @@ function createPgLiteFactoryWorker(databaseName: string) {
 async function registerExternalProcessors(
     manager: ProcessorManager,
     analyticsStore: IAnalyticsStore,
-    RelationalDb: IRelationalDb,
+    relationalDb: IRelationalDb,
     processorName: string,
     processorFactory: Processors,
 ) {
     return await manager.registerFactory(
         processorName,
-        processorFactory({ analyticsStore, RelationalDb }),
+        processorFactory({ analyticsStore, relationalDb }),
     );
 }
 
@@ -142,7 +142,7 @@ export function DriveAnalyticsProcessor() {
 export function ExternalProcessors() {
     const externalProcessors = useExternalProcessors();
     const store = useAnalyticsStoreAsync();
-    const RelationalDb = useRelationalDb();
+    const relationalDb = useRelationalDb();
     const manager = useUnwrappedProcessorManager();
     const hasRegistered = useRef(false);
 
@@ -152,7 +152,7 @@ export function ExternalProcessors() {
             !manager ||
             hasRegistered.current ||
             externalProcessors.length === 0 ||
-            !RelationalDb.db
+            !relationalDb.db
         ) {
             return;
         }
@@ -164,14 +164,14 @@ export function ExternalProcessors() {
             registerExternalProcessors(
                 manager,
                 store.data,
-                RelationalDb.db,
+                relationalDb.db,
                 `${packageName}-${index}`,
                 processors,
             ).catch(logger.error);
 
             index++;
         }
-    }, [store.data, manager, RelationalDb]);
+    }, [store.data, manager, relationalDb]);
 
     return null;
 }

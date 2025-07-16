@@ -21,7 +21,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   }
 
   override async initAndUpgrade(): Promise<void> {
-    await up(this.RelationalDb as IRelationalDb);
+    await up(this.relationalDb as IRelationalDb);
   }
 
   override async onStrands(
@@ -37,7 +37,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
       }
 
       for (const operation of strand.operations) {
-        await this.RelationalDb
+        await this.relationalDb
           .insertInto("todo")
           .values({
             task: strand.documentId,

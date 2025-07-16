@@ -42,7 +42,7 @@ export class GraphQLManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly RelationalDb: Db,
+    private readonly relationalDb: Db,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
     private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
@@ -93,7 +93,7 @@ export class GraphQLManager {
     core = false,
   ) {
     const subgraphInstance = new subgraph({
-      RelationalDb: this.RelationalDb,
+      relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
       reactor: this.reactor,
       graphqlManager: this,
@@ -300,7 +300,7 @@ export class GraphQLManager {
           headers: req.headers,
           driveId: req.params.drive ?? undefined,
           driveServer: this.reactor,
-          db: this.RelationalDb,
+          db: this.relationalDb,
           ...this.getAdditionalContextFields(),
         }),
       }),
