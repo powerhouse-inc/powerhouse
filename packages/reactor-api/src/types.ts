@@ -1,7 +1,7 @@
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
-  type IOperationalStore,
   type IProcessorManager,
+  type IRelationalDb,
 } from "document-drive/processors/types";
 import { type Express } from "express";
 import { type GraphQLManager } from "./graphql/graphql-manager.js";
@@ -20,5 +20,5 @@ export type API = {
 
 export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
-  operationalStore: IOperationalStore;
+  RelationalDb: IRelationalDb;
 };

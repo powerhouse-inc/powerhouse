@@ -20,11 +20,11 @@ export class Subgraph implements ISubgraph {
   `;
   reactor: IDocumentDriveServer;
   graphqlManager: GraphQLManager;
-  operationalStore: Db;
+  RelationalDb: Db;
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
     this.graphqlManager = args.graphqlManager;
-    this.operationalStore = args.operationalStore;
+    this.RelationalDb = args.RelationalDb;
     this.path = args.path ?? "";
   }
   async onSetup() {

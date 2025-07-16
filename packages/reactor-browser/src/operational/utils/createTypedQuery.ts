@@ -1,8 +1,8 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
 import {
   type IOperationalQueryBuilder,
-  type OperationalProcessorClass,
-} from "document-drive/processors/operational-processor";
+  type RelationalDbProcessorClass,
+} from "document-drive/processors/relational-db-processor";
 import { type CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
@@ -10,7 +10,7 @@ import {
   type QueryCallbackReturnType,
   useOperationalQuery,
   type UseOperationalQueryOptions,
-} from "../hooks/useOperationalQuery.js";
+} from "../hooks/useRelationalQuery.js";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {
@@ -25,7 +25,7 @@ function useStableParams<T>(params: T): T {
 }
 
 export function createTypedQuery<TSchema>(
-  ProcessorClass: OperationalProcessorClass<TSchema>,
+  ProcessorClass: RelationalDbProcessorClass<TSchema>,
 ) {
   // Overload for queries without parameters
   function useQuery<

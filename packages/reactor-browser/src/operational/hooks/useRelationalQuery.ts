@@ -2,10 +2,10 @@ import { type LiveQueryResults } from "@electric-sql/pglite/live";
 import {
   createNamespacedQueryBuilder,
   type IOperationalQueryBuilder,
-  type OperationalProcessorClass,
-} from "document-drive/processors/operational-processor";
+  type RelationalDbProcessorClass,
+} from "document-drive/processors/relational-db-processor";
 import { useEffect, useState } from "react";
-import { useOperationalStore } from "./useOperationalStore.js";
+import { useRelationalDb } from "./useRelationalDb.js";
 
 export type QueryCallbackReturnType = {
   sql: string;
@@ -18,7 +18,7 @@ export type UseOperationalQueryOptions = {
 };
 
 export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
-  ProcessorClass: OperationalProcessorClass<Schema>,
+  ProcessorClass: RelationalDbProcessorClass<Schema>,
   driveId: string,
   queryCallback: (
     db: IOperationalQueryBuilder<Schema>,
@@ -31,13 +31,13 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
-  const operationalStore = useOperationalStore<any>();
+  const RelationalDb = useRelationalDb<any>();
 
   useEffect(() => {
     setError(undefined);
     setQueryLoading(true);
 
-    if (!operationalStore.db) {
+    if (!RelationalDb.db) {
       return;
     }
 
@@ -45,14 +45,14 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
     const db = createNamespacedQueryBuilder(
       ProcessorClass,
       driveId,
-      operationalStore.db,
+      RelationalDb.db,
       options,
     );
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;
 
-    const live = operationalStore.db.live
+    const live = RelationalDb.db.live
       .query<T>(sql, queryParameters ? [...queryParameters] : [], (result) => {
         setResult(result);
         setQueryLoading(false);
@@ -65,11 +65,11 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [operationalStore.db, ProcessorClass, driveId, queryCallback, parameters]);
+  }, [RelationalDb.db, ProcessorClass, driveId, queryCallback, parameters]);
 
   return {
-    isLoading: operationalStore.isLoading || queryLoading,
-    error: error || operationalStore.error,
+    isLoading: RelationalDb.isLoading || queryLoading,
+    error: error || RelationalDb.error,
     result,
   } as const;
 }

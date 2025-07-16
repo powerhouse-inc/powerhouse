@@ -4,7 +4,7 @@ import {
     AnalyticsProvider,
     useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
-import { useOperationalStore } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalDb } from '@powerhousedao/reactor-browser/operational';
 import {
     live,
     useSetPGliteDB,
@@ -13,7 +13,7 @@ import {
 } from '@powerhousedao/reactor-browser/pglite';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
-import { type IOperationalStore } from 'document-drive/processors/types';
+import { type IRelationalDb } from 'document-drive/processors/types';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
 import {
     useExternalProcessors,
@@ -63,13 +63,13 @@ function createPgLiteFactoryWorker(databaseName: string) {
 async function registerExternalProcessors(
     manager: ProcessorManager,
     analyticsStore: IAnalyticsStore,
-    operationalStore: IOperationalStore,
+    RelationalDb: IRelationalDb,
     processorName: string,
     processorFactory: Processors,
 ) {
     return await manager.registerFactory(
         processorName,
-        processorFactory({ analyticsStore, operationalStore }),
+        processorFactory({ analyticsStore, RelationalDb }),
     );
 }
 
@@ -142,7 +142,7 @@ export function DriveAnalyticsProcessor() {
 export function ExternalProcessors() {
     const externalProcessors = useExternalProcessors();
     const store = useAnalyticsStoreAsync();
-    const operationalStore = useOperationalStore();
+    const RelationalDb = useRelationalDb();
     const manager = useUnwrappedProcessorManager();
     const hasRegistered = useRef(false);
 
@@ -152,7 +152,7 @@ export function ExternalProcessors() {
             !manager ||
             hasRegistered.current ||
             externalProcessors.length === 0 ||
-            !operationalStore.db
+            !RelationalDb.db
         ) {
             return;
         }
@@ -164,14 +164,14 @@ export function ExternalProcessors() {
             registerExternalProcessors(
                 manager,
                 store.data,
-                operationalStore.db,
+                RelationalDb.db,
                 `${packageName}-${index}`,
                 processors,
             ).catch(logger.error);
 
             index++;
         }
-    }, [store.data, manager, operationalStore]);
+    }, [store.data, manager, RelationalDb]);
 
     return null;
 }

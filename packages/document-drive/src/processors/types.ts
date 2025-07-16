@@ -9,11 +9,11 @@ import { type Kysely } from "kysely";
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  */
-export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
+export type IRelationalDb<Schema = unknown> = Kysely<Schema>;
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
-  operationalStore: IOperationalStore;
+  RelationalDb: IRelationalDb;
 }
 
 /**

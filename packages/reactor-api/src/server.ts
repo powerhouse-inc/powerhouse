@@ -19,9 +19,9 @@ import {
 } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
-  type IOperationalStore,
   type IProcessorHostModule,
   type IProcessorManager,
+  type IRelationalDb,
   type ProcessorFactory,
 } from "document-drive/processors/types";
 import express, { type Express } from "express";
@@ -162,7 +162,7 @@ function setupEventListeners(
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
   module: {
-    operationalStore: IOperationalStore;
+    RelationalDb: IRelationalDb;
     analyticsStore: IAnalyticsStore;
   },
 ): void {
@@ -190,7 +190,7 @@ function setupEventListeners(
       const factories = fns.map((fn) =>
         fn({
           analyticsStore: module.analyticsStore,
-          operationalStore: module.operationalStore,
+          RelationalDb: module.RelationalDb,
         }),
       );
 
@@ -333,7 +333,7 @@ export async function startAPI(
   const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module = { operationalStore: db, analyticsStore };
+  const module = { RelationalDb: db, analyticsStore };
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
@@ -366,7 +366,7 @@ export async function startAPI(
       try {
         return fn({
           analyticsStore: module.analyticsStore,
-          operationalStore: module.operationalStore,
+          RelationalDb: module.RelationalDb,
         });
       } catch (e) {
         logger.error(

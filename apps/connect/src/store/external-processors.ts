@@ -1,6 +1,6 @@
 import { type IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
-    type IOperationalStore,
+    type IRelationalDb,
     type ProcessorRecord,
 } from 'document-drive/processors/types';
 import { type DocumentModelLib } from 'document-model';
@@ -9,7 +9,7 @@ import { externalPackagesAtom } from './external-packages.js';
 
 export type Processors = (module: {
     analyticsStore: IAnalyticsStore;
-    operationalStore: IOperationalStore;
+    RelationalDb: IRelationalDb;
 }) => (driveId: string) => ProcessorRecord[];
 
 export type ExtendedDocumentModelLib = DocumentModelLib & {

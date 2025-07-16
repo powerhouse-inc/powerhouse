@@ -11,7 +11,7 @@ import {
 } from "document-drive/server/types";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";
-import { isOperationalProcessor } from "./operational-processor.js";
+import { isRelationalDbProcessor } from "./relational-db-processor.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([
@@ -106,14 +106,14 @@ export class ProcessorManager implements IProcessorManager {
     }
 
     for (const { filter, processor } of processors) {
-      const isOperational = isOperationalProcessor(processor);
+      const isRelational = isRelationalDbProcessor(processor);
 
       // check for duplicated namespaces
       if (
-        isOperational &&
+        isRelational &&
         driveProcessors.some(
           (p) =>
-            isOperationalProcessor(p.processor) &&
+            isRelationalDbProcessor(p.processor) &&
             p.processor.namespace === processor.namespace,
         )
       ) {
@@ -123,7 +123,7 @@ export class ProcessorManager implements IProcessorManager {
         continue;
       }
 
-      if (isOperational) {
+      if (isRelational) {
         await processor.initAndUpgrade();
       }
 

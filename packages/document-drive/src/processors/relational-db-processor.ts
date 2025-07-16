@@ -3,7 +3,7 @@ import { hash } from "#utils/hash";
 import { type PHDocument } from "document-model";
 import { type QueryCreator } from "kysely";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import { type IOperationalStore, type IProcessor } from "./types.js";
+import { type IProcessor, type IRelationalDb } from "./types.js";
 
 export type IOperationalQueryMethods =
   | "selectFrom"
@@ -18,34 +18,34 @@ export type IOperationalQueryBuilder<Schema = unknown> = Pick<
   withSchema: (schema: string) => IOperationalQueryBuilder<Schema>;
 };
 
-export type OperationalProcessorFilter = ListenerFilter;
-export interface IOperationalProcessor<TDatabaseSchema = unknown>
+export type RelationalDbProcessorFilter = ListenerFilter;
+export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
   extends IProcessor {
   namespace: string;
   query: IOperationalQueryBuilder<TDatabaseSchema>;
-  filter: OperationalProcessorFilter;
+  filter: RelationalDbProcessorFilter;
   initAndUpgrade(): Promise<void>;
 }
 
 export async function createNamespacedDb<T>(
   namespace: string,
-  db: IOperationalStore,
+  db: IRelationalDb,
   options?: {
     hashNamespace?: boolean; // defaults to true
   },
-): Promise<IOperationalStore<ExtractProcessorSchema<T>>> {
+): Promise<IRelationalDb<ExtractProcessorSchema<T>>> {
   // hash the namespace to avoid too long namespaces
   const hashNamespace = options?.hashNamespace ?? true;
   const hashValue = hashNamespace ? hash(namespace) : namespace;
   await db.schema.createSchema(hashValue).ifNotExists().execute();
-  const schemaOperationalStore = db.withSchema(hashValue);
-  return schemaOperationalStore as IOperationalStore<ExtractProcessorSchema<T>>;
+  const schemaRelationalDb = db.withSchema(hashValue);
+  return schemaRelationalDb as IRelationalDb<ExtractProcessorSchema<T>>;
 }
 
 export function createNamespacedQueryBuilder<Schema>(
-  processor: OperationalProcessorClass<Schema>,
+  processor: RelationalDbProcessorClass<Schema>,
   driveId: string,
-  db: IOperationalStore,
+  db: IRelationalDb,
   options?: {
     hashNamespace?: boolean; // defaults to true
   },
@@ -53,21 +53,21 @@ export function createNamespacedQueryBuilder<Schema>(
   const namespace = processor.getNamespace(driveId);
   const hashNamespace = options?.hashNamespace ?? true;
   const hashValue = hashNamespace ? hash(namespace) : namespace;
-  const namespacedDb = db.withSchema(hashValue) as IOperationalStore<Schema>;
-  return operationalStoreToQueryBuilder(namespacedDb);
+  const namespacedDb = db.withSchema(hashValue) as IRelationalDb<Schema>;
+  return RelationalDbToQueryBuilder(namespacedDb);
 }
 
-export function isOperationalProcessor(
+export function isRelationalDbProcessor(
   p: IProcessor,
-): p is IOperationalProcessor {
-  return OperationalProcessor.is(p);
+): p is IRelationalDbProcessor {
+  return RelationalDbProcessor.is(p);
 }
 
 export type ExtractProcessorSchema<TProcessor> =
-  TProcessor extends OperationalProcessor<infer TSchema> ? TSchema : never;
+  TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
 
-function operationalStoreToQueryBuilder<TSchema>(
-  query: IOperationalStore<TSchema>,
+function RelationalDbToQueryBuilder<TSchema>(
+  query: IRelationalDb<TSchema>,
 ): IOperationalQueryBuilder<TSchema> {
   return {
     selectFrom: query.selectFrom.bind(query),
@@ -75,14 +75,14 @@ function operationalStoreToQueryBuilder<TSchema>(
     with: query.with.bind(query),
     withRecursive: query.withRecursive.bind(query),
     withSchema: (schema: string) =>
-      operationalStoreToQueryBuilder<TSchema>(query.withSchema(schema)),
+      RelationalDbToQueryBuilder<TSchema>(query.withSchema(schema)),
   };
 }
 
-export type OperationalProcessorClass<TSchema> = (new (
+export type RelationalDbProcessorClass<TSchema> = (new (
   ...args: any[]
-) => OperationalProcessor<TSchema>) &
-  typeof OperationalProcessor<TSchema>;
+) => RelationalDbProcessor<TSchema>) &
+  typeof RelationalDbProcessor<TSchema>;
 
 const IS_OPERATIONAL_PROCESSOR = Symbol.for("ph.IS_OPERATIONAL_PROCESSOR");
 
@@ -91,18 +91,18 @@ const IS_OPERATIONAL_PROCESSOR = Symbol.for("ph.IS_OPERATIONAL_PROCESSOR");
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export abstract class OperationalProcessor<TDatabaseSchema = unknown>
-  implements IOperationalProcessor<TDatabaseSchema>
+export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
+  implements IRelationalDbProcessor<TDatabaseSchema>
 {
   constructor(
     protected _namespace: string,
-    protected _filter: OperationalProcessorFilter,
-    protected operationalStore: IOperationalStore<TDatabaseSchema>,
+    protected _filter: RelationalDbProcessorFilter,
+    protected RelationalDb: IRelationalDb<TDatabaseSchema>,
   ) {}
 
   static [IS_OPERATIONAL_PROCESSOR] = true;
 
-  static is(p: unknown): p is OperationalProcessor {
+  static is(p: unknown): p is RelationalDbProcessor {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let proto = Object.getPrototypeOf(p);
     while (proto) {
@@ -123,9 +123,9 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
   }
 
   static query<TSchema>(
-    this: OperationalProcessorClass<TSchema>,
+    this: RelationalDbProcessorClass<TSchema>,
     driveId: string,
-    db: IOperationalStore<any>,
+    db: IRelationalDb<any>,
   ): IOperationalQueryBuilder<TSchema> {
     return createNamespacedQueryBuilder(this, driveId, db);
   }
@@ -134,7 +134,7 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
    * Returns the filter for the processor.
    * This method can be overridden by derived classes to provide a custom filter.
    */
-  get filter(): OperationalProcessorFilter {
+  get filter(): RelationalDbProcessorFilter {
     return this._filter;
   }
 
@@ -146,7 +146,7 @@ export abstract class OperationalProcessor<TDatabaseSchema = unknown>
   }
 
   get query(): IOperationalQueryBuilder<TDatabaseSchema> {
-    return operationalStoreToQueryBuilder(this.operationalStore);
+    return RelationalDbToQueryBuilder(this.RelationalDb);
   }
 
   /**

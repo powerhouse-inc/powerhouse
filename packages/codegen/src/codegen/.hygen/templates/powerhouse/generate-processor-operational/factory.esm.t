@@ -8,7 +8,7 @@ import {
 } from "document-drive/processors/types";
 import {
   createNamespacedDb,
-  type OperationalProcessorFilter,
+  type RelationalDbProcessorFilter,
 } from "document-drive/processors/operational-processor";
 import { <%= pascalName %>Processor } from "./index.js";
 
@@ -17,7 +17,7 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
   const namespace = <%= pascalName %>Processor.getNamespace(driveId);
 
    // Create a filter for the processor
-   const filter: OperationalProcessorFilter = {
+   const filter: RelationalDbProcessorFilter = {
     branch: ["main"],
     documentId: ["*"],
     documentType: [<% if(documentTypes.length) { %><%- documentTypes.map(type => `"${type}"`).join(", ") %><% } else { %>"*"<% }   %>],
@@ -27,7 +27,7 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
   // Create a namespaced store for the processor
   const store = await createNamespacedDb<<%= pascalName %>Processor>(
     namespace,
-    module.operationalStore,
+    module.RelationalDb,
   );
 
   // Create the processor
