@@ -1,3 +1,14 @@
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🚀 Features
+
+- **document-drive,codegen:** updated operational processor factory ([39630bfd4](https://github.com/powerhouse-inc/powerhouse/commit/39630bfd4))
+- **codegen,document-drive,reactor-api:** use namespaces per drive and operational processor ([9f2280929](https://github.com/powerhouse-inc/powerhouse/commit/9f2280929))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🩹 Fixes
+
+- **builder-tools:** enhance Vite server configuration to allow serving files from current project and linked packages ([#1700](https://github.com/powerhouse-inc/powerhouse/pull/1700))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🩹 Fixes
+
+- connect build issues ([9e92db6f7](https://github.com/powerhouse-inc/powerhouse/commit/9e92db6f7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

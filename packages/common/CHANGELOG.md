@@ -1,3 +1,13 @@
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🚀 Features
+
+- **document-drive:** anticipate undefined return values for documents and drives ([9bd1bba7b](https://github.com/powerhouse-inc/powerhouse/commit/9bd1bba7b))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

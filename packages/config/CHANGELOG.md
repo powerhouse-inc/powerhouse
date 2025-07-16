@@ -1,3 +1,7 @@
+## 3.3.0-dev.11 (2025-07-16)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes
