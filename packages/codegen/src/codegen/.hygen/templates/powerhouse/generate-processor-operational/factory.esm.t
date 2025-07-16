@@ -7,9 +7,8 @@ import {
   type IProcessorHostModule
 } from "document-drive/processors/types";
 import {
-  createNamespacedDb,
   type RelationalDbProcessorFilter,
-} from "document-drive/processors/relational-db-processor";
+} from "document-drive/processors/relational";
 import { <%= pascalName %>Processor } from "./index.js";
 
 export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcessorHostModule) => async (driveId: string): Promise<ProcessorRecord[]> => {
@@ -24,10 +23,9 @@ export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcess
     scope: ["global"],
   };
 
-  // Create a namespaced store for the processor
-  const store = await createNamespacedDb<<%= pascalName %>Processor>(
+  // Create a namespaced db for the processor
+  const store = await module.relationalDb.createNamespacedDb<<%= pascalName %>Processor>(
     namespace,
-    module.relationalDb,
   );
 
   // Create the processor

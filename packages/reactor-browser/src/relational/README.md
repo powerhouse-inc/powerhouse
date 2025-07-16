@@ -1,10 +1,10 @@
-# Operational Database Layer
+# Relational Database Layer
 
-A TypeScript-first operational layer for PGlite with live query capabilities, designed to provide type-safe database operations with real-time updates.
+A TypeScript-first Relational layer for PGlite with live query capabilities, designed to provide type-safe database operations with real-time updates.
 
 ## Overview
 
-This package provides a high-level operational layer on top of PGlite, offering type-safe database operations through Kysely and live query capabilities with real-time updates.
+This package provides a high-level Relational layer on top of PGlite, offering type-safe database operations through Kysely and live query capabilities with real-time updates.
 
 ## Table of Contents
 
@@ -45,7 +45,7 @@ This package provides a high-level operational layer on top of PGlite, offering 
   - [Debug Tips](#debug-tips)
 - [Hooks API Reference](#hooks-api-reference)
   - [Core Hooks](#core-hooks)
-    - [useOperationalStore<Schema>()](#useoperationalstoreschema)
+    - [useRelationalDb<Schema>()](#useRelationalDbschema)
     - [useLiveQuery<Schema, T>()](#uselivequeryschemat)
 - [Utilities API Reference](#utilities-api-reference)
   - [createProcessorQuery<Schema>()](#createtypedqueryschema-1)
@@ -84,7 +84,7 @@ type MyDatabase = {
 ### 2. Create a Processor Query Hook
 
 ```typescript
-import { createProcessorQuery } from "@powerhousedao/reactor-browser/operational";
+import { createProcessorQuery } from "@powerhousedao/reactor-browser/Relational";
 
 const useProcessorQuery = createProcessorQuery<MyDatabase>();
 ```
@@ -310,7 +310,7 @@ const useUsersWithPosts = () => {
 
 ```typescript
 import React from 'react';
-import { createProcessorQuery } from '@powerhousedao/reactor-browser/operational';
+import { createProcessorQuery } from '@powerhousedao/reactor-browser/Relational';
 
 type Database = {
   users: {
@@ -425,7 +425,7 @@ const { isLoading, error, result } = useProcessorQuery((db) => {
 
 // isLoading combines:
 // - Database connection loading
-// - Operational store loading
+// - Relational db loading
 // - Query execution loading
 ```
 
@@ -537,12 +537,12 @@ const result = useProcessorQuery(
 
 ### Core Hooks
 
-#### `useOperationalStore<Schema>()`
+#### `useRelationalDb<Schema>()`
 
 Returns an enhanced Kysely-wrapped database instance with full type safety for your schema and live query capabilities.
 
 ```typescript
-const { db, isLoading, error } = useOperationalStore<MySchema>();
+const { db, isLoading, error } = useRelationalDb<MySchema>();
 ```
 
 **Returns:**
@@ -561,7 +561,7 @@ const { db, isLoading, error } = useOperationalStore<MySchema>();
 // Enhanced Kysely instance with live query support
 type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
 
-// Query callback return type for operational queries
+// Query callback return type for Relational queries
 type QueryCallbackReturnType = {
   sql: string;
   parameters?: readonly unknown[];
@@ -572,7 +572,7 @@ type QueryCallbackReturnType = {
 
 **Usage:**
 ```typescript
-import { useOperationalStore, type EnhancedKysely } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalDb, type EnhancedKysely } from '@powerhousedao/reactor-browser/Relational';
 
 type MyDatabase = {
   users: {
@@ -582,7 +582,7 @@ type MyDatabase = {
 };
 
 function DatabaseOperations() {
-  const { db, isLoading, error } = useOperationalStore<MyDatabase>();
+  const { db, isLoading, error } = useRelationalDb<MyDatabase>();
 
   const createUser = async (name: string) => {
     if (!db) return;
@@ -602,12 +602,12 @@ function DatabaseOperations() {
 }
 ````
 
-#### `useOperationalQuery<Schema, T, TParams>()`
+#### `useRelationalQuery<Schema, T, TParams>()`
 
 Lower-level hook for creating live queries with manual control over the query callback and parameter support.
 
 ```typescript
-const { result, isLoading, error } = useOperationalQuery<Schema, T, TParams>(
+const { result, isLoading, error } = useRelationalQuery<Schema, T, TParams>(
   queryCallback,
   parameters,
 );
@@ -631,10 +631,10 @@ const { result, isLoading, error } = useOperationalQuery<Schema, T, TParams>(
 **Usage:**
 
 ```typescript
-import { useOperationalQuery } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalQuery } from '@powerhousedao/reactor-browser/Relational';
 
 function UserCount() {
-  const { result, isLoading, error } = useOperationalQuery<MyDatabase, { count: number }>(
+  const { result, isLoading, error } = useRelationalQuery<MyDatabase, { count: number }>(
     (db) => db.selectFrom('users').select(db.fn.count('id').as('count')).compile()
   );
 
@@ -661,8 +661,8 @@ The package exports several useful types for advanced use cases:
 import {
   type EnhancedKysely,
   type QueryCallbackReturnType,
-  type IOperationalStore,
-} from "@powerhousedao/reactor-browser/operational";
+  type IRelationalDb,
+} from "@powerhousedao/reactor-browser/Relational";
 
 // Enhanced Kysely instance with live capabilities
 type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
@@ -673,8 +673,8 @@ type QueryCallbackReturnType = {
   parameters?: readonly unknown[];
 };
 
-// Operational store interface
-interface IOperationalStore<Schema> {
+// Relational db interface
+interface IRelationalDb<Schema> {
   db: EnhancedKysely<Schema> | null;
   isLoading: boolean;
   error: Error | null;
@@ -686,13 +686,13 @@ interface IOperationalStore<Schema> {
 Understanding how the hooks work together:
 
 1. **PGlite Layer** - `usePGliteDB()` provides the raw PGlite database instance
-2. **`useOperationalStore()`** - Wraps the PGlite instance with Enhanced Kysely for type safety and live capabilities
-3. **`useOperationalQuery()`** - Uses the operational store to provide live query functionality
-4. **`createProcessorQuery()`** - Uses `useOperationalQuery()` internally with additional optimizations and parameter memoization
+2. **`useRelationalDb()`** - Wraps the PGlite instance with Enhanced Kysely for type safety and live capabilities
+3. **`useRelationalQuery()`** - Uses the Relational db to provide live query functionality
+4. **`createProcessorQuery()`** - Uses `useRelationalQuery()` internally with additional optimizations and parameter memoization
 
 ```typescript
 // The relationship flow:
-PGlite Layer → useOperationalStore() → useOperationalQuery() → createProcessorQuery()
+PGlite Layer → useRelationalDb() → useRelationalQuery() → createProcessorQuery()
 ```
 
 ## For Low-Level Database Operations
@@ -707,4 +707,4 @@ import {
 } from "@powerhousedao/reactor-browser/pglite";
 ```
 
-This operational layer builds on top of the PGlite foundation to provide everyday database operations with type safety and live updates.
+This Relational layer builds on top of the PGlite foundation to provide everyday database operations with type safety and live updates.

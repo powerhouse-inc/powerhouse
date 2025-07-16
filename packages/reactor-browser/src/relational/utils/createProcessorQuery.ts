@@ -1,8 +1,8 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
 import {
-  type IOperationalQueryBuilder,
+  type IRelationalQueryBuilder,
   type RelationalDbProcessorClass,
-} from "document-drive/processors/relational-db-processor";
+} from "document-drive/processors/relational";
 import { type CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
@@ -30,7 +30,7 @@ export function createProcessorQuery<TSchema>(
   // Overload for queries without parameters
   function useQuery<
     TQueryBuilder extends (
-      db: IOperationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilder<TSchema>,
     ) => QueryCallbackReturnType,
   >(
     driveId: string,
@@ -47,7 +47,7 @@ export function createProcessorQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: IOperationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilder<TSchema>,
       parameters: TParams,
     ) => QueryCallbackReturnType,
   >(
@@ -66,7 +66,7 @@ export function createProcessorQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: IOperationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilder<TSchema>,
       parameters?: TParams,
     ) => QueryCallbackReturnType,
   >(

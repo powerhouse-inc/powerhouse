@@ -19,7 +19,7 @@
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
     "./pglite": "./dist/src/pglite/index.js",
-    "./operational": "./dist/src/operational/index.js",
+    "./relational": "./dist/src/relational/index.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {

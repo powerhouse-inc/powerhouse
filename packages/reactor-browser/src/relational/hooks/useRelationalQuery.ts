@@ -1,9 +1,6 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
-import {
-  createNamespacedQueryBuilder,
-  type IOperationalQueryBuilder,
-  type RelationalDbProcessorClass,
-} from "document-drive/processors/relational-db-processor";
+import { type RelationalDbProcessorClass } from "document-drive/processors/relational";
+import { type IRelationalQueryBuilder } from "document-drive/processors/types";
 import { useEffect, useState } from "react";
 import { useRelationalDb } from "./useRelationalDb.js";
 
@@ -21,7 +18,7 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
   ProcessorClass: RelationalDbProcessorClass<Schema>,
   driveId: string,
   queryCallback: (
-    db: IOperationalQueryBuilder<Schema>,
+    db: IRelationalQueryBuilder<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
@@ -42,12 +39,8 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
     }
 
     // Use processor's query method to get namespaced database
-    const db = createNamespacedQueryBuilder(
-      ProcessorClass,
-      driveId,
-      relationalDb.db,
-      options,
-    );
+    const namespace = ProcessorClass.getNamespace(driveId);
+    const db = relationalDb.db.queryNamespace<Schema>(namespace);
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;

@@ -4,13 +4,13 @@ import {
     AnalyticsProvider,
     useAnalyticsStoreAsync,
 } from '@powerhousedao/reactor-browser/analytics/context';
-import { useRelationalDb } from '@powerhousedao/reactor-browser/operational';
 import {
     live,
     useSetPGliteDB,
     type PGlite,
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
+import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';

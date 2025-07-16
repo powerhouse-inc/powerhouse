@@ -1,60 +1,22 @@
 import { type ListenerFilter } from "#drive-document-model/module";
 import { type PHDocument } from "document-model";
-import { type QueryCreator } from "kysely";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import { type IProcessor, type IRelationalDb } from "./types.js";
-import { hashNamespace } from "./utils.js";
+import {
+  type IProcessor,
+  type IRelationalDb,
+  type IRelationalQueryBuilder,
+} from "./types.js";
+import { relationalDbToQueryBuilder } from "./utils.js";
 
-export type IOperationalQueryMethods =
-  | "selectFrom"
-  | "selectNoFrom"
-  | "with"
-  | "withRecursive";
-
-export type IOperationalQueryBuilder<Schema = unknown> = Pick<
-  QueryCreator<Schema>,
-  IOperationalQueryMethods
-> & {
-  withSchema: (schema: string) => IOperationalQueryBuilder<Schema>;
-};
+export type { IRelationalQueryBuilder } from "./types.js";
 
 export type RelationalDbProcessorFilter = ListenerFilter;
 export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
   extends IProcessor {
   namespace: string;
-  query: IOperationalQueryBuilder<TDatabaseSchema>;
+  query: IRelationalQueryBuilder<TDatabaseSchema>;
   filter: RelationalDbProcessorFilter;
   initAndUpgrade(): Promise<void>;
-}
-
-export async function createNamespacedDb<T>(
-  namespace: string,
-  db: IRelationalDb,
-  options?: {
-    hashNamespace?: boolean; // defaults to true
-  },
-): Promise<IRelationalDb<ExtractProcessorSchema<T>>> {
-  // hash the namespace to avoid too long namespaces
-  const shouldHash = options?.hashNamespace ?? true;
-  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
-  await db.schema.createSchema(hashValue).ifNotExists().execute();
-  const schemaRelationalDb = db.withSchema(hashValue);
-  return schemaRelationalDb as IRelationalDb<ExtractProcessorSchema<T>>;
-}
-
-export function createNamespacedQueryBuilder<Schema>(
-  processor: RelationalDbProcessorClass<Schema>,
-  driveId: string,
-  db: IRelationalDb,
-  options?: {
-    hashNamespace?: boolean; // defaults to true
-  },
-): IOperationalQueryBuilder<Schema> {
-  const namespace = processor.getNamespace(driveId);
-  const shouldHash = options?.hashNamespace ?? true;
-  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
-  const namespacedDb = db.withSchema(hashValue) as IRelationalDb<Schema>;
-  return RelationalDbToQueryBuilder(namespacedDb);
 }
 
 export function isRelationalDbProcessor(
@@ -65,19 +27,6 @@ export function isRelationalDbProcessor(
 
 export type ExtractProcessorSchema<TProcessor> =
   TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
-
-function RelationalDbToQueryBuilder<TSchema>(
-  query: IRelationalDb<TSchema>,
-): IOperationalQueryBuilder<TSchema> {
-  return {
-    selectFrom: query.selectFrom.bind(query),
-    selectNoFrom: query.selectNoFrom.bind(query),
-    with: query.with.bind(query),
-    withRecursive: query.withRecursive.bind(query),
-    withSchema: (schema: string) =>
-      RelationalDbToQueryBuilder<TSchema>(query.withSchema(schema)),
-  };
-}
 
 export type RelationalDbProcessorClass<TSchema> = (new (
   ...args: any[]
@@ -125,9 +74,9 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
   static query<TSchema>(
     this: RelationalDbProcessorClass<TSchema>,
     driveId: string,
-    db: IRelationalDb<any>,
-  ): IOperationalQueryBuilder<TSchema> {
-    return createNamespacedQueryBuilder(this, driveId, db);
+    db: IRelationalDb<TSchema>,
+  ): IRelationalQueryBuilder<TSchema> {
+    return db.queryNamespace(this.getNamespace(driveId));
   }
 
   /**
@@ -145,8 +94,8 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
     return this._namespace;
   }
 
-  get query(): IOperationalQueryBuilder<TDatabaseSchema> {
-    return RelationalDbToQueryBuilder(this.relationalDb);
+  get query(): IRelationalQueryBuilder<TDatabaseSchema> {
+    return relationalDbToQueryBuilder(this.relationalDb);
   }
 
   /**

@@ -11,7 +11,7 @@ import {
 } from "document-drive/server/types";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";
-import { isRelationalDbProcessor } from "./relational-db-processor.js";
+import { isRelationalDbProcessor } from "./relational.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([

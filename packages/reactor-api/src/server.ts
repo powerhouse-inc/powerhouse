@@ -24,8 +24,8 @@ import {
   type IRelationalDb,
   type ProcessorFactory,
 } from "document-drive/processors/types";
+import { createRelationalDb } from "document-drive/processors/utils";
 import express, { type Express } from "express";
-import { type Kysely } from "kysely";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
@@ -89,8 +89,9 @@ function setupGraphQlExplorer(router: express.Router): void {
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
-): Promise<{ db: Kysely<any>; analyticsStore: IAnalyticsStore }> {
+): Promise<{ relationalDb: IRelationalDb; analyticsStore: IAnalyticsStore }> {
   const { db, knex } = getDbClient(dbPath);
+  const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
   });
@@ -99,7 +100,7 @@ async function initializeDatabaseAndAnalytics(
     await knex.raw(sql);
   }
 
-  return { db, analyticsStore };
+  return { relationalDb, analyticsStore };
 }
 
 /**
@@ -108,7 +109,7 @@ async function initializeDatabaseAndAnalytics(
 async function setupGraphQLManager(
   app: Express,
   reactor: IDocumentDriveServer,
-  db: Kysely<any>,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
   auth?: {
@@ -122,7 +123,7 @@ async function setupGraphQLManager(
     config.basePath,
     app,
     reactor,
-    db,
+    relationalDb,
     analyticsStore,
   );
 
@@ -330,10 +331,10 @@ export async function startAPI(
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
+  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module: IProcessorHostModule = { relationalDb: db, analyticsStore };
+  const module: IProcessorHostModule = { relationalDb, analyticsStore };
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
@@ -418,7 +419,7 @@ export async function startAPI(
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
-    db,
+    relationalDb,
     analyticsStore,
     subgraphs,
     options.auth,

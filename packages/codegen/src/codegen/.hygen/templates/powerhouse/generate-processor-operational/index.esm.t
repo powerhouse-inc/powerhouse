@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { type IRelationalDb } from "document-drive/processors/types";
-import { RelationalDbProcessor } from "document-drive/processors/relational-db-processor";
+import { RelationalDbProcessor } from "document-drive/processors/relational";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 <% documentTypes.forEach(type => { _%>
 import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";

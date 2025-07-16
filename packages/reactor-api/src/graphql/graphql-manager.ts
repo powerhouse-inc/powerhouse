@@ -1,4 +1,3 @@
-import { type Db } from "#types.js";
 import {
   buildSubgraphSchemaModule,
   createSchema,
@@ -26,6 +25,7 @@ import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
 import { type Context } from "./types.js";
+import { type IRelationalDb } from "document-drive/processors/types";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,
@@ -42,7 +42,7 @@ export class GraphQLManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly relationalDb: Db,
+    private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
     private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
