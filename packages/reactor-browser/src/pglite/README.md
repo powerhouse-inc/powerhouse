@@ -315,7 +315,7 @@ For type-safe queries and live query capabilities, use the operational layer:
 
 ```typescript
 // For type-safe queries and live updates
-import { useOperationalStore, createTypedQuery } from '@powerhousedao/reactor-browser/operational';
+import { useOperationalStore, createProcessorQuery } from '@powerhousedao/reactor-browser/operational';
 ```
 
 This package provides the foundation - the operational layer builds on top of it for everyday database operations.

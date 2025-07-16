@@ -1,1 +1,1 @@
-export * from "./createTypedQuery.js";
+export * from "./createProcessorQuery.js";

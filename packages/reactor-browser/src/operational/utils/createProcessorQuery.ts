@@ -24,7 +24,7 @@ function useStableParams<T>(params: T): T {
   }, [params]);
 }
 
-export function createTypedQuery<TSchema>(
+export function createProcessorQuery<TSchema>(
   ProcessorClass: RelationalDbProcessorClass<TSchema>,
 ) {
   // Overload for queries without parameters
