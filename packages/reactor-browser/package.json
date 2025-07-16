@@ -30,6 +30,7 @@
     "build": "tsc --build",
     "build:watch": "tsc --build --watch",
     "prebuild": "npm run clean",
+    "test": "vitest run --config vitest.unit.config.ts",
     "test:browser": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",

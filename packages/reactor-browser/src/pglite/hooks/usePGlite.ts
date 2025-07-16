@@ -7,12 +7,14 @@ export interface PGliteState {
   db: PGliteWithLive | null;
   isLoading: boolean;
   error: Error | null;
+  dbReady: boolean;
 }
 
 const defaultPGliteState: PGliteState = {
   db: null,
   isLoading: true,
   error: null,
+  dbReady: false,
 };
 
 export const usePGliteDB = () => {

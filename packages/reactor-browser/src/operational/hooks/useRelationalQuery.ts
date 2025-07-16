@@ -31,13 +31,13 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
 
-  const RelationalDb = useRelationalDb<any>();
+  const relationalDb = useRelationalDb<any>();
 
   useEffect(() => {
     setError(undefined);
     setQueryLoading(true);
 
-    if (!RelationalDb.db) {
+    if (!relationalDb.db || !relationalDb.dbReady) {
       return;
     }
 
@@ -45,14 +45,14 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
     const db = createNamespacedQueryBuilder(
       ProcessorClass,
       driveId,
-      RelationalDb.db,
+      relationalDb.db,
       options,
     );
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;
 
-    const live = RelationalDb.db.live
+    const live = relationalDb.db.live
       .query<T>(sql, queryParameters ? [...queryParameters] : [], (result) => {
         setResult(result);
         setQueryLoading(false);
@@ -65,11 +65,11 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
     return () => {
       void live.then((l) => l?.unsubscribe());
     };
-  }, [RelationalDb.db, ProcessorClass, driveId, queryCallback, parameters]);
+  }, [relationalDb.db, ProcessorClass, driveId, queryCallback, parameters]);
 
   return {
-    isLoading: RelationalDb.isLoading || queryLoading,
-    error: error || RelationalDb.error,
+    isLoading: relationalDb.isLoading || queryLoading || !relationalDb.dbReady,
+    error: error || relationalDb.error,
     result,
   } as const;
 }

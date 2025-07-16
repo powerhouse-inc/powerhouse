@@ -5,6 +5,7 @@ export interface PGliteState {
   db: PGliteWithLive | null;
   isLoading: boolean;
   error: Error | null;
+  dbReady: boolean;
 }
 
 export interface PowerhouseGlobal {
