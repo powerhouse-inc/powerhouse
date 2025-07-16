@@ -37,8 +37,9 @@ export async function createNamespacedDb<T>(
   // hash the namespace to avoid too long namespaces
   const hashNamespace = options?.hashNamespace ?? true;
   const hashValue = hashNamespace ? hash(namespace) : namespace;
-  await db.schema.createSchema(hashValue).ifNotExists().execute();
-  const schemaRelationalDb = db.withSchema(hashValue);
+  const schemaName = `ph_${hashValue}`;
+  await db.schema.createSchema(schemaName).ifNotExists().execute();
+  const schemaRelationalDb = db.withSchema(schemaName);
   return schemaRelationalDb as IRelationalDb<ExtractProcessorSchema<T>>;
 }
 
@@ -53,7 +54,8 @@ export function createNamespacedQueryBuilder<Schema>(
   const namespace = processor.getNamespace(driveId);
   const hashNamespace = options?.hashNamespace ?? true;
   const hashValue = hashNamespace ? hash(namespace) : namespace;
-  const namespacedDb = db.withSchema(hashValue) as IRelationalDb<Schema>;
+  const schemaName = `ph_${hashValue}`;
+  const namespacedDb = db.withSchema(schemaName) as IRelationalDb<Schema>;
   return RelationalDbToQueryBuilder(namespacedDb);
 }
 

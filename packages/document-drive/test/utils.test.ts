@@ -1,3 +1,4 @@
+import { hash } from "#utils/hash";
 import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
@@ -118,5 +119,9 @@ describe("utils", () => {
       global: document.operations.global.slice(0, 3),
       local: [],
     });
+  });
+
+  it("should hash", () => {
+    expect(hash("++**+123123::Asd13$")).toBe("093ltKoZ4GG8");
   });
 });
