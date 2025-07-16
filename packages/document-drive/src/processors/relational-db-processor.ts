@@ -1,9 +1,9 @@
 import { type ListenerFilter } from "#drive-document-model/module";
-import { hash } from "#utils/hash";
 import { type PHDocument } from "document-model";
 import { type QueryCreator } from "kysely";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import { type IProcessor, type IRelationalDb } from "./types.js";
+import { hashNamespace } from "./utils.js";
 
 export type IOperationalQueryMethods =
   | "selectFrom"
@@ -35,8 +35,8 @@ export async function createNamespacedDb<T>(
   },
 ): Promise<IRelationalDb<ExtractProcessorSchema<T>>> {
   // hash the namespace to avoid too long namespaces
-  const hashNamespace = options?.hashNamespace ?? true;
-  const hashValue = hashNamespace ? hash(namespace) : namespace;
+  const shouldHash = options?.hashNamespace ?? true;
+  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
   await db.schema.createSchema(hashValue).ifNotExists().execute();
   const schemaRelationalDb = db.withSchema(hashValue);
   return schemaRelationalDb as IRelationalDb<ExtractProcessorSchema<T>>;
@@ -51,8 +51,8 @@ export function createNamespacedQueryBuilder<Schema>(
   },
 ): IOperationalQueryBuilder<Schema> {
   const namespace = processor.getNamespace(driveId);
-  const hashNamespace = options?.hashNamespace ?? true;
-  const hashValue = hashNamespace ? hash(namespace) : namespace;
+  const shouldHash = options?.hashNamespace ?? true;
+  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
   const namespacedDb = db.withSchema(hashValue) as IRelationalDb<Schema>;
   return RelationalDbToQueryBuilder(namespacedDb);
 }
