@@ -8,8 +8,8 @@ import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
 import {
   type QueryCallbackReturnType,
-  useOperationalQuery,
-  type UseOperationalQueryOptions,
+  useRelationalQuery,
+  type useRelationalQueryOptions,
 } from "../hooks/useRelationalQuery.js";
 
 // Custom hook for parameter memoization
@@ -54,7 +54,7 @@ export function createTypedQuery<TSchema>(
     driveId: string,
     queryCallback: TQueryBuilder,
     parameters: TParams,
-    options?: UseOperationalQueryOptions,
+    options?: useRelationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -73,7 +73,7 @@ export function createTypedQuery<TSchema>(
     driveId: string,
     queryCallback: TQueryBuilder,
     parameters?: TParams,
-    options?: UseOperationalQueryOptions,
+    options?: useRelationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -90,7 +90,7 @@ export function createTypedQuery<TSchema>(
     // Memoize the callback to prevent infinite loops, updating when parameters change
     const memoizedCallback = useCallback(queryCallback, [stableParams]);
 
-    return useOperationalQuery<TSchema, InferredResult, TParams>(
+    return useRelationalQuery<TSchema, InferredResult, TParams>(
       ProcessorClass,
       driveId,
       memoizedCallback,

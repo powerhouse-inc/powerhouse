@@ -12,12 +12,12 @@ export type QueryCallbackReturnType = {
   parameters?: readonly unknown[];
 };
 
-export type UseOperationalQueryOptions = {
+export type useRelationalQueryOptions = {
   // Whether to hash the namespace to avoid namespace size limit. True by default
   hashNamespace?: boolean;
 };
 
-export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
+export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
   ProcessorClass: RelationalDbProcessorClass<Schema>,
   driveId: string,
   queryCallback: (
@@ -25,7 +25,7 @@ export function useOperationalQuery<Schema, T = unknown, TParams = undefined>(
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
-  options?: UseOperationalQueryOptions,
+  options?: useRelationalQueryOptions,
 ) {
   const [result, setResult] = useState<LiveQueryResults<T> | null>(null);
   const [queryLoading, setQueryLoading] = useState(true);
