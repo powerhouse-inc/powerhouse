@@ -9,7 +9,7 @@ import {
 import {
   createNamespacedDb,
   type RelationalDbProcessorFilter,
-} from "document-drive/processors/operational-processor";
+} from "document-drive/processors/relational-db-processor";
 import { <%= pascalName %>Processor } from "./index.js";
 
 export const <%= h.changeCase.camel(name) %>ProcessorFactory = (module: IProcessorHostModule) => async (driveId: string): Promise<ProcessorRecord[]> => {
