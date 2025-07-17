@@ -1,6 +1,6 @@
 # Release Changelog
 
-## 🚀 **v3.3.0** (PRE-RELEASE)
+## 🚀 **v4.0.0** (PRE-RELEASE)
 
 - Significant `PHDocument` refactor.
   - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
@@ -17,6 +17,8 @@
   - `created` and `lastModified` have been renamed to `createdAtUtcIso` and `lastModifiedUtcIso` respectively.
 - Processor generator updates:
   - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factory in place.
+- Reactor API changes:
+  - methods to retrieve documents, like `getDocument`and `getDrive`, now return `undefined` if the document or drive is not found.
 
 ## 🚀 **v3.2.0**
 
@@ -101,7 +103,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
   ***
   ### Find your document scalars in the stand-alone Document-Engineering
   - [https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering](https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering)
-  ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
+    ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
   ***
   ### Performance improvements in Connect
   - We’ve optimised the way components render & avoid rerenders which results in a faster, snappier app.
