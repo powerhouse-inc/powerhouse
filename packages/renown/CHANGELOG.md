@@ -1,3 +1,13 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.3.0-dev.14 (2025-07-17)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

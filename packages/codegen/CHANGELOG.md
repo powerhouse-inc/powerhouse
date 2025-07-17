@@ -1,3 +1,14 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated processor factory to handle async processor factories ([8a562d95a](https://github.com/powerhouse-inc/powerhouse/commit/8a562d95a))
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.3.0-dev.14 (2025-07-17)
 
 ### 🩹 Fixes

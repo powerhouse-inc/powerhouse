@@ -1,3 +1,18 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **academy:** update broken links ([cbbfe9b30](https://github.com/powerhouse-inc/powerhouse/commit/cbbfe9b30))
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+- **codegen:** updated processor factory to handle async processor factories ([8a562d95a](https://github.com/powerhouse-inc/powerhouse/commit/8a562d95a))
+- **reactor-browser:** implement retry logic for live queries on relation errors ([7890e7d95](https://github.com/powerhouse-inc/powerhouse/commit/7890e7d95))
+
+### ❤️ Thank You
+
+- acaldas
+- Callme-T
+- Guillermo Puente @gpuente
+
 ## 3.3.0-dev.14 (2025-07-17)
 
 ### 🩹 Fixes
