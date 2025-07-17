@@ -104,7 +104,7 @@ Generate code from document models with various options. This command supports m
 - `--file <path>`: File path to document model
 - `--processors <type>`: Path to the processors directory
 - `-p, --processor <type>`: Processor Name
-- `--processor-type <type>`: Processor Type (operational/analytics)
+- `--processor-type <type>`: Processor Type (relationalDb/analytics)
 - `-s, --subgraph <type>`: Subgraph Name
 - `--document-models <type>`: Path to the document models directory
 - `--document-types <type>`: Supported document types by the editor
@@ -128,7 +128,7 @@ ph generate --drive-editor myEditor
 ph generate --editor myEditor --document-types "type1,type2"
 
 # Generate a processor
-ph generate --processor myProcessor --processor-type operational
+ph generate --processor myProcessor --processor-type relationalDb
 
 # Generate a subgraph
 ph generate --subgraph mySubgraph --file path/to/model.json

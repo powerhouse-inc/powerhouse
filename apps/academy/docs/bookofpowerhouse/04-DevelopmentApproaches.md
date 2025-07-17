@@ -28,7 +28,7 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
     - This separation offers significant advantages:
         1. **Scalability**: Write and read models can scale independently, allowing Powerhouse to support large decentralized organizations without performance bottlenecks.
         2. **Maintainability**: By isolating business logic (commands) from query logic, developers can iterate on one without affecting the other, ensuring the system evolves efficiently.
-        3. **Flexibility**: Powerhouse supports multiple types of read models—such as operational databases, full-text search, and analytics—each tailored to specific organizational needs.
+        3. **Flexibility**: Powerhouse supports multiple types of read models—such as relational databases, full-text search, and analytics—each tailored to specific organizational needs.
         
 ### Event-driven Architectures (EDA)
     - Event-Driven Architecture (EDA) is a foundational element of Powerhouse’s software philosophy, designed to create responsive, scalable systems that support asynchronous workflows. In EDA, events represent meaningful changes or actions, such as “Document Updated” or “Contributor Added,” and these events trigger reactions across the system in real time.

@@ -1,10 +1,10 @@
-# Operational Database
+# Relational Database
 
-This page covers the operational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.
+This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.
 
 ## Overview
 
-The operational database layer gives you powerful tools to work with data in your Powerhouse applications. You get type-safe queries, real-time updates, and a simple API that feels familiar to React developers.
+The relational database layer gives you powerful tools to work with data in your Powerhouse applications. You get type-safe queries, real-time updates, and a simple API that feels familiar to React developers.
 
 **Key Benefits:**
 - 🔒 **Type-safe queries** with full TypeScript support
@@ -16,7 +16,7 @@ The operational database layer gives you powerful tools to work with data in you
 ## Quick Start
 
 <details>
-<summary>Setting up your first operational database query</summary>
+<summary>Setting up your first relational database query</summary>
 
 ### Step 1: Define your database schema
 
@@ -39,9 +39,9 @@ type MyDatabase = {
 ### Step 2: Create a typed query hook
 
 ```typescript
-import { createTypedQuery } from '@powerhousedao/reactor-browser/operational';
+import { createProcessorQuery } from '@powerhousedao/reactor-browser/relational';
 
-const useTypedQuery = createTypedQuery<MyDatabase>();
+const useTypedQuery = createProcessorQuery<MyDatabase>();
 ```
 
 ### Step 3: Use it in your component
@@ -95,32 +95,32 @@ function UserList() {
 
 ## Core Hooks
 
-### 1. createTypedQuery()
+### 1. createProcessorQuery()
 
 <details>
-<summary>`createTypedQuery<Schema>()`: Creates a typed query hook for your database schema</summary>
+<summary>`createProcessorQuery<Schema>()`: Creates a typed query hook for your database schema</summary>
 
 ### Hook Name and Signature
 
 ```typescript
-function createTypedQuery<Schema>(): TypedQueryHook<Schema>
+function createProcessorQuery<Schema>(): TypedQueryHook<Schema>
 ```
 
 ### Description
 
-Creates a typed query hook that provides type-safe database operations with live query capabilities. This is the main hook you'll use for most operational database operations in your components.
+Creates a typed query hook that provides type-safe database operations with live query capabilities. This is the main hook you'll use for most relational database operations in your components.
 
 ### Usage Example
 
 ```typescript
-import { createTypedQuery } from '@powerhousedao/reactor-browser/operational';
+import { createProcessorQuery } from '@powerhousedao/reactor-browser/relational';
 
 type AppDatabase = {
   users: { id: number; name: string; email: string };
   posts: { id: number; title: string; author_id: number };
 };
 
-const useTypedQuery = createTypedQuery<AppDatabase>();
+const useTypedQuery = createProcessorQuery<AppDatabase>();
 
 // Static query (no parameters)
 function useAllUsers() {
@@ -242,11 +242,11 @@ function DatabaseOperations() {
 - Always check if `db` is not null before using it
 - The database instance includes both Kysely methods and live query capabilities
 - Use this for direct database operations like inserts, updates, and deletes
-- For queries, prefer `createTypedQuery()` which provides better optimization
+- For queries, prefer `createProcessorQuery()` which provides better optimization
 
 ### Related Hooks
 
-- [`createTypedQuery`](#createtypedquery) - For optimized queries
+- [`createProcessorQuery`](#createProcessorQuery) - For optimized queries
 - [`useOperationalQuery`](#useoperationalquery) - For manual query control
 
 </details>
@@ -267,7 +267,7 @@ function useOperationalQuery<Schema, T, TParams>(
 
 ### Description
 
-Lower-level hook for creating live queries with manual control over the query callback and parameters. Most developers should use `createTypedQuery()` instead, but this hook is useful for advanced use cases.
+Lower-level hook for creating live queries with manual control over the query callback and parameters. Most developers should use `createProcessorQuery()` instead, but this hook is useful for advanced use cases.
 
 ### Usage Example
 
@@ -309,12 +309,12 @@ function UserCount() {
 ### Notes / Caveats
 
 - This hook doesn't include automatic parameter memoization
-- Use `createTypedQuery()` for better developer experience and optimization
+- Use `createProcessorQuery()` for better developer experience and optimization
 - Useful for cases where you need manual control over the query lifecycle
 
 ### Related Hooks
 
-- [`createTypedQuery`](#createtypedquery) - Recommended higher-level API
+- [`createProcessorQuery`](#createProcessorQuery) - Recommended higher-level API
 - [`useOperationalStore`](#useoperationalstore) - For direct database access
 
 </details>
@@ -332,7 +332,7 @@ You need to create queries that update automatically when search terms, filters,
 
 ### Solution
 
-The `createTypedQuery` hook automatically handles parameter changes and memoizes them using deep comparison:
+The `createProcessorQuery` hook automatically handles parameter changes and memoizes them using deep comparison:
 
 ```typescript
 function useSearchResults() {

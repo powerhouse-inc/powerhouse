@@ -14,7 +14,7 @@ A subgraph in Powerhouse is a **GraphQL-based modular data component** that exte
 ### Subgraphs can retrieve data from
 
 - **The Reactor** – The core Powerhouse data system or network node.   
-- **Operational Data Stores** – Structured data storage for operational processes, offering real-time updates, for querying structured data.  
+- **Relational Data Stores** – Structured data storage for operational processes, offering real-time updates, for querying structured data.  
 - **Analytics Stores** – Aggregated historical data, useful for insights, reporting and business intelligence.
 
 ### Subgraphs consist of

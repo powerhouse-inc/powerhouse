@@ -15,7 +15,7 @@ This package provides a high-level Relational layer on top of PGlite, offering t
   - [2. Create a Processor Query Hook](#2-create-a-typed-query-hook)
   - [3. Use It in Your Component](#3-use-it-in-your-component)
 - [API Reference](#api-reference)
-  - [createProcessorQuery<Schema>()](#createtypedqueryschema)
+  - [createProcessorQuery<Schema>()](#createProcessorQueryschema)
   - [Static Queries (no parameters)](#static-queries-no-parameters)
   - [Parameterized Queries](#parameterized-queries)
   - [Query Callback](#query-callback)
@@ -48,7 +48,7 @@ This package provides a high-level Relational layer on top of PGlite, offering t
     - [useRelationalDb<Schema>()](#useRelationalDbschema)
     - [useLiveQuery<Schema, T>()](#uselivequeryschemat)
 - [Utilities API Reference](#utilities-api-reference)
-  - [createProcessorQuery<Schema>()](#createtypedqueryschema-1)
+  - [createProcessorQuery<Schema>()](#createProcessorQueryschema-1)
 - [Hook Relationships](#hook-relationships)
 
 ## Key Features
