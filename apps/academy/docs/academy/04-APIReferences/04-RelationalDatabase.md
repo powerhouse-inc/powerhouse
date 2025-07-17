@@ -40,23 +40,26 @@ type MyDatabase = {
 
 ```typescript
 import { createProcessorQuery } from '@powerhousedao/reactor-browser/relational';
+import { MyProcessor } from './processors/my-processor';
 
-const useTypedQuery = createProcessorQuery<MyDatabase>();
+// Create a typed query hook for your processor
+const useTypedQuery = createProcessorQuery(MyProcessor);
 ```
 
 ### Step 3: Use it in your component
 
 ```typescript
 // Simple query - no parameters needed
-export function useUserList() {
-  return useTypedQuery(db => {
+export function useUserList(driveId: string) {
+  return useTypedQuery(driveId, db => {
     return db.selectFrom('users').selectAll().compile();
   });
 }
 
 // Query with parameters
-export function useUserById(userId: number) {
+export function useUserById(driveId: string, userId: number) {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return db
         .selectFrom('users')
@@ -72,8 +75,8 @@ export function useUserById(userId: number) {
 ### Step 4: Use in your React component
 
 ```typescript
-function UserList() {
-  const { isLoading, error, result } = useUserList();
+function UserList({ driveId }: { driveId: string }) {
+  const { isLoading, error, result } = useUserList(driveId);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
@@ -98,40 +101,40 @@ function UserList() {
 ### 1. createProcessorQuery()
 
 <details>
-<summary>`createProcessorQuery<Schema>()`: Creates a typed query hook for your database schema</summary>
+<summary>`createProcessorQuery(ProcessorClass)`: Creates a typed query hook factory for your processor</summary>
 
-### Hook Name and Signature
+### Function Name and Signature
 
 ```typescript
-function createProcessorQuery<Schema>(): TypedQueryHook<Schema>
+function createProcessorQuery<Schema>(
+  ProcessorClass: RelationalDbProcessorClass<Schema>
+): TypedQueryHook<Schema>
 ```
 
 ### Description
 
-Creates a typed query hook that provides type-safe database operations with live query capabilities. This is the main hook you'll use for most relational database operations in your components.
+Creates a typed query hook factory for a specific processor class. This is the main function you'll use to create hooks for querying your relational database.
 
 ### Usage Example
 
 ```typescript
 import { createProcessorQuery } from '@powerhousedao/reactor-browser/relational';
+import { MyProcessor } from './processors/my-processor';
 
-type AppDatabase = {
-  users: { id: number; name: string; email: string };
-  posts: { id: number; title: string; author_id: number };
-};
+// Create a typed query hook for your processor
+const useTypedQuery = createProcessorQuery(MyProcessor);
 
-const useTypedQuery = createProcessorQuery<AppDatabase>();
-
-// Static query (no parameters)
-function useAllUsers() {
-  return useTypedQuery(db => {
+// Use it to create specific query hooks
+export const useUsers = (driveId: string) => {
+  return useTypedQuery(driveId, (db) => {
     return db.selectFrom('users').selectAll().compile();
   });
-}
+};
 
-// Dynamic query with parameters
-function useUsersByStatus(status: string) {
+// With parameters
+export const useUsersByStatus = (driveId: string, status: string) => {
   return useTypedQuery(
+    driveId,
     (db, params) => {
       return db
         .selectFrom('users')
@@ -141,41 +144,32 @@ function useUsersByStatus(status: string) {
     },
     { status }
   );
-}
+};
 ```
 
 ### Parameters
 
-The returned hook has two overloads:
-
-**Static queries (no parameters):**
-- `queryCallback: (db: EnhancedKysely<Schema>) => QueryCallbackReturnType` - Function that receives the database instance and returns a query
-
-**Parameterized queries:**
-- `queryCallback: (db: EnhancedKysely<Schema>, parameters: TParams) => QueryCallbackReturnType` - Function that receives the database instance and parameters
-- `parameters: TParams` - Parameters for the query (automatically memoized)
+The returned hook accepts:
+- `driveId`: The ID of the drive
+- `queryCallback`: Function that receives the database instance and optional parameters
+- `parameters`: Optional parameters for the query
 
 ### Return Value
 
 ```typescript
 {
-  isLoading: boolean;    // True while query is loading
-  error: Error | null;   // Any error that occurred
-  result: LiveQueryResults<T> | null; // Query results with real-time updates
+  isLoading: boolean;      // True while loading or retrying
+  error: Error | null;     // Any error that occurred
+  result: LiveQueryResults<T> | null;  // Query results with live updates
 }
 ```
 
 ### Notes / Caveats
 
-- Parameters are automatically memoized using deep comparison
-- Queries update in real-time when the database changes
-- The callback must return an object with `sql` and optional `parameters` properties
-- Use `.compile()` on Kysely queries to get the required format
-
-### Related Hooks
-
-- [`useOperationalStore`](#2-useoperationalstore) - For direct database access
-- [`useOperationalQuery`](#3-useoperationalquery) - Lower-level query hook
+- Create one `useTypedQuery` hook per processor
+- The hook includes automatic retry logic for common errors
+- Parameters are automatically memoized
+- Queries are live and will update automatically when data changes
 
 </details>
 
