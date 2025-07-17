@@ -1,15 +1,18 @@
 # Release Changelog
 
-## 🚀 **v4.0.0** (PRE-RELEASE)
+## 🚀 **v4.0.0** 
 
-- Significant `PHDocument` refactor.
+## BREAKING CHANGES
+
+### **Significant `PHDocument` refactor**
   - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
-  - Introducing signed and unsigned documents. See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
-- Processor generator updates.
+  - Introducing signed and unsigned documents with Ed25519 keys . See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
+
+### **Processor generator updates**
   - The analytics processor template now includes a namespace and batch inserts by default.
   - Analytics factories are now in their own files, allowing for multiple factories to be generated.
 
-### Migration Guide
+### A Migration Guide has been create to help you navigate the breaking change
 
 - `PHDocument` changes:
   - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
@@ -17,8 +20,53 @@
   - `created` and `lastModified` have been renamed to `createdAtUtcIso` and `lastModifiedUtcIso` respectively.
 - Processor generator updates:
   - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factory in place.
-- Reactor API changes:
-  - methods to retrieve documents, like `getDocument`and `getDrive`, now return `undefined` if the document or drive is not found.
+
+✨ **Highlights**
+
+New features for managing, querying, and analyzing information in real-time. 
+This release focuses on improving data accessibility, enhancing performance, and providing a foundation for advanced analytical insights.
+
+Introducing the **Relational Database & Operational Processor System**, a new architecture designed to enhance data handling, querying, and synchronization across the host-apps.
+
+### 2. Relational Database & Operational Processor System
+**New Operational Processor Architecture with Namespacing**: This introduces a flexible and scalable way to process document operations and transform them into a relational database format. Namespacing ensures conflict avoidance and better organization of data.
+**Database Schema Generation and Migration Support**: The system now automatically generates database schemas and supports migrations, simplifying database management and ensuring data consistency. It leverages Kysely for type-safe query construction.
+**Enhanced Analytics Capabilities with Operational Queries**: By transforming document data into a relational store, we can now perform complex analytical queries that were previously challenging. This enables more robust reporting and data analysis.
+**Processor Factory System and Root Processor Aggregation**: This provides a standardized way to create and manage different types of processors, including those for relational databases, and allows for efficient aggregation of processed data.
+
+✅ **What to try:** 
+- Experiment with generating a new operational database processor using the `pnpm generate` command and specify different document types to see how the schema and files are created.
+- Define a custom database schema and implement an `onStrands` method in your processor to index document states into the relational store.
+- Run tests for your new processor, leveraging the in-memory PGlite instance, to validate the stored state with database queries.
+- Generate a GraphQL subgraph to expose your processed data, then try running various GraphQL queries to access and filter your transformed data.
+
+### 3. Enhanced Analytics & Performance Monitoring
+**Drive and Document Analytics Processors**: New processors are in place to specifically handle and prepare data for analytics related to drives and documents, enabling targeted performance monitoring and insights.
+**Real-Time Analytics Query Subscriptions**: Leveraging PGLite's live query feature, the system now supports real-time subscriptions to analytical queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
+**Performance Improvements in Connect Apps**: The integration of the new operational database and live query capabilities directly within the Connect UI significantly improves the performance of data retrieval and display, offering a more responsive user experience for applications built on Connect.
+
+✅ **What to try:** 
+- Observe the real-time data synchronization by making changes to documents in Connect and simultaneously viewing the updates through a GraphQL interface.
+- Implement search functionality within your Connect UI using the `useTypeQuery` hook to leverage the new database schema for type-safe queries.
+- Create or modify documents in Connect and watch how the changes are immediately reflected in your Connect application's display, demonstrating the live query feature.
+- Explore building more complex analytical queries that span multiple documents, taking advantage of the relational store's capabilities.
+
+
+### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+
+#### Documentation & Guides:
+- **New:**  PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
+- **New:**  Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
+- **New:**  Relational Database & Operational Processor System tutorials - Educational content explaining the new architecture for data handling, querying, and synchronization??
+
+#### Enhanced Learning Content:
+- **Updated:** GraphQL at Powerhouse - Documentation updates reflecting the new operational processor architecture and relational database integration.
+- **Updated:** Document Model Creation guides - Updated to reflect the new PHDocument structure and processor generation changes.
+- **Updated:** API References - Updated CLI command documentation (automatically generated) reflecting the new ph generate schema command and other v4.0.0 changes.
+
+🔍 See [CHANGELOG.md](./CHANGELOG.md) for the complete technical changelog with all commits and detailed changes. 
+Thank you 💙 Core-dev Team
+
 
 ## 🚀 **v3.2.0**
 
