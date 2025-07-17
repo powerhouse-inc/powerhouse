@@ -1,3 +1,7 @@
+## 4.0.0-staging.3 (2025-07-17)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 4.0.0-staging.2 (2025-07-17)
 
 ### 🩹 Fixes

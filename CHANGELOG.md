@@ -1,3 +1,15 @@
+## 4.0.0-staging.3 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated processor factory to handle async processor factories ([8a562d95a](https://github.com/powerhouse-inc/powerhouse/commit/8a562d95a))
+- **reactor-browser:** implement retry logic for live queries on relation errors ([7890e7d95](https://github.com/powerhouse-inc/powerhouse/commit/7890e7d95))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 4.0.0-staging.2 (2025-07-17)
 
 ### 🩹 Fixes

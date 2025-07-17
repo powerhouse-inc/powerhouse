@@ -1,3 +1,13 @@
+## 4.0.0-staging.3 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated processor factory to handle async processor factories ([8a562d95a](https://github.com/powerhouse-inc/powerhouse/commit/8a562d95a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.0.0-staging.2 (2025-07-17)
 
 ### 🩹 Fixes

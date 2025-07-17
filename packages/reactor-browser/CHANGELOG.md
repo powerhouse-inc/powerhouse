@@ -1,3 +1,13 @@
+## 4.0.0-staging.3 (2025-07-17)
+
+### 🩹 Fixes
+
+- **reactor-browser:** implement retry logic for live queries on relation errors ([7890e7d95](https://github.com/powerhouse-inc/powerhouse/commit/7890e7d95))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.0.0-staging.2 (2025-07-17)
 
 ### 🩹 Fixes
