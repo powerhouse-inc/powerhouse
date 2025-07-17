@@ -1,3 +1,15 @@
+## 3.3.0-dev.14 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** run schema codegen without requiring kysely-pglite to be a direct dependency ([e9d901e00](https://github.com/powerhouse-inc/powerhouse/commit/e9d901e00))
+- **codegen:** renamed folder to relationalDb ([42fb0ddff](https://github.com/powerhouse-inc/powerhouse/commit/42fb0ddff))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 3.3.0-dev.13 (2025-07-17)
 
 ### 🚀 Features
