@@ -1,5 +1,25 @@
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
+
+function getKyselyPgLiteBin(): string {
+  const require = createRequire(import.meta.url);
+
+  const paths = require.resolve.paths("kysely-pglite");
+  if (paths) {
+    for (const basePath of paths) {
+      const pkgRoot = join(basePath, "kysely-pglite");
+      const binPath = join(pkgRoot, "bin/run.js");
+
+      if (existsSync(binPath)) {
+        return binPath;
+      }
+    }
+  }
+
+  throw new Error("Could not find kysely-pglite/bin/run.js");
+}
 
 export interface IOptions {
   migrationFile: string;
@@ -39,16 +59,16 @@ export async function generateDBSchema({
   const outFile = schemaFile ?? resolve(migrationFile, "../schema.ts");
 
   try {
+    const kyselyBinPath = getKyselyPgLiteBin();
     // Use kysely-pglite CLI to handle TypeScript compilation and module resolution
     await runCommand(
-      "npx",
-      ["kysely-pglite", migrationFile, "--outFile", outFile],
+      "node",
+      [kyselyBinPath, migrationFile, "--outFile", outFile],
       process.cwd(),
     );
 
     console.log(`Schema types generated at ${outFile}`);
   } catch (error) {
     console.error("Error running migration:", error);
-    throw error;
   }
 }
