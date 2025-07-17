@@ -1,3 +1,17 @@
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🚀 Features
+
+- **reactor-api,reactor-browser,document-drive,codegen,connect:** operation to relationalDb renaming, relational db type improvements, added namespace methods to IRelationalDb ([fd35c3500](https://github.com/powerhouse-inc/powerhouse/commit/fd35c3500))
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 3.3.0-dev.11 (2025-07-16)
 
 ### 🩹 Fixes

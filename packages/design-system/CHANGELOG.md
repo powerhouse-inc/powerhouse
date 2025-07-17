@@ -1,3 +1,13 @@
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.11 (2025-07-16)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
