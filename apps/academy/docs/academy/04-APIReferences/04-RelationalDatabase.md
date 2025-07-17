@@ -7,11 +7,11 @@ This page covers the relational database tools available in Powerhouse applicati
 The relational database layer gives you powerful tools to work with data in your Powerhouse applications. You get type-safe queries, real-time updates, and a simple API that feels familiar to React developers.
 
 **Key Benefits:**
-- 🔒 **Type-safe queries** with full TypeScript support
-- 🔄 **Live query capabilities** with real-time updates  
-- ⚡ **Automatic optimization** to prevent infinite re-renders
-- 🎯 **Simple API** that abstracts away complexity
-- 🧠 **Smart memoization** for parameters and queries
+- **Type-safe queries** with full TypeScript support
+- **Live query capabilities** with real-time updates  
+- **Automatic optimization** to prevent infinite re-renders
+- **Simple API** that abstracts away complexity
+- **Smart memorization** for parameters and queries
 
 ## Quick Start
 
@@ -174,8 +174,8 @@ The returned hook has two overloads:
 
 ### Related Hooks
 
-- [`useOperationalStore`](#useoperationalstore) - For direct database access
-- [`useOperationalQuery`](#useoperationalquery) - Lower-level query hook
+- [`useOperationalStore`](#2-useoperationalstore) - For direct database access
+- [`useOperationalQuery`](#3-useoperationalquery) - Lower-level query hook
 
 </details>
 
@@ -246,8 +246,8 @@ function DatabaseOperations() {
 
 ### Related Hooks
 
-- [`createProcessorQuery`](#createProcessorQuery) - For optimized queries
-- [`useOperationalQuery`](#useoperationalquery) - For manual query control
+- [`createProcessorQuery`](#1-createprocessorquery) - For optimized queries
+- [`useOperationalQuery`](#3-useoperationalquery) - For manual query control
 
 </details>
 
@@ -314,8 +314,8 @@ function UserCount() {
 
 ### Related Hooks
 
-- [`createProcessorQuery`](#createProcessorQuery) - Recommended higher-level API
-- [`useOperationalStore`](#useoperationalstore) - For direct database access
+- [`createProcessorQuery`](#1-createprocessorquery) - Recommended higher-level API
+- [`useOperationalStore`](#2-useoperationalstore) - For direct database access
 
 </details>
 

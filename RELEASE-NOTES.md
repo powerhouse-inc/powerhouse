@@ -42,7 +42,7 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 
 ### 3. Enhanced Analytics & Performance Monitoring
 **Drive and Document Analytics Processors**: New processors are in place to specifically handle and prepare data for analytics related to drives and documents, enabling targeted performance monitoring and insights.
-**Real-Time Analytics Query Subscriptions**: Leveraging PGLite's live query feature, the system now supports real-time subscriptions to analytical queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
+**Real-Time Analytics Query Subscriptions**: Leveraging PGlite's live query feature, the system now supports real-time subscriptions to analytical queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
 **Performance Improvements in Connect Apps**: The integration of the new operational database and live query capabilities directly within the Connect UI significantly improves the performance of data retrieval and display, offering a more responsive user experience for applications built on Connect.
 
 ✅ **What to try:** 
@@ -55,9 +55,14 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 ### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
 
 #### Documentation & Guides:
-- **New:**  PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
+- **New:**  PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns. 
+- 🔗 https://staging.powerhouse.academy/academy/APIReferences/PHDocumentMigrationGuide
 - **New:**  Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
-- **New:**  Relational Database & Operational Processor System tutorials - Educational content explaining the new architecture for data handling, querying, and synchronization??
+- 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/drive-analytics
+- **New:**  Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
+- 🔗 https://staging.powerhouse.academy/academy/APIReferences/RelationalDatabase#useoperationalquery
+- **New:**  Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
+
 
 #### Enhanced Learning Content:
 - **Updated:** GraphQL at Powerhouse - Documentation updates reflecting the new operational processor architecture and relational database integration.
