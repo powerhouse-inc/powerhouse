@@ -7,6 +7,8 @@ import {
   type IRelationalQueryBuilder,
 } from "./types.js";
 import { relationalDbToQueryBuilder } from "./utils.js";
+import { get } from "http";
+import { Schema, string } from "zod";
 
 export type { IRelationalQueryBuilder } from "./types.js";
 
@@ -28,9 +30,12 @@ export function isRelationalDbProcessor(
 export type ExtractProcessorSchema<TProcessor> =
   TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
 
-export type RelationalDbProcessorClass<TSchema> = (new (
-  ...args: any[]
-) => RelationalDbProcessor<TSchema>) &
+export type ExtractProcessorSchemaOrSelf<TProcessor> =
+  TProcessor extends RelationalDbProcessor<infer TSchema>
+    ? TSchema
+    : TProcessor;
+
+export type RelationalDbProcessorClass<TSchema> =
   typeof RelationalDbProcessor<TSchema>;
 
 const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
@@ -71,11 +76,11 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
     return `${this.name}_${driveId.replaceAll("-", "_")}`;
   }
 
-  static query<TSchema>(
-    this: RelationalDbProcessorClass<TSchema>,
+  static query<Schema>(
+    this: RelationalDbProcessorClass<Schema>,
     driveId: string,
-    db: IRelationalDb<TSchema>,
-  ): IRelationalQueryBuilder<TSchema> {
+    db: IRelationalDb<any>,
+  ): IRelationalQueryBuilder<Schema> {
     return db.queryNamespace(this.getNamespace(driveId));
   }
 

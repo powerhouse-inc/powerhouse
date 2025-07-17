@@ -3,6 +3,7 @@ import { type InternalTransmitterUpdate } from "#server/listener/transmitter/int
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
 import { type Kysely, type QueryCreator } from "kysely";
+import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
 
 export type IRelationalQueryMethods =
   | "selectFrom"
@@ -23,11 +24,11 @@ export type IBaseRelationalDb<Schema = unknown> = Kysely<Schema>;
  * The standardized relational database interface for relational db processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
- */
+ **/
 export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
   createNamespace<NamespaceSchema>(
     namespace: string,
-  ): Promise<IRelationalDb<NamespaceSchema>>;
+  ): Promise<IRelationalDb<ExtractProcessorSchemaOrSelf<NamespaceSchema>>>;
   queryNamespace<NamespaceSchema>(
     namespace: string,
   ): IRelationalQueryBuilder<NamespaceSchema>;
