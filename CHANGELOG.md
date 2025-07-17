@@ -1,3 +1,13 @@
+## 3.3.0-dev.13 (2025-07-17)
+
+### 🚀 Features
+
+- **codegen,document-drive:** refactored relational processor namespace methods and updated related codegen templates ([00d4c4e87](https://github.com/powerhouse-inc/powerhouse/commit/00d4c4e87))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.12 (2025-07-17)
 
 ### 🚀 Features

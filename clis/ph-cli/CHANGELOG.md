@@ -1,3 +1,7 @@
+## 3.3.0-dev.13 (2025-07-17)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.12 (2025-07-17)
 
 ### 🩹 Fixes
