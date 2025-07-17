@@ -33,10 +33,10 @@ export type RelationalDbProcessorClass<TSchema> = (new (
 ) => RelationalDbProcessor<TSchema>) &
   typeof RelationalDbProcessor<TSchema>;
 
-const IS_OPERATIONAL_PROCESSOR = Symbol.for("ph.IS_OPERATIONAL_PROCESSOR");
+const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
 
 /**
- * Base class for operational processors that require a relational database storage.
+ * Base class for relational db processors that require a relational database storage.
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
@@ -49,14 +49,14 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
     protected relationalDb: IRelationalDb<TDatabaseSchema>,
   ) {}
 
-  static [IS_OPERATIONAL_PROCESSOR] = true;
+  static [IS_RELATIONAL_DB_PROCESSOR] = true;
 
   static is(p: unknown): p is RelationalDbProcessor {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let proto = Object.getPrototypeOf(p);
     while (proto) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (proto.constructor?.[IS_OPERATIONAL_PROCESSOR]) return true;
+      if (proto.constructor?.[IS_RELATIONAL_DB_PROCESSOR]) return true;
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       proto = Object.getPrototypeOf(proto);
     }

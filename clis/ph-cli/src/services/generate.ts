@@ -21,7 +21,7 @@ export type GenerateOptions = {
   editor?: string;
   processor?: string;
   documentTypes?: string;
-  processorType?: "analytics" | "operational";
+  processorType?: "analytics" | "relationalDb";
   subgraph?: string;
   importScript?: string;
   file?: string;
@@ -83,7 +83,7 @@ export async function startGenerate(
     );
   } else if (command.processor && options.processor) {
     const processorType =
-      options.processorType === "operational" ? "operational" : "analytics";
+      options.processorType === "relationalDb" ? "relationalDb" : "analytics";
     await generateProcessor(
       options.processor,
       processorType,

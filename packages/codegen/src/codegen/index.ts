@@ -188,7 +188,7 @@ export async function generateSubgraph(
 
 export async function generateProcessor(
   name: string,
-  type: "analytics" | "operational",
+  type: "analytics" | "relationalDb",
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {

@@ -111,7 +111,7 @@ const sidebars = {
       items: [
         "academy/APIReferences/PowerhouseCLI",
         "academy/APIReferences/ReactHooks",
-        "academy/APIReferences/OperationalDatabase",
+        "academy/APIReferences/RelationalDatabase",
         "academy/APIReferences/PHDocumentMigrationGuide",
       ],
     },

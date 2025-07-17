@@ -20,7 +20,7 @@ export type IRelationalQueryBuilder<Schema = unknown> = Pick<
 export type IBaseRelationalDb<Schema = unknown> = Kysely<Schema>;
 
 /**
- * The standardized relational database interface for operational processors.
+ * The standardized relational database interface for relational db processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  */
