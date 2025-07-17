@@ -1,3 +1,15 @@
+## 4.0.0-staging.2 (2025-07-17)
+
+### 🩹 Fixes
+
+- **academy:** update broken links ([cbbfe9b30](https://github.com/powerhouse-inc/powerhouse/commit/cbbfe9b30))
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
 ## 4.0.0-staging.1 (2025-07-17)
 
 This was a version bump only, there were no code changes.
