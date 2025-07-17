@@ -328,10 +328,9 @@ describe('Document Migration', () => {
 
 ## Related Documentation
 
-- [PHDocument Architecture](../05-Architecture/PHDocument.md)
-- [Document Model Creation](../02-MasteryTrack/DocumentModelCreation/WhatIsADocumentModel.md)
-- [GraphQL API Reference](./02-ReactorAPI.md)
-- [React Hooks](./01-ReactHooks.md)
+- [PHDocument Architecture](/academy/Architecture/PowerhouseArchitecture)
+- [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+- [React Hooks](/academy/APIReferences/ReactHooks)
 
 ---
 
