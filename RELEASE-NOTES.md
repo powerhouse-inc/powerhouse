@@ -4,7 +4,11 @@
 
 ## BREAKING CHANGES
 
- ⚠️ For both the Dspot team & BAI team update branches have been created that should help with the breaking changes ⚠️
+ ⚠️ For both the Dspot team & BAI team pull requests have been created that support with the breaking changes ⚠️
+
+BAI team:[Contributor Billing Pull Request](https://github.com/powerhouse-inc/contributor-billing/pull/3)
+Dspot Team: [Effective-Octo-Adventure](https://github.com/powerhouse-inc/effective-octo-adventure/pull/162)
+
 
 ### **Significant `PHDocument` refactor**
   - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
@@ -14,7 +18,7 @@
   - The analytics processor template now includes a namespace and batch inserts by default.
   - Analytics factories are now in their own files, allowing for multiple factories to be generated.
 
-### A Migration Guide has been create to help you navigate the breaking change
+### Additional Migration Guide has been create to help you navigate the breaking change of other packages
 
 - `PHDocument` changes:
   - **This version requires that document models be regenerated**. This means that you will need to run `ph generate` to regenerate the `gen` folder for document models.
@@ -23,7 +27,7 @@
 - Processor generator updates:
   - A root processor factory is now generated in the `processors` folder. This will aggregate the collection of all processor factories. It is highly recommended to use this root factory to register all processors. Generating a new processor will put this root factory in place.
 
-✨ **Highlights**
+✨ **Highlights of this release**
 
 New features for managing, querying, and analyzing information in real-time. 
 This release focuses on improving data accessibility, enhancing performance, and providing a foundation for advanced analytical insights.
@@ -44,12 +48,12 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 
 ### 3. Enhanced Analytics & Performance Monitoring
 **Drive and Document Analytics Processors**: New processors are in place to specifically handle and prepare data for analytics related to drives and documents, enabling targeted performance monitoring and insights.
-**Real-Time Analytics Query Subscriptions**: Leveraging PGlite's live query feature, the system now supports real-time subscriptions to analytical queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
+**Real-Time Relational Query**: Leveraging PGlite's live query feature, the system now supports real-time queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
 **Performance Improvements in Connect Apps**: The integration of the new operational database and live query capabilities directly within the Connect UI significantly improves the performance of data retrieval and display, offering a more responsive user experience for applications built on Connect.
 
 ✅ **What to try:** 
 - Observe the real-time data synchronization by making changes to documents in Connect and simultaneously viewing the updates through a GraphQL interface.
-- Implement search functionality within your Connect UI using the `useTypeQuery` hook to leverage the new database schema for type-safe queries.
+- Implement search functionality within your Connect UI using the `createProcessorQuery` hook to leverage the new database schema for type-safe queries.
 - Create or modify documents in Connect and watch how the changes are immediately reflected in your Connect application's display, demonstrating the live query feature.
 - Explore building more complex analytical queries that span multiple documents, taking advantage of the relational store's capabilities.
 
