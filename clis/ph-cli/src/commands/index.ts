@@ -10,6 +10,7 @@ import { reactorCommand } from "./reactor.js";
 import { serviceCommand } from "./service.js";
 import { switchboardCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
+import { vetraCommand } from "./vetra.js";
 
 export const commands = [
   // devCommand,
@@ -23,6 +24,7 @@ export const commands = [
   listCommand,
   inspectCommand,
   switchboardCommand,
+  vetraCommand,
 ];
 
 export default function registerCommands(program: Command) {

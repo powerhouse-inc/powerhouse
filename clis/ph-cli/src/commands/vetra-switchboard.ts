@@ -1,0 +1,76 @@
+import { type SwitchboardReactor } from "@powerhousedao/switchboard/server";
+import { type Command } from "commander";
+import { switchboardHelp } from "../help.js";
+import { type ReactorOptions } from "../services/reactor.js";
+import { type CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
+
+type VetraSwitchboardOptions = ReactorOptions & {
+  basePath?: string;
+};
+
+async function startLocalVetraSwitchboard(options: VetraSwitchboardOptions) {
+  console.log("Starting Vetra switchboard", options);
+  if (options.basePath) {
+    console.log(`Setting BASE_PATH to ${options.basePath}`);
+    process.env.BASE_PATH = options.basePath;
+  }
+
+  const VetraSwitchboard = await import("../services/vetra-switchboard.js");
+  const { startVetraSwitchboard } = VetraSwitchboard;
+
+  return startVetraSwitchboard({
+    ...options,
+    port:
+      typeof options.port === "string" ? parseInt(options.port) : options.port,
+  });
+}
+
+export const vetraSwitchboard: CommandActionType<
+  [ReactorOptions],
+  Promise<SwitchboardReactor>
+> = async (options) => {
+  return await startLocalVetraSwitchboard(options);
+};
+
+export function vetraSwitchboardCommand(program: Command) {
+  const command = program
+    .command("vetra-switchboard")
+    .description("Starts local Vetra switchboard")
+    .option("--port <PORT>", "port to host the api", "4001")
+    .option(
+      "--config-file <configFile>",
+      "Path to the powerhouse.config.js file",
+      "./powerhouse.config.json",
+    )
+    .option("--generate", "generate code when document model is updated")
+    .option("--db-path <DB_PATH>", "path to the database")
+    .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
+    .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
+    .option(
+      "--packages <packages...>",
+      "list of packages to be loaded, if defined then packages on config file are ignored",
+    )
+    .option(
+      "--base-path <basePath>",
+      "base path for the API endpoints (sets the BASE_PATH environment variable)",
+    )
+    .action(async (...args: [ReactorOptions]) => {
+      const { defaultDriveUrl } = await vetraSwitchboard(...args);
+      console.log("   ➜  Vetra Switchboard:", defaultDriveUrl);
+    });
+
+  setCustomHelp(command, switchboardHelp);
+}
+
+if (process.argv.at(2) === "spawn") {
+  const optionsArg = process.argv.at(3);
+  const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
+  startLocalVetraSwitchboard(options)
+    .then((reactor) => {
+      process.send?.(`driveUrl:${reactor.defaultDriveUrl}`);
+    })
+    .catch((e: unknown) => {
+      throw e;
+    });
+}
