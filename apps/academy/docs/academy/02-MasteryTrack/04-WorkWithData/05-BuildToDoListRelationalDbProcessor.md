@@ -18,21 +18,21 @@ In this chapter, we will implement a **Todo-List** relational database processor
 To generate a relational database processor, run the following command:
 
 ```bash
-ph generate --processor todo-processor --processor-type relationalDb --document-types powerhouse/todolist
+ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todolist
 ```
 
-This command creates a processor named `todo-processor` of type `relational database` that listens for changes from documents of type `powerhouse/todolist`.
+This command creates a processor named `todo-indexer` of type `relational database` that listens for changes from documents of type `powerhouse/todolist`.
 
 ## Define Your Database Schema
 
-Next, define your database schema in the `processors/todo-processor/migration.ts` file.
+Next, define your database schema in the `processors/todo-indexer/migration.ts` file.
 
 The migration file contains `up` and `down` functions that are called when the processor is added or removed, respectively.
 
-Here's an example of a todo table schema:
+In the migration.ts file you'll find an example of the todo table default schema:
 
 ```ts
-import { type IBaseRelationalDb } from "document-drive/processors/types"
+import { type IRelationalDb } from "document-drive/processors/types"
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table
@@ -56,14 +56,14 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 After defining your database schema, generate TypeScript types for type-safe queries and better IDE support:
 
 ```bash
-ph generate --migration-file processors/todo-processor/migrations.ts 
+ph generate --migration-file processors/todo-indexer/migrations.ts 
 ```
 
-Check your `processors/todo-processor/schema.ts` file after generation - it will contain the TypeScript types for your database schema.
+Check your `processors/todo-indexer/schema.ts` file after generation - it will contain the TypeScript types for your database schema.
 
 ## Configure the Processor Filter
 
-Configure the processor filter in `processors/todo-processor/factory.ts`:
+This give you the opportunity to configure the processor filter in `processors/todo-indexer/factory.ts`:
 
 ```ts
 import {
@@ -102,12 +102,11 @@ export const todoIndexerProcessorFactory =
       },
     ];
   };
-
 ```
 
 ## Implement the Processor Logic
 
-Now implement the actual processor logic in `processors/todo-processor/processor.ts`:
+Now implement the actual processor logic in `processors/todo-indexer/index.ts` by copying the code underneath:
 
 ```ts
 import { type IRelationalDb } from "document-drive/processors/types";
@@ -157,86 +156,8 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
   async onDisconnect() {}
 }
-
 ```
 
-## Test Your Processor
-
-Create tests for your processor in `processors/todo-processor/processor.test.ts`:
-
-```ts
-
-import { type InternalTransmitterUpdate } from "document-drive";
-
-import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
-import { TodoIndexerProcessor } from "../processors/todo-indexer/index.js";
-
-describe("todo-list", () => {
-  let processor: TodoIndexerProcessor;
-  const namespace = "search-indexer-test";
-
-  beforeAll(async () => {
-    try {
-      const { dialect } = await KyselyPGlite.create();
-      const db = new Kysely<unknown>({ dialect });
-      processor = (await TodoIndexerProcessor.build(
-        namespace,
-        db,
-      )) as TodoIndexerProcessor;
-      await processor.initAndUpgrade();
-    } catch (error) {
-      console.error(error);
-    }
-  });
-
-  it("should instantiate the processor", () => {
-    expect(processor).toBeDefined();
-  });
-
-  it("should have a kysely instance as operational store", () => {
-    expect(processor.operationalStore).toBeDefined();
-    expect(processor.operationalStore).toBeInstanceOf(Kysely);
-  });
-
-  it("should create the db table", async () => {
-    const tables = await processor.operationalStore.introspection.getTables();
-    const tableNames = tables.map((table) => table.name);
-    expect(tableNames).toContain("todo");
-  });
-
-  describe("Todo List", () => {
-    it("should handle add todo", async () => {
-      const strand: InternalTransmitterUpdate<TodoListDocument> = {
-        driveId: "powerhouse",
-        documentId: "todolist-document-id",
-        documentType: "powerhouse/todolist",
-        scope: "global" as const,
-        branch: "main",
-        operations: [{
-          index: 0,
-          type: "ADD_TODO"
-        }],
-       
-      };
-
-      await processor.onStrands([strand]);
-
-      try {
-        const result = await processor.operationalStore
-          .selectFrom("atlas_scope_docs")
-          .selectAll()
-          .where("drive_id", "=", "powerhouse")
-          .where("document_id", "=", "atlas-scope-document-id")
-          .executeTakeFirst();
-        expect(result).toBeDefined();
-      } catch (e) {
-        expect(e).toBeUndefined();
-      }
-    });
-  })
-});
-```
 
 ## Expose Data Through a Subgraph
 
@@ -245,20 +166,20 @@ describe("todo-list", () => {
 Generate a new subgraph to expose your processor data:
 
 ```bash
-ph generate --subgraph todo-subgraph
+ph generate --subgraph todo
 ```
 
 ### Configure the Subgraph
 
-Open `./subgraphs/todo-subgraph/index.ts` and configure the resolvers:
+Open `./subgraphs/todo/index.ts` and configure the resolvers:
 
 ```ts
 import { Subgraph } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
-export class SearchSubgraph extends Subgraph {
-  name = "search";
+export class TodoSubgraph extends Subgraph {
+  name = "Todos";
 
   resolvers = {
     Query: {
@@ -288,13 +209,11 @@ export class SearchSubgraph extends Subgraph {
 
   async onDisconnect() {}
 }
-
 ```
 
 ## Use the Data in Frontend Applications
 
 ### React Hooks
-
 ...
 
 ### Next.js API Route Example
