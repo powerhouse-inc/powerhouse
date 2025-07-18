@@ -17,6 +17,7 @@ This document provides detailed information about the available commands in the 
 - [Switchboard](#switchboard)
 - [Uninstall](#uninstall)
 - [Version](#version)
+- [Vetra](#vetra)
 
 ## Connect Build
 
@@ -499,6 +500,49 @@ Notes:
   - The version follows semantic versioning (MAJOR.MINOR.PATCH)
   - Using the correct CLI version is important for compatibility with your project
   - Version information is read from the package.json file of the CLI
+```
+
+## Vetra
+
+```
+Command Overview:
+  The vetra command sets up a complete Vetra development environment for working with Vetra projects.
+  It starts three coordinated services: a Vetra Switchboard, a Local Reactor, and Connect Studio,
+  enabling full document collaboration and real-time processing with a "Vetra" drive.
+
+  This command:
+  1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
+  2. Starts a Local Reactor that connects to the Vetra Switchboard as a remote drive
+  3. Starts Connect Studio pointing to the Local Reactor for user interaction
+  4. Enables real-time updates, collaboration, and code generation across all services
+
+Options:
+  --generate               Generate code automatically when document models are updated.
+                          This keeps your code in sync with model changes across all services.
+                        
+  --switchboard-port <port> Specify the port to use for the Vetra Switchboard service.
+                          Default is 4001. The Switchboard handles document storage.
+                        
+  --reactor-port <port>    Specify the port to use for the Local Reactor service.
+                          Default is 4002. The Reactor provides the main API and connects to switchboard.
+                        
+  --https-key-file <path>  Path to the SSL key file if using HTTPS for secure connections.
+                        
+  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
+                        
+  --config-file <path>     Path to the powerhouse.config.js file. This allows you to
+                          customize the behavior of all services in the Vetra development environment.
+                        
+  -w, --watch              Watch for local changes to document models and processors,
+                          and automatically update both the Switchboard and Reactor accordingly.
+
+Examples:
+  $ ph vetra                                           # Start complete Vetra environment with defaults
+  $ ph vetra --generate                                # Auto-generate code on model changes
+  $ ph vetra --switchboard-port 5000 --reactor-port 5001  # Use custom ports
+  $ ph vetra --config-file custom.powerhouse.config.js # Use custom configuration
+  $ ph vetra --watch                                   # Watch for changes and auto-update
+  $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 
 ---

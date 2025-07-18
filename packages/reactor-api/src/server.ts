@@ -32,7 +32,7 @@ import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { type API, type SubgraphClass } from "./types.js";
+import { type API, type Processor, type SubgraphClass } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
@@ -58,10 +58,7 @@ type Options = {
     | boolean
     | undefined;
   packageLoader?: IPackageLoader;
-  processors?: Record<
-    string,
-    ((module: IProcessorHostModule) => ProcessorFactory)[]
-  >;
+  processors?: Record<string, Processor>;
 };
 
 const DEFAULT_PORT = 4000;
