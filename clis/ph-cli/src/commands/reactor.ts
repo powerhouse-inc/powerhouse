@@ -40,6 +40,11 @@ export function reactorCommand(program: Command) {
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
     )
+    .option("--remote-drives <urls>", "comma-separated remote drive URLs")
+    .option(
+      "--remote-drives-config <configFile>",
+      "path to JSON file containing remote drive configurations",
+    )
     .action(async (...args: [ReactorOptions]) => {
       await switchboard(...args);
     });

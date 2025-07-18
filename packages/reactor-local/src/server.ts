@@ -1,17 +1,58 @@
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
-import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
+import { InMemoryCache, logger, ReactorBuilder, type DocumentDriveServerOptions, type DefaultRemoteDriveInput } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
 import {
   DefaultStartServerOptions,
   type LocalReactor,
   type StartServerOptions,
+  type RemoteDriveInputSimple,
 } from "./types.js";
 import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
 import { VitePackageLoader } from "./vite-loader.js";
 
 dotenv.config();
+
+/**
+ * Normalizes remote drive input to DefaultRemoteDriveInput format.
+ * If a string URL is provided, it uses Connect-compatible defaults.
+ */
+function normalizeRemoteDriveInput(input: RemoteDriveInputSimple): DefaultRemoteDriveInput {
+  if (typeof input === 'string') {
+    // URL-only input, use Connect-compatible defaults
+    return {
+      url: input,
+      options: {
+        sharingType: 'public',
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: input,
+              name: 'switchboard-push',
+              transmitterType: 'SwitchboardPush',
+            },
+            filter: {
+              branch: ['main'],
+              documentId: ['*'],
+              documentType: ['*'],
+              scope: ['global'],
+            },
+            label: 'Switchboard Sync',
+            listenerId: '1',
+            system: true,
+          },
+        ],
+        triggers: [],
+      },
+    };
+  }
+  
+  // Already a complete configuration, return as-is
+  return input;
+}
 
 const startServer = async (
   options?: StartServerOptions,
@@ -26,6 +67,7 @@ const startServer = async (
     packages = [],
     configFile,
     logLevel,
+    remoteDrives = [],
   } = {
     ...DefaultStartServerOptions,
     ...options,
@@ -50,10 +92,23 @@ const startServer = async (
 
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
-  const driveServer = new ReactorBuilder([])
+  const reactorBuilder = new ReactorBuilder([])
     .withCache(cache)
-    .withStorage(createStorage(storage, cache))
-    .build();
+    .withStorage(createStorage(storage, cache));
+
+  // Configure remote drives if provided
+  if (remoteDrives.length > 0) {
+    const processedRemoteDrives = remoteDrives.map(normalizeRemoteDriveInput);
+    const serverOptions: DocumentDriveServerOptions = {
+      defaultDrives: {
+        loadOnInit: true,
+        remoteDrives: processedRemoteDrives,
+      },
+    };
+    reactorBuilder.withOptions(serverOptions);
+  }
+
+  const driveServer = reactorBuilder.build();
 
   // init drive server + add a default drive
   await driveServer.initialize();

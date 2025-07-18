@@ -1,6 +1,8 @@
 import { type LogLevel } from "@powerhousedao/config";
-import { type DriveInput, type IDocumentDriveServer } from "document-drive";
+import { type DriveInput, type IDocumentDriveServer, type DefaultRemoteDriveInput } from "document-drive";
 import path from "node:path";
+
+export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
@@ -24,6 +26,7 @@ export type StartServerOptions = {
     | boolean
     | undefined;
   logLevel?: LogLevel;
+  remoteDrives?: RemoteDriveInputSimple[];
 };
 
 export const DefaultStartServerOptions = {
