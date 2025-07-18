@@ -56,7 +56,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 After defining your database schema, generate TypeScript types for type-safe queries and better IDE support:
 
 ```bash
-ph generate --migration-file processors/todo-processor/migrations.js --schema-file processors/todo-processor/schema.ts
+ph generate --migration-file processors/todo-processor/migrations.ts 
 ```
 
 Check your `processors/todo-processor/schema.ts` file after generation - it will contain the TypeScript types for your database schema.
