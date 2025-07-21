@@ -1,4 +1,4 @@
-import { useUnwrappedReactor } from '#store';
+import { useUnwrappedReactor } from '@powerhousedao/state';
 import type { IDocumentDriveServer } from 'document-drive';
 import { type DocumentDriveDocument } from 'document-drive';
 import { type OperationScope, type PHDocument } from 'document-model';
