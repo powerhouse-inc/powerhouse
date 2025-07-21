@@ -1,11 +1,9 @@
-import { ReadModeContextProvider, SentryProvider } from '#context';
+import { SentryProvider } from '#context';
 import { DocumentEditorDebugTools, serviceWorkerManager } from '#utils';
 import { ToastContainer, WagmiContext } from '@powerhousedao/design-system';
-import { UiNodesContextProvider } from '@powerhousedao/reactor-browser/hooks/useUiNodesContext';
 import { Suspense } from 'react';
 import ProcessorManagerProvider from '../context/processor-manager.js';
 import { useRenown } from '../hooks/useRenown.js';
-import { useProcessorManager } from '../store/processors.js';
 import Analytics from './analytics.js';
 import { Router } from './router.js';
 
@@ -20,31 +18,21 @@ const PreloadRenown = () => {
     return null;
 };
 
-const PreloadProcessorManager = () => {
-    useProcessorManager();
-    return null;
-};
-
 const App = () => (
     <>
         <SentryProvider>
             <WagmiContext>
-                <ReadModeContextProvider>
-                    <ProcessorManagerProvider>
-                        <ToastContainer
-                            position="bottom-right"
-                            containerId="connect"
-                        />
-                        <UiNodesContextProvider>
-                            <Router />
-                            <Analytics />
-                        </UiNodesContextProvider>
-                    </ProcessorManagerProvider>
-                </ReadModeContextProvider>
+                <ProcessorManagerProvider>
+                    <ToastContainer
+                        position="bottom-right"
+                        containerId="connect"
+                    />
+                    <Router />
+                    <Analytics />
+                </ProcessorManagerProvider>
             </WagmiContext>
         </SentryProvider>
         <Suspense>
-            <PreloadProcessorManager />
             <PreloadRenown />
         </Suspense>
     </>

@@ -66,6 +66,34 @@ export function useInitializeReactor(
         logger.verbose("defaultRemoteDrive");
         refresh();
       });
+      reactor.on("clientStrandsError", () => {
+        logger.verbose("clientStrandsError");
+        refresh();
+      });
+      reactor.on("driveAdded", () => {
+        logger.verbose("driveAdded");
+        refresh();
+      });
+      reactor.on("driveDeleted", () => {
+        logger.verbose("driveDeleted");
+        refresh();
+      });
+      reactor.on("documentModelModules", () => {
+        logger.verbose("documentModelModules");
+        refresh();
+      });
+      reactor.on("documentOperationsAdded", () => {
+        logger.verbose("documentOperationsAdded");
+        refresh();
+      });
+      reactor.on("driveOperationsAdded", () => {
+        logger.verbose("driveOperationsAdded");
+        refresh();
+      });
+      reactor.on("operationsAdded", () => {
+        logger.verbose("operationsAdded");
+        refresh();
+      });
 
       // Set the reactor instance atom.
       setReactor(reactor);

@@ -1,14 +1,17 @@
-import { type Meta, type StoryObj } from "@storybook/react";
-import { createDriveStoryWithUINodes } from "../utils/storybook.js";
+import { createDriveStory } from "#editors/utils/storybook";
+import { type EditorStoryComponent } from "@powerhousedao/builder-tools/editor-utils";
+import { type Meta } from "@storybook/react";
+import { type DocumentDriveDocument } from "document-drive";
 import Editor from "./editor.js";
 
-const { meta: _meta, CreateDocumentStory } =
-  createDriveStoryWithUINodes(Editor);
+const { meta: _meta, CreateDocumentStory } = createDriveStory(
+  Editor as EditorStoryComponent<DocumentDriveDocument>,
+);
 
-const meta: Meta<typeof Editor> = {
+const meta = {
   ..._meta,
   title: "Generic Drive Explorer",
-};
-export const Empty: StoryObj<typeof Editor> = CreateDocumentStory;
+} as Meta<typeof Editor>;
+export const Empty = CreateDocumentStory;
 
 export default meta;

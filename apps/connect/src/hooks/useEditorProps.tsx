@@ -1,10 +1,5 @@
 import { useModal } from '#components';
-import {
-    themeAtom,
-    useFileNodeDocument,
-    useGetDocumentModelModule,
-    useUser,
-} from '#store';
+import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -14,10 +9,10 @@ import {
     validateDocument,
 } from '#utils';
 import {
-    type UiDriveNode,
-    type UiFileNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+    useParentFolder,
+    useSetSelectedNode,
+    useUnwrappedSelectedDrive,
+} from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -47,19 +42,15 @@ export interface EditorProps {
     isAllowedToEditDocuments: boolean;
 }
 
-export function useEditorDispatch(
-    node: UiDriveNode | UiFileNode | null,
-    documentDispatch: DocumentDispatch<PHDocument>,
+export function useEditorDispatch<T extends PHDocument = PHDocument>(
+    document: T | undefined,
+    documentDispatch: DocumentDispatch<T>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-
-    const documentType =
-        node?.kind === 'DRIVE'
-            ? 'powerhouse/document-drive'
-            : node?.documentType;
+    const documentType = document?.header.documentType;
     const getDocumentModelModule = useGetDocumentModelModule();
     const documentModelModule = useMemo(
         () => (documentType ? getDocumentModelModule(documentType) : undefined),
@@ -72,14 +63,14 @@ export function useEditorDispatch(
                 operation,
                 state,
             ) => {
-                if (!node?.id) return;
+                if (!document?.header.id) return;
 
                 const { prevState } = state;
 
                 signOperation(
                     operation,
                     sign,
-                    node.id,
+                    document.header.id,
                     prevState,
                     documentModelModule?.reducer,
                     user,
@@ -104,7 +95,7 @@ export function useEditorDispatch(
             connectDid,
             documentModelModule?.reducer,
             onAddOperation,
-            node,
+            document?.header.id,
             sign,
             user,
         ],
@@ -113,10 +104,9 @@ export function useEditorDispatch(
     return dispatch;
 }
 
-export function useEditorProps(
-    document: PHDocument | undefined,
-    node: UiDriveNode | UiFileNode | null,
-    documentDispatch: DocumentDispatch<PHDocument>,
+export function useEditorProps<T extends PHDocument = PHDocument>(
+    document: T | undefined,
+    documentDispatch: DocumentDispatch<T>,
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const { t } = useTranslation();
@@ -124,10 +114,10 @@ export function useEditorProps(
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
-
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const parentFolder = useParentFolder(document?.header.id);
+    const setSelectedNode = useSetSelectedNode();
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-    const { selectedDocument } = useFileNodeDocument();
-    const { selectedParentNode, setSelectedNode } = useUiNodesContext();
     const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
@@ -136,7 +126,11 @@ export function useEditorProps(
             document.header.revision.local > 0);
     const canRedo = !!document?.clipboard.length;
 
-    const dispatch = useEditorDispatch(node, documentDispatch, onAddOperation);
+    const dispatch = useEditorDispatch(
+        document,
+        documentDispatch,
+        onAddOperation,
+    );
 
     const handleUndo = useCallback(() => {
         dispatch(undo());
@@ -147,8 +141,8 @@ export function useEditorProps(
     }, [dispatch]);
 
     const onClose = useCallback(() => {
-        setSelectedNode(selectedParentNode);
-    }, [selectedParentNode, setSelectedNode]);
+        setSelectedNode(parentFolder?.id ?? selectedDrive?.header.id);
+    }, [parentFolder, selectedDrive?.header.id, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -185,10 +179,10 @@ export function useEditorProps(
     );
 
     const onExport = useCallback(() => {
-        if (selectedDocument) {
-            return exportDocument(selectedDocument);
+        if (document) {
+            return exportDocument(document);
         }
-    }, [exportDocument, selectedDocument]);
+    }, [exportDocument, document]);
 
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const showRevisionHistory = useCallback(

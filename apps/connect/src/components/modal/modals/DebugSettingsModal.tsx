@@ -10,6 +10,7 @@ import {
 } from '@powerhousedao/design-system';
 import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
+import { useUnwrappedDrives } from '../../../../../../packages/state/dist/drives';
 export interface DebugSettingsModalProps {
     open: boolean;
     onClose: () => void;
@@ -41,23 +42,20 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         label: autoRegisterPullResponder ? 'Enabled' : 'Disabled',
         value: autoRegisterPullResponder ? 'true' : 'false',
     });
-    const {
-        documentDrives,
-        removeTrigger,
-        addTrigger,
-        registerNewPullResponderTrigger,
-    } = useDocumentDriveServer();
+    const drives = useUnwrappedDrives();
+    const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
+        useDocumentDriveServer();
 
     useEffect(() => {
         serviceWorkerManager.setDebug(serviceWorkerDebugMode.value);
     }, [serviceWorkerDebugMode]);
 
-    console.log('documentDrives', documentDrives);
+    console.log('drives', drives);
     console.log('selectedDrive', selectedDrive);
 
     const driveTriggers =
-        documentDrives.find(drive => drive.header.id === selectedDrive)?.state
-            .local.triggers || [];
+        drives?.find(drive => drive.header.id === selectedDrive)?.state.local
+            .triggers || [];
 
     const isEmptyURL = driveUrl === '';
     const disableUrlButtons = !selectedDrive || isEmptyURL;
@@ -78,6 +76,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                 driveUrl,
                 { pullInterval: 3000 },
             );
+            if (!pullResponderTrigger) return;
             await addTrigger(selectedDrive, pullResponderTrigger);
             setDriveUrl('');
 
@@ -156,8 +155,8 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
                             setSelectedDrive(value.value as string);
                             setSelectedDriveTrigger(null);
                         }}
-                        options={documentDrives.map(drive => ({
-                            label: drive.state.global.name,
+                        options={drives?.map(drive => ({
+                            label: drive.header.name,
                             value: drive.header.id,
                         }))}
                     />

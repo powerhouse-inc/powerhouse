@@ -1,21 +1,16 @@
 import IconConnect from '#assets/icons/connect.svg?react';
 import IconLogo from '#assets/icons/logo.svg?react';
 import { ModalManager } from '#components';
-import {
-    isElectron,
-    isMac,
-    useLoadInitialData,
-    useLogin,
-    useNodeNavigation,
-} from '#hooks';
+import { isElectron, isMac, useLoadInitialData, useLogin } from '#hooks';
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLoadData } from '../hooks/useLoadData.js';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
+    useLoadData();
     useLoadInitialData();
-    useNodeNavigation();
 
     const navigate = useNavigate();
     const { login } = useLogin();

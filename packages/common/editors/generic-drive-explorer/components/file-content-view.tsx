@@ -1,19 +1,24 @@
 import {
   FileItem,
+  type SharingType,
+  type TNodeActions,
   useWindowSize,
-  type BaseUiFileNode,
 } from "@powerhousedao/design-system";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type { FileNode, Node, SyncStatus } from "document-drive";
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-type Props = {
-  fileNodes: BaseUiFileNode[];
-  onSelectNode: (uiNode: BaseUiFileNode) => void;
-  onRenameNode: (name: string, uiNode: BaseUiFileNode) => void;
-  onDuplicateNode: (uiNode: BaseUiFileNode) => void;
-  onDeleteNode: (uiNode: BaseUiFileNode) => void;
+type Props = TNodeActions & {
+  fileNodes: FileNode[];
   isAllowedToCreateDocuments: boolean;
+  sharingType: SharingType;
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: SharingType,
+  ) => SyncStatus | undefined;
+  setSelectedNode: (id: string | undefined) => void;
+  showDeleteNodeModal: (node: Node) => void;
 };
 
 const GAP = 8;
@@ -26,7 +31,7 @@ export function FileContentView(props: Props) {
   const parentRef = useRef(null);
   const { t } = useTranslation();
   const windowSize = useWindowSize();
-  const { fileNodes, ...fileProps } = props;
+  const { fileNodes } = props;
   const availableWidth = windowSize.innerWidth - USED_SPACE;
 
   const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
@@ -60,10 +65,7 @@ export function FileContentView(props: Props) {
   const getItemIndex = (rowIndex: number, columnIndex: number) =>
     rowIndex * columnCount + columnIndex;
 
-  const getItem = (
-    rowIndex: number,
-    columnIndex: number,
-  ): BaseUiFileNode | null => {
+  const getItem = (rowIndex: number, columnIndex: number): FileNode | null => {
     const index = getItemIndex(rowIndex, columnIndex);
     return fileNodes[index] || null;
   };
@@ -91,7 +93,7 @@ export function FileContentView(props: Props) {
           marginLeft: columnIndex === 0 ? 0 : GAP,
         }}
       >
-        <FileItem key={fileNode.id} uiNode={fileNode} {...fileProps} />
+        <FileItem key={fileNode.id} fileNode={fileNode} {...props} />
       </div>
     );
   };

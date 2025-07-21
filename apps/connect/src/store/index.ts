@@ -7,7 +7,6 @@ export const atoms = {
     themeAtom,
 };
 
-export * from './document-drive.js';
 export * from './document-model.js';
 export * from './editor.js';
 export * from './external-packages.js';

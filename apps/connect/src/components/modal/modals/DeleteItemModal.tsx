@@ -1,13 +1,10 @@
-import {
-    ConnectDeleteItemModal,
-    type UiFileNode,
-    type UiFolderNode,
-} from '@powerhousedao/design-system';
+import { ConnectDeleteItemModal } from '@powerhousedao/design-system';
+import { useNodeKind, useNodeName } from '@powerhousedao/state';
 import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export interface DeleteItemModalProps {
-    uiNode: UiFileNode | UiFolderNode;
+    id: string;
     open: boolean;
     onDelete: (closeModal: () => void) => void;
     onClose: () => void;
@@ -15,8 +12,13 @@ export interface DeleteItemModalProps {
 
 export const DeleteItemModal: React.FC<DeleteItemModalProps> = props => {
     const { t } = useTranslation();
-    const { uiNode, open, onClose, onDelete } = props;
-    const { kind, name } = uiNode;
+    const { id, open, onClose, onDelete } = props;
+    const name = useNodeName(id);
+    const kind = useNodeKind(id);
+
+    if (!name || !kind) {
+        return null;
+    }
 
     return (
         <ConnectDeleteItemModal

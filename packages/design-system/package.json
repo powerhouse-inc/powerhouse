@@ -64,6 +64,7 @@
     "@hookform/devtools": "^4.3.1",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "document-drive": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",

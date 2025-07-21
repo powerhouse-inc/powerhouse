@@ -1,4 +1,9 @@
-import { type FileNode, type FolderNode, type Node } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  type FileNode,
+  type FolderNode,
+  type Node,
+} from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback } from "react";
 import {
@@ -6,8 +11,9 @@ import {
   setSelectedNodeAtom,
   unwrappedNodesAtom,
 } from "./atoms.js";
-import { useSelectedDrive } from "./drives.js";
-import { useSelectedFolder } from "./folders.js";
+import { useUnwrappedSelectedDocument } from "./documents.js";
+import { useUnwrappedDrives, useUnwrappedSelectedDrive } from "./drives.js";
+import { useUnwrappedSelectedFolder } from "./folders.js";
 import { type Loadable, type NodeKind } from "./types.js";
 import { extractDriveFromPath, makeNodeUrlComponent } from "./utils.js";
 
@@ -62,30 +68,40 @@ export function useNodeById(id: string | null | undefined) {
 }
 
 /** Returns a resolved promise of the parent folder for a node. */
-export function useParentFolder(id: string | null | undefined) {
+export function useParentFolderId(id: string | null | undefined) {
   const node = useNodeById(id);
   return node?.parentFolder ?? undefined;
 }
 
-/** Returns a loadable of the path to a node. */
-export function useNodePath(
-  id: string | null | undefined,
-): Loadable<Node[] | undefined> {
-  const loadableNodes = useNodes();
-  const loadableSelectedDrive = useSelectedDrive();
-  if (loadableSelectedDrive.state !== "hasData") return loadableSelectedDrive;
-  if (loadableNodes.state !== "hasData") return loadableNodes;
-  const nodes = loadableNodes.data;
-  const selectedDrive = loadableSelectedDrive.data;
-  if (!nodes || !selectedDrive) return { state: "hasData", data: undefined };
-  const driveFolderNode: FolderNode = {
-    id: selectedDrive.header.id,
-    name: selectedDrive.state.global.name,
-    kind: "FOLDER",
-    parentFolder: null,
-  };
+/** Returns a resolved promise of the parent folder for a node. */
+export function useParentFolder(id: string | null | undefined) {
+  const parentFolderId = useParentFolderId(id);
+  const nodes = useUnwrappedNodes();
+  const parentFolder = nodes
+    ?.filter((n): n is FolderNode => isFolderNodeKind(n))
+    .find((n) => n.id === parentFolderId);
+  return parentFolder;
+}
 
-  const path: Node[] = [driveFolderNode];
+/** Returns the selected folder or document's parent folder. */
+export function useSelectedParentFolder() {
+  const selectedFolder = useUnwrappedSelectedFolder();
+  const selectedDocument = useUnwrappedSelectedDocument();
+  const selectedNodeId = selectedDocument?.header.id ?? selectedFolder?.id;
+  return useParentFolder(selectedNodeId);
+}
+
+/** Returns a loadable of the path to a node. */
+export function useNodePath(id: string | null | undefined): Node[] {
+  const nodes = useUnwrappedNodes();
+  const selectedDrive = useUnwrappedSelectedDrive();
+  if (!nodes || !selectedDrive) return [];
+  const driveFolderNode = makeFolderNodeFromDrive(selectedDrive);
+
+  const path: Node[] = [];
+  if (driveFolderNode) {
+    path.unshift(driveFolderNode);
+  }
   let current = nodes.find((n) => n.id === id);
 
   while (current) {
@@ -94,27 +110,74 @@ export function useNodePath(
     current = nodes.find((n) => n.id === current?.parentFolder);
   }
 
-  return { state: "hasData", data: path.reverse() };
+  return path.reverse();
+}
+
+export function useSelectedNodePath() {
+  const selectedFolder = useUnwrappedSelectedFolder();
+  const selectedDocument = useUnwrappedSelectedDocument();
+  const selectedNodeId = selectedDocument?.header.id ?? selectedFolder?.id;
+  return useNodePath(selectedNodeId);
 }
 
 /** Returns a loadable of the child nodes for the selected drive or folder. */
-export function useChildNodes(): Loadable<Node[] | undefined> {
-  const nodes = useNodes();
-  const selectedFolder = useSelectedFolder();
-  if (nodes.state !== "hasData") return nodes;
-  if (selectedFolder.state !== "hasData") return selectedFolder;
-  const selectedFolderId = selectedFolder.data?.id;
-  if (!selectedFolderId)
-    return {
-      state: "hasData",
-      data: sortNodesByName(nodes.data ?? []),
-    };
-  return {
-    state: "hasData",
-    data: sortNodesByName(
-      nodes.data?.filter((n) => n.parentFolder === selectedFolderId) ?? [],
-    ),
-  };
+export function useChildNodes(): Node[] {
+  const nodes = useUnwrappedNodes();
+  const selectedFolder = useUnwrappedSelectedFolder();
+  const selectedFolderId = selectedFolder?.id;
+  if (!nodes) return [];
+  if (!selectedFolderId) return sortNodesByName(nodes);
+  return sortNodesByName(
+    nodes.filter((n) => n.parentFolder === selectedFolderId),
+  );
+}
+
+/** Returns the folder child nodes for the selected drive or folder. */
+export function useFolderChildNodes(): FolderNode[] {
+  const childNodes = useChildNodes();
+  return sortNodesByName(childNodes.filter((n) => isFolderNodeKind(n)));
+}
+
+/** Returns the file (document) child nodes for the selected drive or folder. */
+export function useFileChildNodes(): FileNode[] {
+  const childNodes = useChildNodes();
+  return sortNodesByName(childNodes.filter((n) => isFileNodeKind(n)));
+}
+
+/** Returns the child nodes for a node by id. */
+export function useChildNodesForId(id: string | null | undefined) {
+  const nodes = useUnwrappedNodes();
+  const drives = useUnwrappedDrives();
+  if (!nodes || !drives) return [];
+  const isDrive = drives.some((d) => d.header.id === id);
+  const childNodes = isDrive
+    ? nodes
+    : nodes.filter((n) => n.parentFolder === id);
+  return sortNodesByName(childNodes);
+}
+
+/** Returns the folder child nodes for a node by id. */
+export function useFolderChildNodesForId(
+  id: string | null | undefined,
+): FolderNode[] {
+  const childNodes = useChildNodesForId(id);
+  return sortNodesByName(childNodes.filter((n) => isFolderNodeKind(n)));
+}
+
+/** Returns the file (document) child nodes for a node by id. */
+export function useFileChildNodesForId(
+  id: string | null | undefined,
+): FileNode[] {
+  const childNodes = useChildNodesForId(id);
+  return sortNodesByName(childNodes.filter((n) => isFileNodeKind(n)));
+}
+
+/** Returns the name of a node. */
+export function useNodeName(id: string | null | undefined) {
+  const unwrappedNodes = useUnwrappedNodes();
+  if (!unwrappedNodes) return undefined;
+  const node = unwrappedNodes.find((n) => n.id === id);
+  return node?.name;
 }
 
 /** Returns the kind of a node. */
@@ -145,4 +208,16 @@ export function isFolderNodeKind(
 ): node is FolderNode {
   if (!node) return false;
   return node.kind.toUpperCase() === "FOLDER";
+}
+
+export function makeFolderNodeFromDrive(
+  drive: DocumentDriveDocument | null | undefined,
+): FolderNode | undefined {
+  if (!drive) return undefined;
+  return {
+    id: drive.header.id,
+    name: drive.state.global.name,
+    kind: "FOLDER",
+    parentFolder: null,
+  };
 }

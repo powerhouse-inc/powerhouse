@@ -1,10 +1,7 @@
 import { useDocumentDriveServer } from '#hooks';
-import {
-    DangerZone as BaseDangerZone,
-    type UiDriveNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
-import { logger } from 'document-drive';
+import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
+import { useUnwrappedDrives } from '@powerhousedao/state';
+import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -15,14 +12,14 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
 }) => {
     const { t } = useTranslation();
     const { clearStorage, deleteDrive } = useDocumentDriveServer();
-    const { driveNodes } = useUiNodesContext();
+    const drives = useUnwrappedDrives();
     const { showModal } = useModal();
     const navigate = useNavigate();
 
     const handleDeleteDrive = useCallback(
-        async (drive: UiDriveNode) => {
+        async (drive: DocumentDriveDocument) => {
             navigate('/');
-            await deleteDrive(drive.driveId);
+            await deleteDrive(drive.header.id);
         },
         [deleteDrive, navigate],
     );
@@ -50,7 +47,7 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
 
     return (
         <BaseDangerZone
-            drives={driveNodes}
+            drives={drives ?? []}
             onDeleteDrive={handleDeleteDrive}
             onClearStorage={handleClearStorage}
         />

@@ -1,13 +1,14 @@
-import { CLOUD, PUBLIC, type UiDriveNode } from "#connect";
+import { CLOUD, PUBLIC, type SharingType } from "#connect";
 import { Icon } from "#powerhouse";
 import { cn } from "#ui";
 import { capitalCase } from "change-case";
+import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
-  drives: UiDriveNode[];
-  onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
+  drives: DocumentDriveDocument[];
+  onDeleteDrive: (drive: DocumentDriveDocument) => void;
   className?: string;
 };
 
@@ -44,35 +45,61 @@ function DriveList(props: ModifyDrivesProps) {
   return (
     <div className={className}>
       {props.drives.map((drive) => (
-        <Drive key={drive.id} drive={drive} {...rest} />
+        <Drive key={drive.header.id} drive={drive} {...rest} />
       ))}
     </div>
   );
 }
 
-function Drive(props: ModifyDrivesProps & { drive: UiDriveNode }) {
+function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   const { drive, className, onDeleteDrive } = props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const localDriveIcon = <Icon name="Hdd" size={16} className="flex-none" />;
 
   const cloudDriveIcon = <Icon name="Server" size={16} className="flex-none" />;
 
-  const publicDriveIcon =
-    "icon" in drive && !!drive.icon ? (
-      <img
-        alt="drive icon"
-        className="size-4 flex-none object-contain"
-        src={drive.icon}
-      />
-    ) : (
-      <Icon name="M" size={16} className="flex-none" />
-    );
+  const publicDriveIcon = drive.state.global.icon ? (
+    <img
+      alt="drive icon"
+      className="size-4 flex-none object-contain"
+      src={drive.state.global.icon}
+    />
+  ) : (
+    <Icon name="M" size={16} className="flex-none" />
+  );
+
+  function getDriveSharingType(
+    drive:
+      | {
+          state: {
+            local: {
+              sharingType?: string | null;
+            };
+          };
+          readContext?: {
+            sharingType?: string | null;
+          };
+        }
+      | undefined
+      | null,
+  ) {
+    if (!drive) return "PUBLIC";
+    const isReadDrive = "readContext" in drive;
+    const { sharingType: _sharingType } = !isReadDrive
+      ? drive.state.local
+      : { sharingType: "PUBLIC" };
+    const __sharingType = _sharingType?.toUpperCase();
+    return (
+      __sharingType === "PRIVATE" ? "LOCAL" : __sharingType
+    ) as SharingType;
+  }
 
   function getNodeIcon() {
-    if (drive.sharingType === PUBLIC) {
+    const sharingType = getDriveSharingType(drive);
+    if (sharingType === PUBLIC) {
       return publicDriveIcon;
     }
-    if (drive.sharingType === CLOUD) {
+    if (sharingType === CLOUD) {
       return cloudDriveIcon;
     }
     return localDriveIcon;
@@ -90,11 +117,11 @@ function Drive(props: ModifyDrivesProps & { drive: UiDriveNode }) {
       {icon}
       <div>
         <span className="block text-sm font-medium leading-[18px]">
-          {capitalCase(drive.name)}
+          {capitalCase(drive.header.name)}
         </span>
         <div className="flex items-baseline gap-x-2 leading-[18px]">
           <span className="text-sm text-gray-600">
-            {capitalCase(drive.sharingType)} App
+            {capitalCase(getDriveSharingType(drive))} App
           </span>
           <a className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-[#9896FF]">
             By Powerhouse

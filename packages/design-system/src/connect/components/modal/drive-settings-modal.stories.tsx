@@ -1,6 +1,6 @@
-import { mockLocalDrive } from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type DocumentDriveDocument } from "document-drive";
 import { DriveSettingsModal } from "./index.js";
 
 const meta = {
@@ -14,12 +14,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    uiDriveNode: mockLocalDrive,
+    drive: {
+      header: {
+        id: "1",
+        name: "Drive 1",
+      },
+    } as DocumentDriveDocument,
     onChangeAvailableOffline() {},
     onRenameDrive() {},
     onChangeSharingType() {},
     onDeleteDrive() {},
     onOpenChange() {},
+    sharingType: "LOCAL",
+    availableOffline: true,
     open: true,
   },
   render: function Wrapper(args) {

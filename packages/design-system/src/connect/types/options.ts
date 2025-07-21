@@ -6,8 +6,8 @@ import {
   type nodeOptions,
   type normalNodeOptions,
   type SharingType,
-  type UiNode,
 } from "#connect";
+import { type Node } from "document-drive";
 import { type ReactNode } from "react";
 
 export type OptionMetadata = {
@@ -33,5 +33,5 @@ export type TNodeOptions = Record<
 >;
 
 export type DropdownMenuHandlers = Partial<
-  Record<NodeOption, (uiNode?: UiNode | null) => void>
+  Record<NodeOption, (node?: Node | null) => void>
 >;

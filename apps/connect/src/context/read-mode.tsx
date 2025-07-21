@@ -1,4 +1,5 @@
-import { drivesToHash, useUserPermissions } from '#hooks';
+import { useUserPermissions } from '#hooks';
+import { useUnwrappedReactor } from '@powerhousedao/state';
 import {
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
@@ -14,6 +15,7 @@ import {
     type RemoteDriveOptions,
 } from 'document-drive';
 import { type PHDocument } from 'document-model';
+import isEqual from 'fast-deep-equal';
 import {
     createContext,
     type FC,
@@ -23,7 +25,6 @@ import {
     useMemo,
     useState,
 } from 'react';
-import { useAsyncReactor } from '../store/reactor.js';
 
 export interface IReadModeContext extends IReadModeDriveServer {
     readDrives: ReadDrive[];
@@ -179,7 +180,7 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
-    const reactor = useAsyncReactor();
+    const reactor = useUnwrappedReactor();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
     const [ready, setReady] = useState(false);
@@ -231,7 +232,7 @@ export const ReadModeContextProvider: FC<
         const unsubscribe = ReadModeInstance.onReadDrivesUpdate(newDrives => {
             setReadDrives(readDrives =>
                 readDrives.length !== newDrives.length ||
-                drivesToHash(readDrives) !== drivesToHash(newDrives)
+                !isEqual(readDrives, newDrives)
                     ? newDrives
                     : readDrives,
             );

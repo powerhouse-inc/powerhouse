@@ -1,20 +1,24 @@
 import {
     DriveSettingsModal as ConnectDriveSettingsModal,
     type SharingType,
-    type UiDriveNode,
 } from '@powerhousedao/design-system';
+import {
+    useDriveAvailableOffline,
+    useDriveSharingType,
+} from '@powerhousedao/state';
+import { type DocumentDriveDocument } from 'document-drive';
 
 type Props = {
-    uiDriveNode: UiDriveNode;
+    drive: DocumentDriveDocument;
     open: boolean;
-    onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => void;
-    onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
+    onRenameDrive: (drive: DocumentDriveDocument, newName: string) => void;
+    onDeleteDrive: (drive: DocumentDriveDocument) => void;
     onChangeSharingType: (
-        uiDriveNode: UiDriveNode,
+        drive: DocumentDriveDocument,
         newSharingType: SharingType,
     ) => void;
     onChangeAvailableOffline: (
-        uiDriveNode: UiDriveNode,
+        drive: DocumentDriveDocument,
         newAvailableOffline: boolean,
     ) => void;
     onClose: () => void;
@@ -22,7 +26,7 @@ type Props = {
 
 export function DriveSettingsModal(props: Props) {
     const {
-        uiDriveNode,
+        drive,
         open,
         onRenameDrive,
         onDeleteDrive,
@@ -30,10 +34,14 @@ export function DriveSettingsModal(props: Props) {
         onChangeSharingType,
         onClose,
     } = props;
+    const sharingType = useDriveSharingType(drive.header.id);
+    const availableOffline = useDriveAvailableOffline(drive.header.id);
 
     return (
         <ConnectDriveSettingsModal
-            uiDriveNode={uiDriveNode}
+            drive={drive}
+            sharingType={sharingType ?? 'LOCAL'}
+            availableOffline={availableOffline}
             open={open}
             onRenameDrive={onRenameDrive}
             onDeleteDrive={onDeleteDrive}

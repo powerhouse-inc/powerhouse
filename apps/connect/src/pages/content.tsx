@@ -1,83 +1,159 @@
-import { useDocumentDrives, useDocumentDriveServer } from '#hooks';
-import { useFileNodeDocument } from '#store';
-/* import {
-    useReactor,
-    useDocuments,
-    useDrives,
+import {
+    useConnectConfig,
+    useDocumentDriveServer,
+    useShowAddDriveModal,
+} from '#hooks';
+import { useGetAppNameForEditorId } from '#store';
+import {
+    HomeScreen,
+    HomeScreenAddDriveItem,
+    HomeScreenItem,
+    Icon,
+} from '@powerhousedao/design-system';
+import {
+    getDriveSharingType,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
-} from '@powerhousedao/common'; */
-import { FILE } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
-import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+    useSetSelectedDrive,
+    useUnwrappedDrives,
+    useUnwrappedSelectedDocument,
+    useUnwrappedSelectedDrive,
+    useUnwrappedSelectedFolder,
+} from '@powerhousedao/state';
+import { type DocumentDriveDocument } from 'document-drive';
+import { useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
-import { toast } from '../services/toast.js';
+
+function getDriveIcon(drive: DocumentDriveDocument) {
+    if (drive.state.global.icon) {
+        return (
+            <img
+                src={drive.state.global.icon}
+                alt={drive.header.name}
+                height={32}
+                width={32}
+            />
+        );
+    }
+    if (getDriveSharingType(drive) === 'LOCAL') {
+        return <Icon name="Hdd" size={32} />;
+    } else {
+        return <Icon name="Server" size={32} />;
+    }
+}
 
 export default function Content() {
-    const navigate = useNavigate();
-    const { driveId } = useParams();
-    const [documentDrives, , , status] = useDocumentDrives();
-    const { selectedDriveNode, selectedNode } = useUiNodesContext();
     const { addFile } = useDocumentDriveServer();
-    const { fileNodeDocument } = useFileNodeDocument();
-    /* const loadableReactor = useReactor();
-    const loadableDrives = useDrives();
-    const loadableDocuments = useDocuments();
-    const loadableSelectedDrive = useSelectedDrive();
-    const loadableSelectedFolder = useSelectedFolder();
-    const loadableSelectedDocument = useSelectedDocument();
-
-    console.log('in content', {
-        loadableReactor,
-        loadableDrives,
-        loadableDocuments,
-        loadableSelectedDrive,
-        loadableSelectedFolder,
-        loadableSelectedDocument,
-    }); */
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedFolder = useUnwrappedSelectedFolder();
+    const selectedDocument = useUnwrappedSelectedDocument();
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
-            if (!selectedDriveNode || selectedNode?.kind !== FILE) {
+            if (!selectedDrive?.header.id || !selectedDocument?.header.id) {
                 return;
             }
 
             await addFile(
                 file.content,
-                selectedDriveNode.id,
+                selectedDrive.header.id,
                 file.name,
-                selectedNode.parentFolder,
+                selectedFolder?.id,
             );
         });
-    }, [selectedDriveNode, selectedNode, addFile]);
-
-    // if drives are loaded and route driveId is not found
-    // then redirects to homepage
-    useEffect(() => {
-        if (
-            (status === 'LOADED' || status === 'ERROR') &&
-            !documentDrives.find(
-                d =>
-                    d.header.id === driveId ||
-                    d.header.slug === driveId ||
-                    d.state.global.name === driveId,
-            )
-        ) {
-            toast(<p>Drive {driveId} not found</p>, { type: 'warning' });
-            navigate('/');
-        }
-    }, [status, driveId, documentDrives]);
+    }, [
+        selectedDrive?.header.id,
+        selectedFolder?.id,
+        selectedDocument?.header.id,
+        addFile,
+    ]);
 
     return (
+        <ContentContainer>
+            <DocumentEditorContainer />
+            <DriveEditorContainer />
+            <HomeScreenContainer />
+        </ContentContainer>
+    );
+}
+
+function ContentContainer({ children }: { children: React.ReactNode }) {
+    return (
         <div className="flex h-full flex-col overflow-auto" id="content-view">
-            {fileNodeDocument ? (
-                <DocumentEditorContainer key={fileNodeDocument.documentId} />
-            ) : selectedDriveNode ? (
-                <DriveEditorContainer key={selectedDriveNode.id} />
-            ) : null}
+            {children}
         </div>
+    );
+}
+
+function HomeScreenContainer() {
+    const { pathname } = useLocation();
+    const drives = useUnwrappedDrives();
+    const loadableSelectedDrive = useSelectedDrive();
+    const loadableSelectedFolder = useSelectedFolder();
+    const loadableSelectedDocument = useSelectedDocument();
+    const showAddDriveModal = useShowAddDriveModal();
+    const setSelectedDrive = useSetSelectedDrive();
+    const getAppDescriptionForEditorId = useGetAppNameForEditorId();
+    const [config] = useConnectConfig();
+    const handleDriveClick = useCallback(
+        (drive: DocumentDriveDocument) => {
+            setSelectedDrive(drive.header.id);
+        },
+        [setSelectedDrive],
+    );
+
+    const onAddDriveClick = useCallback(() => {
+        showAddDriveModal();
+    }, [showAddDriveModal]);
+
+    const isLoading =
+        loadableSelectedDrive.state === 'loading' ||
+        loadableSelectedFolder.state === 'loading' ||
+        loadableSelectedDocument.state === 'loading';
+
+    const isError =
+        loadableSelectedDrive.state === 'hasError' ||
+        loadableSelectedFolder.state === 'hasError' ||
+        loadableSelectedDocument.state === 'hasError';
+
+    const hasSelectedDriveOrFolderOrDocument =
+        !isLoading &&
+        !isError &&
+        (!!loadableSelectedDrive.data ||
+            !!loadableSelectedFolder.data ||
+            !!loadableSelectedDocument.data);
+
+    if (pathname !== '/') {
+        return null;
+    }
+
+    if (hasSelectedDriveOrFolderOrDocument) {
+        return null;
+    }
+
+    return (
+        <HomeScreen>
+            {drives?.map(drive => {
+                const editorId = drive.header.meta?.preferredEditor;
+                const appName = editorId
+                    ? getAppDescriptionForEditorId(editorId)
+                    : undefined;
+                return (
+                    <HomeScreenItem
+                        key={drive.header.id}
+                        title={drive.header.name}
+                        description={appName || 'Drive Explorer App'}
+                        icon={getDriveIcon(drive)}
+                        onClick={() => handleDriveClick(drive)}
+                    />
+                );
+            })}
+            {config.drives.addDriveEnabled && (
+                <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+            )}
+        </HomeScreen>
     );
 }

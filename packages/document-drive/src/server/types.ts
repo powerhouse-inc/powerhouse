@@ -370,7 +370,7 @@ export interface IBaseDocumentDriveServer {
   getDrive(
     driveId: string,
     options?: GetDocumentOptions,
-  ): Promise<DocumentDriveDocument | undefined>;
+  ): Promise<DocumentDriveDocument>;
 
   getDriveBySlug(slug: string): Promise<DocumentDriveDocument | undefined>;
   getDriveIdBySlug(

@@ -64,6 +64,48 @@ loadableReactorAtom.debugLabel = "loadableReactorAtom";
 export const unwrappedReactorAtom = unwrap(reactorAtom);
 unwrappedReactorAtom.debugLabel = "unwrappedReactorAtom";
 
+/* Processor Manager */
+
+/** Holds the processor manager instance.
+ *
+ * Like all base atoms, it is not meant to be accessed or updated directly.
+ * Starts off with the sentinel value NOT_SET.
+ */
+const baseProcessorManagerAtom = atom<
+  UnsetAtomValue | ProcessorManager | undefined
+>(NOT_SET);
+baseProcessorManagerAtom.debugLabel = "baseProcessorManagerAtom";
+
+/** Returns a promise of the processor manager instance if it is set, otherwise suspends until it is set. */
+export const processorManagerAtom = atom<Promise<ProcessorManager | undefined>>(
+  async (get) => {
+    const processorManager = get(baseProcessorManagerAtom);
+    if (processorManager === NOT_SET) return suspendUntilSet();
+    return processorManager;
+  },
+);
+processorManagerAtom.debugLabel = "processorManagerAtom";
+
+/** Sets the processor manager instance. Only runs if the baseProcessorManagerAtom is NOT_SET. */
+export const initializeProcessorManagerAtom = atom(
+  null,
+  (get, set, processorManager: ProcessorManager | undefined) => {
+    const baseProcessorManager = get(baseProcessorManagerAtom);
+    if (baseProcessorManager === NOT_SET) {
+      set(baseProcessorManagerAtom, processorManager);
+    }
+  },
+);
+initializeProcessorManagerAtom.debugLabel = "initializeProcessorManagerAtom";
+
+/** Returns a Loadable of the processor manager instance. */
+export const loadableProcessorManagerAtom = loadable(processorManagerAtom);
+loadableProcessorManagerAtom.debugLabel = "loadableProcessorManagerAtom";
+
+/** Returns a resolved promise of the processor manager instance. */
+export const unwrappedProcessorManagerAtom = unwrap(processorManagerAtom);
+unwrappedProcessorManagerAtom.debugLabel = "unwrappedProcessorManagerAtom";
+
 /* Drives */
 
 /** Holds a promise of the drives for a given reactor.
@@ -73,25 +115,27 @@ unwrappedReactorAtom.debugLabel = "unwrappedReactorAtom";
  * Does not provide a direct setter, instead it uses `atomWithRefresh` which will refetch the drives from the reactor when called.
  * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
-export const drivesAtom = atomWithRefresh(async (get) => {
-  const loadableReactor = get(loadableReactorAtom);
+export const drivesAtom = atomWithRefresh<Promise<DocumentDriveDocument[]>>(
+  async (get) => {
+    const loadableReactor = get(loadableReactorAtom);
 
-  // Suspends until the reactor is set.
-  if (loadableReactor.state !== "hasData")
-    return suspendUntilSet<DocumentDriveDocument[]>();
+    // Suspends until the reactor is set.
+    if (loadableReactor.state !== "hasData")
+      return suspendUntilSet<DocumentDriveDocument[]>();
 
-  const reactor = loadableReactor.data;
+    const reactor = loadableReactor.data;
 
-  // If the reactor is not set, returns an empty array.
-  if (!reactor) return [];
+    // If the reactor is not set, returns an empty array.
+    if (!reactor) return [];
 
-  const driveIds = (await reactor.getDrives()) ?? [];
-  const drives = (
-    await Promise.all(driveIds.map((id) => reactor.getDrive(id)))
-  ).filter((d) => d !== undefined);
+    const driveIds = (await reactor.getDrives()) ?? [];
+    const drives = await Promise.all(
+      driveIds.map((id) => reactor.getDrive(id)),
+    );
 
-  return drives;
-});
+    return drives;
+  },
+);
 drivesAtom.debugLabel = "drivesAtom";
 
 /** Returns a Loadable of the drives for a given reactor. */
@@ -266,7 +310,6 @@ export const documentsAtom = atomWithRefresh(async (get) => {
   const documents = (
     await Promise.all(documentIds.map((id) => reactor.getDocument(driveId, id)))
   ).filter((d) => d !== undefined);
-
   return documents;
 });
 documentsAtom.debugLabel = "documentsAtom";
@@ -368,13 +411,6 @@ export const loadableEditorModulesAtom = loadable(editorModulesAtom);
 loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
 export const unwrappedEditorModulesAtom = unwrap(editorModulesAtom);
 unwrappedEditorModulesAtom.debugLabel = "unwrappedEditorModulesAtom";
-
-/* Processor Manager */
-
-export const processorManagerAtom = atom<ProcessorManager | undefined>(
-  undefined,
-);
-processorManagerAtom.debugLabel = "processorManagerAtom";
 
 /* Config */
 

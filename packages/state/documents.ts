@@ -28,14 +28,27 @@ export function useRefreshDocuments() {
 export function useSelectedDocument<
   TDocument extends PHDocument = PHDocument,
 >() {
-  return useAtomValue(loadableSelectedDocumentAtom) as Loadable<TDocument>;
+  return useAtomValue(loadableSelectedDocumentAtom) as Loadable<
+    TDocument | undefined
+  >;
 }
 
 /** Returns a resolved promise of the selected document. */
 export function useUnwrappedSelectedDocument<
   TDocument extends PHDocument = PHDocument,
 >() {
-  return useAtomValue(unwrappedSelectedDocumentAtom) as TDocument;
+  return useAtomValue(unwrappedSelectedDocumentAtom) as TDocument | undefined;
+}
+
+export function useDocumentTypeById(id: string | null | undefined) {
+  const document = useUnwrappedDocumentById(id);
+  return document?.header.documentType;
+}
+
+/** Returns the document type of the selected document. */
+export function useSelectedDocumentType() {
+  const selectedDocument = useUnwrappedSelectedDocument();
+  return selectedDocument?.header.documentType;
 }
 
 /** Returns a loadable of a document for a reactor by id. */

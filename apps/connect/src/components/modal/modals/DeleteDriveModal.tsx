@@ -1,27 +1,25 @@
-import {
-    ConnectDeleteDriveModal,
-    type UiDriveNode,
-} from '@powerhousedao/design-system';
+import { ConnectDeleteDriveModal } from '@powerhousedao/design-system';
+import { type DocumentDriveDocument } from 'document-drive';
 import { useTranslation } from 'react-i18next';
 
 export interface DeleteDriveModalProps {
-    uiDriveNode: UiDriveNode;
+    drive: DocumentDriveDocument;
     open: boolean;
     onClose: () => void;
     onDelete: (closeModal: () => void) => void;
 }
 
 export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = props => {
-    const { open, onClose, uiDriveNode, onDelete } = props;
+    const { open, onClose, drive, onDelete } = props;
 
     const { t } = useTranslation();
 
     return (
         <ConnectDeleteDriveModal
             open={open}
-            driveName={uiDriveNode.name}
+            driveName={drive.header.name}
             onCancel={onClose}
-            header={t('modals.deleteDrive.title', { label: uiDriveNode.name })}
+            header={t('modals.deleteDrive.title', { label: drive.header.name })}
             body={t('modals.deleteDrive.body')}
             inputPlaceholder={t('modals.deleteDrive.inputPlaceholder')}
             cancelLabel={t('common.cancel')}
