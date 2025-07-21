@@ -14,6 +14,7 @@ export type DevOptions = {
   watch?: boolean;
   switchboardPort?: number;
   reactorPort?: number;
+  disableDefaultDrive?: boolean;
   configFile?: string;
   httpsKeyFile?: string;
   httpsCertFile?: string;
@@ -140,6 +141,7 @@ export async function startVetra({
   watch,
   switchboardPort = DefaultReactorOptions.port,
   reactorPort = DefaultReactorOptions.port + 1,
+  disableDefaultDrive,
   configFile,
 }: DevOptions) {
   try {
@@ -164,6 +166,7 @@ export async function startVetra({
         port: reactorPort,
         watch,
         https,
+        disableDefaultDrive,
       },
       driveUrl,
     );

@@ -1,13 +1,19 @@
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI } from "@powerhousedao/reactor-api";
-import { InMemoryCache, logger, ReactorBuilder, type DocumentDriveServerOptions, type DefaultRemoteDriveInput } from "document-drive";
+import {
+  InMemoryCache,
+  logger,
+  ReactorBuilder,
+  type DefaultRemoteDriveInput,
+  type DocumentDriveServerOptions,
+} from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
 import {
   DefaultStartServerOptions,
   type LocalReactor,
-  type StartServerOptions,
   type RemoteDriveInputSimple,
+  type StartServerOptions,
 } from "./types.js";
 import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
 import { VitePackageLoader } from "./vite-loader.js";
@@ -18,30 +24,31 @@ dotenv.config();
  * Normalizes remote drive input to DefaultRemoteDriveInput format.
  * If a string URL is provided, it uses Connect-compatible defaults.
  */
-function normalizeRemoteDriveInput(input: RemoteDriveInputSimple): DefaultRemoteDriveInput {
-  if (typeof input === 'string') {
-    // URL-only input, use Connect-compatible defaults
+function normalizeRemoteDriveInput(
+  input: RemoteDriveInputSimple,
+): DefaultRemoteDriveInput {
+  if (typeof input === "string") {
     return {
       url: input,
       options: {
-        sharingType: 'public',
+        sharingType: "public",
         availableOffline: true,
         listeners: [
           {
             block: true,
             callInfo: {
               data: input,
-              name: 'switchboard-push',
-              transmitterType: 'SwitchboardPush',
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
             },
             filter: {
-              branch: ['main'],
-              documentId: ['*'],
-              documentType: ['*'],
-              scope: ['global'],
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
             },
-            label: 'Switchboard Sync',
-            listenerId: '1',
+            label: "Switchboard Sync",
+            listenerId: "1",
             system: true,
           },
         ],
@@ -49,7 +56,7 @@ function normalizeRemoteDriveInput(input: RemoteDriveInputSimple): DefaultRemote
       },
     };
   }
-  
+
   // Already a complete configuration, return as-is
   return input;
 }
@@ -110,9 +117,11 @@ const startServer = async (
 
   const driveServer = reactorBuilder.build();
 
-  // init drive server + add a default drive
+  // init drive server + conditionally add a default drive
   await driveServer.initialize();
-  const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
+  const driveUrl = options?.disableDefaultDrive
+    ? null
+    : await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
   const packageLoader = vite ? new VitePackageLoader(vite) : undefined;
@@ -135,7 +144,13 @@ const startServer = async (
     api.app.use(vite.middlewares);
   }
 
-  logger.info(`  ➜  Reactor:   ${driveUrl}`);
+  if (driveUrl) {
+    logger.info(`  ➜  Reactor:   ${driveUrl}`);
+  } else {
+    logger.info(
+      `  ➜  Reactor:   http://localhost:${serverPort}/graphql (no default drive)`,
+    );
+  }
 
   return {
     driveUrl,

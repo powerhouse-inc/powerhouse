@@ -26,6 +26,10 @@ export function vetraCommand(program: Command) {
       "port to use for the Vetra switchboard",
     )
     .option("--reactor-port <port>", "port to use for the local reactor")
+    .option(
+      "--disable-default-drive",
+      "disable automatic creation of the default 'powerhouse' drive in the reactor",
+    )
     .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
     .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
     .option(

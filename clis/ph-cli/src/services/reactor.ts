@@ -22,6 +22,7 @@ export type ReactorOptions = StartServerOptions & {
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
+  disableDefaultDrive?: boolean;
   remoteDrives?: string;
   remoteDrivesConfig?: string;
 };

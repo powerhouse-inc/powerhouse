@@ -37,6 +37,10 @@ export function reactorCommand(program: Command) {
       "if the reactor should watch for local changes to document models and processors",
     )
     .option(
+      "--disable-default-drive",
+      "disable automatic creation of the default 'powerhouse' drive",
+    )
+    .option(
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
     )

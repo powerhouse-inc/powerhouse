@@ -1,5 +1,9 @@
 import { type LogLevel } from "@powerhousedao/config";
-import { type DriveInput, type IDocumentDriveServer, type DefaultRemoteDriveInput } from "document-drive";
+import {
+  type DefaultRemoteDriveInput,
+  type DriveInput,
+  type IDocumentDriveServer,
+} from "document-drive";
 import path from "node:path";
 
 export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
@@ -17,6 +21,7 @@ export type StartServerOptions = {
   storage?: StorageOptions;
   dbPath?: string;
   drive?: DriveInput;
+  disableDefaultDrive?: boolean;
   packages?: string[];
   https?:
     | {
@@ -53,7 +58,7 @@ export const DefaultStartServerOptions = {
 } satisfies StartServerOptions;
 
 export type LocalReactor = {
-  driveUrl: string;
+  driveUrl: string | null;
   getDocumentPath: (driveId: string, documentId: string) => string;
   server: IDocumentDriveServer;
 };
