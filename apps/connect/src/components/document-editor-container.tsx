@@ -24,6 +24,10 @@ export function DocumentEditorContainer() {
     const { addDocumentOperations } = useDocumentDriveServer();
     const unwrappedSelectedDrive = useUnwrappedSelectedDrive();
     const loadableSelectedDocument = useSelectedDocument();
+    // keep an internal state of the selected document
+    // we can use the 'fast-deep-equal' library to compare the documents
+    // the actual document can still update without needing to re-render the component
+    // this is updated in the `useEffect` below
     const [internalSelectedDocument, setInternalSelectedDocument] = useState<
         PHDocument | undefined
     >();
@@ -128,6 +132,9 @@ export function DocumentEditorContainer() {
     }, [isRemoteDrive, remoteUrl, selectedDocumentId, documentModelModule]);
 
     useEffect(() => {
+        // if the selected document has changed, update the internal state
+        // this allows us to only re-render the child component if the document content is really different
+        // and prevents rendering an empty state when the document changes to the loading state when performing the async update
         if (
             loadableSelectedDocument.state === 'hasData' &&
             !isDeepEqual(

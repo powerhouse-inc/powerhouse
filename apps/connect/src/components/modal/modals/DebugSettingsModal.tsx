@@ -8,9 +8,9 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
+import { useUnwrappedDrives } from '@powerhousedao/state';
 import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
-import { useUnwrappedDrives } from '../../../../../../packages/state/dist/drives';
 export interface DebugSettingsModalProps {
     open: boolean;
     onClose: () => void;
