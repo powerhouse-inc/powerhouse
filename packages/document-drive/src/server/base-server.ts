@@ -165,6 +165,7 @@ export class BaseDocumentDriveServer
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
       document.header.sig = header.sig;
+      document.header.documentType = documentType;
 
       try {
         const createdDocument = await this.createDocument(
@@ -179,13 +180,15 @@ export class BaseDocumentDriveServer
           signals: [],
         };
       } catch (error) {
+        const cause =
+          error instanceof Error ? error : new Error(JSON.stringify(error));
         return {
           status: "ERROR",
           error: new OperationError(
             "ERROR",
             undefined,
-            "Error creating document",
-            error instanceof Error ? error : new Error(JSON.stringify(error)),
+            `Error creating document: ${cause.message}`,
+            cause,
           ),
           operations: [],
           document: undefined,
@@ -2243,9 +2246,9 @@ export class BaseDocumentDriveServer
     document.header.id = action.input.id;
     document.header.name = action.input.name;
     document.header.documentType = action.input.documentType;
-    await this.createDocument(
+    await this.queueDocument(
       { document },
-      options?.source || { type: "local" },
+      { source: options?.source || { type: "local" } },
     );
 
     // create updated version of the ADD_FILE action
