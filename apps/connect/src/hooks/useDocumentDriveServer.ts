@@ -28,23 +28,23 @@ import {
     type SyncStatus,
     SynchronizationUnitNotFoundError,
     type Trigger,
-    addFolder,
-    addTrigger,
+    addFolder as baseAddFolder,
+    addTrigger as baseAddTrigger,
+    copyNode as baseCopyNode,
+    deleteNode as baseDeleteNode,
+    moveNode as baseMoveNode,
+    removeTrigger as baseRemoveTrigger,
+    updateFile as baseUpdateFile,
     childLogger,
-    copyNode,
     createDriveState,
-    deleteNode,
     documentDriveReducer,
     generateAddNodeAction,
     generateNodesCopy,
     isFileNode,
     isFolderNode,
-    moveNode,
-    removeTrigger,
     setAvailableOffline,
     setDriveName,
     setSharingType,
-    updateFile,
     updateNode,
 } from 'document-drive';
 import {
@@ -383,7 +383,7 @@ export function useDocumentDriveServer() {
         ],
     );
 
-    const handleUpdateFile = useCallback(
+    const updateFile = useCallback(
         async (
             driveId: string,
             nodeId: string,
@@ -396,7 +396,7 @@ export function useDocumentDriveServer() {
             }
             const drive = await addDriveOperation(
                 driveId,
-                updateFile({
+                baseUpdateFile({
                     id: nodeId,
                     name: name || undefined,
                     parentFolder,
@@ -415,7 +415,7 @@ export function useDocumentDriveServer() {
         [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleAddFolder = useCallback(
+    const addFolder = useCallback(
         async (driveId: string, name: string, parentFolder?: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create folders');
@@ -423,7 +423,7 @@ export function useDocumentDriveServer() {
             const folderId = generateId();
             const drive = await addDriveOperation(
                 driveId,
-                addFolder({
+                baseAddFolder({
                     id: folderId,
                     name,
                     parentFolder,
@@ -441,14 +441,14 @@ export function useDocumentDriveServer() {
         [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleDeleteNode = useCallback(
+    const deleteNode = useCallback(
         async (driveId: string, nodeId: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete documents');
             }
             await addDriveOperation(
                 driveId,
-                deleteNode({
+                baseDeleteNode({
                     id: nodeId,
                 }),
             );
@@ -484,7 +484,7 @@ export function useDocumentDriveServer() {
         [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleMoveNode = useCallback(
+    const moveNode = useCallback(
         async (src: Node, target: Node | undefined) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to move documents');
@@ -493,7 +493,7 @@ export function useDocumentDriveServer() {
 
             await addDriveOperation(
                 selectedDrive.header.id,
-                moveNode({
+                baseMoveNode({
                     srcFolder: src.id,
                     targetParentFolder: target?.id,
                 }),
@@ -506,7 +506,7 @@ export function useDocumentDriveServer() {
         ],
     );
 
-    const handleCopyNode = useCallback(
+    const copyNode = useCallback(
         async (src: Node, target: Node | undefined) => {
             if (!reactor) {
                 return;
@@ -529,7 +529,7 @@ export function useDocumentDriveServer() {
             );
 
             const copyActions = copyNodesInput.map(copyNodeInput =>
-                copyNode(copyNodeInput),
+                baseCopyNode(copyNodeInput),
             );
             const result = await reactor.addDriveActions(
                 selectedDrive.header.id,
@@ -712,11 +712,11 @@ export function useDocumentDriveServer() {
         refreshDrives();
     }, [refreshDrives, reactor, storage]);
 
-    const handleRemoveTrigger = useCallback(
+    const removeTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
             const drive = await addDriveOperation(
                 driveId,
-                removeTrigger({ triggerId }),
+                baseRemoveTrigger({ triggerId }),
             );
 
             const trigger = drive?.state.local.triggers.find(
@@ -793,11 +793,11 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
-    const handleAddTrigger = useCallback(
+    const addTrigger = useCallback(
         async (driveId: string, trigger: Trigger) => {
             const drive = await addDriveOperation(
                 driveId,
-                addTrigger({ trigger }),
+                baseAddTrigger({ trigger }),
             );
 
             const newTrigger = drive?.state.local.triggers.find(
@@ -816,17 +816,17 @@ export function useDocumentDriveServer() {
     return useMemo(
         () => ({
             addDocument,
+            addDocumentOperations,
             addDriveOperation,
             addDriveOperations,
-            addDocumentOperations,
-            openFile,
             addFile,
-            updateFile: handleUpdateFile,
-            addFolder: handleAddFolder,
-            deleteNode: handleDeleteNode,
+            addFolder,
+            openFile,
+            updateFile,
+            deleteNode,
             renameNode,
-            moveNode: handleMoveNode,
-            copyNode: handleCopyNode,
+            moveNode,
+            copyNode,
             addDrive,
             addRemoteDrive,
             deleteDrive,
@@ -836,33 +836,35 @@ export function useDocumentDriveServer() {
             getSyncStatus,
             getSyncStatusSync,
             clearStorage,
-            removeTrigger: handleRemoveTrigger,
-            addTrigger: handleAddTrigger,
+            removeTrigger,
+            addTrigger,
             registerNewPullResponderTrigger,
         }),
         [
             addDocument,
             addDocumentOperations,
-            addDrive,
+            addDriveOperation,
+            addDriveOperations,
             addFile,
-            handleAddFolder,
-            addRemoteDrive,
-            handleAddTrigger,
-            clearStorage,
-            handleCopyNode,
-            deleteDrive,
-            handleDeleteNode,
-            getSyncStatus,
-            getSyncStatusSync,
-            handleMoveNode,
+            addFolder,
             openFile,
-            registerNewPullResponderTrigger,
-            handleRemoveTrigger,
-            renameDrive,
+            updateFile,
+            deleteNode,
             renameNode,
+            moveNode,
+            copyNode,
+            addDrive,
+            addRemoteDrive,
+            deleteDrive,
+            renameDrive,
             setDriveAvailableOffline,
             setDriveSharingType,
-            handleUpdateFile,
+            getSyncStatus,
+            getSyncStatusSync,
+            clearStorage,
+            removeTrigger,
+            addTrigger,
+            registerNewPullResponderTrigger,
         ],
     );
 }
