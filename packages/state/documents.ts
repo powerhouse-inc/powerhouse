@@ -1,12 +1,17 @@
+import { logger } from "document-drive";
 import { type PHDocument } from "document-model";
 import { useAtomValue, useSetAtom } from "jotai";
+import { useCallback } from "react";
 import {
-  documentsAtom,
+  initializeDocumentsAtom,
   loadableDocumentsAtom,
   loadableSelectedDocumentAtom,
+  setDocumentsAtom,
   unwrappedDocumentsAtom,
   unwrappedSelectedDocumentAtom,
 } from "./atoms.js";
+import { useUnwrappedSelectedDrive } from "./drives.js";
+import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable } from "./types.js";
 
 /** Returns a loadable of the documents for a reactor. */
@@ -19,9 +24,37 @@ export function useUnwrappedDocuments() {
   return useAtomValue(unwrappedDocumentsAtom);
 }
 
+/** Initializes the documents for a reactor. */
+export function useInitializeDocuments() {
+  return useSetAtom(initializeDocumentsAtom);
+}
+
 /** Refreshes the documents for a reactor. */
 export function useRefreshDocuments() {
-  return useSetAtom(documentsAtom);
+  const reactor = useUnwrappedReactor();
+  const selectedDrive = useUnwrappedSelectedDrive();
+  const setDocuments = useSetAtom(setDocumentsAtom);
+
+  return useCallback(() => {
+    if (!reactor || !selectedDrive) return;
+    reactor
+      .getDocuments(selectedDrive.header.id)
+      .then((documentIds) => {
+        if (!documentIds) return;
+        Promise.all(
+          documentIds.map((id) =>
+            reactor.getDocument(selectedDrive.header.id, id),
+          ),
+        )
+          .then((documents) => {
+            setDocuments(documents.filter((d) => d !== undefined)).catch(
+              (error: unknown) => logger.error(error),
+            );
+          })
+          .catch((error: unknown) => logger.error(error));
+      })
+      .catch((error: unknown) => logger.error(error));
+  }, [reactor, selectedDrive, setDocuments]);
 }
 
 /** Returns a loadable of the selected document. */

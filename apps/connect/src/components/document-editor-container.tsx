@@ -5,13 +5,13 @@ import {
     useDriveIsRemote,
     useDriveRemoteUrl,
     useParentFolderId,
-    useSelectedDocument,
+    useRefreshDocuments,
     useSetSelectedNode,
+    useUnwrappedSelectedDocument,
     useUnwrappedSelectedDrive,
 } from '@powerhousedao/state';
 import { type Operation, type PHDocument } from 'document-model';
-import isDeepEqual from 'fast-deep-equal';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
 import { exportFile, openUrl } from '../utils/index.js';
@@ -22,21 +22,13 @@ export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
     const { addDocumentOperations } = useDocumentDriveServer();
+    const refreshDocuments = useRefreshDocuments();
     const unwrappedSelectedDrive = useUnwrappedSelectedDrive();
-    const loadableSelectedDocument = useSelectedDocument();
-    // keep an internal state of the selected document
-    // we can use the 'fast-deep-equal' library to compare the documents
-    // the actual document can still update without needing to re-render the component
-    // this is updated in the `useEffect` below
-    const [internalSelectedDocument, setInternalSelectedDocument] = useState<
-        PHDocument | undefined
-    >();
-    const selectedDriveId = unwrappedSelectedDrive?.header.id;
-    const selectedDocumentId = internalSelectedDocument?.header.id;
-    const parentFolderId = useParentFolderId(selectedDocumentId);
-    const documentType = internalSelectedDocument?.header.documentType;
-    const isRemoteDrive = useDriveIsRemote(selectedDriveId);
-    const remoteUrl = useDriveRemoteUrl(selectedDriveId);
+    const selectedDocument = useUnwrappedSelectedDocument();
+    const parentFolderId = useParentFolderId(selectedDocument?.header.id);
+    const documentType = selectedDocument?.header.documentType;
+    const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
+    const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
     const getDocumentModelModule = useGetDocumentModelModule();
     const documentModelModule = documentType
         ? getDocumentModelModule(documentType)
@@ -45,14 +37,20 @@ export function DocumentEditorContainer() {
 
     const onAddOperation = useCallback(
         async (operation: Operation) => {
-            if (!selectedDriveId || !selectedDocumentId) {
+            if (
+                !unwrappedSelectedDrive?.header.id ||
+                !selectedDocument?.header.id
+            ) {
                 return;
             }
-            await addDocumentOperations(selectedDriveId, selectedDocumentId, [
-                operation,
-            ]);
+            await addDocumentOperations(
+                unwrappedSelectedDrive.header.id,
+                selectedDocument.header.id,
+                [operation],
+            );
+            refreshDocuments();
         },
-        [addDocumentOperations, selectedDocumentId, selectedDriveId],
+        [addDocumentOperations, selectedDocument, unwrappedSelectedDrive],
     );
 
     const onClose = useCallback(() => {
@@ -94,15 +92,15 @@ export function DocumentEditorContainer() {
     );
 
     const onExport = useCallback(() => {
-        if (internalSelectedDocument) {
-            return exportDocument(internalSelectedDocument);
+        if (selectedDocument) {
+            return exportDocument(selectedDocument);
         }
-    }, [exportDocument, internalSelectedDocument]);
+    }, [exportDocument, selectedDocument]);
 
     const onOpenSwitchboardLink = useMemo(() => {
         return isRemoteDrive
             ? async () => {
-                  if (!selectedDocumentId) {
+                  if (!selectedDocument?.header.id) {
                       console.error('No selected document');
                       return;
                   }
@@ -119,7 +117,7 @@ export function DocumentEditorContainer() {
 
                   const url = buildDocumentSubgraphUrl(
                       remoteUrl,
-                      selectedDocumentId,
+                      selectedDocument.header.id,
                       documentModelModule.documentModel,
                   );
                   try {
@@ -129,29 +127,14 @@ export function DocumentEditorContainer() {
                   }
               }
             : undefined;
-    }, [isRemoteDrive, remoteUrl, selectedDocumentId, documentModelModule]);
+    }, [isRemoteDrive, remoteUrl, selectedDocument, documentModelModule]);
 
-    useEffect(() => {
-        // if the selected document has changed, update the internal state
-        // this allows us to only re-render the child component if the document content is really different
-        // and prevents rendering an empty state when the document changes to the loading state when performing the async update
-        if (
-            loadableSelectedDocument.state === 'hasData' &&
-            !isDeepEqual(
-                loadableSelectedDocument.data,
-                internalSelectedDocument,
-            )
-        ) {
-            setInternalSelectedDocument(loadableSelectedDocument.data);
-        }
-    }, [loadableSelectedDocument]);
-
-    if (!internalSelectedDocument) return null;
+    if (!selectedDocument) return null;
 
     return (
         <div className="flex-1 rounded-2xl bg-gray-50 p-4">
             <DocumentEditor
-                document={internalSelectedDocument}
+                document={selectedDocument}
                 onClose={onClose}
                 onExport={onExport}
                 onAddOperation={onAddOperation}

@@ -102,6 +102,8 @@ export async function setSelectedDriveAndNodeFromUrl(
   const drive = await handleDriveFromUrl(reactor, path, setSelectedDrive);
 
   handleNodeFromUrl(drive, path, setSelectedNode);
+
+  return drive?.header.id;
 }
 
 async function handleDriveFromUrl(

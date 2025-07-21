@@ -108,6 +108,22 @@ unwrappedProcessorManagerAtom.debugLabel = "unwrappedProcessorManagerAtom";
 
 /* Drives */
 
+const baseDrivesAtom = atom<
+  UnsetAtomValue | DocumentDriveDocument[] | undefined
+>(NOT_SET);
+baseDrivesAtom.debugLabel = "baseDrivesAtom";
+
+export const initializeDrivesAtom = atom(
+  null,
+  (get, set, drives: DocumentDriveDocument[] | undefined) => {
+    const baseDrives = get(baseDrivesAtom);
+    if (baseDrives === NOT_SET) {
+      set(baseDrivesAtom, drives);
+    }
+  },
+);
+initializeDrivesAtom.debugLabel = "initializeDrivesAtom";
+
 /** Holds a promise of the drives for a given reactor.
  *
  * Suspends until the reactor is set.
@@ -115,28 +131,39 @@ unwrappedProcessorManagerAtom.debugLabel = "unwrappedProcessorManagerAtom";
  * Does not provide a direct setter, instead it uses `atomWithRefresh` which will refetch the drives from the reactor when called.
  * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
-export const drivesAtom = atomWithRefresh<Promise<DocumentDriveDocument[]>>(
+export const drivesAtom = atom<Promise<DocumentDriveDocument[]>>(
   async (get) => {
-    const loadableReactor = get(loadableReactorAtom);
-
+    const reactor = get(baseReactorAtom);
+    const drives = get(baseDrivesAtom);
     // Suspends until the reactor is set.
-    if (loadableReactor.state !== "hasData")
-      return suspendUntilSet<DocumentDriveDocument[]>();
+    if (reactor === NOT_SET) return suspendUntilSet<DocumentDriveDocument[]>();
+    if (drives === NOT_SET) return suspendUntilSet<DocumentDriveDocument[]>();
 
-    const reactor = loadableReactor.data;
-
-    // If the reactor is not set, returns an empty array.
+    // If the reactor is set to undefined, returns an empty array.
     if (!reactor) return [];
-
-    const driveIds = (await reactor.getDrives()) ?? [];
-    const drives = await Promise.all(
-      driveIds.map((id) => reactor.getDrive(id)),
-    );
+    // If the drives are set to undefined, returns an empty array.
+    if (!drives) return [];
 
     return drives;
   },
 );
 drivesAtom.debugLabel = "drivesAtom";
+
+export const setDrivesAtom = atom(
+  null,
+  async (
+    _get,
+    set,
+    drives:
+      | Promise<DocumentDriveDocument[] | undefined>
+      | DocumentDriveDocument[]
+      | undefined,
+  ) => {
+    const newDrives = await drives;
+    set(baseDrivesAtom, newDrives);
+  },
+);
+setDrivesAtom.debugLabel = "setDrivesAtom";
 
 /** Returns a Loadable of the drives for a given reactor. */
 export const loadableDrivesAtom = loadable(drivesAtom);
@@ -178,12 +205,24 @@ export const selectedDriveAtom = atom(
 
     return drives.find((drive) => drive.header.id === driveId);
   },
-  (_get, set, driveId: string | undefined) => {
+  async (get, set, driveId: string | undefined) => {
     // Updates the baseSelectedDriveIdAtom.
     set(baseSelectedDriveIdAtom, driveId);
-
     // Resets the selected node id.
     set(selectedNodeIdAtom, undefined);
+    // update the documents for the new selected drive
+    async function getNewDocuments() {
+      if (!driveId) return;
+      const reactor = await get(reactorAtom);
+      if (!reactor) return;
+      const documentIds = await reactor.getDocuments(driveId);
+      if (!documentIds) return;
+      const documents = await Promise.all(
+        documentIds.map((id) => reactor.getDocument(driveId, id)),
+      );
+      return documents.filter((d) => d !== undefined);
+    }
+    set(baseDocumentsAtom, await getNewDocuments());
   },
 );
 selectedDriveAtom.debugLabel = "selectedDriveAtom";
@@ -283,6 +322,22 @@ unwrappedSelectedFolderAtom.debugLabel = "unwrappedSelectedFolderAtom";
 
 /* Documents */
 
+const baseDocumentsAtom = atom<UnsetAtomValue | PHDocument[] | undefined>(
+  NOT_SET,
+);
+baseDocumentsAtom.debugLabel = "baseDocumentsAtom";
+
+export const initializeDocumentsAtom = atom(
+  null,
+  (get, set, documents: PHDocument[] | undefined) => {
+    const baseDocuments = get(baseDocumentsAtom);
+    if (baseDocuments === NOT_SET) {
+      set(baseDocumentsAtom, documents);
+    }
+  },
+);
+initializeDocumentsAtom.debugLabel = "initializeDocumentsAtom";
+
 /** Holds a promise of the documents for the selected drive.
  *
  * Suspends until the selected drive is set.
@@ -292,27 +347,28 @@ unwrappedSelectedFolderAtom.debugLabel = "unwrappedSelectedFolderAtom";
  * Does not provide a setter, instead it uses `atomWithRefresh` which will refetch the documents from the reactor when called.
  * See https://jotai.org/docs/utilities/resettable#atomwithrefresh for more details.
  */
-export const documentsAtom = atomWithRefresh(async (get) => {
-  const loadableReactor = get(loadableReactorAtom);
-  const loadableDrive = get(loadableSelectedDriveAtom);
+export const documentsAtom = atom<Promise<PHDocument[]>>(async (get) => {
+  const baseDocuments = get(baseDocumentsAtom);
+  if (baseDocuments === NOT_SET) return suspendUntilSet<PHDocument[]>();
 
-  // Suspends until the selected drive is set.
-  if (loadableReactor.state !== "hasData" || loadableDrive.state !== "hasData")
-    return suspendUntilSet<PHDocument[]>();
+  if (!baseDocuments) return [];
 
-  const reactor = loadableReactor.data;
-  const driveId = loadableDrive.data?.header.id;
-
-  // If the reactor or drive id is not set, returns an empty array.
-  if (!reactor || !driveId) return [];
-
-  const documentIds = (await reactor.getDocuments(driveId)) ?? [];
-  const documents = (
-    await Promise.all(documentIds.map((id) => reactor.getDocument(driveId, id)))
-  ).filter((d) => d !== undefined);
-  return documents;
+  return baseDocuments;
 });
 documentsAtom.debugLabel = "documentsAtom";
+
+export const setDocumentsAtom = atom(
+  null,
+  async (
+    _get,
+    set,
+    documents: Promise<PHDocument[] | undefined> | PHDocument[] | undefined,
+  ) => {
+    const newDocuments = await documents;
+    set(baseDocumentsAtom, newDocuments);
+  },
+);
+setDocumentsAtom.debugLabel = "setDocumentsAtom";
 
 /** Returns a Loadable of the documents for the selected drive. */
 export const loadableDocumentsAtom = loadable(documentsAtom);

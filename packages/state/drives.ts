@@ -1,15 +1,21 @@
-import { type DocumentDriveDocument, type Trigger } from "document-drive";
+import {
+  logger,
+  type DocumentDriveDocument,
+  type Trigger,
+} from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback } from "react";
 import {
-  drivesAtom,
+  initializeDrivesAtom,
   loadableDrivesAtom,
   loadableSelectedDriveAtom,
   selectedDriveAtom,
+  setDrivesAtom,
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
 import { useUnwrappedDocuments } from "./documents.js";
+import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable, type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
@@ -23,9 +29,30 @@ export function useUnwrappedDrives() {
   return useAtomValue(unwrappedDrivesAtom);
 }
 
+/** Initializes the drives for a reactor. */
+export function useInitializeDrives() {
+  return useSetAtom(initializeDrivesAtom);
+}
+
 /** Refreshes the drives for a reactor. */
 export function useRefreshDrives() {
-  return useSetAtom(drivesAtom);
+  const reactor = useUnwrappedReactor();
+  const setDrives = useSetAtom(setDrivesAtom);
+
+  return useCallback(() => {
+    if (!reactor) return;
+    reactor
+      .getDrives()
+      .then((driveIds) => {
+        if (!driveIds) return;
+        Promise.all(driveIds.map((id) => reactor.getDrive(id)))
+          .then((drives) => {
+            setDrives(drives).catch((error: unknown) => logger.error(error));
+          })
+          .catch((error: unknown) => logger.error(error));
+      })
+      .catch((error: unknown) => logger.error(error));
+  }, [reactor, setDrives]);
 }
 
 /** Returns a loadable of a drive for a reactor by id. */
