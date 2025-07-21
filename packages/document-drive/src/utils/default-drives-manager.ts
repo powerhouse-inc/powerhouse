@@ -80,7 +80,6 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     const getAllDrives = drives.map((driveId) => this.server.getDrive(driveId));
 
     const drivesToRemove = (await Promise.all(getAllDrives))
-      .filter((drive) => drive !== undefined)
       .filter(
         (drive) =>
           drive.state.local.listeners.length > 0 ||
@@ -111,11 +110,8 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     await Promise.all(detachDrivesPromises);
   }
 
-  async removeOldRemoteDrives() {
-    const driveIds = await this.server.getDrives();
-    if (!driveIds) {
-      return;
-    }
+  async removeOldremoteDrives() {
+    const driveids = await this.server.getDrives();
 
     switch (this.removeOldRemoteDrivesConfig.strategy) {
       case "preserve-by-id-and-detach":
@@ -128,7 +124,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
         await this.preserveDrivesById(
           this.removeOldRemoteDrivesConfig.ids,
-          driveIds,
+          driveids,
           detach,
         );
         break;
@@ -148,12 +144,12 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
           (driveInfo) => driveInfo.id,
         );
 
-        await this.preserveDrivesById(drivesIdsToPreserve, driveIds, detach);
+        await this.preserveDrivesById(drivesIdsToPreserve, driveids, detach);
         break;
       }
       case "remove-by-id": {
         const drivesIdsToRemove = this.removeOldRemoteDrivesConfig.ids.filter(
-          (driveId) => driveIds.includes(driveId),
+          (driveId) => driveids.includes(driveId),
         );
 
         await this.removeDrivesById(drivesIdsToRemove);
@@ -168,18 +164,17 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
         const drivesIdsToRemove = drivesInfo
           .map((driveInfo) => driveInfo.id)
-          .filter((driveId) => driveIds.includes(driveId));
+          .filter((driveId) => driveids.includes(driveId));
 
         await this.removeDrivesById(drivesIdsToRemove);
         break;
       }
       case "remove-all": {
-        const getDrives = driveIds.map((driveId) =>
+        const getDrives = driveids.map((driveId) =>
           this.server.getDrive(driveId),
         );
         const drives = await Promise.all(getDrives);
         const drivesToRemove = drives
-          .filter((drive) => drive !== undefined)
           .filter(
             (drive) =>
               drive.state.local.listeners.length > 0 ||
@@ -192,7 +187,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
       }
       case "detach-by-id": {
         const drivesIdsToRemove = this.removeOldRemoteDrivesConfig.ids.filter(
-          (driveId) => driveIds.includes(driveId),
+          (driveId) => driveids.includes(driveId),
         );
         const detachDrivesPromises = drivesIdsToRemove.map((driveId) =>
           this.delegate.detachDrive(driveId),
@@ -210,7 +205,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
         const drivesIdsToRemove = drivesInfo
           .map((driveInfo) => driveInfo.id)
-          .filter((driveId) => driveIds.includes(driveId));
+          .filter((driveId) => driveids.includes(driveId));
 
         const detachDrivesPromises = drivesIdsToRemove.map((driveId) =>
           this.delegate.detachDrive(driveId),
@@ -267,7 +262,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
         this.defaultRemoteDrives.set(remoteDrive.url, remoteDriveInfo);
 
-        const driveIsAdded = drives?.includes(driveInfo.id);
+        const driveIsAdded = drives.includes(driveInfo.id);
         const readDriveIsAdded = readDrives?.includes(driveInfo.id);
 
         const hasAccessLevel = remoteDrive.options.accessLevel !== undefined;

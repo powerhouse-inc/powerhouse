@@ -130,8 +130,8 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive!.header.id;
-      const driveOperations = buildOperations(reducer, drive!, [
+      const driveId = drive.header.id;
+      const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: documentId,
@@ -175,7 +175,7 @@ describe.each(queueLayers)(
 
       // now get the drive and check that the rename was applied
       drive = await server.getDrive(driveId);
-      expect(drive!.state.global.nodes).toStrictEqual([
+      expect(drive.state.global.nodes).toStrictEqual([
         expect.objectContaining({
           id: folderId,
           name: "folder 1",
@@ -212,11 +212,11 @@ describe.each(queueLayers)(
 
       let drive = await createDrive(server);
 
-      const driveId = drive!.header.id;
+      const driveId = drive.header.id;
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
-      const driveOperations = buildOperations(reducer, drive!, [
+      const driveOperations = buildOperations(reducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: fileId,
@@ -244,7 +244,7 @@ describe.each(queueLayers)(
         server.queueDriveOperations(driveId, [
           buildOperation(
             reducer,
-            drive!,
+            drive,
             addFolder({
               id: folderId2,
               name: "folder 2",
@@ -262,7 +262,7 @@ describe.each(queueLayers)(
       expect(errors.length).toBe(0);
 
       drive = await server.getDrive(driveId);
-      expect(drive!.state.global.nodes).toStrictEqual(
+      expect(drive.state.global.nodes).toStrictEqual(
         expect.arrayContaining([
           expect.objectContaining({
             id: folderId,
@@ -291,9 +291,9 @@ describe.each(queueLayers)(
 
       // add file 1 operation has to be processed after add folder 1
       expect(
-        drive!.state.global.nodes.findIndex((n) => n.id === fileId),
+        drive.state.global.nodes.findIndex((n) => n.id === fileId),
       ).toBeGreaterThan(
-        drive!.state.global.nodes.findIndex((n) => n.id === folderId),
+        drive.state.global.nodes.findIndex((n) => n.id === folderId),
       );
 
       const docModelDocument = (await server.getDocument(
@@ -314,7 +314,7 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       let drive = await createDrive(server);
-      const driveId = drive!.header.id;
+      const driveId = drive.header.id;
 
       const document = createDocumentModelDocument();
 
@@ -337,7 +337,7 @@ describe.each(queueLayers)(
       );
 
       // add file op
-      const driveOperations = buildOperations(reducer, drive!, [
+      const driveOperations = buildOperations(reducer, drive, [
         addFile({
           id: "file 1",
           name: "file 1",
@@ -364,7 +364,7 @@ describe.each(queueLayers)(
 
       // delete node op
       drive = await server.getDrive(driveId);
-      const deleteNodeOps = buildOperations(documentDriveReducer, drive!, [
+      const deleteNodeOps = buildOperations(documentDriveReducer, drive, [
         deleteNode({ id: "file 1" }),
       ]);
 
@@ -377,7 +377,7 @@ describe.each(queueLayers)(
       ).rejects.toThrowError("Queue is deleted");
 
       drive = await server.getDrive(driveId);
-      expect(drive!.state.global.nodes).toStrictEqual([]);
+      expect(drive.state.global.nodes).toStrictEqual([]);
     });
 
     it("queues operations when using addDriveOperations", async ({
@@ -398,7 +398,7 @@ describe.each(queueLayers)(
       const driveResults = await Promise.all(
         drives.map((drive) => {
           expect(drive).toBeDefined();
-          return addOperationsToDrive(server, drive!, false);
+          return addOperationsToDrive(server, drive, false);
         }),
       );
 
@@ -424,7 +424,7 @@ describe.each(queueLayers)(
       const driveResults = await Promise.all(
         drives.map((drive) => {
           expect(drive).toBeDefined();
-          return addOperationsToDrive(server, drive!);
+          return addOperationsToDrive(server, drive);
         }),
       );
 
@@ -449,7 +449,7 @@ describe.each(queueLayers)(
         .build();
       await server.initialize();
       const drive = await createDrive(server);
-      const driveId = drive!.header.id;
+      const driveId = drive.header.id;
       const action = addListener({
         listener: {
           block: true,
@@ -472,7 +472,7 @@ describe.each(queueLayers)(
       const result = await server.queueDriveAction(driveId, action);
       const drive2 = await server.getDrive(driveId);
 
-      expect(drive2!.state.local.listeners.length).toBe(1);
+      expect(drive2.state.local.listeners.length).toBe(1);
     });
   },
 );

@@ -123,7 +123,7 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
     );
 
     const remoteDocumentOperations = Object.values(
-      remoteDocument!.operations,
+      remoteDocument.operations,
     ).flat();
 
     const result = await this.server._processOperations(
