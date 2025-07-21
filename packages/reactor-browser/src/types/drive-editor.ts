@@ -38,6 +38,8 @@ export type IDriveContext = {
   showSearchBar: boolean;
   /** Indicates whether the current user has permissions to create new documents */
   isAllowedToCreateDocuments: boolean;
+  /** Documents for the selected drive */
+  documents: PHDocument[];
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
   /**

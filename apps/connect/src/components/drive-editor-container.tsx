@@ -16,6 +16,7 @@ import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
+    useDocumentsForSelectedDrive,
     useParentFolder,
     useSetSelectedDrive,
     useSetSelectedNode,
@@ -48,6 +49,7 @@ export function DriveEditorContainer() {
     const selectedDrive = useUnwrappedSelectedDrive();
     const selectedFolder = useUnwrappedSelectedFolder();
     const selectedDocument = useUnwrappedSelectedDocument();
+    const documents = useDocumentsForSelectedDrive();
     const setSelectedNode = useSetSelectedNode();
     const setSelectedDrive = useSetSelectedDrive();
     const nodeActions = useNodeActions();
@@ -109,6 +111,7 @@ export function DriveEditorContainer() {
             reactor,
             showSearchBar,
             isAllowedToCreateDocuments,
+            documents,
             documentModels,
             selectedDrive,
             selectedFolder,

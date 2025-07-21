@@ -47,6 +47,7 @@ export function createDriveStory(
       (Story, context) => (
         <DriveContextProvider
           value={{
+            documents: [],
             selectedDrive: context.args.document,
             selectedFolder: undefined,
             selectedDocument: context.args.document,

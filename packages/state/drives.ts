@@ -9,6 +9,7 @@ import {
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
+import { useUnwrappedDocuments } from "./documents.js";
 import { type Loadable, type SharingType } from "./types.js";
 import { makeDriveUrlComponent } from "./utils.js";
 
@@ -82,6 +83,25 @@ export function useSetSelectedDrive(shouldNavigate = true) {
     },
     [drives, setSelectedDrive],
   );
+}
+
+/** Returns the documents for a drive id. */
+export function useDocumentsForDriveId(driveId: string | null | undefined) {
+  const drive = useUnwrappedDriveById(driveId);
+  const documents = useUnwrappedDocuments();
+  if (!drive || !documents) return [];
+  return documents.filter((document) => {
+    const node = drive.state.global.nodes.find(
+      (node) => node.id === document.header.id,
+    );
+    return node !== undefined;
+  });
+}
+
+/** Returns the documents for the selected drive. */
+export function useDocumentsForSelectedDrive() {
+  const selectedDrive = useUnwrappedSelectedDrive();
+  return useDocumentsForDriveId(selectedDrive?.header.id);
 }
 
 /** Returns the remote URL for a drive. */
