@@ -51,6 +51,7 @@
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@storybook/react": "^9.0.17",
     "@storybook/types": "^8.6.14",
     "@tailwindcss/cli": "^4.1.4",
     "@tailwindcss/vite": "^4.1.4",
