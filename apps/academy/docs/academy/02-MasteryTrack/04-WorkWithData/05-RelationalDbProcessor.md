@@ -350,7 +350,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
   http://localhost:4001/graphql
   ```
 The supergraph allows you to both query & mutate data from the same endpoint. 
-Read more about [subgraphs](docs/academy/MasteryTrack/WorkWithData/UsingSubgraphs).
+Read more about [subgraphs](academy/MasteryTrack/WorkWithData/Usingsubgraphs).
 
 <details>
 <summary>**Example: Complete Data Flow from Document Operations to Relational Database**</summary>
