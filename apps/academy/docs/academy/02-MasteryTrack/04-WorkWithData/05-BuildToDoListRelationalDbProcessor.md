@@ -211,6 +211,99 @@ export class TodoSubgraph extends Subgraph {
 }
 ```
 
+## Now query the data via the supergraph.
+
+The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To access the endpoint, start the reactor and navigate to the URL with `graphql` appended. The following commands explain how you can test & try the supergraph. 
+
+- Start the reactor:
+
+  ```bash
+  ph reactor
+  ```
+
+- Open the GraphQL editor in your browser:
+
+  ```
+  http://localhost:4001/graphql
+  ```
+
+The supergraph allows you to both query & mutate data from the same endpoint. 
+Read more about [subgraphs](docs/academy/MasteryTrack/WorkWithData/UsingSubgraphs).
+
+<details>
+<summary>**Example: Using the supergraph with To-do List documents**</summary>
+
+1. Create a todo document in the `powerhouse` drive using the `ToDoList_createDocument` mutation:
+   ```graphql
+   mutation {
+     ToDoList_createDocument(
+       input: {
+         documentId: "my-todo-list"
+         name: "My Test To-do List"
+       }
+     ) {
+       id
+       name
+     }
+   }
+   ```
+
+2. Add some items to your to-do list using the `ToDoList_addTodoItem` mutation:
+   ```graphql
+   mutation {
+     ToDoList_addTodoItem(
+       docId: "my-todo-list"
+       input: {
+         id: "item-1"
+         text: "Learn about supergraphs"
+       }
+     )
+   }
+   ```
+
+3. Query the document state using the `GetDocument` query:
+   ```graphql
+   query {
+     ToDoList {
+       getDocument(docId: "my-todo-list") {
+         id
+         name
+         state {
+           items {
+             id
+             text
+             checked
+           }
+           stats {
+             total
+             checked
+             unchecked
+           }
+         }
+       }
+     }
+   }
+   ```
+
+4. Now query the same data through your subgraph (which should be included in the supergraph):
+   ```graphql
+   query {
+     todoList {
+       total
+       checked
+       unchecked
+     }
+     todoItems {
+       id
+       text
+       checked
+     }
+   }
+   ```
+
+This demonstrates how the supergraph provides a unified interface to both your document models and your custom subgraphs, allowing you to query and mutate data from the same endpoint. 
+</details>
+
 ## Use the Data in Frontend Applications
 
 ### React Hooks
