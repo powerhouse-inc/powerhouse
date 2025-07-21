@@ -8,10 +8,8 @@ import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
-    Icon,
 } from '@powerhousedao/design-system';
 import {
-    getDriveSharingType,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
@@ -26,25 +24,7 @@ import { useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
-
-function getDriveIcon(drive: DocumentDriveDocument) {
-    if (drive.state.global.icon) {
-        return (
-            <img
-                src={drive.state.global.icon}
-                alt={drive.header.name}
-                height={32}
-                width={32}
-            />
-        );
-    }
-    if (getDriveSharingType(drive) === 'LOCAL') {
-        return <Icon name="Hdd" size={32} />;
-    } else {
-        return <Icon name="Server" size={32} />;
-    }
-}
-
+import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
     const { addFile } = useDocumentDriveServer();
     const selectedDrive = useUnwrappedSelectedDrive();
@@ -146,7 +126,7 @@ function HomeScreenContainer() {
                         key={drive.header.id}
                         title={drive.header.name}
                         description={appName || 'Drive Explorer App'}
-                        icon={getDriveIcon(drive)}
+                        icon={<DriveIcon drive={drive} />}
                         onClick={() => handleDriveClick(drive)}
                     />
                 );

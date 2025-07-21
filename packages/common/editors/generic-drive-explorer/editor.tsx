@@ -34,17 +34,13 @@ export type IProps = DriveEditorProps<DocumentDriveDocument> &
   React.HTMLProps<HTMLDivElement>;
 
 export function BaseEditor(props: IProps) {
-  const { document, dispatch, className, children } = props;
+  const { document, className, children } = props;
 
-  const {
-    header: { id: driveId },
-  } = document;
   const {
     showSearchBar,
     isAllowedToCreateDocuments,
     documentModels,
     getSyncStatusSync,
-    addDocument,
     showCreateDocumentModal,
     onRenameNode,
     onDuplicateNode,
@@ -61,18 +57,10 @@ export function BaseEditor(props: IProps) {
   const selectedNodePath = useSelectedNodePath();
   const setSelectedNode = useSetSelectedNode();
   const onCreateDocument = useCallback(
-    async (documentModel: DocumentModelModule) => {
-      const { name } = await showCreateDocumentModal(documentModel);
-      const document = documentModel.utils.createDocument();
-      await addDocument(
-        driveId,
-        name,
-        documentModel.documentModel.name,
-        selectedFolder?.id,
-        document,
-      );
+    (documentModel: DocumentModelModule) => {
+      showCreateDocumentModal(documentModel);
     },
-    [addDocument, showCreateDocumentModal, selectedFolder?.id],
+    [showCreateDocumentModal],
   );
 
   const { isDropTarget, dropProps } = useDrop({

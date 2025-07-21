@@ -2,7 +2,6 @@ import {
   type DocumentDriveDocument,
   type FileNode,
   type FolderNode,
-  type GetDocumentOptions,
   type IDocumentDriveServer,
   type Node,
   type SyncStatus,
@@ -108,9 +107,7 @@ export type IDriveContext = {
    * @param documentModel - Document model of the document to be created
    * @returns Promise resolving to an object containing the document name
    */
-  showCreateDocumentModal: (
-    documentModel: DocumentModelModule,
-  ) => Promise<{ name: string }>;
+  showCreateDocumentModal: (documentModel: DocumentModelModule) => void;
   showDeleteNodeModal: (node: Node) => void;
   /**
    * Retrieves the document model module for a given document type

@@ -185,8 +185,6 @@ export function useDocumentDriveServer() {
                     signedOperation,
                 );
 
-                console.log('result', result);
-
                 if (result.status !== 'SUCCESS') {
                     logger.error(result.error);
                 }

@@ -14,6 +14,7 @@ import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
+import { DriveIcon } from './drive-icon.js';
 import { useModal } from './modal/index.js';
 
 export default function Sidebar() {
@@ -97,16 +98,7 @@ export default function Sidebar() {
                         title={drive.header.name}
                         onClick={() => handleDriveClick(drive)}
                         active={selectedDrive?.header.id === drive.header.id}
-                        icon={
-                            drive.state.global.icon ? (
-                                <img
-                                    src={drive.state.global.icon}
-                                    alt={drive.header.name}
-                                    width={32}
-                                    height={32}
-                                />
-                            ) : undefined
-                        }
+                        icon={<DriveIcon drive={drive} />}
                     />
                 ))}
                 {config.drives.addDriveEnabled && (
