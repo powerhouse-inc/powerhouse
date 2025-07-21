@@ -6,7 +6,7 @@ import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
 
-export type Db = Kysely<any>;
+type Db = Kysely<any>;
 
 function isPG(connectionString: string) {
   if (connectionString.startsWith("postgresql://")) {

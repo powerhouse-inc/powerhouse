@@ -19,13 +19,13 @@ import {
 } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import {
-  type IOperationalStore,
   type IProcessorHostModule,
   type IProcessorManager,
+  type IRelationalDb,
   type ProcessorFactory,
 } from "document-drive/processors/types";
+import { createRelationalDb } from "document-drive/processors/utils";
 import express, { type Express } from "express";
-import { type Kysely } from "kysely";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
@@ -89,8 +89,9 @@ function setupGraphQlExplorer(router: express.Router): void {
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
-): Promise<{ db: Kysely<any>; analyticsStore: IAnalyticsStore }> {
+): Promise<{ relationalDb: IRelationalDb; analyticsStore: IAnalyticsStore }> {
   const { db, knex } = getDbClient(dbPath);
+  const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
   });
@@ -99,7 +100,7 @@ async function initializeDatabaseAndAnalytics(
     await knex.raw(sql);
   }
 
-  return { db, analyticsStore };
+  return { relationalDb, analyticsStore };
 }
 
 /**
@@ -108,7 +109,7 @@ async function initializeDatabaseAndAnalytics(
 async function setupGraphQLManager(
   app: Express,
   reactor: IDocumentDriveServer,
-  db: Kysely<any>,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
   auth?: {
@@ -122,7 +123,7 @@ async function setupGraphQLManager(
     config.basePath,
     app,
     reactor,
-    db,
+    relationalDb,
     analyticsStore,
   );
 
@@ -162,7 +163,7 @@ function setupEventListeners(
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
   module: {
-    operationalStore: IOperationalStore;
+    relationalDb: IRelationalDb;
     analyticsStore: IAnalyticsStore;
   },
 ): void {
@@ -190,12 +191,16 @@ function setupEventListeners(
       const factories = fns.map((fn) =>
         fn({
           analyticsStore: module.analyticsStore,
-          operationalStore: module.operationalStore,
+          relationalDb: module.relationalDb,
         }),
       );
 
-      await processorManager.registerFactory(packageName, (driveId: string) =>
-        factories.map((factory) => factory(driveId)).flat(),
+      await processorManager.registerFactory(
+        packageName,
+        async (driveId: string) =>
+          (
+            await Promise.all(factories.map((factory) => factory(driveId)))
+          ).flat(),
       );
     }
   });
@@ -326,10 +331,10 @@ export async function startAPI(
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { db, analyticsStore } = await initializeDatabaseAndAnalytics(
+  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module = { operationalStore: db, analyticsStore };
+  const module: IProcessorHostModule = { relationalDb, analyticsStore };
 
   // Initialize package manager
   const loaders: IPackageLoader[] = [new ImportPackageLoader()];
@@ -362,7 +367,7 @@ export async function startAPI(
       try {
         return fn({
           analyticsStore: module.analyticsStore,
-          operationalStore: module.operationalStore,
+          relationalDb: module.relationalDb,
         });
       } catch (e) {
         logger.error(
@@ -383,18 +388,25 @@ export async function startAPI(
       continue;
     }
 
-    await processorManager.registerFactory(packageName, (driveId: string) =>
-      validFactories
-        .map((factory) => {
-          try {
-            return factory(driveId);
-          } catch (e) {
-            logger.error(`Error creating processor for drive ${driveId}:`, e);
+    await processorManager.registerFactory(
+      packageName,
+      async (driveId: string) =>
+        (
+          await Promise.all(
+            validFactories.map(async (factory) => {
+              try {
+                return await factory(driveId);
+              } catch (e) {
+                logger.error(
+                  `Error creating processor for drive ${driveId}:`,
+                  e,
+                );
 
-            return [];
-          }
-        })
-        .flat(),
+                return [];
+              }
+            }),
+          )
+        ).flat(),
     );
   }
 
@@ -407,7 +419,7 @@ export async function startAPI(
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
-    db,
+    relationalDb,
     analyticsStore,
     subgraphs,
     options.auth,

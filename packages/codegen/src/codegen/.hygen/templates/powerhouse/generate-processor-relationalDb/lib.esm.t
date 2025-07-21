@@ -13,19 +13,20 @@ import { type ProcessorRecord, type IProcessorHostModule } from "document-drive/
 
 export const processorFactory = (module: IProcessorHostModule) => {
   // Initialize all processor factories once with the module
-  const factories: Array<(driveId: string) => ProcessorRecord[]> = [];
+  const factories: Array<(driveId: string) => Promise<ProcessorRecord[]>> = [];
   
   // Add all processor factories
   
   // Add other processors here as they are generated
   
   // Return the inner function that will be called for each drive
-  return (driveId: string): ProcessorRecord[] => {
+  return async (driveId: string): Promise<ProcessorRecord[]> => {
     const processors: ProcessorRecord[] = [];
     
     // Call each cached factory with the driveId
     for (const factory of factories) {
-      processors.push(...factory(driveId));
+      const factoryProcessors = await factory(driveId);
+      processors.push(...factoryProcessors);
     }
     
     return processors;

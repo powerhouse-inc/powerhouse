@@ -1,12 +1,16 @@
 import { type LiveQueryResults } from "@electric-sql/pglite/live";
-import { type CompiledQuery, type Kysely } from "kysely";
+import {
+  type IRelationalQueryBuilder,
+  type RelationalDbProcessorClass,
+} from "document-drive/processors/relational";
+import { type CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
-
 import {
   type QueryCallbackReturnType,
-  useOperationalQuery,
-} from "../hooks/useOperationalQuery.js";
+  useRelationalQuery,
+  type useRelationalQueryOptions,
+} from "../hooks/useRelationalQuery.js";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {
@@ -20,11 +24,16 @@ function useStableParams<T>(params: T): T {
   }, [params]);
 }
 
-export function createTypedQuery<Schema>() {
+export function createProcessorQuery<TSchema>(
+  ProcessorClass: RelationalDbProcessorClass<TSchema>,
+) {
   // Overload for queries without parameters
   function useQuery<
-    TQueryBuilder extends (db: Kysely<Schema>) => QueryCallbackReturnType,
+    TQueryBuilder extends (
+      db: IRelationalQueryBuilder<TSchema>,
+    ) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
   ): {
     isLoading: boolean;
@@ -38,12 +47,14 @@ export function createTypedQuery<Schema>() {
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<Schema>,
+      db: IRelationalQueryBuilder<TSchema>,
       parameters: TParams,
     ) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
     parameters: TParams,
+    options?: useRelationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -55,12 +66,14 @@ export function createTypedQuery<Schema>() {
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: Kysely<Schema>,
+      db: IRelationalQueryBuilder<TSchema>,
       parameters?: TParams,
     ) => QueryCallbackReturnType,
   >(
+    driveId: string,
     queryCallback: TQueryBuilder,
     parameters?: TParams,
+    options?: useRelationalQueryOptions,
   ): {
     isLoading: boolean;
     error: Error | null;
@@ -77,9 +90,12 @@ export function createTypedQuery<Schema>() {
     // Memoize the callback to prevent infinite loops, updating when parameters change
     const memoizedCallback = useCallback(queryCallback, [stableParams]);
 
-    return useOperationalQuery<Schema, InferredResult, TParams>(
+    return useRelationalQuery<TSchema, InferredResult, TParams>(
+      ProcessorClass,
+      driveId,
       memoizedCallback,
       stableParams,
+      options,
     ) as {
       isLoading: boolean;
       error: Error | null;

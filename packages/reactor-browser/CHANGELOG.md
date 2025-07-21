@@ -1,3 +1,57 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **reactor-browser:** implement retry logic for live queries on relation errors ([7890e7d95](https://github.com/powerhouse-inc/powerhouse/commit/7890e7d95))
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.14 (2025-07-17)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.13 (2025-07-17)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🚀 Features
+
+- **reactor-api,reactor-browser,document-drive,codegen,connect:** operation to relationalDb renaming, relational db type improvements, added namespace methods to IRelationalDb ([fd35c3500](https://github.com/powerhouse-inc/powerhouse/commit/fd35c3500))
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🚀 Features
+
+- **document-drive,reactor-browser:** hash processor namespaces when writing and when querying from the relational db ([db817eeab](https://github.com/powerhouse-inc/powerhouse/commit/db817eeab))
+- **reactor-browser:** update useOperationalQuery and createTypedQuery to support operational processor classes and drive IDs ([70cfe6fef](https://github.com/powerhouse-inc/powerhouse/commit/70cfe6fef))
+- **document-drive:** anticipate undefined return values for documents and drives ([9bd1bba7b](https://github.com/powerhouse-inc/powerhouse/commit/9bd1bba7b))
+
+### 🩹 Fixes
+
+- **reactor-browser:** simplify useOperationalQuery by utilizing processor's query method for namespaced database ([7a07ef35c](https://github.com/powerhouse-inc/powerhouse/commit/7a07ef35c))
+- **document-drive,reactor-browser:** use underscore instead of dashes and update loading status when there is an error ([02720ab52](https://github.com/powerhouse-inc/powerhouse/commit/02720ab52))
+- **reactor-browser:** catch live query error ([c8c8f5c21](https://github.com/powerhouse-inc/powerhouse/commit/c8c8f5c21))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

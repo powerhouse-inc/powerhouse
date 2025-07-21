@@ -189,7 +189,7 @@ Examples:
   $ ph generate --drive-editor custom-drive-explorer                # Generate a custom drive editor
   $ ph generate -s MySubgraph                                       # Generate with a specific subgraph
   $ ph generate --skip-format                                       # Generate without formatting
-  $ ph generate --migration-file ./migrations.ts                    # Generate types for an Operational Processor
+  $ ph generate --migration-file ./migrations.ts                    # Generate types for an RelationalDB Processor
 ```
 
 ## Inspect

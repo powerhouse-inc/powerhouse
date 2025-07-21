@@ -4,7 +4,7 @@
 2. Define your database schema
 3. Customize the processor to your needs
 4. Test your processor
-5. Use the operational store in Frontend and Subgraph
+5. Use the relational database in Frontend and Subgraph
 
 
 ## Generate the Processor
@@ -25,9 +25,9 @@ The migration file has a up and a down function which gets called when either th
 Below you can find the example of a todo table.
 
 ```ts
-import { type IOperationalStore } from "document-drive/processors/types"
+import { type IBaseRelationalDb } from "document-drive/processors/types"
 
-export async function up(db: IOperationalStore): Promise<void> {
+export async function up(db: IBaseRelationalDb): Promise<void> {
   // Create table
   await db.schema
     .createTable("todo")
@@ -41,7 +41,7 @@ export async function up(db: IOperationalStore): Promise<void> {
   console.log(tables);
 }
 
-export async function down(db: IOperationalStore): Promise<void> {
+export async function down(db: IBaseRelationalDb): Promise<void> {
   // drop table
   await db.schema.dropTable("todo").execute();
 }
@@ -74,7 +74,7 @@ export const todoProcessorProcessorFactory =
     const namespace = TodoProcessorProcessor.getNamespace(driveId);
 
     // Create a filter for the processor
-    const filter: OperationalProcessorFilter = {
+    const filter: RelationalDbProcessorFilter = {
       branch: ["main"],
       documentId: ["*"],
       documentType: ["powerhouse/todo-list"],
@@ -84,7 +84,7 @@ export const todoProcessorProcessorFactory =
     // Create a namespaced store for the processor
     const store = await createNamespacedDb<TodoProcessorProcessor>(
       namespace,
-      module.operationalStore,
+      module.relationalStore,
     );
 
     // Create the processor
@@ -108,7 +108,7 @@ In the following you'll find an example where we store all the created and udpat
 ```ts
 type DocumentType = ToDoListDocument;
 
-export class TodoIndexerProcessor extends OperationalProcessor<DB> {
+export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
   static override getNamespace(driveId: string): string {
     // Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`
@@ -116,7 +116,7 @@ export class TodoIndexerProcessor extends OperationalProcessor<DB> {
   }
 
   override async initAndUpgrade(): Promise<void> {
-    await up(this.operationalStore as IOperationalStore);
+    await up(this.relationalDb as IBaseRelationalDb);
   }
 
   override async onStrands(
@@ -132,7 +132,7 @@ export class TodoIndexerProcessor extends OperationalProcessor<DB> {
       }
 
       for (const operation of strand.operations) {
-        await this.operationalStore
+        await this.relationalDb
           .insertInto("todo")
           .values({
             task: strand.documentId,
@@ -173,7 +173,7 @@ resolvers = {
         resolve: async (parent, args, context, info) => {
           const todoList = await TodoProcessor.query(
               args.driveId ?? "powerhouse", 
-              this.operationalStore
+              this.relationalDb
           )
             .selectFrom("todo")
             .selectAll()
@@ -196,8 +196,4 @@ resolvers = {
   `;
   ``` 
 
-
-  ### useOperationalStore Hook
-
-  ..... 
 

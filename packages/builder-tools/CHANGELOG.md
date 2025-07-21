@@ -1,3 +1,41 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.14 (2025-07-17)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.13 (2025-07-17)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🩹 Fixes
+
+- **builder-tools:** enhance Vite server configuration to allow serving files from current project and linked packages ([#1700](https://github.com/powerhouse-inc/powerhouse/pull/1700))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 3.3.0-dev.10 (2025-07-15)
 
 ### 🩹 Fixes

@@ -1,12 +1,12 @@
-# PHDocument Migration Guide (v3.3.0)
+# PHDocument Migration Guide
 
 :::tip
-This guide covers the **breaking changes** introduced in Powerhouse v3.3.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, **this migration is required** and document models must be regenerated.
+This guide covers the **breaking changes** introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, **this migration is required** and document models must be regenerated.
 :::
 
 ## Overview
 
-Version 3.3.0 introduced a significant refactor of the `PHDocument` structure that consolidates document metadata into a `header` field. This change enables signed and unsigned documents with cryptographic verification capabilities, but requires updating all code that accesses document properties.
+Version 4.0.0 introduced a significant refactor of the `PHDocument` structure that consolidates document metadata into a `header` field. This change enables signed and unsigned documents with cryptographic verification capabilities, but requires updating all code that accesses document properties.
 
 ## What Changed
 
@@ -28,7 +28,7 @@ const document = {
 }
 ```
 
-**After (v3.3.0):**
+**After (v4.0.0):**
 ```javascript
 const document = {
   header: {
@@ -328,11 +328,10 @@ describe('Document Migration', () => {
 
 ## Related Documentation
 
-- [PHDocument Architecture](../05-Architecture/PHDocument.md)
-- [Document Model Creation](../02-MasteryTrack/DocumentModelCreation/WhatIsADocumentModel.md)
-- [GraphQL API Reference](./02-ReactorAPI.md)
-- [React Hooks](./01-ReactHooks.md)
+- [PHDocument Architecture](/academy/Architecture/PowerhouseArchitecture)
+- [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+- [React Hooks](/academy/APIReferences/ReactHooks)
 
 ---
 
-*This migration guide covers the major changes in v3.3.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository.* 
+*This migration guide covers the major changes in v4.0.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository.* 

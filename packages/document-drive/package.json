@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "3.3.0-dev.10",
+  "version": "3.3.0-dev.15",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -51,6 +51,7 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@prisma/client": "5.17.0",
+    "@sindresorhus/fnv1a": "^3.1.0",
     "change-case": "^5.4.4",
     "document-model": "workspace:*",
     "exponential-backoff": "^3.1.1",
