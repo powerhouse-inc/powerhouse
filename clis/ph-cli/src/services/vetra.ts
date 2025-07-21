@@ -1,5 +1,5 @@
 import { type ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
-import { blue, green, red } from "colorette";
+import { blue, cyan, green, red } from "colorette";
 import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,7 @@ export type DevOptions = {
   generate?: boolean;
   watch?: boolean;
   switchboardPort?: number;
+  reactorPort?: number;
   configFile?: string;
   httpsKeyFile?: string;
   httpsCertFile?: string;
@@ -57,6 +58,50 @@ function spawnLocalVetraSwitchboard(options?: ReactorOptions) {
   });
 }
 
+function spawnLocalReactor(options?: ReactorOptions, switchboardUrl?: string) {
+  const reactorOptions = {
+    ...options,
+    remoteDrives: switchboardUrl || "",
+  };
+
+  const child = fork(
+    path.join(dirname(__dirname), "commands", "reactor.js"),
+    ["spawn", JSON.stringify(reactorOptions)],
+    { silent: true },
+  ) as ChildProcessWithoutNullStreams;
+
+  return new Promise<{ reactorUrl: string }>((resolve) => {
+    child.on("message", (message) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const text = message.toString();
+
+      if (text.startsWith("reactorUrl:")) {
+        const reactorUrl = text.substring("reactorUrl:".length);
+        resolve({ reactorUrl });
+      }
+    });
+
+    child.stdout.on("data", (data: Buffer) => {
+      const message = data.toString();
+      const lines = message.split("\n").filter((line) => line.trim().length);
+      for (const line of lines) {
+        process.stdout.write(cyan(`[Reactor]: ${line}\n`));
+      }
+    });
+
+    child.stderr.on("error", (data: Buffer) => {
+      process.stderr.write(red(`[Reactor]: ${data.toString()}`));
+    });
+    child.on("error", (err) => {
+      process.stderr.write(red(`[Reactor]: ${err}`));
+    });
+
+    child.on("exit", (code) => {
+      console.log(`Reactor process exited with code ${code}`);
+    });
+  });
+}
+
 async function spawnConnect(
   options?: ConnectStudioOptions,
   localReactorUrl?: string,
@@ -94,18 +139,39 @@ export async function startVetra({
   generate,
   watch,
   switchboardPort = DefaultReactorOptions.port,
+  reactorPort = DefaultReactorOptions.port + 1,
   configFile,
 }: DevOptions) {
   try {
     const baseConfig = getConfig(configFile);
     const https = baseConfig.reactor?.https;
+
+    // Start Vetra Switchboard
+    console.log("Starting Vetra Switchboard...");
     const { driveUrl } = await spawnLocalVetraSwitchboard({
       generate,
       port: switchboardPort,
       watch,
       https,
     });
-    await spawnConnect({ configFile }, driveUrl);
+    console.log(`Vetra Switchboard started at: ${driveUrl}`);
+
+    // Start Local Reactor with Switchboard as remote drive
+    console.log("Starting Local Reactor...");
+    const { reactorUrl } = await spawnLocalReactor(
+      {
+        generate,
+        port: reactorPort,
+        watch,
+        https,
+      },
+      driveUrl,
+    );
+    console.log(`Local Reactor started at: ${reactorUrl}`);
+
+    // Start Connect pointing to the Local Reactor
+    console.log("Starting Connect...");
+    await spawnConnect({ configFile }, reactorUrl);
   } catch (error) {
     console.error(error);
   }

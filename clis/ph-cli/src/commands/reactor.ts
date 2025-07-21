@@ -56,8 +56,8 @@ if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
   const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
   startLocalSwitchboard(options)
-    .then((switchboard) => {
-      process.send?.(`driveUrl:${switchboard.driveUrl}`);
+    .then((reactor) => {
+      process.send?.(`reactorUrl:${reactor.driveUrl}`);
     })
     .catch((e: unknown) => {
       throw e;

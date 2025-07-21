@@ -17,9 +17,15 @@ export const vetra: CommandActionType<[DevOptions]> = async (options) => {
 export function vetraCommand(program: Command) {
   const cmd = program
     .command("vetra")
-    .description("Starts Vetra development environment")
+    .description(
+      "Starts Vetra development environment with switchboard, reactor, and connect",
+    )
     .option("--generate", "generate code when document model is updated")
-    .option("--switchboard-port <port>", "port to use for the switchboard")
+    .option(
+      "--switchboard-port <port>",
+      "port to use for the Vetra switchboard",
+    )
+    .option("--reactor-port <port>", "port to use for the local reactor")
     .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
     .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
     .option(
@@ -28,7 +34,7 @@ export function vetraCommand(program: Command) {
     )
     .option(
       "-w, --watch",
-      "if the switchboard should watch for local changes to document models and processors",
+      "if the switchboard and reactor should watch for local changes to document models and processors",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting
