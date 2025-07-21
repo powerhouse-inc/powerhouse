@@ -115,7 +115,7 @@ The document model has these operations:
 
 Now let's create a subgraph that provides enhanced querying capabilities for our To-do List documents. 
 
-**Step 1: Define the schema in `subgraphs/to-do-list/schema.ts`:**
+**Step 1: Define the schema in `subgraphs/to-do-list/schema.ts` by creating the file:**
 
 ```typescript
 export const typeDefs = `
@@ -148,7 +148,7 @@ export const typeDefs = `
     text: String!    # The task description
     checked: Boolean! # Completion status
   }
-`;
+}`
 ```
 
 
@@ -435,7 +435,7 @@ You should see the subgraph being registered in the console output:
 ### 3.2. Create some test data
 Before testing queries, let's create some To-do List documents with test data:
 
-1. Open Connect at `http://localhost:3001`
+1. Open Connect at `http://localhost:3001` in another terminal
 2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
 3. Create a new To-do List document
 4. Add some test items:
