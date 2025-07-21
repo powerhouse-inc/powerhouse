@@ -263,7 +263,7 @@ flowchart TD
 
 - [IQueue](../Queue/index.md)
 - [IEventBus](../Events/index.md)
-- [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
+- [IOperationStore](../Storage/IOperationStore.md)
 
 ### Links
 

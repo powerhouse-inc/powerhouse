@@ -46,8 +46,8 @@ for (const operation of operations) {
 
 ### Dependencies
 
-- [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
-- [IDocumentIndexer](../Reactor/Interfaces/IDocumentIndexer.md)
+- [IOperationStore](../Storage/IOperationStore.md)
+- [IDocumentIndexer](../Storage/IDocumentIndexer.md)
 
 ### Interface
 

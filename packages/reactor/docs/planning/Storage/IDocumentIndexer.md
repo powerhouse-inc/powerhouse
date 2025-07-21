@@ -40,7 +40,7 @@ for (const operation of operations) {
 
 ### Dependencies
 
-- [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
+- [IOperationStore](IOperationStore.md)
 
 ### Interface
 
