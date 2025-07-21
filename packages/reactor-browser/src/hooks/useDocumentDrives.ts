@@ -83,13 +83,10 @@ function waitForResult(
 async function fetchDocumentdrives(reactor: IDocumentDriveServer) {
   const documentDrives: DocumentDriveDocument[] = [];
 
-  const driveIds = (await reactor.getDrives()) ?? [];
+  const driveIds = await reactor.getDrives();
   for (const id of driveIds) {
     try {
       const drive = await reactor.getDrive(id);
-      if (!drive) {
-        continue;
-      }
       documentDrives.push(drive);
     } catch (error) {
       console.error(error);
