@@ -15,6 +15,7 @@ import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { type IDocumentDriveServer } from "document-drive";
+import { type IRelationalDb } from "document-drive/processors/types";
 import type express from "express";
 import { Router, type IRouter } from "express";
 import { type GraphQLSchema } from "graphql";
@@ -25,7 +26,6 @@ import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
 import { type Context } from "./types.js";
-import { type IRelationalDb } from "document-drive/processors/types";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,
@@ -62,7 +62,9 @@ export class GraphQLManager {
 
     this.coreRouter.use(cors());
     this.coreRouter.use(bodyParser.json({ limit: "50mb" }));
-    this.coreRouter.use(bodyParser.urlencoded({ limit: "50mb" }));
+    this.coreRouter.use(
+      bodyParser.urlencoded({ extended: true, limit: "50mb" }),
+    );
 
     this.app.use("/", (req, res, next) => this.coreRouter(req, res, next));
     this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
