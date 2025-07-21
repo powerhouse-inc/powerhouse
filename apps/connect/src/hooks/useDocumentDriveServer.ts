@@ -309,51 +309,6 @@ export function useDocumentDriveServer() {
         [addDriveOperation, drives, isAllowedToCreateDocuments],
     );
 
-    // const addOperations = useCallback(
-    //     async (
-    //         driveId: string,
-    //         documentId: string | undefined,
-    //         operations: Operation[],
-    //     ) => {
-    //         if (!isAllowedToEditDocuments) {
-    //             throw new Error('User is not allowed to edit documents');
-    //         }
-
-    //         if (!reactor) {
-    //             throw new Error('Reactor is not loaded');
-    //         }
-
-    //         const isDriveOperations = documentId === undefined;
-
-    //         const result = isDriveOperations
-    //             ? await reactor.queueDriveOperations(
-    //                   driveId,
-    //                   operations as Operation<DocumentDriveAction>[],
-    //               )
-    //             : await reactor.queueOperations(
-    //                   driveId,
-    //                   documentId,
-    //                   operations,
-    //               );
-
-    //         if (result.operations.length) {
-    //             if (isDriveOperations) {
-    //                 refreshDrives();
-    //             } else {
-    //                 refreshDocuments();
-    //             }
-    //         }
-    //         return result.document;
-    //     },
-    //     [
-    //         drives,
-    //         isAllowedToEditDocuments,
-    //         reactor,
-    //         refreshDrives,
-    //         refreshDocuments,
-    //     ],
-    // );
-
     const addFile = useCallback(
         async (
             file: string | File,
