@@ -34,16 +34,12 @@ export type IDriveContext = {
   selectedDocument: PHDocument | null | undefined;
   /** Selected document parent folder */
   parentFolder: FolderNode | null | undefined;
-
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
-
   /** Indicates whether the current user has permissions to create new documents */
   isAllowedToCreateDocuments: boolean;
-
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-
   /**
    * The name of the analytics database to use for the drive editor
    */
@@ -58,16 +54,62 @@ export type IDriveContext = {
    * @param id - The id of the drive to be selected
    */
   setSelectedDrive: (id: string | undefined) => void;
+  /**
+   * Callback to add a new file to the drive
+   * @param file - The file to be added
+   * @param parent - The parent node of the file
+   * @returns Promise resolving to the newly created Node
+   */
   onAddFile: (file: File, parent: Node | undefined) => Promise<void>;
+  /**
+   * Callback to add a new folder to the drive
+   * @param name - The name of the folder
+   * @param parent - The parent node of the folder
+   * @returns Promise resolving to the newly created FolderNode
+   */
   onAddFolder: (
     name: string,
     parent: Node | undefined,
   ) => Promise<FolderNode | undefined>;
+  /**
+   * Callback to rename a node
+   * @param newName - The new name of the node
+   * @param node - The node to be renamed
+   * @returns Promise resolving to the newly renamed Node
+   */
   onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
+  /**
+   * Callback to copy a node
+   * @param src - The node to be copied
+   * @param target - The parent node of the copied node
+   * @returns Promise resolving to the newly created Node
+   */
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
+  /**
+   * Callback to move a node
+   * @param src - The node to be moved
+   * @param target - The parent node of the moved node
+   * @returns Promise resolving to the newly created Node
+   */
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
+  /**
+   * Callback to duplicate a node
+   * @param src - The node to be duplicated
+   * @returns Promise resolving to the newly created Node
+   */
   onDuplicateNode: (src: Node) => Promise<void>;
+  /**
+   * Callback to add a new folder and select it
+   * @param name - The name of the folder
+   * @returns Promise resolving to the newly created FolderNode
+   */
   onAddAndSelectNewFolder: (name: string) => Promise<void>;
+  /**
+   * Callback to get the sync status of a sync
+   * @param syncId - The id of the sync
+   * @param sharingType - The sharing type of the sync
+   * @returns The sync status of the sync, or undefined if not found
+   */
   getSyncStatusSync: (
     syncId: string,
     sharingType: "LOCAL" | "CLOUD" | "PUBLIC",
@@ -108,6 +150,10 @@ export type IDriveContext = {
    * @returns Promise resolving to an object containing the document name
    */
   showCreateDocumentModal: (documentModel: DocumentModelModule) => void;
+  /**
+   * Shows a modal for deleting a node
+   * @param node - The node to be deleted
+   */
   showDeleteNodeModal: (node: Node) => void;
   /**
    * Retrieves the document model module for a given document type
