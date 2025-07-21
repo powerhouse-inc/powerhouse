@@ -68,7 +68,7 @@ describe("Drive operations", () => {
     const drive = await server.getDrive(id);
     const result = await server.addDriveOperation(
       id,
-      buildOperation(drive!, addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
     expect(result.status).toBe("SUCCESS");
   });
@@ -89,12 +89,12 @@ describe("Drive operations", () => {
     const drive = await server.getDrive(id);
     await server.addDriveOperation(
       id,
-      buildOperation(drive!, addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
       id,
-      buildOperation(drive!, addFolder({ id: "1", name: "test" }), 1),
+      buildOperation(drive, addFolder({ id: "1", name: "test" }), 1),
     );
     expect(result.status).toBe("SUCCESS");
     expect(result.operations.find((op) => op.error)?.error).toBe(
@@ -117,12 +117,12 @@ describe("Drive operations", () => {
     const drive = await server.getDrive(id);
     await server.addDriveOperation(
       id,
-      buildOperation(drive!, addFolder({ id: "1", name: "test" })),
+      buildOperation(drive, addFolder({ id: "1", name: "test" })),
     );
 
     const result = await server.addDriveOperation(
       id,
-      buildOperation(drive!, addFolder({ id: "2", name: "test 2" }), 2),
+      buildOperation(drive, addFolder({ id: "2", name: "test 2" }), 2),
     );
     expect(result.status).toBe("ERROR");
     expect(result.error?.message).toBe(
@@ -144,12 +144,12 @@ describe("Drive operations", () => {
     });
     let drive = await server.getDrive(id);
     const result = await server.addDriveOperations(id, [
-      ...buildOperations(drive!, [
+      ...buildOperations(drive, [
         addFolder({ id: "1", name: "test 1" }),
         addFolder({ id: "2", name: "test 2" }),
         addFolder({ id: "3", name: "test 3" }),
       ]),
-      buildOperation(drive!, addFolder({ id: "4", name: "test 4" }), 4),
+      buildOperation(drive, addFolder({ id: "4", name: "test 4" }), 4),
     ]);
 
     expect(result.status).toBe("ERROR");
@@ -159,7 +159,7 @@ describe("Drive operations", () => {
     expect(result.operations.length).toBe(3);
 
     drive = await server.getDrive(id);
-    expect(drive!.state.global.nodes).toStrictEqual([
+    expect(drive.state.global.nodes).toStrictEqual([
       expect.objectContaining({ id: "1", name: "test 1" }),
       expect.objectContaining({ id: "2", name: "test 2" }),
       expect.objectContaining({ id: "3", name: "test 3" }),
@@ -181,7 +181,7 @@ describe("Drive operations", () => {
     let drive = await server.getDrive(id);
     const result = await server.addDriveOperations(
       id,
-      buildOperations(drive!, [
+      buildOperations(drive, [
         addFolder({ id: "1", name: "test 1" }),
         addFolder({ id: "2", name: "test 2" }),
         setAvailableOffline({ availableOffline: true }),
@@ -192,10 +192,10 @@ describe("Drive operations", () => {
     expect(result.operations.length).toBe(3);
 
     drive = await server.getDrive(id);
-    expect(drive!.state.global.nodes).toStrictEqual([
+    expect(drive.state.global.nodes).toStrictEqual([
       expect.objectContaining({ id: "1", name: "test 1" }),
       expect.objectContaining({ id: "2", name: "test 2" }),
     ]);
-    expect(drive!.state.local.availableOffline).toBe(true);
+    expect(drive.state.local.availableOffline).toBe(true);
   });
 });

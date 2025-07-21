@@ -85,10 +85,13 @@ export const drivesAtom = atomWithRefresh(async (get) => {
   // If the reactor is not set, returns an empty array.
   if (!reactor) return [];
 
-  const driveIds = (await reactor.getDrives()) ?? [];
-  const drives = (
-    await Promise.all(driveIds.map((id) => reactor.getDrive(id)))
-  ).filter((d) => d !== undefined);
+  const driveIds = await reactor.getDrives();
+  const drives = new Array<DocumentDriveDocument>();
+
+  for (const driveId of driveIds) {
+    const drive = await reactor.getDrive(driveId);
+    drives.push(drive);
+  }
 
   return drives;
 });
@@ -262,10 +265,10 @@ export const documentsAtom = atomWithRefresh(async (get) => {
   // If the reactor or drive id is not set, returns an empty array.
   if (!reactor || !driveId) return [];
 
-  const documentIds = (await reactor.getDocuments(driveId)) ?? [];
-  const documents = (
-    await Promise.all(documentIds.map((id) => reactor.getDocument(driveId, id)))
-  ).filter((d) => d !== undefined);
+  const documentIds = await reactor.getDocuments(driveId);
+  const documents = await Promise.all(
+    documentIds.map((id) => reactor.getDocument(driveId, id)),
+  );
 
   return documents;
 });

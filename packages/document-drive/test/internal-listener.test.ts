@@ -85,7 +85,7 @@ describe("Internal Listener", () => {
       onDisconnect: () => Promise.resolve(),
     });
     const drive = await server.getDrive(driveId);
-    if (!drive) return;
+
     const documentId = generateId();
     const action = generateAddNodeAction(
       drive.state.global,

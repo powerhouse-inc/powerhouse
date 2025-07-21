@@ -1,6 +1,10 @@
 {
   "name": "@powerhousedao/reactor",
+<<<<<<< HEAD
   "version": "4.0.0-staging.3",
+=======
+  "version": "3.3.0-dev.15",
+>>>>>>> main
   "description": "",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
