@@ -12,10 +12,9 @@ export function responseForDrive(drive: DocumentDriveDocument) {
 }
 
 export function responseForDocument(
-  document: PHDocument | undefined,
+  document: PHDocument,
   typeName: string,
 ): any {
-  if (!document) return undefined;
   return {
     ...document,
     id: document.header.id,

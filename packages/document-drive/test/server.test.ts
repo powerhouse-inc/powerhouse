@@ -110,7 +110,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
     const drive = await server.getDrive(driveId);
-    expect(drive!.state).toStrictEqual(
+    expect(drive.state).toStrictEqual(
       DocumentDriveUtils.createState({
         global: {
           name: "name",
@@ -126,7 +126,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     const drives = await server.getDrives();
-    expect(drives!.includes(driveId)).toBeTruthy();
+    expect(drives.includes(driveId)).toBeTruthy();
   });
 
   it.skipIf(!file)("adds file to server", async ({ expect }) => {
@@ -153,9 +153,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     let drive = await server.getDrive(driveId);
     // performs ADD_FILE operation locally
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -171,9 +171,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(operationResult.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive!.state).toStrictEqual(operationResult.document?.state);
+    expect(drive.state).toStrictEqual(operationResult.document?.state);
 
-    expect(drive!.state.global.nodes[0]).toStrictEqual({
+    expect(drive.state.global.nodes[0]).toStrictEqual({
       id: documentId,
       kind: "file",
       name: "document 1",
@@ -219,9 +219,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -240,11 +240,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(result.status).toBe("SUCCESS");
 
     const document = await server.getDocument(driveId, documentId);
-    expect(document!.header.documentType).toBe("powerhouse/document-model");
-    expect(document!.state).toStrictEqual(DocumentModelUtils.createState());
+    expect(document.header.documentType).toBe("powerhouse/document-model");
+    expect(document.state).toStrictEqual(DocumentModelUtils.createState());
 
     const driveDocuments = await server.getDocuments(driveId);
-    expect(driveDocuments!).toStrictEqual([documentId]);
+    expect(driveDocuments).toStrictEqual([documentId]);
   });
 
   it("deletes file from server", async ({ expect }) => {
@@ -272,9 +272,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // adds file
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -291,7 +291,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // removes file
     drive = reducer(
-      drive!,
+      drive,
       actions.deleteNode({
         id: documentId,
       }),
@@ -303,7 +303,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(result.status).toBe("SUCCESS");
 
     const serverDrive = await server.getDrive(driveId);
-    expect(serverDrive!.state.global.nodes).toStrictEqual([]);
+    expect(serverDrive.state.global.nodes).toStrictEqual([]);
   });
 
   it("deletes document when file is removed from server", async ({
@@ -331,9 +331,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -343,7 +343,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ),
     );
     drive = reducer(
-      drive!,
+      drive,
       actions.deleteNode({
         id: documentId,
       }),
@@ -390,16 +390,16 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     let drive = await server.getDrive(driveId);
 
     drive = reducer(
-      drive!,
+      drive,
       actions.addFolder({
         id: folderId,
         name: "document 1",
       }),
     );
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -410,7 +410,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ),
     );
     drive = reducer(
-      drive!,
+      drive,
       actions.deleteNode({
         id: folderId,
       }),
@@ -483,9 +483,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     let drive = await server.getDrive(driveId);
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -529,7 +529,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
     drive = reducer(
-      drive!,
+      drive,
       actions.setDriveName({
         name: "new name",
       }),
@@ -542,7 +542,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(result.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive!.state.global.name).toBe("new name");
+    expect(drive.state.global.name).toBe("new name");
   });
 
   it("copies document when file is copied drive", async ({ expect }) => {
@@ -571,23 +571,23 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
     drive = reducer(
-      drive!,
+      drive,
       actions.addFolder({
         id: folder1Id,
         name: "1",
       }),
     );
     drive = reducer(
-      drive!,
+      drive,
       actions.addFolder({
         id: folder2Id,
         name: "2",
       }),
     );
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: document1Id,
           name: "1.1",
@@ -598,7 +598,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ),
     );
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateCopyNodeAction(drive.state.global, {
         srcId: document1Id,
         targetId: document2Id,
@@ -619,11 +619,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const documentB = await server.getDocument(driveId, document2Id);
 
     // slugs have to change, as they are unique
-    expect(document!.header.slug).not.toBe(documentB!.header.slug);
+    expect(document.header.slug).not.toBe(documentB.header.slug);
 
     // compare everything but the slug + id (which are supposed to be different)
-    const a = document!.state;
-    const b = documentB!.state;
+    const a = document.state;
+    const b = documentB.state;
     expect(a).toStrictEqual(b);
   });
 
@@ -652,9 +652,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // adds file
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -683,8 +683,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     const storedDocument = await server.getDocument(driveId, documentId);
-    expect(storedDocument!.state).toStrictEqual(document.state);
-    expect(storedDocument!.operations).toMatchObject(document.operations);
+    expect(storedDocument.state).toStrictEqual(document.state);
+    expect(storedDocument.operations).toMatchObject(document.operations);
   });
 
   it("saves operation context", async ({ expect }) => {
@@ -725,9 +725,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     };
 
-    drive = reducer(drive!, {
+    drive = reducer(drive, {
       ...DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -744,7 +744,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(operationResult.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive!.operations.global[0]?.context).toStrictEqual(context);
+    expect(drive.operations.global[0]?.context).toStrictEqual(context);
   });
 
   it("get drives by slug", async ({ expect }) => {
@@ -788,13 +788,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     }
 
     let drive = await server.getDriveBySlug("slug1");
-    expect(drive!.header.id).toBe(driveId1);
+    expect(drive.header.id).toBe(driveId1);
 
     drive = await server.getDriveBySlug("slug2");
-    expect(drive!.header.id).toBe(driveId2);
+    expect(drive.header.id).toBe(driveId2);
 
     drive = await server.getDriveBySlug("slug3");
-    expect(drive!.header.id).toBe(driveId3);
+    expect(drive.header.id).toBe(driveId3);
   });
 
   it.skipIf(!file)("import document from zip", async ({ expect }) => {
@@ -820,7 +820,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     const documentId = generateId();
     const action = generateAddNodeAction(
-      drive!.state.global,
+      drive.state.global,
       {
         id: documentId,
         name: "name",
@@ -862,9 +862,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // adds file
     drive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -962,9 +962,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     };
 
     // adds file
-    drive = reducer(drive!, {
+    drive = reducer(drive, {
       ...DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -977,7 +977,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     await server.addDriveOperation(driveId, drive.operations.global[0]!);
     const storedDrive = await server.getDrive(driveId);
-    expect(storedDrive!.operations.global[0]).toMatchObject(
+    expect(storedDrive.operations.global[0]).toMatchObject(
       drive.operations.global[0]!,
     );
   });
@@ -1007,9 +1007,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     // adds file
     const newDrive = reducer(
-      drive!,
+      drive,
       DocumentDriveUtils.generateAddNodeAction(
-        drive!.state.global,
+        drive.state.global,
         {
           id: documentId,
           name: "document 1",
@@ -1024,8 +1024,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const drive0 = await server.getDrive(driveId, {
       revisions: { global: -1 },
     });
-    expect(drive0!.operations.global.length).toBe(0);
-    expect(drive0!).toStrictEqual(drive);
+    expect(drive0.operations.global.length).toBe(0);
+    expect(drive0).toStrictEqual(drive);
   });
 
   it("should allow removing a drive and then adding a new drive with the same id and slug", async ({
@@ -1069,6 +1069,6 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     const drive = await server.getDriveBySlug("test-drive");
-    expect(drive!.header.slug).toBe("test-drive");
+    expect(drive.header.slug).toBe("test-drive");
   });
 });

@@ -356,33 +356,33 @@ export interface IBaseDocumentDriveServer {
   get listeners(): IListenerManager;
 
   setDocumentModelModules(models: DocumentModelModule[]): void;
-  getDrives(): Promise<string[] | undefined>;
-  getDrivesSlugs(): Promise<string[] | undefined>;
+  getDrives(): Promise<string[]>;
+  getDrivesSlugs(): Promise<string[]>;
   addDrive(
     input: DriveInput,
     preferredEditor?: string,
-  ): Promise<DocumentDriveDocument | undefined>;
+  ): Promise<DocumentDriveDocument>;
   addRemoteDrive(
     url: string,
     options: RemoteDriveOptions,
-  ): Promise<DocumentDriveDocument | undefined>;
+  ): Promise<DocumentDriveDocument>;
   deleteDrive(driveId: string): Promise<void>;
   getDrive(
     driveId: string,
     options?: GetDocumentOptions,
   ): Promise<DocumentDriveDocument>;
 
-  getDriveBySlug(slug: string): Promise<DocumentDriveDocument | undefined>;
+  getDriveBySlug(slug: string): Promise<DocumentDriveDocument>;
   getDriveIdBySlug(
     slug: string,
-  ): Promise<DocumentDriveDocument["header"]["id"] | undefined>;
+  ): Promise<DocumentDriveDocument["header"]["id"]>;
 
-  getDocuments(driveId: string): Promise<string[] | undefined>;
+  getDocuments(driveId: string): Promise<string[]>;
   getDocument<TDocument extends PHDocument>(
     driveId: string,
     documentId: string,
     options?: GetDocumentOptions,
-  ): Promise<TDocument | undefined>;
+  ): Promise<TDocument>;
 
   addOperation(
     driveId: string,
