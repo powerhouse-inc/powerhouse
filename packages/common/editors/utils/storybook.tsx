@@ -1,3 +1,4 @@
+import { type GenericDriveExplorerEditorProps } from "#editors/generic-drive-explorer/editor";
 import {
   createDocumentStory,
   type DocumentStory,
@@ -8,10 +9,10 @@ import {
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { type Decorator, type Meta } from "@storybook/react";
 import {
+  driveDocumentModelModule,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
   type DocumentDriveState,
-  driveDocumentModelModule,
   type IDocumentDriveServer,
 } from "document-drive";
 import {
@@ -20,59 +21,6 @@ import {
   type ExtendedState,
   type PartialState,
 } from "document-model";
-
-const DriveContextDecorator: Decorator<
-  EditorStoryProps<DocumentDriveDocument>
-> = (Story, context) => {
-  return (
-    <DriveContextProvider
-      value={{
-        selectedDrive: context.args.document,
-        selectedFolder: undefined,
-        selectedDocument: context.args.document,
-        parentFolder: undefined,
-        analyticsDatabaseName: "test",
-        setSelectedNode: () => {},
-        setSelectedDrive: () => {},
-        onAddFile: () => Promise.resolve(),
-        onAddFolder: () => Promise.resolve(undefined),
-        onRenameNode: () => Promise.resolve(undefined),
-        onCopyNode: () => Promise.resolve(),
-        onMoveNode: () => Promise.resolve(),
-        onDuplicateNode: () => Promise.resolve(),
-        onAddAndSelectNewFolder: () => Promise.resolve(),
-        getSyncStatusSync: () => undefined,
-        showDeleteNodeModal: () => {},
-        getDocumentModelModule: () => undefined,
-        getEditor: () => undefined,
-        reactor: {} as unknown as IDocumentDriveServer,
-        useDocumentEditorProps: () => ({
-          dispatch: () => {},
-          document: context.args.document,
-          error: undefined,
-        }),
-        showSearchBar: false,
-        isAllowedToCreateDocuments: true,
-        documentModels: [
-          documentModelDocumentModelModule as DocumentModelModule,
-        ],
-        addFile() {
-          throw new Error("addFile not implemented");
-        },
-        addDocument() {
-          throw new Error("addDocument not implemented");
-        },
-        showCreateDocumentModal(documentModel: DocumentModelModule) {
-          return Promise.resolve({
-            name: `New ${documentModel.documentModel.name}`,
-          });
-        },
-      }}
-    >
-      <Story />
-    </DriveContextProvider>
-  );
-};
 
 export function createDriveStory(
   Editor: EditorStoryComponent<DocumentDriveDocument>,
@@ -95,8 +43,57 @@ export function createDriveStory(
       }),
     },
     additionalStoryArgs,
-    [DriveContextDecorator, ...(decorators ?? [])],
+    [
+      (Story, context) => (
+        <DriveContextProvider
+          value={{
+            selectedDrive: context.args.document,
+            selectedFolder: undefined,
+            selectedDocument: context.args.document,
+            parentFolder: undefined,
+            analyticsDatabaseName: "test",
+            setSelectedNode: () => {},
+            setSelectedDrive: () => {},
+            onAddFile: () => Promise.resolve(),
+            onAddFolder: () => Promise.resolve(undefined),
+            onRenameNode: () => Promise.resolve(undefined),
+            onCopyNode: () => Promise.resolve(),
+            onMoveNode: () => Promise.resolve(),
+            onDuplicateNode: () => Promise.resolve(),
+            onAddAndSelectNewFolder: () => Promise.resolve(),
+            getSyncStatusSync: () => undefined,
+            showDeleteNodeModal: () => {},
+            getDocumentModelModule: () => undefined,
+            getEditor: () => undefined,
+            reactor: {} as unknown as IDocumentDriveServer,
+            useDocumentEditorProps: () => ({
+              dispatch: () => {},
+              document: context.args.document,
+              error: undefined,
+            }),
+            showSearchBar: false,
+            isAllowedToCreateDocuments: true,
+            documentModels: [
+              documentModelDocumentModelModule as DocumentModelModule,
+            ],
+            addFile() {
+              throw new Error("addFile not implemented");
+            },
+            addDocument() {
+              throw new Error("addDocument not implemented");
+            },
+            showCreateDocumentModal(documentModel: DocumentModelModule) {
+              return Promise.resolve({
+                name: `New ${documentModel.documentModel.name}`,
+              });
+            },
+          }}
+        >
+          <Story />
+        </DriveContextProvider>
+      ),
+      ...(decorators ?? []),
+    ],
   );
-  story.meta.id = "powerhouse";
   return story;
 }

@@ -25,15 +25,10 @@ import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";
 import { SearchBar } from "./components/search-bar.js";
 
-export type IGenericDriveExplorerEditorProps = {
-  className?: string;
-  children?: React.ReactNode;
-};
+export type GenericDriveExplorerEditorProps =
+  DriveEditorProps<DocumentDriveDocument> & React.HTMLProps<HTMLDivElement>;
 
-export type IProps = DriveEditorProps<DocumentDriveDocument> &
-  React.HTMLProps<HTMLDivElement>;
-
-export function BaseEditor(props: IProps) {
+export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { document, className, children } = props;
 
   const {
@@ -124,7 +119,7 @@ export function BaseEditor(props: IProps) {
   );
 }
 
-export default function Editor(props: IProps) {
+export default function Editor(props: GenericDriveExplorerEditorProps) {
   return (
     <DriveContextProvider value={props.context}>
       <BaseEditor {...props} />
