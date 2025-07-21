@@ -1,6 +1,6 @@
 # Refactoring to `Reactor`: An Iterative Approach
 
-This document outlines the plan to refactor the existing `document-drive` package into the new `Reactor` architecture. The core of this refactoring is a shift from a state-oriented storage model to an event-sourced architecture, accomplished iteratively using a facade to minimize risk and disruption.
+This document outlines the plan to refactor the existing `document-drive` package into the new `Reactor` architecture. The core of this refactoring is a shift from a state-oriented storage model to a command-sourced architecture, accomplished iteratively using a facade to minimize risk and disruption.
 
 All new development will take place in the `packages/reactor` directory, providing a clean separation from the existing `document-drive` codebase.
 
