@@ -1,10 +1,10 @@
-# Operational Database Layer
+# Relational Database Layer
 
-A TypeScript-first operational layer for PGlite with live query capabilities, designed to provide type-safe database operations with real-time updates.
+A TypeScript-first Relational layer for PGlite with live query capabilities, designed to provide type-safe database operations with real-time updates.
 
 ## Overview
 
-This package provides a high-level operational layer on top of PGlite, offering type-safe database operations through Kysely and live query capabilities with real-time updates.
+This package provides a high-level Relational layer on top of PGlite, offering type-safe database operations through Kysely and live query capabilities with real-time updates.
 
 ## Table of Contents
 
@@ -12,10 +12,10 @@ This package provides a high-level operational layer on top of PGlite, offering 
 - [Key Features](#key-features)
 - [Quick Start](#quick-start)
   - [1. Define Your Database Schema](#1-define-your-database-schema)
-  - [2. Create a Typed Query Hook](#2-create-a-typed-query-hook)
+  - [2. Create a Processor Query Hook](#2-create-a-typed-query-hook)
   - [3. Use It in Your Component](#3-use-it-in-your-component)
 - [API Reference](#api-reference)
-  - [createTypedQuery<Schema>()](#createtypedqueryschema)
+  - [createProcessorQuery<Schema>()](#createProcessorQueryschema)
   - [Static Queries (no parameters)](#static-queries-no-parameters)
   - [Parameterized Queries](#parameterized-queries)
   - [Query Callback](#query-callback)
@@ -45,10 +45,10 @@ This package provides a high-level operational layer on top of PGlite, offering 
   - [Debug Tips](#debug-tips)
 - [Hooks API Reference](#hooks-api-reference)
   - [Core Hooks](#core-hooks)
-    - [useOperationalStore<Schema>()](#useoperationalstoreschema)
+    - [useRelationalDb<Schema>()](#useRelationalDbschema)
     - [useLiveQuery<Schema, T>()](#uselivequeryschemat)
 - [Utilities API Reference](#utilities-api-reference)
-  - [createTypedQuery<Schema>()](#createtypedqueryschema-1)
+  - [createProcessorQuery<Schema>()](#createProcessorQueryschema-1)
 - [Hook Relationships](#hook-relationships)
 
 ## Key Features
@@ -81,12 +81,12 @@ type MyDatabase = {
 };
 ```
 
-### 2. Create a Typed Query Hook
+### 2. Create a Processor Query Hook
 
 ```typescript
-import { createTypedQuery } from '@powerhousedao/reactor-browser/operational';
+import { createProcessorQuery } from "@powerhousedao/reactor-browser/Relational";
 
-const useTypedQuery = createTypedQuery<MyDatabase>();
+const useProcessorQuery = createProcessorQuery<MyDatabase>();
 ```
 
 ### 3. Use It in Your Component
@@ -94,8 +94,8 @@ const useTypedQuery = createTypedQuery<MyDatabase>();
 ```typescript
 // Static query (no parameters)
 export function useUserList() {
-  const result = useTypedQuery(db => {
-    return db.selectFrom('users').selectAll().compile();
+  const result = useProcessorQuery((db) => {
+    return db.selectFrom("users").selectAll().compile();
   });
 
   return result;
@@ -103,15 +103,15 @@ export function useUserList() {
 
 // Dynamic query with parameters
 export function useUserById(userId: number) {
-  const result = useTypedQuery(
+  const result = useProcessorQuery(
     (db, params) => {
       return db
-        .selectFrom('users')
+        .selectFrom("users")
         .selectAll()
-        .where('id', '=', params.userId)
+        .where("id", "=", params.userId)
         .compile();
     },
-    { userId }
+    { userId },
   );
 
   return result;
@@ -120,7 +120,7 @@ export function useUserById(userId: number) {
 
 ## API Reference
 
-### `createTypedQuery<Schema>()`
+### `createProcessorQuery<Schema>()`
 
 Creates a typed query hook for your database schema with support for both static and dynamic parameterized queries.
 
@@ -146,7 +146,7 @@ useQuery(
 The callback function receives an Enhanced Kysely database instance and optionally parameters. It must return an object with `sql` and optional `parameters` properties.
 
 ```typescript
-type QueryCallbackReturnType = { 
+type QueryCallbackReturnType = {
   sql: string;
   parameters?: readonly unknown[];
 };
@@ -156,8 +156,8 @@ type QueryCallbackReturnType = {
 
 ```typescript
 {
-  isLoading: boolean;    // True while query is loading
-  error: Error | null;   // Any error that occurred
+  isLoading: boolean; // True while query is loading
+  error: Error | null; // Any error that occurred
   result: LiveQueryResults<T> | null; // Query results (live updates)
 }
 ```
@@ -170,15 +170,15 @@ One of the key features is support for dynamic parameters that automatically upd
 
 ```typescript
 export function useUserById(userId: number) {
-  const result = useTypedQuery(
+  const result = useProcessorQuery(
     (db, params) => {
       return db
-        .selectFrom('users')
+        .selectFrom("users")
         .selectAll()
-        .where('id', '=', params.userId)
+        .where("id", "=", params.userId)
         .compile();
     },
-    { userId } // Query updates when userId changes
+    { userId }, // Query updates when userId changes
   );
 
   return result;
@@ -189,25 +189,25 @@ export function useUserById(userId: number) {
 
 ```typescript
 export function useSearchResults() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [category, setCategory] = useState("all");
 
   // Query automatically updates when searchTerm or category changes
-  const result = useTypedQuery(
+  const result = useProcessorQuery(
     (db, params) => {
-      let query = db.selectFrom('products').selectAll();
-      
+      let query = db.selectFrom("products").selectAll();
+
       if (params.searchTerm) {
-        query = query.where('name', 'like', `%${params.searchTerm}%`);
+        query = query.where("name", "like", `%${params.searchTerm}%`);
       }
-      
-      if (params.category !== 'all') {
-        query = query.where('category', '=', params.category);
+
+      if (params.category !== "all") {
+        query = query.where("category", "=", params.category);
       }
-      
+
       return query.compile();
     },
-    { searchTerm, category }
+    { searchTerm, category },
   );
 
   return { result, setSearchTerm, setCategory };
@@ -222,16 +222,16 @@ Parameters are automatically memoized using deep comparison, so you don't need t
 // ✅ This works perfectly - no manual memoization needed
 const parameters = {
   userId: user.id,
-  status: 'active',
-  limit: 10
+  status: "active",
+  limit: 10,
 };
 
-const result = useTypedQuery((db, params) => {
+const result = useProcessorQuery((db, params) => {
   return db
-    .selectFrom('users')
+    .selectFrom("users")
     .selectAll()
-    .where('id', '=', params.userId)
-    .where('status', '=', params.status)
+    .where("id", "=", params.userId)
+    .where("status", "=", params.status)
     .limit(params.limit)
     .compile();
 }, parameters);
@@ -243,10 +243,10 @@ const result = useTypedQuery((db, params) => {
 
 ```typescript
 const useUsers = () => {
-  const useTypedQuery = createTypedQuery<MyDatabase>();
-  
-  return useTypedQuery(db => {
-    return db.selectFrom('users').selectAll().compile();
+  const useProcessorQuery = createProcessorQuery<MyDatabase>();
+
+  return useProcessorQuery((db) => {
+    return db.selectFrom("users").selectAll().compile();
   });
 };
 ```
@@ -255,17 +255,17 @@ const useUsers = () => {
 
 ```typescript
 const useUserById = (userId: number) => {
-  const useTypedQuery = createTypedQuery<MyDatabase>();
-  
-  return useTypedQuery(
+  const useProcessorQuery = createProcessorQuery<MyDatabase>();
+
+  return useProcessorQuery(
     (db, params) => {
       return db
-        .selectFrom('users')
+        .selectFrom("users")
         .selectAll()
-        .where('id', '=', params.userId)
+        .where("id", "=", params.userId)
         .compile();
     },
-    { userId }
+    { userId },
   );
 };
 ```
@@ -274,11 +274,11 @@ const useUserById = (userId: number) => {
 
 ```typescript
 const useCustomQuery = () => {
-  const useTypedQuery = createTypedQuery<MyDatabase>();
-  
-  return useTypedQuery(db => {
-    return { 
-      sql: 'SELECT u.name, COUNT(p.id) as post_count FROM users u LEFT JOIN posts p ON u.id = p.author_id GROUP BY u.id, u.name'
+  const useProcessorQuery = createProcessorQuery<MyDatabase>();
+
+  return useProcessorQuery((db) => {
+    return {
+      sql: "SELECT u.name, COUNT(p.id) as post_count FROM users u LEFT JOIN posts p ON u.id = p.author_id GROUP BY u.id, u.name",
     };
   });
 };
@@ -288,18 +288,18 @@ const useCustomQuery = () => {
 
 ```typescript
 const useUsersWithPosts = () => {
-  const useTypedQuery = createTypedQuery<MyDatabase>();
-  
-  return useTypedQuery(db => {
+  const useProcessorQuery = createProcessorQuery<MyDatabase>();
+
+  return useProcessorQuery((db) => {
     return db
-      .selectFrom('users')
-      .leftJoin('posts', 'users.id', 'posts.author_id')
+      .selectFrom("users")
+      .leftJoin("posts", "users.id", "posts.author_id")
       .select([
-        'users.id',
-        'users.name',
-        'users.email',
-        'posts.title as post_title',
-        'posts.content as post_content'
+        "users.id",
+        "users.name",
+        "users.email",
+        "posts.title as post_title",
+        "posts.content as post_content",
       ])
       .compile();
   });
@@ -310,7 +310,7 @@ const useUsersWithPosts = () => {
 
 ```typescript
 import React from 'react';
-import { createTypedQuery } from '@powerhousedao/reactor-browser/operational';
+import { createProcessorQuery } from '@powerhousedao/reactor-browser/Relational';
 
 type Database = {
   users: {
@@ -320,10 +320,10 @@ type Database = {
   };
 };
 
-const useTypedQuery = createTypedQuery<Database>();
+const useProcessorQuery = createProcessorQuery<Database>();
 
 export function UserList() {
-  const { isLoading, error, result } = useTypedQuery(db => {
+  const { isLoading, error, result } = useProcessorQuery(db => {
     return db.selectFrom('users').selectAll().compile();
   });
 
@@ -351,17 +351,17 @@ The hook automatically handles query optimization to prevent infinite re-renders
 
 ```typescript
 // ✅ Static queries - automatically optimized
-const result = useTypedQuery(db => {
-  return db.selectFrom('users').selectAll().compile();
+const result = useProcessorQuery((db) => {
+  return db.selectFrom("users").selectAll().compile();
 });
 
 // ✅ Parameterized queries - parameters are automatically memoized
-const parameters = { status: 'active', limit: 10 };
-const result = useTypedQuery((db, params) => {
+const parameters = { status: "active", limit: 10 };
+const result = useProcessorQuery((db, params) => {
   return db
-    .selectFrom('users')
+    .selectFrom("users")
     .selectAll()
-    .where('status', '=', params.status)
+    .where("status", "=", params.status)
     .limit(params.limit)
     .compile();
 }, parameters);
@@ -373,23 +373,27 @@ Parameters are automatically memoized using deep comparison with `lodash.isequal
 
 ```typescript
 // ✅ These won't cause re-renders (same content)
-const params1 = { id: 1, name: 'john' };
-const params2 = { id: 1, name: 'john' };
+const params1 = { id: 1, name: "john" };
+const params2 = { id: 1, name: "john" };
 
 // ✅ This will cause a re-render (different content)
-const params3 = { id: 2, name: 'john' };
+const params3 = { id: 2, name: "john" };
 
 // ✅ No manual useMemo needed!
-const result = useTypedQuery((db, params) => {
-  return db
-    .selectFrom('users')
-    .selectAll()
-    .where('id', '=', params.id)
-    .compile();
-}, { id: userId, name: userName }); // Updates only when userId or userName changes
+const result = useProcessorQuery(
+  (db, params) => {
+    return db
+      .selectFrom("users")
+      .selectAll()
+      .where("id", "=", params.id)
+      .compile();
+  },
+  { id: userId, name: userName },
+); // Updates only when userId or userName changes
 ```
 
 **Internal Implementation:**
+
 - Uses `useStableParams()` utility with deep equality comparison
 - Callback functions are automatically memoized when parameters change
 - Prevents infinite re-renders even with complex nested parameter objects
@@ -400,13 +404,13 @@ The hook provides full TypeScript support:
 
 ```typescript
 // ✅ TypeScript will enforce the sql property
-const result = useTypedQuery(db => {
-  return db.selectFrom('users').selectAll().compile(); // Has sql property
+const result = useProcessorQuery((db) => {
+  return db.selectFrom("users").selectAll().compile(); // Has sql property
 });
 
 // ❌ TypeScript error - missing sql property
-const result = useTypedQuery(db => {
-  return db.selectFrom('users').selectAll(); // No compile(), no sql property
+const result = useProcessorQuery((db) => {
+  return db.selectFrom("users").selectAll(); // No compile(), no sql property
 });
 ```
 
@@ -415,13 +419,13 @@ const result = useTypedQuery(db => {
 The hook provides detailed loading states:
 
 ```typescript
-const { isLoading, error, result } = useTypedQuery(db => {
-  return db.selectFrom('users').selectAll().compile();
+const { isLoading, error, result } = useProcessorQuery((db) => {
+  return db.selectFrom("users").selectAll().compile();
 });
 
 // isLoading combines:
 // - Database connection loading
-// - Operational store loading  
+// - Relational db loading
 // - Query execution loading
 ```
 
@@ -446,9 +450,15 @@ type MyDatabase = {
 Create descriptive hook names for your queries:
 
 ```typescript
-const useUserById = (id: number) => { /* ... */ };
-const useActiveUsers = () => { /* ... */ };
-const useUserPostCount = (userId: number) => { /* ... */ };
+const useUserById = (id: number) => {
+  /* ... */
+};
+const useActiveUsers = () => {
+  /* ... */
+};
+const useUserPostCount = (userId: number) => {
+  /* ... */
+};
 ```
 
 ### 3. Handle Loading and Error States
@@ -456,7 +466,7 @@ const useUserPostCount = (userId: number) => { /* ... */ };
 Always handle loading and error states in your components:
 
 ```typescript
-const { isLoading, error, result } = useTypedQuery(/* ... */);
+const { isLoading, error, result } = useProcessorQuery(/* ... */);
 
 if (isLoading) return <LoadingSpinner />;
 if (error) return <ErrorMessage error={error} />;
@@ -469,18 +479,19 @@ Prefer simple, focused queries over complex ones:
 
 ```typescript
 // ✅ Good - focused query
-const useUsers = () => useTypedQuery(db => 
-  db.selectFrom('users').selectAll().compile()
-);
+const useUsers = () =>
+  useProcessorQuery((db) => db.selectFrom("users").selectAll().compile());
 
 // ❌ Avoid - too complex
-const useEverything = () => useTypedQuery(db => 
-  db.selectFrom('users')
-    .leftJoin('posts', 'users.id', 'posts.author_id')
-    .leftJoin('comments', 'posts.id', 'comments.post_id')
-    .selectAll()
-    .compile()
-);
+const useEverything = () =>
+  useProcessorQuery((db) =>
+    db
+      .selectFrom("users")
+      .leftJoin("posts", "users.id", "posts.author_id")
+      .leftJoin("comments", "posts.id", "comments.post_id")
+      .selectAll()
+      .compile(),
+  );
 ```
 
 ## Troubleshooting
@@ -499,63 +510,69 @@ const useEverything = () => useTypedQuery(db =>
 
 ```typescript
 // Debug static queries
-const result = useTypedQuery(db => {
-  const compiled = db.selectFrom('users').selectAll().compile();
-  console.log('Query SQL:', compiled.sql);
+const result = useProcessorQuery((db) => {
+  const compiled = db.selectFrom("users").selectAll().compile();
+  console.log("Query SQL:", compiled.sql);
   return compiled;
 });
 
 // Debug parameterized queries
-const result = useTypedQuery((db, params) => {
-  console.log('Query parameters:', params);
-  const compiled = db
-    .selectFrom('users')
-    .selectAll()
-    .where('id', '=', params.userId)
-    .compile();
-  console.log('Query SQL:', compiled.sql);
-  console.log('SQL parameters:', compiled.parameters);
-  return compiled;
-}, { userId });
+const result = useProcessorQuery(
+  (db, params) => {
+    console.log("Query parameters:", params);
+    const compiled = db
+      .selectFrom("users")
+      .selectAll()
+      .where("id", "=", params.userId)
+      .compile();
+    console.log("Query SQL:", compiled.sql);
+    console.log("SQL parameters:", compiled.parameters);
+    return compiled;
+  },
+  { userId },
+);
 ```
 
 ## Hooks API Reference
 
 ### Core Hooks
 
-#### `useOperationalStore<Schema>()`
+#### `useRelationalDb<Schema>()`
 
 Returns an enhanced Kysely-wrapped database instance with full type safety for your schema and live query capabilities.
 
 ```typescript
-const { db, isLoading, error } = useOperationalStore<MySchema>();
+const { db, isLoading, error } = useRelationalDb<MySchema>();
 ```
 
 **Returns:**
+
 ```typescript
 {
-  db: EnhancedKysely<Schema> | null;    // Type-safe Kysely database instance with live capabilities
-  isLoading: boolean;                   // True while database is initializing
-  error: Error | null;                  // Any initialization error
+  db: EnhancedKysely<Schema> | null; // Type-safe Kysely database instance with live capabilities
+  isLoading: boolean; // True while database is initializing
+  error: Error | null; // Any initialization error
 }
 ```
 
 **Types:**
+
 ```typescript
 // Enhanced Kysely instance with live query support
 type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
 
-// Query callback return type for operational queries
+// Query callback return type for Relational queries
 type QueryCallbackReturnType = {
   sql: string;
   parameters?: readonly unknown[];
 };
 ```
-```
+
+````
 
 **Usage:**
 ```typescript
-import { useOperationalStore, type EnhancedKysely } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalDb, type EnhancedKysely } from '@powerhousedao/reactor-browser/Relational';
 
 type MyDatabase = {
   users: {
@@ -565,66 +582,72 @@ type MyDatabase = {
 };
 
 function DatabaseOperations() {
-  const { db, isLoading, error } = useOperationalStore<MyDatabase>();
-  
+  const { db, isLoading, error } = useRelationalDb<MyDatabase>();
+
   const createUser = async (name: string) => {
     if (!db) return;
-    
+
     // db is EnhancedKysely<MyDatabase> with both Kysely methods and live capabilities
     await db
       .insertInto('users')
       .values({ name })
       .execute();
   };
-  
+
   return (
     <button onClick={() => createUser('John')}>
       Create User
     </button>
   );
 }
-```
+````
 
-#### `useOperationalQuery<Schema, T, TParams>()`
+#### `useRelationalQuery<Schema, T, TParams>()`
 
 Lower-level hook for creating live queries with manual control over the query callback and parameter support.
 
 ```typescript
-const { result, isLoading, error } = useOperationalQuery<Schema, T, TParams>(queryCallback, parameters);
+const { result, isLoading, error } = useRelationalQuery<Schema, T, TParams>(
+  queryCallback,
+  parameters,
+);
 ```
 
 **Parameters:**
+
 - `queryCallback: (db: EnhancedKysely<Schema>, parameters?: TParams) => QueryCallbackReturnType` - Function that returns a query with SQL and optional parameters
 - `parameters?: TParams` - Optional parameters for the query
 
 **Returns:**
+
 ```typescript
 {
-  result: LiveQueryResults<T> | null;  // Live query results
-  isLoading: boolean;                  // Combined loading state
-  error: Error | null;                 // Any error that occurred
+  result: LiveQueryResults<T> | null; // Live query results
+  isLoading: boolean; // Combined loading state
+  error: Error | null; // Any error that occurred
 }
 ```
 
 **Usage:**
+
 ```typescript
-import { useOperationalQuery } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalQuery } from '@powerhousedao/reactor-browser/Relational';
 
 function UserCount() {
-  const { result, isLoading, error } = useOperationalQuery<MyDatabase, { count: number }>(
+  const { result, isLoading, error } = useRelationalQuery<MyDatabase, { count: number }>(
     (db) => db.selectFrom('users').select(db.fn.count('id').as('count')).compile()
   );
-  
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
-  
+
   return <div>User count: {result?.rows[0]?.count ?? 0}</div>;
 }
 ```
 
 ## Utilities API Reference
 
-### `createTypedQuery<Schema>()`
+### `createProcessorQuery<Schema>()`
 
 Creates a typed query hook for your database schema with automatic optimization and type safety.
 
@@ -635,11 +658,11 @@ Creates a typed query hook for your database schema with automatic optimization 
 The package exports several useful types for advanced use cases:
 
 ```typescript
-import { 
+import {
   type EnhancedKysely,
   type QueryCallbackReturnType,
-  type IOperationalStore 
-} from '@powerhousedao/reactor-browser/operational';
+  type IRelationalDb,
+} from "@powerhousedao/reactor-browser/Relational";
 
 // Enhanced Kysely instance with live capabilities
 type EnhancedKysely<Schema> = Kysely<Schema> & { live: LiveNamespace };
@@ -650,8 +673,8 @@ type QueryCallbackReturnType = {
   parameters?: readonly unknown[];
 };
 
-// Operational store interface
-interface IOperationalStore<Schema> {
+// Relational db interface
+interface IRelationalDb<Schema> {
   db: EnhancedKysely<Schema> | null;
   isLoading: boolean;
   error: Error | null;
@@ -663,13 +686,13 @@ interface IOperationalStore<Schema> {
 Understanding how the hooks work together:
 
 1. **PGlite Layer** - `usePGliteDB()` provides the raw PGlite database instance
-2. **`useOperationalStore()`** - Wraps the PGlite instance with Enhanced Kysely for type safety and live capabilities
-3. **`useOperationalQuery()`** - Uses the operational store to provide live query functionality
-4. **`createTypedQuery()`** - Uses `useOperationalQuery()` internally with additional optimizations and parameter memoization
+2. **`useRelationalDb()`** - Wraps the PGlite instance with Enhanced Kysely for type safety and live capabilities
+3. **`useRelationalQuery()`** - Uses the Relational db to provide live query functionality
+4. **`createProcessorQuery()`** - Uses `useRelationalQuery()` internally with additional optimizations and parameter memoization
 
 ```typescript
 // The relationship flow:
-PGlite Layer → useOperationalStore() → useOperationalQuery() → createTypedQuery()
+PGlite Layer → useRelationalDb() → useRelationalQuery() → createProcessorQuery()
 ```
 
 ## For Low-Level Database Operations
@@ -678,7 +701,10 @@ For low-level PGlite database management, use the PGlite layer:
 
 ```typescript
 // For database initialization and state management
-import { usePGliteDB, useSetPGliteDB } from '@powerhousedao/reactor-browser/pglite';
+import {
+  usePGliteDB,
+  useSetPGliteDB,
+} from "@powerhousedao/reactor-browser/pglite";
 ```
 
-This operational layer builds on top of the PGlite foundation to provide everyday database operations with type safety and live updates.
+This Relational layer builds on top of the PGlite foundation to provide everyday database operations with type safety and live updates.

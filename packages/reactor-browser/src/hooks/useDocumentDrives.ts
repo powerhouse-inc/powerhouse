@@ -49,6 +49,52 @@ export type ClientErrorHandler = {
   ) => Promise<void>;
 };
 
+const FETCH_TIMEOUT = 250;
+let timeout: NodeJS.Timeout | undefined;
+const listeners = new Array<() => void>();
+function waitForResult(
+  promise: () => Promise<void>,
+  callback: () => void,
+  onError: (error: unknown) => void,
+) {
+  if (timeout) {
+    clearTimeout(timeout);
+  }
+  listeners.push(callback);
+  const listenersCopy = [...listeners];
+  timeout = setTimeout(() => {
+    promise()
+      .then(() => {
+        while (listenersCopy.length) {
+          const listener = listenersCopy.shift();
+          if (listener) {
+            listener();
+            const index = listeners.indexOf(listener);
+            if (index > -1) {
+              listeners.splice(index, 1);
+            }
+          }
+        }
+      })
+      .catch(onError);
+  }, FETCH_TIMEOUT);
+}
+
+async function fetchDocumentdrives(reactor: IDocumentDriveServer) {
+  const documentDrives: DocumentDriveDocument[] = [];
+
+  const driveIds = await reactor.getDrives();
+  for (const id of driveIds) {
+    try {
+      const drive = await reactor.getDrive(id);
+      documentDrives.push(drive);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  return documentDrives;
+}
+
 export function useDocumentDrives(reactor?: IDocumentDriveServer) {
   const [documentDrives, setDocumentDrives] = useAtom(
     useMemo(readWriteDocumentDrivesAtom(reactor), [reactor]),
@@ -59,27 +105,23 @@ export function useDocumentDrives(reactor?: IDocumentDriveServer) {
       return;
     }
 
-    const documentDrives: DocumentDriveDocument[] = [];
-    try {
-      const driveIds = await reactor.getDrives();
-      for (const id of driveIds) {
-        try {
-          const drive = await reactor.getDrive(id);
-          documentDrives.push(drive);
-        } catch (error) {
-          console.error(error);
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setDocumentDrives(documentDrives);
-    }
+    return new Promise<void>((resolve, reject) => {
+      waitForResult(
+        () =>
+          fetchDocumentdrives(reactor)
+            .then((documentDrives) => {
+              setDocumentDrives(documentDrives);
+            })
+            .catch(reject),
+        resolve,
+        reject,
+      );
+    });
   }, [reactor]);
 
   const [status, setStatus] = useAtom(documentDrivesInitialized);
 
-  if (status === "INITIAL") {
+  if (status === "INITIAL" && reactor) {
     setStatus("LOADING");
     refreshDocumentDrives()
       .then(() => setStatus("LOADED"))
@@ -91,30 +133,47 @@ export function useDocumentDrives(reactor?: IDocumentDriveServer) {
       if (!reactor) {
         return;
       }
-      const unsub1 = reactor.on(
+
+      const unsubStrandUpdate = reactor.on("strandUpdate", () =>
+        refreshDocumentDrives(),
+      );
+
+      const unsubSyncStatus = reactor.on(
         "syncStatus",
         async (_event, _status, error) => {
           if (error) {
             console.error(error);
           }
-          await refreshDocumentDrives();
+          if (error) await refreshDocumentDrives();
         },
       );
-      const unsub2 = reactor.on("strandUpdate", () => refreshDocumentDrives());
+
+      const unsubDriveAdded = reactor.on("driveAdded", () =>
+        refreshDocumentDrives(),
+      );
+      const unsubDriveDeleted = reactor.on("driveDeleted", () =>
+        refreshDocumentDrives(),
+      );
+      const unsubDriveOperations = reactor.on("driveOperationsAdded", () =>
+        refreshDocumentDrives(),
+      );
       const unsubOnSyncError = reactor.on(
         "clientStrandsError",
         clientErrorhandler.strandsErrorHandler,
       );
 
-      const unsub3 = reactor.on("defaultRemoteDrive", () =>
+      const unsubDefaultRemoteDrive = reactor.on("defaultRemoteDrive", () =>
         refreshDocumentDrives(),
       );
 
       return () => {
-        unsub1();
-        unsub2();
+        unsubStrandUpdate();
+        unsubSyncStatus();
+        unsubDriveAdded();
+        unsubDriveDeleted();
+        unsubDriveOperations();
         unsubOnSyncError();
-        unsub3();
+        unsubDefaultRemoteDrive();
       };
     },
     [reactor, refreshDocumentDrives],

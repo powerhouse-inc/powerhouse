@@ -1,11 +1,11 @@
-# Operational Processor Technical Specification
+# Relational Db Processor Technical Specification
 
 ## Goals
 
-The operational processor system aims to provide a standardized, type-safe, and maintainable approach for processing document operations in Powerhouse projects that require persistent database storage. The system addresses current limitations in code generation templates and establishes consistent patterns for processor development across the ecosystem.
+The relational database processor system aims to provide a standardized, type-safe, and maintainable approach for processing document operations in Powerhouse projects that require persistent database storage. The system addresses current limitations in code generation templates and establishes consistent patterns for processor development across the ecosystem.
 
 **Primary Goals:**
-- Provide a unified interface for operational processors with database integration
+- Provide a unified interface for relational database processors with database integration
 - Enable type-safe database operations using PowerhouseDB
 - Standardize migration management at the project level
 - Simplify processor development by abstracting common database operations
@@ -21,16 +21,16 @@ The operational processor system aims to provide a standardized, type-safe, and 
 
 ## Usage Overview
 
-Developers interact with the operational processor system through a standardized factory pattern and base class abstraction. When creating a new operational processor, developers:
+Developers interact with the relational database processor system through a standardized factory pattern and base class abstraction. When creating a new relational database processor, developers:
 
 1. **Generate the processor structure** using the CLI command:
    ```bash
-   ph generate processor search-indexer --processor-type operational --document-types "sky/atlas-scope,sky/atlas-foundation"
+   ph generate processor search-indexer --processor-type relationalDb --document-types "sky/atlas-scope,sky/atlas-foundation"
    ```
 
 2. **Extend the base class** to focus on business logic rather than database setup:
    ```typescript
-   export class SearchIndexerProcessor extends BaseOperationalProcessor<Database> {
+   export class SearchIndexerProcessor extends RelationalDbProcessor<Database> {
      async onStrands<TDocument extends PHDocument>(
        strands: InternalTransmitterUpdate<TDocument>[]
      ): Promise<void> {
@@ -44,11 +44,11 @@ Developers interact with the operational processor system through a standardized
 
 4. **Register processors** through the factory pattern that handles filtering and lifecycle management
 
-The system solves the problem of inconsistent processor implementations, manual database setup, and lack of type safety that currently exists in the codebase. Developers can expect automatic migration management, type-safe database operations, and consistent error handling across all operational processors.
+The system solves the problem of inconsistent processor implementations, manual database setup, and lack of type safety that currently exists in the codebase. Developers can expect automatic migration management, type-safe database operations, and consistent error handling across all relational database processors.
 
 ## Data
 
-The operational processor system manages several types of data:
+The relational database processor system manages several types of data:
 
 ### Input Data
 - **Document Operations**: Streams of document operations from the Powerhouse document drive system
@@ -64,7 +64,7 @@ The operational processor system manages several types of data:
 ```mermaid
 flowchart TD
     A[Document Drive] --> B[Processor Filter]
-    B --> C[BaseOperationalProcessor]
+    B --> C[RelationalDbProcessor]
     C --> D[PowerhouseDB]
     
     A1[Operations] --> A
@@ -102,13 +102,15 @@ interface IProcessor {
 
 This interface provides the contract for all processors, ensuring consistent lifecycle management.
 
-#### BaseOperationalProcessor Class
+#### RelationalDbProcessor Class
 ```typescript
-abstract class BaseOperationalProcessor<TDatabase = any> implements IProcessor {
-  protected powerhouseDb: Promise<PowerhouseDB<TDatabase>>;
-  protected readonly operationalStore: Db;
+abstract class RelationalDbProcessor<TDatabase = any> implements IProcessor {
   
-  constructor(operationalStore: Db, migrationsPath?: string);
+  constructor(
+    protected _namespace: string,
+    protected _filter: RelationalDbProcessorFilter,
+    protected relationalDb: IRelationalDb<TDatabaseSchema>,
+  );
   protected async getDb(): Promise<PowerhouseDB<TDatabase>>;
   protected async healthCheck(tableName: string): Promise<boolean>;
 }
@@ -136,7 +138,7 @@ The factory pattern enables dynamic processor creation with configurable filteri
 import { type Kysely } from "kysely";
 
 /**
- * PowerhouseDB is the standardized database interface for operational processors.
+ * PowerhouseDB is the standardized database interface for relational database processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  */
@@ -176,7 +178,7 @@ Project-level migrations that are automatically discovered and applied by the ba
 
 ## Network Messages
 
-The operational processor system primarily operates on internal document drive messages rather than external network communication. However, the following message patterns are relevant:
+The relational database processor system primarily operates on internal document drive messages rather than external network communication. However, the following message patterns are relevant:
 
 ### Document Drive Messages
 - **InternalTransmitterUpdate**: Contains document operations and metadata
@@ -185,7 +187,7 @@ The operational processor system primarily operates on internal document drive m
   - Purpose: Trigger processor execution
 
 ### Health Check Messages
-- **Database Connectivity**: Periodic health checks to operational store
+- **Database Connectivity**: Periodic health checks to relational database
   - Size: Small (< 1KB)
   - Frequency: Low (every 30 seconds)
   - Purpose: Monitor processor health
@@ -233,7 +235,7 @@ The operational processor system primarily operates on internal document drive m
 
 #### Compromised Processor Instance
 **Risk**: A compromised processor could:
-- Access sensitive document data from the operational store
+- Access sensitive document data from the relational database
 - Modify database schema through migration injection
 - Exfiltrate data through malicious business logic
 - Impact other processors sharing the same database
@@ -245,7 +247,7 @@ The operational processor system primarily operates on internal document drive m
 - **Audit Logging**: All database operations are logged for security monitoring
 
 #### Database Access Compromise
-**Risk**: Unauthorized access to the operational database could:
+**Risk**: Unauthorized access to the relational database could:
 - Expose all processed document data
 - Modify processor-generated data
 - Disrupt processor operations
@@ -311,7 +313,7 @@ The operational processor system primarily operates on internal document drive m
 ### Release Strategy
 
 #### Phase 1: Internal Adoption
-1. **Base Class Implementation**: Deploy `BaseOperationalProcessor` to `document-drive` package
+1. **Base Class Implementation**: Deploy `RelationalDbProcessor` to `document-drive` package
 2. **Template Updates**: Update codegen templates to use new base class
 3. **Migration Tools**: Deploy migration management utilities
 4. **Documentation**: Complete developer documentation and examples

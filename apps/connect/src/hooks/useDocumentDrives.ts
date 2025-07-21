@@ -1,6 +1,6 @@
 import { useUnwrappedReactor } from '#store';
 import type { IDocumentDriveServer } from 'document-drive';
-import { type DocumentDriveDocument, logger } from 'document-drive';
+import { type DocumentDriveDocument } from 'document-drive';
 import { type OperationScope, type PHDocument } from 'document-model';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useMemo } from 'react';
@@ -52,8 +52,55 @@ export type IDrivesState = 'INITIAL' | 'LOADING' | 'LOADED' | 'ERROR';
 export const documentDrivesInitialized = atom<IDrivesState>('INITIAL');
 documentDrivesInitialized.debugLabel = 'documentDrivesInitializedInConnect';
 
-// returns an array with the document drives of a
-// server and a method to fetch the document drives
+const FETCH_TIMEOUT = 250;
+let timeout: NodeJS.Timeout | undefined;
+const listeners = new Array<() => void>();
+function waitForResult(
+    promise: () => Promise<void>,
+    callback: () => void,
+    onError: (error: unknown) => void,
+) {
+    if (timeout) {
+        clearTimeout(timeout);
+    }
+    listeners.push(callback);
+    const listenersCopy = [...listeners];
+    timeout = setTimeout(() => {
+        promise()
+            .then(() => {
+                while (listenersCopy.length) {
+                    const listener = listenersCopy.shift();
+                    if (listener) {
+                        listener();
+                        const index = listeners.indexOf(listener);
+                        if (index > -1) {
+                            listeners.splice(index, 1);
+                        }
+                    }
+                }
+            })
+            .catch(onError);
+    }, FETCH_TIMEOUT);
+}
+
+async function fetchDocumentdrives(reactor: IDocumentDriveServer) {
+    const documentDrives: DocumentDriveDocument[] = [];
+
+    const driveIds = (await reactor.getDrives()) ?? [];
+    for (const id of driveIds) {
+        try {
+            const drive = await reactor.getDrive(id);
+            if (!drive) {
+                continue;
+            }
+            documentDrives.push(drive);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    return documentDrives;
+}
+
 export function useDocumentDrives() {
     const reactor = useUnwrappedReactor();
     const [documentDrives, setDocumentDrives] = useAtom(
@@ -65,26 +112,20 @@ export function useDocumentDrives() {
             return;
         }
 
-        const documentDrives: DocumentDriveDocument[] = [];
-        try {
-            const driveIds = await reactor.getDrives();
-            for (const id of driveIds) {
-                try {
-                    const drive = await reactor.getDrive(id);
-                    documentDrives.push(drive);
-                } catch (error) {
-                    logger.error(error);
-                }
-            }
-        } catch (error) {
-            logger.error(error);
-        } finally {
-            setDocumentDrives(documentDrives);
-        }
+        return new Promise<void>((resolve, reject) => {
+            waitForResult(
+                () =>
+                    fetchDocumentdrives(reactor)
+                        .then(documentDrives => {
+                            setDocumentDrives(documentDrives);
+                        })
+                        .catch(reject),
+                resolve,
+                reject,
+            );
+        });
     }, [reactor]);
 
-    // if the server has not been initialized then
-    // fetches the drives for the first time
     const [status, setStatus] = useAtom(documentDrivesInitialized);
 
     if (status === 'INITIAL' && reactor) {
@@ -99,32 +140,45 @@ export function useDocumentDrives() {
             if (!reactor) {
                 return;
             }
-            const unsub1 = reactor.on(
+            const unsubSyncStatus = reactor.on(
                 'syncStatus',
                 async (_event, _status, error) => {
                     if (error) {
-                        logger.error(error);
+                        console.error(error);
                     }
-                    await refreshDocumentDrives();
+                    if (error) await refreshDocumentDrives();
                 },
             );
-            const unsub2 = reactor.on('strandUpdate', () =>
+            const unsubStrandUpdate = reactor.on('strandUpdate', () =>
                 refreshDocumentDrives(),
+            );
+            const unsubDriveAdded = reactor.on('driveAdded', () =>
+                refreshDocumentDrives(),
+            );
+            const unsubDriveDeleted = reactor.on('driveDeleted', () =>
+                refreshDocumentDrives(),
+            );
+            const unsubDriveOperations = reactor.on(
+                'driveOperationsAdded',
+                () => refreshDocumentDrives(),
             );
             const unsubOnSyncError = reactor.on(
                 'clientStrandsError',
                 clientErrorhandler.strandsErrorHandler,
             );
-
-            const unsub3 = reactor.on('defaultRemoteDrive', () =>
-                refreshDocumentDrives(),
+            const unsubDefaultRemoteDrive = reactor.on(
+                'defaultRemoteDrive',
+                () => refreshDocumentDrives(),
             );
 
             return () => {
-                unsub1();
-                unsub2();
+                unsubStrandUpdate();
+                unsubSyncStatus();
+                unsubDriveAdded();
+                unsubDriveDeleted();
+                unsubDriveOperations();
                 unsubOnSyncError();
-                unsub3();
+                unsubDefaultRemoteDrive();
             };
         },
         [reactor, refreshDocumentDrives],

@@ -15,7 +15,6 @@ const __dirname =
 const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function run(
   args: string[],
   { watch = false, skipFormat = false } = {},
@@ -152,11 +151,11 @@ export async function generateProcessor(
   documentTypesMap: DocumentTypesMap,
   outDir: string,
   documentModelsDir: string,
-  type = "analytics",
+  type: "analytics" | "relationalDb",
   { skipFormat = false } = {},
 ) {
   // Generate the singular files for the document model logic
-  const processorType = type === "operational" ? "operational" : "analytics";
+  const processorType = type === "relationalDb" ? "relationalDb" : "analytics";
   await run(
     [
       "powerhouse",

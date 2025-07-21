@@ -156,7 +156,7 @@ When dealing with lists of data, GraphQL employs a pattern that includes:
 
 ## GraphQL Subgraphs in Powerhouse
 
-Powerhouse structures its data into **subgraphs**, which are modular GraphQL services that connect to the Reactor (Powerhouse's core data infrastructure) or Operational Data Stores fueled by data from processors. Each subgraph has its own SDL, ensuring modularity and flexibility while working within the ecosystem.
+Powerhouse structures its data into **subgraphs**, which are modular GraphQL services that connect to the Reactor (Powerhouse's core data infrastructure) or Data Stores fueled by data from processors. Each subgraph has its own SDL, ensuring modularity and flexibility while working within the ecosystem.
 
 ### Fetching data from the Reactor
 

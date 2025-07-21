@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "3.3.0-dev.6",
+  "version": "3.3.0-dev.15",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -19,7 +19,7 @@
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
     "./pglite": "./dist/src/pglite/index.js",
-    "./operational": "./dist/src/operational/index.js",
+    "./relational": "./dist/src/relational/index.js",
     "./*": "./dist/src/*.js"
   },
   "scripts": {

@@ -1,4 +1,3 @@
-import { type Db } from "#types.js";
 import {
   buildSubgraphSchemaModule,
   createSchema,
@@ -16,6 +15,7 @@ import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
 import { type IDocumentDriveServer } from "document-drive";
+import { type IRelationalDb } from "document-drive/processors/types";
 import type express from "express";
 import { Router, type IRouter } from "express";
 import { type GraphQLSchema } from "graphql";
@@ -42,7 +42,7 @@ export class GraphQLManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
-    private readonly operationalStore: Db,
+    private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
     private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
@@ -62,7 +62,9 @@ export class GraphQLManager {
 
     this.coreRouter.use(cors());
     this.coreRouter.use(bodyParser.json({ limit: "50mb" }));
-    this.coreRouter.use(bodyParser.urlencoded({ limit: "50mb" }));
+    this.coreRouter.use(
+      bodyParser.urlencoded({ extended: true, limit: "50mb" }),
+    );
 
     this.app.use("/", (req, res, next) => this.coreRouter(req, res, next));
     this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
@@ -93,7 +95,7 @@ export class GraphQLManager {
     core = false,
   ) {
     const subgraphInstance = new subgraph({
-      operationalStore: this.operationalStore,
+      relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
       reactor: this.reactor,
       graphqlManager: this,
@@ -300,7 +302,7 @@ export class GraphQLManager {
           headers: req.headers,
           driveId: req.params.drive ?? undefined,
           driveServer: this.reactor,
-          db: this.operationalStore,
+          db: this.relationalDb,
           ...this.getAdditionalContextFields(),
         }),
       }),

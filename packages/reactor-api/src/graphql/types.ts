@@ -1,9 +1,9 @@
-import { type Db } from "#types.js";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type IDocumentDriveServer } from "document-drive";
 import { type DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import { type GraphQLManager } from "./graphql-manager.js";
+import { type IRelationalDb } from "document-drive/processors/types";
 
 export type Context = {
   driveServer: IDocumentDriveServer;
@@ -26,13 +26,13 @@ export type ISubgraph = {
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
   reactor: IDocumentDriveServer;
-  operationalStore: Db;
+  relationalDb: IRelationalDb;
   onSetup?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
   reactor: IDocumentDriveServer;
-  operationalStore: Db;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
   path?: string;

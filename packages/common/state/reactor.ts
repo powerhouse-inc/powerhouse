@@ -1,4 +1,5 @@
 import {
+  childLogger,
   SynchronizationUnitNotFoundError,
   type SyncStatus,
 } from "document-drive";
@@ -14,6 +15,8 @@ import {
 import { useSyncDrivesAndDocumentsWithReactor } from "./syncing.js";
 import { type Reactor, type SharingType } from "./types.js";
 import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
+
+const logger = childLogger(["state", "reactor"]);
 
 /** Returns a loadable of the reactor. */
 export function useReactor() {
@@ -52,15 +55,15 @@ export function useInitializeReactor(
 
       // Subscribe to the reactor's events.
       reactor.on("syncStatus", (event, status, error) => {
-        console.log("syncStatus", event, status, error);
+        logger.verbose("syncStatus", event, status, error);
         refresh();
       });
       reactor.on("strandUpdate", () => {
-        console.log("strandUpdate");
+        logger.verbose("strandUpdate");
         refresh();
       });
       reactor.on("defaultRemoteDrive", () => {
-        console.log("defaultRemoteDrive");
+        logger.verbose("defaultRemoteDrive");
         refresh();
       });
 
@@ -76,7 +79,7 @@ export function useInitializeReactor(
       );
     }
 
-    initializeReactor().catch(console.error);
+    initializeReactor().catch(logger.error);
   }, [setReactor, createReactor, refresh, shouldNavigate]);
 }
 
@@ -95,7 +98,7 @@ export function useGetSyncStatusSync() {
           return "INITIAL_SYNC";
         return syncStatus;
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         return "ERROR";
       }
     },

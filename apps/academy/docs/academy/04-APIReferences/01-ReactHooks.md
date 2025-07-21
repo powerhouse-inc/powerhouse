@@ -50,6 +50,42 @@ const updateInvoiceName = useUpdateDocumentField('docId', 'name')
 // Combined read + write (like useState)
 const [invoiceName, updateInvoiceName] = useDocumentField('docId', 'name')
 ```
+Initial documentation about the hooks can be found [here](https://github.com/powerhouse-inc/powerhouse/blob/main/packages/common/state/README.md)
+
+### Temporary use of new hooks on custom drive editors. 
+
+
+To use the new hooks in custom components or editors today, devs must:
+
+1. Pass in the existing Reactor instance as a prop (createReactor).
+2. Call useInitializeReactor(props.createReactor, false) in the custom component.
+3. Optionally wrap dispatch() to trigger a refresh manually, using:
+
+const refresh = useSyncDrivesAndDocumentsWithReactor();
+
+For maximum compatibility, consider passing data and set functions (drives, documents, etc.) directly as props instead of using the hooks inside the custom editor..
+
+Example: 
+
+```
++import { AtomStoreProvider } from "@powerhousedao/common";
+
+export default function Editor(props: IProps) {
+  return (
++    <AtomStoreProvider reactor={props.context.reactor}> 
+      <DriveContextProvider value={props.context}>
+        <WagmiContext>
+          <BaseEditor {...props} />
+        </WagmiContext>
+      </DriveContextProvider>
++    </AtomStoreProvider>
+  );
+}
+```
+
+Until the hooks are fully integrated and event handling is granular, the team will need to handle some of this manually or limit their use to experimental side projects and internal demos.
+
+
 
 
 ## An overview of currently available hooks

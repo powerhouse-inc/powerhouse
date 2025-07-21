@@ -1,3 +1,96 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated processor factory to handle async processor factories ([8a562d95a](https://github.com/powerhouse-inc/powerhouse/commit/8a562d95a))
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.14 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** renamed folder to relationalDb ([42fb0ddff](https://github.com/powerhouse-inc/powerhouse/commit/42fb0ddff))
+- **codegen:** run schema codegen without requiring kysely-pglite to be a direct dependency ([e9d901e00](https://github.com/powerhouse-inc/powerhouse/commit/e9d901e00))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 3.3.0-dev.13 (2025-07-17)
+
+### 🚀 Features
+
+- **codegen,document-drive:** refactored relational processor namespace methods and updated related codegen templates ([00d4c4e87](https://github.com/powerhouse-inc/powerhouse/commit/00d4c4e87))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🚀 Features
+
+- **reactor-api,reactor-browser,document-drive,codegen,connect:** operation to relationalDb renaming, relational db type improvements, added namespace methods to IRelationalDb ([fd35c3500](https://github.com/powerhouse-inc/powerhouse/commit/fd35c3500))
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🚀 Features
+
+- **document-drive,codegen:** updated operational processor factory ([39630bfd4](https://github.com/powerhouse-inc/powerhouse/commit/39630bfd4))
+- **codegen,document-drive,reactor-api:** use namespaces per drive and operational processor ([9f2280929](https://github.com/powerhouse-inc/powerhouse/commit/9f2280929))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.10 (2025-07-15)
+
+### 🩹 Fixes
+
+- **codegen:** remove sucrase dependency and update schema gen ([9d3efd2ec](https://github.com/powerhouse-inc/powerhouse/commit/9d3efd2ec))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
+## 3.3.0-dev.9 (2025-07-10)
+
+### 🩹 Fixes
+
+- force release ([8185a3b37](https://github.com/powerhouse-inc/powerhouse/commit/8185a3b37))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.8 (2025-07-10)
+
+### 🩹 Fixes
+
+- **codegen:** fix broken test ([4135c4174](https://github.com/powerhouse-inc/powerhouse/commit/4135c4174))
+- **codegen:** update codegen with new header changes ([a933f1829](https://github.com/powerhouse-inc/powerhouse/commit/a933f1829))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.7 (2025-07-10)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.6 (2025-07-10)
 
 ### 🚀 Features

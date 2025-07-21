@@ -2,18 +2,41 @@ import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
-import { type Kysely } from "kysely";
+import { type Kysely, type QueryCreator } from "kysely";
+import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
+
+export type IRelationalQueryMethods =
+  | "selectFrom"
+  | "selectNoFrom"
+  | "with"
+  | "withRecursive";
+
+export type IRelationalQueryBuilder<Schema = unknown> = Pick<
+  QueryCreator<Schema>,
+  IRelationalQueryMethods
+> & {
+  withSchema: (schema: string) => IRelationalQueryBuilder<Schema>;
+};
+
+export type IBaseRelationalDb<Schema = unknown> = Kysely<Schema>;
 
 /**
- * The standardized relational database interface for operational processors.
+ * The standardized relational database interface for relational db processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
- */
-export type IOperationalStore<Schema = unknown> = Kysely<Schema>;
+ **/
+export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
+  createNamespace<NamespaceSchema>(
+    namespace: string,
+  ): Promise<IRelationalDb<ExtractProcessorSchemaOrSelf<NamespaceSchema>>>;
+  queryNamespace<NamespaceSchema>(
+    namespace: string,
+  ): IRelationalQueryBuilder<NamespaceSchema>;
+};
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
-  operationalStore: IOperationalStore;
+  relationalDb: IRelationalDb;
 }
 
 /**
@@ -50,7 +73,9 @@ export type ProcessorRecord = {
  * @param driveId The drive to create processors for.
  * @returns A list of processor records.
  */
-export type ProcessorFactory = (driveId: string) => ProcessorRecord[];
+export type ProcessorFactory = (
+  driveId: string,
+) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**
  * Manages processor creation and destruction.

@@ -1,3 +1,79 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.14 (2025-07-17)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.13 (2025-07-17)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🚀 Features
+
+- **reactor-api,reactor-browser,document-drive,codegen,connect:** operation to relationalDb renaming, relational db type improvements, added namespace methods to IRelationalDb ([fd35c3500](https://github.com/powerhouse-inc/powerhouse/commit/fd35c3500))
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.11 (2025-07-16)
+
+### 🩹 Fixes
+
+- connect build issues ([9e92db6f7](https://github.com/powerhouse-inc/powerhouse/commit/9e92db6f7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.10 (2025-07-15)
+
+### 🩹 Fixes
+
+- **codegen:** remove sucrase dependency and update schema gen ([9d3efd2ec](https://github.com/powerhouse-inc/powerhouse/commit/9d3efd2ec))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
+## 3.3.0-dev.9 (2025-07-10)
+
+### 🩹 Fixes
+
+- force release ([8185a3b37](https://github.com/powerhouse-inc/powerhouse/commit/8185a3b37))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.8 (2025-07-10)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.7 (2025-07-10)
+
+### 🩹 Fixes
+
+- **connect:** enable external processors by default ([010bed4ce](https://github.com/powerhouse-inc/powerhouse/commit/010bed4ce))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 3.3.0-dev.6 (2025-07-10)
 
 ### 🚀 Features

@@ -1,3 +1,65 @@
+## 3.3.0-dev.15 (2025-07-17)
+
+### 🩹 Fixes
+
+- **codegen:** updated subgraph template to deal with undefined return on getDocument ([7b2862a91](https://github.com/powerhouse-inc/powerhouse/commit/7b2862a91))
+- **academy:** update broken links ([cbbfe9b30](https://github.com/powerhouse-inc/powerhouse/commit/cbbfe9b30))
+
+### ❤️ Thank You
+
+- acaldas
+- Callme-T
+
+## 3.3.0-dev.14 (2025-07-17)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.13 (2025-07-17)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.12 (2025-07-17)
+
+### 🩹 Fixes
+
+- **document-drive:** use lowercase letters when hashing relational processor namespace ([87c7944d3](https://github.com/powerhouse-inc/powerhouse/commit/87c7944d3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 3.3.0-dev.11 (2025-07-16)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.10 (2025-07-15)
+
+### 🩹 Fixes
+
+- **codegen:** remove sucrase dependency and update schema gen ([9d3efd2ec](https://github.com/powerhouse-inc/powerhouse/commit/9d3efd2ec))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
+## 3.3.0-dev.9 (2025-07-10)
+
+### 🩹 Fixes
+
+- force release ([8185a3b37](https://github.com/powerhouse-inc/powerhouse/commit/8185a3b37))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 3.3.0-dev.8 (2025-07-10)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.7 (2025-07-10)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.6 (2025-07-10)
 
 ### 🚀 Features

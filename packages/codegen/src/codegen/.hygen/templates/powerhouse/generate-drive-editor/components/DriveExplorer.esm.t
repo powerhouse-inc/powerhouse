@@ -94,13 +94,14 @@ export function DriveExplorer({
       const node = await addDocument(
         driveId,
         fileName,
-        documentModel.documentModel.id
+        documentModel.documentModel.id,
+        selectedNodeId,
       );
 
       selectedDocumentModel.current = null;
       setActiveDocumentId(node.id);
     },
-    [addDocument, driveId]
+    [addDocument, driveId, selectedNodeId]
   );
 
   const onSelectDocumentModel = useCallback(
