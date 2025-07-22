@@ -2,6 +2,7 @@ import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {
+  type DocumentModelDocument,
   type DocumentModelModule,
   type DocumentModelState,
 } from "document-model";
@@ -113,10 +114,23 @@ export async function generate(config: PowerhouseConfig) {
   await generateAll(config.documentModelsDir, { skipFormat, watch });
 }
 
-export async function generateFromFile(path: string, config: PowerhouseConfig) {
-  // load document model spec from file
-  const documentModel = await loadDocumentModel(path);
-
+/**
+ * Generates code from a DocumentModelState.
+ *
+ * @remarks
+ * This is the core generation function that both generateFromFile and generateFromDocument
+ * use internally. It handles the actual code generation from a DocumentModelState object.
+ *
+ * @param documentModel - The DocumentModelState containing the document model specification
+ * @param config - The PowerhouseConfig configuration object
+ * @param filePath - Optional file path for generateSubgraph (null if not from file)
+ * @returns A promise that resolves when code generation is complete
+ */
+async function generateFromDocumentModel(
+  documentModel: DocumentModelState,
+  config: PowerhouseConfig,
+  filePath?: string | null,
+) {
   const name = paramCase(documentModel.name);
 
   // create document model folder and spec as json
@@ -141,7 +155,38 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
 
   await generateSchema(name, config.documentModelsDir, config);
   await generateDocumentModel(documentModel, config.documentModelsDir, config);
-  await generateSubgraph(name, path, config);
+  await generateSubgraph(name, filePath || null, config);
+}
+
+export async function generateFromFile(path: string, config: PowerhouseConfig) {
+  // load document model spec from file
+  const documentModel = await loadDocumentModel(path);
+
+  // delegate to shared generation function
+  await generateFromDocumentModel(documentModel, config, path);
+}
+
+/**
+ * Generates code from a DocumentModelDocument object directly.
+ *
+ * @remarks
+ * This function performs the same code generation as generateFromFile but takes
+ * a DocumentModelDocument object directly instead of loading from a file. This allows for
+ * programmatic code generation without file I/O.
+ *
+ * @param documentModelDocument - The DocumentModelDocument object containing the document model
+ * @param config - The PowerhouseConfig configuration object
+ * @returns A promise that resolves when code generation is complete
+ */
+export async function generateFromDocument(
+  documentModelDocument: DocumentModelDocument,
+  config: PowerhouseConfig,
+) {
+  // extract document model spec from DocumentModelDocument
+  const documentModel = documentModelDocument.state.global;
+
+  // delegate to shared generation function
+  await generateFromDocumentModel(documentModel, config, null);
 }
 
 export async function generateEditor(
