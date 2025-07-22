@@ -15,6 +15,8 @@
     "build:tsc": "tsc --build",
     "lint": "eslint"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "exports": {
     ".": "./dist/index.js",
     "./*": "./dist/*.js"
@@ -25,22 +27,18 @@
     "@types/slug": "^5.0.9",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "jotai": "^2.12.5",
-    "jotai-devtools": "^0.12.0",
-    "jotai-effect": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "peerDependencies": {
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "jotai": "^2.12.5",
-    "jotai-devtools": "^0.12.0",
-    "jotai-effect": "^2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "dependencies": {
-    "slug": "^11.0.0"
+    "slug": "^11.0.0",
+    "jotai": "^2.12.5",
+    "jotai-devtools": "^0.12.0"
   }
 }

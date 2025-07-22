@@ -1786,6 +1786,12 @@ importers:
 
   packages/state:
     dependencies:
+      jotai:
+        specifier: ^2.12.5
+        version: 2.12.5(@types/react@19.1.8)(react@18.3.1)
+      jotai-devtools:
+        specifier: ^0.12.0
+        version: 0.12.0(@types/react@19.1.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)(storybook@9.0.17(@testing-library/dom@10.4.0)(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
       slug:
         specifier: ^11.0.0
         version: 11.0.0
@@ -1802,15 +1808,6 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
-      jotai:
-        specifier: ^2.12.5
-        version: 2.12.5(@types/react@19.1.8)(react@18.3.1)
-      jotai-devtools:
-        specifier: ^0.12.0
-        version: 0.12.0(@types/react@19.1.8)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)(storybook@9.0.17(@testing-library/dom@10.4.0)(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
-      jotai-effect:
-        specifier: ^2.0.4
-        version: 2.0.4(jotai@2.12.5(@types/react@19.1.8)(react@18.3.1))
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -13580,12 +13577,6 @@ packages:
     engines: {node: '>=12.20.0'}
     peerDependencies:
       jotai: '>=2.5.0'
-
-  jotai-effect@2.0.4:
-    resolution: {integrity: sha512-V2ARMu1JvRCie43X6SwCXPpecMR+cRI7JuSoOz/6uziOEQJnziJFRzvWHoWple+DvWdARHcFMjlIp+BEDsUoVQ==}
-    engines: {node: '>=12.20.0'}
-    peerDependencies:
-      jotai: '>=2.12.1'
 
   jotai@2.12.5:
     resolution: {integrity: sha512-G8m32HW3lSmcz/4mbqx0hgJIQ0ekndKWiYP7kWVKi0p6saLXdSoye+FZiOFyonnd7Q482LCzm8sMDl7Ar1NWDw==}
@@ -36954,10 +36945,6 @@ snapshots:
   jotai-effect@1.1.6(jotai@2.12.5(@types/react@18.3.23)(react@18.3.1)):
     dependencies:
       jotai: 2.12.5(@types/react@18.3.23)(react@18.3.1)
-
-  jotai-effect@2.0.4(jotai@2.12.5(@types/react@19.1.8)(react@18.3.1)):
-    dependencies:
-      jotai: 2.12.5(@types/react@19.1.8)(react@18.3.1)
 
   jotai@2.12.5(@types/react@18.3.23)(react@18.3.1):
     optionalDependencies:
