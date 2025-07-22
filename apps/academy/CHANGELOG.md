@@ -1,3 +1,7 @@
+## 3.3.0-dev.16 (2025-07-22)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.15 (2025-07-17)
 
 ### 🩹 Fixes

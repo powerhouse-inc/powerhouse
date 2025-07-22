@@ -1,3 +1,15 @@
+## 3.3.0-dev.16 (2025-07-22)
+
+### 🩹 Fixes
+
+- **common,document-drive,reactor-api,reactor-browser:** revert undefined return on getDocument methods ([fc145a82a](https://github.com/powerhouse-inc/powerhouse/commit/fc145a82a))
+- **connect,reactor-browser:** avoid memory leak on useDocumentDrives ([cdaba1dc3](https://github.com/powerhouse-inc/powerhouse/commit/cdaba1dc3))
+- **reactor-api:** remove body-parser depecration warning ([4098ffedd](https://github.com/powerhouse-inc/powerhouse/commit/4098ffedd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.15 (2025-07-17)
 
 ### 🩹 Fixes
