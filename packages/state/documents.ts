@@ -29,26 +29,30 @@ export function useInitializeDocuments() {
   return useSetAtom(initializeDocumentsAtom);
 }
 
+/** Sets the documents for a reactor. */
+export function useSetDocuments() {
+  return useSetAtom(setDocumentsAtom);
+}
+
 /** Refreshes the documents for a reactor. */
 export function useRefreshDocuments() {
   const reactor = useUnwrappedReactor();
   const selectedDrive = useUnwrappedSelectedDrive();
-  const setDocuments = useSetAtom(setDocumentsAtom);
+  const setDocuments = useSetDocuments();
 
   return useCallback(() => {
     if (!reactor || !selectedDrive) return;
     reactor
       .getDocuments(selectedDrive.header.id)
       .then((documentIds) => {
-        if (!documentIds) return;
         Promise.all(
           documentIds.map((id) =>
             reactor.getDocument(selectedDrive.header.id, id),
           ),
         )
           .then((documents) => {
-            setDocuments(documents.filter((d) => d !== undefined)).catch(
-              (error: unknown) => logger.error(error),
+            setDocuments(documents).catch((error: unknown) =>
+              logger.error(error),
             );
           })
           .catch((error: unknown) => logger.error(error));

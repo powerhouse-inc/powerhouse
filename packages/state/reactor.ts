@@ -6,10 +6,10 @@ import {
   initializeDrivesAtom,
   initializeReactorAtom,
   loadableReactorAtom,
-  selectedDriveAtom,
   setSelectedNodeAtom,
   unwrappedReactorAtom,
 } from "./atoms.js";
+import { useSetSelectedDrive } from "./drives.js";
 import { useRefreshDrivesAndDocuments } from "./syncing.js";
 import { type Reactor } from "./types.js";
 import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
@@ -39,7 +39,7 @@ export function useInitializeReactor(
 ) {
   const unwrappedReactor = useUnwrappedReactor();
   const setReactor = useSetAtom(initializeReactorAtom);
-  const setSelectedDrive = useSetAtom(selectedDriveAtom);
+  const setSelectedDrive = useSetSelectedDrive();
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
   const initializeDrives = useSetAtom(initializeDrivesAtom);
   const initializeDocuments = useSetAtom(initializeDocumentsAtom);

@@ -33,8 +33,9 @@ export function useSetSelectedNode(shouldNavigate = true) {
 
   return useCallback(
     (nodeId: string | undefined, _shouldNavigate = shouldNavigate) => {
+      // Set the selected node.
       setSelectedNode(nodeId);
-
+      // Update the URL if `shouldNavigate` is true.
       if (typeof window !== "undefined" && _shouldNavigate) {
         const driveSlugFromPath = extractDriveFromPath(
           window.location.pathname,

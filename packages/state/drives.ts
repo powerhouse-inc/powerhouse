@@ -9,8 +9,8 @@ import {
   initializeDrivesAtom,
   loadableDrivesAtom,
   loadableSelectedDriveAtom,
-  selectedDriveAtom,
   setDrivesAtom,
+  setSelectedDriveAtom,
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
@@ -34,6 +34,11 @@ export function useInitializeDrives() {
   return useSetAtom(initializeDrivesAtom);
 }
 
+/** Sets the drives for a reactor. */
+export function useSetDrives() {
+  return useSetAtom(setDrivesAtom);
+}
+
 /** Refreshes the drives for a reactor. */
 export function useRefreshDrives() {
   const reactor = useUnwrappedReactor();
@@ -44,7 +49,6 @@ export function useRefreshDrives() {
     reactor
       .getDrives()
       .then((driveIds) => {
-        if (!driveIds) return;
         Promise.all(driveIds.map((id) => reactor.getDrive(id)))
           .then((drives) => {
             setDrives(drives).catch((error: unknown) => logger.error(error));
@@ -97,11 +101,14 @@ export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
  */
 export function useSetSelectedDrive(shouldNavigate = true) {
   const drives = useUnwrappedDrives();
-  const setSelectedDrive = useSetAtom(selectedDriveAtom);
+  const setSelectedDrive = useSetAtom(setSelectedDriveAtom);
 
   return useCallback(
     (driveId: string | undefined, _shouldNavigate = shouldNavigate) => {
-      setSelectedDrive(driveId);
+      // Set the selected drive.
+      setSelectedDrive(driveId).catch((error: unknown) => logger.error(error));
+
+      // Update the URL if `shouldNavigate` is true.
       const drive = drives?.find((d) => d.header.id === driveId);
       const newPathname = makeDriveUrlComponent(drive);
       if (typeof window !== "undefined" && _shouldNavigate) {
