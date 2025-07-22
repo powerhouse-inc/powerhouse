@@ -1,3 +1,16 @@
+## 4.0.0-staging.4 (2025-07-22)
+
+### 🩹 Fixes
+
+- **common,document-drive,reactor-api,reactor-browser:** revert undefined return on getDocument methods ([fc145a82a](https://github.com/powerhouse-inc/powerhouse/commit/fc145a82a))
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
 ## 4.0.0-staging.3 (2025-07-17)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
