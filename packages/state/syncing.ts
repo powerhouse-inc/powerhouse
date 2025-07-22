@@ -3,7 +3,7 @@ import { useRefreshDocuments } from "./documents.js";
 import { useRefreshDrives } from "./drives.js";
 
 /** Returns a function that refreshes the drives and documents for a reactor. */
-export function useSyncDrivesAndDocumentsWithReactor() {
+export function useRefreshDrivesAndDocuments() {
   const refreshDrives = useRefreshDrives();
   const refreshDocuments = useRefreshDocuments();
 

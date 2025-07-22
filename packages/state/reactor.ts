@@ -14,7 +14,7 @@ import {
   setSelectedNodeAtom,
   unwrappedReactorAtom,
 } from "./atoms.js";
-import { useSyncDrivesAndDocumentsWithReactor } from "./syncing.js";
+import { useRefreshDrivesAndDocuments } from "./syncing.js";
 import { type Reactor, type SharingType } from "./types.js";
 import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
 
@@ -47,7 +47,7 @@ export function useInitializeReactor(
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
   const initializeDrives = useSetAtom(initializeDrivesAtom);
   const initializeDocuments = useSetAtom(initializeDocumentsAtom);
-  const refresh = useSyncDrivesAndDocumentsWithReactor();
+  const refresh = useRefreshDrivesAndDocuments();
 
   useEffect(() => {
     // If the reactor is already initialized, do nothing.
