@@ -141,7 +141,7 @@ export async function startVetra({
   watch,
   switchboardPort = DefaultReactorOptions.port,
   reactorPort = DefaultReactorOptions.port + 1,
-  disableDefaultDrive,
+  disableDefaultDrive = true,
   configFile,
 }: DevOptions) {
   try {
