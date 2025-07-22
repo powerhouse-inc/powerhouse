@@ -71,19 +71,9 @@ export function DriveView() {
 
             showModal('createDocument', {
                 documentModel,
-                selectedDrive,
-                selectedFolder,
-                parentFolder,
-                setSelectedNode,
             });
         },
-        [
-            selectedDrive,
-            selectedFolder,
-            parentFolder,
-            setSelectedNode,
-            showModal,
-        ],
+        [selectedDrive, showModal],
     );
 
     return (

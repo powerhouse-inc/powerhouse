@@ -133,11 +133,6 @@ export function useDocumentDriveServer() {
                 return;
             }
             const document = await reactor.getDocument(drive, id, options);
-            if (!document) {
-                throw new Error(
-                    `There was an error opening file with id ${id} on drive ${drive}`,
-                );
-            }
             return document;
         },
         [reactor],
@@ -189,16 +184,23 @@ export function useDocumentDriveServer() {
                     logger.error(result.error);
                 }
 
-                if (result.operations.length) {
-                    refreshDrives();
-                }
+                refreshDrives();
+                refreshDocuments();
                 return result.document;
             } catch (error) {
                 logger.error(error);
                 return oldDrive;
             }
         },
-        [reactor, drives, sign, user, connectDid, refreshDrives],
+        [
+            reactor,
+            drives,
+            sign,
+            user,
+            connectDid,
+            refreshDrives,
+            refreshDocuments,
+        ],
     );
 
     // TODO: why does addDriveOperation do signing but adding multiple operations does not?
@@ -224,12 +226,11 @@ export function useDocumentDriveServer() {
             if (result.status !== 'SUCCESS') {
                 logger.error(result.error);
             }
-            if (result.operations.length) {
-                refreshDrives();
-            }
+            refreshDrives();
+            refreshDocuments();
             return result.document;
         },
-        [reactor],
+        [reactor, refreshDrives, refreshDocuments],
     );
 
     const addDocumentOperations = useCallback(
@@ -242,9 +243,6 @@ export function useDocumentDriveServer() {
                 return;
             }
             const document = await reactor.getDocument(driveId, documentId);
-            if (!document) {
-                return;
-            }
             const newOperations = deduplicateOperations(
                 document.operations,
                 operationsToAdd,
@@ -257,12 +255,11 @@ export function useDocumentDriveServer() {
             if (result.status !== 'SUCCESS') {
                 logger.error(result.error);
             }
-            if (result.operations.length) {
-                refreshDocuments();
-            }
+            refreshDrives();
+            refreshDocuments();
             return result.document;
         },
-        [reactor],
+        [reactor, refreshDrives, refreshDocuments],
     );
 
     const addDocument = useCallback(
@@ -584,9 +581,7 @@ export function useDocumentDriveServer() {
             }
 
             const newDrive = await reactor.addRemoteDrive(url, options);
-            if (newDrive) {
-                refreshDrives();
-            }
+            refreshDrives();
             return newDrive;
         },
         [isAllowedToCreateDocuments, refreshDrives, reactor],
@@ -615,9 +610,7 @@ export function useDocumentDriveServer() {
                 driveId,
                 setDriveName({ name }),
             );
-            if (renamedDrive) {
-                refreshDrives();
-            }
+            refreshDrives();
             return renamedDrive;
         },
         [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],
@@ -634,9 +627,7 @@ export function useDocumentDriveServer() {
                 driveId,
                 setAvailableOffline({ availableOffline }),
             );
-            if (updatedDrive) {
-                refreshDrives();
-            }
+            refreshDrives();
             return updatedDrive;
         },
         [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],
@@ -653,9 +644,7 @@ export function useDocumentDriveServer() {
                 driveId,
                 setSharingType({ type: sharingType }),
             );
-            if (updatedDrive) {
-                refreshDrives();
-            }
+            refreshDrives();
             return updatedDrive;
         },
         [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],

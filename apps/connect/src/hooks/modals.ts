@@ -7,6 +7,7 @@ import {
     type SharingType,
 } from '@powerhousedao/design-system';
 import {
+    makeDriveUrlComponent,
     useSelectedParentFolder,
     useSetSelectedDrive,
     useSetSelectedNode,
@@ -53,7 +54,11 @@ export function useShowAddDriveModal() {
                     return;
                 }
 
-                setSelectedDrive(newDrive.header.id);
+                setSelectedDrive(newDrive.header.id, false);
+                if (typeof window !== 'undefined') {
+                    const newPathname = makeDriveUrlComponent(newDrive);
+                    window.history.pushState(null, '', newPathname);
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -97,7 +102,11 @@ export function useShowAddDriveModal() {
                     return;
                 }
 
-                setSelectedDrive(newDrive.header.id);
+                setSelectedDrive(newDrive.header.id, false);
+                if (typeof window !== 'undefined') {
+                    const newPathname = makeDriveUrlComponent(newDrive);
+                    window.history.pushState(null, '', newPathname);
+                }
             } catch (e) {
                 console.error(e);
             }

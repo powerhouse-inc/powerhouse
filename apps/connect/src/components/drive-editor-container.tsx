@@ -88,10 +88,6 @@ export function DriveEditorContainer() {
 
             showModal('createDocument', {
                 documentModel,
-                selectedDrive,
-                selectedFolder,
-                parentFolder,
-                setSelectedNode,
             });
             return Promise.resolve({ name: 'New Document' }); // TODO fix this
         },

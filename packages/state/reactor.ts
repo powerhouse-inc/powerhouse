@@ -34,7 +34,7 @@ export function useUnwrappedReactor() {
  * If the reactor is already initialized, does nothing.
  */
 export function useInitializeReactor(
-  createReactor: () => Promise<Reactor>,
+  createReactor: () => Promise<Reactor> | Reactor | undefined,
   shouldNavigate = true,
 ) {
   const unwrappedReactor = useUnwrappedReactor();
@@ -52,7 +52,7 @@ export function useInitializeReactor(
     async function initializeReactor() {
       // Create the reactor instance.
       const reactor = await createReactor();
-
+      if (!reactor) return;
       // Subscribe to the reactor's events.
       reactor.on("syncStatus", (event, status, error) => {
         logger.verbose("syncStatus", event, status, error);
