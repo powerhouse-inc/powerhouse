@@ -1,10 +1,6 @@
-import {
-  childLogger,
-  SynchronizationUnitNotFoundError,
-  type SyncStatus,
-} from "document-drive";
+import { childLogger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import {
   initializeDocumentsAtom,
   initializeDrivesAtom,
@@ -15,7 +11,7 @@ import {
   unwrappedReactorAtom,
 } from "./atoms.js";
 import { useRefreshDrivesAndDocuments } from "./syncing.js";
-import { type Reactor, type SharingType } from "./types.js";
+import { type Reactor } from "./types.js";
 import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
 
 const logger = childLogger(["state", "reactor"]);
@@ -138,29 +134,4 @@ export function useInitializeReactor(
     setSelectedDrive,
     setSelectedNode,
   ]);
-}
-
-export function useGetSyncStatusSync() {
-  const reactor = useUnwrappedReactor();
-
-  const getSyncStatusSync = useCallback(
-    (syncId: string, sharingType: SharingType): SyncStatus | undefined => {
-      if (sharingType === "LOCAL") return;
-      if (!reactor) {
-        return "INITIAL_SYNC";
-      }
-      try {
-        const syncStatus = reactor.getSyncStatus(syncId);
-        if (syncStatus instanceof SynchronizationUnitNotFoundError)
-          return "INITIAL_SYNC";
-        return syncStatus;
-      } catch (error) {
-        logger.error(error);
-        return "ERROR";
-      }
-    },
-    [reactor],
-  );
-
-  return getSyncStatusSync;
 }
