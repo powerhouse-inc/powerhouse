@@ -178,7 +178,7 @@ The `IChannel` interface is a bi-directional interface for sending, receiving, a
 
 ```tsx
 
-enum JobStatus {
+enum JobChannelStatus {
     /** The job status is not known */
     Unknown = -1,
 
@@ -241,7 +241,7 @@ class JobHandle {
     operations: Operation[];
 
     /** The status of the job */
-    status: JobStatus = JobStatus.Unknown;
+    status: JobChannelStatus = JobChannelStatus.Unknown;
 
     /** The error that occurred, if any */
     error?: ChannelError;
@@ -249,7 +249,7 @@ class JobHandle {
     /**
      * Subscribes to changes in the job status.
      */
-    on(callback: (job: JobHandle, prev: JobStatus, next: JobStatus) => void): void;
+    on(callback: (job: JobHandle, prev: JobChannelStatus, next: JobChannelStatus) => void): void;
 }
 
 class MutableJobHandle extends JobHandle {

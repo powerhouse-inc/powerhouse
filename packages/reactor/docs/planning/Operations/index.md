@@ -2,16 +2,17 @@
 
 ### Summary
 
-An `Operation` is the fundamental unit of change in the Reactor system. These represent atomic facts about document state. That is, Operations are mutations that have already been applied.
+An `Operation` is the fundamental unit of change in the Reactor system. These represent commands that describe intended state changes to documents.
 
-- In a typical Event Sourcing architecture, Operations correspond to "Events".
+- In a Command Sourcing architecture, Operations correspond to "Commands" - they capture the intent to change the system state.
 - An `Operation` is immutable, ordered (though sometimes reshuffled), and provides complete auditability of all document changes.
 - An `Operation` always applies to a specific document, scope, and branch. See [PHDocument](../PHDocument/index.md) for more information on scopes.
+- Operations are stored in the Command Store and synchronized between clients, while Events (containing the resulting state) are output for downstream aggregates to build their read models.
 
 ### Actions
 
-- Before an `Operation` exists, an `Action` must be created. An `Action` is a plain object that represents the intent of the Operation. It can be mutated before it is submitted to the Reactor.
-- In a typical Event Sourcing architecture, Actions correspond to "Commands".
+- Before an `Operation` exists, an `Action` must be created. An `Action` is a plain object that represents the user's intent to perform an operation. It can be mutated before it is submitted to the Reactor.
+- In Command Sourcing, Actions are the initial requests that are wrapped by Operations (Commands) internally by the Reactor.
 
 The data structure for an `Action` is as follows:
 
@@ -177,13 +178,13 @@ Providing both of these parameters is useful in cases for highly secure applicat
 
 ### Operations
 
-An `Operation` represents a result of an `Action` being executed. It is a "fact", not an "intent".
+An `Operation` represents a command derived from an `Action`. It captures the intent to change the system state.
 
-Unlike a typical ES approach, where Actions are generally discarded or stored in an outbox pattern, each `Operation` is stored with the `Action` that produced it. This allows every client to re-execute each `Action` and verify the resulting `Operation`.
+Each `Operation` is stored with the original `Action` that produced it. This allows every client to re-execute each `Action` and verify the resulting `Operation`.
 
 ```tsx
 /**
- * Core Operation type that combines action data with execution metadata
+ * Core Operation type that represents a command in the Command Sourcing architecture
  */
 type Operation<T extends Action = Action> = {
   /** Unique operation id */
@@ -200,33 +201,36 @@ type Operation<T extends Action = Action> = {
 
   /** The action that was executed to produce this operation */
   action: T;
-
-  /** The resulting state after the operation is executed */
-  resultingState: string;
-
-  /** Hash of the resulting state */
-  hash: string;
 };
 ```
 
 ### Schema
 
-See the `[IOperationStore](../Storage/IOperationStore.md)` doc for explicit db schema.
+See the `[IOperationStore](../Storage/IOperationStore.md)` doc for operations (commands) schema and the `[IEventStore](../Storage/IEventStore.md)` doc for events schema.
 
 ### Operation Lifecycle
 
 ```mermaid
 graph TD
-    Action --> IQueue --> IJobExecutor --> Operation
+    Action --> IQueue --> IJobExecutor
+    IJobExecutor --> Operation --> IOperationStore
+    IJobExecutor --> Event --> IEventStore
+    Event --> ReadModels
 ```
 
 1. Action creation - An `Action` is created by the user using the document model API.
 
 2. Queueing - Actions are queued by `(documentId, scope, branch)` to ensure proper ordering.
 
-3. Execution - Actions are passed through reducers to mutate state. Operations are created from the resulting state.
+3. Command creation - Actions are wrapped in Operations that represent the intent to change state.
 
-4. Storage - Once applied, operations are persisted in the `IOperationStore` with atomic transactions.
+4. Command storage - Operations are persisted in the `IOperationStore`, which is synchronized between clients.
+
+5. Event generation - The `IJobExecutor` processes Operations and generates Events containing the resulting state.
+
+6. Event storage - Events are persisted in the `IEventStore`.
+
+7. Read model updates - Events are consumed by downstream aggregates to build their read models.
 
 ### Idempotency
 
@@ -248,7 +252,7 @@ See the [Attachments doc](../Attachments/index.md) for more information on attac
 
 ### "System Stream"
 
-In Event Sourcing terminology, the `IOperationStore` is the event log, holding many streams of events: and one stream per `(documentId, scope, branch)` tuple. However, there are some events ("facts") that occur outside of this tuple-defined stream. We are left with two options: either create a wrapper around `Operation` that functions more like a typical event log (`{ type, data: operations }`), or create a special stream events on top of the existing `Operation` scheme. We have opted for the latter.
+The `IOperationStore` holds many streams of operations: one stream per `(documentId, scope, branch)` tuple. However, there are some operations that occur outside of this tuple-defined stream. We are left with two options: either create a wrapper around `Operation` that functions differently (`{ type, data: operations }`), or create a special stream on top of the existing `Operation` scheme. We have opted for the latter.
 
 The "System Stream" is a special stream of Operations that represent state changes not from a reducer, but from the Reactor itself. This stream is determined by the tuple,  `(00000000-0000-0000-0000-000000000000, "system", "*")` (we leave open the possibility of other system streams in the future).
 
@@ -333,7 +337,7 @@ This flow has some big implications:
 
 #### Example: CREATE_CHILD_DOCUMENT Action
 
-Instead, we propose a flow in which the provided reducer `dispatch` function takes an `Action` as input, which is then queued for execution. The `Action` that is currently being processed finalizes execution and produces an `Operation`, like normal. Then the next `Action` is dequeued and processed, and so on. This creates a "flat" event store with a linear history of state changes.
+Instead, we propose a flow in which the provided reducer `dispatch` function takes an `Action` as input, which is then queued for execution. The `Action` that is currently being processed finalizes execution and produces an `Operation`, like normal. Then the next `Action` is dequeued and processed, and so on. This creates a "flat" command store with a linear history of state changes.
 
 Client code would then look like this (using the [`IReactorClient`](../ReactorClient/index.md) interface):
 

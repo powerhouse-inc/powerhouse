@@ -3,6 +3,7 @@
 ### Summary
 
 - Read/append-only access to raw operations.
+- In the Command Sourcing architecture, this serves as the Command Store that is synchronized between clients.
 - No dependencies on `PHDocument` or `Attachment`.
 - Optimistic locking: see comparison below.
 - All writes are atomic.
@@ -128,9 +129,6 @@ model Operation {
   // defines reshuffling logic (the reactor does this)
   skip            Int
   
-  // defines the result of applying the action (the reactor does this)
-  resultingState  Json
-  hash            String
 
   // compound unique constraint: the index is unique
   @@unique([documentId, scope, branch, index], name: "unique_revision")

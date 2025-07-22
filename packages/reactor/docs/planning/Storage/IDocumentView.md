@@ -2,10 +2,10 @@
 
 ### Summary
 
-TLDR: Think of this as a smart, materialized view of the operations store.
+TLDR: Think of this as a smart, materialized view of the event store.
 
-- Listens to `IEventBus` for operation store updates, which trigger it to rebuild / update pre-joined, denormalized views for application reads.
-- Reads from `IOperationStore` as needed.
+- Listens to `IEventBus` for event store updates, which trigger it to rebuild / update pre-joined, denormalized views for application reads.
+- Reads from `IEventStore` as needed.
 - Provides an API for `IReactor` or external systems to read document data from.
 
 ### Snapshots + Cache Invalidation
@@ -16,38 +16,38 @@ TLDR: Think of this as a smart, materialized view of the operations store.
 
 ### Eventual Consistency
 
-The `IDocumentView` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentView` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
+The `IDocumentView` must ensure that it has the latest event information. It may be the case that the system crashed or shutdown after events were generated, but before the `IDocumentView` was able to process the events. In this case, the `IEventStore` would have events that have not yet been indexed.
 
-The view stores the last operation id it has processed synchronously in memory and also lazily updates the `ViewState` table.
+The view stores the last event id it has processed synchronously in memory and also lazily updates the `ViewState` table.
 
 #### Case 1: At Runtime
 
-If the document view receives an event for an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+If the document view receives an event that has a later id than the last event it has processed, it must catch up to the latest event by querying the `IEventStore` for all events with an id greater than the last event it knows about.
 
 ```tsx
-const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+const events = await this.eventStore.getSinceId(lastEventId + 1);
 
-for (const operation of operations) {
-  this.indexOperation(operation);
+for (const event of events) {
+  this.processEvent(event);
 }
 ```
 
 #### Case 2: At Startup
 
-Before any operation events have fired, the document view must ensure that it has the latest operation information. This can be done by querying the `IOperationStore`for all operations with an id greater than the last operation it knows about.
+Before any events have been processed, the document view must ensure that it has the latest event information. This can be done by querying the `IEventStore` for all events with an id greater than the last event it knows about.
 
 ```tsx
-const operations = await this.operationStore.getSinceId(lastOperationId + 1);
+const events = await this.eventStore.getSinceId(lastEventId + 1);
 
-for (const operation of operations) {
-  this.indexOperation(operation);
+for (const event of events) {
+  this.processEvent(event);
 }
 ```
 
 ### Dependencies
 
-- [IOperationStore](../Reactor/Interfaces/IOperationStore.md)
-- [IDocumentIndexer](../Reactor/Interfaces/IDocumentIndexer.md)
+- [IEventStore](../Storage/IEventStore.md)
+- [IDocumentIndexer](../Storage/IDocumentIndexer.md)
 
 ### Interface
 
@@ -151,12 +151,12 @@ interface IDocumentView {
 
 ### Schema
 
-The `IDocumentView` is a smart, materialized view of the operations store.
+The `IDocumentView` is a smart, materialized view of the event store.
 
 ```prisma
 model ViewState {
-  lastOperationId Int @id
-  lastOperationTimestamp DateTime @default(now())
+  lastEventId Int @id
+  lastEventTimestamp DateTime @default(now())
 }
 
 model DocumentSnapshot {
@@ -179,8 +179,8 @@ model DocumentSnapshot {
   parentId          String?
   
   // Cache invalidation & staleness detection
-  lastOperationIndex Int     // Last operation index this snapshot includes
-  lastOperationHash  String  // Hash of the last operation for integrity
+  lastEventIndex Int     // Last event index this snapshot includes
+  lastEventHash  String  // Hash of the last event for integrity
   lastUpdatedAt     DateTime @default(now()) @updatedAt
   snapshotVersion   Int      @default(1) // Incremented on each rebuild
   
@@ -203,7 +203,7 @@ model DocumentSnapshot {
   @@index([parentId]) // Hierarchy queries
   @@index([lastUpdatedAt]) // Staleness detection
   @@index([isDeleted]) // Active documents only
-  @@index([documentId, lastOperationIndex]) // Staleness check by operation index
+  @@index([documentId, lastEventIndex]) // Staleness check by event index
 }
 
 model DocumentViewCache {

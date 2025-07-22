@@ -1,3 +1,13 @@
+## 3.3.0-dev.16 (2025-07-22)
+
+### 🩹 Fixes
+
+- **connect,reactor-browser:** avoid memory leak on useDocumentDrives ([cdaba1dc3](https://github.com/powerhouse-inc/powerhouse/commit/cdaba1dc3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.15 (2025-07-17)
 
 ### 🩹 Fixes

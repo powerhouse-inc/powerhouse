@@ -1,4 +1,4 @@
-# Using Subgraphs
+# Using subgraphs
 
 This tutorial will demonstrate how to create and customize a subgraph using our To-do List project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
@@ -79,11 +79,11 @@ Initializing Subgraph Manager...
   ➜  Reactor:   http://localhost:4001/d/powerhouse
 ```
 
-## 2. Building a To-do List Subgraph
+## 2. Building a to-do list subgraph
 
 Now that we've generated our subgraph, let's build a complete To-do List subgraph that extends the functionality of our To-do List document model. This subgraph will provide additional querying capabilities and demonstrate how subgraphs work with document models.
 
-### 2.1 Understanding the To-do List Document Model
+### 2.1 Understanding the to-do list document model
 
 Before building our subgraph, let's recall the structure of our To-do List document model from the [DocumentModelCreation tutorial](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema):
 
@@ -111,11 +111,11 @@ The document model has these operations:
 - `UPDATE_TODO_ITEM`: Updates an existing to-do item
 - `DELETE_TODO_ITEM`: Deletes a to-do item
 
-### 2.2 Define the Subgraph Schema
+### 2.2 Define the subgraph schema
 
 Now let's create a subgraph that provides enhanced querying capabilities for our To-do List documents. 
 
-**Step 1: Define the schema in `subgraphs/to-do-list/schema.ts`:**
+**Step 1: Define the schema in `subgraphs/to-do-list/schema.ts` by creating the file:**
 
 ```typescript
 export const typeDefs = `
@@ -148,19 +148,19 @@ export const typeDefs = `
     text: String!    # The task description
     checked: Boolean! # Completion status
   }
-`;
+}`
 ```
 
 
-
-#### Understanding Resolvers
+<details>
+<summary> #### Understanding resolvers </summary>
 
 Before diving into the technical implementation, let's understand why these three different query types matter for your product.
 Think of resolvers as custom API endpoints that are automatically created based on what your users actually need to know about your data.
 
  When someone asks your system a question through GraphQL, the resolver:
 
-1. **Understands the request** - "The customer wants unchecked items"
+1. **Understands the request** - "The user wants unchecked items"
 2. **Knows where to get the data** - "I need to check the todo_items database table"  
 3. **Applies the right filters** - "Only get items where checked = false"
 4. **Returns the answer** - "Here are the 5 unchecked items"
@@ -186,6 +186,8 @@ Think of resolvers as custom API endpoints that are automatically created based 
 - **Performance**: Count queries are much faster than getting full lists when you only need numbers
 - **User Experience**: Different resolvers serve different user needs efficiently
 - **Flexibility**: Users can ask for exactly what they need, nothing more, nothing less
+
+</details>
 
 **Step 2: Create resolvers in `subgraphs/to-do-list/resolvers.ts`:**
 
@@ -329,7 +331,7 @@ export default class ToDoListSubgraph {
 }
 ```
 
-### 2.3 Understanding the Implementation
+### 2.3 Understanding the implementation
 
 **What this multi-file approach provides:**
 
@@ -344,7 +346,7 @@ export default class ToDoListSubgraph {
 - Resolvers that fetch and filter todo items from the operational store
 - Event processing to keep the subgraph data synchronized with document model changes
 
-### 2.4 Understanding the Document Model Event Integration
+### 2.4 Understanding the document model event integration
 
 Notice that our `index.ts` file already includes a `process` method - this is the **processor integration** that keeps our subgraph synchronized with To-do List document model events. When users interact with To-do List documents through Connect, this method automatically handles the updates.
 
@@ -394,7 +396,7 @@ if (event.type === "DELETE_TODO_ITEM") {
 4. **Subgraph response**: Your `process` method updates the operational store
 5. **Query availability**: Users can now query the updated data via GraphQL
 
-### 2.5 Summary of What We've Built
+### 2.5 Summary of what we've built
 
 Our complete To-do List subgraph includes:
 
@@ -411,7 +413,7 @@ Our complete To-do List subgraph includes:
 - **Real-time synchronization**: Changes in Connect immediately appear in subgraph queries
 - **Complete statistics**: The `todoList` query returns total, checked, and unchecked counts
 
-## 3. Testing the To-do List Subgraph
+## 3. Testing the to-do list subgraph
 
 ### 3.1. Start the reactor
 To activate the subgraph, run:
@@ -433,7 +435,7 @@ You should see the subgraph being registered in the console output:
 ### 3.2. Create some test data
 Before testing queries, let's create some To-do List documents with test data:
 
-1. Open Connect at `http://localhost:3001`
+1. Open Connect at `http://localhost:3001` in another terminal
 2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
 3. Create a new To-do List document
 4. Add some test items:
@@ -654,24 +656,11 @@ This demonstrates how the supergraph provides a unified interface to both your d
 
 Congratulations! You've successfully built a complete To-do List subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
 
-### What you built:
-- **A custom GraphQL schema** that provides enhanced querying capabilities for To-do List documents
-- **An operational data store** that efficiently stores and retrieves to-do items
-- **Real-time event processing** that keeps your subgraph synchronized with document model changes
-- **Advanced query capabilities** including filtering and counting operations
-- **Integration with the supergraph** for unified API access
-
 ### Key concepts learned:
 - **Subgraphs extend document models** with additional querying and data processing capabilities
 - **Operational data stores** provide efficient storage for subgraph data
 - **Event processing** enables real-time synchronization between document models and subgraphs
 - **The supergraph** unifies multiple subgraphs into a single GraphQL endpoint
-
-### Next steps:
-- Explore adding **mutations** to your subgraph for more complex operations
-- Implement **data aggregation** for analytics and reporting
-- Connect to **external APIs** for enhanced functionality
-- Build **processors** that automate workflows between different document models
 
 This tutorial has provided you with a solid foundation for building sophisticated data processing and querying capabilities in the Powerhouse ecosystem.
 
@@ -691,10 +680,6 @@ This tutorial has provided you with a solid foundation for building sophisticate
    - Add automated task assignments
    - Create custom reporting functionality
 
-### Prebuilt subgraphs
-
-Some subgraphs (e.g., System Subgraph, Drive Subgraph) already exist.  
-To integrate with them, register them via the Reactor API.
 
 ### Future enhancements
 
