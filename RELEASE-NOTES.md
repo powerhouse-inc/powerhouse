@@ -66,8 +66,9 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 - **New:**  Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
 - 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/drive-analytics
 - **New:**  Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
-- 🔗 https://staging.powerhouse.academy/academy/APIReferences/RelationalDatabase#useoperationalquery
+- 🔗 https://staging.powerhouse.academy/academy/APIReferences/RelationalDatabase
 - **New:**  Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
+- 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
 
 
 #### Enhanced Learning Content:
