@@ -56,11 +56,6 @@ export function useInitializeReactor(
     async function initializeReactor() {
       // Create the reactor instance.
       const reactor = await createReactor();
-      const driveIds = await reactor.getDrives();
-      const drives = await Promise.all(
-        (driveIds ?? []).map((driveId) => reactor.getDrive(driveId)),
-      );
-      initializeDrives(drives);
 
       // Subscribe to the reactor's events.
       reactor.on("syncStatus", (event, status, error) => {
@@ -107,6 +102,13 @@ export function useInitializeReactor(
       // Set the reactor instance atom.
       setReactor(reactor);
 
+      // Initialize the drives.
+      const driveIds = await reactor.getDrives();
+      const drives = await Promise.all(
+        driveIds.map((driveId) => reactor.getDrive(driveId)),
+      );
+      initializeDrives(drives);
+
       // Set the selected drive and node from the URL if `shouldNavigate` is true.
       const driveId = await setSelectedDriveAndNodeFromUrl(
         reactor,
@@ -114,17 +116,28 @@ export function useInitializeReactor(
         setSelectedNode,
         shouldNavigate,
       );
+
+      // Initialize the documents if selected drive is set.
       if (driveId) {
         const documentIds = await reactor.getDocuments(driveId);
         const documents = await Promise.all(
-          (documentIds ?? []).map((id) => reactor.getDocument(driveId, id)),
+          documentIds.map((id) => reactor.getDocument(driveId, id)),
         );
-        initializeDocuments(documents.filter((d) => d !== undefined));
+        initializeDocuments(documents);
       }
     }
 
     initializeReactor().catch(logger.error);
-  }, [setReactor, createReactor, refresh, shouldNavigate]);
+  }, [
+    shouldNavigate,
+    setReactor,
+    createReactor,
+    refresh,
+    initializeDrives,
+    initializeDocuments,
+    setSelectedDrive,
+    setSelectedNode,
+  ]);
 }
 
 export function useGetSyncStatusSync() {
