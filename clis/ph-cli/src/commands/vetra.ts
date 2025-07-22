@@ -4,14 +4,14 @@ import { type DevOptions } from "../services/vetra.js";
 import { type CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
-async function startVetra(options: DevOptions) {
+async function startVetraEnv(options: DevOptions) {
   const Vetra = await import("../services/vetra.js");
   const { startVetra } = Vetra;
   return startVetra(options);
 }
 
 export const vetra: CommandActionType<[DevOptions]> = async (options) => {
-  return startVetra(options);
+  return startVetraEnv(options);
 };
 
 export function vetraCommand(program: Command) {
