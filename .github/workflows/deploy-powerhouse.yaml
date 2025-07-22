@@ -1,4 +1,4 @@
-name: Deploy Powerhouse   
+name: Deploy Powerhouse
 
 on:
   workflow_run:
@@ -11,9 +11,23 @@ on:
       - production
       - sky-atlas-staging
       - sky-atlas-demo
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - main
+          - release/staging/*
+          - staging
+          - sky-atlas-staging
+          - sky-atlas-demo
 
 env:
   HUSKY: 0
+  DEPLOY_ENV: ${{ startsWith(github.ref, 'refs/heads/release/staging/') && 'staging' || github.ref_name }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,9 +35,13 @@ concurrency:
 
 jobs:
   connect:
-    environment: ${{ github.ref_name }}
+    environment: ${{ env.DEPLOY_ENV }}
     runs-on: ubuntu-latest
     steps:
+      - name: Show environment to deploy
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "DEPLOY_ENV: ${{ env.DEPLOY_ENV }}"
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
@@ -40,20 +58,20 @@ jobs:
             --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
             --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
             --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
-            --build-arg PH_CONNECT_SENTRY_ENV=${{ github.ref_name }}
+            --build-arg PH_CONNECT_SENTRY_ENV=${{ env.DEPLOY_ENV }}
             --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
             --build-arg TAG=${{ vars.PH_TAG }}
           process_type: web
   switchboard:
-    environment: ${{ github.ref_name }}
+    environment: ${{ env.DEPLOY_ENV }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up heroku
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh     
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Build, Push and Release API to Heroku. # Your custom step name
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
@@ -64,7 +82,7 @@ jobs:
           process_type: web
           docker_options: "--build-arg TAG=${{ vars.PH_TAG }}"
   academy:
-    environment: ${{ github.ref_name }}
+    environment: ${{ env.DEPLOY_ENV }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -173,28 +173,28 @@ The returned hook accepts:
 
 </details>
 
-### 2. useOperationalStore()
+### 2. useRelationalDb()
 
 <details>
-<summary>`useOperationalStore<Schema>()`: Access the enhanced database instance directly</summary>
+<summary>`useRelationalDb<Schema>()`: Access the enhanced database instance directly</summary>
 
 ### Hook Name and Signature
 
 ```typescript
-function useOperationalStore<Schema>(): IOperationalStore<Schema>
+function useRelationalDb<Schema>(): IRelationalDb<Schema>
 ```
 
 ### Description
 
-Provides direct access to the enhanced Kysely database instance with live query capabilities. Use this when you need to perform operational database operations outside of the typical query patterns.
+Provides direct access to the enhanced Kysely database instance with live query capabilities. Use this when you need to perform relational database operations outside of the typical query patterns.
 
 ### Usage Example
 
 ```typescript
-import { useOperationalStore } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
 
 function DatabaseOperations() {
-  const { db, isLoading, error } = useOperationalStore<MyDatabase>();
+  const { db, isLoading, error } = useRelationalDb<MyDatabase>();
   
   const createUser = async (name: string, email: string) => {
     if (!db) return;
@@ -241,19 +241,19 @@ function DatabaseOperations() {
 ### Related Hooks
 
 - [`createProcessorQuery`](#1-createprocessorquery) - For optimized queries
-- [`useOperationalQuery`](#3-useoperationalquery) - For manual query control
+- [`useRelationalQuery`](#3-userelationalquery) - For manual query control
 
 </details>
 
-### 3. useOperationalQuery()
+### 3. useRelationalQuery()
 
 <details>
-<summary>`useOperationalQuery<Schema, T, TParams>()`: Lower-level hook for manual query control</summary>
+<summary>`useRelationalQuery<Schema, T, TParams>()`: Lower-level hook for manual query control</summary>
 
 ### Hook Name and Signature
 
 ```typescript
-function useOperationalQuery<Schema, T, TParams>(
+function useRelationalQuery<Schema, T, TParams>(
   queryCallback: (db: EnhancedKysely<Schema>, parameters?: TParams) => QueryCallbackReturnType,
   parameters?: TParams
 ): QueryResult<T>
@@ -266,10 +266,10 @@ Lower-level hook for creating live queries with manual control over the query ca
 ### Usage Example
 
 ```typescript
-import { useOperationalQuery } from '@powerhousedao/reactor-browser/operational';
+import { useRelationalQuery } from '@powerhousedao/reactor-browser/relational';
 
 function UserCount() {
-  const { result, isLoading, error } = useOperationalQuery<MyDatabase, { count: number }>(
+  const { result, isLoading, error } = useRelationalQuery<MyDatabase, { count: number }>(
     (db) => {
       return db
         .selectFrom('users')
@@ -309,7 +309,7 @@ function UserCount() {
 ### Related Hooks
 
 - [`createProcessorQuery`](#1-createprocessorquery) - Recommended higher-level API
-- [`useOperationalStore`](#2-useoperationalstore) - For direct database access
+- [`useRelationalDb`](#2-usedelationaldb) - For direct database access
 
 </details>
 
