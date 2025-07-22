@@ -39,6 +39,9 @@
     },
     {
       "path": "./packages/common"
+    },
+    {
+      "path": "./packages/state"
     }
   ],
   "files": []
