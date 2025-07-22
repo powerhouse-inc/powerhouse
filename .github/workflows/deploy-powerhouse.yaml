@@ -11,6 +11,19 @@ on:
       - production
       - sky-atlas-staging
       - sky-atlas-demo
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - main
+          - release/staging/*
+          - staging
+          - sky-atlas-staging
+          - sky-atlas-demo
 
 env:
   HUSKY: 0
@@ -25,6 +38,10 @@ jobs:
     environment: ${{ env.DEPLOY_ENV }}
     runs-on: ubuntu-latest
     steps:
+      - name: Show environment to deploy
+        run: |
+          echo "github.ref: ${{ github.ref }}"
+          echo "DEPLOY_ENV: ${{ env.DEPLOY_ENV }}"
       - name: Set up heroku
         run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
