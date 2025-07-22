@@ -3,6 +3,7 @@
   "version": "3.3.0-dev.10",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "/dist"
   ],
@@ -15,7 +16,8 @@
     "lint": "eslint"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./*": "./dist/*.js"
   },
   "types": "./dist/index.d.ts",
   "devDependencies": {
