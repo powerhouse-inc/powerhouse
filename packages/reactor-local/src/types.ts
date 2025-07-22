@@ -4,6 +4,10 @@ import {
   type DriveInput,
   type IDocumentDriveServer,
 } from "document-drive";
+import {
+  type IProcessorHostModule,
+  type ProcessorFactory,
+} from "document-drive/processors/types";
 import path from "node:path";
 
 export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
@@ -32,6 +36,10 @@ export type StartServerOptions = {
     | undefined;
   logLevel?: LogLevel;
   remoteDrives?: RemoteDriveInputSimple[];
+  processors?: Record<
+    string,
+    ((module: IProcessorHostModule) => ProcessorFactory)[]
+  >;
 };
 
 export const DefaultStartServerOptions = {

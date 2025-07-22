@@ -134,9 +134,7 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
-    // processors: {
-    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-    // },
+    processors: options?.processors,
   });
 
   // add vite middleware after express app is initialized if applicable
