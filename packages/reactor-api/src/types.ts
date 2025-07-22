@@ -1,7 +1,9 @@
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
+  type IProcessorHostModule,
   type IProcessorManager,
   type IRelationalDb,
+  type ProcessorFactory,
 } from "document-drive/processors/types";
 import { type Express } from "express";
 import { type GraphQLManager } from "./graphql/graphql-manager.js";
@@ -21,3 +23,5 @@ export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
 };
+
+export type Processor = ((module: IProcessorHostModule) => ProcessorFactory)[];

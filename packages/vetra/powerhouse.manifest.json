@@ -1,0 +1,25 @@
+{
+    "name": "your-model-name",
+    "description": "A brief description of your PH package.",
+    "category": "your-category",
+    "publisher": {
+        "name": "your-publisher-name",
+        "url": "your-publisher-url"
+    },
+    "documentModels": [
+        {
+            "id": "your-model-id",
+            "name": "your-model-name"
+        }
+    ],
+    "editors": [
+        {
+            "id": "your-editor-id",
+            "name": "your-editor-name",
+            "documentTypes": ["your-model-id"]
+        }
+    ],
+    "apps": [],
+    "subgraphs": [],
+    "importScripts": []
+}

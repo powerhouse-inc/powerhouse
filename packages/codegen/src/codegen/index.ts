@@ -2,9 +2,8 @@ import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {
-  type DocumentModelDocument,
   type DocumentModelModule,
-  type DocumentModelState,
+  type DocumentModelState
 } from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
@@ -179,14 +178,11 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
  * @returns A promise that resolves when code generation is complete
  */
 export async function generateFromDocument(
-  documentModelDocument: DocumentModelDocument,
+  documentModelState: DocumentModelState,
   config: PowerhouseConfig,
 ) {
-  // extract document model spec from DocumentModelDocument
-  const documentModel = documentModelDocument.state.global;
-
   // delegate to shared generation function
-  await generateFromDocumentModel(documentModel, config, null);
+  await generateFromDocumentModel(documentModelState, config, null);
 }
 
 export async function generateEditor(
