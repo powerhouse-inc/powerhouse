@@ -687,6 +687,117 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(storedDocument.operations).toMatchObject(document.operations);
   });
 
+  it("adds document operations", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
+    const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
+      .withStorage(await buildStorage())
+      .build();
+    await server.addDrive({
+      id: driveId,
+      slug: "slug",
+      global: {
+        name: "name",
+        icon: "icon",
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "public",
+        listeners: [],
+        triggers: [],
+      },
+    });
+    let drive = await server.getDrive(driveId);
+
+    // adds file
+    drive = reducer(
+      drive,
+      DocumentDriveUtils.generateAddNodeAction(
+        drive.state.global,
+        {
+          id: documentId,
+          name: "document 1",
+          documentType: "powerhouse/document-model",
+        },
+        ["global", "local"],
+      ),
+    );
+    await server.addDriveOperation(driveId, drive.operations.global[0]!);
+
+    let document = (await server.getDocument(
+      driveId,
+      documentId,
+    )) as DocumentModelDocument;
+
+    document = documentModelDocumentModelModule.reducer(
+      document,
+      documentModelDocumentModelModule.actions.setModelName("Test"),
+    );
+    document = documentModelDocumentModelModule.reducer(
+      document,
+      documentModelDocumentModelModule.actions.setStateSchema(
+        'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
+      ),
+    );
+    const operations = document.operations.global;
+    const result = await server.addOperations(driveId, documentId, operations);
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe("SUCCESS");
+    expect(result.operations).toStrictEqual(
+      expect.objectContaining(operations),
+    );
+
+    const storedDocument = await server.getDocument(driveId, documentId);
+    expect(storedDocument.state).toStrictEqual(document.state);
+    expect(storedDocument.operations).toMatchObject(document.operations);
+  });
+
+  it("adds drive operations", async ({ expect }) => {
+    const driveId = generateId();
+    const documentId = generateId();
+    const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
+      .withStorage(await buildStorage())
+      .build();
+    await server.addDrive({
+      id: driveId,
+      slug: "slug",
+      global: {
+        name: "name",
+        icon: "icon",
+      },
+      local: {
+        availableOffline: false,
+        sharingType: "public",
+        listeners: [],
+        triggers: [],
+      },
+    });
+    let drive = await server.getDrive(driveId);
+
+    drive = reducer(
+      drive,
+      actions.addFolder({ id: generateId(), name: "folder 1" }),
+    );
+    drive = reducer(
+      drive,
+      actions.addFolder({ id: generateId(), name: "folder 2" }),
+    );
+
+    const operations = drive.operations.global;
+    const result = await server.addDriveOperations(driveId, operations);
+
+    expect(result.status).toBe("SUCCESS");
+    expect(result.operations).toStrictEqual(
+      expect.objectContaining(operations),
+    );
+
+    const storedDrive = await server.getDrive(driveId);
+    expect(storedDrive.state).toStrictEqual(drive.state);
+    expect(storedDrive.operations).toMatchObject(drive.operations);
+  });
+
   it("saves operation context", async ({ expect }) => {
     const driveId = generateId();
     const documentId = generateId();

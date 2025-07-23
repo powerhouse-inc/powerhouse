@@ -395,7 +395,10 @@ export class FilesystemStorage
       return Promise.reject(new DocumentNotFoundError(id));
     }
 
-    const mergedOperations = mergeOperations(document.operations, operations);
+    const mergedOperations = mergeOperations(
+      existingDocument.operations,
+      operations,
+    );
 
     const documentPath = this._buildDocumentPath(id);
     await fs.writeFile(
