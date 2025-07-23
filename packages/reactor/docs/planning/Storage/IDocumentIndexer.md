@@ -7,6 +7,10 @@
 - Forms a graph of documents and relationships.
 - Generally just needs to listen to the System Stream.
 
+### Implementations
+
+Only one implementation is provided: `KyselyDocumentIndexer`. This implementation uses Kysely on top of PGLite.
+
 ### Eventual Consistency
 
 The `IDocumentIndexer` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentIndexer` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.

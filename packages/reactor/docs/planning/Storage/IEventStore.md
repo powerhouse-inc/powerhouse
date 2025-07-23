@@ -9,6 +9,10 @@
 - Provides temporal queries for event replay and projection building.
 - All writes are atomic.
 
+### Implementations
+
+Only one implementation is provided: `KyselyDocumentIndexer`. This implementation uses Kysely on top of PGLite.
+
 ### Interface
 
 ```tsx

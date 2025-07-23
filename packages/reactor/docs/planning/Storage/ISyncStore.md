@@ -4,6 +4,10 @@
 
 - Read/write storage for synchronization primitives.
 
+### Implementations
+
+Only one implementation is provided: `KyselySyncStore`. This implementation uses Kysely on top of PGLite.
+
 ### Interface
 
 ```tsx
