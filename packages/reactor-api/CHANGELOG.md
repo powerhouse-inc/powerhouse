@@ -1,3 +1,14 @@
+## 3.3.0-dev.17 (2025-07-23)
+
+### 🩹 Fixes
+
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+
+### ❤️ Thank You
+
+- Callme-T
+
 ## 3.3.0-dev.16 (2025-07-22)
 
 ### 🩹 Fixes

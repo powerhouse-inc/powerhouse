@@ -1,3 +1,18 @@
+## 3.3.0-dev.17 (2025-07-23)
+
+### 🩹 Fixes
+
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- **academy:** generate types command ([b8b883200](https://github.com/powerhouse-inc/powerhouse/commit/b8b883200))
+- **codegen:** revert changes to resolvers template ([b96a7b899](https://github.com/powerhouse-inc/powerhouse/commit/b96a7b899))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+- Frank
+
 ## 3.3.0-dev.16 (2025-07-22)
 
 ### 🩹 Fixes
