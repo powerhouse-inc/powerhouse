@@ -324,14 +324,6 @@ describe('Document Migration', () => {
 
 </details>
 
-
-
-## Related Documentation
-
-- [PHDocument Architecture](/academy/Architecture/PowerhouseArchitecture)
-- [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
-- [React Hooks](/academy/APIReferences/ReactHooks)
-
 ---
 
 *This migration guide covers the major changes in v4.0.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository.* 
