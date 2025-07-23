@@ -10,6 +10,5 @@ export * from "./processors.js";
 export * from "./reactor.js";
 export * from "./store-provider.js";
 export * from "./store.js";
-export * from "./syncing.js";
 export * from "./types.js";
 export * from "./utils.js";

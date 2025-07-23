@@ -1,4 +1,5 @@
 import {
+  logger,
   type DocumentDriveDocument,
   type FileNode,
   type FolderNode,
@@ -14,6 +15,7 @@ import {
 import { useUnwrappedSelectedDocument } from "./documents.js";
 import { useUnwrappedDrives, useUnwrappedSelectedDrive } from "./drives.js";
 import { useUnwrappedSelectedFolder } from "./folders.js";
+import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable, type NodeKind } from "./types.js";
 import { extractDriveFromPath, makeNodeUrlComponent } from "./utils.js";
 
@@ -28,32 +30,43 @@ export function useNodes(): Loadable<Node[] | undefined> {
  * `shouldNavigate` can be overridden by passing a different value to the callback.
  */
 export function useSetSelectedNode(shouldNavigate = true) {
-  const nodes = useUnwrappedNodes();
+  const selectedDrive = useUnwrappedSelectedDrive();
+  const reactor = useUnwrappedReactor();
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
+  const driveId = selectedDrive?.header.id;
 
   return useCallback(
     (nodeId: string | undefined, _shouldNavigate = shouldNavigate) => {
       // Set the selected node.
       setSelectedNode(nodeId);
-      // Update the URL if `shouldNavigate` is true.
-      if (typeof window !== "undefined" && _shouldNavigate) {
-        const driveSlugFromPath = extractDriveFromPath(
-          window.location.pathname,
-        );
-        const node = nodes?.find((n) => n.id === nodeId);
-        if (!node) {
-          window.history.pushState(null, "", `/d/${driveSlugFromPath}`);
-        } else {
-          const nodeSlug = makeNodeUrlComponent(node);
-          window.history.pushState(
-            null,
-            "",
-            `/d/${driveSlugFromPath}/${nodeSlug}`,
-          );
-        }
-      }
+      if (!driveId || !reactor) return;
+      reactor
+        .getDrive(driveId)
+        .then((drive) => {
+          const nodes = drive.state.global.nodes;
+          // Update the URL if `shouldNavigate` is true.
+          if (typeof window !== "undefined" && _shouldNavigate) {
+            const driveSlugFromPath = extractDriveFromPath(
+              window.location.pathname,
+            );
+            const node = nodes.find((n) => n.id === nodeId);
+            if (!node) {
+              window.history.pushState(null, "", `/d/${driveSlugFromPath}`);
+            } else {
+              const nodeSlug = makeNodeUrlComponent(node);
+              window.history.pushState(
+                null,
+                "",
+                `/d/${driveSlugFromPath}/${nodeSlug}`,
+              );
+            }
+          }
+        })
+        .catch((error: unknown) => {
+          logger.error(error);
+        });
     },
-    [setSelectedNode, nodes],
+    [setSelectedNode, reactor, driveId],
   );
 }
 

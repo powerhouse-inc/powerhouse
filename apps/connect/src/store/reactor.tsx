@@ -1,10 +1,7 @@
 import connectConfig from '#connect-config';
+import { type IRenown } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
-import {
-    atomStore,
-    useUnwrappedDrives,
-    useUnwrappedReactor,
-} from '@powerhousedao/state';
+import { useUnwrappedDrives, useUnwrappedReactor } from '@powerhousedao/state';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -12,16 +9,18 @@ import {
     type IDocumentStorage,
     type IDriveOperationStorage,
 } from 'document-drive/storage/types';
-import { generateId } from 'document-model';
+import { type DocumentModelModule, generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { observe } from 'jotai-effect';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
-import { renownAtom, renownStatusAtom } from '../hooks/useRenown.js';
+import { useRenown } from '../hooks/useRenown.js';
 import { documentModelsAtom } from './document-model.js';
 
-async function initReactor(reactor: IDocumentDriveServer) {
-    await initJwtHandler(reactor);
+async function initReactor(
+    reactor: IDocumentDriveServer,
+    renown: IRenown | undefined,
+) {
+    await initJwtHandler(reactor, renown);
     const errors = await reactor.initialize();
     const error = errors?.at(0);
     if (error) {
@@ -63,8 +62,10 @@ export function useCreateFirstLocalDrive() {
     }, [localDrivesEnabled, reactor, drives]);
 }
 
-async function initJwtHandler(server: IDocumentDriveServer) {
-    const renown = await atomStore.get(renownAtom);
+async function initJwtHandler(
+    server: IDocumentDriveServer,
+    renown: IRenown | undefined,
+) {
     const user = await renown?.user();
     const crypto = await getConnectCrypto();
 
@@ -75,61 +76,29 @@ async function initJwtHandler(server: IDocumentDriveServer) {
     }
 }
 
-// Helper function to wait for renown to be initialized
-async function waitForRenown(): Promise<void> {
-    let unsubscribe: (() => void) | undefined;
+export function useCreateReactor() {
+    const storage = useAtomValue(storageAtom);
+    const documentModels = useAtomValue(documentModelsAtom);
+    const renown = useRenown();
 
-    // Wait for renown status to be 'finished'
-    return Promise.race([
-        new Promise<void>((resolve, reject) => {
-            unsubscribe = observe(get => {
-                try {
-                    const status = get(renownStatusAtom);
-                    if (status === 'finished' || status === 'error') {
-                        resolve();
-                    }
-                } catch (err) {
-                    // In case of any error during the observation, proceed with reactor initialization
-                    reject(
-                        new Error(
-                            `Error observing renown status: ${
-                                err instanceof Error
-                                    ? err.message
-                                    : 'Unknown error'
-                            }`,
-                        ),
-                    );
-                }
-            }, atomStore);
-            return () => unsubscribe?.();
-        }),
-        new Promise<void>((_, reject) => {
-            // Set a maximum timeout (5 seconds) to avoid blocking indefinitely
-            setTimeout(() => {
-                unsubscribe?.();
-                reject(new Error('Timed out waiting for renown to initialize'));
-            }, 5000);
-        }),
-    ]).catch((error: unknown) => {
-        unsubscribe?.();
-        logger.warn(error);
-    });
+    const makeReactorCreator = useCallback(async () => {
+        return await createReactor(storage, documentModels, renown);
+    }, [storage, documentModels, renown]);
+
+    return makeReactorCreator;
 }
 
-export async function createReactor() {
-    await waitForRenown();
-    // get storage
-    const storage = atomStore.get(storageAtom);
-
-    // waits for document models to be loaded
-    const documentModels = await atomStore.get(documentModelsAtom);
-    const server =
-        (window.electronAPI?.documentDrive as
-            | IDocumentDriveServer
-            | undefined) ??
-        createBrowserDocumentDriveServer(documentModels, storage);
-    await initReactor(server);
-    return server;
+export async function createReactor(
+    storage: IDriveOperationStorage &
+        IDocumentOperationStorage &
+        IDocumentStorage &
+        IDocumentAdminStorage,
+    documentModels: DocumentModelModule[],
+    renown: IRenown | undefined,
+) {
+    const reactor = createBrowserDocumentDriveServer(documentModels, storage);
+    await initReactor(reactor, renown);
+    return reactor;
 }
 
 export const storageAtom = atom<

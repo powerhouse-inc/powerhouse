@@ -1,8 +1,6 @@
 import { useDocumentDriveServer } from '#hooks';
 import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
 import {
-    makeDriveUrlComponent,
-    makeNodeUrlComponent,
     useSelectedParentFolder,
     useSetSelectedNode,
     useUnwrappedSelectedDrive,
@@ -36,19 +34,7 @@ export const CreateDocumentModal: React.FC<
             documentModel.documentModel.id,
             selectedFolder?.id ?? parentFolder?.id,
         );
-
-        if (node) {
-            setSelectedNode(node.id, false);
-            if (typeof window !== 'undefined') {
-                const driveSlug = makeDriveUrlComponent(selectedDrive);
-                const nodeSlug = makeNodeUrlComponent(node);
-                window.history.pushState(
-                    null,
-                    '',
-                    `/d/${driveSlug}/${nodeSlug}`,
-                );
-            }
-        }
+        setSelectedNode(node?.id);
     };
 
     return (

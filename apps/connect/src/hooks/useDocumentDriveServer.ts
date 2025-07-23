@@ -11,8 +11,6 @@ import {
 } from '#utils';
 import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
 import {
-    useRefreshDocuments,
-    useRefreshDrives,
     useUnwrappedDrives,
     useUnwrappedReactor,
     useUnwrappedSelectedDrive,
@@ -124,8 +122,6 @@ export function useDocumentDriveServer() {
     const getDocumentModelModule = useGetDocumentModelModule();
     const drives = useUnwrappedDrives();
     const selectedDrive = useUnwrappedSelectedDrive();
-    const refreshDrives = useRefreshDrives();
-    const refreshDocuments = useRefreshDocuments();
 
     const openFile = useCallback(
         async (drive: string, id: string, options?: GetDocumentOptions) => {
@@ -184,23 +180,13 @@ export function useDocumentDriveServer() {
                     logger.error(result.error);
                 }
 
-                refreshDrives();
-                refreshDocuments();
                 return result.document;
             } catch (error) {
                 logger.error(error);
                 return oldDrive;
             }
         },
-        [
-            reactor,
-            drives,
-            sign,
-            user,
-            connectDid,
-            refreshDrives,
-            refreshDocuments,
-        ],
+        [reactor, drives, sign, user, connectDid],
     );
 
     // TODO: why does addDriveOperation do signing but adding multiple operations does not?
@@ -226,11 +212,9 @@ export function useDocumentDriveServer() {
             if (result.status !== 'SUCCESS') {
                 logger.error(result.error);
             }
-            refreshDrives();
-            refreshDocuments();
             return result.document;
         },
-        [reactor, refreshDrives, refreshDocuments],
+        [reactor],
     );
 
     const addDocumentOperations = useCallback(
@@ -255,11 +239,9 @@ export function useDocumentDriveServer() {
             if (result.status !== 'SUCCESS') {
                 logger.error(result.error);
             }
-            refreshDrives();
-            refreshDocuments();
             return result.document;
         },
-        [reactor, refreshDrives, refreshDocuments],
+        [reactor],
     );
 
     const addDocument = useCallback(
@@ -540,13 +522,9 @@ export function useDocumentDriveServer() {
                 );
             }
 
-            if (result.operations.length) {
-                refreshDrives();
-            }
-
             return result.document;
         },
-        [isAllowedToCreateDocuments, refreshDrives, reactor, selectedDrive],
+        [isAllowedToCreateDocuments, reactor, selectedDrive],
     );
 
     const addDrive = useCallback(
@@ -568,10 +546,9 @@ export function useDocumentDriveServer() {
                 },
                 preferredEditor,
             );
-            refreshDrives();
             return newDrive;
         },
-        [isAllowedToCreateDocuments, refreshDrives, reactor],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const addRemoteDrive = useCallback(
@@ -581,10 +558,9 @@ export function useDocumentDriveServer() {
             }
 
             const newDrive = await reactor.addRemoteDrive(url, options);
-            refreshDrives();
             return newDrive;
         },
-        [isAllowedToCreateDocuments, refreshDrives, reactor],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const deleteDrive = useCallback(
@@ -596,9 +572,8 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to delete drives');
             }
             await reactor.deleteDrive(driveId);
-            refreshDrives();
         },
-        [isAllowedToCreateDocuments, refreshDrives, reactor],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const renameDrive = useCallback(
@@ -610,10 +585,9 @@ export function useDocumentDriveServer() {
                 driveId,
                 setDriveName({ name }),
             );
-            refreshDrives();
             return renamedDrive;
         },
-        [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const setDriveAvailableOffline = useCallback(
@@ -627,10 +601,9 @@ export function useDocumentDriveServer() {
                 driveId,
                 setAvailableOffline({ availableOffline }),
             );
-            refreshDrives();
             return updatedDrive;
         },
-        [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const setDriveSharingType = useCallback(
@@ -644,10 +617,9 @@ export function useDocumentDriveServer() {
                 driveId,
                 setSharingType({ type: sharingType }),
             );
-            refreshDrives();
             return updatedDrive;
         },
-        [addDriveOperation, isAllowedToCreateDocuments, refreshDrives],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const getSyncStatus = useCallback(
@@ -698,8 +670,7 @@ export function useDocumentDriveServer() {
         }
 
         await storage.clear();
-        refreshDrives();
-    }, [refreshDrives, reactor, storage]);
+    }, [reactor, storage]);
 
     const removeTrigger = useCallback(
         async (driveId: string, triggerId: string) => {

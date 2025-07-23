@@ -1,29 +1,22 @@
 import { childLogger } from "document-drive";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { useEffect } from "react";
+import { setSelectedNodeAtom } from "./atoms.js";
+import { useRefreshDocuments } from "./documents.js";
 import {
-  initializeDocumentsAtom,
-  initializeDrivesAtom,
-  initializeReactorAtom,
-  loadableReactorAtom,
-  setSelectedNodeAtom,
-  unwrappedReactorAtom,
-} from "./atoms.js";
-import { useSetSelectedDrive } from "./drives.js";
-import { useRefreshDrivesAndDocuments } from "./syncing.js";
+  useRefreshDrives,
+  useSetSelectedDrive,
+  useUnwrappedSelectedDrive,
+} from "./drives.js";
 import { type Reactor } from "./types.js";
 import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
 
 const logger = childLogger(["state", "reactor"]);
 
-/** Returns a loadable of the reactor. */
-export function useReactor() {
-  return useAtomValue(loadableReactorAtom);
-}
-
 /** Returns the unwrapped reactor. */
 export function useUnwrappedReactor() {
-  return useAtomValue(unwrappedReactorAtom);
+  if (typeof window === "undefined") return;
+  return window.reactor;
 }
 
 /** Initializes the reactor.
@@ -37,73 +30,18 @@ export function useInitializeReactor(
   createReactor: () => Promise<Reactor> | Reactor | undefined,
   shouldNavigate = true,
 ) {
-  const unwrappedReactor = useUnwrappedReactor();
-  const setReactor = useSetAtom(initializeReactorAtom);
+  const selectedDrive = useUnwrappedSelectedDrive();
   const setSelectedDrive = useSetSelectedDrive();
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
-  const initializeDrives = useSetAtom(initializeDrivesAtom);
-  const initializeDocuments = useSetAtom(initializeDocumentsAtom);
-  const refresh = useRefreshDrivesAndDocuments();
 
   useEffect(() => {
     // If the reactor is already initialized, do nothing.
-    if (unwrappedReactor) return;
+    if (window.reactor) return;
 
     async function initializeReactor() {
       // Create the reactor instance.
       const reactor = await createReactor();
-      if (!reactor) return;
-      // Subscribe to the reactor's events.
-      reactor.on("syncStatus", (event, status, error) => {
-        logger.verbose("syncStatus", event, status, error);
-        refresh();
-      });
-      reactor.on("strandUpdate", () => {
-        logger.verbose("strandUpdate");
-        refresh();
-      });
-      reactor.on("defaultRemoteDrive", () => {
-        logger.verbose("defaultRemoteDrive");
-        refresh();
-      });
-      reactor.on("clientStrandsError", () => {
-        logger.verbose("clientStrandsError");
-        refresh();
-      });
-      reactor.on("driveAdded", () => {
-        logger.verbose("driveAdded");
-        refresh();
-      });
-      reactor.on("driveDeleted", () => {
-        logger.verbose("driveDeleted");
-        refresh();
-      });
-      reactor.on("documentModelModules", () => {
-        logger.verbose("documentModelModules");
-        refresh();
-      });
-      reactor.on("documentOperationsAdded", () => {
-        logger.verbose("documentOperationsAdded");
-        refresh();
-      });
-      reactor.on("driveOperationsAdded", () => {
-        logger.verbose("driveOperationsAdded");
-        refresh();
-      });
-      reactor.on("operationsAdded", () => {
-        logger.verbose("operationsAdded");
-        refresh();
-      });
-
-      // Set the reactor instance atom.
-      setReactor(reactor);
-
-      // Initialize the drives.
-      const driveIds = await reactor.getDrives();
-      const drives = await Promise.all(
-        driveIds.map((driveId) => reactor.getDrive(driveId)),
-      );
-      initializeDrives(drives);
+      window.reactor = reactor;
 
       // Set the selected drive and node from the URL if `shouldNavigate` is true.
       const driveId = await setSelectedDriveAndNodeFromUrl(
@@ -112,26 +50,86 @@ export function useInitializeReactor(
         setSelectedNode,
         shouldNavigate,
       );
-
-      // Initialize the documents if selected drive is set.
-      if (driveId) {
-        const documentIds = await reactor.getDocuments(driveId);
-        const documents = await Promise.all(
-          documentIds.map((id) => reactor.getDocument(driveId, id)),
-        );
-        initializeDocuments(documents);
-      }
     }
 
     initializeReactor().catch(logger.error);
   }, [
     shouldNavigate,
-    setReactor,
+    selectedDrive,
     createReactor,
-    refresh,
-    initializeDrives,
-    initializeDocuments,
     setSelectedDrive,
     setSelectedNode,
   ]);
+}
+
+export function useSubscribeToReactorEvents() {
+  const unwrappedSelectedDrive = useUnwrappedSelectedDrive();
+  const driveId = unwrappedSelectedDrive?.header.id;
+  const refreshDrives = useRefreshDrives();
+  const refreshDocuments = useRefreshDocuments();
+  const reactor = useUnwrappedReactor();
+
+  useEffect(() => {
+    if (!reactor) return;
+    reactor.on("syncStatus", (event, status, error) => {
+      console.log("syncStatus", event, status, error);
+      logger.verbose("syncStatus", event, status, error);
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("strandUpdate", () => {
+      console.log("strandUpdate");
+      logger.verbose("strandUpdate");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("defaultRemoteDrive", () => {
+      console.log("defaultRemoteDrive");
+      logger.verbose("defaultRemoteDrive");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("clientStrandsError", () => {
+      console.log("clientStrandsError");
+      logger.verbose("clientStrandsError");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("driveAdded", () => {
+      console.log("driveAdded");
+      logger.verbose("driveAdded");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("driveDeleted", () => {
+      console.log("driveDeleted");
+      logger.verbose("driveDeleted");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("documentModelModules", () => {
+      console.log("documentModelModules");
+      logger.verbose("documentModelModules");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("documentOperationsAdded", () => {
+      console.log("documentOperationsAdded");
+      logger.verbose("documentOperationsAdded");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("driveOperationsAdded", () => {
+      console.log("driveOperationsAdded");
+      logger.verbose("driveOperationsAdded");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+    reactor.on("operationsAdded", () => {
+      console.log("operationsAdded");
+      logger.verbose("operationsAdded");
+      refreshDrives(reactor);
+      refreshDocuments(reactor, driveId);
+    });
+  }, [driveId, refreshDrives, refreshDocuments, reactor]);
 }

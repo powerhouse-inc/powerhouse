@@ -1,23 +1,24 @@
 import {
   logger,
   type DocumentDriveDocument,
+  type IDocumentDriveServer,
   type Trigger,
 } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
-  initializeDrivesAtom,
+  baseDrivesAtom,
+  drivesAtom,
   loadableDrivesAtom,
   loadableSelectedDriveAtom,
-  setDrivesAtom,
-  setSelectedDriveAtom,
+  selectedDriveAtom,
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
 import { useUnwrappedDocuments } from "./documents.js";
 import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable, type SharingType } from "./types.js";
-import { makeDriveUrlComponent } from "./utils.js";
+import { makeDriveUrlComponent, NOT_SET } from "./utils.js";
 
 /** Returns a loadable of the drives for a reactor. */
 export function useDrives(): Loadable<DocumentDriveDocument[]> {
@@ -31,32 +32,51 @@ export function useUnwrappedDrives() {
 
 /** Initializes the drives for a reactor. */
 export function useInitializeDrives() {
-  return useSetAtom(initializeDrivesAtom);
+  const baseDrives = useAtomValue(baseDrivesAtom);
+  const setDrives = useSetDrives();
+  const reactor = useUnwrappedReactor();
+
+  useEffect(() => {
+    if (baseDrives !== NOT_SET) return;
+
+    async function handleInitializeDrives() {
+      if (!reactor) return;
+
+      // Initialize the drives.
+      const driveIds = await reactor.getDrives();
+      const drives = await Promise.all(
+        driveIds.map((driveId) => reactor.getDrive(driveId)),
+      );
+      setDrives(drives);
+    }
+
+    handleInitializeDrives().catch((error: unknown) => logger.error(error));
+  }, [baseDrives, setDrives, reactor]);
 }
 
 /** Sets the drives for a reactor. */
 export function useSetDrives() {
-  return useSetAtom(setDrivesAtom);
+  return useSetAtom(drivesAtom);
 }
 
 /** Refreshes the drives for a reactor. */
 export function useRefreshDrives() {
-  const reactor = useUnwrappedReactor();
-  const setDrives = useSetAtom(setDrivesAtom);
+  const setDrives = useSetDrives();
 
-  return useCallback(() => {
-    if (!reactor) return;
-    reactor
-      .getDrives()
-      .then((driveIds) => {
-        Promise.all(driveIds.map((id) => reactor.getDrive(id)))
-          .then((drives) => {
-            setDrives(drives).catch((error: unknown) => logger.error(error));
-          })
-          .catch((error: unknown) => logger.error(error));
-      })
-      .catch((error: unknown) => logger.error(error));
-  }, [reactor, setDrives]);
+  return useCallback(
+    (reactor: IDocumentDriveServer) => {
+      reactor
+        .getDrives()
+        .then(async (driveIds) => {
+          const drives = await Promise.all(
+            driveIds.map((id) => reactor.getDrive(id)),
+          );
+          setDrives(drives);
+        })
+        .catch((error: unknown) => logger.error(error));
+    },
+    [setDrives],
+  );
 }
 
 /** Returns a loadable of a drive for a reactor by id. */
@@ -100,22 +120,33 @@ export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
  * `shouldNavigate` can be overridden by passing a different value to the callback.
  */
 export function useSetSelectedDrive(shouldNavigate = true) {
-  const drives = useUnwrappedDrives();
-  const setSelectedDrive = useSetAtom(setSelectedDriveAtom);
+  const reactor = useUnwrappedReactor();
+  const setSelectedDrive = useSetAtom(selectedDriveAtom);
 
   return useCallback(
     (driveId: string | undefined, _shouldNavigate = shouldNavigate) => {
       // Set the selected drive.
       setSelectedDrive(driveId).catch((error: unknown) => logger.error(error));
 
-      // Update the URL if `shouldNavigate` is true.
-      const drive = drives?.find((d) => d.header.id === driveId);
-      const newPathname = makeDriveUrlComponent(drive);
-      if (typeof window !== "undefined" && _shouldNavigate) {
-        window.history.pushState(null, "", newPathname);
-      }
+      if (!reactor) return;
+
+      reactor
+        .getDrives()
+        .then(async (driveIds) => {
+          const drives = await Promise.all(
+            driveIds.map((id) => reactor.getDrive(id)),
+          );
+          const drive = drives.find((d) => d.header.id === driveId);
+          const newPathname = makeDriveUrlComponent(drive);
+          // Update the URL if `shouldNavigate` is true.
+
+          if (typeof window !== "undefined" && _shouldNavigate) {
+            window.history.pushState(null, "", newPathname);
+          }
+        })
+        .catch((error: unknown) => logger.error(error));
     },
-    [drives, setSelectedDrive],
+    [reactor, setSelectedDrive],
   );
 }
 

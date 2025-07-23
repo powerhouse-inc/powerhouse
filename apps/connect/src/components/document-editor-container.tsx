@@ -22,7 +22,6 @@ export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
     const { addDocumentOperations } = useDocumentDriveServer();
-    const refreshDocuments = useRefreshDocuments();
     const unwrappedSelectedDrive = useUnwrappedSelectedDrive();
     const selectedDocument = useUnwrappedSelectedDocument();
     const parentFolderId = useParentFolderId(selectedDocument?.header.id);
@@ -48,7 +47,6 @@ export function DocumentEditorContainer() {
                 selectedDocument.header.id,
                 [operation],
             );
-            refreshDocuments();
         },
         [addDocumentOperations, selectedDocument, unwrappedSelectedDrive],
     );
