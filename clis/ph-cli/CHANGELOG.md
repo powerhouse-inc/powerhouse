@@ -1,3 +1,7 @@
+## 4.0.0-staging.5 (2025-07-23)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 4.0.0-staging.4 (2025-07-22)
 
 ### 🩹 Fixes

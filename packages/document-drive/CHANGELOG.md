@@ -1,3 +1,13 @@
+## 4.0.0-staging.5 (2025-07-23)
+
+### 🩹 Fixes
+
+- **document-drive:** fix regression when adding multiple operations ([bce76878e](https://github.com/powerhouse-inc/powerhouse/commit/bce76878e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.0.0-staging.4 (2025-07-22)
 
 ### 🩹 Fixes
