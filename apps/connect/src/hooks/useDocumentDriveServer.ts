@@ -100,7 +100,38 @@ function deduplicateOperations<TAction extends Action = Action>(
         operationIndicesByScope[scope].add(index);
     }
 
-    return newOperations;
+    const uniqueOperationHashes = new Set<string>();
+    const operationsDedupedByHash: Operation<TAction>[] = [];
+
+    for (const [scope, operations] of Object.entries(existingOperations)) {
+        for (const operation of operations) {
+            const hash = operation.hash;
+            if (uniqueOperationHashes.has(hash)) {
+                console.warn(
+                    'skipping existing operation with duplicate hash in scope',
+                    scope,
+                    operation,
+                );
+                continue;
+            }
+            uniqueOperationHashes.add(hash);
+        }
+    }
+
+    for (const operation of newOperations) {
+        const hash = operation.hash;
+        if (uniqueOperationHashes.has(hash)) {
+            console.warn(
+                'skipping new operation with duplicate hash in scope',
+                operation.scope,
+                operation,
+            );
+            continue;
+        }
+        uniqueOperationHashes.add(hash);
+        operationsDedupedByHash.push(operation);
+    }
+    return operationsDedupedByHash;
 }
 
 export function useDocumentDriveServer() {
