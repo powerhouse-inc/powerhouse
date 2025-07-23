@@ -1995,7 +1995,7 @@ export class BaseDocumentDriveServer
               "ERROR",
               undefined,
               (error as Error).message,
-              (error as Error).cause,
+              error,
             );
 
       return {
