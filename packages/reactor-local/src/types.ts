@@ -1,11 +1,12 @@
 import { type LogLevel } from "@powerhousedao/config";
-import { type Processor } from "@powerhousedao/reactor-api";
 import {
   type DefaultRemoteDriveInput,
   type DriveInput,
   type IDocumentDriveServer,
 } from "document-drive";
 import path from "node:path";
+
+import { type DefaultProcessors } from "./default-processors.js";
 
 export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
 
@@ -33,7 +34,7 @@ export type StartServerOptions = {
     | undefined;
   logLevel?: LogLevel;
   remoteDrives?: RemoteDriveInputSimple[];
-  processors?: Record<string, Processor>;
+  processors?: Array<DefaultProcessors>;
 };
 
 export const DefaultStartServerOptions = {

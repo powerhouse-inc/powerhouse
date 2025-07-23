@@ -195,6 +195,7 @@ export async function startVetra({
         https,
         disableDefaultDrive,
         configFile,
+        processors: ["ph/codegen/processor"],
       },
       driveUrl, // Pass the vetra drive URL as remote drive
     );

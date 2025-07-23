@@ -49,10 +49,7 @@
     "build": "npm run build:tsc && npm run build:css",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
-    "generate": "ph-cli generate",
-    "connect": "ph-cli connect",
-    "reactor": "ph-cli reactor"
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
@@ -70,10 +67,8 @@
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@tailwindcss/cli": "^4.0.15",
     "@testing-library/react": "^16.3.0",
