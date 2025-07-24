@@ -335,7 +335,8 @@ export class DriveSubgraph extends Subgraph {
 
         const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
         const isUser = ctx.isUser?.(ctx.user?.address ?? "");
-        if (!isAdmin && !isUser) {
+        const isGuest = ctx.isGuest?.(ctx.user?.address ?? "");
+        if (!isAdmin && !isUser && !isGuest) {
           throw new GraphQLError("Forbidden");
         }
 
@@ -398,6 +399,12 @@ export class DriveSubgraph extends Subgraph {
           `pushUpdates(drive: slug:${ctx.driveId} id:${driveId})`,
           strandsGql,
         );
+
+        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        const isUser = ctx.isUser?.(ctx.user?.address ?? "");
+        if (!isAdmin && !isUser) {
+          throw new GraphQLError("Forbidden");
+        }
 
         // translate data types
         const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
