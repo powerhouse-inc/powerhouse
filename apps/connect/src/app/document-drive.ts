@@ -92,7 +92,7 @@ export default (
             drive: string,
             operation: Operation<DocumentDriveAction>,
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperation(drive, operation, { forceSync }),
+        ) => documentDrive.addOperation(drive, operation, { forceSync }),
     );
 
     ipcMain.handle(
@@ -103,7 +103,7 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.addDriveOperations(
+            documentDrive.addOperations(
                 drive,
                 operations as Operation<DocumentDriveAction>[],
                 { forceSync },
@@ -118,7 +118,7 @@ export default (
             operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(
+            documentDrive.queueOperations(
                 drive,
                 [operation] as Operation<DocumentDriveAction>[],
                 {
@@ -135,7 +135,7 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(
+            documentDrive.queueOperations(
                 drive,
                 operations as Operation<DocumentDriveAction>[],
                 {

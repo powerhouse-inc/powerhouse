@@ -139,7 +139,7 @@ export const selectedDriveAtom = atom(
     const oldDocuments = get(baseDocumentsAtom);
     const newDocumentIds = await reactor.getDocuments(driveId);
     const newDocuments = await Promise.all(
-      newDocumentIds.map((id) => reactor.getDocument(driveId, id)),
+      newDocumentIds.map((id) => reactor.getDocument(id)),
     );
     if (isEqual(newDocuments, oldDocuments)) return;
     set(baseDocumentsAtom, newDocuments);

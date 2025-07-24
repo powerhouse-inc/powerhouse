@@ -129,11 +129,13 @@ export function useSubscribeToReactorEvents() {
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("driveOperationsAdded", (...args) => {
+        console.log("driveOperationsAdded", ...args);
         logger.verbose("driveOperationsAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("operationsAdded", (...args) => {
+        console.log("operationsAdded", ...args);
         logger.verbose("operationsAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
