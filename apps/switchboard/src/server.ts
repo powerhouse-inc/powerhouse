@@ -111,7 +111,6 @@ export const startSwitchboard = async (
       configFile:
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),
-      auth: options.auth,
     });
 
     return {
