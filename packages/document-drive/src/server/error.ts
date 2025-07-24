@@ -22,6 +22,9 @@ export class OperationError extends Error {
     super(message, { cause: cause ?? operation });
     this.status = status;
     this.operation = operation;
+    if (cause instanceof Error) {
+      this.stack = cause.stack;
+    }
   }
 }
 

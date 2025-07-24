@@ -8,6 +8,10 @@ TLDR: Think of this as a smart, materialized view of the event store.
 - Reads from `IEventStore` as needed.
 - Provides an API for `IReactor` or external systems to read document data from.
 
+### Implementations
+
+Only one implementation is provided: `KyselyDocumentIndexer`. This implementation uses Kysely on top of PGLite.
+
 ### Snapshots + Cache Invalidation
 
 - The document view keeps an LRU cache of `(document id, ViewFilter)` tuples.

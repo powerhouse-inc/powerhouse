@@ -7,8 +7,6 @@ on:
       - completed
   push:
     branches:
-      - staging
-      - production
       - sky-atlas-staging
       - sky-atlas-demo
   workflow_dispatch:
@@ -21,7 +19,6 @@ on:
         options:
           - main
           - release/staging/*
-          - staging
           - sky-atlas-staging
           - sky-atlas-demo
 
@@ -43,6 +40,8 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/heads/release/staging/* ]]; then
             echo "deploy-env=staging" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/release/production/* ]]; then
+            echo "deploy-env=production" >> $GITHUB_OUTPUT
           else
             echo "deploy-env=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi

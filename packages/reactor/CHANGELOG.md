@@ -1,3 +1,20 @@
+## 3.3.0-dev.18 (2025-07-24)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 3.3.0-dev.17 (2025-07-23)
+
+### 🩹 Fixes
+
+- **codegen:** revert changes to resolvers template ([b96a7b899](https://github.com/powerhouse-inc/powerhouse/commit/b96a7b899))
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+
+### ❤️ Thank You
+
+- acaldas
+- Callme-T
+
 ## 3.3.0-dev.16 (2025-07-22)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

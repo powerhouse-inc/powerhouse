@@ -10,6 +10,18 @@
 - Deterministic hashing.
 - Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
 
+### Implementations
+
+We will maintain multiple implementations of the `IOperationStore` interface.
+
+- `KyselyOperationStore`: A Kysely implementation. This will be the default implementation, using a PostgreSQL database on the server, and PGLite for the browser.
+
+- `FilesystemOperationStore`: A filesystem implementation. This will be used for local development.
+
+- `IPFSOperationStore`: A IPFS implementation. This will be used for decentralized storage.
+
+- `SwarmOperationStore`: A Swarm implementation. This will be used for decentralized storage.
+
 ### Interface
 
 ```tsx
