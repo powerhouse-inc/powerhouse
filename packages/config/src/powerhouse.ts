@@ -49,13 +49,13 @@ export type PowerhouseConfig = {
       postgresUrl?: string;
     };
   };
+  auth?: {
+    enabled?: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  };
   switchboard?: {
-    auth?: {
-      enabled?: boolean;
-      guests: string[];
-      users: string[];
-      admins: string[];
-    };
     database?: {
       url?: string;
     };
@@ -86,12 +86,10 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
   importScriptsDir: DEFAULT_IMPORT_SCRIPTS_DIR,
   skipFormat: DEFAULT_SKIP_FORMAT,
   logLevel: DEFAULT_LOG_LEVEL,
-  switchboard: {
-    auth: {
-      enabled: false,
-      guests: [],
-      users: [],
-      admins: [],
-    },
+  auth: {
+    enabled: false,
+    guests: [],
+    users: [],
+    admins: [],
   },
 };
