@@ -1,13 +1,13 @@
 import { useDocumentDriveServer } from '#hooks';
+import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
 import {
-    DangerZone as BaseDangerZone,
-    type UiDriveNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
-import { logger } from 'document-drive';
+    useSetSelectedDrive,
+    useSetSelectedNode,
+    useUnwrappedDrives,
+} from '@powerhousedao/state';
+import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../modal.js';
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
@@ -15,16 +15,17 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
 }) => {
     const { t } = useTranslation();
     const { clearStorage, deleteDrive } = useDocumentDriveServer();
-    const { driveNodes } = useUiNodesContext();
+    const drives = useUnwrappedDrives();
+    const setSelectedDrive = useSetSelectedDrive();
+    const setSelectedNode = useSetSelectedNode();
     const { showModal } = useModal();
-    const navigate = useNavigate();
 
     const handleDeleteDrive = useCallback(
-        async (drive: UiDriveNode) => {
-            navigate('/');
-            await deleteDrive(drive.driveId);
+        async (drive: DocumentDriveDocument) => {
+            setSelectedDrive(undefined);
+            await deleteDrive(drive.header.id);
         },
-        [deleteDrive, navigate],
+        [deleteDrive, setSelectedDrive],
     );
 
     const handleClearStorage = () => {
@@ -39,7 +40,8 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
                 clearStorage()
                     .then(() => {
                         // refreshes the page to reload default drive
-                        navigate('/');
+                        setSelectedDrive(undefined);
+                        setSelectedNode(undefined);
                         onRefresh();
                     })
                     .catch(logger.error);
@@ -50,7 +52,7 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
 
     return (
         <BaseDangerZone
-            drives={driveNodes}
+            drives={drives ?? []}
             onDeleteDrive={handleDeleteDrive}
             onClearStorage={handleClearStorage}
         />

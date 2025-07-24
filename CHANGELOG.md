@@ -1,3 +1,40 @@
+## 3.3.0-dev.18 (2025-07-24)
+
+### 🩹 Fixes
+
+- **document-drive:** fix regression when adding multiple operations ([3a8617e79](https://github.com/powerhouse-inc/powerhouse/commit/3a8617e79))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.17 (2025-07-23)
+
+### 🩹 Fixes
+
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- **academy:** generate types command ([b8b883200](https://github.com/powerhouse-inc/powerhouse/commit/b8b883200))
+- **codegen:** revert changes to resolvers template ([b96a7b899](https://github.com/powerhouse-inc/powerhouse/commit/b96a7b899))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+- Frank
+
+## 3.3.0-dev.16 (2025-07-22)
+
+### 🩹 Fixes
+
+- **common,document-drive,reactor-api,reactor-browser:** revert undefined return on getDocument methods ([fc145a82a](https://github.com/powerhouse-inc/powerhouse/commit/fc145a82a))
+- **connect,reactor-browser:** avoid memory leak on useDocumentDrives ([cdaba1dc3](https://github.com/powerhouse-inc/powerhouse/commit/cdaba1dc3))
+- **reactor-api:** remove body-parser depecration warning ([4098ffedd](https://github.com/powerhouse-inc/powerhouse/commit/4098ffedd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.15 (2025-07-17)
 
 ### 🩹 Fixes

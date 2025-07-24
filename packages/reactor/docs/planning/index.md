@@ -24,5 +24,5 @@
 
 ### Implementation
 
-* [Implementation Plan](ImplementationPlan/index.md)
-* [Testing Strategy](TestingStrategy/index.md)
+* [Implementation Plan](implementation-plan.md)
+* [Testing Strategy](testing-strategy.md)

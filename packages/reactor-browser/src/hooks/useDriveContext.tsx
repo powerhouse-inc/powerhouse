@@ -1,7 +1,5 @@
-import { createContext, type PropsWithChildren, useContext } from "react";
+import { createContext, useContext, type PropsWithChildren } from "react";
 import { type IDriveContext } from "../types/drive-editor.js";
-
-export { type IDriveContext } from "../types/drive-editor.js";
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);
 

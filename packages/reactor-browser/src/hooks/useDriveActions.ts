@@ -2,7 +2,9 @@ import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
   addFolder,
+  copyNode,
   deleteNode,
+  generateNodesCopy,
   isFolderNode,
   moveNode,
   updateNode,
@@ -14,7 +16,6 @@ import {
 } from "document-model";
 import { useMemo } from "react";
 import { type IDriveContext } from "../types/drive-editor.js";
-import { type UiNode } from "../uiNodes/types.js";
 
 const generateId = () => _generateId().toString();
 
@@ -34,9 +35,6 @@ function getNode(id: string, drive: DocumentDriveDocument) {
 export interface IDriveActions {
   /** The drive context provided by the host application */
   context: IDriveContext;
-
-  /** Selects a node in the drive */
-  selectNode: (node: UiNode | null) => void;
 
   /**
    * Creates a new folder in the drive
@@ -125,8 +123,6 @@ function createDriveActions(
   const drive = document;
   const driveId = drive.header.id;
 
-  const { selectedNode } = context;
-
   const handleAddFolder = async (
     name: string,
     parentFolder?: string | null,
@@ -160,24 +156,10 @@ function createDriveActions(
 
   const addFile = async (
     file: File,
-    parentFolder = selectedNode && isFolderNode(selectedNode)
-      ? selectedNode.id
-      : undefined,
+    parentFolderId: string | null | undefined,
     name: string = file.name.replace(/\.zip$/gim, ""),
   ) => {
-    const folder = parentFolder ? getNode(parentFolder, drive) : undefined;
-
-    if (parentFolder && !folder) {
-      throw new Error(`Parent folder with id "${parentFolder}" not found`);
-    }
-
-    if (folder && !isFolderNode(folder)) {
-      throw new Error(
-        `Parent folder with id "${parentFolder}" is not a folder`,
-      );
-    }
-
-    await context.addFile(file, driveId, name, parentFolder);
+    await context.addFile(file, driveId, name, parentFolderId ?? undefined);
   };
 
   const handleDeleteNode = async (id: string) => {
@@ -216,7 +198,23 @@ function createDriveActions(
       throw new Error(`Source node with id "${sourceId}" not found`);
     }
 
-    await context.copyNode(sourceId, targetFolderId);
+    const copyNodesInput = generateNodesCopy(
+      {
+        srcId: sourceId,
+        targetParentFolder: target?.id,
+        targetName: source.name,
+      },
+      generateId,
+      drive.state.global.nodes,
+    );
+
+    const copyActions = copyNodesInput.map((copyNodeInput) =>
+      copyNode(copyNodeInput),
+    );
+
+    for (const copyAction of copyActions) {
+      dispatch(copyAction); // TODO support batching dispatch
+    }
   };
 
   const duplicateNode = async (sourceId: string) => {
@@ -224,12 +222,12 @@ function createDriveActions(
     if (!node) {
       throw new Error(`Node with id "${sourceId}" not found`);
     }
+
     await handleCopyNode(node.id, node.parentFolder || undefined);
   };
 
   return {
     context,
-    selectNode: context.selectNode,
     addFolder: handleAddFolder,
     addFile,
     addDocument,

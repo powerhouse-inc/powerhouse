@@ -1,18 +1,22 @@
-import { useShowDeleteNodeModal, useWindowSize, type TUiNodes } from '#hooks';
 import {
-    FileItem,
-    type BaseUiFileNode,
-    type UiFileNode,
-    type UiNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+    useDocumentDriveServer,
+    useNodeActions,
+    useShowDeleteNodeModal,
+    useWindowSize,
+} from '#hooks';
+import { FileItem } from '@powerhousedao/design-system';
+import {
+    useSelectedDriveSharingType,
+    useSetSelectedNode,
+} from '@powerhousedao/state';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import type { FileNode } from 'document-drive';
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-type Props = TUiNodes & {
+type Props = {
     isAllowedToCreateDocuments?: boolean;
-    fileNodes: UiFileNode[];
+    fileNodes: FileNode[];
 };
 
 const GAP = 8;
@@ -21,47 +25,27 @@ const ITEM_HEIGHT = 48;
 
 const USED_SPACE = 420;
 
-export function FileContentView(props: Props) {
+export function FileContentView({
+    fileNodes,
+    isAllowedToCreateDocuments,
+}: Props) {
     const parentRef = useRef(null);
     const { t } = useTranslation();
     const windowSize = useWindowSize();
-    const { fileNodes } = props;
+    const sharingType = useSelectedDriveSharingType();
+    const setSelectedNode = useSetSelectedNode();
+    const {
+        onRenameNode,
+        onDuplicateNode,
+        onMoveNode,
+        onCopyNode,
+        onAddFile,
+        onAddFolder,
+        onAddAndSelectNewFolder,
+    } = useNodeActions();
+    const { getSyncStatusSync } = useDocumentDriveServer();
     const availableWidth = windowSize.innerWidth - USED_SPACE;
-    const { setSelectedNode } = useUiNodesContext();
     const showDeleteNodeModal = useShowDeleteNodeModal();
-    const handleSelectNode = (node: BaseUiFileNode) => {
-        setSelectedNode(node as unknown as UiFileNode);
-    };
-
-    const handleRenameNode = (name: string, node: BaseUiFileNode) => {
-        props.onRenameNode(name, node as unknown as UiFileNode);
-    };
-
-    const handleDuplicateNode = (node: BaseUiFileNode) => {
-        props.onDuplicateNode(node as unknown as UiFileNode);
-    };
-
-    const handleDeleteNode = (node: BaseUiFileNode) => {
-        showDeleteNodeModal(node as unknown as UiFileNode);
-    };
-
-    const handleAddFile = (file: File, parentNode: BaseUiFileNode | null) => {
-        props.onAddFile(file, parentNode as UiNode | null);
-    };
-
-    const handleCopyNode = (
-        node: BaseUiFileNode,
-        targetNode: BaseUiFileNode,
-    ) => {
-        props.onCopyNode(node as UiNode, targetNode as UiNode);
-    };
-
-    const handleMoveNode = (
-        node: BaseUiFileNode,
-        targetNode: BaseUiFileNode,
-    ) => {
-        props.onMoveNode(node as UiNode, targetNode as UiNode);
-    };
 
     const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
     const rowCount = Math.ceil(fileNodes.length / columnCount);
@@ -97,7 +81,7 @@ export function FileContentView(props: Props) {
     const getItem = (
         rowIndex: number,
         columnIndex: number,
-    ): UiFileNode | null => {
+    ): FileNode | null => {
         const index = getItemIndex(rowIndex, columnIndex);
         return fileNodes[index] || null;
     };
@@ -125,14 +109,21 @@ export function FileContentView(props: Props) {
             >
                 <FileItem
                     key={fileNode.id}
-                    uiNode={fileNode}
-                    onSelectNode={handleSelectNode}
-                    onRenameNode={handleRenameNode}
-                    onDuplicateNode={handleDuplicateNode}
-                    onDeleteNode={handleDeleteNode}
+                    fileNode={fileNode}
+                    sharingType={sharingType ?? 'LOCAL'}
                     isAllowedToCreateDocuments={
-                        props.isAllowedToCreateDocuments ?? false
+                        isAllowedToCreateDocuments ?? false
                     }
+                    onRenameNode={onRenameNode}
+                    onDuplicateNode={onDuplicateNode}
+                    onMoveNode={onMoveNode}
+                    onCopyNode={onCopyNode}
+                    onAddFile={onAddFile}
+                    onAddFolder={onAddFolder}
+                    onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+                    getSyncStatusSync={getSyncStatusSync}
+                    setSelectedNode={setSelectedNode}
+                    showDeleteNodeModal={showDeleteNodeModal}
                 />
             </div>
         );

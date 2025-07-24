@@ -1,20 +1,15 @@
 import { useDocumentDriveServer } from '#hooks';
-import { makeNodeSlugFromNodeName } from '#utils';
+import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
 import {
-    CreateDocumentModal as ConnectCreateDocumentModal,
-    FILE,
-    FOLDER,
-    type TDocumentType,
-    type UiDriveNode,
-    type UiFolderNode,
-    type UiNode,
-} from '@powerhousedao/design-system';
+    useSelectedParentFolder,
+    useSetSelectedNode,
+    useUnwrappedSelectedDrive,
+    useUnwrappedSelectedFolder,
+} from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
     open: boolean;
-    selectedParentNode: UiDriveNode | UiFolderNode | null;
-    setSelectedNode: (uiNode: UiNode | null) => void;
     documentModel: DocumentModelModule;
     onClose: () => void;
 }
@@ -22,44 +17,24 @@ export interface CreateDocumentModalProps {
 export const CreateDocumentModal: React.FC<
     CreateDocumentModalProps
 > = props => {
-    const {
-        open,
-        onClose,
-        selectedParentNode,
-        setSelectedNode,
-        documentModel,
-    } = props;
-
+    const { open, documentModel, onClose } = props;
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const setSelectedNode = useSetSelectedNode();
+    const selectedFolder = useUnwrappedSelectedFolder();
+    const parentFolder = useSelectedParentFolder();
     const { addDocument } = useDocumentDriveServer();
 
     const onCreateDocument = async (documentName: string) => {
         onClose();
-
-        if (!selectedParentNode) {
-            throw new Error('No drive or folder selected');
-        }
+        if (!selectedDrive) return;
 
         const node = await addDocument(
-            selectedParentNode.driveId,
+            selectedDrive.header.id,
             documentName || `New ${documentModel.documentModel.name}`,
             documentModel.documentModel.id,
-            selectedParentNode.kind === FOLDER
-                ? selectedParentNode.id
-                : undefined,
+            selectedFolder?.id ?? parentFolder?.id,
         );
-
-        if (node) {
-            setSelectedNode({
-                ...node,
-                slug: makeNodeSlugFromNodeName(node.name),
-                kind: FILE,
-                documentType: node.documentType as TDocumentType,
-                parentFolder: selectedParentNode.id,
-                driveId: selectedParentNode.driveId,
-                syncStatus: selectedParentNode.syncStatus,
-                sharingType: selectedParentNode.sharingType,
-            });
-        }
+        setSelectedNode(node?.id);
     };
 
     return (

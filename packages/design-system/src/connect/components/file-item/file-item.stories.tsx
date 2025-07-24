@@ -1,5 +1,6 @@
-import { documentTypes, mockUiFileNode } from "#connect";
+import { documentTypes } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type FileNode } from "document-drive";
 import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {
@@ -20,14 +21,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    uiNode: mockUiFileNode,
     isAllowedToCreateDocuments: true,
   },
   render: function Wrapper(args) {
+    const node: FileNode = {
+      name: "Mock file",
+      id: "1",
+      kind: "file",
+      documentType: "mock",
+      parentFolder: "1",
+    };
     const fileNodes = [...documentTypes, "SOME RANDOM DOCUMENT TYPE"].map(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       (documentType, index) => ({
-        ...args.uiNode,
+        ...node,
         documentType,
         id: `file-${index}`,
         name: `${documentType} document`,
@@ -36,13 +42,22 @@ export const Default: Story = {
     return (
       <div className="flex flex-wrap gap-2">
         {fileNodes.map((node) => (
-          // @ts-expect-error
           <FileItem
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             key={node.id}
+            fileNode={node}
             {...args}
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            uiNode={node}
+            onAddFile={() => Promise.resolve()}
+            onAddFolder={() => Promise.resolve(undefined)}
+            onRenameNode={() => Promise.resolve(undefined)}
+            onCopyNode={() => Promise.resolve(undefined)}
+            onMoveNode={() => Promise.resolve(undefined)}
+            onDuplicateNode={() => Promise.resolve(undefined)}
+            onAddAndSelectNewFolder={() => Promise.resolve(undefined)}
+            showDeleteNodeModal={() => Promise.resolve(undefined)}
+            setSelectedNode={() => {}}
+            sharingType="LOCAL"
+            getSyncStatusSync={() => undefined}
+            isAllowedToCreateDocuments={true}
           />
         ))}
       </div>

@@ -7,10 +7,8 @@ import {
     type PHDocument,
 } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { observe } from 'jotai-effect';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
-import { atomStore } from '@powerhousedao/common';
 
 export const baseDocumentModels = [
     driveDocumentModelModule,
@@ -54,30 +52,15 @@ documentModelsAtom.debugLabel = 'documentModelsAtomInConnect';
 // blocks rendering until document models are loaded.
 export const useDocumentModels = () => useAtomValue(documentModelsAtom);
 
-const unrappedDocumentModelsAtom = unwrap(documentModelsAtom);
-unrappedDocumentModelsAtom.debugLabel = 'unwrappedDocumentModelsAtomInConnect';
+const unwrappedDocumentModelsAtom = unwrap(documentModelsAtom);
+unwrappedDocumentModelsAtom.debugLabel = 'unwrappedDocumentModelsAtomInConnect';
 
 // will return undefined until document models are initialized. Does not block rendering.
 export const useUnwrappedDocumentModelModules = () =>
-    useAtomValue(unrappedDocumentModelsAtom);
-
-export const subscribeDocumentModels = function (
-    listener: (documentModels: DocumentModelModule[]) => void,
-) {
-    // activate the effect on the default store
-    const unobserve = observe(get => {
-        const documentModels = get(documentModelsAtom);
-        documentModels.then(listener).catch(e => {
-            throw e;
-        });
-    }, atomStore);
-
-    // Clean up the effect
-    return () => unobserve();
-};
+    useAtomValue(unwrappedDocumentModelsAtom);
 
 function getDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string,
+    documentType: string | undefined,
     documentModels: DocumentModelModule[] | undefined,
 ) {
     return documentModels?.find(d => d.documentModel.id === documentType) as
@@ -97,7 +80,7 @@ export function useDocumentModelModule<TDocument extends PHDocument>(
 
 export const useGetDocumentModelModule = <TDocument extends PHDocument>() => {
     const documentModelModules = useUnwrappedDocumentModelModules();
-    return (documentType: string) =>
+    return (documentType: string | undefined) =>
         getDocumentModelModule<TDocument>(documentType, documentModelModules);
 };
 

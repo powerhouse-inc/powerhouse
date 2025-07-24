@@ -1,7 +1,6 @@
 import {
     useDocumentAdminStorage,
     useGetDocumentModelModule,
-    useUnwrappedReactor,
     useUser,
 } from '#store';
 import {
@@ -10,42 +9,40 @@ import {
     signOperation,
     uploadDocumentOperations,
 } from '#utils';
+import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
 import {
-    ERROR,
-    FILE,
-    LOCAL,
-    type SharingType,
-    type UiNode,
-} from '@powerhousedao/design-system';
+    useUnwrappedDrives,
+    useUnwrappedReactor,
+    useUnwrappedSelectedDrive,
+} from '@powerhousedao/state';
 import {
     type DocumentDriveAction,
     type DocumentDriveDocument,
     type DriveInput,
+    type Node,
     PullResponderTransmitter,
     type PullResponderTrigger,
     type RemoteDriveOptions,
-    type StrandUpdate,
     type SyncStatus,
     SynchronizationUnitNotFoundError,
     type Trigger,
-    addFile as addFileAction,
-    addFolder,
-    addTrigger,
+    addFile as baseAddFile,
+    addFolder as baseAddFolder,
+    addTrigger as baseAddTrigger,
+    copyNode as baseCopyNode,
+    deleteNode as baseDeleteNode,
+    moveNode as baseMoveNode,
+    removeTrigger as baseRemoveTrigger,
+    updateFile as baseUpdateFile,
     childLogger,
-    copyNode,
     createDriveState,
-    deleteNode,
     documentDriveReducer,
     generateNodesCopy,
-    isDocumentDrive,
     isFileNode,
     isFolderNode,
-    moveNode,
-    removeTrigger,
     setAvailableOffline,
     setDriveName,
     setSharingType,
-    updateFile,
     updateNode,
 } from 'document-drive';
 import {
@@ -53,19 +50,89 @@ import {
     type Listener,
 } from 'document-drive/server/types';
 import {
+    type Action,
     type Operation,
+    type OperationScope,
     type PHDocument,
     createPresignedHeader,
     generateId,
 } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
-import { useDocumentDrives } from './useDocumentDrives.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
-// TODO this should be added to the document model
-export interface SortOptions {
-    afterNodePath?: string;
+function deduplicateOperations<TAction extends Action = Action>(
+    existingOperations: Record<OperationScope, Operation<TAction>[]>,
+    operationsToDeduplicate: Operation<TAction>[],
+) {
+    // make a set of all the operation indices for each scope to avoid duplicates
+    const operationIndicesByScope = {} as Record<OperationScope, Set<number>>;
+    for (const scope of Object.keys(existingOperations) as OperationScope[]) {
+        operationIndicesByScope[scope] = new Set(
+            existingOperations[scope].map(op => op.index),
+        );
+    }
+
+    const newOperations: Operation<TAction>[] = [];
+
+    for (const operation of operationsToDeduplicate) {
+        const scope = operation.scope;
+        const index = operation.index;
+        if (operationIndicesByScope[scope].has(index)) {
+            const duplicatedExistingOperation = existingOperations[scope].find(
+                op => op.index === index,
+            );
+            const duplicatedNewOperation = newOperations.find(
+                op => op.index === index,
+            );
+            console.warn('skipping duplicate operation');
+            if (duplicatedExistingOperation) {
+                console.warn(
+                    'duplicate existing operation',
+                    duplicatedExistingOperation,
+                );
+            }
+            if (duplicatedNewOperation) {
+                console.warn('duplicate new operation', duplicatedNewOperation);
+            }
+            continue;
+        }
+        newOperations.push(operation);
+        operationIndicesByScope[scope].add(index);
+    }
+
+    const uniqueOperationHashes = new Set<string>();
+    const operationsDedupedByHash: Operation<TAction>[] = [];
+
+    for (const [scope, operations] of Object.entries(existingOperations)) {
+        for (const operation of operations) {
+            const hash = operation.hash;
+            if (uniqueOperationHashes.has(hash)) {
+                console.warn(
+                    'skipping existing operation with duplicate hash in scope',
+                    scope,
+                    operation,
+                );
+                continue;
+            }
+            uniqueOperationHashes.add(hash);
+        }
+    }
+
+    for (const operation of newOperations) {
+        const hash = operation.hash;
+        if (uniqueOperationHashes.has(hash)) {
+            console.warn(
+                'skipping new operation with duplicate hash in scope',
+                operation.scope,
+                operation,
+            );
+            continue;
+        }
+        uniqueOperationHashes.add(hash);
+        operationsDedupedByHash.push(operation);
+    }
+    return operationsDedupedByHash;
 }
 
 export function useDocumentDriveServer() {
@@ -84,63 +151,40 @@ export function useDocumentDriveServer() {
     const { sign } = useConnectCrypto();
     const reactor = useUnwrappedReactor();
     const storage = useDocumentAdminStorage();
-
     const getDocumentModelModule = useGetDocumentModelModule();
-
-    const [documentDrives, refreshDocumentDrives, , documentDrivesStatus] =
-        useDocumentDrives();
-
-    const reactorLoaded = !!reactor;
+    const drives = useUnwrappedDrives();
+    const selectedDrive = useUnwrappedSelectedDrive();
 
     const openFile = useCallback(
         async (id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
             const document = await reactor.getDocument(id, options);
-            if (!document) {
-                throw new Error(
-                    `There was an error opening file with id ${id}`,
-                );
-            }
             return document;
         },
         [reactor],
     );
 
-    const getDocumentsIds = useCallback(
-        async (driveId: string) => {
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-
-            const ids = await reactor.getDocuments(driveId);
-            return ids;
-        },
-        [reactor],
-    );
-
-    const _addDriveOperation = useCallback(
+    const addDriveOperation = useCallback(
         async (driveId: string, action: DocumentDriveAction) => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
 
-            let drive = documentDrives.find(
-                drive => drive.header.id === driveId,
-            );
-            if (!drive) {
-                throw new Error(`Drive with id ${driveId} not found`);
+            const oldDrive = drives?.find(drive => drive.header.id === driveId);
+            if (!oldDrive) {
+                return;
             }
 
-            const driveCopy = { ...drive };
+            const driveCopy = { ...oldDrive };
 
-            drive = documentDriveReducer(
-                drive,
+            const newDrive = documentDriveReducer(
+                oldDrive,
                 addActionContext(action, connectDid, user),
             );
-            const scope = action.scope ?? 'global';
-            const operations = drive.operations[scope];
+            const scope = action.scope;
+            const operations = newDrive.operations[scope];
             const operation = operations.findLast(
                 op => op.type === action.type,
             );
@@ -168,29 +212,63 @@ export function useDocumentDriveServer() {
                     logger.error(result.error);
                 }
 
-                if (result.operations.length) {
-                    await refreshDocumentDrives();
-                }
-
-                if (result.document && !isDocumentDrive(result.document)) {
-                    throw new Error(
-                        'Received document is not a Document Drive',
-                    );
-                }
-                return result.document;
+                return result.document as DocumentDriveDocument;
             } catch (error) {
                 logger.error(error);
-                return drive;
+                return oldDrive;
             }
         },
-        [
-            documentDrives,
-            refreshDocumentDrives,
-            reactor,
-            sign,
-            user,
-            connectDid,
-        ],
+        [reactor, drives, sign, user, connectDid],
+    );
+
+    // TODO: why does addDriveOperation do signing but adding multiple operations does not?
+    const addDriveOperations = useCallback(
+        async (
+            driveId: string,
+            operationsToAdd: Operation<DocumentDriveAction>[],
+        ) => {
+            if (!reactor) {
+                return;
+            }
+            const drive = await reactor.getDrive(driveId);
+
+            const dedupedOperations = deduplicateOperations(
+                drive.operations,
+                operationsToAdd,
+            );
+
+            const result = await reactor.queueOperations(
+                driveId,
+                dedupedOperations,
+            );
+            if (result.status !== 'SUCCESS') {
+                logger.error(result.error);
+            }
+            return result.document;
+        },
+        [reactor],
+    );
+
+    const addDocumentOperations = useCallback(
+        async (documentId: string, operationsToAdd: Operation[]) => {
+            if (!reactor) {
+                return;
+            }
+            const document = await reactor.getDocument(documentId);
+            const newOperations = deduplicateOperations(
+                document.operations,
+                operationsToAdd,
+            );
+            const result = await reactor.queueOperations(
+                documentId,
+                newOperations,
+            );
+            if (result.status !== 'SUCCESS') {
+                logger.error(result.error);
+            }
+            return result.document;
+        },
+        [reactor],
     );
 
     const addDocument = useCallback(
@@ -210,9 +288,9 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            let drive = documentDrives.find(d => d.header.id === driveId);
-            if (!drive) {
-                throw new Error(`Drive with id ${driveId} not found`);
+            const oldDrive = drives?.find(d => d.header.id === driveId);
+            if (!oldDrive) {
+                return;
             }
 
             const documentId = id ?? generateId();
@@ -234,16 +312,16 @@ export function useDocumentDriveServer() {
 
             await reactor.addDocument(newDocument);
 
-            const action = addFileAction({
+            const action = baseAddFile({
                 id: documentId,
                 name,
                 documentType,
                 parentFolder: parentFolder ?? null,
             });
 
-            drive = await _addDriveOperation(driveId, action);
+            const newDrive = await addDriveOperation(driveId, action);
 
-            const node = drive?.state.global.nodes.find(
+            const node = newDrive?.state.global.nodes.find(
                 node => node.id === documentId,
             );
             if (!node || !isFileNode(node)) {
@@ -252,47 +330,21 @@ export function useDocumentDriveServer() {
 
             return node;
         },
-        [
-            reactor,
-            _addDriveOperation,
-            documentDrives,
-            isAllowedToCreateDocuments,
-        ],
-    );
-
-    const addOperations = useCallback(
-        async (id: string, operations: Operation[]) => {
-            if (!isAllowedToEditDocuments) {
-                throw new Error('User is not allowed to edit documents');
-            }
-
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-
-            const result = await reactor.queueOperations(id, operations);
-
-            if (result.operations.length) {
-                await refreshDocumentDrives();
-            }
-            refreshDocumentDrives().catch(logger.error);
-            return result.document;
-        },
-        [documentDrives, isAllowedToEditDocuments, reactor],
+        [addDriveOperation, drives, isAllowedToCreateDocuments],
     );
 
     const addFile = useCallback(
         async (
             file: string | File,
-            drive: string,
+            driveId: string,
             name?: string,
             parentFolder?: string,
         ) => {
             logger.verbose(
-                `addFile(drive: ${drive}, name: ${name}, folder: ${parentFolder})`,
+                `addFile(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
             );
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
 
             if (!isAllowedToCreateDocuments) {
@@ -313,7 +365,7 @@ export function useDocumentDriveServer() {
                 clipboard: [],
             };
             const fileNode = await addDocument(
-                drive,
+                driveId,
                 name ||
                     (typeof file === 'string'
                         ? document.header.name
@@ -323,32 +375,40 @@ export function useDocumentDriveServer() {
                 initialDocument,
             );
 
+            if (!fileNode) {
+                throw new Error('There was an error adding file');
+            }
+
             // then add all the operations
-            const driveDocument = documentDrives.find(
-                documentDrive => documentDrive.header.id === drive,
+            const driveDocument = drives?.find(
+                drive => drive.header.id === driveId,
             );
             const waitForSync =
                 driveDocument && driveDocument.state.local.listeners.length > 0;
 
-            uploadDocumentOperations(fileNode.id, document, addOperations, {
-                waitForSync,
-            }).catch(error => {
+            uploadDocumentOperations(
+                fileNode.id,
+                document,
+                addDocumentOperations,
+                { waitForSync },
+            ).catch(error => {
                 throw error;
             });
         },
         [
             addDocument,
-            addOperations,
+            addDocumentOperations,
             getDocumentModelModule,
+            drives,
             isAllowedToCreateDocuments,
             reactor,
         ],
     );
 
-    const handleUpdateFile = useCallback(
+    const updateFile = useCallback(
         async (
             driveId: string,
-            id: string,
+            nodeId: string,
             documentType?: string,
             name?: string,
             parentFolder?: string,
@@ -356,34 +416,36 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to update files');
             }
-            const drive = await _addDriveOperation(
+            const drive = await addDriveOperation(
                 driveId,
-                updateFile({
-                    id,
+                baseUpdateFile({
+                    id: nodeId,
                     name: name || undefined,
                     parentFolder,
                     documentType,
                 }),
             );
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === nodeId,
+            );
             if (!node || !isFileNode(node)) {
                 throw new Error('There was an error updating document');
             }
             return node;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleAddFolder = useCallback(
+    const addFolder = useCallback(
         async (driveId: string, name: string, parentFolder?: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create folders');
             }
             const folderId = generateId();
-            const drive = await _addDriveOperation(
+            const drive = await addDriveOperation(
                 driveId,
-                addFolder({
+                baseAddFolder({
                     id: folderId,
                     name,
                     parentFolder,
@@ -398,282 +460,222 @@ export function useDocumentDriveServer() {
             }
             return node;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleDeleteNode = useCallback(
-        async (drive: string, id: string) => {
+    const deleteNode = useCallback(
+        async (driveId: string, nodeId: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete documents');
             }
-            await _addDriveOperation(
-                drive,
-                deleteNode({
-                    id,
+            await addDriveOperation(
+                driveId,
+                baseDeleteNode({
+                    id: nodeId,
                 }),
             );
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const renameNode = useCallback(
-        async (driveId: string, id: string, name: string) => {
+        async (
+            driveId: string,
+            nodeId: string,
+            name: string,
+        ): Promise<Node | undefined> => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to rename documents');
             }
-            const drive = await _addDriveOperation(
+            const drive = await addDriveOperation(
                 driveId,
                 updateNode({
-                    id,
+                    id: nodeId,
                     name,
                 }),
             );
 
-            const node = drive?.state.global.nodes.find(node => node.id === id);
+            const node = drive?.state.global.nodes.find(
+                node => node.id === nodeId,
+            );
             if (!node) {
                 throw new Error('There was an error renaming node');
             }
             return node;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
-    const handleMoveNode = useCallback(
-        async (src: UiNode, target: UiNode) => {
+    const moveNode = useCallback(
+        async (src: Node, target: Node | undefined) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to move documents');
             }
+            if (!selectedDrive?.header.id) return;
 
-            if (target.kind === FILE || src.parentFolder === target.id) return;
-
-            await _addDriveOperation(
-                target.driveId,
-                moveNode({
+            await addDriveOperation(
+                selectedDrive.header.id,
+                baseMoveNode({
                     srcFolder: src.id,
-                    targetParentFolder: target.id,
+                    targetParentFolder: target?.id,
                 }),
             );
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [
+            addDriveOperation,
+            isAllowedToCreateDocuments,
+            selectedDrive?.header.id,
+        ],
     );
 
-    const handleCopyNode = useCallback(
-        async (src: UiNode, target: UiNode | null) => {
+    const copyNode = useCallback(
+        async (src: Node, target: Node | undefined) => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
+            }
+            if (!selectedDrive) {
+                return;
             }
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to copy documents');
             }
 
-            if (target?.kind === FILE) return;
-
-            const drive = documentDrives.find(
-                drive => drive.header.id === src.driveId,
-            );
-
-            if (!drive) return;
-
-            const documentsToCopy: { oldId: string; newId: string }[] = [];
             const copyNodesInput = generateNodesCopy(
                 {
                     srcId: src.id,
-                    targetParentFolder: target?.parentFolder,
+                    targetParentFolder: target?.id,
                     targetName: src.name,
                 },
-                node => {
-                    const newId = generateId();
-                    if (isFileNode(node)) {
-                        documentsToCopy.push({ oldId: node.id, newId });
-                    }
-                    return newId;
-                },
-                drive.state.global.nodes,
+                () => generateId(),
+                selectedDrive.state.global.nodes,
             );
 
-            for (const { oldId, newId } of documentsToCopy) {
-                const document = await reactor
-                    .getDocument(oldId)
-                    .catch(e =>
-                        logger.warn(
-                            'Document being copied does not exist',
-                            oldId,
-                        ),
-                    );
-                if (!document) {
-                    logger.warn('Document being copied does not exist', oldId);
-                    continue;
-                }
-                try {
-                    const newHeader = createPresignedHeader(
-                        newId,
-                        document.header.documentType,
-                    );
-                    const newDocument = {
-                        ...document,
-                        header: {
-                            ...document.header,
-                            id: newHeader.id,
-                            sig: newHeader.sig,
-                            slug: newHeader.id,
-                        },
-                    };
-                    await reactor.addDocument(newDocument);
-                } catch (error) {
-                    logger.error('Error copying document', oldId, error);
-                }
-            }
             const copyActions = copyNodesInput.map(copyNodeInput =>
-                copyNode(copyNodeInput),
+                baseCopyNode(copyNodeInput),
+            );
+            const result = await reactor.addActions(
+                selectedDrive.header.id,
+                copyActions,
             );
 
-            const result = await reactor.addActions(src.driveId, copyActions);
-            if (result.operations.length) {
-                await refreshDocumentDrives();
-            } else if (result.status !== 'SUCCESS') {
+            if (result.status !== 'SUCCESS') {
                 logger.error(
                     `Error copying files: ${result.status}`,
                     result.error,
                 );
             }
+
+            return result.document as DocumentDriveDocument;
         },
-        [
-            documentDrives,
-            isAllowedToCreateDocuments,
-            refreshDocumentDrives,
-            reactor,
-        ],
-    );
-
-    const addOperation = useCallback(
-        async (id: string, operation: Operation) => {
-            if (!isAllowedToEditDocuments) {
-                throw new Error('User is not allowed to edit documents');
-            }
-
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-
-            const newDocument = await reactor.addOperation(id, operation);
-            return newDocument.document;
-        },
-        [isAllowedToEditDocuments, reactor],
+        [isAllowedToCreateDocuments, reactor, selectedDrive],
     );
 
     const addDrive = useCallback(
         async (drive: DriveInput, preferredEditor?: string) => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
 
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create drives');
             }
             const id = drive.id || generateId();
-            drive = createDriveState(drive);
+            const driveInput = createDriveState(drive);
             const newDrive = await reactor.addDrive(
                 {
-                    global: drive.global,
-                    local: drive.local,
+                    global: driveInput.global,
+                    local: driveInput.local,
                     id,
                 },
                 preferredEditor,
             );
-            await refreshDocumentDrives();
             return newDrive;
         },
-        [isAllowedToCreateDocuments, refreshDocumentDrives, reactor],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const addRemoteDrive = useCallback(
         async (url: string, options: RemoteDriveOptions) => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
 
             const newDrive = await reactor.addRemoteDrive(url, options);
-            await refreshDocumentDrives();
             return newDrive;
         },
-        [refreshDocumentDrives, reactor],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const deleteDrive = useCallback(
-        async (id: string) => {
+        async (driveId: string) => {
+            if (!reactor) {
+                return;
+            }
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete drives');
             }
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-
-            const drive = documentDrives.find(drive => drive.header.id === id);
-            if (!drive) {
-                throw new Error(`Drive with id ${id} not found`);
-            }
-            await reactor.deleteDrive(id);
-            return refreshDocumentDrives();
+            await reactor.deleteDrive(driveId);
         },
-        [
-            documentDrives,
-            isAllowedToCreateDocuments,
-            refreshDocumentDrives,
-            reactor,
-        ],
+        [isAllowedToCreateDocuments, reactor],
     );
 
     const renameDrive = useCallback(
-        async (id: string, name: string) => {
+        async (driveId: string, name: string) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to rename drives');
             }
-            return _addDriveOperation(id, setDriveName({ name }));
+            const renamedDrive = await addDriveOperation(
+                driveId,
+                setDriveName({ name }),
+            );
+            return renamedDrive;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const setDriveAvailableOffline = useCallback(
-        async (id: string, availableOffline: boolean) => {
+        async (driveId: string, availableOffline: boolean) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error(
                     'User is not allowed to change drive availability',
                 );
             }
-            return _addDriveOperation(
-                id,
+            const updatedDrive = await addDriveOperation(
+                driveId,
                 setAvailableOffline({ availableOffline }),
             );
+            return updatedDrive;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const setDriveSharingType = useCallback(
-        async (id: string, sharingType: SharingType) => {
+        async (driveId: string, sharingType: SharingType) => {
             if (!isAllowedToCreateDocuments) {
                 throw new Error(
                     'User is not allowed to change drive availability',
                 );
             }
-            return _addDriveOperation(
-                id,
+            const updatedDrive = await addDriveOperation(
+                driveId,
                 setSharingType({ type: sharingType }),
             );
+            return updatedDrive;
         },
-        [_addDriveOperation, isAllowedToCreateDocuments],
+        [addDriveOperation, isAllowedToCreateDocuments],
     );
 
     const getSyncStatus = useCallback(
         async (
-            syncId: string,
+            documentId: string,
             sharingType: SharingType,
         ): Promise<SyncStatus | undefined> => {
             if (sharingType === LOCAL) return;
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
             try {
-                const syncStatus = reactor.getSyncStatus(syncId);
+                const syncStatus = reactor.getSyncStatus(documentId);
                 if (syncStatus instanceof SynchronizationUnitNotFoundError)
                     return 'INITIAL_SYNC';
                 return syncStatus;
@@ -686,13 +688,16 @@ export function useDocumentDriveServer() {
     );
 
     const getSyncStatusSync = useCallback(
-        (syncId: string, sharingType: SharingType): SyncStatus | undefined => {
+        (
+            documentId: string,
+            sharingType: SharingType,
+        ): SyncStatus | undefined => {
             if (sharingType === LOCAL) return;
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
             try {
-                const syncStatus = reactor.getSyncStatus(syncId);
+                const syncStatus = reactor.getSyncStatus(documentId);
                 if (syncStatus instanceof SynchronizationUnitNotFoundError)
                     return 'INITIAL_SYNC';
                 return syncStatus;
@@ -704,36 +709,6 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
-    const onStrandUpdate = useCallback(
-        (cb: (update: StrandUpdate) => void) => {
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-            return reactor.on('strandUpdate', cb);
-        },
-        [reactor],
-    );
-
-    const onOperationsAdded = useCallback(
-        (cb: (documentId: string, operations: Operation[]) => void) => {
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-            return reactor.on('operationsAdded', cb);
-        },
-        [reactor],
-    );
-
-    const onSyncStatus = useCallback(
-        (cb: (driveId: string, status: SyncStatus, error?: Error) => void) => {
-            if (!reactor) {
-                throw new Error('Reactor is not loaded');
-            }
-            return reactor.on('syncStatus', cb);
-        },
-        [reactor],
-    );
-
     const clearStorage = useCallback(async () => {
         // reactor may have not loaded yet
         if (!reactor) {
@@ -741,14 +716,13 @@ export function useDocumentDriveServer() {
         }
 
         await storage.clear();
-        await refreshDocumentDrives();
-    }, [refreshDocumentDrives, reactor, storage]);
+    }, [reactor, storage]);
 
-    const handleRemoveTrigger = useCallback(
+    const removeTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
-            const drive = await _addDriveOperation(
+            const drive = await addDriveOperation(
                 driveId,
-                removeTrigger({ triggerId }),
+                baseRemoveTrigger({ triggerId }),
             );
 
             const trigger = drive?.state.local.triggers.find(
@@ -761,7 +735,7 @@ export function useDocumentDriveServer() {
                 );
             }
         },
-        [_addDriveOperation],
+        [addDriveOperation],
     );
 
     const registerNewPullResponderTrigger = useCallback(
@@ -769,9 +743,9 @@ export function useDocumentDriveServer() {
             driveId: string,
             url: string,
             options: Pick<RemoteDriveOptions, 'pullFilter' | 'pullInterval'>,
-        ): Promise<PullResponderTrigger> => {
+        ): Promise<PullResponderTrigger | undefined> => {
             if (!reactor) {
-                throw new Error('Reactor is not loaded');
+                return;
             }
 
             const uuid = generateId();
@@ -825,11 +799,11 @@ export function useDocumentDriveServer() {
         [reactor],
     );
 
-    const handleAddTrigger = useCallback(
+    const addTrigger = useCallback(
         async (driveId: string, trigger: Trigger) => {
-            const drive = await _addDriveOperation(
+            const drive = await addDriveOperation(
                 driveId,
-                addTrigger({ trigger }),
+                baseAddTrigger({ trigger }),
             );
 
             const newTrigger = drive?.state.local.triggers.find(
@@ -842,25 +816,23 @@ export function useDocumentDriveServer() {
                 );
             }
         },
-        [_addDriveOperation],
+        [addDriveOperation],
     );
 
     return useMemo(
         () => ({
-            reactorLoaded,
-            documentDrives,
-            documentDrivesStatus,
             addDocument,
-            openFile,
+            addDocumentOperations,
+            addDriveOperation,
+            addDriveOperations,
             addFile,
-            updateFile: handleUpdateFile,
-            addFolder: handleAddFolder,
-            deleteNode: handleDeleteNode,
+            addFolder,
+            openFile,
+            updateFile,
+            deleteNode,
             renameNode,
-            moveNode: handleMoveNode,
-            copyNode: handleCopyNode,
-            addOperation,
-            addOperations,
+            moveNode,
+            copyNode,
             addDrive,
             addRemoteDrive,
             deleteDrive,
@@ -869,46 +841,36 @@ export function useDocumentDriveServer() {
             setDriveSharingType,
             getSyncStatus,
             getSyncStatusSync,
-            onStrandUpdate,
-            onSyncStatus,
             clearStorage,
-            removeTrigger: handleRemoveTrigger,
-            addTrigger: handleAddTrigger,
+            removeTrigger,
+            addTrigger,
             registerNewPullResponderTrigger,
-            getDocumentsIds,
-            onOperationsAdded,
         }),
         [
-            reactorLoaded,
             addDocument,
-            addDrive,
+            addDocumentOperations,
+            addDriveOperation,
+            addDriveOperations,
             addFile,
-            handleAddFolder,
-            addOperation,
-            addOperations,
-            addRemoteDrive,
-            handleAddTrigger,
-            clearStorage,
-            handleCopyNode,
-            deleteDrive,
-            handleDeleteNode,
-            documentDrives,
-            documentDrivesStatus,
-            getSyncStatus,
-            getSyncStatusSync,
-            handleMoveNode,
-            onStrandUpdate,
-            onSyncStatus,
+            addFolder,
             openFile,
-            registerNewPullResponderTrigger,
-            handleRemoveTrigger,
-            renameDrive,
+            updateFile,
+            deleteNode,
             renameNode,
+            moveNode,
+            copyNode,
+            addDrive,
+            addRemoteDrive,
+            deleteDrive,
+            renameDrive,
             setDriveAvailableOffline,
             setDriveSharingType,
-            handleUpdateFile,
-            getDocumentsIds,
-            onOperationsAdded,
+            getSyncStatus,
+            getSyncStatusSync,
+            clearStorage,
+            removeTrigger,
+            addTrigger,
+            registerNewPullResponderTrigger,
         ],
     );
 }

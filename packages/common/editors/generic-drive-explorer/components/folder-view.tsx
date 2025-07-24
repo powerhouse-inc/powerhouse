@@ -1,88 +1,60 @@
 import type { BaseProps } from "#editors/utils/index";
 import {
-  FILE,
-  FOLDER,
   FolderItem,
-  type BaseUiFileNode,
-  type BaseUiFolderNode,
-  type BaseUiNode,
-  type UiDriveNode,
-  type UiFileNode,
-  type UiFolderNode,
-  type UiNode,
+  useDrop,
+  type SharingType,
+  type TNodeActions,
 } from "@powerhousedao/design-system";
+import {
+  useFileChildNodesForId,
+  useFolderChildNodesForId,
+} from "@powerhousedao/state";
+import { type FolderNode, type Node, type SyncStatus } from "document-drive";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
-import { sortUiNodesByName } from "../../utils/uiNodes.js";
 import FileContentView from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 
-interface IFolderViewProps extends BaseProps {
-  node: UiDriveNode | UiFolderNode;
-  isDropTarget: boolean;
-  onSelectNode: (uiNode: UiNode) => void;
-  onRenameNode: (name: string, uiNode: UiNode) => void;
-  onDuplicateNode: (uiNode: UiNode) => void;
-  onDeleteNode: (uiNode: UiNode) => void;
-  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
-  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  isAllowedToCreateDocuments: boolean;
-}
+type IFolderViewProps = BaseProps &
+  TNodeActions & {
+    node: FolderNode | undefined;
+    sharingType: SharingType;
+    isAllowedToCreateDocuments: boolean;
+    setSelectedNode: (id: string | undefined) => void;
+    showDeleteNodeModal: (node: Node) => void;
+    getSyncStatusSync: (
+      syncId: string,
+      sharingType: SharingType,
+    ) => SyncStatus | undefined;
+  };
 
 export function FolderView(props: IFolderViewProps) {
-  const { node, className, isDropTarget, containerProps, ...nodeProps } = props;
+  const {
+    node,
+    isAllowedToCreateDocuments,
+    className,
+    containerProps,
+    sharingType,
+    getSyncStatusSync,
+    setSelectedNode,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+    onRenameNode,
+    onDuplicateNode,
+    onAddFolder,
+    onAddAndSelectNewFolder,
+    showDeleteNodeModal,
+  } = props;
   const { t } = useTranslation();
-
-  // Remove after ts reset is fixed
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  const folderNodes = node.children
-    .filter((node) => node.kind === FOLDER)
-    .sort(sortUiNodesByName) as UiFolderNode[];
-
-  // Remove after ts reset is fixed
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  const fileNodes: UiFileNode[] = node.children
-    .filter((node) => node.kind === FILE)
-    .sort(sortUiNodesByName) as UiFileNode[];
-
-  // Convert UiNode callbacks to BaseUiFolderNode callbacks
-  const folderCallbacks = {
-    onSelectNode: (node: BaseUiFolderNode) =>
-      nodeProps.onSelectNode(node as UiNode),
-    onRenameNode: (name: string, node: BaseUiFolderNode) =>
-      nodeProps.onRenameNode(name, node as UiNode),
-    onDuplicateNode: (node: BaseUiFolderNode) =>
-      nodeProps.onDuplicateNode(node as UiNode),
-    onDeleteNode: (node: BaseUiFolderNode) =>
-      nodeProps.onDeleteNode(node as UiNode),
-  };
-
-  // Convert UiNode callbacks to BaseUiFileNode callbacks
-  const fileCallbacks = {
-    onSelectNode: (node: BaseUiFileNode) =>
-      nodeProps.onSelectNode(node as UiNode),
-    onRenameNode: (name: string, node: BaseUiFileNode) =>
-      nodeProps.onRenameNode(name, node as UiNode),
-    onDuplicateNode: (node: BaseUiFileNode) =>
-      nodeProps.onDuplicateNode(node as UiNode),
-    onDeleteNode: (node: BaseUiFileNode) =>
-      nodeProps.onDeleteNode(node as UiNode),
-  };
-
-  // Convert UiNode callbacks to BaseUiNode callbacks
-  const baseNodeCallbacks = {
-    onAddFile: async (file: File, parentNode: BaseUiNode | null) => {
-      await nodeProps.onAddFile(file, parentNode as UiNode | null);
-    },
-    onCopyNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
-      await nodeProps.onCopyNode(uiNode as UiNode, targetNode as UiNode);
-    },
-    onMoveNode: async (uiNode: BaseUiNode, targetNode: BaseUiNode) => {
-      await nodeProps.onMoveNode(uiNode as UiNode, targetNode as UiNode);
-    },
-  };
-
+  const folderNodes = useFolderChildNodesForId(node?.id);
+  const fileNodes = useFileChildNodesForId(node?.id);
+  const { isDropTarget, dropProps } = useDrop({
+    node,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+  });
   return (
     <div
       className={twMerge(
@@ -91,6 +63,7 @@ export function FolderView(props: IFolderViewProps) {
         className,
       )}
       {...containerProps}
+      {...dropProps}
     >
       <DriveLayout.ContentSection
         title={t("folderView.sections.folders.title", {
@@ -102,10 +75,19 @@ export function FolderView(props: IFolderViewProps) {
           folderNodes.map((folderNode) => (
             <FolderItem
               key={folderNode.id}
-              uiNode={folderNode}
-              {...baseNodeCallbacks}
-              {...folderCallbacks}
-              isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
+              folderNode={folderNode}
+              isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+              sharingType={sharingType}
+              getSyncStatusSync={getSyncStatusSync}
+              setSelectedNode={setSelectedNode}
+              onAddFile={onAddFile}
+              onCopyNode={onCopyNode}
+              onMoveNode={onMoveNode}
+              onRenameNode={onRenameNode}
+              onDuplicateNode={onDuplicateNode}
+              onAddFolder={onAddFolder}
+              onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+              showDeleteNodeModal={showDeleteNodeModal}
             />
           ))
         ) : (
@@ -129,8 +111,18 @@ export function FolderView(props: IFolderViewProps) {
         >
           <FileContentView
             fileNodes={fileNodes}
-            {...fileCallbacks}
-            isAllowedToCreateDocuments={nodeProps.isAllowedToCreateDocuments}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+            sharingType={sharingType}
+            getSyncStatusSync={getSyncStatusSync}
+            setSelectedNode={setSelectedNode}
+            showDeleteNodeModal={showDeleteNodeModal}
+            onAddFile={onAddFile}
+            onCopyNode={onCopyNode}
+            onMoveNode={onMoveNode}
+            onRenameNode={onRenameNode}
+            onDuplicateNode={onDuplicateNode}
+            onAddFolder={onAddFolder}
+            onAddAndSelectNewFolder={onAddAndSelectNewFolder}
           />
         </div>
       </DriveLayout.ContentSection>

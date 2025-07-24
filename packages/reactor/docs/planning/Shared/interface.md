@@ -43,12 +43,17 @@ type JobInfo = {
 }
 
 /**
- * The status of a job.
+ * Job execution statuses (copied from Jobs/interface.md)
  */
 enum JobStatus {
-  Success = "success",
-  Error = "error",
-  Pending = "pending",
+  /** Job is queued but not yet started */
+  PENDING = 'PENDING',
+  /** Job is currently being executed */
+  RUNNING = 'RUNNING',
+  /** Job completed successfully */
+  COMPLETED = 'COMPLETED',
+  /** Job failed (may be retried) */
+  FAILED = 'FAILED',
 }
 
 /**

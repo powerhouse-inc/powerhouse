@@ -1,5 +1,4 @@
 import {
-  type BaseUiFileNode,
   ConnectDropdownMenu,
   defaultFileOptions,
   DELETE,
@@ -10,47 +9,55 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
-  type UiFileNode,
+  type SharingType,
+  type TNodeActions,
   useDrag,
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
+import { type FileNode, type Node, type SyncStatus } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon/index.js";
 
-export type FileItemProps = {
-  uiNode: BaseUiFileNode;
+export type FileItemProps = TNodeActions & {
+  fileNode: FileNode;
+  sharingType: SharingType;
+  isAllowedToCreateDocuments: boolean;
   customDocumentIconSrc?: string;
   className?: string;
-  onSelectNode: (uiNode: BaseUiFileNode) => void;
-  onRenameNode: (name: string, uiNode: BaseUiFileNode) => void;
-  onDuplicateNode: (uiNode: BaseUiFileNode) => void;
-  onDeleteNode: (uiNode: BaseUiFileNode) => void;
-  isAllowedToCreateDocuments: boolean;
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: SharingType,
+  ) => SyncStatus | undefined;
+  setSelectedNode: (id: string | undefined) => void;
+  showDeleteNodeModal: (node: Node) => void;
 };
 
 export function FileItem(props: FileItemProps) {
   const {
-    uiNode,
+    fileNode,
+    sharingType,
     className,
     customDocumentIconSrc,
-    onSelectNode,
+    isAllowedToCreateDocuments,
+    getSyncStatusSync,
+    setSelectedNode,
     onRenameNode,
     onDuplicateNode,
-    onDeleteNode,
-    isAllowedToCreateDocuments,
+    showDeleteNodeModal,
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ uiNode: uiNode as UiFileNode });
+  const { dragProps } = useDrag({ node: fileNode });
 
   const isReadMode = mode === READ;
+  const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
   const dropdownMenuHandlers = {
-    [DUPLICATE]: () => onDuplicateNode(uiNode),
+    [DUPLICATE]: () => onDuplicateNode(fileNode),
     [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => onDeleteNode(uiNode),
+    [DELETE]: () => showDeleteNodeModal(fileNode),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -65,7 +72,7 @@ export function FileItem(props: FileItemProps) {
     );
 
   function onSubmit(name: string) {
-    onRenameNode(name, uiNode);
+    onRenameNode(name, fileNode);
     setMode(READ);
   }
 
@@ -74,7 +81,7 @@ export function FileItem(props: FileItemProps) {
   }
 
   function onClick() {
-    onSelectNode(uiNode);
+    setSelectedNode(fileNode.id);
   }
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
@@ -89,7 +96,7 @@ export function FileItem(props: FileItemProps) {
   }
 
   const iconSrc = getDocumentIconSrc(
-    uiNode.documentType,
+    fileNode.documentType,
     customDocumentIconSrc,
   );
 
@@ -102,12 +109,12 @@ export function FileItem(props: FileItemProps) {
         src={iconSrc}
         width={32}
       />
-      {isReadMode && uiNode.syncStatus && (
+      {isReadMode && syncStatus && (
         <div className="absolute bottom-[-2px] right-0 size-3 rounded-full bg-white">
           <div className="absolute left-[-2px] top-[-2px]">
             <SyncStatusIcon
               overrideSyncIcons={{ SUCCESS: "CheckCircleFill" }}
-              syncStatus={uiNode.syncStatus}
+              syncStatus={syncStatus}
             />
           </div>
         </div>
@@ -124,10 +131,10 @@ export function FileItem(props: FileItemProps) {
     <div className="flex w-52 items-center justify-between">
       <div className="mr-2 truncate group-hover:mr-0">
         <div className="max-h-6 truncate text-sm font-medium group-hover:text-gray-800">
-          {uiNode.name}
+          {fileNode.name}
         </div>
         <div className="max-h-6 truncate text-xs font-medium text-gray-600 group-hover:text-gray-800">
-          {uiNode.documentType}
+          {fileNode.documentType}
         </div>
       </div>
       {isAllowedToCreateDocuments ? (
@@ -155,7 +162,7 @@ export function FileItem(props: FileItemProps) {
   ) : (
     <NodeInput
       className="ml-3 flex-1 font-medium"
-      defaultValue={uiNode.name}
+      defaultValue={fileNode.name}
       onCancel={onCancel}
       onSubmit={onSubmit}
     />

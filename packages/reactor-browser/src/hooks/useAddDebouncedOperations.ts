@@ -44,7 +44,7 @@ function debounceOperations(
 }
 
 export type UseAddDebouncedOperationsProps = {
-  documentId: string;
+  documentId: string | undefined;
 };
 
 export function useAddDebouncedOperations(
@@ -59,13 +59,17 @@ export function useAddDebouncedOperations(
   };
 
   const addOperations = useCallback(
-    async (id: string, operations: Operation[]) => {
+    async (id: string | undefined, operations: Operation[]) => {
       if (!isAllowedToEditDocuments) {
         throw new Error("User is not allowed to edit documents");
       }
 
       if (!reactor) {
         throw new Error("Reactor is not loaded");
+      }
+
+      if (!id) {
+        throw new Error("Document id is not set");
       }
 
       const newDocument = await reactor.queueOperations(id, operations);

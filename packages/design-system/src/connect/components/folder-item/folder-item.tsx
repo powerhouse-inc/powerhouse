@@ -1,6 +1,4 @@
 import {
-  type BaseUiFolderNode,
-  type BaseUiNode,
   ConnectDropdownMenu,
   defaultFolderOptions,
   DELETE,
@@ -10,8 +8,10 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
+  type SharingType,
+  type SyncStatus,
   SyncStatusIcon,
-  type UiFolderNode,
+  type TNodeActions,
   useDrag,
   useDrop,
   WRITE,
@@ -19,62 +19,66 @@ import {
 import { Icon } from "#powerhouse";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { type FolderNode, type Node } from "document-drive";
 
-export type FolderItemProps = {
-  readonly uiNode: BaseUiFolderNode;
-  readonly className?: string;
-  onAddFile: (file: File, parentNode: BaseUiNode | null) => Promise<void>;
-  onCopyNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
-  onMoveNode: (uiNode: BaseUiNode, targetNode: BaseUiNode) => Promise<void>;
-  onSelectNode: (uiNode: BaseUiFolderNode) => void;
-  onRenameNode: (name: string, uiNode: BaseUiFolderNode) => void;
-  onDuplicateNode: (uiNode: BaseUiFolderNode) => void;
-  onDeleteNode: (uiNode: BaseUiFolderNode) => void;
+export type FolderItemProps = TNodeActions & {
+  folderNode: FolderNode;
+  sharingType: SharingType;
   isAllowedToCreateDocuments: boolean;
+  className?: string;
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: SharingType,
+  ) => SyncStatus | undefined;
+  setSelectedNode: (id: string | undefined) => void;
+  showDeleteNodeModal: (node: Node) => void;
 };
 
 export function FolderItem(props: FolderItemProps) {
   const {
-    uiNode,
+    folderNode,
+    sharingType,
     isAllowedToCreateDocuments,
     className,
+    setSelectedNode,
+    getSyncStatusSync,
     onRenameNode,
     onDuplicateNode,
-    onDeleteNode,
-    onSelectNode,
+    showDeleteNodeModal,
     onAddFile,
     onCopyNode,
     onMoveNode,
   } = props;
   const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const { dragProps } = useDrag({ ...props, uiNode: uiNode as UiFolderNode });
+  const { dragProps } = useDrag({ node: folderNode });
   const { isDropTarget, dropProps } = useDrop({
-    uiNode: uiNode as UiFolderNode,
+    node: folderNode,
     onAddFile,
     onCopyNode,
     onMoveNode,
   });
 
   const isReadMode = mode === READ;
+  const syncStatus = getSyncStatusSync(folderNode.id, sharingType);
 
   function onCancel() {
     setMode(READ);
   }
 
   function onSubmit(name: string) {
-    onRenameNode(name, uiNode);
+    onRenameNode(name, folderNode);
     setMode(READ);
   }
 
   function onClick() {
-    onSelectNode(uiNode);
+    setSelectedNode(folderNode.id);
   }
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
-    [DUPLICATE]: () => onDuplicateNode(uiNode),
+    [DUPLICATE]: () => onDuplicateNode(folderNode),
     [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => onDeleteNode(uiNode),
+    [DELETE]: () => showDeleteNodeModal(folderNode),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -101,12 +105,12 @@ export function FolderItem(props: FolderItemProps) {
   const content =
     isReadMode || !isAllowedToCreateDocuments ? (
       <div className="ml-3 max-h-6 truncate font-medium text-gray-600 group-hover:text-gray-800">
-        {uiNode.name}
+        {folderNode.name}
       </div>
     ) : (
       <NodeInput
         className="ml-3 font-medium"
-        defaultValue={uiNode.name}
+        defaultValue={folderNode.name}
         onCancel={onCancel}
         onSubmit={onSubmit}
       />
@@ -125,14 +129,14 @@ export function FolderItem(props: FolderItemProps) {
           <div className="p-1">
             <div className="relative">
               <Icon name="FolderClose" size={24} />
-              {isReadMode && uiNode.syncStatus ? (
+              {isReadMode && syncStatus ? (
                 <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
                   <div className="absolute left-[-2px] top-[-2px]">
                     <SyncStatusIcon
                       overrideSyncIcons={{
                         SUCCESS: "CheckCircleFill",
                       }}
-                      syncStatus={uiNode.syncStatus}
+                      syncStatus={syncStatus}
                     />
                   </div>
                 </div>

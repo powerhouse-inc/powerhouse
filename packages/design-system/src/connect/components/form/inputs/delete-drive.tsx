@@ -1,18 +1,19 @@
-import { DriveNameInput, type UiDriveNode } from "#connect";
+import { DriveNameInput } from "#connect";
 import { Button, Icon } from "#powerhouse";
+import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 
 export type DeleteDriveProps = {
-  readonly uiDriveNode: UiDriveNode;
-  readonly handleDeleteDrive: () => void;
-  readonly onCancel: () => void;
+  drive: DocumentDriveDocument;
+  handleDeleteDrive: () => void;
+  onCancel: () => void;
 };
 
 export function DeleteDrive(props: DeleteDriveProps) {
-  const { uiDriveNode, handleDeleteDrive, onCancel } = props;
+  const { drive, handleDeleteDrive, onCancel } = props;
   const [driveNameInput, setDriveNameInput] = useState("");
 
-  const isAllowedToDelete = driveNameInput === uiDriveNode.name;
+  const isAllowedToDelete = driveNameInput === drive.header.name;
 
   function deleteDrive() {
     if (isAllowedToDelete) {

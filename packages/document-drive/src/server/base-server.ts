@@ -2101,7 +2101,7 @@ export class BaseDocumentDriveServer
               "ERROR",
               undefined,
               (error as Error).message,
-              (error as Error).cause,
+              error,
             );
 
       return {
@@ -2309,9 +2309,11 @@ export class BaseDocumentDriveServer
   }
 
   getSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    scope?: string,
+    branch?: string,
   ): SyncStatus | SynchronizationUnitNotFoundError {
-    return this.synchronizationManager.getSyncStatus(syncUnitId);
+    return this.synchronizationManager.getSyncStatus(documentId, scope, branch);
   }
 
   on<K extends keyof DriveEvents>(event: K, cb: DriveEvents[K]): Unsubscribe {

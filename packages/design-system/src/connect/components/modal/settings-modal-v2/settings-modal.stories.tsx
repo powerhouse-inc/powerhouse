@@ -1,11 +1,6 @@
-import {
-  mockCloudDrive,
-  mockLocalDrive,
-  mockPublicDrive,
-  type UiDriveNode,
-} from "#connect";
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
+import { type DocumentDriveDocument } from "document-drive";
 import React from "react";
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
@@ -60,16 +55,25 @@ const tabs = [
     label: <span className="text-red-900">Danger Zone</span>,
     content() {
       const [drives, setDrives] = React.useState([
-        mockCloudDrive,
-        mockLocalDrive,
-        mockPublicDrive,
+        {
+          header: {
+            id: "1",
+            name: "Drive 1",
+          },
+        } as DocumentDriveDocument,
+        {
+          header: {
+            id: "2",
+            name: "Drive 2",
+          },
+        } as DocumentDriveDocument,
       ]);
       return (
         <DangerZone
           drives={drives}
-          onDeleteDrive={(uiDriveNode: UiDriveNode) => {
+          onDeleteDrive={(drive) => {
             setDrives((drives) =>
-              drives.filter((d) => d.id !== uiDriveNode.driveId),
+              drives.filter((d) => d.header.id !== drive.header.id),
             );
           }}
           onClearStorage={() => setDrives([])}

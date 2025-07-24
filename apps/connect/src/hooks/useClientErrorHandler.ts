@@ -1,10 +1,9 @@
-import { useUnwrappedReactor } from '#store';
 import { LOCAL } from '@powerhousedao/design-system';
 import { getDriveIdBySlug } from '@powerhousedao/reactor-browser/utils/switchboard';
+import { useUnwrappedDrives } from '@powerhousedao/state';
 import {
     logger,
     type PullResponderTrigger,
-    type PullResponderTriggerData,
     type Trigger,
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -40,11 +39,9 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         registerNewPullResponderTrigger,
         renameDrive,
         addRemoteDrive,
-        documentDrives,
         setDriveSharingType,
     } = useDocumentDriveServer();
-
-    const reactor = useUnwrappedReactor();
+    const drives = useUnwrappedDrives();
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
@@ -52,8 +49,8 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         async (driveId: string, trigger: Trigger, handlerCode: string) => {
             setHandlingInProgress(state => [...state, handlerCode]);
 
-            const triggerData =
-                trigger.data as unknown as PullResponderTriggerData;
+            const triggerData = trigger.data;
+            if (!triggerData) return;
 
             try {
                 let pullResponderTrigger =
@@ -70,6 +67,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
                             },
                         );
 
+                    if (!pullResponderTrigger) return;
                     pullResponderTriggerMap.set(
                         handlerCode,
                         pullResponderTrigger,
@@ -110,7 +108,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
             setHandlingInProgress(state => [...state, handlerCode]);
             try {
                 // get local drive by id
-                const drive = documentDrives.find(
+                const drive = drives?.find(
                     drive => drive.header.id === driveId,
                 );
                 if (!drive) return;
@@ -150,7 +148,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
             }
         },
         [
-            documentDrives,
+            drives,
             removeTrigger,
             renameDrive,
             setDriveSharingType,

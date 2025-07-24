@@ -1,8 +1,8 @@
-import { useDocumentDrives } from '#hooks';
 import { addExternalPackage, removeExternalPackage } from '#services';
 import { useExternalPackages, useMutableExternalPackages } from '#store';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
+import { useUnwrappedDrives } from '@powerhousedao/state';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -35,11 +35,11 @@ export interface SettingsModalProps {
 export const PackageManager: React.FC = () => {
     const packages = useExternalPackages();
     const isMutable = useMutableExternalPackages();
-    const [drives] = useDocumentDrives();
+    const drives = useUnwrappedDrives();
     const [reactor, setReactor] = useState('');
 
     const options = useMemo(() => {
-        return drives.reduce<
+        return drives?.reduce<
             { value: string; label: string; disabled: boolean }[]
         >(
             (acc, drive) => {
@@ -72,8 +72,8 @@ export const PackageManager: React.FC = () => {
 
     useEffect(() => {
         setReactor(reactor => {
-            const defaultOption = options.find(option => !option.disabled);
-            if (reactor && options.find(option => option.value === reactor)) {
+            const defaultOption = options?.find(option => !option.disabled);
+            if (reactor && options?.find(option => option.value === reactor)) {
                 return reactor;
             } else {
                 return defaultOption?.value ?? '';
@@ -120,7 +120,7 @@ export const PackageManager: React.FC = () => {
     return (
         <BasePackageManager
             mutable={isMutable}
-            reactorOptions={options}
+            reactorOptions={options ?? []}
             reactor={reactor}
             packages={packagesInfo}
             onReactorChange={handleReactorChange}

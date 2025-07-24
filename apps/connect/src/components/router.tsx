@@ -6,9 +6,6 @@ import {
     createBrowserRouter,
 } from 'react-router-dom';
 
-const Home = React.lazy(() =>
-    import('../pages/home.js').then(m => ({ default: m.Home })),
-);
 const Content = React.lazy(() => import('../pages/content.js'));
 const Root = React.lazy(() => import('./root.js'));
 
@@ -34,13 +31,6 @@ function createRoutes() {
     const routes: RouteObject[] = [
         {
             index: true,
-            element: (
-                <Suspense name="Home">
-                    <Home />
-                </Suspense>
-            ),
-        },
-        {
             path: 'd?/:driveId?/*?',
             element: (
                 <Suspense name="Drive">

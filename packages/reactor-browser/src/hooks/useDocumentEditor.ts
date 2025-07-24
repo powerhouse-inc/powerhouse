@@ -22,10 +22,10 @@ export type DocumentDispatchCallback<TDocument extends PHDocument> = (
 ) => void;
 
 export type UseDocumentEditorProps<TDocument extends PHDocument> = {
-  driveId: string;
-  nodeId: string;
+  driveId: string | undefined;
+  nodeId: string | undefined;
   document: TDocument | undefined;
-  documentModelModule: DocumentModelModule<TDocument>;
+  documentModelModule: DocumentModelModule<TDocument> | undefined;
   user?: User;
   onExport?: () => void;
   onOpenSwitchboardLink?: () => Promise<void>;
@@ -48,12 +48,12 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
     sign,
   } = props;
 
-  const addDebouncedOprations = useAddDebouncedOperations(reactor, {
+  const addDebouncedOperations = useAddDebouncedOperations(reactor, {
     documentId: nodeId,
   });
 
   const [document, _dispatch, error] = useDocumentDispatch(
-    documentModelModule.reducer,
+    documentModelModule?.reducer,
     initialDocument,
   );
 
@@ -67,16 +67,20 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
     ) => {
       const { prevState } = state;
 
+      if (!nodeId) {
+        throw new Error("Node id is not set");
+      }
+
       signOperation<TDocument>(
         operation,
         sign,
         nodeId,
         prevState,
-        documentModelModule.reducer,
+        documentModelModule?.reducer,
         user,
       )
         .then((op) => {
-          return addDebouncedOprations(op);
+          return addDebouncedOperations(op);
         })
         .catch(console.error);
     };

@@ -1,11 +1,6 @@
-import {
-  mockCloudDrive,
-  mockLocalDrive,
-  mockPublicDrive,
-  type UiDriveNode,
-} from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type DocumentDriveDocument } from "document-drive";
 import { useCallback } from "react";
 import { DangerZone } from "./danger-zone.js";
 
@@ -20,7 +15,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    drives: [mockCloudDrive, mockLocalDrive, mockPublicDrive],
+    drives: [
+      {
+        header: {
+          id: "1",
+          name: "Drive 1",
+        },
+      } as DocumentDriveDocument,
+      {
+        header: {
+          id: "2",
+          name: "Drive 2",
+        },
+      } as DocumentDriveDocument,
+    ],
     onDeleteDrive: () => {},
     onClearStorage: () => {},
   },
@@ -30,9 +38,9 @@ export const Default: Story = {
       alert("You cleared the storage. Good for you.");
     }, []);
     const onDeleteDrive = useCallback(
-      (drive: UiDriveNode) => {
+      (drive: DocumentDriveDocument) => {
         setArgs({
-          drives: args.drives.filter((d) => d.id !== drive.id),
+          drives: args.drives.filter((d) => d.header.id !== drive.header.id),
         });
       },
       [args.drives, setArgs],

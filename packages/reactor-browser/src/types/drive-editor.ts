@@ -1,7 +1,6 @@
 import {
   type FileNode,
-  type GetDocumentOptions,
-  type IDocumentDriveServer,
+  type FolderNode,
   type Node,
   type SyncStatus,
 } from "document-drive";
@@ -16,35 +15,83 @@ import {
 } from "document-model";
 import { type FC } from "react";
 
-import { type HookState } from "../hooks/document-state.js";
 import { type User } from "../renown/types.js";
-import type { UiNode } from "../uiNodes/types.js";
 
 /**
  * Interface representing the context values provided by the host application
  * for managing document drive functionality.
  */
-export interface IDriveContext {
-  /** Reactor instance */
-  reactor: IDocumentDriveServer;
-
+export type IDriveContext = {
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
-
   /** Indicates whether the current user has permissions to create new documents */
   isAllowedToCreateDocuments: boolean;
-
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
-  /** Currently selected node (file/folder) in the drive */
-  selectedNode: Node | null;
-
   /**
-   * Callback to update the selected node in the drive
-   * @param node - The node to be selected
+   * The name of the analytics database to use for the drive editor
    */
-  selectNode: (node: UiNode | null) => void;
-
+  analyticsDatabaseName: string;
+  /**
+   * Callback to add a new file to the drive
+   * @param file - The file to be added
+   * @param parent - The parent node of the file
+   * @returns Promise resolving to the newly created Node
+   */
+  onAddFile: (file: File, parent: Node | undefined) => Promise<void>;
+  /**
+   * Callback to add a new folder to the drive
+   * @param name - The name of the folder
+   * @param parent - The parent node of the folder
+   * @returns Promise resolving to the newly created FolderNode
+   */
+  onAddFolder: (
+    name: string,
+    parent: Node | undefined,
+  ) => Promise<FolderNode | undefined>;
+  /**
+   * Callback to rename a node
+   * @param newName - The new name of the node
+   * @param node - The node to be renamed
+   * @returns Promise resolving to the newly renamed Node
+   */
+  onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
+  /**
+   * Callback to copy a node
+   * @param src - The node to be copied
+   * @param target - The parent node of the copied node
+   * @returns Promise resolving to the newly created Node
+   */
+  onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
+  /**
+   * Callback to move a node
+   * @param src - The node to be moved
+   * @param target - The parent node of the moved node
+   * @returns Promise resolving to the newly created Node
+   */
+  onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
+  /**
+   * Callback to duplicate a node
+   * @param src - The node to be duplicated
+   * @returns Promise resolving to the newly created Node
+   */
+  onDuplicateNode: (src: Node) => Promise<void>;
+  /**
+   * Callback to add a new folder and select it
+   * @param name - The name of the folder
+   * @returns Promise resolving to the newly created FolderNode
+   */
+  onAddAndSelectNewFolder: (name: string) => Promise<void>;
+  /**
+   * Callback to get the sync status of a sync
+   * @param syncId - The id of the sync
+   * @param sharingType - The sharing type of the sync
+   * @returns The sync status of the sync, or undefined if not found
+   */
+  getSyncStatusSync: (
+    syncId: string,
+    sharingType: "LOCAL" | "CLOUD" | "PUBLIC",
+  ) => SyncStatus | undefined;
   /**
    * Adds a new file to the drive
    * @param file - File to be added (can be a string path or File object)
@@ -59,7 +106,6 @@ export interface IDriveContext {
     name?: string,
     parentFolder?: string,
   ) => Promise<void>;
-
   /**
    * Adds a new document to the drive
    * @param driveId - ID of the drive to add the document to
@@ -67,6 +113,7 @@ export interface IDriveContext {
    * @param documentType - Type of document to create
    * @param parentFolder - Optional parent folder of the document
    * @param document - Optional document content
+   * @param id - Optional id for the document
    * @returns Promise resolving to the newly created
    */
   addDocument: (
@@ -76,111 +123,50 @@ export interface IDriveContext {
     parentFolder?: string,
     document?: PHDocument,
     id?: string,
-  ) => Promise<FileNode>;
-
-  /**
-   * Copies a node to a new location, along with all it's descendants if it's a folder
-   * @param sourceId - ID of the node to copy
-   * @param targetFolderId - Optional ID of the target folder
-   */
-  copyNode: (
-    sourceId: string,
-    targetFolderId: string | undefined,
-  ) => Promise<void>;
-
+  ) => Promise<FileNode | undefined>;
   /**
    * Shows a modal for creating a new document
    * @param documentModel - Document model of the document to be created
+   * @returns Promise resolving to an object containing the document name
    */
-  showCreateDocumentModal: (
-    documentModel: DocumentModelModule,
-  ) => Promise<void>;
-
+  showCreateDocumentModal: (documentModel: DocumentModelModule) => void;
   /**
-   * Retrieves the sync status of a document or drive
-   * @param driveId - ID of the drive to check sync status for
-   * @param documentId - ID of the document to check sync status for
-   * @returns SyncStatus object containing sync information
+   * Shows a modal for deleting a node
+   * @param node - The node to be deleted
    */
-  useSyncStatus: (
-    driveId: string,
-    documentId?: string,
-  ) => SyncStatus | undefined;
-
-  useDocumentEditorProps: (props: {
-    driveId: string;
-    documentId: string;
-    documentType: string;
-    documentModelModule: DocumentModelModule<PHDocument>;
-    user?: User;
-  }) => {
-    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
-    document: PHDocument | undefined;
-    error: unknown;
-  };
-
-  /**
-   * Retrieves the states of all documents in a drive
-   * @param driveId - ID of the drive to retrieve document states for
-   * @param documentIds - IDs of the documents to retrieve states for (all if not provided)
-   * @returns Record of document IDs to their states
-   */
-  useDriveDocumentStates: (props: {
-    driveId: string;
-    documentIds?: string[];
-  }) => readonly [
-    Record<string, HookState>,
-    (_driveId: string, _documentIds?: string[]) => Promise<void>,
-  ];
-
-  /**
-   * Retrieves the state of a document in a drive
-   * @param driveId - ID of the drive to retrieve document state for
-   * @param documentId - ID of the document to retrieve state for
-   * @type TDocument - Type of the document to retrieve state for if known
-   * @returns State of the document
-   */
-  useDriveDocumentState: (props: {
-    driveId: string;
-    documentId: string;
-  }) => PHDocument["state"] | undefined;
-}
-
-export interface DriveEditorContext
-  extends IDriveContext,
-    Omit<EditorContext, "getDocumentRevision"> {
-  /**
-   * Retrieves a document from a specific revision
-   * @param documentId - ID of the document to retrieve
-   * @param options - Optional configuration options for the retrieval
-   * @returns Promise resolving to the document at the specified revision
-   */
-  getDocumentRevision?: (
-    documentId: string,
-    options?: GetDocumentOptions,
-  ) => Promise<PHDocument> | undefined;
-
-  /**
-   * The name of the analytics database to use for the drive editor
-   */
-  analyticsDatabaseName: string;
-
+  showDeleteNodeModal: (node: Node) => void;
   /**
    * Retrieves the document model module for a given document type
    * @param documentType - The type of document to retrieve the model for
    * @returns The document model module for the given document type, or undefined if not found
    */
   getDocumentModelModule: (
-    documentType: string,
+    documentType: string | undefined,
   ) => DocumentModelModule<PHDocument> | undefined;
-
   /**
    * Retrieves the editor module for a given document type
    * @param documentType - The type of document to retrieve the editor for
    * @returns The editor module for the given document type, or null if not found
    */
-  getEditor: (documentType: string) => EditorModule | null | undefined;
-}
+  getEditor: (
+    documentType: string | undefined,
+  ) => EditorModule | null | undefined;
+  useDocumentEditorProps: (props: {
+    driveId: string | undefined;
+    documentId: string | undefined;
+    documentType: string | undefined;
+    documentModelModule: DocumentModelModule<PHDocument> | undefined;
+    user?: User;
+  }) => {
+    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
+    document: PHDocument | undefined;
+    error: unknown;
+  };
+};
+
+export type DriveEditorContext = Omit<EditorContext, "getDocumentRevision"> &
+  IDriveContext;
+
 export interface DriveEditorProps<TDocument extends PHDocument>
   extends Omit<EditorProps<TDocument>, "context"> {
   context: DriveEditorContext;

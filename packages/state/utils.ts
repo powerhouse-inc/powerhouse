@@ -1,5 +1,14 @@
-import { type DocumentDriveDocument, type Node } from "document-drive";
+import { logger, type DocumentDriveDocument, type Node } from "document-drive";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useEffect } from "react";
 import slug from "slug";
+import {
+  baseSelectedDriveIdAtom,
+  baseSelectedNodeIdAtom,
+  selectedDriveAtom,
+  setSelectedNodeAtom,
+} from "./atoms.js";
+import { useUnwrappedReactor } from "./reactor.js";
 import { type Reactor } from "./types.js";
 
 /** Sentinel value for atoms that are not set. */
@@ -88,20 +97,36 @@ export function makeNodeSlugFromNodeName(name: string) {
  * If the URL is in the format `/d/<drive-slug>`, the selected drive will be set.
  * If the URL is in the format `/d/<drive-slug>/<node-slug>`, the selected drive and node will be set.
  */
-export async function setSelectedDriveAndNodeFromUrl(
-  reactor: Reactor | undefined,
-  setSelectedDrive: (driveId: string | undefined) => void,
-  setSelectedNode: (nodeId: string | undefined) => void,
-  shouldNavigate: boolean,
-) {
-  if (typeof window === "undefined") return;
-  if (!shouldNavigate) return;
-  if (!reactor) return;
+export function useSetSelectedDriveAndNodeFromUrl() {
+  const setSelectedDrive = useSetAtom(selectedDriveAtom);
+  const setSelectedNode = useSetAtom(setSelectedNodeAtom);
+  const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
+  const baseSelectedNodeId = useAtomValue(baseSelectedNodeIdAtom);
+  const reactor = useUnwrappedReactor();
 
-  const path = window.location.pathname;
-  const drive = await handleDriveFromUrl(reactor, path, setSelectedDrive);
+  useEffect(() => {
+    async function handle() {
+      if (typeof window === "undefined") return;
+      if (!reactor) return;
 
-  handleNodeFromUrl(drive, path, setSelectedNode);
+      if (baseSelectedDriveId === NOT_SET) {
+        const path = window.location.pathname;
+        const drive = await handleDriveFromUrl(reactor, path, setSelectedDrive);
+        if (!drive) return;
+        if (baseSelectedNodeId === NOT_SET) {
+          handleNodeFromUrl(drive, path, setSelectedNode);
+        }
+      }
+    }
+
+    handle().catch(logger.error);
+  }, [
+    reactor,
+    baseSelectedDriveId,
+    baseSelectedNodeId,
+    setSelectedDrive,
+    setSelectedNode,
+  ]);
 }
 
 async function handleDriveFromUrl(

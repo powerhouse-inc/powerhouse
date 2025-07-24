@@ -1,42 +1,33 @@
-import { DRIVE, UI_NODE, type UiNode } from "#connect";
+import { UI_NODE } from "#connect";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
+import { type Node } from "document-drive";
 
 type Props = {
-  uiNode: UiNode | null;
+  node: Node;
 };
 export function useDrag(props: Props) {
-  const { uiNode } = props;
+  const { node } = props;
   const [isDragging, setIsDragging] = useState(false);
 
   const onDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      event.dataTransfer.setData(UI_NODE, JSON.stringify(uiNode));
+      event.dataTransfer.setData(UI_NODE, JSON.stringify(node));
     },
-    [uiNode],
+    [node],
   );
 
   const onDragEnd = useCallback(() => {
     setIsDragging(false);
   }, []);
 
-  const allowedToDragNode = !!uiNode && uiNode.kind !== DRIVE;
-
   return useMemo(() => {
-    const dragProps = allowedToDragNode
-      ? {
-          draggable: true,
-          onDragStart,
-          onDragEnd,
-        }
-      : {
-          draggable: false,
-          onDragStart: undefined,
-          onDragEnd: undefined,
-        };
-
     return {
       isDragging,
-      dragProps,
+      dragProps: {
+        draggable: true,
+        onDragStart,
+        onDragEnd,
+      },
     };
-  }, [allowedToDragNode, isDragging, onDragEnd, onDragStart]);
+  }, [isDragging, onDragEnd, onDragStart]);
 }

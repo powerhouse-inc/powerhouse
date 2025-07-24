@@ -3,35 +3,39 @@ import {
   DriveSettingsForm,
   type DriveSettingsFormSubmitHandler,
   type SharingType,
-  type UiDriveNode,
 } from "#connect";
 import { type DivProps, Icon, Modal } from "#powerhouse";
+import { type DocumentDriveDocument } from "document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 
 export type DriveSettingsModalProps = {
-  readonly uiDriveNode: UiDriveNode;
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly onRenameDrive: (uiDriveNode: UiDriveNode, newName: string) => void;
-  readonly onDeleteDrive: (uiDriveNode: UiDriveNode) => void;
-  readonly onChangeSharingType: (
-    uiDriveNode: UiDriveNode,
+  drive: DocumentDriveDocument;
+  sharingType: SharingType;
+  availableOffline: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRenameDrive: (drive: DocumentDriveDocument, newName: string) => void;
+  onDeleteDrive: (drive: DocumentDriveDocument) => void;
+  onChangeSharingType: (
+    drive: DocumentDriveDocument,
     newSharingType: SharingType,
   ) => void;
-  readonly onChangeAvailableOffline: (
-    uiDriveNode: UiDriveNode,
+  onChangeAvailableOffline: (
+    drive: DocumentDriveDocument,
     newAvailableOffline: boolean,
   ) => void;
-  readonly modalProps?: ModalProps;
-  readonly containerProps?: DivProps;
+  modalProps?: ModalProps;
+  containerProps?: DivProps;
 };
 export function DriveSettingsModal(props: DriveSettingsModalProps) {
   const {
-    uiDriveNode,
+    drive,
     open,
+    sharingType,
+    availableOffline,
     onOpenChange,
     onDeleteDrive,
     onRenameDrive,
@@ -42,20 +46,20 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
   } = props;
 
   const onSubmit: DriveSettingsFormSubmitHandler = (data) => {
-    if (data.name !== uiDriveNode.name) {
-      onRenameDrive(uiDriveNode, data.name);
+    if (data.name !== drive.header.name) {
+      onRenameDrive(drive, data.name);
     }
-    if (data.sharingType !== uiDriveNode.sharingType) {
-      onChangeSharingType(uiDriveNode, data.sharingType);
+    if (data.sharingType !== sharingType) {
+      onChangeSharingType(drive, data.sharingType);
     }
-    if (data.availableOffline !== uiDriveNode.availableOffline) {
-      onChangeAvailableOffline(uiDriveNode, data.availableOffline);
+    if (data.availableOffline !== availableOffline) {
+      onChangeAvailableOffline(drive, data.availableOffline);
     }
     onOpenChange(false);
   };
 
   function handleDeleteDrive() {
-    onDeleteDrive(uiDriveNode);
+    onDeleteDrive(drive);
     onOpenChange(false);
   }
 
@@ -94,7 +98,9 @@ export function DriveSettingsModal(props: DriveSettingsModalProps) {
           handleCancel={handleCancel}
           handleDeleteDrive={handleDeleteDrive}
           onSubmit={onSubmit}
-          uiDriveNode={uiDriveNode}
+          drive={drive}
+          sharingType={sharingType}
+          availableOffline={availableOffline}
         />
       </div>
     </Modal>

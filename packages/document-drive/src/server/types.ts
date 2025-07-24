@@ -569,7 +569,9 @@ export interface IBaseDocumentDriveServer {
   ): Promise<DriveOperationResult>;
 
   getSyncStatus(
-    syncUnitId: string,
+    documentId: string,
+    scope?: string,
+    branch?: string,
   ): SyncStatus | SynchronizationUnitNotFoundError;
 
   /** Internal methods **/

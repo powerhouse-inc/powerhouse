@@ -1,3 +1,34 @@
+## 3.3.0-dev.18 (2025-07-24)
+
+### 🩹 Fixes
+
+- **document-drive:** fix regression when adding multiple operations ([3a8617e79](https://github.com/powerhouse-inc/powerhouse/commit/3a8617e79))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 3.3.0-dev.17 (2025-07-23)
+
+### 🩹 Fixes
+
+- update release notes ([f1b6a8e71](https://github.com/powerhouse-inc/powerhouse/commit/f1b6a8e71))
+- add release notes on correct branch ([a2d60a537](https://github.com/powerhouse-inc/powerhouse/commit/a2d60a537))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 3.3.0-dev.16 (2025-07-22)
+
+### 🩹 Fixes
+
+- **common,document-drive,reactor-api,reactor-browser:** revert undefined return on getDocument methods ([fc145a82a](https://github.com/powerhouse-inc/powerhouse/commit/fc145a82a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.15 (2025-07-17)
 
 ### 🩹 Fixes

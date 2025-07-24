@@ -1,12 +1,18 @@
 import {
     useConnectConfig,
     useDocumentDriveServer,
-    useUiNodes,
+    useNodeActions,
     useUserPermissions,
 } from '#hooks';
 import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import {
+    useSelectedNodePath,
+    useSelectedParentFolder,
+    useSetSelectedNode,
+    useUnwrappedSelectedDrive,
+    useUnwrappedSelectedFolder,
+} from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button.js';
@@ -25,13 +31,12 @@ export function DriveView() {
     const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
-    const {
-        selectedDriveNode,
-        selectedParentNode,
-        setSelectedNode,
-        selectedNodePath,
-        getNodeById,
-    } = useUiNodesContext();
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedFolder = useUnwrappedSelectedFolder();
+    const parentFolder = useSelectedParentFolder();
+    const selectedNodePath = useSelectedNodePath();
+    const setSelectedNode = useSetSelectedNode();
+
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
     const documentModels = useFilteredDocumentModels();
     const {
@@ -42,36 +47,33 @@ export function DriveView() {
         onMoveNode,
         onDuplicateNode,
         onAddAndSelectNewFolder,
-    } = useUiNodes();
+    } = useNodeActions();
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
-            if (!selectedDriveNode) {
+            if (!selectedDrive) {
                 return;
             }
-            addFolder(selectedDriveNode.id, name, parentFolder).catch(
+            addFolder(selectedDrive.header.id, name, parentFolder).catch(
                 console.error,
             );
         },
-        [selectedDriveNode, addFolder],
+        [selectedDrive?.header.id, addFolder],
     );
 
     const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
         selectedNodePath,
-        getNodeById,
         setSelectedNode,
     });
 
     const createDocument = useCallback(
         (documentModel: DocumentModelModule) => {
-            if (!selectedDriveNode) return;
+            if (!selectedDrive) return;
 
             showModal('createDocument', {
                 documentModel,
-                selectedParentNode,
-                setSelectedNode,
             });
         },
-        [selectedDriveNode, selectedParentNode, setSelectedNode, showModal],
+        [selectedDrive, showModal],
     );
 
     return (
@@ -86,13 +88,7 @@ export function DriveView() {
             <div className="px-4">
                 <div className="mb-5">
                     <FolderView
-                        onAddFile={onAddFile}
-                        onAddFolder={onAddFolder}
-                        onRenameNode={onRenameNode}
-                        onCopyNode={onCopyNode}
-                        onMoveNode={onMoveNode}
-                        onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-                        onDuplicateNode={onDuplicateNode}
+                        isAllowedToCreateDocuments={isAllowedToCreateDocuments}
                     />
                 </div>
                 {isAllowedToCreateDocuments && (

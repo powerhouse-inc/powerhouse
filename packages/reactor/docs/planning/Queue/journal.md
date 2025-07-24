@@ -28,14 +28,8 @@ The `RedisQueueJournal` is a durable journal implementation that uses Redis as t
 
 This is used on the server.
 
-### IndexedDBQueueJournal
+### PGLiteQueueJournal
 
-The `IndexedDBQueueJournal` is a durable journal implementation that uses IndexedDB as the underlying storage.
+The `PGLiteQueueJournal` is a durable journal implementation that uses PGLite as the underlying storage.
 
-This is used on the client.
-
-### InMemoryQueueJournal
-
-The `InMemoryQueueJournal` is a durable journal implementation that uses an in-memory map as the underlying storage.
-
-This is used in tests.
+This is used on the client and in tests.

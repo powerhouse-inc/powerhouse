@@ -1,27 +1,19 @@
+import { type GenericDriveExplorerEditorProps } from "#editors/generic-drive-explorer/editor";
 import {
   createDocumentStory,
   type DocumentStory,
-  type DriveDocumentStory,
-  type DriveEditorStoryComponent,
   type EditorStoryArgs,
   type EditorStoryComponent,
   type EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
-import {
-  DRIVE,
-  DriveContextProvider,
-  type UiDriveNode,
-  UiNodesContextProvider,
-  useUiNodesContext,
-} from "@powerhousedao/reactor-browser";
+import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { type Decorator, type Meta } from "@storybook/react";
 import {
+  driveDocumentModelModule,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
   type DocumentDriveState,
-  driveDocumentModelModule,
   type IDocumentDriveServer,
-  type Node,
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
@@ -29,100 +21,6 @@ import {
   type ExtendedState,
   type PartialState,
 } from "document-model";
-import { type PropsWithChildren, useEffect, useState } from "react";
-import { makeUiDriveNode } from "./uiNodes.js";
-
-// Sets the ui drive nodes for the story
-function UINodesSetter(
-  props: PropsWithChildren<{
-    document: DocumentDriveDocument;
-  }>,
-) {
-  const { document } = props;
-  const { setDriveNodes, selectedNode, setSelectedNode } = useUiNodesContext();
-
-  const [uiDriveNode, setUiDriveNode] = useState<UiDriveNode | null>(null);
-
-  useEffect(() => {
-    const node = makeUiDriveNode(document);
-    setUiDriveNode((prev) => {
-      if (JSON.stringify(prev) !== JSON.stringify(node)) {
-        return node;
-      } else {
-        return prev;
-      }
-    });
-  }, [document]);
-
-  useEffect(() => {
-    if (
-      !selectedNode ||
-      (selectedNode.kind === DRIVE && selectedNode.id !== uiDriveNode?.id)
-    ) {
-      setSelectedNode(uiDriveNode);
-    }
-  }, [uiDriveNode, selectedNode, setSelectedNode]);
-
-  useEffect(() => {
-    setDriveNodes(uiDriveNode ? [uiDriveNode] : []);
-  }, [uiDriveNode, setDriveNodes]);
-
-  return null;
-}
-
-const UiNodesContextDecorator: Decorator<
-  EditorStoryProps<DocumentDriveDocument>
-> = (Story, context) => {
-  const { document } = context.args;
-  return (
-    <UiNodesContextProvider>
-      <UINodesSetter document={document} />
-      <Story />
-    </UiNodesContextProvider>
-  );
-};
-
-const DriveContextDecorator: Decorator<
-  EditorStoryProps<DocumentDriveDocument>
-> = (Story, context) => {
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  return (
-    <DriveContextProvider
-      value={{
-        reactor: {} as unknown as IDocumentDriveServer,
-        useDocumentEditorProps: () => ({
-          dispatch: () => {},
-          document: context.args.document,
-          error: undefined,
-        }),
-        showSearchBar: false,
-        isAllowedToCreateDocuments: true,
-        documentModels: [
-          documentModelDocumentModelModule as DocumentModelModule,
-        ],
-        selectedNode,
-        selectNode: setSelectedNode,
-        useSyncStatus: () => "SUCCESS",
-        useDriveDocumentState: () => undefined,
-        useDriveDocumentStates: () => [{}, () => Promise.resolve()],
-        addFile() {
-          throw new Error("addFile not implemented");
-        },
-        addDocument() {
-          throw new Error("addDocument not implemented");
-        },
-        copyNode() {
-          throw new Error("copyNode not implemented");
-        },
-        showCreateDocumentModal(documentModel: DocumentModelModule) {
-          return Promise.resolve();
-        },
-      }}
-    >
-      <Story />
-    </DriveContextProvider>
-  );
-};
 
 export function createDriveStory(
   Editor: EditorStoryComponent<DocumentDriveDocument>,
@@ -145,40 +43,50 @@ export function createDriveStory(
       }),
     },
     additionalStoryArgs,
-    [DriveContextDecorator, ...(decorators ?? [])],
+    [
+      (Story, context) => (
+        <DriveContextProvider
+          value={{
+            analyticsDatabaseName: "test",
+            onAddFile: () => Promise.resolve(),
+            onAddFolder: () => Promise.resolve(undefined),
+            onRenameNode: () => Promise.resolve(undefined),
+            onCopyNode: () => Promise.resolve(),
+            onMoveNode: () => Promise.resolve(),
+            onDuplicateNode: () => Promise.resolve(),
+            onAddAndSelectNewFolder: () => Promise.resolve(),
+            getSyncStatusSync: () => undefined,
+            showDeleteNodeModal: () => {},
+            getDocumentModelModule: () => undefined,
+            getEditor: () => undefined,
+            useDocumentEditorProps: () => ({
+              dispatch: () => {},
+              document: context.args.document,
+              error: undefined,
+            }),
+            showSearchBar: false,
+            isAllowedToCreateDocuments: true,
+            documentModels: [
+              documentModelDocumentModelModule as DocumentModelModule,
+            ],
+            addFile() {
+              throw new Error("addFile not implemented");
+            },
+            addDocument() {
+              throw new Error("addDocument not implemented");
+            },
+            showCreateDocumentModal(documentModel: DocumentModelModule) {
+              return Promise.resolve({
+                name: `New ${documentModel.documentModel.name}`,
+              });
+            },
+          }}
+        >
+          <Story />
+        </DriveContextProvider>
+      ),
+      ...(decorators ?? []),
+    ],
   );
-  story.meta.id = "powerhouse";
   return story;
-}
-
-export function createDriveStoryWithUINodes(
-  Editor: DriveEditorStoryComponent<DocumentDriveDocument>,
-  initialState?: ExtendedState<
-    PartialState<DocumentDriveState>,
-    PartialState<DocumentDriveLocalState>
-  >,
-  additionalStoryArgs?: EditorStoryArgs<DocumentDriveDocument>,
-  decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
-): {
-  meta: Meta<typeof Editor>;
-  CreateDocumentStory: DriveDocumentStory<DocumentDriveDocument>;
-} {
-  const { meta, CreateDocumentStory } = createDocumentStory(
-    Editor as EditorStoryComponent<DocumentDriveDocument>,
-    driveDocumentModelModule.reducer,
-    initialState ?? {
-      ...driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { name: "Powerhouse" }, local: {} },
-      }),
-    },
-    additionalStoryArgs,
-    [DriveContextDecorator, UiNodesContextDecorator, ...(decorators ?? [])],
-  );
-  meta.id = "powerhouse";
-
-  return {
-    meta: meta as Meta<typeof Editor>,
-    CreateDocumentStory:
-      CreateDocumentStory as DriveDocumentStory<DocumentDriveDocument>,
-  };
 }
