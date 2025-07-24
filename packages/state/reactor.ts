@@ -89,61 +89,51 @@ export function useSubscribeToReactorEvents() {
     if (!reactor) return;
     const unsubs = [
       reactor.on("syncStatus", (...args) => {
-        console.log("syncStatus", ...args);
         logger.verbose("syncStatus", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("strandUpdate", (...args) => {
-        console.log("strandUpdate", ...args);
         logger.verbose("strandUpdate", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("defaultRemoteDrive", (...args) => {
-        console.log("defaultRemoteDrive", ...args);
         logger.verbose("defaultRemoteDrive", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("clientStrandsError", (...args) => {
-        console.log("clientStrandsError", ...args);
         logger.verbose("clientStrandsError", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("driveAdded", (...args) => {
-        console.log("driveAdded", ...args);
         logger.verbose("driveAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("driveDeleted", (...args) => {
-        console.log("driveDeleted", ...args);
         logger.verbose("driveDeleted", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("documentModelModules", (...args) => {
-        console.log("documentModelModules", ...args);
         logger.verbose("documentModelModules", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("documentOperationsAdded", (...args) => {
-        console.log("documentOperationsAdded", ...args);
         logger.verbose("documentOperationsAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("driveOperationsAdded", (...args) => {
-        console.log("driveOperationsAdded", ...args);
         logger.verbose("driveOperationsAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
       }),
       reactor.on("operationsAdded", (...args) => {
-        console.log("operationsAdded", ...args);
         logger.verbose("operationsAdded", ...args);
         refreshDrives(reactor);
         refreshDocuments(reactor, driveId);
