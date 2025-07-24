@@ -1,10 +1,13 @@
 import { useDocumentDriveServer } from '#hooks';
 import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
-import { useUnwrappedDrives } from '@powerhousedao/state';
+import {
+    useSetSelectedDrive,
+    useSetSelectedNode,
+    useUnwrappedDrives,
+} from '@powerhousedao/state';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../modal.js';
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
@@ -13,15 +16,16 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
     const { t } = useTranslation();
     const { clearStorage, deleteDrive } = useDocumentDriveServer();
     const drives = useUnwrappedDrives();
+    const setSelectedDrive = useSetSelectedDrive();
+    const setSelectedNode = useSetSelectedNode();
     const { showModal } = useModal();
-    const navigate = useNavigate();
 
     const handleDeleteDrive = useCallback(
         async (drive: DocumentDriveDocument) => {
-            navigate('/');
+            setSelectedDrive(undefined);
             await deleteDrive(drive.header.id);
         },
-        [deleteDrive, navigate],
+        [deleteDrive, setSelectedDrive],
     );
 
     const handleClearStorage = () => {
@@ -36,7 +40,8 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
                 clearStorage()
                     .then(() => {
                         // refreshes the page to reload default drive
-                        navigate('/');
+                        setSelectedDrive(undefined);
+                        setSelectedNode(undefined);
                         onRefresh();
                     })
                     .catch(logger.error);
