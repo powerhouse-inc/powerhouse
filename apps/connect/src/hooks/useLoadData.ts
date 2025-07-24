@@ -23,5 +23,5 @@ export function useLoadData() {
     useSubscribeToWindowEvents();
     useInitializeProcessorManager();
     useCreateFirstLocalDrive();
-    useSetSelectedDriveAndNodeFromUrl(true);
+    useSetSelectedDriveAndNodeFromUrl();
 }

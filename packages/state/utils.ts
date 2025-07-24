@@ -97,7 +97,7 @@ export function makeNodeSlugFromNodeName(name: string) {
  * If the URL is in the format `/d/<drive-slug>`, the selected drive will be set.
  * If the URL is in the format `/d/<drive-slug>/<node-slug>`, the selected drive and node will be set.
  */
-export function useSetSelectedDriveAndNodeFromUrl(shouldNavigate: boolean) {
+export function useSetSelectedDriveAndNodeFromUrl() {
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(setSelectedNodeAtom);
   const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
@@ -107,7 +107,6 @@ export function useSetSelectedDriveAndNodeFromUrl(shouldNavigate: boolean) {
   useEffect(() => {
     async function handle() {
       if (typeof window === "undefined") return;
-      if (!shouldNavigate) return;
       if (!reactor) return;
 
       if (baseSelectedDriveId === NOT_SET) {
@@ -127,7 +126,6 @@ export function useSetSelectedDriveAndNodeFromUrl(shouldNavigate: boolean) {
     baseSelectedNodeId,
     setSelectedDrive,
     setSelectedNode,
-    shouldNavigate,
   ]);
 }
 
