@@ -141,8 +141,8 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     }, [dispatch]);
 
     const onClose = useCallback(() => {
-        setSelectedNode(parentFolder?.id ?? selectedDrive?.header.id);
-    }, [parentFolder, selectedDrive?.header.id, setSelectedNode]);
+        setSelectedNode(parentFolder?.id);
+    }, [parentFolder, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
