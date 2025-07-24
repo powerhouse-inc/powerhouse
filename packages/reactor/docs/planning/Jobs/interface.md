@@ -121,7 +121,7 @@ export interface IJobExecutor {
    * @param signal - Optional abort signal to cancel the promise. This does NOT cancel the job execution.
    * @returns Promise that resolves to the job result
    */
-  executeJob(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
+  execute(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
 }
 
 /**
