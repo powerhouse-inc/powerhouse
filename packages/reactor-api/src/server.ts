@@ -140,10 +140,11 @@ async function setupGraphQLManager(
   if (auth?.enabled) {
     graphqlManager.setAdditionalContextFields({
       isGuest: (address: string) =>
-        auth.enabled && auth.guests.includes(address),
-      isUser: (address: string) => auth.enabled && auth.users.includes(address),
+        auth.enabled && auth.guests?.includes(address.toLowerCase()),
+      isUser: (address: string) =>
+        auth.enabled && auth.users?.includes(address.toLowerCase()),
       isAdmin: (address: string) =>
-        auth.enabled && auth.admins.includes(address),
+        auth.enabled && auth.admins?.includes(address.toLowerCase()),
     });
   } else {
     graphqlManager.setAdditionalContextFields({
@@ -299,8 +300,9 @@ export async function startAPI(
   // add auth middleware if auth is enabled
   if (authEnabled) {
     // set admin, users and guest list
+    logger.info("> Setting up Auth middleware");
     app.use(async (req, res, next) => {
-      if (!options.auth || req.method === "OPTIONS" || req.method === "GET") {
+      if (!authEnabled || req.method === "OPTIONS" || req.method === "GET") {
         next();
         return;
       }
@@ -340,16 +342,18 @@ export async function startAPI(
         networkId,
       };
 
+      graphqlManager.setAdditionalContextFields({
+        user: {
+          address: address.toLowerCase(),
+          chainId,
+          networkId,
+        },
+      });
+
       if (!all.includes(req.user.address)) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
-
-      req.user = {
-        address,
-        chainId,
-        networkId,
-      };
 
       next();
     });
@@ -451,7 +455,12 @@ export async function startAPI(
     relationalDb,
     analyticsStore,
     subgraphs,
-    options.auth,
+    {
+      enabled: authEnabled,
+      guests,
+      users,
+      admins,
+    },
   );
 
   // Set up event listeners
