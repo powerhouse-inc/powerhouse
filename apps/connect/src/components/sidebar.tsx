@@ -4,13 +4,17 @@ import {
     Icon,
     SidebarAddDriveItem,
     SidebarItem,
-    type UiDriveNode,
 } from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
-import { logger } from 'document-drive';
+import {
+    useSetSelectedDrive,
+    useUnwrappedDrives,
+    useUnwrappedSelectedDrive,
+} from '@powerhousedao/state';
+import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
+import { DriveIcon } from './drive-icon.js';
 import { useModal } from './modal/index.js';
 
 export default function Sidebar() {
@@ -18,7 +22,9 @@ export default function Sidebar() {
     const navigate = useNavigate();
 
     const { user, openRenown, logout } = useLogin();
-    const { driveNodes, setSelectedNode, selectedNode } = useUiNodesContext();
+    const drives = useUnwrappedDrives();
+    const selectedDrive = useUnwrappedSelectedDrive();
+    const setSelectedDrive = useSetSelectedDrive();
     const [config] = useConnectConfig();
     const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
@@ -28,9 +34,9 @@ export default function Sidebar() {
     };
 
     const onRootClick = useCallback(() => {
-        setSelectedNode(null);
+        setSelectedDrive(undefined);
         navigate('/');
-    }, [navigate, setSelectedNode]);
+    }, [navigate, setSelectedDrive]);
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
@@ -57,10 +63,10 @@ export default function Sidebar() {
     );
 
     const handleDriveClick = useCallback(
-        (driveNode: UiDriveNode) => {
-            setSelectedNode(driveNode);
+        (drive: DocumentDriveDocument) => {
+            setSelectedDrive(drive.header.id);
         },
-        [setSelectedNode],
+        [setSelectedDrive],
     );
 
     const etherscanUrl = user?.address
@@ -86,22 +92,13 @@ export default function Sidebar() {
                 }
                 onError={logger.error}
             >
-                {driveNodes.map((node, index) => (
+                {drives?.map((drive, index) => (
                     <SidebarItem
                         key={index}
-                        title={node.name}
-                        onClick={() => handleDriveClick(node)}
-                        active={selectedNode?.id === node.id}
-                        icon={
-                            node.icon ? (
-                                <img
-                                    src={node.icon}
-                                    alt={node.name}
-                                    width={32}
-                                    height={32}
-                                />
-                            ) : undefined
-                        }
+                        title={drive.header.name}
+                        onClick={() => handleDriveClick(drive)}
+                        active={selectedDrive?.header.id === drive.header.id}
+                        icon={<DriveIcon drive={drive} />}
                     />
                 ))}
                 {config.drives.addDriveEnabled && (

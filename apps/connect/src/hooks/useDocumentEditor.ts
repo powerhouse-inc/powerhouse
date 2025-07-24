@@ -1,4 +1,3 @@
-import { useUnwrappedReactor } from '#store';
 import {
     useDocument,
     useDocumentEditorProps,
@@ -7,12 +6,13 @@ import {
 import { type DocumentModelModule, type PHDocument } from 'document-model';
 
 import { useConnectCrypto, useConnectDid } from '#hooks';
+import { useUnwrappedReactor } from '@powerhousedao/state';
 
 export interface DocumentEditorProps {
-    driveId: string;
-    documentId: string;
-    documentType: string;
-    documentModelModule: DocumentModelModule<PHDocument>;
+    driveId: string | undefined;
+    documentId: string | undefined;
+    documentType: string | undefined;
+    documentModelModule: DocumentModelModule<PHDocument> | undefined;
     user?: User;
 }
 

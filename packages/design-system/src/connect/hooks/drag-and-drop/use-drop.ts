@@ -1,16 +1,16 @@
-import { FILE, UI_NODE, type UiNode } from "#connect";
+import { UI_NODE } from "#connect";
+import { type Node } from "document-drive";
 import { type DragEvent, useCallback, useMemo, useState } from "react";
 
 type Props = {
-  uiNode: UiNode | null;
-  onAddFile: (file: File, parentNode: UiNode | null) => Promise<void>;
-  onMoveNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
-  onCopyNode: (uiNode: UiNode, targetNode: UiNode) => Promise<void>;
+  node: Node | undefined;
+  onAddFile: (file: File, parent: Node | undefined) => Promise<void> | void;
+  onMoveNode: (src: Node, target: Node | undefined) => Promise<void> | void;
+  onCopyNode: (src: Node, target: Node | undefined) => Promise<void> | void;
 };
 export function useDrop(props: Props) {
-  const { uiNode, onAddFile, onCopyNode, onMoveNode } = props;
+  const { node, onAddFile, onCopyNode, onMoveNode } = props;
   const [isDropTarget, setIsDropTarget] = useState(false);
-  const allowedToBeDropTarget = !uiNode || uiNode.kind !== FILE;
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -33,19 +33,19 @@ export function useDrop(props: Props) {
         if (droppedFiles.length) {
           for (const file of droppedFiles) {
             if (file) {
-              await onAddFile(file, uiNode);
+              await onAddFile(file, node);
             }
           }
-        } else if (uiNode) {
-          const altOrOptionKeyPressed = event.getModifierState("Alt");
-          const data = event.dataTransfer.getData(UI_NODE);
-          const droppedNode = JSON.parse(data) as UiNode;
+          return;
+        }
+        const altOrOptionKeyPressed = event.getModifierState("Alt");
+        const data = event.dataTransfer.getData(UI_NODE);
+        const droppedNode = JSON.parse(data) as Node;
 
-          if (altOrOptionKeyPressed) {
-            await onCopyNode(droppedNode, uiNode);
-          } else {
-            await onMoveNode(droppedNode, uiNode);
-          }
+        if (altOrOptionKeyPressed) {
+          await onCopyNode(droppedNode, node);
+        } else {
+          await onMoveNode(droppedNode, node);
         }
       } catch (error) {
         console.error(error);
@@ -53,22 +53,15 @@ export function useDrop(props: Props) {
         setIsDropTarget(false);
       }
     },
-    [onAddFile, onCopyNode, onMoveNode, uiNode],
+    [onAddFile, onCopyNode, onMoveNode, parent],
   );
 
   return useMemo(() => {
-    const dropProps = allowedToBeDropTarget
-      ? { onDragOver, onDragLeave, onDrop }
-      : {
-          onDragOver: undefined,
-          onDragLeave: undefined,
-          onDrop: undefined,
-        };
     return {
       isDropTarget,
-      dropProps,
+      dropProps: { onDragOver, onDragLeave, onDrop },
     };
-  }, [allowedToBeDropTarget, isDropTarget, onDragLeave, onDragOver, onDrop]);
+  }, [isDropTarget, onDragLeave, onDragOver, onDrop]);
 }
 
 function getDroppedFiles(items: DataTransferItemList) {

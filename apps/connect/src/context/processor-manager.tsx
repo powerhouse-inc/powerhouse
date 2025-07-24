@@ -11,6 +11,7 @@ import {
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
+import { useUnwrappedProcessorManager } from '@powerhousedao/state';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
@@ -19,7 +20,6 @@ import {
     useExternalProcessors,
     type Processors,
 } from '../store/external-processors';
-import { useUnwrappedProcessorManager } from '../store/processors';
 
 const logger = childLogger(['reactor-analytics']);
 

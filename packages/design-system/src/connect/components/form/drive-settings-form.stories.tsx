@@ -1,5 +1,5 @@
-import { mockLocalDrive } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type DocumentDriveDocument } from "document-drive";
 import { DriveSettingsForm } from "./index.js";
 
 const meta = {
@@ -18,7 +18,14 @@ export const Default: Story = {
     },
     handleCancel: () => {},
     handleDeleteDrive: () => {},
-    uiDriveNode: mockLocalDrive,
+    sharingType: "LOCAL",
+    availableOffline: true,
+    drive: {
+      header: {
+        id: "1",
+        name: "Drive 1",
+      },
+    } as DocumentDriveDocument,
   },
   decorators: [
     (Story) => (

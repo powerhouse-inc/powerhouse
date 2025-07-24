@@ -1,6 +1,7 @@
 import connectConfig from '#connect-config';
+import { type IRenown } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
-import { atomStore } from '@powerhousedao/common';
+import { useUnwrappedDrives, useUnwrappedReactor } from '@powerhousedao/state';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -8,29 +9,39 @@ import {
     type IDocumentStorage,
     type IDriveOperationStorage,
 } from 'document-drive/storage/types';
-import { generateId } from 'document-model';
+import { type DocumentModelModule, generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { observe } from 'jotai-effect';
-import { atomWithLazy, unwrap } from 'jotai/utils';
+import { useCallback, useEffect, useRef } from 'react';
 import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
-import { renownAtom, renownStatusAtom } from '../hooks/useRenown.js';
-import {
-    documentModelsAtom,
-    subscribeDocumentModels,
-} from './document-model.js';
+import { useRenown } from '../hooks/useRenown.js';
+import { documentModelsAtom } from './document-model.js';
 
-async function initReactor(reactor: IDocumentDriveServer) {
-    await initJwtHandler(reactor);
-
+async function initReactor(
+    reactor: IDocumentDriveServer,
+    renown: IRenown | undefined,
+) {
+    await initJwtHandler(reactor, renown);
     const errors = await reactor.initialize();
     const error = errors?.at(0);
     if (error) {
         throw error;
     }
+}
 
-    const drives = await reactor.getDrives();
-    if (!drives?.length && connectConfig.drives.sections.LOCAL.enabled) {
-        return reactor
+export function useCreateFirstLocalDrive() {
+    const localDrivesEnabled = connectConfig.drives.sections.LOCAL.enabled;
+    const reactor = useUnwrappedReactor();
+    const drives = useUnwrappedDrives();
+    const hasHandledCreateFirstLocalDrive = useRef(false);
+
+    useEffect(() => {
+        if (hasHandledCreateFirstLocalDrive.current) return;
+        if (!localDrivesEnabled) return;
+        if (reactor === undefined) return;
+        if (drives === undefined) return;
+        if (drives.length > 0) return;
+
+        reactor
             .addDrive({
                 id: generateId(),
                 slug: 'my-local-drive',
@@ -46,11 +57,15 @@ async function initReactor(reactor: IDocumentDriveServer) {
                 },
             })
             .catch(logger.error);
-    }
+
+        hasHandledCreateFirstLocalDrive.current = true;
+    }, [localDrivesEnabled, reactor, drives]);
 }
 
-async function initJwtHandler(server: IDocumentDriveServer) {
-    const renown = await atomStore.get(renownAtom);
+async function initJwtHandler(
+    server: IDocumentDriveServer,
+    renown: IRenown | undefined,
+) {
     const user = await renown?.user();
     const crypto = await getConnectCrypto();
 
@@ -61,61 +76,17 @@ async function initJwtHandler(server: IDocumentDriveServer) {
     }
 }
 
-// Helper function to wait for renown to be initialized
-async function waitForRenown(): Promise<void> {
-    let unsubscribe: (() => void) | undefined;
-
-    // Wait for renown status to be 'finished'
-    return Promise.race([
-        new Promise<void>((resolve, reject) => {
-            unsubscribe = observe(get => {
-                try {
-                    const status = get(renownStatusAtom);
-                    if (status === 'finished' || status === 'error') {
-                        resolve();
-                    }
-                } catch (err) {
-                    // In case of any error during the observation, proceed with reactor initialization
-                    reject(
-                        new Error(
-                            `Error observing renown status: ${
-                                err instanceof Error
-                                    ? err.message
-                                    : 'Unknown error'
-                            }`,
-                        ),
-                    );
-                }
-            }, atomStore);
-            return () => unsubscribe?.();
-        }),
-        new Promise<void>((_, reject) => {
-            // Set a maximum timeout (5 seconds) to avoid blocking indefinitely
-            setTimeout(() => {
-                unsubscribe?.();
-                reject(new Error('Timed out waiting for renown to initialize'));
-            }, 5000);
-        }),
-    ]).catch((error: unknown) => {
-        unsubscribe?.();
-        logger.warn(error);
-    });
-}
-
-export async function createReactor() {
-    await waitForRenown();
-    // get storage
-    const storage = atomStore.get(storageAtom);
-
-    // waits for document models to be loaded
-    const documentModels = await atomStore.get(documentModelsAtom);
-    const server =
-        (window.electronAPI?.documentDrive as
-            | IDocumentDriveServer
-            | undefined) ??
-        createBrowserDocumentDriveServer(documentModels, storage);
-    await initReactor(server);
-    return server;
+export async function createReactor(
+    storage: IDriveOperationStorage &
+        IDocumentOperationStorage &
+        IDocumentStorage &
+        IDocumentAdminStorage,
+    documentModels: DocumentModelModule[],
+    renown: IRenown | undefined,
+) {
+    const reactor = createBrowserDocumentDriveServer(documentModels, storage);
+    await initReactor(reactor, renown);
+    return reactor;
 }
 
 export const storageAtom = atom<
@@ -125,60 +96,6 @@ export const storageAtom = atom<
         IDocumentAdminStorage
 >(createBrowserStorage(connectConfig.routerBasename));
 storageAtom.debugLabel = 'storageAtomInConnect';
-export const reactorAtom = atomWithLazy<Promise<IDocumentDriveServer>>(() =>
-    createReactor(),
-);
-reactorAtom.debugLabel = 'reactorAtomInConnect';
-export const unwrappedReactor = unwrap(reactorAtom);
-unwrappedReactor.debugLabel = 'unwrappedReactorInConnect';
-// blocks rendering until reactor is initialized.
-export const useReactor = (): IDocumentDriveServer => useAtomValue(reactorAtom);
 
 export const useDocumentAdminStorage = (): IDocumentAdminStorage =>
     useAtomValue(storageAtom);
-
-// will return undefined until reactor is initialized. Does not block rendering.
-export const useUnwrappedReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(unwrappedReactor);
-
-// will return undefined until reactor is initialized. Does not block rendering or trigger the reactor to be initialized.
-export const useAsyncReactor = (): IDocumentDriveServer | undefined =>
-    useAtomValue(reactorAsyncAtom);
-
-const reactorAsyncAtom = atom<IDocumentDriveServer | undefined>(undefined);
-reactorAsyncAtom.onMount = setAtom => {
-    subscribeReactor(setAtom);
-};
-reactorAsyncAtom.debugLabel = 'reactorAsyncAtomInConnect';
-// updates the reactor when the available document models change
-let documentModelsSubscripion: (() => void) | undefined;
-reactorAtom.onMount = setAtom => {
-    if (documentModelsSubscripion) return;
-    setAtom(async prevReactor => {
-        const reactor = await prevReactor;
-
-        if (!documentModelsSubscripion) {
-            documentModelsSubscripion = subscribeDocumentModels(
-                documentModels => {
-                    reactor.setDocumentModelModules(documentModels);
-                },
-            );
-        }
-        return reactor;
-    });
-};
-
-export const subscribeReactor = function (
-    listener: (reactor: IDocumentDriveServer) => void,
-) {
-    // activate the effect on the default store
-    const unobserve = observe(get => {
-        const reactor = get(reactorAtom);
-        reactor.then(listener).catch(e => {
-            throw e;
-        });
-    }, atomStore);
-
-    // Clean up the effect
-    return () => unobserve();
-};

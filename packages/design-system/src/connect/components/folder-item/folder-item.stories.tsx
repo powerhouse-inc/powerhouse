@@ -1,5 +1,5 @@
-import { mockUiFolderNode } from "#connect";
 import { type Meta, type StoryObj } from "@storybook/react";
+import { type FolderNode } from "document-drive";
 import { FolderItem } from "./folder-item.js";
 
 const meta: Meta<typeof FolderItem> = {
@@ -12,30 +12,36 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ReadMode: Story = {
-  args: {
-    uiNode: { ...mockUiFolderNode, syncStatus: undefined },
-    isAllowedToCreateDocuments: true,
-    onMoveNode: () => Promise.resolve(),
-    onAddFile: () => Promise.resolve(),
-    onCopyNode: () => Promise.resolve(),
-  },
-  render: function Wrapper(args) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  render: function Wrapper() {
+    const folderNode: FolderNode = {
+      id: "1",
+      name: "Folder 1",
+      kind: "folder",
+      parentFolder: "1",
+    };
     const folderNodes = Array.from({ length: 5 }).map((_, index) => ({
-      ...args.uiNode,
+      ...folderNode,
       id: `folder-${index}`,
       name: `Folder ${index} lorem ipsum dolor sit amet consectetur adipiscing elit`,
     }));
     return (
       <div className="flex flex-wrap gap-2">
         {folderNodes.map((node) => (
-          // @ts-expect-error
           <FolderItem
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             key={node.id}
-            {...args}
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            uiNode={node}
+            folderNode={node}
+            onAddFile={() => Promise.resolve()}
+            onAddFolder={() => Promise.resolve(undefined)}
+            onRenameNode={() => Promise.resolve(undefined)}
+            onCopyNode={() => Promise.resolve(undefined)}
+            onMoveNode={() => Promise.resolve(undefined)}
+            onDuplicateNode={() => Promise.resolve(undefined)}
+            onAddAndSelectNewFolder={() => Promise.resolve(undefined)}
+            showDeleteNodeModal={() => Promise.resolve(undefined)}
+            setSelectedNode={() => {}}
+            sharingType="LOCAL"
+            getSyncStatusSync={() => undefined}
+            isAllowedToCreateDocuments={true}
           />
         ))}
       </div>
@@ -47,7 +53,6 @@ export const NotAllowedToCreateDocuments: Story = {
   ...ReadMode,
   args: {
     ...ReadMode.args,
-    uiNode: mockUiFolderNode,
     isAllowedToCreateDocuments: false,
   },
 };

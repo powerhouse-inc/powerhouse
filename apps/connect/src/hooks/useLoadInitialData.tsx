@@ -1,16 +1,7 @@
 import { ReloadConnectToast } from '#components';
-import { useReadModeContext } from '#context';
-import { useDocumentDriveServer, useMakeUiDriveNode } from '#hooks';
-// import { createReactor } from '#store';
-// import { useInitializeReactor } from '@powerhousedao/common';
-import {
-    CONFLICT,
-    ERROR,
-    LOCAL,
-    SUCCESS,
-    type UiDriveNode,
-} from '@powerhousedao/design-system';
-import { useUiNodesContext } from '@powerhousedao/reactor-browser';
+import { useDocumentDriveServer } from '#hooks';
+import { CONFLICT, ERROR, LOCAL, SUCCESS } from '@powerhousedao/design-system';
+import { getDriveSharingType, useUnwrappedDrives } from '@powerhousedao/state';
 import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
@@ -18,21 +9,15 @@ import { useTranslation } from 'react-i18next';
 import { toast } from '../services/toast.js';
 import { useClientErrorHandler } from './useClientErrorHandler.js';
 import { useConnectConfig } from './useConnectConfig.js';
-import { useDocumentDrives } from './useDocumentDrives.js';
 import { isLatestVersion } from './utils.js';
 
 export const useLoadInitialData = () => {
     const { t } = useTranslation();
-    const { reactorLoaded, documentDrives, onSyncStatus } =
-        useDocumentDriveServer();
-    const { driveNodes, setDriveNodes } = useUiNodesContext();
-    const prevDrivesState = useRef([...driveNodes]);
-    const drivesWithError = useRef<UiDriveNode[]>([]);
-    const [, , serverSubscribeUpdates] = useDocumentDrives();
-    const { readDrives } = useReadModeContext();
+    const { getSyncStatusSync } = useDocumentDriveServer();
+    const drivesWithError = useRef<DocumentDriveDocument[]>([]);
+    const drives = useUnwrappedDrives();
     const clientErrorHandler = useClientErrorHandler();
     const [connectConfig] = useConnectConfig();
-    // useInitializeReactor(createReactor);
 
     async function checkLatestVersion() {
         const result = await isLatestVersion();
@@ -63,28 +48,33 @@ export const useLoadInitialData = () => {
         checkLatestVersion().catch(console.error);
     }, []);
 
-    useEffect(() => {
-        const unsubscribe = serverSubscribeUpdates(clientErrorHandler);
-        return unsubscribe;
-    }, [serverSubscribeUpdates, documentDrives, clientErrorHandler]);
-
     const checkDrivesErrors = useCallback(
-        async (driveNodes: UiDriveNode[], t: TFunction) => {
-            driveNodes.forEach(drive => {
-                const prevDrive = prevDrivesState.current.find(
-                    prevDrive => prevDrive.id === drive.id,
+        async (drives: DocumentDriveDocument[], t: TFunction) => {
+            drives.forEach(drive => {
+                const prevDrive = drivesWithError.current.find(
+                    prevDrive => prevDrive.header.id === drive.header.id,
                 );
 
                 if (!prevDrive) return;
 
+                const sharingType = getDriveSharingType(drive);
+                const prevSyncStatus = getSyncStatusSync(
+                    prevDrive.header.id,
+                    sharingType,
+                );
+                const syncStatus = getSyncStatusSync(
+                    drive.header.id,
+                    sharingType,
+                );
+
                 if (
-                    drive.sharingType !== LOCAL &&
-                    drive.syncStatus === SUCCESS &&
+                    sharingType !== LOCAL &&
+                    syncStatus === SUCCESS &&
                     drivesWithError.current.includes(drive)
                 ) {
                     // remove the drive from the error list
                     drivesWithError.current = drivesWithError.current.filter(
-                        d => d.id !== drive.id,
+                        d => d.header.id !== drive.header.id,
                     );
 
                     return toast(t('notifications.driveSyncSuccess'), {
@@ -93,29 +83,31 @@ export const useLoadInitialData = () => {
                 }
 
                 if (
-                    (drive.syncStatus === CONFLICT ||
-                        drive.syncStatus === ERROR) &&
-                    drive.syncStatus !== prevDrive.syncStatus
+                    (syncStatus === CONFLICT || syncStatus === ERROR) &&
+                    syncStatus !== prevSyncStatus
                 ) {
                     // add the drive to the error list
                     drivesWithError.current.push(drive);
                 }
             });
 
-            prevDrivesState.current = [...driveNodes];
-
             if (drivesWithError.current.length > 0) {
                 const isCurrent = await checkLatestVersion();
                 if (isCurrent) {
                     drivesWithError.current.forEach(drive => {
+                        const sharingType = getDriveSharingType(drive);
+                        const syncStatus = getSyncStatusSync(
+                            drive.header.id,
+                            sharingType,
+                        );
                         toast(
                             t(
-                                `notifications.${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}`,
-                                { drive: drive.name },
+                                `notifications.${syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}`,
+                                { drive: drive.header.name },
                             ),
                             {
                                 type: 'connect-warning',
-                                toastId: `${drive.syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}-${drive.id}`,
+                                toastId: `${syncStatus === CONFLICT ? 'driveSyncConflict' : 'driveSyncError'}-${drive.header.id}`,
                             },
                         );
                     });
@@ -126,39 +118,6 @@ export const useLoadInitialData = () => {
     );
 
     useEffect(() => {
-        checkDrivesErrors(driveNodes, t).catch(console.error);
-    }, [driveNodes, t, checkDrivesErrors]);
-
-    const makeUiDriveNode = useMakeUiDriveNode();
-
-    const makeUiDriveNodes = useCallback(
-        async (documentDrives: DocumentDriveDocument[]) => {
-            return Promise.all(documentDrives.map(makeUiDriveNode));
-        },
-        [makeUiDriveNode],
-    );
-
-    const updateUiDriveNodes = useCallback(
-        async (documentDrives: DocumentDriveDocument[]) => {
-            const uiDriveNodes = await makeUiDriveNodes(documentDrives);
-            setDriveNodes(uiDriveNodes);
-        },
-        [makeUiDriveNodes, setDriveNodes],
-    );
-    useEffect(() => {
-        const drives: DocumentDriveDocument[] = [
-            ...readDrives,
-            ...documentDrives,
-        ];
-        updateUiDriveNodes(drives).catch(console.error);
-    }, [documentDrives, readDrives, updateUiDriveNodes]);
-
-    useEffect(() => {
-        if (!reactorLoaded) {
-            return;
-        }
-
-        const unsub = onSyncStatus(() => updateUiDriveNodes(documentDrives));
-        return unsub;
-    }, [reactorLoaded, documentDrives, onSyncStatus, updateUiDriveNodes]);
+        checkDrivesErrors(drives ?? [], t).catch(console.error);
+    }, [drives, t, checkDrivesErrors]);
 };

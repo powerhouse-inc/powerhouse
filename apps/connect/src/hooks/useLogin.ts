@@ -1,6 +1,6 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
-import { reactorAtom, useUser } from '#store';
-import { atomStore } from '@powerhousedao/common';
+import { useUser } from '#store';
+import { useUnwrappedReactor } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -17,6 +17,7 @@ export const useLogin = () => {
     const user = useUser();
     const renown = useRenown();
     const { did, getBearerToken } = useConnectCrypto();
+    const reactor = useUnwrappedReactor();
 
     const openRenown = useCallback(async () => {
         const connectId = await did();
@@ -56,14 +57,9 @@ export const useLogin = () => {
                 if (newUser) {
                     setStatus('authorized');
 
-                    atomStore
-                        .get(reactorAtom)
-                        .then(reactor => {
-                            reactor.setGenerateJwtHandler(async driveUrl =>
-                                getBearerToken(driveUrl, newUser.address),
-                            );
-                        })
-                        .catch(err => console.error(err));
+                    reactor?.setGenerateJwtHandler(async driveUrl =>
+                        getBearerToken(driveUrl, newUser.address),
+                    );
 
                     return newUser;
                 } else {
@@ -74,7 +70,7 @@ export const useLogin = () => {
                 logger.error(error);
             }
         },
-        [renown],
+        [renown, reactor, getBearerToken],
     );
 
     useEffect(() => {
@@ -86,13 +82,8 @@ export const useLogin = () => {
     const logout = useCallback(async () => {
         setStatus('initial');
         await renown?.logout();
-        atomStore
-            .get(reactorAtom)
-            .then(reactor => {
-                reactor.removeJwtHandler();
-            })
-            .catch(err => console.error(err));
-    }, [renown]);
+        reactor?.removeJwtHandler();
+    }, [renown, reactor]);
 
     return useMemo(
         () =>

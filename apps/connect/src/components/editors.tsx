@@ -5,8 +5,6 @@ import {
     useUserPermissions,
 } from '#hooks';
 import {
-    type FileNodeDocument,
-    isSameDocument,
     themeAtom,
     useGetDocumentModelModule,
     useGetEditor,
@@ -36,28 +34,18 @@ import {
     undo,
 } from 'document-model';
 import { useAtomValue } from 'jotai';
-import {
-    Suspense,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { EditorLoader } from './editor-loader.js';
 import { useModal } from './modal/index.js';
 
-export type EditorProps<TDocument extends PHDocument = PHDocument> = {
-    fileNodeDocument: FileNodeDocument;
-    document: TDocument | undefined;
+type Props<TDocument extends PHDocument = PHDocument> = {
+    document: TDocument;
     onClose: () => void;
     onExport: () => void;
     onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
-    onChange?: (documentId: string, document: TDocument) => void;
-    onGetDocumentRevision?: EditorContext['getDocumentRevision'];
 };
 
 function EditorError({ message }: { message: React.ReactNode }) {
@@ -76,21 +64,17 @@ function FallbackEditorError(props: FallbackProps) {
     return <EditorError message={message} />;
 }
 
-export const DocumentEditor: React.FC<EditorProps> = props => {
+export const DocumentEditor: React.FC<Props> = props => {
     const {
-        fileNodeDocument,
-        document: initialDocument,
+        document,
         onClose,
-        onChange,
         onExport,
         onAddOperation,
-        onGetDocumentRevision,
         onOpenSwitchboardLink,
     } = props;
-    const documentId = fileNodeDocument?.documentId;
+    const documentId = document.header.id;
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
-
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
@@ -98,8 +82,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     const { sign } = useConnectCrypto();
     const getDocumentModelModule = useGetDocumentModelModule();
     const getEditor = useGetEditor();
-
-    const documentType = fileNodeDocument?.documentType;
+    const documentType = document.header.documentType;
     const documentModel = useMemo(
         () => (documentType ? getDocumentModelModule(documentType) : undefined),
         [documentType, getDocumentModelModule],
@@ -110,9 +93,9 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [documentType, getEditor],
     );
 
-    const [document, _dispatch, error] = useDocumentDispatch(
+    const [, _dispatch, error] = useDocumentDispatch(
         documentModel?.reducer,
-        initialDocument,
+        document,
     );
     const context: EditorContext = useMemo(
         () => ({ theme, user }),
@@ -122,30 +105,8 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
 
     const timelineItems = useTimelineItems(
         documentId,
-        initialDocument?.header.createdAtUtcIso,
+        document.header.createdAtUtcIso,
     );
-
-    const currentDocument = useRef({ ...fileNodeDocument, document });
-    useEffect(() => {
-        if (!fileNodeDocument?.documentId || !document) return;
-
-        // if current document ref is undefined or outdated then updates the ref
-        // and doesn't call the onChange callback
-        if (
-            !('documentId' in currentDocument.current) ||
-            currentDocument.current.documentId !== documentId
-        ) {
-            currentDocument.current = { ...fileNodeDocument, document };
-            return;
-        }
-
-        // if the document is different then calls the onChange callback
-        if (!isSameDocument(currentDocument.current.document, document)) {
-            currentDocument.current.document = document;
-            window.documentEditorDebugTools?.setDocument(document);
-            onChange?.(documentId, document);
-        }
-    }, [document, documentId, fileNodeDocument, onChange]);
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
@@ -153,14 +114,14 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                 operation,
                 state,
             ) => {
-                if (!fileNodeDocument?.documentId) return;
+                if (!documentId) return;
 
                 const { prevState } = state;
 
                 signOperation(
                     operation,
                     sign,
-                    fileNodeDocument.documentId,
+                    documentId,
                     prevState,
                     documentModel?.reducer,
                     user,
@@ -185,7 +146,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
             connectDid,
             documentModel?.reducer,
             onAddOperation,
-            fileNodeDocument,
+            documentId,
             sign,
             user,
         ],
@@ -208,19 +169,15 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         dispatch(redo());
     }, [dispatch]);
 
-    const isLoadingDocument =
-        fileNodeDocument?.status === 'LOADING' || !document;
     const isLoadingEditor =
         editor === undefined ||
-        (!!document &&
-            editor &&
+        (editor &&
             !editor.documentTypes.includes(document.header.documentType) &&
             !editor.documentTypes.includes('*'));
 
     const canUndo =
-        !!document &&
-        (document.header.revision.global > 0 ||
-            document.header.revision.local > 0);
+        document.header.revision.global > 0 ||
+        document.header.revision.local > 0;
     const canRedo = !!document?.clipboard.length;
     useUndoRedoShortcuts({
         undo: handleUndo,
@@ -249,13 +206,10 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
     >(undefined);
 
     useEffect(() => {
-        if (
-            editorError &&
-            editorError.documentId !== fileNodeDocument?.documentId
-        ) {
+        if (editorError && editorError.documentId !== documentId) {
             setEditorError(undefined);
         }
-    }, [editorError, fileNodeDocument, document]);
+    }, [editorError, documentId]);
 
     const handleEditorError = useCallback(
         (error: Error, info: React.ErrorInfo) => {
@@ -268,19 +222,8 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         [documentId],
     );
 
-    if (fileNodeDocument?.status === 'ERROR') {
-        return <EditorError message={'Error loading document'} />;
-    }
-
-    if (isLoadingDocument || isLoadingEditor) {
-        const message = isLoadingDocument
-            ? 'Loading document'
-            : 'Loading editor';
-        return <EditorLoader message={message} />;
-    }
-
-    if (!fileNodeDocument) {
-        return null;
+    if (isLoadingEditor) {
+        return <EditorLoader message="Loading editor" />;
     }
 
     if (!documentModel) {
@@ -313,7 +256,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         );
     }
 
-    if (editor === null) {
+    if (!editor) {
         return (
             <EditorError
                 message={
@@ -349,7 +292,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
         documentToolbarEnabled,
         showSwitchboardLink,
         timelineEnabled,
-    } = editor.config || {};
+    } = editor.config;
 
     const handleSwitchboardLinkClick =
         showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
@@ -362,7 +305,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                         onClose={onClose}
                         onExport={onExport}
                         onShowRevisionHistory={showRevisionHistory}
-                        title={fileNodeDocument.name || document.header.name}
+                        title={document.header.name}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
@@ -389,7 +332,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                 <RevisionHistory
                     key={documentId}
                     documentTitle={document.header.name}
-                    documentId={fileNodeDocument.documentId}
+                    documentId={document.header.id}
                     globalOperations={document.operations.global}
                     localOperations={document.operations.local}
                     onClose={hideRevisionHistory}
@@ -407,7 +350,6 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                 error={error}
                                 context={{
                                     ...context,
-                                    getDocumentRevision: onGetDocumentRevision,
                                     readMode: !!selectedTimelineItem,
                                     selectedTimelineRevision:
                                         getRevisionFromDate(
@@ -417,7 +359,7 @@ export const DocumentEditor: React.FC<EditorProps> = props => {
                                         ),
                                 }}
                                 document={document}
-                                documentNodeName={fileNodeDocument.name}
+                                documentNodeName={document.header.name}
                                 dispatch={dispatch}
                                 onClose={onClose}
                                 onExport={onExport}
