@@ -13,14 +13,18 @@ export class CodegenProcessor implements IProcessor {
   async onStrands<TDocument extends DocumentModelDocument>(
     strands: InternalTransmitterUpdate<TDocument>[],
   ): Promise<void> {
-    console.log('>>>> codegenProcessor onStrands:');
-    console.dir(strands, { depth: null });
     for (const strand of strands) {
       const state = strand.state as DocumentModelState;
       const validationResult = validateDocumentModelState(state);
-      console.log('>>>> validationResult', validationResult);
+  
       if (validationResult.isValid) {
-        await generateFromDocument(state, PH_CONFIG)
+        console.log(`🔄 Starting code generation for document model: ${state.name}`);
+        try {
+          await generateFromDocument(state, PH_CONFIG, { verbose: false });
+          console.log(`✅ Code generation completed successfully for: ${state.name}`);
+        } catch (error) {
+          console.error(`❌ Error during code generation for ${state.name}:`, error);
+        }
       }
     }
   }

@@ -22,6 +22,7 @@ export type DevOptions = {
   configFile?: string;
   httpsKeyFile?: string;
   httpsCertFile?: string;
+  verbose?: boolean;
 };
 
 const defaultVetraSwitchboardOptions: Partial<SwitchboardStartServerOptions> = {
@@ -59,11 +60,18 @@ export async function startVetraSwitchboard(
   return switchboard;
 }
 
-async function spawnLocalVetraSwitchboard(options?: ReactorOptions) {
+async function spawnLocalVetraSwitchboard(
+  options?: ReactorOptions & { verbose?: boolean },
+) {
   // Instead of spawning, let's start the switchboard directly
   // and simulate the spawn interface
   try {
-    const { port: rawPort, configFile, ...restOptions } = options || {};
+    const {
+      port: rawPort,
+      configFile,
+      verbose = false,
+      ...restOptions
+    } = options || {};
     const port =
       typeof rawPort === "string"
         ? parseInt(rawPort)
@@ -76,7 +84,12 @@ async function spawnLocalVetraSwitchboard(options?: ReactorOptions) {
       ...restOptions,
     });
 
-    console.log(blue(`[Vetra Switchboard]: Started successfully`));
+    if (verbose) {
+      console.log(blue(`[Vetra Switchboard]: Started successfully`));
+    } else {
+      console.log(`Switchboard initialized`);
+      console.log(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`);
+    }
     return { driveUrl: switchboard.defaultDriveUrl || "" };
   } catch (error) {
     console.error(
@@ -88,15 +101,19 @@ async function spawnLocalVetraSwitchboard(options?: ReactorOptions) {
   }
 }
 
-function spawnLocalReactor(options?: ReactorOptions, remoteDrives?: string) {
-  const reactorOptions = {
-    ...options,
+function spawnLocalReactor(
+  options?: ReactorOptions & { verbose?: boolean },
+  remoteDrives?: string,
+) {
+  const { verbose = false, ...reactorOptions } = options || {};
+  const finalOptions = {
+    ...reactorOptions,
     remoteDrives: remoteDrives || "",
   };
 
   const child = fork(
     path.join(dirname(__dirname), "commands", "reactor.js"),
-    ["spawn", JSON.stringify(reactorOptions)],
+    ["spawn", JSON.stringify(finalOptions)],
     { silent: true },
   ) as ChildProcessWithoutNullStreams;
 
@@ -114,8 +131,20 @@ function spawnLocalReactor(options?: ReactorOptions, remoteDrives?: string) {
     child.stdout.on("data", (data: Buffer) => {
       const message = data.toString();
       const lines = message.split("\n").filter((line) => line.trim().length);
+
       for (const line of lines) {
-        process.stdout.write(cyan(`[Reactor]: ${line}\n`));
+        if (verbose) {
+          process.stdout.write(cyan(`[Reactor]: ${line}\n`));
+        } else {
+          // Only show specific logs when not verbose
+          if (
+            line.includes("🔄 Starting code generation") ||
+            line.includes("✅ Code generation completed") ||
+            line.includes("❌ Error during code generation")
+          ) {
+            process.stdout.write(cyan(`[Codegen]: ${line}\n`));
+          }
+        }
       }
     });
 
@@ -127,18 +156,22 @@ function spawnLocalReactor(options?: ReactorOptions, remoteDrives?: string) {
     });
 
     child.on("exit", (code) => {
-      console.log(`Reactor process exited with code ${code}`);
+      if (verbose) {
+        console.log(`Reactor process exited with code ${code}`);
+      }
     });
   });
 }
 
 async function spawnConnect(
-  options?: ConnectStudioOptions,
+  options?: ConnectStudioOptions & { verbose?: boolean },
   localReactorUrl?: string,
 ) {
+  const { verbose = false, ...connectOptions } = options || {};
+
   const child = fork(
     path.join(dirname(__dirname), "commands", "connect.js"),
-    ["spawn", JSON.stringify(options ?? {})],
+    ["spawn", JSON.stringify(connectOptions)],
     {
       silent: true,
       env: {
@@ -149,17 +182,42 @@ async function spawnConnect(
   ) as ChildProcessWithoutNullStreams;
 
   return new Promise<void>((resolve) => {
+    let connectInitialized = false;
+
     child.stdout.on("data", (data: Buffer) => {
-      resolve();
-      process.stdout.write(green(`[Connect]: ${data.toString()}`));
+      const message = data.toString();
+      const lines = message.split("\n").filter((line) => line.trim().length);
+
+      if (!connectInitialized) {
+        resolve();
+        connectInitialized = true;
+        if (!verbose) {
+          console.log(green(`[Connect]: Connect initialized`));
+        }
+      }
+
+      for (const line of lines) {
+        if (verbose) {
+          process.stdout.write(green(`[Connect]: ${line}\n`));
+        } else {
+          // Only show Local and Network URLs when not verbose
+          if (line.includes("➜  Local:") || line.includes("➜  Network:")) {
+            process.stdout.write(green(`[Connect]: ${line}\n`));
+          }
+        }
+      }
     });
 
     child.stderr.on("data", (data: Buffer) => {
-      process.stderr.write(red(`[Connect]: ${data.toString()}`));
+      if (verbose) {
+        process.stderr.write(red(`[Connect]: ${data.toString()}`));
+      }
     });
 
     child.on("close", (code) => {
-      console.log(`Connect process exited with code ${code}`);
+      if (verbose) {
+        console.log(`Connect process exited with code ${code}`);
+      }
     });
   });
 }
@@ -171,22 +229,28 @@ export async function startVetra({
   reactorPort = DefaultReactorOptions.port + 1,
   disableDefaultDrive = true,
   configFile,
+  verbose = false,
 }: DevOptions) {
   try {
     const baseConfig = getConfig(configFile);
     const https = baseConfig.reactor?.https;
 
     // Start Vetra Switchboard
-    console.log("Starting Vetra Switchboard...");
+    if (verbose) {
+      console.log("Starting Vetra Switchboard...");
+    }
     const { driveUrl } = await spawnLocalVetraSwitchboard({
       generate,
       port: switchboardPort,
       watch,
       https,
       configFile,
+      verbose,
     });
 
-    console.log("Starting Codegen Reactor...");
+    if (verbose) {
+      console.log("Starting Codegen Reactor...");
+    }
     await spawnLocalReactor(
       {
         generate,
@@ -196,14 +260,17 @@ export async function startVetra({
         disableDefaultDrive,
         configFile,
         processors: ["ph/codegen/processor"],
+        verbose,
       },
       driveUrl, // Pass the vetra drive URL as remote drive
     );
 
     // Start Connect pointing directly to the Vetra Drive
-    console.log("Starting Connect...");
-    console.log(`   ➜ Connect will use vetra drive: ${driveUrl}`);
-    await spawnConnect({ configFile }, driveUrl);
+    if (verbose) {
+      console.log("Starting Connect...");
+      console.log(`   ➜ Connect will use vetra drive: ${driveUrl}`);
+    }
+    await spawnConnect({ configFile, verbose }, driveUrl);
   } catch (error) {
     console.error(error);
   }

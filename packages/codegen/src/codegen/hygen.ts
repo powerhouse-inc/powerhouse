@@ -12,13 +12,16 @@ const require = createRequire(import.meta.url);
 
 const __dirname =
   import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
-const logger = new Logger(console.log.bind(console));
 const defaultTemplates = path.join(__dirname, ".hygen", "templates");
 
 export async function run(
   args: string[],
-  { watch = false, skipFormat = false } = {},
+  { watch = false, skipFormat = false, verbose = true } = {},
 ) {
+  // Create logger that respects verbose setting
+  const logFunction = verbose ? console.log.bind(console) : () => {};
+  const logger = new Logger(logFunction);
+
   const result = await runner(args, {
     templates: defaultTemplates,
     cwd: process.cwd(),
@@ -44,7 +47,9 @@ export async function run(
           ".",
           process.cwd(),
         )}`.catch((err: unknown) => {
-          console.log(err);
+          if (verbose) {
+            console.log(err);
+          }
         });
       });
   }
@@ -54,7 +59,7 @@ export async function run(
 
 export async function generateAll(
   dir: string,
-  { watch = false, skipFormat = false } = {},
+  { watch = false, skipFormat = false, verbose = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   for (const directory of files.filter((f) => f.isDirectory())) {
@@ -69,9 +74,15 @@ export async function generateAll(
 
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
-      await generateDocumentModel(documentModel, dir, { watch, skipFormat });
+      await generateDocumentModel(documentModel, dir, {
+        watch,
+        skipFormat,
+        verbose,
+      });
     } catch (error) {
-      console.error(directory.name, error);
+      if (verbose) {
+        console.error(directory.name, error);
+      }
     }
   }
 }
@@ -79,7 +90,7 @@ export async function generateAll(
 export async function generateDocumentModel(
   documentModelState: DocumentModelState,
   dir: string,
-  { watch = false, skipFormat = false } = {},
+  { watch = false, skipFormat = false, verbose = true } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -91,7 +102,7 @@ export async function generateDocumentModel(
       "--root-dir",
       dir,
     ],
-    { watch, skipFormat },
+    { watch, skipFormat, verbose },
   );
 
   const latestSpec =
@@ -112,7 +123,7 @@ export async function generateDocumentModel(
         "--module",
         module.name,
       ],
-      { watch, skipFormat },
+      { watch, skipFormat, verbose },
     );
   }
 }
@@ -123,7 +134,7 @@ export async function generateEditor(
   documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
-  { skipFormat = false } = {},
+  { skipFormat = false, verbose = true } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -141,7 +152,7 @@ export async function generateEditor(
       "--document-models-dir",
       documentModelsDir,
     ],
-    { skipFormat },
+    { skipFormat, verbose },
   );
 }
 
@@ -152,7 +163,7 @@ export async function generateProcessor(
   outDir: string,
   documentModelsDir: string,
   type: "analytics" | "relationalDb",
-  { skipFormat = false } = {},
+  { skipFormat = false, verbose = true } = {},
 ) {
   // Generate the singular files for the document model logic
   const processorType = type === "relationalDb" ? "relationalDb" : "analytics";
@@ -173,7 +184,7 @@ export async function generateProcessor(
       "--document-models-dir",
       documentModelsDir,
     ],
-    { skipFormat },
+    { skipFormat, verbose },
   );
 }
 
@@ -181,7 +192,7 @@ export async function generateSubgraph(
   name: string,
   documentModel: DocumentModelState | null,
   dir: string,
-  { skipFormat = false } = {},
+  { skipFormat = false, verbose = true } = {},
 ) {
   const params = [
     "powerhouse",
@@ -199,7 +210,7 @@ export async function generateSubgraph(
   }
 
   // Generate the singular files for the document model logic
-  await run(params, { skipFormat });
+  await run(params, { skipFormat, verbose });
 
   if (documentModel) {
     // Generate the GraphQL mutation schemas
@@ -214,7 +225,7 @@ export async function generateSubgraph(
         "--root-dir",
         dir,
       ],
-      { skipFormat },
+      { skipFormat, verbose },
     );
   }
 }
@@ -222,7 +233,7 @@ export async function generateSubgraph(
 export async function generateImportScript(
   name: string,
   dir: string,
-  { skipFormat = false } = {},
+  { skipFormat = false, verbose = true } = {},
 ) {
   // Generate the singular files for the document model logic
   await run(
@@ -236,7 +247,7 @@ export async function generateImportScript(
       "--root-dir",
       dir,
     ],
-    { skipFormat },
+    { skipFormat, verbose },
   );
 }
 

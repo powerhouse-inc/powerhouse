@@ -3,7 +3,7 @@ import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {
   type DocumentModelModule,
-  type DocumentModelState
+  type DocumentModelState,
 } from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
@@ -18,7 +18,12 @@ import {
   generateDocumentModel,
 } from "./hygen.js";
 import { loadDocumentModel } from "./utils.js";
+
 export { generateDBSchema } from "./kysely.js";
+
+export type CodegenOptions = {
+  verbose?: boolean;
+};
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
   const spec =
@@ -46,11 +51,6 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
   ];
   return schemas.join("\n\n");
 }
-
-export type DocumentTypesMap = Record<
-  string,
-  { name: string; importPath: string }
->;
 
 // returns map of document model id to document model name in pascal case and import path
 async function getDocumentTypesMap(
@@ -123,13 +123,16 @@ export async function generate(config: PowerhouseConfig) {
  * @param documentModel - The DocumentModelState containing the document model specification
  * @param config - The PowerhouseConfig configuration object
  * @param filePath - Optional file path for generateSubgraph (null if not from file)
+ * @param options - Optional configuration for generation behavior
  * @returns A promise that resolves when code generation is complete
  */
 async function generateFromDocumentModel(
   documentModel: DocumentModelState,
   config: PowerhouseConfig,
   filePath?: string | null,
+  options: CodegenOptions = {},
 ) {
+  const { verbose = false } = options;
   const name = paramCase(documentModel.name);
 
   // create document model folder and spec as json
@@ -152,17 +155,27 @@ async function generateFromDocumentModel(
     );
   }
 
-  await generateSchema(name, config.documentModelsDir, config);
-  await generateDocumentModel(documentModel, config.documentModelsDir, config);
-  await generateSubgraph(name, filePath || null, config);
+  await generateSchema(name, config.documentModelsDir, {
+    skipFormat: config.skipFormat,
+    verbose,
+  });
+  await generateDocumentModel(documentModel, config.documentModelsDir, {
+    skipFormat: config.skipFormat,
+    verbose,
+  });
+  await generateSubgraph(name, filePath || null, config, { verbose });
 }
 
-export async function generateFromFile(path: string, config: PowerhouseConfig) {
+export async function generateFromFile(
+  path: string,
+  config: PowerhouseConfig,
+  options: CodegenOptions = {},
+) {
   // load document model spec from file
   const documentModel = await loadDocumentModel(path);
 
   // delegate to shared generation function
-  await generateFromDocumentModel(documentModel, config, path);
+  await generateFromDocumentModel(documentModel, config, path, options);
 }
 
 /**
@@ -175,14 +188,16 @@ export async function generateFromFile(path: string, config: PowerhouseConfig) {
  *
  * @param documentModelDocument - The DocumentModelDocument object containing the document model
  * @param config - The PowerhouseConfig configuration object
+ * @param options - Optional configuration for generation behavior (verbose logging, etc.)
  * @returns A promise that resolves when code generation is complete
  */
 export async function generateFromDocument(
   documentModelState: DocumentModelState,
   config: PowerhouseConfig,
+  options: CodegenOptions = {},
 ) {
   // delegate to shared generation function
-  await generateFromDocumentModel(documentModelState, config, null);
+  await generateFromDocumentModel(documentModelState, config, null, options);
 }
 
 export async function generateEditor(
@@ -218,12 +233,13 @@ export async function generateSubgraph(
   name: string,
   file: string | null,
   config: PowerhouseConfig,
+  options: { verbose?: boolean } = {},
 ) {
   return _generateSubgraph(
     name,
     file !== null ? await loadDocumentModel(file) : null,
     config.subgraphsDir,
-    config,
+    { skipFormat: config.skipFormat, verbose: options.verbose },
   );
 }
 
@@ -254,18 +270,25 @@ export async function generateProcessor(
   );
 }
 
-export async function generateImportScript(
-  name: string,
-  config: PowerhouseConfig,
-) {
-  return _generateImportScript(name, config.importScriptsDir, config);
-}
+export type DocumentTypesMap = Record<
+  string,
+  { name: string; importPath: string }
+>;
 
 export async function generateDriveEditor(
   name: string,
   config: PowerhouseConfig,
 ) {
   return _generateDriveEditor(name, config.editorsDir, {
+    skipFormat: config.skipFormat,
+  });
+}
+
+export async function generateImportScript(
+  name: string,
+  config: PowerhouseConfig,
+) {
+  return _generateImportScript(name, config.importScriptsDir, {
     skipFormat: config.skipFormat,
   });
 }

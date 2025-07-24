@@ -84,7 +84,7 @@ export function schemaConfig(
 export const generateSchema = (
   model: string,
   inDir: string,
-  { watch = false, skipFormat = false, outDir = inDir } = {},
+  { watch = false, skipFormat = false, outDir = inDir, verbose = true } = {},
 ) => {
   const documentModelConfig = schemaConfig(model, inDir, outDir);
 
@@ -92,11 +92,12 @@ export const generateSchema = (
     overwrite: true,
     generates: documentModelConfig,
     watch,
+    silent: !verbose,
     hooks: {
       beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
-  return generate(config, true);
+  return generate(config, !verbose);
 };
 
 export const generateSchemas = (
