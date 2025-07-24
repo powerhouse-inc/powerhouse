@@ -23,9 +23,13 @@ export function vetraCommand(program: Command) {
     .option("--generate", "generate code when document model is updated")
     .option(
       "--switchboard-port <port>",
-      "port to use for the Vetra switchboard",
+      "port to use for the Vetra switchboard (default: 4001)",
     )
-    .option("--reactor-port <port>", "port to use for the local reactor")
+    .option(
+      "--reactor-port <port>",
+      "port to use for the local reactor (default: 4002)",
+    )
+    .option("--connect-port <port>", "port to use for Connect (default: 3000)")
     .option(
       "--disable-default-drive",
       "disable automatic creation of the default 'powerhouse' drive in the reactor",
@@ -39,6 +43,10 @@ export function vetraCommand(program: Command) {
     .option(
       "-w, --watch",
       "if the switchboard and reactor should watch for local changes to document models and processors",
+    )
+    .option(
+      "--remote-drive <url>",
+      "URL of remote drive to connect to (skips switchboard initialization)",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting

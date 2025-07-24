@@ -5,7 +5,6 @@ import {
   logger,
   ReactorBuilder,
   type DefaultRemoteDriveInput,
-  type DocumentDriveServerOptions,
 } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
@@ -104,18 +103,6 @@ const startServer = async (
     .withCache(cache)
     .withStorage(createStorage(storage, cache));
 
-  // Configure remote drives if provided
-  if (remoteDrives.length > 0) {
-    const processedRemoteDrives = remoteDrives.map(normalizeRemoteDriveInput);
-    const serverOptions: DocumentDriveServerOptions = {
-      defaultDrives: {
-        loadOnInit: true,
-        remoteDrives: processedRemoteDrives,
-      },
-    };
-    reactorBuilder.withOptions(serverOptions);
-  }
-
   const driveServer = reactorBuilder.build();
 
   // init drive server + conditionally add a default drive
@@ -126,8 +113,6 @@ const startServer = async (
 
   // create loader
   const packageLoader = vite ? new VitePackageLoader(vite) : undefined;
-
-  console.log(">>>> processors", options?.processors);
 
   const processors = options?.processors?.reduce(
     (acc, processor) => {
@@ -151,6 +136,22 @@ const startServer = async (
   // add vite middleware after express app is initialized if applicable
   if (vite) {
     api.app.use(vite.middlewares);
+  }
+
+  // Add remote drives after full initialization (including PackageManager)
+  if (remoteDrives.length > 0) {
+    const processedRemoteDrives = remoteDrives.map(normalizeRemoteDriveInput);
+
+    for (const remoteDrive of processedRemoteDrives) {
+      try {
+        await driveServer.addRemoteDrive(remoteDrive.url, remoteDrive.options);
+      } catch (error) {
+        logger.error(
+          `  ➜  Failed to connect to remote drive ${remoteDrive.url}:`,
+          error,
+        );
+      }
+    }
   }
 
   if (driveUrl) {
