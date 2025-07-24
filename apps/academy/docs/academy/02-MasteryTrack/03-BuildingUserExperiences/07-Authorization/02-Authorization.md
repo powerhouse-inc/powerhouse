@@ -1,10 +1,10 @@
-# Switchboard authorization
+# Reactor API Authorization
 
-This tutorial explains how to configure authorization for the Powerhouse Switchboard using the new role-based authentication system.
+This tutorial explains how to configure authorization for the Powerhouse Reactor API using the new role-based authentication system.
 
 ## Basic configuration
 
-The Switchboard supports two main ways to configure authorization:
+The Reactor API supports two main ways to configure authorization:
 
 1. Using environment variables
 2. Using the powerhouse configuration file
@@ -33,13 +33,11 @@ Alternatively, you can configure authorization in your `powerhouse.config.json`:
 
 ```json
 {
-  "switchboard": {
-    "auth": {
-      "enabled": true,
-      "guests": ["0x789", "0xabc"],
-      "users": ["0xdef", "0xghi"],
-      "admins": ["0x123", "0x456"]
-    }
+  "auth": {
+    "enabled": true,
+    "guests": ["0x789", "0xabc"],
+    "users": ["0xdef", "0xghi"],
+    "admins": ["0x123", "0x456"]
   }
 }
 ```
@@ -65,14 +63,14 @@ The new authorization system implements role-based access control with three dis
 
 ## Docker configuration
 
-When running the Switchboard in Docker, you can pass these configurations as environment variables:
+When running the Reactor API in Docker, you can pass these configurations as environment variables:
 
 ```bash
 docker run -e AUTH_ENABLED=true \
            -e GUESTS="0x789,0xabc" \
            -e USERS="0xdef,0xghi" \
            -e ADMINS="0x123,0x456" \
-           your-switchboard-image
+           your-Reactor API-image
 ```
 
 ## Authorization flow
@@ -95,6 +93,6 @@ If you encounter authorization issues:
 
 1. Check that AUTH_ENABLED is set appropriately
 2. Verify wallet addresses are correctly formatted in their respective roles
-3. Check the Switchboard logs for detailed error messages
+3. Check the Reactor API logs for detailed error messages
 4. Verify that your database and Redis connections are working
 5. Confirm that users are assigned to the correct roles
