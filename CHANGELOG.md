@@ -1,3 +1,13 @@
+## 3.3.0-dev.18 (2025-07-24)
+
+### 🩹 Fixes
+
+- **document-drive:** fix regression when adding multiple operations ([3a8617e79](https://github.com/powerhouse-inc/powerhouse/commit/3a8617e79))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 3.3.0-dev.17 (2025-07-23)
 
 ### 🩹 Fixes

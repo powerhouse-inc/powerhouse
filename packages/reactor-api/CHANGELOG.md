@@ -1,3 +1,7 @@
+## 3.3.0-dev.18 (2025-07-24)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 3.3.0-dev.17 (2025-07-23)
 
 ### 🩹 Fixes
