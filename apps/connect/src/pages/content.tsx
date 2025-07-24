@@ -31,10 +31,6 @@ export default function Content() {
     const selectedFolder = useUnwrappedSelectedFolder();
     const selectedDocument = useUnwrappedSelectedDocument();
 
-    console.log('selectedDrive', selectedDrive);
-    console.log('selectedFolder', selectedFolder);
-    console.log('selectedDocument', selectedDocument);
-
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
             if (!selectedDrive?.header.id || !selectedDocument?.header.id) {

@@ -60,7 +60,7 @@ export const useUnwrappedDocumentModelModules = () =>
     useAtomValue(unwrappedDocumentModelsAtom);
 
 function getDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string,
+    documentType: string | undefined,
     documentModels: DocumentModelModule[] | undefined,
 ) {
     return documentModels?.find(d => d.documentModel.id === documentType) as
@@ -80,7 +80,7 @@ export function useDocumentModelModule<TDocument extends PHDocument>(
 
 export const useGetDocumentModelModule = <TDocument extends PHDocument>() => {
     const documentModelModules = useUnwrappedDocumentModelModules();
-    return (documentType: string) =>
+    return (documentType: string | undefined) =>
         getDocumentModelModule<TDocument>(documentType, documentModelModules);
 };
 

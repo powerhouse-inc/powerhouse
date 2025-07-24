@@ -47,14 +47,7 @@ export function createDriveStory(
       (Story, context) => (
         <DriveContextProvider
           value={{
-            documents: [],
-            selectedDrive: context.args.document,
-            selectedFolder: undefined,
-            selectedDocument: context.args.document,
-            parentFolder: undefined,
             analyticsDatabaseName: "test",
-            setSelectedNode: () => {},
-            setSelectedDrive: () => {},
             onAddFile: () => Promise.resolve(),
             onAddFolder: () => Promise.resolve(undefined),
             onRenameNode: () => Promise.resolve(undefined),
@@ -66,7 +59,6 @@ export function createDriveStory(
             showDeleteNodeModal: () => {},
             getDocumentModelModule: () => undefined,
             getEditor: () => undefined,
-            reactor: {} as unknown as IDocumentDriveServer,
             useDocumentEditorProps: () => ({
               dispatch: () => {},
               document: context.args.document,

@@ -1,8 +1,6 @@
 import {
-  type DocumentDriveDocument,
   type FileNode,
   type FolderNode,
-  type IDocumentDriveServer,
   type Node,
   type SyncStatus,
 } from "document-drive";
@@ -24,38 +22,16 @@ import { type User } from "../renown/types.js";
  * for managing document drive functionality.
  */
 export type IDriveContext = {
-  /** Reactor instance */
-  reactor: IDocumentDriveServer | undefined;
-  /** Currently selected drive */
-  selectedDrive: DocumentDriveDocument | null | undefined;
-  /** Currently selected folder */
-  selectedFolder: FolderNode | null | undefined;
-  /** Currently selected document */
-  selectedDocument: PHDocument | null | undefined;
-  /** Selected document parent folder */
-  parentFolder: FolderNode | null | undefined;
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
   /** Indicates whether the current user has permissions to create new documents */
   isAllowedToCreateDocuments: boolean;
-  /** Documents for the selected drive */
-  documents: PHDocument[];
   /** Array of available document models that can be created */
   documentModels: DocumentModelModule[];
   /**
    * The name of the analytics database to use for the drive editor
    */
   analyticsDatabaseName: string;
-  /**
-   * Callback to update the selected node (document or folder) in the drive
-   * @param id - The id of the node to be selected
-   */
-  setSelectedNode: (id: string | undefined) => void;
-  /**
-   * Callback to update the selected drive in the drive
-   * @param id - The id of the drive to be selected
-   */
-  setSelectedDrive: (id: string | undefined) => void;
   /**
    * Callback to add a new file to the drive
    * @param file - The file to be added
@@ -163,19 +139,21 @@ export type IDriveContext = {
    * @returns The document model module for the given document type, or undefined if not found
    */
   getDocumentModelModule: (
-    documentType: string,
+    documentType: string | undefined,
   ) => DocumentModelModule<PHDocument> | undefined;
   /**
    * Retrieves the editor module for a given document type
    * @param documentType - The type of document to retrieve the editor for
    * @returns The editor module for the given document type, or null if not found
    */
-  getEditor: (documentType: string) => EditorModule | null | undefined;
+  getEditor: (
+    documentType: string | undefined,
+  ) => EditorModule | null | undefined;
   useDocumentEditorProps: (props: {
-    driveId: string;
-    documentId: string;
-    documentType: string;
-    documentModelModule: DocumentModelModule<PHDocument>;
+    driveId: string | undefined;
+    documentId: string | undefined;
+    documentType: string | undefined;
+    documentModelModule: DocumentModelModule<PHDocument> | undefined;
     user?: User;
   }) => {
     dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;

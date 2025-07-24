@@ -11,14 +11,14 @@ import {
   drivesAtom,
   loadableDrivesAtom,
   loadableSelectedDriveAtom,
-  selectedDriveAtom,
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
 import { useUnwrappedDocuments } from "./documents.js";
+import { dispatchSetDriveEvent } from "./events.js";
 import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable, type SharingType } from "./types.js";
-import { makeDriveUrlComponent, NOT_SET } from "./utils.js";
+import { NOT_SET } from "./utils.js";
 
 /** Returns a loadable of the drives for a reactor. */
 export function useDrives(): Loadable<DocumentDriveDocument[]> {
@@ -114,40 +114,21 @@ export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
   return useAtomValue(unwrappedSelectedDriveAtom);
 }
 
+/** Returns the selected drive id. */
+export function useSelectedDriveId(): string | undefined {
+  const selectedDrive = useUnwrappedSelectedDrive();
+  return selectedDrive?.header.id;
+}
+
 /** Returns a function that sets the selected drive with a drive id.
  *
  * If `shouldNavigate` is true, the URL will be updated to the new drive.
  * `shouldNavigate` can be overridden by passing a different value to the callback.
  */
-export function useSetSelectedDrive(shouldNavigate = true) {
-  const reactor = useUnwrappedReactor();
-  const setSelectedDrive = useSetAtom(selectedDriveAtom);
-
-  return useCallback(
-    (driveId: string | undefined, _shouldNavigate = shouldNavigate) => {
-      // Set the selected drive.
-      setSelectedDrive(driveId).catch((error: unknown) => logger.error(error));
-
-      if (!reactor) return;
-
-      reactor
-        .getDrives()
-        .then(async (driveIds) => {
-          const drives = await Promise.all(
-            driveIds.map((id) => reactor.getDrive(id)),
-          );
-          const drive = drives.find((d) => d.header.id === driveId);
-          const newPathname = makeDriveUrlComponent(drive);
-          // Update the URL if `shouldNavigate` is true.
-
-          if (typeof window !== "undefined" && _shouldNavigate) {
-            window.history.pushState(null, "", newPathname);
-          }
-        })
-        .catch((error: unknown) => logger.error(error));
-    },
-    [reactor, setSelectedDrive],
-  );
+export function useSetSelectedDrive() {
+  return useCallback((driveId: string | undefined) => {
+    dispatchSetDriveEvent(driveId);
+  }, []);
 }
 
 /** Returns the documents for a drive id. */

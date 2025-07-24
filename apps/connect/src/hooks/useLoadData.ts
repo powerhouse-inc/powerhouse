@@ -5,11 +5,11 @@ import {
     useCreateFirstLocalDrive,
 } from '#store';
 import {
-    useInitializeDocuments,
-    useInitializeDrives,
     useInitializeProcessorManager,
     useInitializeReactor,
+    useSetSelectedDriveAndNodeFromUrl,
     useSubscribeToReactorEvents,
+    useSubscribeToWindowEvents,
 } from '@powerhousedao/state';
 import { useAtomValue } from 'jotai';
 import { useRenown } from './useRenown';
@@ -20,8 +20,8 @@ export function useLoadData() {
     const renown = useRenown();
     useInitializeReactor(() => createReactor(storage, documentModels, renown));
     useSubscribeToReactorEvents();
-    useInitializeDrives();
-    useInitializeDocuments();
+    useSubscribeToWindowEvents();
     useInitializeProcessorManager();
     useCreateFirstLocalDrive();
+    useSetSelectedDriveAndNodeFromUrl(true);
 }

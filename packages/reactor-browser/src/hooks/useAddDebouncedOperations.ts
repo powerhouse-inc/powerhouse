@@ -45,8 +45,8 @@ function debounceOperations(
 }
 
 export type UseAddDebouncedOperationsProps = {
-  driveId: string;
-  documentId: string;
+  driveId: string | undefined;
+  documentId: string | undefined;
 };
 
 export function useAddDebouncedOperations(
@@ -68,13 +68,25 @@ export function useAddDebouncedOperations(
   }, [documentDrives]);
 
   const addOperations = useCallback(
-    async (driveId: string, id: string, operations: Operation[]) => {
+    async (
+      driveId: string | undefined,
+      id: string | undefined,
+      operations: Operation[],
+    ) => {
       if (!isAllowedToEditDocuments) {
         throw new Error("User is not allowed to edit documents");
       }
 
       if (!reactor) {
         throw new Error("Reactor is not loaded");
+      }
+
+      if (!driveId) {
+        throw new Error("Drive id  is not set");
+      }
+
+      if (!id) {
+        throw new Error("Document id is not set");
       }
 
       const drive = documentDrivesRef.current.find(

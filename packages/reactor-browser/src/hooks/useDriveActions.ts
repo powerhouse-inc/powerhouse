@@ -37,9 +37,6 @@ export interface IDriveActions {
   /** The drive context provided by the host application */
   context: IDriveContext;
 
-  /** Selects a node in the drive */
-  setSelectedNode: (id: string | undefined) => void;
-
   /**
    * Creates a new folder in the drive
    * @param name - Name of the folder
@@ -236,7 +233,6 @@ function createDriveActions(
 
   return {
     context,
-    setSelectedNode: context.setSelectedNode,
     addFolder: handleAddFolder,
     addFile,
     addDocument,

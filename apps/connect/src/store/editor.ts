@@ -79,10 +79,11 @@ export const useEditorsAsync = () => {
 };
 
 const getEditor = (
-    documentType: string,
+    documentType: string | undefined,
     editors: EditorModule[],
     preferredEditorId?: string,
 ) => {
+    if (!documentType) return null;
     const preferredEditor = editors.find(
         e =>
             e.config.id === preferredEditorId &&
@@ -110,7 +111,7 @@ export const useGetEditor = () => {
     const editors = useUnwrappedEditors();
     const [defaultDocumentModelEditor] = useDefaultDocumentModelEditor();
 
-    return (documentType: string) =>
+    return (documentType: string | undefined) =>
         editors
             ? getEditor(documentType, editors, defaultDocumentModelEditor.value)
             : undefined;

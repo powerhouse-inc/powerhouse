@@ -1,15 +1,21 @@
 import { childLogger } from "document-drive";
 import { useSetAtom } from "jotai";
 import { useEffect } from "react";
-import { setSelectedNodeAtom } from "./atoms.js";
+import { selectedDriveAtom, setSelectedNodeAtom } from "./atoms.js";
 import { useRefreshDocuments } from "./documents.js";
 import {
   useRefreshDrives,
-  useSetSelectedDrive,
+  useSelectedDriveId,
+  useSetDrives,
   useUnwrappedSelectedDrive,
 } from "./drives.js";
+import {
+  handleSetDriveEvent,
+  handleSetNodeEvent,
+  type SetDriveEvent,
+  type SetNodeEvent,
+} from "./events.js";
 import { type Reactor } from "./types.js";
-import { setSelectedDriveAndNodeFromUrl } from "./utils.js";
 
 const logger = childLogger(["state", "reactor"]);
 
@@ -28,12 +34,8 @@ export function useUnwrappedReactor() {
  */
 export function useInitializeReactor(
   createReactor: () => Promise<Reactor> | Reactor | undefined,
-  shouldNavigate = true,
 ) {
-  const selectedDrive = useUnwrappedSelectedDrive();
-  const setSelectedDrive = useSetSelectedDrive();
-  const setSelectedNode = useSetAtom(setSelectedNodeAtom);
-
+  const setDrives = useSetDrives();
   useEffect(() => {
     // If the reactor is already initialized, do nothing.
     if (window.reactor) return;
@@ -42,24 +44,38 @@ export function useInitializeReactor(
       // Create the reactor instance.
       const reactor = await createReactor();
       window.reactor = reactor;
-
-      // Set the selected drive and node from the URL if `shouldNavigate` is true.
-      const driveId = await setSelectedDriveAndNodeFromUrl(
-        reactor,
-        setSelectedDrive,
-        setSelectedNode,
-        shouldNavigate,
+      // Initialize the drives.
+      if (!reactor) return;
+      const driveIds = await reactor.getDrives();
+      const drives = await Promise.all(
+        driveIds.map((driveId) => reactor.getDrive(driveId)),
       );
+      setDrives(drives);
     }
-
     initializeReactor().catch(logger.error);
-  }, [
-    shouldNavigate,
-    selectedDrive,
-    createReactor,
-    setSelectedDrive,
-    setSelectedNode,
-  ]);
+  }, [createReactor]);
+}
+
+export function useSubscribeToWindowEvents() {
+  const selectedDriveId = useSelectedDriveId();
+  const setSelectedDrive = useSetAtom(selectedDriveAtom);
+  const setSelectedNode = useSetAtom(setSelectedNodeAtom);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleSetDrive = (event: SetDriveEvent) => {
+      handleSetDriveEvent(event, setSelectedDrive);
+    };
+    const handleSetNode = (event: SetNodeEvent) => {
+      handleSetNodeEvent(event, selectedDriveId, setSelectedNode);
+    };
+    window.addEventListener("ph:setDrive", handleSetDrive);
+    window.addEventListener("ph:setNode", handleSetNode);
+    return () => {
+      window.removeEventListener("ph:setDrive", handleSetDrive);
+      window.removeEventListener("ph:setNode", handleSetNode);
+    };
+  }, [selectedDriveId, setSelectedDrive, setSelectedNode]);
 }
 
 export function useSubscribeToReactorEvents() {
@@ -71,65 +87,71 @@ export function useSubscribeToReactorEvents() {
 
   useEffect(() => {
     if (!reactor) return;
-    reactor.on("syncStatus", (event, status, error) => {
-      console.log("syncStatus", event, status, error);
-      logger.verbose("syncStatus", event, status, error);
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("strandUpdate", () => {
-      console.log("strandUpdate");
-      logger.verbose("strandUpdate");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("defaultRemoteDrive", () => {
-      console.log("defaultRemoteDrive");
-      logger.verbose("defaultRemoteDrive");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("clientStrandsError", () => {
-      console.log("clientStrandsError");
-      logger.verbose("clientStrandsError");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("driveAdded", () => {
-      console.log("driveAdded");
-      logger.verbose("driveAdded");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("driveDeleted", () => {
-      console.log("driveDeleted");
-      logger.verbose("driveDeleted");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("documentModelModules", () => {
-      console.log("documentModelModules");
-      logger.verbose("documentModelModules");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("documentOperationsAdded", () => {
-      console.log("documentOperationsAdded");
-      logger.verbose("documentOperationsAdded");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("driveOperationsAdded", () => {
-      console.log("driveOperationsAdded");
-      logger.verbose("driveOperationsAdded");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
-    reactor.on("operationsAdded", () => {
-      console.log("operationsAdded");
-      logger.verbose("operationsAdded");
-      refreshDrives(reactor);
-      refreshDocuments(reactor, driveId);
-    });
+    const unsubs = [
+      reactor.on("syncStatus", (...args) => {
+        console.log("syncStatus", ...args);
+        logger.verbose("syncStatus", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("strandUpdate", (...args) => {
+        console.log("strandUpdate", ...args);
+        logger.verbose("strandUpdate", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("defaultRemoteDrive", (...args) => {
+        console.log("defaultRemoteDrive", ...args);
+        logger.verbose("defaultRemoteDrive", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("clientStrandsError", (...args) => {
+        console.log("clientStrandsError", ...args);
+        logger.verbose("clientStrandsError", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("driveAdded", (...args) => {
+        console.log("driveAdded", ...args);
+        logger.verbose("driveAdded", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("driveDeleted", (...args) => {
+        console.log("driveDeleted", ...args);
+        logger.verbose("driveDeleted", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("documentModelModules", (...args) => {
+        console.log("documentModelModules", ...args);
+        logger.verbose("documentModelModules", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("documentOperationsAdded", (...args) => {
+        console.log("documentOperationsAdded", ...args);
+        logger.verbose("documentOperationsAdded", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("driveOperationsAdded", (...args) => {
+        console.log("driveOperationsAdded", ...args);
+        logger.verbose("driveOperationsAdded", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+      reactor.on("operationsAdded", (...args) => {
+        console.log("operationsAdded", ...args);
+        logger.verbose("operationsAdded", ...args);
+        refreshDrives(reactor);
+        refreshDocuments(reactor, driveId);
+      }),
+    ];
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
   }, [driveId, refreshDrives, refreshDocuments, reactor]);
 }

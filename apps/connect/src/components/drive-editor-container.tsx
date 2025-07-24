@@ -16,14 +16,8 @@ import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
-    useDocumentsForSelectedDrive,
-    useParentFolder,
-    useSetSelectedDrive,
-    useSetSelectedNode,
-    useUnwrappedReactor,
     useUnwrappedSelectedDocument,
     useUnwrappedSelectedDrive,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import {
     type DocumentDriveAction,
@@ -47,18 +41,12 @@ function DriveEditorError({ error }: FallbackProps) {
 export function DriveEditorContainer() {
     const { addDriveOperations, getSyncStatusSync } = useDocumentDriveServer();
     const selectedDrive = useUnwrappedSelectedDrive();
-    const selectedFolder = useUnwrappedSelectedFolder();
     const selectedDocument = useUnwrappedSelectedDocument();
-    const documents = useDocumentsForSelectedDrive();
-    const setSelectedNode = useSetSelectedNode();
-    const setSelectedDrive = useSetSelectedDrive();
     const nodeActions = useNodeActions();
-    const parentFolder = useParentFolder(selectedDocument?.header.id);
     const [, _dispatch, error] = useDocumentDispatch(
         driveDocumentModelModule.reducer,
         selectedDrive,
     );
-    const reactor = useUnwrappedReactor();
     const onAddOperation = useCallback(
         async (operation: Operation) => {
             if (!selectedDrive?.header.id) {
@@ -82,16 +70,11 @@ export function DriveEditorContainer() {
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(
         (documentModel: DocumentModelModule) => {
-            if (!selectedDrive) {
-                throw new Error('No drive node selected');
-            }
-
             showModal('createDocument', {
                 documentModel,
             });
-            return Promise.resolve({ name: 'New Document' }); // TODO fix this
         },
-        [selectedDrive, showModal],
+        [showModal],
     );
     const showDeleteNodeModal = useShowDeleteNodeModal();
     const { addFile, addDocument } = useDocumentDriveServer();
@@ -104,21 +87,13 @@ export function DriveEditorContainer() {
     const driveContext: IDriveContext = useMemo(
         () => ({
             ...nodeActions,
-            reactor,
             showSearchBar,
             isAllowedToCreateDocuments,
-            documents,
             documentModels,
-            selectedDrive,
-            selectedFolder,
-            selectedDocument,
-            parentFolder,
             analyticsDatabaseName,
             getSyncStatusSync,
             getDocumentModelModule,
             getEditor,
-            setSelectedNode,
-            setSelectedDrive,
             addFile,
             showCreateDocumentModal,
             showDeleteNodeModal,
@@ -127,20 +102,13 @@ export function DriveEditorContainer() {
         }),
         [
             nodeActions,
-            reactor,
             isAllowedToCreateDocuments,
             documentModels,
-            selectedDrive,
-            selectedFolder,
-            selectedDocument,
-            parentFolder,
             addFile,
             addDocument,
             getSyncStatusSync,
             getDocumentModelModule,
             getEditor,
-            setSelectedNode,
-            setSelectedDrive,
             showDeleteNodeModal,
             showCreateDocumentModal,
         ],
@@ -161,7 +129,6 @@ export function DriveEditorContainer() {
             key={selectedDrive.header.id}
         >
             <DriveEditorComponent
-                key={selectedDrive.header.id}
                 {...editorProps}
                 context={{
                     ...editorProps.context,

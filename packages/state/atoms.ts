@@ -133,7 +133,7 @@ export const selectedDriveAtom = atom(
     // Updates the baseSelectedDriveIdAtom.
     set(baseSelectedDriveIdAtom, driveId);
     // Resets the selected node id.
-    set(selectedNodeIdAtom, undefined);
+    set(baseSelectedNodeIdAtom, undefined);
     const reactor = window.reactor;
     if (!reactor || !driveId) return;
     const oldDocuments = get(baseDocumentsAtom);
@@ -194,14 +194,14 @@ unwrappedNodesAtom.debugLabel = "unwrappedNodesAtom";
  *
  * When this value changes, the data for the selected node is re-fetched from the nodes atom.
  */
-export const selectedNodeIdAtom = atom<string | undefined>(NOT_SET);
-selectedNodeIdAtom.debugLabel = "selectedNodeIdAtom";
+export const baseSelectedNodeIdAtom = atom<string | undefined>(NOT_SET);
+baseSelectedNodeIdAtom.debugLabel = "baseSelectedNodeIdAtom";
 
 /** Sets the selected node via a node id. */
 export const setSelectedNodeAtom = atom(
   null,
   (_get, set, nodeId: string | undefined) => {
-    set(selectedNodeIdAtom, nodeId);
+    set(baseSelectedNodeIdAtom, nodeId);
   },
 );
 setSelectedNodeAtom.debugLabel = "setSelectedNodeAtom";
@@ -217,7 +217,7 @@ setSelectedNodeAtom.debugLabel = "setSelectedNodeAtom";
  */
 export const selectedFolderAtom = atom(async (get) => {
   const nodes = await get(nodesAtom);
-  const nodeId = get(selectedNodeIdAtom);
+  const nodeId = get(baseSelectedNodeIdAtom);
 
   // Suspends until the nodes are set and the selected node id is set.
   if (nodeId === NOT_SET) return suspendUntilSet<FolderNode>();
@@ -287,13 +287,16 @@ unwrappedDocumentsAtom.debugLabel = "unwrappedDocumentsAtom";
 export const selectedDocumentAtom = atom<Promise<PHDocument | undefined>>(
   async (get) => {
     const documents = get(baseDocumentsAtom);
-    const nodeId = get(selectedNodeIdAtom);
+    const nodeId = get(baseSelectedNodeIdAtom);
 
     // Suspends until the documents are set and the selected node id is set.
     if (nodeId === NOT_SET || documents === NOT_SET)
       return suspendUntilSet<PHDocument>();
 
-    const document = documents?.find(
+    if (!nodeId) return undefined;
+    if (!documents) return undefined;
+
+    const document = documents.find(
       (document) => document.header.id === nodeId,
     );
     return document;
