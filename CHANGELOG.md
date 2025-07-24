@@ -1,3 +1,7 @@
+# 4.0.0 (2025-07-24)
+
+This was a version bump only, there were no code changes.
+
 ## 4.0.0-staging.5 (2025-07-23)
 
 ### 🩹 Fixes
