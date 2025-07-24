@@ -269,16 +269,16 @@ export async function startAPI(
   let guests: string[] = [];
   let authEnabled = false;
 
-  if (options.auth === undefined) {
+  if (options.configFile) {
     const config = getConfig(options.configFile);
-    admins = config.auth?.admins.map((a) => a.toLowerCase()) ?? [];
-    users = config.auth?.users.map((u) => u.toLowerCase()) ?? [];
-    guests = config.auth?.guests.map((g) => g.toLowerCase()) ?? [];
+    admins = config.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
+    users = config.auth?.users?.map((u) => u.toLowerCase()) ?? [];
+    guests = config.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = config.auth?.enabled ?? false;
-  } else {
-    admins = options.auth?.admins.map((a) => a.toLowerCase()) ?? [];
-    users = options.auth?.users.map((u) => u.toLowerCase()) ?? [];
-    guests = options.auth?.guests.map((g) => g.toLowerCase()) ?? [];
+  } else if (options.auth) {
+    admins = options.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
+    users = options.auth?.users?.map((u) => u.toLowerCase()) ?? [];
+    guests = options.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = options.auth?.enabled ?? false;
   }
   const { AUTH_ENABLED, GUESTS, USERS, ADMINS } = process.env;
