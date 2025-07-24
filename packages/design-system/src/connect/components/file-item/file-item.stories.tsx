@@ -30,7 +30,6 @@ export const Default: Story = {
       kind: "file",
       documentType: "mock",
       parentFolder: "1",
-      synchronizationUnits: [{ syncId: "1", branch: "main", scope: "local" }],
     };
     const fileNodes = [...documentTypes, "SOME RANDOM DOCUMENT TYPE"].map(
       (documentType, index) => ({

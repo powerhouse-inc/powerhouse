@@ -8,6 +8,8 @@ import {
   type UpdateNodeInput,
   type CopyNodeInput,
   type MoveNodeInput,
+  LegacyAddFileInput,
+  LegacyAddFileAction,
 } from "../types.js";
 import {
   type AddFileAction,
@@ -19,14 +21,35 @@ import {
   type MoveNodeAction,
 } from "./actions.js";
 
-export const addFile = (input: AddFileInput) =>
-  createAction<AddFileAction>(
+/**
+ * @deprecated Use addFile with {@link AddFileInput} instead. This overload will be removed in the future.
+ */
+export function addFile(input: LegacyAddFileInput): LegacyAddFileAction;
+export function addFile(input: AddFileInput): AddFileAction;
+export function addFile(
+  input: LegacyAddFileInput | AddFileInput,
+): typeof input extends LegacyAddFileInput
+  ? LegacyAddFileAction
+  : AddFileAction {
+  if (input && typeof input === "object" && "synchronizationUnits" in input) {
+    // Legacy overload
+    return createAction<AddFileAction>(
+      "ADD_FILE",
+      { ...input },
+      undefined,
+      undefined,
+      "global",
+    );
+  }
+  // Standard overload
+  return createAction<AddFileAction>(
     "ADD_FILE",
     { ...input },
     undefined,
     z.AddFileInputSchema,
     "global",
   );
+}
 
 export const addFolder = (input: AddFolderInput) =>
   createAction<AddFolderAction>(

@@ -213,14 +213,17 @@ export const validateHeader = async (
  *
  * @returns An unsigned header for a document.
  */
-export const createUnsignedHeader = (): PHDocumentHeader => {
+export const createUnsignedHeader = (
+  id: string = generateUUID(),
+  documentType = "",
+): PHDocumentHeader => {
   return {
-    id: generateUUID(),
+    id,
     sig: {
       publicKey: {},
       nonce: "",
     },
-    documentType: "",
+    documentType,
     createdAtUtcIso: new Date().toISOString(),
     slug: "",
     name: "",

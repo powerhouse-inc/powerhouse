@@ -38,13 +38,12 @@ export type {
 } from "#drive-document-model/gen/types";
 export { module as driveDocumentModelModule } from "#drive-document-model/module";
 export {
-  generateAddNodeAction,
   generateNodesCopy,
   isFileNode,
   isFolderNode,
 } from "#drive-document-model/src/utils";
 export type { IProcessor } from "#processors/types";
-export { BaseQueueManager } from "#queue/base";
+export { EventQueueManager as BaseQueueManager } from "#queue/event";
 export {
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,

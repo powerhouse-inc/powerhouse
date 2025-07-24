@@ -4,7 +4,6 @@ import {
   addFolder,
   copyNode,
   deleteNode,
-  generateAddNodeAction,
   generateNodesCopy,
   isFolderNode,
   moveNode,
@@ -145,18 +144,14 @@ function createDriveActions(
     parentFolder?: string,
     id = generateId(),
   ) => {
-    const action = generateAddNodeAction(
-      drive.state.global,
-      {
-        id,
-        name,
-        parentFolder: parentFolder ?? null,
-        documentType,
-        document,
-      },
-      ["global"],
+    await context.addDocument(
+      driveId,
+      name,
+      documentType,
+      parentFolder,
+      document,
+      id,
     );
-    dispatch(action);
   };
 
   const addFile = async (

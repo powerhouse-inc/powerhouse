@@ -9,6 +9,7 @@ import {
 import { driveDocumentType } from "#drive-document-model/constants";
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
+import { type ListenerRevision } from "#server/types";
 import { pascalCase } from "change-case";
 import { RunAsap } from "./run-asap.js";
 
@@ -73,6 +74,13 @@ export function isNoopUpdate(
 // return true if dateA is before dateB
 export function isBefore(dateA: Date | string, dateB: Date | string) {
   return new Date(dateA) < new Date(dateB);
+}
+
+export function operationsToRevision(
+  operations: Pick<Operation, "index">[] | undefined,
+): ListenerRevision["revision"] {
+  const lastOperation = operations?.at(-1);
+  return lastOperation ? lastOperation.index + 1 : 0;
 }
 
 /**

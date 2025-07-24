@@ -115,21 +115,17 @@ describe("Base reducer", () => {
   });
 
   it("should dispatch trigger action", async () => {
-    expect.assertions(4);
+    expect.assertions(3);
     const document = baseCreateDocument();
 
     const id = generateId();
     const reducer = createReducer((_state, action, dispatch) => {
       if (action.type === "CREATE_DOCUMENT") {
-        // @ts-expect-error TODO add synchronization units to fix type error
         dispatch?.({
           type: "CREATE_CHILD_DOCUMENT",
           input: {
             id,
             documentType: "test",
-            document: baseCreateDocument({
-              state: { global: { value: "test" }, local: {} },
-            }),
           },
         });
       }
@@ -149,9 +145,6 @@ describe("Base reducer", () => {
       // eslint-disable-next-line
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
-      expect(input.document?.initialState.state.global).toStrictEqual({
-        value: "test",
-      });
     });
   });
 

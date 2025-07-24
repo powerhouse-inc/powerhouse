@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { type ErrorStatus } from "./types.js";
+import { type ErrorStatus, type SynchronizationUnitId } from "./types.js";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(
@@ -78,10 +78,10 @@ export class DocumentNotFoundError extends Error {
 }
 
 export class SynchronizationUnitNotFoundError extends Error {
-  syncUnitId: string;
+  syncUnitId: SynchronizationUnitId;
 
-  constructor(message: string, syncUnitId: string) {
-    super(message);
+  constructor(syncUnitId: SynchronizationUnitId) {
+    super(`Sync unit ${JSON.stringify(syncUnitId)} not found`);
     this.syncUnitId = syncUnitId;
   }
 }

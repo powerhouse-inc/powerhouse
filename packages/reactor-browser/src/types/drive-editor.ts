@@ -113,6 +113,7 @@ export type IDriveContext = {
    * @param documentType - Type of document to create
    * @param parentFolder - Optional parent folder of the document
    * @param document - Optional document content
+   * @param id - Optional id for the document
    * @returns Promise resolving to the newly created
    */
   addDocument: (
@@ -121,6 +122,7 @@ export type IDriveContext = {
     documentType: string,
     parentFolder?: string,
     document?: PHDocument,
+    id?: string,
   ) => Promise<FileNode | undefined>;
   /**
    * Shows a modal for creating a new document

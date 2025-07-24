@@ -1,17 +1,8 @@
-import { generateId, type OperationScope } from "document-model";
 import {
-  type AddFileAction,
-  type CopyNodeAction,
-} from "../gen/node/actions.js";
-import { addFile, copyNode } from "../gen/node/creators.js";
-import {
-  type AddFileInput,
   type CopyNodeInput,
-  type DocumentDriveState,
   type FileNode,
   type FolderNode,
   type Node,
-  type SynchronizationUnit,
 } from "../gen/types.js";
 
 export function isFileNode(node: Node): node is FileNode {
@@ -46,7 +37,7 @@ export type GenerateNodesCopySrc = {
   targetParentFolder?: Node["parentFolder"];
 };
 
-export type GenerateNodesCopyIdGenerator = (prevId: Node["id"]) => Node["id"];
+export type GenerateNodesCopyIdGenerator = (nodeToCopy: Node) => Node["id"];
 
 /**
  * Generates a copy of nodes based on the provided source and target information.
@@ -83,12 +74,12 @@ export function generateNodesCopy(
     ids[src.targetParentFolder] = src.targetParentFolder;
   }
 
-  const getNewNodeId = (id: string): string => {
-    let newId = ids[id];
+  const getNewNodeId = (node: Node): string => {
+    let newId = ids[node.id];
 
     if (!newId) {
-      const oldId = id;
-      newId = idGenerator(id);
+      const oldId = node.id;
+      newId = idGenerator(node);
       ids[oldId] = newId;
     }
 
@@ -97,86 +88,12 @@ export function generateNodesCopy(
 
   const copyNodesInput = nodesToCopy.map<CopyNodeInput>((node) => ({
     srcId: node.id,
-    targetId: getNewNodeId(node.id),
+    targetId: getNewNodeId(node),
     targetName: node.name,
-    targetParentFolder: node.parentFolder
-      ? getNewNodeId(node.parentFolder)
-      : null,
-    synchronizationUnits: isFileNode(node)
-      ? node.synchronizationUnits.map((unit) => ({
-          ...unit,
-          syncId: generateSynchronizationUnitId(nodes),
-        }))
-      : undefined,
+    targetParentFolder: node.parentFolder ? ids[node.parentFolder] : null,
   }));
 
   return copyNodesInput;
-}
-
-export function generateSynchronizationUnitId(
-  nodes: DocumentDriveState["nodes"],
-): string {
-  let syncId = "";
-  while (
-    !syncId ||
-    nodes.find(
-      (node) =>
-        isFileNode(node) &&
-        node.synchronizationUnits.find((unit) => unit.syncId === syncId),
-    )
-  ) {
-    syncId = generateId();
-  }
-  return syncId;
-}
-
-export function generateSynchronizationUnits(
-  state: DocumentDriveState,
-  scopes: OperationScope[],
-  branch = "main",
-): SynchronizationUnit[] {
-  return scopes.map((scope) => ({
-    scope,
-    branch,
-    syncId: generateSynchronizationUnitId(state.nodes),
-  }));
-}
-
-export function generateAddNodeAction(
-  state: DocumentDriveState,
-  action: Omit<AddFileInput, "synchronizationUnits">,
-  scopes: OperationScope[],
-): AddFileAction {
-  return addFile({
-    ...action,
-    synchronizationUnits: generateSynchronizationUnits(state, scopes),
-  });
-}
-
-export function generateCopyNodeAction(
-  state: DocumentDriveState,
-  action: Omit<CopyNodeInput, "synchronizationUnits">,
-): CopyNodeAction {
-  const originalNode = state.nodes.find((node) => node.id === action.srcId);
-  if (!originalNode) {
-    throw new Error(`Node with id ${action.srcId} not found`);
-  }
-
-  let synchronizationUnits: SynchronizationUnit[] | undefined = undefined;
-
-  if (isFileNode(originalNode)) {
-    synchronizationUnits = originalNode.synchronizationUnits.map(
-      (syncUnit) => ({
-        ...syncUnit,
-        syncId: generateSynchronizationUnitId(state.nodes),
-      }),
-    ) as SynchronizationUnit[];
-  }
-
-  return copyNode({
-    ...action,
-    synchronizationUnits,
-  });
 }
 
 export function getNextCopyNumber(

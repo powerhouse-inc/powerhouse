@@ -1,15 +1,14 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "noEmit": true
+    "outDir": "./test/dist",
+    "resolveJsonModule": true
   },
   "references": [
     {
-      "path": "../document-model"
-    },
-    {
-      "path": "../codegen"
+      "path": "tsconfig.lib.json"
     }
   ],
-  "include": ["src/**/*", "test/**/*"]
+  "include": ["test", "test/**/*.json", "vitest.config.ts"],
+  "exclude": ["test/flaky/**", "dist", "node_modules", "coverage", "test/dist"]
 }

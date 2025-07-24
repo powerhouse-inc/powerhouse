@@ -5,7 +5,6 @@ import {
     useDriveIsRemote,
     useDriveRemoteUrl,
     useParentFolderId,
-    useRefreshDocuments,
     useSetSelectedNode,
     useUnwrappedSelectedDocument,
     useUnwrappedSelectedDrive,
@@ -36,19 +35,14 @@ export function DocumentEditorContainer() {
 
     const onAddOperation = useCallback(
         async (operation: Operation) => {
-            if (
-                !unwrappedSelectedDrive?.header.id ||
-                !selectedDocument?.header.id
-            ) {
+            if (!selectedDocument?.header.id) {
                 return;
             }
-            await addDocumentOperations(
-                unwrappedSelectedDrive.header.id,
-                selectedDocument.header.id,
-                [operation],
-            );
+            await addDocumentOperations(selectedDocument.header.id, [
+                operation,
+            ]);
         },
-        [addDocumentOperations, selectedDocument, unwrappedSelectedDrive],
+        [addDocumentOperations, selectedDocument],
     );
 
     const onClose = useCallback(() => {

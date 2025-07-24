@@ -7,6 +7,7 @@ import {
   type StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
+import { operationsToRevision } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   type GlobalStateFromDocument,
@@ -30,11 +31,11 @@ export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
 export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
+  documentType: string;
   scope: OperationScope;
   branch: string;
   operations: InternalOperationUpdate<TDocument>[];
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
-  documentType: string;
 };
 
 export class InternalTransmitter implements ITransmitter {
@@ -75,13 +76,12 @@ export class InternalTransmitter implements ITransmitter {
         },
         checkHashes: false,
       };
-      const document = await (strand.documentId
-        ? this.drive.getDocument<TDocument>(
-            strand.driveId,
+      const document = await (strand.documentId === strand.driveId
+        ? this.drive.getDrive(strand.driveId, getDocumentOptions)
+        : this.drive.getDocument<TDocument>(
             strand.documentId,
             getDocumentOptions,
-          )
-        : this.drive.getDrive(strand.driveId, getDocumentOptions));
+          ));
 
       if (index < 0) {
         stateByIndex.set(index, document.initialState.state[strand.scope]);
@@ -119,12 +119,7 @@ export class InternalTransmitter implements ITransmitter {
       const updates = [];
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
-        const document = await (strand.documentId
-          ? this.drive.getDocument<PHDocument>(
-              strand.driveId,
-              strand.documentId,
-            )
-          : this.drive.getDrive(strand.driveId));
+        const document = await this.drive.getDocument(strand.documentId);
         const state = operations.at(-1)?.state ?? {};
         updates.push({
           ...strand,
@@ -136,17 +131,20 @@ export class InternalTransmitter implements ITransmitter {
 
       try {
         await this.processor.onStrands(updates);
-        return strands.map(({ operations, ...s }) => ({
-          ...s,
-          status: "SUCCESS",
-          revision: operations.at(operations.length - 1)?.index ?? -1,
-        }));
+        return strands.map(({ operations, ...s }) => {
+          return {
+            ...s,
+            status: "SUCCESS",
+            revision: operationsToRevision(operations),
+          };
+        });
       } catch (error) {
         logger.error(error);
+        // TODO check which strand caused an error
         return strands.map(({ operations, ...s }) => ({
           ...s,
           status: "ERROR",
-          revision: (operations.at(0)?.index ?? 0) - 1,
+          revision: operations.at(0)?.index ?? 0,
         }));
       }
     };

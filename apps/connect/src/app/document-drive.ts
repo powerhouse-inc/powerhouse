@@ -30,7 +30,7 @@ export default (
     const documentDrive = new ReactorBuilder(documentModels)
         .withStorage(storage)
         .withCache(new InMemoryCache())
-        .withQueueManager(new BaseQueueManager(1, 10))
+        .withQueueManager(new BaseQueueManager())
         .withOptions({ ...getReactorDefaultDrivesConfig() })
         .build();
 
@@ -58,53 +58,31 @@ export default (
     ipcMain.handle('documentDrive:getDocuments', (_e, drive: string) =>
         documentDrive.getDocuments(drive),
     );
-    ipcMain.handle(
-        'documentDrive:getDocument',
-        (_e, drive: string, id: string) => documentDrive.getDocument(drive, id),
+    ipcMain.handle('documentDrive:getDocument', (_e, id: string) =>
+        documentDrive.getDocument(id),
     );
     ipcMain.handle(
         'documentDrive:addOperation',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operation: Operation,
-            forceSync?: boolean,
-        ) => documentDrive.addOperation(drive, id, operation, { forceSync }),
+        (_e, id: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.addOperation(id, operation, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:addOperations',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operations: Operation[],
-            forceSync?: boolean,
-        ) => documentDrive.addOperations(drive, id, operations, { forceSync }),
+        (_e, id: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.addOperations(id, operations, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:queueOperation',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operation: Operation,
-            forceSync?: boolean,
-        ) => documentDrive.queueOperation(drive, id, operation, { forceSync }),
+        (_e, id: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.queueOperation(id, operation, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:queueOperations',
-        (
-            _e,
-            drive: string,
-            id: string,
-            operations: Operation[],
-            forceSync?: boolean,
-        ) =>
-            documentDrive.queueOperations(drive, id, operations, { forceSync }),
+        (_e, id: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.queueOperations(id, operations, { forceSync }),
     );
 
     ipcMain.handle(
@@ -114,7 +92,7 @@ export default (
             drive: string,
             operation: Operation<DocumentDriveAction>,
             forceSync?: boolean,
-        ) => documentDrive.addDriveOperation(drive, operation, { forceSync }),
+        ) => documentDrive.addOperation(drive, operation, { forceSync }),
     );
 
     ipcMain.handle(
@@ -125,7 +103,7 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.addDriveOperations(
+            documentDrive.addOperations(
                 drive,
                 operations as Operation<DocumentDriveAction>[],
                 { forceSync },
@@ -140,7 +118,7 @@ export default (
             operation: Operation<DocumentDriveAction | DocumentAction>,
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(
+            documentDrive.queueOperations(
                 drive,
                 [operation] as Operation<DocumentDriveAction>[],
                 {
@@ -157,7 +135,7 @@ export default (
             operations: Operation<DocumentDriveAction | DocumentAction>[],
             forceSync?: boolean,
         ) =>
-            documentDrive.queueDriveOperations(
+            documentDrive.queueOperations(
                 drive,
                 operations as Operation<DocumentDriveAction>[],
                 {

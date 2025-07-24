@@ -1,16 +1,13 @@
 {
   "extends": "../../tsconfig.options.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-  },
+
   "references": [
     {
-      "path": "../document-model"
+      "path": "tsconfig.lib.json"
     },
     {
-      "path": "../codegen"
+      "path": "tsconfig.test.json"
     }
   ],
-  "include": ["**/*"],
-  "exclude": ["**/flaky/**", "**/*.bench.ts", "dist", "node_modules", ".db"]
+  "include": [],
 }

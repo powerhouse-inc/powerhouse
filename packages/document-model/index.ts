@@ -38,8 +38,8 @@ export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
-export { BaseDocumentClass, applyMixins } from "#document/object.js";
-export type { PHDocumentHeader } from "#document/ph-types.js";
+export { applyMixins, BaseDocumentClass } from "#document/object.js";
+export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,
@@ -80,20 +80,20 @@ export type {
   Operation,
   OperationFromDocument,
   OperationScope,
-  OperationSignatureContext,
   OperationsFromDocument,
+  OperationSignatureContext,
+  PartialState,
   PHDocument,
   PHReducer,
-  PartialState,
   Reducer,
   ReducerOptions,
   SaveToFile,
   SaveToFileHandle,
   Signal,
   SignalDispatch,
+  SignalResult,
   Signature,
   StateReducer,
-  SynchronizationUnitInput,
   User,
   ValidationError,
 } from "#document/types.js";

@@ -49,7 +49,7 @@ describe("Switchboard hooks", () => {
       driveDocumentModelModule.documentModel,
     );
     expect(url).toBe(
-      "https://example.com/graphql/document-drive?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RACgBJsUAhABoiTPAEsAbgg5cAyiklISASiLAAOkiJEqLWhUkyN23brKVqreszljmNdmFFhjszg-cd1Wned0JMDMAoig8BABDFARg-wCAG0iAZxQAWQgwCQAzCViQgKRIxALzCKkJZIkIJFLdVOiEU3jQosQiJEyEZI0iADoBohqiRxsAfQAxCASwfAA5Lt6gjuKmgGsJJDAiAAdIiNQpmfwiAF9+weHR2kmJBIQF2aXttvXN7evUABUCHaa9g4oI6zPBEZIEJBQAAWeBqEgAXtFqkgAKpICQoHrAMEQqAcMFQCB-IgAIzwkUhULO1POEkJtRaulOpWZ-lZpxAwhAUn2EkiJPuyQwID8uk04GstA44q44piqQAtJ8UOLhCFxW5pB4ZURxQBGABMAGZxdoOacgA",
+      "https://example.com/graphql/document-drive?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RACgBJsUAhABoiTPAEsAbgg5cAyiklISASiLAAOkiJEqLWhUkyN23brKVqreszljmNdmFFhjszg-cd1Wned0JMDMAoig8BABDFARg-wCAG0iAZxQAWQgwCQAzCViQgKRIxALzCKkJZIkIJFLdVOiEU3jQosQiJEyEZI0iADoBohqiRxsAfQAxCASwfAA5Lt6gjuKmgGsJJDAiAAdIiNQpmfwiAF9+weHR2kmJBIQF2aXttvXN7evUABUCHaa9g4oI6zPBnMESKA1OpnUqnEJwpCnEDCEBSfYSSIAI3uyQwID8uk04GstA4RK4RJiqQAtJ8UEThCEiW5pB5yUQiQBGABMAGYidokacgA",
     );
   });
 });

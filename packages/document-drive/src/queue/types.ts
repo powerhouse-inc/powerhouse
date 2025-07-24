@@ -1,12 +1,21 @@
 import { type AddOperationOptions, type IOperationResult } from "#server/types";
-import type { Action, Operation } from "document-model";
+import type {
+  Action,
+  Operation,
+  OperationScope,
+  PHDocument,
+} from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
-  driveId: string;
-  documentId?: string;
+  documentId: string;
   actions?: Action[];
   options?: AddOperationOptions;
+}
+
+export interface DocumentJob extends Omit<BaseJob, "actions"> {
+  documentType: string;
+  initialState?: PHDocument;
 }
 
 export interface OperationJob extends BaseJob {
@@ -17,14 +26,16 @@ export interface ActionJob extends BaseJob {
   actions: Action[];
 }
 
-export type Job = OperationJob | ActionJob;
+export type Job = DocumentJob | OperationJob | ActionJob;
 
 export type JobId = string;
 
 export interface QueueEvents {
+  jobAdded: (job: IJob<Job>) => void;
+  jobStarted: (job: IJob<Job>) => void;
   jobCompleted: (job: IJob<Job>, result: IOperationResult) => void;
   jobFailed: (job: IJob<Job>, error: Error) => void;
-  queueRemoved: (queueId: string) => void;
+  queueRemoved: (queue: { documentId: string; scope: OperationScope }) => void;
 }
 
 export interface IServerDelegate {
@@ -34,10 +45,6 @@ export interface IServerDelegate {
 
 export interface IQueueManager {
   addJob: (job: Job) => Promise<JobId>;
-  getQueue: (driveId: string, documentId?: string) => IQueue<Job>;
-  removeQueue: (driveId: string, documentId?: string) => void;
-  getQueueByIndex: (index: number) => IQueue<Job> | null;
-  getQueues: () => string[];
   init: (
     delegate: IServerDelegate,
     onError: (error: Error) => void,
@@ -56,16 +63,21 @@ export interface IQueue<T> {
   getNextJob(): Promise<IJob<T> | undefined>;
   amountOfJobs(): Promise<number>;
   getId(): string;
-  setBlocked(blocked: boolean): Promise<void>;
   isBlocked(): Promise<boolean>;
   isDeleted(): Promise<boolean>;
+  isRunning(): Promise<boolean>;
   setDeleted(deleted: boolean): Promise<void>;
+  setRunning(running: boolean): Promise<void>;
   getJobs(): Promise<IJob<T>[]>;
-  addDependencies: (job: IJob<Job>) => Promise<void>;
-  removeDependencies: (job: IJob<Job>) => Promise<void>;
+  addDependency: (job: IJob<Job>) => Promise<void>;
+  removeDependency: (job: IJob<Job>) => Promise<void>;
 }
 
 export type IJobQueue = IQueue<Job>;
+
+export function isDocumentJob(job: Job): job is DocumentJob {
+  return "documentType" in job;
+}
 
 export function isOperationJob(job: Job): job is OperationJob {
   return "operations" in job;

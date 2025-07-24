@@ -26,9 +26,11 @@ import {
 import { createDocument } from "../../src/drive-document-model/gen/utils.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
-import { BaseDocumentDriveServer } from "../../src/server/base-server.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
-import { IOperationResult } from "../../src/server/types.js";
+import {
+  IDocumentDriveServer,
+  IOperationResult,
+} from "../../src/server/types.js";
 import { DriveBasicClient } from "../utils.js";
 
 function sortNodes(nodes: Node[]) {
@@ -75,7 +77,7 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       await prisma.$executeRawUnsafe('DELETE FROM "DriveDocument";');
       await prisma.$executeRawUnsafe('DELETE FROM "Drive";');
 
-      return new PrismaStorage(prisma, new InMemoryCache());
+      return new PrismaStorage(prisma as any, new InMemoryCache());
     },
   ],
   /*[
@@ -94,13 +96,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       driveDocumentModelModule,
     ] as DocumentModelModule[];
 
-    let server: BaseDocumentDriveServer;
+    let server: IDocumentDriveServer;
     beforeEach(async () => {
       const storage = await buildStorage();
 
       server = new ReactorBuilder(documentModels)
         .withStorage(storage as unknown as IDriveOperationStorage)
-        .build() as unknown as BaseDocumentDriveServer;
+        .build();
       await server.initialize();
     });
 

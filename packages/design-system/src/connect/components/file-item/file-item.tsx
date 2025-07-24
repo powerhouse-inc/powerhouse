@@ -52,10 +52,7 @@ export function FileItem(props: FileItemProps) {
   const { dragProps } = useDrag({ node: fileNode });
 
   const isReadMode = mode === READ;
-  const syncStatus = getSyncStatusSync(
-    fileNode.synchronizationUnits[0].syncId,
-    sharingType,
-  );
+  const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
   const dropdownMenuHandlers = {
     [DUPLICATE]: () => onDuplicateNode(fileNode),

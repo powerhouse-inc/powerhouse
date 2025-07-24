@@ -1,16 +1,17 @@
 import {
-  type DocumentDriveAction,
   type IDocumentDriveServer,
   type ListenerRevision,
   type PullResponderTransmitter,
   type StrandUpdate,
 } from "document-drive";
+import { operationsToRevision } from "document-drive/utils/misc";
 import { type Operation, type OperationScope } from "document-model";
 
 // define types
 export type InternalStrandUpdate = {
   operations: Operation[];
   documentId: string;
+  documentType: string;
   driveId: string;
   scope: OperationScope;
   branch: string;
@@ -21,40 +22,77 @@ export const processPushUpdate = async (
   reactor: IDocumentDriveServer,
   strand: InternalStrandUpdate,
 ): Promise<ListenerRevision> => {
-  const result = await (strand.documentId !== undefined
-    ? reactor.queueOperations(
-        strand.driveId,
-        strand.documentId,
-        strand.operations,
-      )
-    : reactor.queueDriveOperations(
-        strand.driveId,
-        strand.operations as Operation<DocumentDriveAction>[],
-      ));
+  const existingDocuments = strand.driveId
+    ? await reactor.getDocuments(strand.driveId)
+    : [];
+  const isNewDocument = !existingDocuments.includes(strand.documentId);
 
-  const scopeOperations = result.document?.operations[strand.scope] ?? [];
-  if (scopeOperations.length === 0) {
-    return {
-      revision: -1,
-      branch: strand.branch,
-      documentId: strand.documentId ?? "",
-      driveId: strand.driveId,
-      scope: strand.scope,
-      status: result.status,
-      error: result.error?.message,
-    };
+  if (isNewDocument) {
+    const result = await processPushNewDocument(reactor, strand);
+    if (result.status !== "SUCCESS" || strand.operations.length === 0) {
+      return result;
+    }
   }
 
-  const revision = scopeOperations.slice().pop()?.index ?? -1;
+  const result = await reactor.queueOperations(
+    strand.documentId,
+    strand.operations,
+  );
+
   return {
-    revision,
+    revision: operationsToRevision(result.operations),
     branch: strand.branch,
-    documentId: strand.documentId ?? "",
+    documentId: strand.documentId,
+    documentType: strand.documentType,
     driveId: strand.driveId,
     scope: strand.scope,
     status: result.status,
-    error: result.error?.message || undefined,
+    error: result.error?.message,
   };
+};
+
+export const processPushNewDocument = async (
+  reactor: IDocumentDriveServer,
+  strand: InternalStrandUpdate,
+): Promise<ListenerRevision> => {
+  const listenerRevision: Omit<ListenerRevision, "status" | "error"> = {
+    revision: 0,
+    branch: strand.branch,
+    documentId: strand.documentId,
+    documentType: strand.documentType,
+    driveId: strand.driveId,
+    scope: strand.scope,
+  };
+
+  try {
+    const result = await reactor.queueDocument({
+      id: strand.documentId,
+      documentType: strand.documentType,
+    });
+
+    return {
+      ...listenerRevision,
+      revision: operationsToRevision(result.operations),
+      status: result.status,
+      error: result.error?.message,
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.constructor.name === "DocumentAlreadyExistsError"
+    ) {
+      return {
+        ...listenerRevision,
+        status: "SUCCESS",
+      };
+    } else {
+      return {
+        ...listenerRevision,
+        status: "ERROR",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
 };
 
 // processes an acknowledge request and returns a boolean

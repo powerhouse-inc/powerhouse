@@ -1585,6 +1585,9 @@ importers:
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.11.0)
+      msw:
+        specifier: ^2.7.3
+        version: 2.10.2(@types/node@22.15.33)(typescript@5.8.3)
       tinybench:
         specifier: ^3.1.1
         version: 3.1.1
@@ -20934,7 +20937,7 @@ snapshots:
 
   '@codesandbox/nodebox@0.1.8':
     dependencies:
-      outvariant: 1.4.0
+      outvariant: 1.4.3
       strict-event-emitter: 0.4.6
 
   '@codesandbox/sandpack-client@2.19.8':
@@ -41999,7 +42002,7 @@ snapshots:
       '@open-draft/deferred-promise': 2.2.0
       dotenv: 16.6.0
       mime-db: 1.54.0
-      outvariant: 1.4.0
+      outvariant: 1.4.3
 
   statuses@1.5.0: {}
 

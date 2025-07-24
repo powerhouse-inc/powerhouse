@@ -26,6 +26,7 @@ import {
     type SyncStatus,
     SynchronizationUnitNotFoundError,
     type Trigger,
+    addFile as baseAddFile,
     addFolder as baseAddFolder,
     addTrigger as baseAddTrigger,
     copyNode as baseCopyNode,
@@ -36,7 +37,6 @@ import {
     childLogger,
     createDriveState,
     documentDriveReducer,
-    generateAddNodeAction,
     generateNodesCopy,
     isFileNode,
     isFolderNode,
@@ -54,6 +54,7 @@ import {
     type Operation,
     type OperationScope,
     type PHDocument,
+    createPresignedHeader,
     generateId,
 } from 'document-model';
 import { useCallback, useMemo } from 'react';
@@ -155,11 +156,11 @@ export function useDocumentDriveServer() {
     const selectedDrive = useUnwrappedSelectedDrive();
 
     const openFile = useCallback(
-        async (drive: string, id: string, options?: GetDocumentOptions) => {
+        async (id: string, options?: GetDocumentOptions) => {
             if (!reactor) {
                 return;
             }
-            const document = await reactor.getDocument(drive, id, options);
+            const document = await reactor.getDocument(id, options);
             return document;
         },
         [reactor],
@@ -202,7 +203,7 @@ export function useDocumentDriveServer() {
             );
 
             try {
-                const result = await reactor.queueDriveOperation(
+                const result = await reactor.queueOperation(
                     driveId,
                     signedOperation,
                 );
@@ -211,7 +212,7 @@ export function useDocumentDriveServer() {
                     logger.error(result.error);
                 }
 
-                return result.document;
+                return result.document as DocumentDriveDocument;
             } catch (error) {
                 logger.error(error);
                 return oldDrive;
@@ -236,7 +237,7 @@ export function useDocumentDriveServer() {
                 operationsToAdd,
             );
 
-            const result = await reactor.queueDriveOperations(
+            const result = await reactor.queueOperations(
                 driveId,
                 dedupedOperations,
             );
@@ -249,21 +250,16 @@ export function useDocumentDriveServer() {
     );
 
     const addDocumentOperations = useCallback(
-        async (
-            driveId: string,
-            documentId: string,
-            operationsToAdd: Operation[],
-        ) => {
+        async (documentId: string, operationsToAdd: Operation[]) => {
             if (!reactor) {
                 return;
             }
-            const document = await reactor.getDocument(driveId, documentId);
+            const document = await reactor.getDocument(documentId);
             const newOperations = deduplicateOperations(
                 document.operations,
                 operationsToAdd,
             );
             const result = await reactor.queueOperations(
-                driveId,
                 documentId,
                 newOperations,
             );
@@ -282,7 +278,12 @@ export function useDocumentDriveServer() {
             documentType: string,
             parentFolder?: string,
             document?: PHDocument,
+            id?: string,
         ) => {
+            if (!reactor) {
+                throw new Error('Reactor is not loaded');
+            }
+
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create documents');
             }
@@ -292,18 +293,31 @@ export function useDocumentDriveServer() {
                 return;
             }
 
-            const documentId = generateId();
-            const action = generateAddNodeAction(
-                oldDrive.state.global,
-                {
-                    id: documentId,
-                    name,
-                    parentFolder: parentFolder ?? null,
-                    documentType,
-                    document,
-                },
-                ['global'],
+            const documentId = id ?? generateId();
+            const documentModelModule = getDocumentModelModule(documentType);
+            if (!documentModelModule) {
+                throw new Error(
+                    `Document model module for type ${documentType} not found`,
+                );
+            }
+
+            const newDocument = documentModelModule.utils.createDocument({
+                ...document,
+            });
+            newDocument.header = createPresignedHeader(
+                documentId,
+                documentType,
             );
+            newDocument.header.name = name;
+
+            await reactor.addDocument(newDocument);
+
+            const action = baseAddFile({
+                id: documentId,
+                name,
+                documentType,
+                parentFolder: parentFolder ?? null,
+            });
 
             const newDrive = await addDriveOperation(driveId, action);
 
@@ -373,10 +387,8 @@ export function useDocumentDriveServer() {
                 driveDocument && driveDocument.state.local.listeners.length > 0;
 
             uploadDocumentOperations(
-                driveId,
                 fileNode.id,
                 document,
-                reactor,
                 addDocumentOperations,
                 { waitForSync },
             ).catch(error => {
@@ -541,7 +553,7 @@ export function useDocumentDriveServer() {
             const copyActions = copyNodesInput.map(copyNodeInput =>
                 baseCopyNode(copyNodeInput),
             );
-            const result = await reactor.addDriveActions(
+            const result = await reactor.addActions(
                 selectedDrive.header.id,
                 copyActions,
             );
@@ -553,7 +565,7 @@ export function useDocumentDriveServer() {
                 );
             }
 
-            return result.document;
+            return result.document as DocumentDriveDocument;
         },
         [isAllowedToCreateDocuments, reactor, selectedDrive],
     );
@@ -655,7 +667,7 @@ export function useDocumentDriveServer() {
 
     const getSyncStatus = useCallback(
         async (
-            syncId: string,
+            documentId: string,
             sharingType: SharingType,
         ): Promise<SyncStatus | undefined> => {
             if (sharingType === LOCAL) return;
@@ -663,7 +675,7 @@ export function useDocumentDriveServer() {
                 return;
             }
             try {
-                const syncStatus = reactor.getSyncStatus(syncId);
+                const syncStatus = reactor.getSyncStatus(documentId);
                 if (syncStatus instanceof SynchronizationUnitNotFoundError)
                     return 'INITIAL_SYNC';
                 return syncStatus;
@@ -676,13 +688,16 @@ export function useDocumentDriveServer() {
     );
 
     const getSyncStatusSync = useCallback(
-        (syncId: string, sharingType: SharingType): SyncStatus | undefined => {
+        (
+            documentId: string,
+            sharingType: SharingType,
+        ): SyncStatus | undefined => {
             if (sharingType === LOCAL) return;
             if (!reactor) {
                 return;
             }
             try {
-                const syncStatus = reactor.getSyncStatus(syncId);
+                const syncStatus = reactor.getSyncStatus(documentId);
                 if (syncStatus instanceof SynchronizationUnitNotFoundError)
                     return 'INITIAL_SYNC';
                 return syncStatus;

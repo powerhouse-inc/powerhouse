@@ -4,8 +4,8 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import {
   baseDocumentsAtom,
-  documentsAtom,
   baseSelectedDriveIdAtom,
+  documentsAtom,
   loadableDocumentsAtom,
   loadableSelectedDocumentAtom,
   unwrappedDocumentsAtom,
@@ -42,7 +42,7 @@ export function useInitializeDocuments() {
 
       const documentIds = await reactor.getDocuments(baseSelectedDriveId);
       const documents = await Promise.all(
-        documentIds.map((id) => reactor.getDocument(baseSelectedDriveId, id)),
+        documentIds.map((id) => reactor.getDocument(id)),
       );
       setDocuments(documents);
     }
@@ -71,7 +71,7 @@ export function useRefreshDocuments() {
         .getDocuments(driveId)
         .then(async (documentIds) => {
           const documents = await Promise.all(
-            documentIds.map((id) => reactor.getDocument(driveId, id)),
+            documentIds.map((id) => reactor.getDocument(id)),
           );
           setDocuments(documents);
         })

@@ -6,7 +6,6 @@
 
 import { DocumentIdValidationError } from "#server/error";
 import { isValidDocumentId } from "#storage/utils";
-import { type PHDocument, type SynchronizationUnitInput } from "document-model";
 import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import { type FileNode } from "../../gen/types.js";
 import {
@@ -32,31 +31,11 @@ export const reducer: DocumentDriveNodeOperations = {
       targetParentFolder: action.input.parentFolder || null,
     });
 
-    const synchronizationUnits = action.input
-      .synchronizationUnits as SynchronizationUnitInput[];
-
-    const invalidSyncUnit: SynchronizationUnitInput | undefined =
-      synchronizationUnits.find(
-        (unit) =>
-          !!state.nodes.find(
-            (node) =>
-              isFileNode(node) &&
-              node.synchronizationUnits.find(
-                (fileUnit) => fileUnit.syncId === unit.syncId,
-              ),
-          ),
-      );
-    if (invalidSyncUnit) {
-      throw new Error(
-        `A synchronization unit with Id ${invalidSyncUnit.syncId} already exists`,
-      );
-    }
     const fileNode: FileNode = {
       id: action.input.id,
       name,
       kind: "file",
       parentFolder: action.input.parentFolder ?? null,
-      synchronizationUnits,
       documentType: action.input.documentType,
     };
     state.nodes.push(fileNode);
@@ -66,8 +45,6 @@ export const reducer: DocumentDriveNodeOperations = {
       input: {
         id: action.input.id,
         documentType: action.input.documentType,
-        synchronizationUnits,
-        document: action.input.document as PHDocument,
       },
     });
   },
@@ -181,46 +158,15 @@ export const reducer: DocumentDriveNodeOperations = {
       parentFolder: action.input.targetParentFolder || null,
     };
 
-    const isFile = isFileNode(newNode);
-
-    if (isFile) {
-      const synchronizationUnits = action.input
-        .synchronizationUnits as SynchronizationUnitInput[];
-
-      if (!action.input.synchronizationUnits) {
-        throw new Error("Synchronization units were not provided");
-      }
-
-      const invalidSyncUnit: SynchronizationUnitInput | undefined =
-        synchronizationUnits.find(
-          (unit) =>
-            !!state.nodes.find(
-              (node) =>
-                isFileNode(node) &&
-                node.synchronizationUnits.find(
-                  (fileUnit) => fileUnit.syncId === unit.syncId,
-                ),
-            ),
-        );
-      if (invalidSyncUnit) {
-        throw new Error(
-          `A synchronization unit with Id ${invalidSyncUnit.syncId} already exists`,
-        );
-      }
-
-      newNode.synchronizationUnits = synchronizationUnits;
-    }
-
     state.nodes.push(newNode);
 
+    const isFile = isFileNode(newNode);
     if (isFile) {
       dispatch?.({
         type: "COPY_CHILD_DOCUMENT",
         input: {
           id: action.input.srcId,
           newId: action.input.targetId,
-          synchronizationUnits:
-            newNode.synchronizationUnits as SynchronizationUnitInput[],
         },
       });
     }

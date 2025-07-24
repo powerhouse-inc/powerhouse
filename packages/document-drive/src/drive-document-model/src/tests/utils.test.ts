@@ -1,11 +1,8 @@
-import { validate } from "uuid";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CopyNodeInput, DocumentDriveState } from "../../gen/types.js";
 
 import {
   generateNodesCopy,
-  generateSynchronizationUnitId,
-  generateSynchronizationUnits,
   getNextCopyNumber,
   handleTargetNameCollisions,
 } from "../utils.js";
@@ -75,7 +72,11 @@ describe("DocumentDrive Utils", () => {
         },
       ];
 
-      const result = generateNodesCopy({ srcId: "1" }, generateId, nodes);
+      const result = generateNodesCopy(
+        { srcId: "1" },
+        (node) => generateId(node.id),
+        nodes,
+      );
 
       expect(result.length).toBe(3);
       expect(result).toEqual(expectedResult);
@@ -105,7 +106,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1", targetName: "New Name" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -125,7 +126,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1.1.1", targetParentFolder: "1.1" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -157,7 +158,7 @@ describe("DocumentDrive Utils", () => {
 
       const result = generateNodesCopy(
         { srcId: "1", targetParentFolder: "2" },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -193,7 +194,7 @@ describe("DocumentDrive Utils", () => {
           targetParentFolder: "2",
           targetName: "New Name",
         },
-        generateId,
+        (node) => generateId(node.id),
         nodes,
       );
 
@@ -203,43 +204,12 @@ describe("DocumentDrive Utils", () => {
 
     it("should throw an error if the src node is not found", () => {
       expect(() =>
-        generateNodesCopy({ srcId: "invalid" }, generateId, nodes),
+        generateNodesCopy(
+          { srcId: "invalid" },
+          (node) => generateId(node.id),
+          nodes,
+        ),
       ).toThrowError(`Node with id invalid not found`);
-    });
-
-    it("should generate uuid sync id", () => {
-      const state: DocumentDriveState = {
-        icon: null,
-        name: "",
-        nodes: [],
-      };
-      const id = generateSynchronizationUnitId(state.nodes);
-      expect(validate(id)).toBe(true);
-    });
-
-    it("should generate a sync unit for each scope", () => {
-      const state: DocumentDriveState = {
-        icon: null,
-        name: "",
-        nodes: [],
-      };
-      const units = generateSynchronizationUnits(state, ["global", "local"]);
-      expect(units).toStrictEqual([
-        {
-          scope: "global",
-          branch: "main",
-          syncId: expect.stringMatching(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-          ) as string,
-        },
-        {
-          scope: "local",
-          branch: "main",
-          syncId: expect.stringMatching(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-          ) as string,
-        },
-      ]);
     });
   });
 });

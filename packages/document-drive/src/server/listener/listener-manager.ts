@@ -1,5 +1,6 @@
 import { OperationError } from "#server/error";
 import { type StrandUpdateSource } from "#server/listener/transmitter/types";
+import { SyncUnitMap } from "#server/sync-unit-map";
 import {
   DefaultListenerManagerOptions,
   type DriveUpdateErrorHandler,
@@ -14,7 +15,8 @@ import {
   type OperationUpdate,
   type StrandUpdate,
   type SynchronizationUnit,
-  type SynchronizationUnitQuery,
+  type SynchronizationUnitId,
+  type SyncronizationUnitState,
 } from "#server/types";
 import { childLogger, type ListenerFilter } from "document-drive";
 import { type OperationScope } from "document-model";
@@ -63,9 +65,11 @@ export class ListenerManager implements IListenerManager {
     // then triggers the listeners update
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
-        this.triggerUpdate(false, { type: "local" }, handler).catch((error) => {
-          this.logger.error("Non handled error updating listeners", error);
-        });
+        this.triggerUpdate(false, { type: "local" }, undefined, handler).catch(
+          (error) => {
+            this.logger.error("Non handled error updating listeners", error);
+          },
+        );
       });
     }
   }
@@ -99,7 +103,7 @@ export class ListenerManager implements IListenerManager {
       pendingTimeout: "0",
       listener,
       listenerStatus: "CREATED",
-      syncUnits: new Map(),
+      syncUnits: new SyncUnitMap<SyncronizationUnitState>(),
     });
 
     await this.triggerUpdate(true, { type: "local" });
@@ -117,36 +121,36 @@ export class ListenerManager implements IListenerManager {
   }
 
   async removeSyncUnits(
-    driveId: string,
-    syncUnits: Pick<SynchronizationUnit, "syncId">[],
+    parentId: string,
+    syncUnits: SynchronizationUnitId[],
   ): Promise<void> {
-    const listeners = this.listenerStateByDriveId.get(driveId);
-    if (!listeners) {
+    const driveMap = this.listenerStateByDriveId.get(parentId);
+    if (!driveMap) {
       return;
     }
-    for (const [, listener] of listeners) {
+
+    // delete sync unit state from listeners
+    for (const [, listener] of driveMap) {
       for (const syncUnit of syncUnits) {
-        listener.syncUnits.delete(syncUnit.syncId);
+        listener.syncUnits.delete(syncUnit);
       }
     }
     return Promise.resolve();
   }
 
   async updateSynchronizationRevisions(
-    driveId: string,
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
     willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync = false,
   ) {
-    const listenerIdToListenerState = this.listenerStateByDriveId.get(driveId);
-    if (!listenerIdToListenerState) {
-      return [];
-    }
-
+    // TODO Do we need to check if listeners are outdated?
+    // This method is called when processing an operation.
+    // Should we decouple the operation processing from the sync?
+    const driveListeners = this.listenerStateByDriveId.values();
     const outdatedListeners: Listener[] = [];
-    for (const [, listenerState] of listenerIdToListenerState) {
+    for (const [[_drive, listenerState]] of driveListeners) {
       if (
         outdatedListeners.find(
           (l) => l.listenerId === listenerState.listener.listenerId,
@@ -161,11 +165,12 @@ export class ListenerManager implements IListenerManager {
       }
 
       for (const syncUnit of syncUnits) {
+        // TODO how to check document type?
         if (!this._checkFilter(listenerState.listener.filter, syncUnit)) {
           continue;
         }
 
-        const listenerRev = listenerState.syncUnits.get(syncUnit.syncId);
+        const listenerRev = listenerState.syncUnits.get(syncUnit);
 
         if (!listenerRev || listenerRev.listenerRev < syncUnit.revision) {
           outdatedListeners.push(listenerState.listener);
@@ -174,17 +179,13 @@ export class ListenerManager implements IListenerManager {
       }
     }
 
-    if (outdatedListeners.length) {
-      willUpdate?.(outdatedListeners);
-      return this.triggerUpdate(forceSync, source, onError);
-    }
-    return [];
+    return this.triggerUpdate(forceSync, source, willUpdate, onError);
   }
 
   async updateListenerRevision(
     listenerId: string,
     driveId: string,
-    syncId: string,
+    syncId: SynchronizationUnitId,
     listenerRev: number,
   ): Promise<void> {
     const drive = this.listenerStateByDriveId.get(driveId);
@@ -198,13 +199,7 @@ export class ListenerManager implements IListenerManager {
     }
 
     const lastUpdated = new Date().toISOString();
-    const entry = listener.syncUnits.get(syncId);
-    if (entry) {
-      entry.listenerRev = listenerRev;
-      entry.lastUpdated = lastUpdated;
-    } else {
-      listener.syncUnits.set(syncId, { listenerRev, lastUpdated });
-    }
+    listener.syncUnits.set(syncId, { listenerRev, lastUpdated });
 
     return Promise.resolve();
   }
@@ -216,6 +211,7 @@ export class ListenerManager implements IListenerManager {
 
   private async _triggerUpdate(
     source: StrandUpdateSource,
+    willUpdate?: (listeners: Listener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     maxContinues = 500,
   ) {
@@ -246,11 +242,11 @@ export class ListenerManager implements IListenerManager {
 
         // TODO change to push one after the other, reusing operation data
         const tasks = syncUnits.map((syncUnit) => async () => {
-          const unitState = listenerState.syncUnits.get(syncUnit.syncId);
+          const unitState = listenerState.syncUnits.get(syncUnit);
 
           if (unitState && unitState.listenerRev >= syncUnit.revision) {
             this.logger.verbose(
-              `Abandoning push for sync unit ${syncUnit.syncId}: already up-to-date (${unitState.listenerRev} >= ${syncUnit.revision})`,
+              `Abandoning push for sync unit ${JSON.stringify(syncUnit)}: already up-to-date (${unitState.listenerRev} >= ${syncUnit.revision})`,
             );
             return;
           } else {
@@ -260,29 +256,31 @@ export class ListenerManager implements IListenerManager {
           }
 
           const opData: OperationUpdate[] = [];
-          try {
-            const data = await this.syncManager.getOperationData(
-              // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
-              driveId,
-              syncUnit.syncId,
-              {
-                fromRevision: unitState?.listenerRev,
-              },
-            );
-            opData.push(...data);
-          } catch (e) {
-            this.logger.error(e);
-          }
+          if (syncUnit.revision > 0) {
+            try {
+              const data = await this.syncManager.getOperationData(
+                // TODO - join queries, DEAL WITH INVALID SYNC ID ERROR
+                syncUnit,
+                {
+                  fromRevision: unitState?.listenerRev,
+                },
+              );
+              opData.push(...data);
+            } catch (e) {
+              this.logger.error(e);
+            }
 
-          if (!opData.length) {
-            this.logger.verbose(
-              `Abandoning push for ${syncUnit.syncId}: no operations found`,
-            );
-            return;
+            if (!opData.length) {
+              this.logger.verbose(
+                `Abandoning push for ${JSON.stringify(syncUnit)}: no operations found`,
+              );
+              return;
+            }
           }
 
           strandUpdates.push({
             driveId,
+            documentType: syncUnit.documentType,
             documentId: syncUnit.documentId,
             branch: syncUnit.branch,
             operations: opData,
@@ -348,7 +346,7 @@ export class ListenerManager implements IListenerManager {
             );
 
             if (syncUnit) {
-              listenerState.syncUnits.set(syncUnit.syncId, {
+              listenerState.syncUnits.set(syncUnit, {
                 lastUpdated,
                 listenerRev: revision.revision,
               });
@@ -363,9 +361,7 @@ export class ListenerManager implements IListenerManager {
               );
 
               if (su && su.operations.length > 0) {
-                const suIndex = su.operations.at(
-                  su.operations.length - 1,
-                )?.index;
+                const suIndex = su.operations.at(-1)?.index;
                 if (suIndex !== revision.revision) {
                   this.logger.verbose(
                     `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
@@ -376,10 +372,6 @@ export class ListenerManager implements IListenerManager {
                     `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
                   );
                 }
-              } else {
-                this.logger.verbose(
-                  `Cannot find strand update for (${revision.documentId}:${revision.scope}:${revision.branch} in drive ${revision.driveId})`,
-                );
               }
               // Check for revision status ^^
             } else {
@@ -412,6 +404,7 @@ export class ListenerManager implements IListenerManager {
           } else {
             const updates = await this._triggerUpdate(
               source,
+              willUpdate,
               onError,
               maxContinues - 1,
             );
@@ -436,8 +429,9 @@ export class ListenerManager implements IListenerManager {
     return listenerUpdates;
   }
 
+  // does not check for documentType filter
   private _checkFilter(filter: ListenerFilter, syncUnit: SynchronizationUnit) {
-    const { branch, documentId, scope, documentType } = syncUnit;
+    const { branch, documentId, scope } = syncUnit;
     // TODO: Needs to be optimized
     if (
       (!filter.branch ||
@@ -448,10 +442,7 @@ export class ListenerManager implements IListenerManager {
         filter.documentId.includes("*")) &&
       (!filter.scope ||
         filter.scope.includes(scope) ||
-        filter.scope.includes("*")) &&
-      (!filter.documentType ||
-        filter.documentType.includes(documentType) ||
-        filter.documentType.includes("*"))
+        filter.scope.includes("*"))
     ) {
       return true;
     }
@@ -465,24 +456,6 @@ export class ListenerManager implements IListenerManager {
     }
     const filter = listener.listener.filter;
     return this.syncManager.getSynchronizationUnits(
-      driveId,
-      filter.documentId ?? ["*"],
-      filter.scope ?? ["*"],
-      filter.branch ?? ["*"],
-      filter.documentType ?? ["*"],
-    );
-  }
-
-  getListenerSyncUnitIds(
-    driveId: string,
-    listenerId: string,
-  ): Promise<SynchronizationUnitQuery[]> {
-    const listener = this.listenerStateByDriveId.get(driveId)?.get(listenerId);
-    if (!listener) {
-      return Promise.resolve([]);
-    }
-    const filter = listener.listener.filter;
-    return this.syncManager.getSynchronizationUnitsIds(
       driveId,
       filter.documentId ?? ["*"],
       filter.scope ?? ["*"],
@@ -552,59 +525,57 @@ export class ListenerManager implements IListenerManager {
         }
         if (syncUnit.revision < 0) {
           this.logger.verbose(
-            `[SYNC DEBUG] Skipping sync unit with negative revision: ${syncUnit.syncId}, revision: ${syncUnit.revision}`,
+            `[SYNC DEBUG] Skipping sync unit with negative revision: ${JSON.stringify(syncUnit)}, revision: ${syncUnit.revision}`,
           );
           return;
         }
-        const entry = listenerState.syncUnits.get(syncUnit.syncId);
+        const entry = listenerState.syncUnits.get(syncUnit);
         if (entry && entry.listenerRev >= syncUnit.revision) {
           this.logger.verbose(
-            `[SYNC DEBUG] Skipping sync unit - listener already up to date: ${syncUnit.syncId}, listenerRev: ${entry.listenerRev}, revision: ${syncUnit.revision}`,
+            `[SYNC DEBUG] Skipping sync unit - listener already up to date: ${JSON.stringify(syncUnit)}, listenerRev: ${entry.listenerRev}, revision: ${syncUnit.revision}`,
           );
           return;
         }
 
         const { documentId, scope, branch } = syncUnit;
+        let operations: OperationUpdate[] = [];
         try {
-          this.logger.verbose(
-            `[SYNC DEBUG] Getting operations for syncUnit: ${syncUnit.syncId}, documentId: ${documentId}, scope: ${scope}, branch: ${branch}`,
-          );
+          if (syncUnit.revision > 0) {
+            this.logger.verbose(
+              `[SYNC DEBUG] Getting operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+            );
 
-          const operations = await this.syncManager.getOperationData(
-            // DEAL WITH INVALID SYNC ID ERROR
-            driveId,
-            syncUnit.syncId,
-            {
-              since: options?.since,
-              fromRevision: options?.fromRevision ?? entry?.listenerRev,
-              limit: limit ? limit - operationsCount : undefined,
-            },
-          );
-
-          this.logger.verbose(
-            `[SYNC DEBUG] Retrieved ${operations.length} operations for syncUnit: ${syncUnit.syncId}`,
-          );
-
-          if (!operations.length) {
-            return;
+            operations = await this.syncManager.getOperationData(
+              // DEAL WITH INVALID SYNC ID ERROR
+              syncUnit,
+              {
+                since: options?.since,
+                fromRevision: options?.fromRevision ?? entry?.listenerRev,
+                limit: limit ? limit - operationsCount : undefined,
+              },
+            );
           }
+          this.logger.verbose(
+            `[SYNC DEBUG] Retrieved ${operations.length} operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+          );
 
           operationsCount += operations.length;
 
           strands.push({
             driveId,
             documentId,
+            documentType: syncUnit.documentType,
             scope: scope as OperationScope,
             branch,
             operations,
           });
 
           this.logger.verbose(
-            `[SYNC DEBUG] Added strand with ${operations.length} operations for syncUnit: ${syncUnit.syncId}`,
+            `[SYNC DEBUG] Added strand with ${operations.length} operations for syncUnit: ${JSON.stringify(syncUnit)}`,
           );
         } catch (error) {
           this.logger.error(
-            `Error getting operations for syncUnit: ${syncUnit.syncId}, error: ${error}`,
+            `Error getting operations for syncUnit: ${JSON.stringify(syncUnit)}, error: ${error}`,
           );
           return;
         }

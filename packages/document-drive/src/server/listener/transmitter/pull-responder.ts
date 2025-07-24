@@ -18,6 +18,7 @@ import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
 import { type GraphQLResult, requestGraphql } from "#utils/graphql";
 import { childLogger, type ILogger } from "#utils/logger";
+import { operationsToRevision } from "#utils/misc";
 import { generateId } from "document-model";
 import { gql } from "graphql-request";
 import {
@@ -171,33 +172,25 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       `processAcknowledge(drive: ${driveId}, listener: ${listenerId})`,
       revisions,
     );
-
-    const syncUnits = await this.manager.getListenerSyncUnitIds(
-      driveId,
-      listenerId,
-    );
     let success = true;
     for (const revision of revisions) {
-      const syncUnit = syncUnits.find(
-        (s) =>
-          s.scope === revision.scope &&
-          s.branch === revision.branch &&
-          s.documentId === revision.documentId,
-      );
-      if (!syncUnit) {
-        this.logger.warn("Unknown sync unit was acknowledged", revision);
+      try {
+        await this.manager.updateListenerRevision(
+          listenerId,
+          driveId,
+          {
+            documentId: revision.documentId,
+            scope: revision.scope,
+            branch: revision.branch,
+          },
+          revision.revision,
+        );
+      } catch (error) {
+        this.logger.warn("Error acknowledging sync unit", error, revision);
         success = false;
         continue;
       }
-
-      await this.manager.updateListenerRevision(
-        listenerId,
-        driveId,
-        syncUnit.syncId,
-        revision.revision,
-      );
     }
-
     return success;
   }
 
@@ -300,6 +293,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
               strands(listenerId: $listenerId) {
                 driveId
                 documentId
+                documentType
                 scope
                 branch
                 operations {
@@ -348,6 +342,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                   strands(listenerId: $listenerId) {
                     driveId
                     documentId
+                    documentType
                     scope
                     branch
                     operations {
@@ -671,8 +666,9 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       listenerRevisions.push({
         branch: strand.branch,
         documentId: strand.documentId || "",
+        documentType: strand.documentType,
         driveId: strand.driveId,
-        revision: operations.pop()?.index ?? -1,
+        revision: operationsToRevision(operations),
         scope: strand.scope,
         status: error
           ? error instanceof OperationError
