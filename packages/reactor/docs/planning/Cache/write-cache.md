@@ -136,6 +136,20 @@ We can use SHA256 (for example, but there are cheaper variants) to reduce the le
 
 Obviously, this creates a CPU-side performance impact from running SHA256. This could be mitigated by creating the hash only on document creation. Additionally, putting the performance impact in CPU worker threads may still be preferable in real-world testing.
 
+### Cursors
+
+There are two types of cursors: one cursor into the `IOperationStore` that allows the `IWriteCache` to understand which operations have been processed, and a set of cursors that listeners have into the `IWriteCache` that allow them to iterate over operations that affect them.
+
+#### Cursor into `IOperationStore`
+
+The cursor into the `IOperationStore` is a simple integer that represents the ordinal of the last operation that was processed. This is used to determine which operations have been processed and which have not. It can easily be generated on startup and updated on commit.
+
+#### Cursors into `IWriteCache`
+
+The `IListenerManager` and `ISyncManager` both have cursors into the `IWriteCache`. The `IListenerManager` has a cursor for each listener, and the `ISyncManager` has a cursor for each registered synchronization channel (currently, pull responders).
+
+These cursors are kept in storage mechanisms specific to the `IListenerManager` and `ISyncManager`.
+
 ### Sharding
 
 TODO
@@ -221,26 +235,3 @@ flowchart LR
   ISyncManager -->|Query| IWriteCache
   IListenerManager -->|Query| IWriteCache
 ```
-
-
-
-
-```ts
-// filters with AND
-type ListenerFilter = {
-  branch: string[];
-  documentId: string[];
-  documentType: string[];
-  scope: string[];
-};
-
-// processors
-(driveId: string) => {
-  processor: IProcessor;
-  filter: ListenerFilter;
-}[];
-
-
-```
-
-Filter `->` Deterministic Function `->` CollectionId
