@@ -192,8 +192,6 @@ describe("DriveSubgraph", () => {
       id: mockDocumentData.header.id,
     });
 
-    expect(mockReactor.getDocuments).toHaveBeenCalledWith(context.driveId);
-
     expect(mockReactor.getDocument).toHaveBeenCalledWith(
       mockDocumentData.header.id,
     );

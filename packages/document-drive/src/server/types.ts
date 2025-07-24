@@ -430,36 +430,90 @@ export interface IBaseDocumentDriveServer {
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use addOperation(documentId, operation, options) instead. This method will be removed in the future.
+   */
+  addOperation(
+    driveId: string,
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   addOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use addOperations(documentId, operations, options) instead. This method will be removed in the future.
+   */
+  addOperations(
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   addOperations(
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use queueOperation(documentId, operation, options) instead. This method will be removed in the future.
+   */
+  queueOperation(
+    driveId: string,
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   queueOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use queueOperations(documentId, operations, options) instead. This method will be removed in the future.
+   */
+  queueOperations(
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   queueOperations(
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use queueAction(documentId, action, options) instead. This method will be removed in the future.
+   */
+  queueAction(
+    driveId: string,
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   queueAction(
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
 
+  /**
+   * @deprecated Use queueActions(documentId, actions, options) instead. This method will be removed in the future.
+   */
+  queueActions(
+    driveId: string,
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   queueActions(
     documentId: string,
     actions: Action[],
@@ -532,6 +586,15 @@ export interface IBaseDocumentDriveServer {
   addAction(
     documentId: string,
     action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  /**
+   * @deprecated Use addActions(documentId, actions, options) instead. This method will be removed in the future.
+   */
+  addActions(
+    driveId: string,
+    documentId: string,
+    actions: Action[],
     options?: AddOperationOptions,
   ): Promise<IOperationResult>;
   addActions(

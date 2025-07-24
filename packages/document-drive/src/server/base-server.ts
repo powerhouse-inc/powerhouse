@@ -1337,11 +1337,41 @@ export class BaseDocumentDriveServer
     };
   }
 
+  /**
+   * @deprecated Use addOperation(documentId, operation, options) instead. This method will be removed in the future.
+   */
+  addOperation(
+    driveId: string,
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   addOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addOperation(
+    driveIdOrDocumentId: string,
+    documentIdOrOperation: string | Operation,
+    operationOrOptions?: Operation | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
   ): Promise<IOperationResult> {
+    let documentId: string;
+    let operation: Operation;
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrOperation === "string") {
+      // Deprecated overload: (driveId, documentId, operation, options)
+      documentId = documentIdOrOperation;
+      operation = operationOrOptions as Operation;
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, operation, options)
+      documentId = driveIdOrDocumentId;
+      operation = documentIdOrOperation;
+      options = operationOrOptions as AddOperationOptions | undefined;
+    }
     return this.addOperations(documentId, [operation], options);
   }
 
@@ -1430,12 +1460,42 @@ export class BaseDocumentDriveServer
     return promise;
   }
 
+  /**
+   * @deprecated Use queueOperation(documentId, operation, options) instead. This method will be removed in the future.
+   */
+  queueOperation(
+    driveId: string,
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   queueOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueOperation(
+    driveIdOrDocumentId: string,
+    documentIdOrOperation: string | Operation,
+    operationOrOptions?: Operation | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueOperations(documentId, [operation], options);
+    let documentId: string;
+    let operation: Operation;
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrOperation === "string") {
+      // Deprecated overload: (driveId, documentId, operation, options)
+      documentId = documentIdOrOperation;
+      operation = operationOrOptions as Operation;
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, operation, options)
+      documentId = driveIdOrDocumentId;
+      operation = documentIdOrOperation;
+      options = operationOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueOperations(documentId, [operation], options);
   }
 
   private async resultIfExistingOperations(
@@ -1475,7 +1535,45 @@ export class BaseDocumentDriveServer
     }
   }
 
-  async queueOperations(
+  /**
+   * @deprecated Use queueOperations(documentId, operations, options) instead. This method will be removed in the future.
+   */
+  queueOperations(
+    driveId: string,
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueOperations(
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueOperations(
+    driveIdOrDocumentId: string,
+    documentIdOrOperations: string | Operation[],
+    operationsOrOptions?: Operation[] | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
+  ): Promise<IOperationResult> {
+    let documentId: string;
+    let operations: Operation[];
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrOperations === "string") {
+      // Deprecated overload: (driveId, documentId, operations, options)
+      documentId = documentIdOrOperations;
+      operations = operationsOrOptions as Operation[];
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, operations, options)
+      documentId = driveIdOrDocumentId;
+      operations = documentIdOrOperations;
+      options = operationsOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueOperations(documentId, operations, options);
+  }
+
+  private async _queueOperations(
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
@@ -1529,15 +1627,83 @@ export class BaseDocumentDriveServer
     return promise;
   }
 
-  async queueAction(
+  /**
+   * @deprecated Use queueAction(documentId, action, options) instead. This method will be removed in the future.
+   */
+  queueAction(
+    driveId: string,
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueAction(
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueAction(
+    driveIdOrDocumentId: string,
+    documentIdOrAction: string | Action,
+    actionOrOptions?: Action | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueActions(documentId, [action], options);
+    let documentId: string;
+    let action: Action;
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrAction === "string") {
+      // Deprecated overload: (driveId, documentId, action, options)
+      documentId = documentIdOrAction;
+      action = actionOrOptions as Action;
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, action, options)
+      documentId = driveIdOrDocumentId;
+      action = documentIdOrAction;
+      options = actionOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueActions(documentId, [action], options);
   }
 
-  async queueActions(
+  /**
+   * @deprecated Use queueActions(documentId, actions, options) instead. This method will be removed in the future.
+   */
+  queueActions(
+    driveId: string,
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueActions(
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  queueActions(
+    driveIdOrDocumentId: string,
+    documentIdOrActions: string | Action[],
+    actionsOrOptions?: Action[] | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
+  ): Promise<IOperationResult> {
+    let documentId: string;
+    let actions: Action[];
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrActions === "string") {
+      // Deprecated overload: (driveId, documentId, actions, options)
+      documentId = documentIdOrActions;
+      actions = actionsOrOptions as Action[];
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, actions, options)
+      documentId = driveIdOrDocumentId;
+      actions = documentIdOrActions;
+      options = actionsOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueActions(documentId, actions, options);
+  }
+
+  private async _queueActions(
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
@@ -1577,6 +1743,9 @@ export class BaseDocumentDriveServer
     }
   }
 
+  /**
+   * @deprecated Use the {@link queueAction} method instead.
+   */
   async queueDriveAction(
     driveId: string,
     action: DocumentDriveAction | Action,
@@ -1585,6 +1754,9 @@ export class BaseDocumentDriveServer
     return this.queueDriveActions(driveId, [action], options);
   }
 
+  /**
+   * @deprecated Use the {@link queueActions} method instead.
+   */
   async queueDriveActions(
     driveId: string,
     actions: (DocumentDriveAction | Action)[],
@@ -1626,12 +1798,42 @@ export class BaseDocumentDriveServer
     }
   }
 
-  async addOperations(
+  /**
+   * @deprecated Use addOperations(documentId, operations, options) instead. This method will be removed in the future.
+   */
+  addOperations(
+    driveId: string,
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addOperations(
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addOperations(
+    driveIdOrDocumentId: string,
+    documentIdOrOperations: string | Operation[],
+    operationsOrOptions?: Operation[] | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueOperations(documentId, operations, options);
+    let documentId: string;
+    let operations: Operation[];
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrOperations === "string") {
+      // Deprecated overload: (driveId, documentId, operations, options)
+      documentId = documentIdOrOperations;
+      operations = operationsOrOptions as Operation[];
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, operations, options)
+      documentId = driveIdOrDocumentId;
+      operations = documentIdOrOperations;
+      options = operationsOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueOperations(documentId, operations, options);
   }
 
   private async processOperations(
@@ -1823,6 +2025,9 @@ export class BaseDocumentDriveServer
     }
   }
 
+  /**
+   * @deprecated Use the {@link addOperation} method instead.
+   */
   addDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
@@ -1859,6 +2064,9 @@ export class BaseDocumentDriveServer
     }
   }
 
+  /**
+   * @deprecated Use the {@link queueOperation} method instead.
+   */
   queueDriveOperation(
     driveId: string,
     operation: Operation<DocumentDriveAction>,
@@ -1900,6 +2108,9 @@ export class BaseDocumentDriveServer
     }
   }
 
+  /**
+   * @deprecated Use the {@link queueOperations} method instead.
+   */
   async queueDriveOperations(
     driveId: string,
     operations: Operation[],
@@ -1947,6 +2158,9 @@ export class BaseDocumentDriveServer
     }
   }
 
+  /**
+   * @deprecated Use the {@link addOperations} method instead.
+   */
   async addDriveOperations(
     driveId: string,
     operations: Operation[],
@@ -2136,6 +2350,9 @@ export class BaseDocumentDriveServer
   /**
    * @deprecated Use addAction(documentId, action, options) instead. This method will be removed in the future.
    */
+  /**
+   * @deprecated Use addAction(documentId, action, options) instead. This method will be removed in the future.
+   */
   addAction(
     driveId: string,
     documentId: string,
@@ -2179,12 +2396,42 @@ export class BaseDocumentDriveServer
     return this.addActions(documentId, [action], options);
   }
 
-  async addActions(
+  /**
+   * @deprecated Use addActions(documentId, actions, options) instead. This method will be removed in the future.
+   */
+  addActions(
+    driveId: string,
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addActions(
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
+  addActions(
+    driveIdOrDocumentId: string,
+    documentIdOrActions: string | Action[],
+    actionsOrOptions?: Action[] | AddOperationOptions,
+    maybeOptions?: AddOperationOptions,
   ): Promise<IOperationResult> {
-    return this.queueActions(documentId, actions, options);
+    let documentId: string;
+    let actions: Action[];
+    let options: AddOperationOptions | undefined;
+
+    if (typeof documentIdOrActions === "string") {
+      // Deprecated overload: (driveId, documentId, actions, options)
+      documentId = documentIdOrActions;
+      actions = actionsOrOptions as Action[];
+      options = maybeOptions;
+    } else {
+      // Standard overload: (documentId, actions, options)
+      documentId = driveIdOrDocumentId;
+      actions = documentIdOrActions;
+      options = actionsOrOptions as AddOperationOptions | undefined;
+    }
+    return this._queueActions(documentId, actions, options);
   }
 
   private async processActions(
@@ -2197,6 +2444,9 @@ export class BaseDocumentDriveServer
     return this.processOperations(documentId, operations, options);
   }
 
+  /**
+   * @deprecated Use the {@link addAction} method instead with a {@link AddFileAction} and call {@link addDocument} if the document needs to be created.
+   */
   /**
    * @deprecated Use the {@link addAction} method instead with a {@link AddFileAction} and call {@link addDocument} if the document needs to be created.
    */
@@ -2268,6 +2518,9 @@ export class BaseDocumentDriveServer
     )) as IOperationResult<DocumentDriveDocument>;
   }
 
+  /**
+   * @deprecated Use the {@link addActions} method instead.
+   */
   async addDriveActions(
     driveId: string,
     actions: (DocumentDriveAction | Action)[],

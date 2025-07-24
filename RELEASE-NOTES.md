@@ -1,22 +1,137 @@
 # Release Changelog
 
-## 🚀 **v4.0.0** 
+## 🚀 **v5.0.0**
 
 ## BREAKING CHANGES
 
- ⚠️ For both the Dspot team & BAI team pull requests have been created that support with the breaking changes ⚠️
+### **New Document Creation Pattern**
+
+**Breaking Change**: Documents are no longer created using `ADD_FILE` operations. Instead, documents now exist independently and are created using the new `addDocument` method.
+
+**Before (v4.x):**
+
+```typescript
+// Old pattern: Documents were created via ADD_FILE operations
+await server.addDriveAction(driveId, {
+  type: "ADD_FILE",
+  input: {
+    id: documentId,
+    name: "My Document",
+    documentType: "my-document-type",
+    document: documentData,
+    synchronizationUnits: [...]
+  }
+});
+```
+
+**After (v5.0):**
+
+```typescript
+// New pattern: Documents exist independently
+await server.addDocument(document, meta);
+// Then optionally add to drive if needed
+await server.addAction(driveId, {
+  type: "ADD_FILE",
+  input: {
+    id: documentId,
+    name: "My Document",
+    documentType: "my-document-type",
+  },
+});
+```
+
+**Key Changes:**
+
+- **`addDocument`** - New method for creating documents
+- `ADD_FILE` operation no longer takes the document state and synchronization units as input
+- Documents can exist without being part of any drive
+- Cleaner separation between document creation and drive organization
+
+**Migration Steps:**
+
+1. Update `ADD_FILE` operations and add `addDocument()` calls
+
+### **IBaseDocumentDriveServer Interface Simplification**
+
+The `IBaseDocumentDriveServer` interface has been simplified to remove the need for passing `driveId` parameters when interacting with documents. This change improves the API by removing redundant parameters and aligning with the new document-centric approach.
+
+#### **Method Signature Changes**
+
+The following methods have had their signatures simplified by removing the `driveId` parameter:
+
+- `addOperation(driveId, documentId, operation, options)` → `addOperation(documentId, operation, options)`
+- `addOperations(driveId, documentId, operations, options)` → `addOperations(documentId, operations, options)`
+- `queueOperation(driveId, documentId, operation, options)` → `queueOperation(documentId, operation, options)`
+- `queueOperations(driveId, documentId, operations, options)` → `queueOperations(documentId, operations, options)`
+- `queueAction(driveId, documentId, action, options)` → `queueAction(documentId, action, options)`
+- `queueActions(driveId, documentId, actions, options)` → `queueActions(documentId, actions, options)`
+- `getDocument(driveId, documentId, options)` → `getDocument(documentId, options)`
+- `addAction(driveId, documentId, action, options)` → `addAction(documentId, action, options)`
+- `addActions(driveId, documentId, actions, options)` → `addActions(documentId, actions, options)`
+
+#### **Migration Guide**
+
+**Before (v4.x):**
+
+```typescript
+// Old method signatures requiring driveId
+await server.addOperation(driveId, documentId, operation, options);
+await server.queueActions(driveId, documentId, actions, options);
+await server.getDocument(driveId, documentId, options);
+```
+
+**After (v5.0):**
+
+```typescript
+// New simplified method signatures
+await server.addOperation(documentId, operation, options);
+await server.queueActions(documentId, actions, options);
+await server.getDocument(documentId, options);
+```
+
+#### **Backward Compatibility**
+
+**Legacy support is maintained** - the old method signatures with `driveId` parameters are still supported but marked as `@deprecated`. They will be removed in a future release.
+
+When using the old signatures, you'll see deprecation warnings guiding you to the new method signatures. This allows for gradual migration without breaking existing code.
+
+**Migration Steps:**
+
+1. Update your code to use the new method signatures without `driveId`
+2. Test your application to ensure all functionality works correctly
+3. Remove any unused `driveId` variables from your codebase
+
+#### **Deprecated Drive-Specific Methods**
+
+The following drive-specific methods are also deprecated in favor of the standard document methods:
+
+- `addDriveOperation` → use `addOperation`
+- `addDriveOperations` → use `addOperations`
+- `queueDriveOperation` → use `queueOperation`
+- `queueDriveOperations` → use `queueOperations`
+- `queueDriveAction` → use `queueAction`
+- `queueDriveActions` → use `queueActions`
+- `addDriveAction` → use `addAction`
+- `addDriveActions` → use `addActions`
+
+## 🚀 **v4.0.0**
+
+## BREAKING CHANGES
+
+⚠️ For both the Dspot team & BAI team pull requests have been created that support with the breaking changes ⚠️
 
 BAI team:[Contributor Billing Pull Request](https://github.com/powerhouse-inc/contributor-billing/pull/3)
 Dspot Team: [Effective-Octo-Adventure](https://github.com/powerhouse-inc/effective-octo-adventure/pull/162)
 
-
 ### **Significant `PHDocument` refactor**
-  - Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
-  - Introducing signed and unsigned documents with Ed25519 keys . See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
+
+- Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
+- Introducing signed and unsigned documents with Ed25519 keys . See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
 
 ### **Processor generator updates**
-  - The analytics processor template now includes a namespace and batch inserts by default.
-  - Analytics factories are now in their own files, allowing for multiple factories to be generated.
+
+- The analytics processor template now includes a namespace and batch inserts by default.
+- Analytics factories are now in their own files, allowing for multiple factories to be generated.
 
 ### Additional Migration Guide has been create to help you navigate the breaking change of other packages
 
@@ -29,54 +144,58 @@ Dspot Team: [Effective-Octo-Adventure](https://github.com/powerhouse-inc/effecti
 
 ✨ **Highlights of this release**
 
-New features for managing, querying, and analyzing information in real-time. 
+New features for managing, querying, and analyzing information in real-time.
 This release focuses on improving data accessibility, enhancing performance, and providing a foundation for advanced analytical insights.
 
 Introducing the **Relational Database & Operational Processor System**, a new architecture designed to enhance data handling, querying, and synchronization across the host-apps.
 
 ### 2. Relational Database & Operational Processor System
+
 **New Operational Processor Architecture with Namespacing**: This introduces a flexible and scalable way to process document operations and transform them into a relational database format. Namespacing ensures conflict avoidance and better organization of data.
 **Database Schema Generation and Migration Support**: The system now automatically generates database schemas and supports migrations, simplifying database management and ensuring data consistency. It leverages Kysely for type-safe query construction.
 **Enhanced Analytics Capabilities with Operational Queries**: By transforming document data into a relational store, we can now perform complex analytical queries that were previously challenging. This enables more robust reporting and data analysis.
 **Processor Factory System and Root Processor Aggregation**: This provides a standardized way to create and manage different types of processors, including those for relational databases, and allows for efficient aggregation of processed data.
 
-✅ **What to try:** 
+✅ **What to try:**
+
 - Experiment with generating a new operational database processor using the `ph generate` command and specify different document types to see how the schema and files are created.
 - Define a custom database schema and implement an `onStrands` method in your processor to index document states into the relational store.
 - Run tests for your new processor, leveraging the in-memory PGlite instance, to validate the stored state with database queries.
 - Generate a GraphQL subgraph to expose your processed data, then try running various GraphQL queries to access and filter your transformed data.
 
 ### 3. Enhanced Analytics & Performance Monitoring
+
 **Drive and Document Analytics Processors**: New processors are in place to specifically handle and prepare data for analytics related to drives and documents, enabling targeted performance monitoring and insights.
 **Real-Time Relational Query**: Leveraging PGlite's live query feature, the system now supports real-time queries. This means that as underlying data changes, the results of these queries are updated instantly without requiring a refresh.
 **Performance Improvements in Connect Apps**: The integration of the new operational database and live query capabilities directly within the Connect UI significantly improves the performance of data retrieval and display, offering a more responsive user experience for applications built on Connect.
 
-✅ **What to try:** 
+✅ **What to try:**
+
 - Observe the real-time data synchronization by making changes to documents in Connect and simultaneously viewing the updates through a GraphQL interface.
 - Implement search functionality within your Connect UI using the `createProcessorQuery` hook to leverage the new database schema for type-safe queries.
 - Create or modify documents in Connect and watch how the changes are immediately reflected in your Connect application's display, demonstrating the live query feature.
 - Explore building more complex analytical queries that span multiple documents, taking advantage of the relational store's capabilities.
 
-
 ### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
 
 #### Documentation & Guides:
-- **New:**  PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns. 
+
+- **New:** PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
 - 🔗 https://staging.powerhouse.academy/academy/APIReferences/PHDocumentMigrationGuide
-- **New:**  Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
+- **New:** Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
 - 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/drive-analytics
-- **New:**  Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
+- **New:** Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
 - 🔗 https://staging.powerhouse.academy/academy/APIReferences/RelationalDatabase
-- **New:**  Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
+- **New:** Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
 - 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
 
-
 #### Enhanced Learning Content:
+
 - **Updated:** GraphQL at Powerhouse - Documentation updates reflecting the new operational processor architecture and relational database integration.
 - **Updated:** Document Model Creation guides - Updated to reflect the new PHDocument structure and processor generation changes.
 - **Updated:** API References - Updated CLI command documentation (automatically generated) reflecting the new ph generate schema command and other v4.0.0 changes.
 
-🔍 See [CHANGELOG.md](./CHANGELOG.md) for the complete technical changelog with all commits and detailed changes. 
+🔍 See [CHANGELOG.md](./CHANGELOG.md) for the complete technical changelog with all commits and detailed changes.
 Thank you 💙 Core-dev Team
 
 ## 🚀 **v3.2.0**
