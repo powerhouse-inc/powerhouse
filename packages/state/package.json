@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build:tsc": "tsc --build",
+    "build": "pnpm run build:tsc",
     "lint": "eslint"
   },
   "main": "./dist/index.js",
