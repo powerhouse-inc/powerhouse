@@ -124,7 +124,7 @@ function HomeScreenContainer() {
                 return (
                     <HomeScreenItem
                         key={drive.header.id}
-                        title={drive.header.name}
+                        title={drive.state.global.name}
                         description={appName || 'Drive Explorer App'}
                         icon={<DriveIcon drive={drive} />}
                         onClick={() => handleDriveClick(drive)}
