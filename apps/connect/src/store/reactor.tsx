@@ -76,18 +76,6 @@ async function initJwtHandler(
     }
 }
 
-export function useCreateReactor() {
-    const storage = useAtomValue(storageAtom);
-    const documentModels = useAtomValue(documentModelsAtom);
-    const renown = useRenown();
-
-    const makeReactorCreator = useCallback(async () => {
-        return await createReactor(storage, documentModels, renown);
-    }, [storage, documentModels, renown]);
-
-    return makeReactorCreator;
-}
-
 export async function createReactor(
     storage: IDriveOperationStorage &
         IDocumentOperationStorage &
