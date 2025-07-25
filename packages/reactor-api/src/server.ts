@@ -10,6 +10,7 @@ import { type IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
+import { getConfig } from "@powerhousedao/config/utils";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
@@ -139,10 +140,11 @@ async function setupGraphQLManager(
   if (auth?.enabled) {
     graphqlManager.setAdditionalContextFields({
       isGuest: (address: string) =>
-        auth.enabled && auth.guests.includes(address),
-      isUser: (address: string) => auth.enabled && auth.users.includes(address),
+        auth.enabled && auth.guests?.includes(address.toLowerCase()),
+      isUser: (address: string) =>
+        auth.enabled && auth.users?.includes(address.toLowerCase()),
       isAdmin: (address: string) =>
-        auth.enabled && auth.admins.includes(address),
+        auth.enabled && auth.admins?.includes(address.toLowerCase()),
     });
   } else {
     graphqlManager.setAdditionalContextFields({
@@ -261,17 +263,46 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-  const admins = options.auth?.admins.map((a) => a.toLowerCase()) ?? [];
-  const users = options.auth?.users.map((u) => u.toLowerCase()) ?? [];
-  const guests = options.auth?.guests.map((g) => g.toLowerCase()) ?? [];
+
+  let admins: string[] = [];
+  let users: string[] = [];
+  let guests: string[] = [];
+  let authEnabled = false;
+
+  if (options.configFile) {
+    const config = getConfig(options.configFile);
+    admins = config.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
+    users = config.auth?.users?.map((u) => u.toLowerCase()) ?? [];
+    guests = config.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
+    authEnabled = config.auth?.enabled ?? false;
+  } else if (options.auth) {
+    admins = options.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
+    users = options.auth?.users?.map((u) => u.toLowerCase()) ?? [];
+    guests = options.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
+    authEnabled = options.auth?.enabled ?? false;
+  }
+  const { AUTH_ENABLED, GUESTS, USERS, ADMINS } = process.env;
+  if (AUTH_ENABLED !== undefined) {
+    authEnabled = AUTH_ENABLED === "true";
+  }
+  if (GUESTS !== undefined) {
+    guests = GUESTS.split(",").map((g) => g.toLowerCase());
+  }
+  if (USERS !== undefined) {
+    users = USERS.split(",").map((u) => u.toLowerCase());
+  }
+  if (ADMINS !== undefined) {
+    admins = ADMINS.split(",").map((a) => a.toLowerCase());
+  }
 
   const all = [...admins, ...users, ...guests];
 
   // add auth middleware if auth is enabled
-  if (options.auth?.enabled) {
+  if (authEnabled) {
     // set admin, users and guest list
+    logger.info("> Setting up Auth middleware");
     app.use(async (req, res, next) => {
-      if (!options.auth || req.method === "OPTIONS" || req.method === "GET") {
+      if (!authEnabled || req.method === "OPTIONS" || req.method === "GET") {
         next();
         return;
       }
@@ -311,16 +342,18 @@ export async function startAPI(
         networkId,
       };
 
+      graphqlManager.setAdditionalContextFields({
+        user: {
+          address: address.toLowerCase(),
+          chainId,
+          networkId,
+        },
+      });
+
       if (!all.includes(req.user.address)) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
-
-      req.user = {
-        address,
-        chainId,
-        networkId,
-      };
 
       next();
     });
@@ -422,7 +455,12 @@ export async function startAPI(
     relationalDb,
     analyticsStore,
     subgraphs,
-    options.auth,
+    {
+      enabled: authEnabled,
+      guests,
+      users,
+      admins,
+    },
   );
 
   // Set up event listeners
