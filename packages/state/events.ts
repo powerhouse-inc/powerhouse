@@ -8,13 +8,6 @@ import {
 export type SetDriveEvent = CustomEvent<{ driveId: string | undefined }>;
 export type SetNodeEvent = CustomEvent<{ nodeId: string | undefined }>;
 
-declare global {
-  interface WindowEventMap {
-    "ph:setDrive": SetDriveEvent;
-    "ph:setNode": SetNodeEvent;
-  }
-}
-
 export function dispatchSetDriveEvent(driveId: string | undefined) {
   const event = new CustomEvent("ph:setDrive", { detail: { driveId } });
   window.dispatchEvent(event);

@@ -4,17 +4,12 @@ import {
   type Node,
 } from "document-drive";
 import { type ProcessorManager } from "document-drive/processors/processor-manager";
-import {
-  type DocumentModelModule,
-  type EditorModule,
-  type PHDocument,
-} from "document-model";
+import { type PHDocument } from "document-model";
 import isEqual from "fast-deep-equal";
 import { atom } from "jotai";
-import { atomWithRefresh, loadable, unwrap } from "jotai/utils";
+import { loadable, unwrap } from "jotai/utils";
 import { isFolderNodeKind } from "./nodes.js";
-import type { PHPackage } from "./ph-packages.js";
-import { type ConnectConfig, type UnsetAtomValue } from "./types.js";
+import { type UnsetAtomValue } from "./types.js";
 import { NOT_SET, suspendUntilSet } from "./utils.js";
 
 /* Processor Manager */
@@ -311,104 +306,3 @@ loadableSelectedDocumentAtom.debugLabel = "loadableSelectedDocumentAtom";
 /** Returns a resolved promise of the selected document. */
 export const unwrappedSelectedDocumentAtom = unwrap(selectedDocumentAtom);
 unwrappedSelectedDocumentAtom.debugLabel = "unwrappedSelectedDocumentAtom";
-
-/* PH Packages */
-
-export const phPackagesAtom = atom<Promise<PHPackage[] | undefined>>(
-  Promise.resolve(undefined),
-);
-phPackagesAtom.debugLabel = "phPackagesAtom";
-export const setPhPackagesAtom = atom(
-  null,
-  (
-    _get,
-    set,
-    phPackages: Promise<PHPackage[] | undefined> | PHPackage[] | undefined,
-  ) => {
-    set(phPackagesAtom, Promise.resolve(phPackages));
-  },
-);
-setPhPackagesAtom.debugLabel = "setPhPackagesAtom";
-export const loadablePhPackagesAtom = loadable(phPackagesAtom);
-loadablePhPackagesAtom.debugLabel = "loadablePhPackagesAtom";
-export const unwrappedPhPackagesAtom = unwrap(phPackagesAtom);
-unwrappedPhPackagesAtom.debugLabel = "unwrappedPhPackagesAtom";
-
-/* Document Model Modules */
-
-export const documentModelModulesAtom = atomWithRefresh(async (get) => {
-  const loadablePhPackages = get(loadablePhPackagesAtom);
-  if (loadablePhPackages.state !== "hasData")
-    return suspendUntilSet<DocumentModelModule[]>();
-  const phPackages = loadablePhPackages.data;
-  return phPackages?.map((p) => p.documentModels).flat();
-});
-documentModelModulesAtom.debugLabel = "documentModelModulesAtom";
-export const loadableDocumentModelModulesAtom = loadable(
-  documentModelModulesAtom,
-);
-loadableDocumentModelModulesAtom.debugLabel =
-  "loadableDocumentModelModulesAtom";
-export const unwrappedDocumentModelModulesAtom = unwrap(
-  documentModelModulesAtom,
-);
-unwrappedDocumentModelModulesAtom.debugLabel =
-  "unwrappedDocumentModelModulesAtom";
-
-/* Editors */
-
-export const editorModulesAtom = atomWithRefresh(async (get) => {
-  const loadablePhPackages = get(loadablePhPackagesAtom);
-  if (loadablePhPackages.state !== "hasData")
-    return suspendUntilSet<EditorModule[]>();
-  const phPackages = loadablePhPackages.data;
-  return phPackages?.map((p) => p.editors).flat();
-});
-editorModulesAtom.debugLabel = "editorModulesAtom";
-
-export const loadableEditorModulesAtom = loadable(editorModulesAtom);
-loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
-export const unwrappedEditorModulesAtom = unwrap(editorModulesAtom);
-unwrappedEditorModulesAtom.debugLabel = "unwrappedEditorModulesAtom";
-
-/* Config */
-
-export const configAtom = atom<ConnectConfig>({
-  appVersion: undefined,
-  studioMode: false,
-  warnOutdatedApp: false,
-  routerBasename: undefined,
-  analyticsDatabaseName: undefined,
-  sentry: {
-    dsn: undefined,
-    env: undefined,
-    tracing: undefined,
-  },
-  content: {
-    showSearchBar: true,
-    showDocumentModelSelectionSetting: true,
-  },
-  drives: {
-    addDriveEnabled: true,
-    sections: {
-      LOCAL: {
-        enabled: true,
-        allowAdd: true,
-        allowDelete: true,
-      },
-      CLOUD: {
-        enabled: true,
-        allowAdd: true,
-        allowDelete: true,
-      },
-      PUBLIC: {
-        enabled: true,
-        allowAdd: true,
-        allowDelete: true,
-      },
-    },
-  },
-  gaTrackingId: undefined,
-  phCliVersion: undefined,
-});
-configAtom.debugLabel = "configAtom";

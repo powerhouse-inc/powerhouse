@@ -6,11 +6,15 @@ import {
 } from "document-drive";
 import { useAtomValue } from "jotai";
 import { useCallback } from "react";
-import { loadableNodesAtom, unwrappedNodesAtom } from "./atoms.js";
+import {
+  loadableNodesAtom,
+  loadableSelectedFolderAtom,
+  unwrappedNodesAtom,
+  unwrappedSelectedFolderAtom,
+} from "./atoms.js";
 import { useUnwrappedSelectedDocument } from "./documents.js";
 import { useUnwrappedDrives, useUnwrappedSelectedDrive } from "./drives.js";
 import { dispatchSetNodeEvent } from "./events.js";
-import { useUnwrappedSelectedFolder } from "./folders.js";
 import { type Loadable, type NodeKind } from "./types.js";
 
 /** Returns a loadable of the nodes for a reactor. */
@@ -84,6 +88,16 @@ export function useNodePath(id: string | null | undefined): Node[] {
   }
 
   return path.reverse();
+}
+
+/** Returns a loadable of the selected folder. */
+export function useSelectedFolder() {
+  return useAtomValue(loadableSelectedFolderAtom);
+}
+
+/** Returns a resolved promise of the selected folder. */
+export function useUnwrappedSelectedFolder(): FolderNode | undefined {
+  return useAtomValue(unwrappedSelectedFolderAtom);
 }
 
 export function useSelectedNodePath() {

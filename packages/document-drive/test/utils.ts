@@ -1,6 +1,6 @@
 import { driveDocumentModelModule } from "#drive-document-model/module";
 import { type BaseDocumentDriveServer } from "#server/base-server";
-import { IDocumentDriveServer } from "#server/types";
+import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
   type ActionFromDocument,

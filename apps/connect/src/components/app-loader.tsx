@@ -2,7 +2,7 @@ import { lazy, StrictMode, Suspense } from 'react';
 import '../i18n';
 
 import { useLoadInitialData, useRenown } from '#hooks';
-import { AtomStoreProvider } from '@powerhousedao/state';
+import { Provider } from 'jotai';
 import { useLoadData } from '../hooks/useLoadData.js';
 import { AppSkeleton } from './app-skeleton.js';
 
@@ -24,7 +24,7 @@ function Load() {
 
 export const AppLoader = (
     <StrictMode>
-        <AtomStoreProvider>
+        <Provider>
             <Suspense fallback={<AppSkeleton />} name="AppLoader">
                 <Load />
                 <App />
@@ -34,6 +34,6 @@ export const AppLoader = (
                     <CookieBanner />
                 </ModalManager>
             </Suspense>
-        </AtomStoreProvider>
+        </Provider>
     </StrictMode>
 );
