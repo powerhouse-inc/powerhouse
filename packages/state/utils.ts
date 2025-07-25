@@ -4,10 +4,10 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import slug from "slug";
 import {
-  baseSelectedDriveIdAtom,
-  baseSelectedNodeIdAtom,
+  driveIdInitializedAtom,
   selectedDriveAtom,
   selectedNodeAtom,
+  selectedNodeIdInitializedAtom,
 } from "./atoms.js";
 import { useUnwrappedReactor } from "./reactor.js";
 import { type Reactor } from "./types.js";
@@ -131,30 +131,27 @@ export function makeNodeSlugFromNodeName(name: string) {
 export function useSetSelectedDriveAndNodeFromUrl() {
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(selectedNodeAtom);
-  const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
-  const baseSelectedNodeId = useAtomValue(baseSelectedNodeIdAtom);
+  const selectedDriveIdInitialized = useAtomValue(driveIdInitializedAtom);
+  const selectedNodeIdInitialized = useAtomValue(selectedNodeIdInitializedAtom);
   const reactor = useUnwrappedReactor();
 
   useEffect(() => {
     async function handle() {
       if (typeof window === "undefined") return;
       if (!reactor) return;
-
-      if (baseSelectedDriveId === NOT_SET) {
-        const path = window.location.pathname;
-        const drive = await handleDriveFromUrl(reactor, path, setSelectedDrive);
-        if (!drive) return;
-        if (baseSelectedNodeId === NOT_SET) {
-          handleNodeFromUrl(drive, path, setSelectedNode);
-        }
-      }
+      if (selectedDriveIdInitialized) return;
+      const path = window.location.pathname;
+      const drive = await handleDriveFromUrl(reactor, path, setSelectedDrive);
+      if (!drive) return;
+      if (selectedNodeIdInitialized) return;
+      handleNodeFromUrl(drive, path, setSelectedNode);
     }
 
     handle().catch(logger.error);
   }, [
     reactor,
-    baseSelectedDriveId,
-    baseSelectedNodeId,
+    selectedDriveIdInitialized,
+    selectedNodeIdInitialized,
     setSelectedDrive,
     setSelectedNode,
   ]);

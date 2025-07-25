@@ -24,10 +24,16 @@ import {
  * Like all base atoms, it is not meant to be accessed or updated directly.
  * Starts off with the sentinel value NOT_SET.
  */
-export const baseProcessorManagerAtom = atom<
+const baseProcessorManagerAtom = atom<
   UnsetAtomValue | ProcessorManager | undefined
 >(NOT_SET);
 baseProcessorManagerAtom.debugLabel = "baseProcessorManagerAtom";
+
+export const processorManagerInitializedAtom = atom((get) => {
+  const processorManager = get(baseProcessorManagerAtom);
+  return processorManager !== NOT_SET;
+});
+processorManagerInitializedAtom.debugLabel = "processorManagerInitializedAtom";
 
 /** Returns the processor manager instance if it is set, a promise of the processor manager if it is loading. */
 export const processorManagerAtom = atom(
@@ -58,10 +64,17 @@ unwrappedProcessorManagerAtom.debugLabel = "unwrappedProcessorManagerAtom";
  * Like all base atoms, it is not meant to be accessed or updated directly.
  * Starts off with the sentinel value NOT_SET.
  */
-export const baseDrivesAtom = atom<
+const baseDrivesAtom = atom<
   UnsetAtomValue | DocumentDriveDocument[] | undefined
 >(NOT_SET);
 baseDrivesAtom.debugLabel = "baseDrivesAtom";
+
+/** Returns a boolean indicating if the drives are initialized. */
+export const drivesInitializedAtom = atom((get) => {
+  const drives = get(baseDrivesAtom);
+  return drives !== NOT_SET;
+});
+drivesInitializedAtom.debugLabel = "drivesInitializedAtom";
 
 /** Returns a promise of the drives for a given reactor.
  *
@@ -100,12 +113,18 @@ unwrappedDrivesAtom.debugLabel = "unwrappedDrivesAtom";
  *
  * When this value changes, the data for the selected drive is re-fetched from the drives atom.
  */
-export const baseSelectedDriveIdAtom = atom<string | undefined>(NOT_SET);
-baseSelectedDriveIdAtom.debugLabel = "baseSelectedDriveIdAtom";
+const selectedDriveIdAtom = atom<string | undefined>(NOT_SET);
+selectedDriveIdAtom.debugLabel = "selectedDriveIdAtom";
+
+export const driveIdInitializedAtom = atom((get) => {
+  const driveId = get(selectedDriveIdAtom);
+  return driveId !== NOT_SET;
+});
+driveIdInitializedAtom.debugLabel = "driveIdInitializedAtom";
 
 /** Returns a promise of the selected drive.
  *
- * Provides a setter which receives a drive id and updates the baseSelectedDriveIdAtom.
+ * Provides a setter which receives a drive id and updates the selectedDriveIdAtom.
  *
  * When changing to a different drive, we also fetch its documents (nodes) and set the documents atom.
  *
@@ -116,17 +135,17 @@ baseSelectedDriveIdAtom.debugLabel = "baseSelectedDriveIdAtom";
  */
 export const selectedDriveAtom = atom(
   async (get) => {
-    const driveId = get(baseSelectedDriveIdAtom);
+    const driveId = get(selectedDriveIdAtom);
     const drives = await get(drivesAtom);
     if (driveId === NOT_SET) return suspendUntilSet<DocumentDriveDocument>();
     const drive = drives?.find((drive) => drive.header.id === driveId);
     return drive;
   },
   (_get, set, driveId: string | undefined) => {
-    // Updates the baseSelectedDriveIdAtom.
-    set(baseSelectedDriveIdAtom, driveId);
+    // Updates the selectedDriveIdAtom.
+    set(selectedDriveIdAtom, driveId);
     // Resets the selected node id.
-    set(baseSelectedNodeIdAtom, undefined);
+    set(selectedNodeIdAtom, undefined);
   },
 );
 selectedDriveAtom.debugLabel = "selectedDriveAtom";
@@ -151,7 +170,7 @@ unwrappedSelectedDriveAtom.debugLabel = "unwrappedSelectedDriveAtom";
  *
  * Does not provide a setter, since it is derived from the selected drive.
  */
-export const nodesAtom = atom(async (get) => {
+export const nodesAtom = atom<Promise<Node[] | undefined>>(async (get) => {
   const selectedDrive = await get(selectedDriveAtom);
   const nodes = selectedDrive?.state.global.nodes;
   return nodes;
@@ -175,19 +194,25 @@ unwrappedNodesAtom.debugLabel = "unwrappedNodesAtom";
  *
  * When this value changes, the data for the selected node is re-fetched from the nodes atom.
  */
-export const baseSelectedNodeIdAtom = atom<string | undefined>(NOT_SET);
-baseSelectedNodeIdAtom.debugLabel = "baseSelectedNodeIdAtom";
+const selectedNodeIdAtom = atom<string | undefined>(NOT_SET);
+selectedNodeIdAtom.debugLabel = "selectedNodeIdAtom";
+
+export const selectedNodeIdInitializedAtom = atom((get) => {
+  const nodeId = get(selectedNodeIdAtom);
+  return nodeId !== NOT_SET;
+});
+selectedNodeIdInitializedAtom.debugLabel = "selectedNodeIdInitializedAtom";
 
 /** Sets the selected node via a node id. */
 export const selectedNodeAtom = atom(
   async (get) => {
-    const nodeId = get(baseSelectedNodeIdAtom);
+    const nodeId = get(selectedNodeIdAtom);
     const nodes = await get(nodesAtom);
     if (nodeId === NOT_SET) return suspendUntilSet<Node>();
     return nodes?.find((node) => node.id === nodeId);
   },
   (_get, set, nodeId: string | undefined) => {
-    set(baseSelectedNodeIdAtom, nodeId);
+    set(selectedNodeIdAtom, nodeId);
   },
 );
 selectedNodeAtom.debugLabel = "selectedNodeAtom";
@@ -221,10 +246,16 @@ unwrappedSelectedFolderAtom.debugLabel = "unwrappedSelectedFolderAtom";
 
 /* Documents */
 
-export const baseDocumentsAtom = atom<
-  UnsetAtomValue | PHDocument[] | undefined
->(NOT_SET);
+const baseDocumentsAtom = atom<UnsetAtomValue | PHDocument[] | undefined>(
+  NOT_SET,
+);
 baseDocumentsAtom.debugLabel = "baseDocumentsAtom";
+
+export const documentsInitializedAtom = atom((get) => {
+  const documents = get(baseDocumentsAtom);
+  return documents !== NOT_SET;
+});
+documentsInitializedAtom.debugLabel = "documentsInitializedAtom";
 
 /** Holds a promise of the documents for the selected drive.
  *
@@ -265,15 +296,11 @@ unwrappedDocumentsAtom.debugLabel = "unwrappedDocumentsAtom";
  *
  * Does not provide a setter, since it is derived from the selected node id.
  */
-export const selectedDocumentAtom = atom<Promise<PHDocument | undefined>>(
-  async (get) => {
-    const documents = await get(documentsAtom);
-    const selectedNode = await get(selectedNodeAtom);
-    return documents?.find(
-      (document) => document.header.id === selectedNode?.id,
-    );
-  },
-);
+export const selectedDocumentAtom = atom(async (get) => {
+  const documents = await get(documentsAtom);
+  const selectedNode = await get(selectedNodeAtom);
+  return documents?.find((document) => document.header.id === selectedNode?.id);
+});
 selectedDocumentAtom.debugLabel = "selectedDocumentAtom";
 
 /** Returns a Loadable of the selected document. */

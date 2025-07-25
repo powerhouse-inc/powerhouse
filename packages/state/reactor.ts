@@ -2,9 +2,9 @@ import { childLogger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 import {
-  baseDocumentsAtom,
-  baseDrivesAtom,
-  baseSelectedDriveIdAtom,
+  documentsInitializedAtom,
+  driveIdInitializedAtom,
+  drivesInitializedAtom,
   selectedDriveAtom,
   selectedNodeAtom,
 } from "./atoms.js";
@@ -21,7 +21,6 @@ import {
   type SetNodeEvent,
 } from "./events.js";
 import { type Reactor } from "./types.js";
-import { NOT_SET } from "./utils.js";
 
 const logger = childLogger(["state", "reactor"]);
 
@@ -41,10 +40,11 @@ export function useInitializeReactor(
   createReactor: () => Promise<Reactor> | Reactor | undefined,
 ) {
   const [reactorInitialized, setReactorInitialized] = useState(false);
-  const baseDrives = useAtomValue(baseDrivesAtom);
+  const drivesInitialized = useAtomValue(drivesInitializedAtom);
   const setDrives = useSetDrives();
-  const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
-  const baseDocuments = useAtomValue(baseDocumentsAtom);
+  const selectedDriveIdInitialized = useAtomValue(driveIdInitializedAtom);
+  const selectedDriveId = useSelectedDriveId();
+  const documentsInitialized = useAtomValue(documentsInitializedAtom);
   const setDocuments = useSetDocuments();
 
   useEffect(() => {
@@ -65,28 +65,34 @@ export function useInitializeReactor(
     // Wait for the reactor to be initialized.
     if (!reactorInitialized) return;
     // If the drives are already initialized, do nothing.
-    if (baseDrives !== NOT_SET) return;
+    if (drivesInitialized) return;
 
     async function initializeDrives() {
       await setDrives();
     }
 
     initializeDrives().catch(logger.error);
-  }, [reactorInitialized, setDrives, baseDrives]);
+  }, [reactorInitialized, setDrives, drivesInitialized]);
 
   useEffect(() => {
     // Wait for the reactor to be initialized.
     if (!reactorInitialized) return;
-    // If the documents are already initialized, do nothing.
-    if (baseDocuments !== NOT_SET) return;
     // If the selected drive id is not initialized, do nothing.
-    if (baseSelectedDriveId === NOT_SET) return;
+    if (!selectedDriveIdInitialized) return;
+    // If the documents are already initialized, do nothing.
+    if (documentsInitialized) return;
 
     async function initializeDocuments() {
-      await setDocuments(baseSelectedDriveId);
+      await setDocuments(selectedDriveId);
     }
     initializeDocuments().catch(logger.error);
-  }, [reactorInitialized, baseDocuments, baseSelectedDriveId, setDocuments]);
+  }, [
+    reactorInitialized,
+    documentsInitialized,
+    selectedDriveIdInitialized,
+    selectedDriveId,
+    setDocuments,
+  ]);
 }
 
 export function useSubscribeToWindowEvents() {

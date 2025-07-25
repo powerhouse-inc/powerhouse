@@ -1,14 +1,14 @@
 import { type DocumentDriveDocument } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import {
-  baseProcessorManagerAtom,
   loadableProcessorManagerAtom,
+  processorManagerAtom,
+  processorManagerInitializedAtom,
   unwrappedProcessorManagerAtom,
 } from "./atoms.js";
 import { useUnwrappedReactor } from "./reactor.js";
-import { NOT_SET } from "./utils.js";
 
 export function useProcessorManager() {
   return useAtomValue(loadableProcessorManagerAtom);
@@ -20,13 +20,14 @@ export function useUnwrappedProcessorManager() {
 
 export function useInitializeProcessorManager() {
   const reactor = useUnwrappedReactor();
-  const [processorManager, setProcessorManager] = useAtom(
-    baseProcessorManagerAtom,
+  const processorManagerInitialized = useAtomValue(
+    processorManagerInitializedAtom,
   );
+  const setProcessorManager = useSetAtom(processorManagerAtom);
 
   useEffect(() => {
     // return if already initialized
-    if (processorManager !== NOT_SET) return;
+    if (processorManagerInitialized) return;
     // wait for reactor to be initialized
     if (!reactor) return;
 
@@ -38,5 +39,5 @@ export function useInitializeProcessorManager() {
       await initializedProcessManager.registerDrive(drive.header.id);
     });
     setProcessorManager(initializedProcessManager);
-  }, [processorManager, reactor, setProcessorManager]);
+  }, [processorManagerInitialized, reactor, setProcessorManager]);
 }
