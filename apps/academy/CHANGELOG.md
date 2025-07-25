@@ -1,3 +1,13 @@
+## 4.0.1 (2025-07-25)
+
+### 🚀 Features
+
+- **switchboard,config,reactor-api:** handle auth in reactor-api ([f33c921ee](https://github.com/powerhouse-inc/powerhouse/commit/f33c921ee))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 # 4.0.0 (2025-07-24)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

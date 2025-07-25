@@ -1,3 +1,7 @@
+## 4.0.1 (2025-07-25)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 # 4.0.0 (2025-07-24)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
