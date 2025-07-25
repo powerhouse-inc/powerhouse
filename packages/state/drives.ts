@@ -1,13 +1,11 @@
 import {
   logger,
   type DocumentDriveDocument,
-  type IDocumentDriveServer,
   type Trigger,
 } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
-  baseDrivesAtom,
   drivesAtom,
   loadableDrivesAtom,
   loadableSelectedDriveAtom,
@@ -16,42 +14,16 @@ import {
 } from "./atoms.js";
 import { useUnwrappedDocuments } from "./documents.js";
 import { dispatchSetDriveEvent } from "./events.js";
-import { useUnwrappedReactor } from "./reactor.js";
 import { type Loadable, type SharingType } from "./types.js";
-import { NOT_SET } from "./utils.js";
 
 /** Returns a loadable of the drives for a reactor. */
-export function useDrives(): Loadable<DocumentDriveDocument[]> {
+export function useDrives(): Loadable<DocumentDriveDocument[] | undefined> {
   return useAtomValue(loadableDrivesAtom);
 }
 
 /** Returns a resolved promise of the drives for a reactor. */
 export function useUnwrappedDrives() {
   return useAtomValue(unwrappedDrivesAtom);
-}
-
-/** Initializes the drives for a reactor. */
-export function useInitializeDrives() {
-  const baseDrives = useAtomValue(baseDrivesAtom);
-  const setDrives = useSetDrives();
-  const reactor = useUnwrappedReactor();
-
-  useEffect(() => {
-    if (baseDrives !== NOT_SET) return;
-
-    async function handleInitializeDrives() {
-      if (!reactor) return;
-
-      // Initialize the drives.
-      const driveIds = await reactor.getDrives();
-      const drives = await Promise.all(
-        driveIds.map((driveId) => reactor.getDrive(driveId)),
-      );
-      setDrives(drives);
-    }
-
-    handleInitializeDrives().catch((error: unknown) => logger.error(error));
-  }, [baseDrives, setDrives, reactor]);
 }
 
 /** Sets the drives for a reactor. */
@@ -63,20 +35,9 @@ export function useSetDrives() {
 export function useRefreshDrives() {
   const setDrives = useSetDrives();
 
-  return useCallback(
-    (reactor: IDocumentDriveServer) => {
-      reactor
-        .getDrives()
-        .then(async (driveIds) => {
-          const drives = await Promise.all(
-            driveIds.map((id) => reactor.getDrive(id)),
-          );
-          setDrives(drives);
-        })
-        .catch((error: unknown) => logger.error(error));
-    },
-    [setDrives],
-  );
+  return useCallback(() => {
+    setDrives().catch((error: unknown) => logger.error(error));
+  }, [setDrives]);
 }
 
 /** Returns a loadable of a drive for a reactor by id. */
@@ -89,7 +50,7 @@ export function useDriveById(
   const data = loadableDrives.data;
   return {
     state: "hasData",
-    data: data.find((d) => d.header.id === id),
+    data: data?.find((d) => d.header.id === id),
   };
 }
 

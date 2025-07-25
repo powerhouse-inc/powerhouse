@@ -16,9 +16,11 @@ export function dispatchSetDriveEvent(driveId: string | undefined) {
 export function handleSetDriveEvent(
   event: SetDriveEvent,
   setSelectedDrive: (driveId: string | undefined) => void,
+  setDocuments: (driveId: string | undefined) => void,
 ) {
   const driveId = event.detail.driveId;
   setSelectedDrive(driveId);
+  setDocuments(driveId);
   if (typeof window === "undefined") return;
   if (!driveId) {
     window.history.pushState(null, "", "/");

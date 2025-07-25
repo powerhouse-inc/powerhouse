@@ -1,19 +1,16 @@
-import { type IDocumentDriveServer, logger } from "document-drive";
+import { logger } from "document-drive";
 import { type PHDocument } from "document-model";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
-  baseDocumentsAtom,
-  baseSelectedDriveIdAtom,
   documentsAtom,
   loadableDocumentsAtom,
   loadableSelectedDocumentAtom,
   unwrappedDocumentsAtom,
   unwrappedSelectedDocumentAtom,
 } from "./atoms.js";
-import { useUnwrappedReactor } from "./reactor.js";
+import { useSelectedDriveId } from "./drives.js";
 import { type Loadable } from "./types.js";
-import { NOT_SET } from "./utils.js";
 
 /** Returns a loadable of the documents for a reactor. */
 export function useDocuments() {
@@ -25,32 +22,6 @@ export function useUnwrappedDocuments() {
   return useAtomValue(unwrappedDocumentsAtom);
 }
 
-/** Initializes the documents for a reactor. */
-export function useInitializeDocuments() {
-  const setDocuments = useSetAtom(documentsAtom);
-  const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
-  const baseDocuments = useAtomValue(baseDocumentsAtom);
-  const reactor = useUnwrappedReactor();
-
-  useEffect(() => {
-    if (baseSelectedDriveId === NOT_SET) return;
-    if (baseDocuments !== NOT_SET) return;
-
-    async function handleInitializeDocuments() {
-      if (!baseSelectedDriveId) return;
-      if (!reactor) return;
-
-      const documentIds = await reactor.getDocuments(baseSelectedDriveId);
-      const documents = await Promise.all(
-        documentIds.map((id) => reactor.getDocument(id)),
-      );
-      setDocuments(documents);
-    }
-
-    handleInitializeDocuments().catch((error: unknown) => logger.error(error));
-  }, [baseSelectedDriveId, baseDocuments, setDocuments, reactor]);
-}
-
 /** Sets the documents for a reactor. */
 export function useSetDocuments() {
   return useSetAtom(documentsAtom);
@@ -58,27 +29,14 @@ export function useSetDocuments() {
 
 /** Refreshes the documents for a reactor. */
 export function useRefreshDocuments() {
+  const selectedDriveId = useSelectedDriveId();
   const setDocuments = useSetDocuments();
 
-  return useCallback(
-    (reactor: IDocumentDriveServer, driveId: string | undefined) => {
-      if (!driveId) {
-        setDocuments([]);
-        return;
-      }
-
-      reactor
-        .getDocuments(driveId)
-        .then(async (documentIds) => {
-          const documents = await Promise.all(
-            documentIds.map((id) => reactor.getDocument(id)),
-          );
-          setDocuments(documents);
-        })
-        .catch((error: unknown) => logger.error(error));
-    },
-    [setDocuments],
-  );
+  return useCallback(() => {
+    setDocuments(selectedDriveId).catch((error: unknown) =>
+      logger.error(error),
+    );
+  }, [setDocuments, selectedDriveId]);
 }
 
 /** Returns a loadable of the selected document. */
@@ -117,7 +75,7 @@ export function useDocumentById<TDocument extends PHDocument = PHDocument>(
 
   if (!id) return { state: "hasData", data: undefined };
 
-  const document = documents.data.find((d) => d.header.id === id);
+  const document = documents.data?.find((d) => d.header.id === id);
   return { state: "hasData", data: document } as Loadable<
     TDocument | undefined
   >;

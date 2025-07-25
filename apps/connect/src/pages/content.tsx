@@ -14,6 +14,7 @@ import {
     useSelectedDrive,
     useSelectedFolder,
     useSetSelectedDrive,
+    useUnwrappedDocuments,
     useUnwrappedDrives,
     useUnwrappedSelectedDocument,
     useUnwrappedSelectedDrive,
@@ -30,6 +31,9 @@ export default function Content() {
     const selectedDrive = useUnwrappedSelectedDrive();
     const selectedFolder = useUnwrappedSelectedFolder();
     const selectedDocument = useUnwrappedSelectedDocument();
+    const documents = useUnwrappedDocuments();
+
+    console.log('documents', documents);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

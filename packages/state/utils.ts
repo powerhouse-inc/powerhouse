@@ -1,4 +1,5 @@
 import { logger, type DocumentDriveDocument, type Node } from "document-drive";
+import { type PHDocument } from "document-model";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 import slug from "slug";
@@ -6,7 +7,7 @@ import {
   baseSelectedDriveIdAtom,
   baseSelectedNodeIdAtom,
   selectedDriveAtom,
-  setSelectedNodeAtom,
+  selectedNodeAtom,
 } from "./atoms.js";
 import { useUnwrappedReactor } from "./reactor.js";
 import { type Reactor } from "./types.js";
@@ -21,6 +22,45 @@ export const NOT_SET = "NOT_SET";
  */
 export function suspendUntilSet<T>(): Promise<T> {
   return new Promise(() => {});
+}
+
+export async function getDocumentsForDriveId(
+  reactor: Reactor | undefined,
+  driveId: string | undefined,
+): Promise<PHDocument[]> {
+  if (!reactor || !driveId) return [];
+  const documentIds = await reactor.getDocuments(driveId);
+  const documents = await Promise.all(
+    documentIds.map((id) => reactor.getDocument(id)),
+  );
+  return documents;
+}
+
+export async function getDrives(
+  reactor: Reactor | undefined,
+): Promise<DocumentDriveDocument[]> {
+  if (!reactor) return [];
+  const driveIds = await reactor.getDrives();
+  const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
+  return drives;
+}
+
+export async function getDriveById(
+  reactor: Reactor | undefined,
+  driveId: string | undefined,
+): Promise<DocumentDriveDocument | undefined> {
+  if (!reactor || !driveId) return undefined;
+  return await reactor.getDrive(driveId);
+}
+
+export async function getNodes(
+  reactor: Reactor | undefined,
+  driveId: string | undefined,
+): Promise<Node[]> {
+  if (!reactor || !driveId) return [];
+  const drive = await getDriveById(reactor, driveId);
+  if (!drive) return [];
+  return drive.state.global.nodes;
 }
 
 /** Makes a URL component for a drive. */
@@ -57,15 +97,6 @@ function findUuid(input: string | undefined | undefined) {
   return match ? match[0] : undefined;
 }
 
-/** Extracts the node id from a path. */
-export function extractNodeFromPath(path: string) {
-  const nodeSlug = extractNodeSlug(path);
-  if (!nodeSlug) return undefined;
-  const uuid = findUuid(nodeSlug);
-  if (!uuid) return undefined;
-  return uuid;
-}
-
 /** Extracts the node name, slug, or id from a path. */
 export function extractNodeNameOrSlugOrIdFromPath(path: string) {
   const nodeSlug = extractNodeSlug(path);
@@ -99,7 +130,7 @@ export function makeNodeSlugFromNodeName(name: string) {
  */
 export function useSetSelectedDriveAndNodeFromUrl() {
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
-  const setSelectedNode = useSetAtom(setSelectedNodeAtom);
+  const setSelectedNode = useSetAtom(selectedNodeAtom);
   const baseSelectedDriveId = useAtomValue(baseSelectedDriveIdAtom);
   const baseSelectedNodeId = useAtomValue(baseSelectedNodeIdAtom);
   const reactor = useUnwrappedReactor();
