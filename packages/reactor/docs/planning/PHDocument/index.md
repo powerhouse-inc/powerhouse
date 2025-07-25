@@ -116,6 +116,7 @@ The `header` scope is a "special case" scope that is always populated, and the `
 ```tsx
 type BaseDocumentState = {
   auth: AuthScopeState;
+  document: DocumentScopeState;
 }
 
 export type PHDocument<TState extends BaseDocumentState> = {
@@ -150,6 +151,63 @@ type MyDocument = PHDocument<MyDocModelState>;
 The mutations object is a typed API for creating and/or executing operations. It has operation-specific methods that pertain to the specific scope.
 
 ```tsx
+
+// base class
+class PHDocumentMutations {
+  auth: AuthMutations;
+  document: DocumentMutations;
+}
+
+// derived class
+class DriveGlobalMutations extends PHDocumentMutations {
+  setDriveIcon(icon: string): ActionExecutor {
+    // elided
+  }
+
+  setDriveName(name: string): ActionExecutor {
+    // elided
+  }
+}
+```
+
+The `ActionExecutor` is a wrapper around an `Action` that provides a way to execute the action or pass it into the Reactor API.
+
+```tsx
+
+interface IExecutionDelegate {
+  /**
+   * Executes the action.
+   */
+  execute(action: Action): Promise<void>;
+}
+
+class ActionExecutor {
+  constructor(
+    private readonly executionDelegate: IExecutionDelegate,
+    private readonly action: Action,
+  ) {
+    this.action = action;
+  }
+
+  /**
+   * Retrieves the underlying action that will be executed.
+   */
+  get action(): Action {
+    return this.action;
+  }
+
+  /**
+   * Executes the underlying action.
+   */
+  execute(): Promise<void> {
+    return this.executionDelegate.execute(this.action);
+  }
+}
+```
+
+This allows us to execute actions in a more functional way:
+
+```tsx
 // change the drive icon
 await drive.mutations.global.setDriveIcon({
   icon: "🚀",
@@ -159,27 +217,38 @@ await drive.mutations.global.setDriveIcon({
 await drive.mutations.global.setDriveName({
   name: "My Drive",
 }).execute();
+```
 
-// we are still free to batch operations together via the client API
+But we are still free to batch operations together via the client API:
+
+```tsx
 await client.mutate(
   drive.id,
   [
-    drive.mutations.global.setDriveName({ name: "My Drive" }),
-    drive.mutations.global.setDriveIcon({ icon: "🚀" }),
+    drive.mutations.global.setDriveName({ name: "My Drive" }).action,
+    drive.mutations.global.setDriveIcon({ icon: "🚀" }).action,
   ],
 );
 ```
 
 #### History
 
-The history object is a typed API for fetching document history.
+The history object is an API for fetching document history, per scope.
 
 ```tsx
-await drive.history.global.fetch();
+const operations = await drive.history.fetchOperations("myScope");
 
-console.log(`Drive history: ${drive.history.global.operations.length} operations`);
+console.log(`Drive history: ${operations.length} operations`);
 
-const history = await drive.history.global.fetch(10);
+// this is paged:
+for await (const page of paginate(() => drive.history.fetchOperations("myScope", { limit: 1000 }))) {
+  for (const operation of page.results) {
+    console.log(operation.id);
+  }
+}
 
-console.log(`History for revision 10: ${history.length} operations`);
+// or, we can fetch a specific revision of the document
+const document = await drive.history.fetch({
+  revision: 10,
+});
 ```
