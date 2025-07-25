@@ -1,20 +1,20 @@
 import {
-  Breadcrumbs,
-  useBreadcrumbs,
-  useDrop,
+    Breadcrumbs,
+    useBreadcrumbs,
+    useDrop,
 } from "@powerhousedao/design-system";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
-  DriveContextProvider,
-  useDriveContext,
+    DriveContextProvider,
+    useDriveContext,
 } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import {
-  getDriveSharingType,
-  makeFolderNodeFromDrive,
-  useSelectedNodePath,
-  useSetSelectedNode,
-  useUnwrappedSelectedDrive,
-  useUnwrappedSelectedFolder,
+    getDriveSharingType,
+    makeFolderNodeFromDrive,
+    useSelectedDrive,
+    useSelectedFolder,
+    useSelectedNodePath,
+    useSetSelectedNode,
 } from "@powerhousedao/state";
 import { type DocumentDriveDocument } from "document-drive";
 import { type DocumentModelModule } from "document-model";
@@ -46,8 +46,8 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     onAddAndSelectNewFolder,
     showDeleteNodeModal,
   } = useDriveContext();
-  const selectedDrive = useUnwrappedSelectedDrive();
-  const selectedFolder = useUnwrappedSelectedFolder();
+  const selectedDrive = useSelectedDrive();
+  const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const selectedNodePath = useSelectedNodePath();
   const setSelectedNode = useSetSelectedNode();

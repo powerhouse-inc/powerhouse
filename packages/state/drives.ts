@@ -12,17 +12,18 @@ import {
   unwrappedDrivesAtom,
   unwrappedSelectedDriveAtom,
 } from "./atoms.js";
-import { useUnwrappedDocuments } from "./documents.js";
 import { dispatchSetDriveEvent } from "./events.js";
 import { type Loadable, type SharingType } from "./types.js";
 
 /** Returns a loadable of the drives for a reactor. */
-export function useDrives(): Loadable<DocumentDriveDocument[] | undefined> {
+export function useLoadableDrives(): Loadable<
+  DocumentDriveDocument[] | undefined
+> {
   return useAtomValue(loadableDrivesAtom);
 }
 
 /** Returns a resolved promise of the drives for a reactor. */
-export function useUnwrappedDrives() {
+export function useDrives() {
   return useAtomValue(unwrappedDrivesAtom);
 }
 
@@ -41,10 +42,10 @@ export function useRefreshDrives() {
 }
 
 /** Returns a loadable of a drive for a reactor by id. */
-export function useDriveById(
+export function useLoadableDriveById(
   id: string | null | undefined,
 ): Loadable<DocumentDriveDocument | undefined> {
-  const loadableDrives = useDrives();
+  const loadableDrives = useLoadableDrives();
   if (loadableDrives.state !== "hasData") return loadableDrives;
   if (!id) return { state: "hasData", data: undefined };
   const data = loadableDrives.data;
@@ -55,65 +56,42 @@ export function useDriveById(
 }
 
 /** Returns a resolved promise of a drive for a reactor by id. */
-export function useUnwrappedDriveById(
+export function useDriveById(
   id: string | null | undefined,
 ): DocumentDriveDocument | undefined {
-  const drives = useUnwrappedDrives();
+  const drives = useDrives();
   if (!id) return undefined;
   return drives?.find((d) => d.header.id === id);
 }
 
 /** Returns a loadable of the selected drive */
-export function useSelectedDrive(): Loadable<
+export function useLoadableSelectedDrive(): Loadable<
   DocumentDriveDocument | undefined
 > {
   return useAtomValue(loadableSelectedDriveAtom);
 }
 
 /** Returns a resolved promise of the selected drive */
-export function useUnwrappedSelectedDrive(): DocumentDriveDocument | undefined {
+export function useSelectedDrive(): DocumentDriveDocument | undefined {
   return useAtomValue(unwrappedSelectedDriveAtom);
 }
 
 /** Returns the selected drive id. */
 export function useSelectedDriveId(): string | undefined {
-  const selectedDrive = useUnwrappedSelectedDrive();
+  const selectedDrive = useSelectedDrive();
   return selectedDrive?.header.id;
 }
 
-/** Returns a function that sets the selected drive with a drive id.
- *
- * If `shouldNavigate` is true, the URL will be updated to the new drive.
- * `shouldNavigate` can be overridden by passing a different value to the callback.
- */
+/** Returns a function that sets the selected drive with a drive id. */
 export function useSetSelectedDrive() {
   return useCallback((driveId: string | undefined) => {
     dispatchSetDriveEvent(driveId);
   }, []);
 }
 
-/** Returns the documents for a drive id. */
-export function useDocumentsForDriveId(driveId: string | null | undefined) {
-  const drive = useUnwrappedDriveById(driveId);
-  const documents = useUnwrappedDocuments();
-  if (!drive || !documents) return [];
-  return documents.filter((document) => {
-    const node = drive.state.global.nodes.find(
-      (node) => node.id === document.header.id,
-    );
-    return node !== undefined;
-  });
-}
-
-/** Returns the documents for the selected drive. */
-export function useDocumentsForSelectedDrive() {
-  const selectedDrive = useUnwrappedSelectedDrive();
-  return useDocumentsForDriveId(selectedDrive?.header.id);
-}
-
 /** Returns the remote URL for a drive. */
 export function useDriveRemoteUrl(driveId: string | null | undefined) {
-  const drive = useUnwrappedDriveById(driveId);
+  const drive = useDriveById(driveId);
   const pullResponderUrl = useDrivePullResponderUrl(driveId);
 
   if (!drive) return undefined;
@@ -132,7 +110,7 @@ export function useDriveRemoteUrl(driveId: string | null | undefined) {
 export function useDrivePullResponderTrigger(
   driveId: string | null | undefined,
 ): Trigger | undefined {
-  const drive = useUnwrappedDriveById(driveId);
+  const drive = useDriveById(driveId);
 
   const pullResponder = drive?.state.local.triggers.find(
     (trigger) => trigger.type === "PullResponder",
@@ -157,21 +135,21 @@ export function useDriveIsRemote(driveId: string | null | undefined) {
 export function useDriveSharingType(
   driveId: string | null | undefined,
 ): SharingType | undefined {
-  const drive = useUnwrappedDriveById(driveId);
+  const drive = useDriveById(driveId);
   if (!drive) return undefined;
   return getDriveSharingType(drive);
 }
 
 /** Returns the sharing type for the selected drive. */
 export function useSelectedDriveSharingType(): SharingType | undefined {
-  const drive = useUnwrappedSelectedDrive();
+  const drive = useSelectedDrive();
   if (!drive) return undefined;
   return getDriveSharingType(drive);
 }
 
 /** Returns  whether a drive is available offline. */
 export function useDriveAvailableOffline(driveId: string | null | undefined) {
-  const drive = useUnwrappedDriveById(driveId);
+  const drive = useDriveById(driveId);
   if (!drive) return false;
   return getDriveAvailableOffline(drive);
 }

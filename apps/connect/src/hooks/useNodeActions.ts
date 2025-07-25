@@ -1,9 +1,9 @@
 import { type TNodeActions } from '@powerhousedao/design-system';
 import {
+    useSelectedDrive,
+    useSelectedFolder,
     useSelectedParentFolder,
     useSetSelectedNode,
-    useUnwrappedSelectedDrive,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import { type Node } from 'document-drive';
 import { useCallback, useMemo } from 'react';
@@ -63,8 +63,8 @@ export function useDebugHandlers() {
 }
 
 export function useNodeActions(): TNodeActions {
-    const selectedDrive = useUnwrappedSelectedDrive();
-    const selectedFolder = useUnwrappedSelectedFolder();
+    const selectedDrive = useSelectedDrive();
+    const selectedFolder = useSelectedFolder();
     const selectedParentFolder = useSelectedParentFolder();
     const setSelectedNode = useSetSelectedNode();
     const { addFolder, addFile, renameNode, copyNode, moveNode } =

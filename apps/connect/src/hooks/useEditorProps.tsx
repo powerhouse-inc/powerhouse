@@ -10,8 +10,8 @@ import {
 } from '#utils';
 import {
     useParentFolder,
+    useSelectedDrive,
     useSetSelectedNode,
-    useUnwrappedSelectedDrive,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
@@ -114,7 +114,7 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
-    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedDrive = useSelectedDrive();
     const parentFolder = useParentFolder(document?.header.id);
     const setSelectedNode = useSetSelectedNode();
     const context = useMemo(() => ({ theme, user }), [theme, user]);

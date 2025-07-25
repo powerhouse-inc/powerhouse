@@ -5,9 +5,9 @@ import {
     useDriveIsRemote,
     useDriveRemoteUrl,
     useParentFolderId,
+    useSelectedDocument,
+    useSelectedDrive,
     useSetSelectedNode,
-    useUnwrappedSelectedDocument,
-    useUnwrappedSelectedDrive,
 } from '@powerhousedao/state';
 import { type Operation, type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
@@ -21,8 +21,8 @@ export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
     const { addDocumentOperations } = useDocumentDriveServer();
-    const unwrappedSelectedDrive = useUnwrappedSelectedDrive();
-    const selectedDocument = useUnwrappedSelectedDocument();
+    const unwrappedSelectedDrive = useSelectedDrive();
+    const selectedDocument = useSelectedDocument();
     const parentFolderId = useParentFolderId(selectedDocument?.header.id);
     const documentType = selectedDocument?.header.documentType;
     const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);

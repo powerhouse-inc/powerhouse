@@ -6,7 +6,7 @@ import {
 import { type DocumentModelModule, type PHDocument } from 'document-model';
 
 import { useConnectCrypto, useConnectDid } from '#hooks';
-import { useUnwrappedReactor } from '@powerhousedao/state';
+import { useReactor } from '@powerhousedao/state';
 
 export interface DocumentEditorProps {
     driveId: string | undefined;
@@ -20,7 +20,7 @@ export function useDocumentEditor(props: DocumentEditorProps) {
     const { driveId, documentId, documentType, documentModelModule, user } =
         props;
 
-    const reactor = useUnwrappedReactor();
+    const reactor = useReactor();
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
 

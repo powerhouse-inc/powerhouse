@@ -1,5 +1,5 @@
 import { useUserPermissions } from '#hooks';
-import { useUnwrappedReactor } from '@powerhousedao/state';
+import { useReactor } from '@powerhousedao/state';
 import {
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
@@ -180,7 +180,7 @@ async function getReadDrives(
 export const ReadModeContextProvider: FC<
     ReadModeContextProviderProps
 > = props => {
-    const reactor = useUnwrappedReactor();
+    const reactor = useReactor();
     const [readDrives, setReadDrives] = useState<ReadDrive[]>([]);
     const userPermissions = useUserPermissions();
     const [ready, setReady] = useState(false);

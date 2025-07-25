@@ -1,4 +1,4 @@
-import { childLogger } from "document-drive";
+import { childLogger, logger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 import {
@@ -22,29 +22,24 @@ import {
 } from "./events.js";
 import { type Reactor } from "./types.js";
 
-const logger = childLogger(["state", "reactor"]);
-
-/** Returns the unwrapped reactor. */
-export function useUnwrappedReactor() {
+/** Returns the reactor. */
+export function useReactor() {
   return window.reactor;
 }
 
 /** Initializes the reactor.
  *
- * Creates the reactor and sets the selected drive and node from the URL if `shouldNavigate` is true.
- * Subscribes to the reactor's events and refreshes the drives and documents when they change.
- *
- * If the reactor is already initialized, does nothing.
+ * Creates the reactor and sets the selected drive and node from the URL.
  */
 export function useInitializeReactor(
   createReactor: () => Promise<Reactor> | Reactor | undefined,
 ) {
   const [reactorInitialized, setReactorInitialized] = useState(false);
   const drivesInitialized = useAtomValue(drivesInitializedAtom);
-  const setDrives = useSetDrives();
   const selectedDriveIdInitialized = useAtomValue(driveIdInitializedAtom);
   const selectedDriveId = useSelectedDriveId();
   const documentsInitialized = useAtomValue(documentsInitializedAtom);
+  const setDrives = useSetDrives();
   const setDocuments = useSetDocuments();
 
   useEffect(() => {
@@ -121,7 +116,7 @@ export function useSubscribeToWindowEvents() {
 export function useSubscribeToReactorEvents() {
   const refreshDrives = useRefreshDrives();
   const refreshDocuments = useRefreshDocuments();
-  const reactor = useUnwrappedReactor();
+  const reactor = useReactor();
 
   useEffect(() => {
     if (!reactor) return;

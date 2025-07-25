@@ -8,18 +8,18 @@ import {
   processorManagerInitializedAtom,
   unwrappedProcessorManagerAtom,
 } from "./atoms.js";
-import { useUnwrappedReactor } from "./reactor.js";
+import { useReactor } from "./reactor.js";
 
-export function useProcessorManager() {
+export function useLoadableProcessorManager() {
   return useAtomValue(loadableProcessorManagerAtom);
 }
 
-export function useUnwrappedProcessorManager() {
+export function useProcessorManager() {
   return useAtomValue(unwrappedProcessorManagerAtom);
 }
 
 export function useInitializeProcessorManager() {
-  const reactor = useUnwrappedReactor();
+  const reactor = useReactor();
   const processorManagerInitialized = useAtomValue(
     processorManagerInitializedAtom,
   );

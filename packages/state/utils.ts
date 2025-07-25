@@ -9,7 +9,7 @@ import {
   selectedNodeAtom,
   selectedNodeIdInitializedAtom,
 } from "./atoms.js";
-import { useUnwrappedReactor } from "./reactor.js";
+import { useReactor } from "./reactor.js";
 import { type Reactor } from "./types.js";
 
 /** Sentinel value for atoms that are not set. */
@@ -133,7 +133,7 @@ export function useSetSelectedDriveAndNodeFromUrl() {
   const setSelectedNode = useSetAtom(selectedNodeAtom);
   const selectedDriveIdInitialized = useAtomValue(driveIdInitializedAtom);
   const selectedNodeIdInitialized = useAtomValue(selectedNodeIdInitializedAtom);
-  const reactor = useUnwrappedReactor();
+  const reactor = useReactor();
 
   useEffect(() => {
     async function handle() {

@@ -1,6 +1,6 @@
 import { LOCAL } from '@powerhousedao/design-system';
 import { getDriveIdBySlug } from '@powerhousedao/reactor-browser/utils/switchboard';
-import { useUnwrappedDrives } from '@powerhousedao/state';
+import { useDrives } from '@powerhousedao/state';
 import {
     logger,
     type PullResponderTrigger,
@@ -41,7 +41,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
         addRemoteDrive,
         setDriveSharingType,
     } = useDocumentDriveServer();
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 

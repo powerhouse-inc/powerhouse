@@ -8,7 +8,7 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
-import { useUnwrappedDrives } from '@powerhousedao/state';
+import { useDrives } from '@powerhousedao/state';
 import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 export interface DebugSettingsModalProps {
@@ -42,7 +42,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         label: autoRegisterPullResponder ? 'Enabled' : 'Disabled',
         value: autoRegisterPullResponder ? 'true' : 'false',
     });
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
     const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
         useDocumentDriveServer();
 

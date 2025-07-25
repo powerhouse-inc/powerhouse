@@ -7,12 +7,11 @@ import {
     type SharingType,
 } from '@powerhousedao/design-system';
 import {
-    makeDriveUrlComponent,
+    useDrives,
+    useSelectedDrive,
     useSelectedParentFolder,
     useSetSelectedDrive,
     useSetSelectedNode,
-    useUnwrappedDrives,
-    useUnwrappedSelectedDrive,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument, type Node } from 'document-drive';
 import { t } from 'i18next';
@@ -125,7 +124,7 @@ export function useShowDriveSettingsModal() {
         setDriveSharingType,
         deleteDrive,
     } = useDocumentDriveServer();
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
     const setSelectedDrive = useSetSelectedDrive();
     const onRenameDrive = useCallback(
         async (drive: DocumentDriveDocument, newName: string) => {
@@ -193,7 +192,7 @@ export function useShowDriveSettingsModal() {
 export function useShowDeleteNodeModal() {
     const { showModal } = useModal();
     const { deleteNode } = useDocumentDriveServer();
-    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedDrive = useSelectedDrive();
     const selectedParentFolder = useSelectedParentFolder();
     const setSelectedNode = useSetSelectedNode();
     const showDeleteNodeModal = useCallback(
