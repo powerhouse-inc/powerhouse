@@ -1,3 +1,51 @@
+## 3.3.0-dev.19 (2025-07-25)
+
+### 🚀 Features
+
+- **connect:** remove redundant load data hook invocation ([fdb56a1ae](https://github.com/powerhouse-inc/powerhouse/commit/fdb56a1ae))
+- **connect:** use atom hooks instead of navigate when deleting drives ([cbbb0e688](https://github.com/powerhouse-inc/powerhouse/commit/cbbb0e688))
+- **connect:** remove unused dep ([00d3f68c0](https://github.com/powerhouse-inc/powerhouse/commit/00d3f68c0))
+- **state,connect:** use window events for setting selected items ([29cc997d2](https://github.com/powerhouse-inc/powerhouse/commit/29cc997d2))
+- **connect:** also dedupe operations by hash ([fb26a8aca](https://github.com/powerhouse-inc/powerhouse/commit/fb26a8aca))
+- **state:** use reactor on window object ([40321826e](https://github.com/powerhouse-inc/powerhouse/commit/40321826e))
+- **state:** add state package reference to monorepo tsconfig ([93de86073](https://github.com/powerhouse-inc/powerhouse/commit/93de86073))
+- **state:** remove unused deps ([d681fff7a](https://github.com/powerhouse-inc/powerhouse/commit/d681fff7a))
+- **state:** remove jotai optics dep ([dfc955a82](https://github.com/powerhouse-inc/powerhouse/commit/dfc955a82))
+- **connect:** do instant navigation when creating drive or document ([bea7bae67](https://github.com/powerhouse-inc/powerhouse/commit/bea7bae67))
+- **connect:** update document drive server hook dependency array ([51a27489a](https://github.com/powerhouse-inc/powerhouse/commit/51a27489a))
+- **state:** update documents when selected drive changes ([94b893d0a](https://github.com/powerhouse-inc/powerhouse/commit/94b893d0a))
+- **state:** add hooks for drive documents ([a80c72e51](https://github.com/powerhouse-inc/powerhouse/commit/a80c72e51))
+- **common:** add storybook react dev dep ([61404f414](https://github.com/powerhouse-inc/powerhouse/commit/61404f414))
+- **connect:** add comments ([31c363f99](https://github.com/powerhouse-inc/powerhouse/commit/31c363f99))
+- **common:** install storybook types ([c4d45bb7c](https://github.com/powerhouse-inc/powerhouse/commit/c4d45bb7c))
+- **connect:** fix drive icon ([76492b996](https://github.com/powerhouse-inc/powerhouse/commit/76492b996))
+- **connect:** use new hooks ([93a9eccfa](https://github.com/powerhouse-inc/powerhouse/commit/93a9eccfa))
+- **state:** move state code to own package ([605bd5d75](https://github.com/powerhouse-inc/powerhouse/commit/605bd5d75))
+- **prisma:** updated prisma storage adapter ([1303a2395](https://github.com/powerhouse-inc/powerhouse/commit/1303a2395))
+- updated remaining packages with new reactor api and bug fixes ([f8045faa1](https://github.com/powerhouse-inc/powerhouse/commit/f8045faa1))
+- **connect:** updated connect with new reactor interface ([8a73b62c8](https://github.com/powerhouse-inc/powerhouse/commit/8a73b62c8))
+- support initial strand without operations ([46698d2ff](https://github.com/powerhouse-inc/powerhouse/commit/46698d2ff))
+- **document-drive:** removed drive id where possible ([adcedc4f0](https://github.com/powerhouse-inc/powerhouse/commit/adcedc4f0))
+- use EventQueueManager by default ([0d367ea6a](https://github.com/powerhouse-inc/powerhouse/commit/0d367ea6a))
+
+### 🩹 Fixes
+
+- **common:** use name on drive state in home page ([b2449c2bc](https://github.com/powerhouse-inc/powerhouse/commit/b2449c2bc))
+- **document-drive:** added deprecation warnings and release notes ([dbc86d172](https://github.com/powerhouse-inc/powerhouse/commit/dbc86d172))
+- **connect:** remove unused hook ([34885a879](https://github.com/powerhouse-inc/powerhouse/commit/34885a879))
+- **connect:** remove should navigate hook arg ([befb67ca9](https://github.com/powerhouse-inc/powerhouse/commit/befb67ca9))
+- **connect:** do not use selected drive id when closing node ([8d50dfccd](https://github.com/powerhouse-inc/powerhouse/commit/8d50dfccd))
+- **connect:** remove commented out code ([605c3e72e](https://github.com/powerhouse-inc/powerhouse/commit/605c3e72e))
+- **connect:** remove logs ([3267e3d57](https://github.com/powerhouse-inc/powerhouse/commit/3267e3d57))
+- **common:** update storybook story type ([a84550281](https://github.com/powerhouse-inc/powerhouse/commit/a84550281))
+- **document-drive,connect,common,reactor-browser:** reimplemented support for copy node action ([0e4da7a84](https://github.com/powerhouse-inc/powerhouse/commit/0e4da7a84))
+- **document-drive,connect,common,reactor-api:** test fixes and interface improvements ([981b638bf](https://github.com/powerhouse-inc/powerhouse/commit/981b638bf))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 3.3.0-dev.18 (2025-07-24)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
