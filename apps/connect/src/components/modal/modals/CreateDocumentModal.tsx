@@ -1,10 +1,10 @@
 import { useDocumentDriveServer } from '#hooks';
 import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
 import {
+    useSelectedDrive,
+    useSelectedFolder,
     useSelectedParentFolder,
     useSetSelectedNode,
-    useUnwrappedSelectedDrive,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 
@@ -18,9 +18,9 @@ export const CreateDocumentModal: React.FC<
     CreateDocumentModalProps
 > = props => {
     const { open, documentModel, onClose } = props;
-    const selectedDrive = useUnwrappedSelectedDrive();
+    const selectedDrive = useSelectedDrive();
     const setSelectedNode = useSetSelectedNode();
-    const selectedFolder = useUnwrappedSelectedFolder();
+    const selectedFolder = useSelectedFolder();
     const parentFolder = useSelectedParentFolder();
     const { addDocument } = useDocumentDriveServer();
 

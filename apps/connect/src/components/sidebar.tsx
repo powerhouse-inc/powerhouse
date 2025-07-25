@@ -6,9 +6,9 @@ import {
     SidebarItem,
 } from '@powerhousedao/design-system';
 import {
+    useDrives,
+    useSelectedDrive,
     useSetSelectedDrive,
-    useUnwrappedDrives,
-    useUnwrappedSelectedDrive,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
@@ -22,8 +22,8 @@ export default function Sidebar() {
     const navigate = useNavigate();
 
     const { user, openRenown, logout } = useLogin();
-    const drives = useUnwrappedDrives();
-    const selectedDrive = useUnwrappedSelectedDrive();
+    const drives = useDrives();
+    const selectedDrive = useSelectedDrive();
     const setSelectedDrive = useSetSelectedDrive();
     const [config] = useConnectConfig();
     const showAddDriveModal = useShowAddDriveModal();

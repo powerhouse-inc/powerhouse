@@ -16,8 +16,8 @@ import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
-    useUnwrappedSelectedDocument,
-    useUnwrappedSelectedDrive,
+    useSelectedDocument,
+    useSelectedDrive,
 } from '@powerhousedao/state';
 import {
     type DocumentDriveAction,
@@ -40,8 +40,8 @@ function DriveEditorError({ error }: FallbackProps) {
 
 export function DriveEditorContainer() {
     const { addDriveOperations, getSyncStatusSync } = useDocumentDriveServer();
-    const selectedDrive = useUnwrappedSelectedDrive();
-    const selectedDocument = useUnwrappedSelectedDocument();
+    const selectedDrive = useSelectedDrive();
+    const selectedDocument = useSelectedDocument();
     const nodeActions = useNodeActions();
     const [, _dispatch, error] = useDocumentDispatch(
         driveDocumentModelModule.reducer,

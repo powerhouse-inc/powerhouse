@@ -1,7 +1,7 @@
 import { ReloadConnectToast } from '#components';
 import { useDocumentDriveServer } from '#hooks';
 import { CONFLICT, ERROR, LOCAL, SUCCESS } from '@powerhousedao/design-system';
-import { getDriveSharingType, useUnwrappedDrives } from '@powerhousedao/state';
+import { getDriveSharingType, useDrives } from '@powerhousedao/state';
 import { logger, type DocumentDriveDocument } from 'document-drive';
 import { type TFunction } from 'i18next';
 import { useCallback, useEffect, useRef } from 'react';
@@ -15,7 +15,7 @@ export const useLoadInitialData = () => {
     const { t } = useTranslation();
     const { getSyncStatusSync } = useDocumentDriveServer();
     const drivesWithError = useRef<DocumentDriveDocument[]>([]);
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
     const clientErrorHandler = useClientErrorHandler();
     const [connectConfig] = useConnectConfig();
 

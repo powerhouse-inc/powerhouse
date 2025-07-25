@@ -11,7 +11,7 @@ import {
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
-import { useUnwrappedProcessorManager } from '@powerhousedao/state';
+import { useProcessorManager } from '@powerhousedao/state';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
@@ -103,7 +103,7 @@ async function registerDriveAnalytics(
 
 export function DiffAnalyzerProcessor() {
     const store = useAnalyticsStoreAsync();
-    const manager = useUnwrappedProcessorManager();
+    const manager = useProcessorManager();
     const hasRegistered = useRef(false);
 
     useEffect(() => {
@@ -120,7 +120,7 @@ export function DiffAnalyzerProcessor() {
 
 export function DriveAnalyticsProcessor() {
     const store = useAnalyticsStoreAsync();
-    const manager = useUnwrappedProcessorManager();
+    const manager = useProcessorManager();
     const hasRegistered = useRef(false);
 
     useEffect(() => {
@@ -143,7 +143,7 @@ export function ExternalProcessors() {
     const externalProcessors = useExternalProcessors();
     const store = useAnalyticsStoreAsync();
     const relationalDb = useRelationalDb();
-    const manager = useUnwrappedProcessorManager();
+    const manager = useProcessorManager();
     const hasRegistered = useRef(false);
 
     useEffect(() => {

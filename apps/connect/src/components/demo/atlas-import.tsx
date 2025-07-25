@@ -2,7 +2,7 @@ import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
 import RefreshIcon from '#assets/icons/refresh.svg?react';
 import { useDocumentDriveServer } from '#hooks';
 import { Button } from '@powerhousedao/design-system';
-import { useUnwrappedReactor } from '@powerhousedao/state';
+import { useReactor } from '@powerhousedao/state';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -36,7 +36,7 @@ export function AtlasImport() {
     const status = useRef<
         'initial' | 'forking' | 'forked' | 'addingDrive' | 'done' | 'error'
     >('initial');
-    const reactor = useUnwrappedReactor();
+    const reactor = useReactor();
     const { documentId } = useParams();
     const reactorUrl = useReactorUrl();
     const navigate = useNavigate();

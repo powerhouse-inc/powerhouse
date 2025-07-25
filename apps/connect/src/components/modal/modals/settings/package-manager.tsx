@@ -2,7 +2,7 @@ import { addExternalPackage, removeExternalPackage } from '#services';
 import { useExternalPackages, useMutableExternalPackages } from '#store';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { useUnwrappedDrives } from '@powerhousedao/state';
+import { useDrives } from '@powerhousedao/state';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -35,7 +35,7 @@ export interface SettingsModalProps {
 export const PackageManager: React.FC = () => {
     const packages = useExternalPackages();
     const isMutable = useMutableExternalPackages();
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
     const [reactor, setReactor] = useState('');
 
     const options = useMemo(() => {

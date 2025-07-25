@@ -10,14 +10,15 @@ import {
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
+    useDocuments,
+    useDrives,
+    useLoadableSelectedDocument,
+    useLoadableSelectedDrive,
+    useLoadableSelectedFolder,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
     useSetSelectedDrive,
-    useUnwrappedDrives,
-    useUnwrappedSelectedDocument,
-    useUnwrappedSelectedDrive,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument } from 'document-drive';
 import { useCallback, useEffect } from 'react';
@@ -27,9 +28,9 @@ import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
     const { addFile } = useDocumentDriveServer();
-    const selectedDrive = useUnwrappedSelectedDrive();
-    const selectedFolder = useUnwrappedSelectedFolder();
-    const selectedDocument = useUnwrappedSelectedDocument();
+    const selectedDrive = useSelectedDrive();
+    const selectedFolder = useSelectedFolder();
+    const selectedDocument = useSelectedDocument();
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -70,10 +71,10 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 
 function HomeScreenContainer() {
     const { pathname } = useLocation();
-    const drives = useUnwrappedDrives();
-    const loadableSelectedDrive = useSelectedDrive();
-    const loadableSelectedFolder = useSelectedFolder();
-    const loadableSelectedDocument = useSelectedDocument();
+    const drives = useDrives();
+    const loadableSelectedDrive = useLoadableSelectedDrive();
+    const loadableSelectedFolder = useLoadableSelectedFolder();
+    const loadableSelectedDocument = useLoadableSelectedDocument();
     const showAddDriveModal = useShowAddDriveModal();
     const setSelectedDrive = useSetSelectedDrive();
     const getAppDescriptionForEditorId = useGetAppNameForEditorId();

@@ -1,9 +1,9 @@
 import { useDocumentDriveServer } from '#hooks';
 import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
 import {
+    useDrives,
     useSetSelectedDrive,
     useSetSelectedNode,
-    useUnwrappedDrives,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
@@ -15,7 +15,7 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
 }) => {
     const { t } = useTranslation();
     const { clearStorage, deleteDrive } = useDocumentDriveServer();
-    const drives = useUnwrappedDrives();
+    const drives = useDrives();
     const setSelectedDrive = useSetSelectedDrive();
     const setSelectedNode = useSetSelectedNode();
     const { showModal } = useModal();

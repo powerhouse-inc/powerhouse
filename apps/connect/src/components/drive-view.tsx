@@ -7,11 +7,11 @@ import {
 import { useFilteredDocumentModels } from '#store';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import {
+    useSelectedDrive,
+    useSelectedFolder,
     useSelectedNodePath,
     useSelectedParentFolder,
     useSetSelectedNode,
-    useUnwrappedSelectedDrive,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
@@ -31,8 +31,8 @@ export function DriveView() {
     const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
-    const selectedDrive = useUnwrappedSelectedDrive();
-    const selectedFolder = useUnwrappedSelectedFolder();
+    const selectedDrive = useSelectedDrive();
+    const selectedFolder = useSelectedFolder();
     const parentFolder = useSelectedParentFolder();
     const selectedNodePath = useSelectedNodePath();
     const setSelectedNode = useSetSelectedNode();

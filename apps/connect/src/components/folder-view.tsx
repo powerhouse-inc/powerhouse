@@ -8,8 +8,8 @@ import {
     useFileChildNodes,
     useFolderChildNodes,
     useSelectedDriveSharingType,
+    useSelectedFolder,
     useSetSelectedNode,
-    useUnwrappedSelectedFolder,
 } from '@powerhousedao/state';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
@@ -17,7 +17,7 @@ import { ContentSection } from './content/index.js';
 import FileContentView from './file-content-view.js';
 
 export function FolderView(props: { isAllowedToCreateDocuments?: boolean }) {
-    const selectedFolder = useUnwrappedSelectedFolder();
+    const selectedFolder = useSelectedFolder();
     const setSelectedNode = useSetSelectedNode();
     const sharingType = useSelectedDriveSharingType();
     const { t } = useTranslation();

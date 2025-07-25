@@ -10,11 +10,7 @@ import {
     uploadDocumentOperations,
 } from '#utils';
 import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
-import {
-    useUnwrappedDrives,
-    useUnwrappedReactor,
-    useUnwrappedSelectedDrive,
-} from '@powerhousedao/state';
+import { useDrives, useReactor, useSelectedDrive } from '@powerhousedao/state';
 import {
     type DocumentDriveAction,
     type DocumentDriveDocument,
@@ -149,11 +145,11 @@ export function useDocumentDriveServer() {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const reactor = useUnwrappedReactor();
+    const reactor = useReactor();
     const storage = useDocumentAdminStorage();
     const getDocumentModelModule = useGetDocumentModelModule();
-    const drives = useUnwrappedDrives();
-    const selectedDrive = useUnwrappedSelectedDrive();
+    const drives = useDrives();
+    const selectedDrive = useSelectedDrive();
 
     const openFile = useCallback(
         async (id: string, options?: GetDocumentOptions) => {

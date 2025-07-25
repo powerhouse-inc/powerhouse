@@ -1,7 +1,7 @@
 import connectConfig from '#connect-config';
 import { type IRenown } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
-import { useUnwrappedDrives, useUnwrappedReactor } from '@powerhousedao/state';
+import { useDrives, useReactor } from '@powerhousedao/state';
 import { type IDocumentDriveServer, logger } from 'document-drive';
 import {
     type IDocumentAdminStorage,
@@ -11,10 +11,8 @@ import {
 } from 'document-drive/storage/types';
 import { type DocumentModelModule, generateId } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
-import { useRenown } from '../hooks/useRenown.js';
-import { documentModelsAtom } from './document-model.js';
 
 async function initReactor(
     reactor: IDocumentDriveServer,
@@ -30,8 +28,8 @@ async function initReactor(
 
 export function useCreateFirstLocalDrive() {
     const localDrivesEnabled = connectConfig.drives.sections.LOCAL.enabled;
-    const reactor = useUnwrappedReactor();
-    const drives = useUnwrappedDrives();
+    const reactor = useReactor();
+    const drives = useDrives();
     const hasHandledCreateFirstLocalDrive = useRef(false);
 
     useEffect(() => {

@@ -1,6 +1,6 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
 import { useUser } from '#store';
-import { useUnwrappedReactor } from '@powerhousedao/state';
+import { useReactor } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import { atom, useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo } from 'react';
@@ -17,7 +17,7 @@ export const useLogin = () => {
     const user = useUser();
     const renown = useRenown();
     const { did, getBearerToken } = useConnectCrypto();
-    const reactor = useUnwrappedReactor();
+    const reactor = useReactor();
 
     const openRenown = useCallback(async () => {
         const connectId = await did();
