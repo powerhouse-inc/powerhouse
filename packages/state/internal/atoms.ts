@@ -8,14 +8,11 @@ import { type PHDocument } from "document-model";
 import isEqual from "fast-deep-equal";
 import { atom } from "jotai";
 import { loadable, unwrap } from "jotai/utils";
-import { isFolderNodeKind } from "./nodes.js";
+import { getDocumentsForDriveId, getDrives } from "../utils/drives.js";
+import { isFolderNodeKind } from "../utils/nodes.js";
+import { NOT_SET } from "./constants.js";
+import { suspendUntilSet } from "./suspend.js";
 import { type UnsetAtomValue } from "./types.js";
-import {
-  getDocumentsForDriveId,
-  getDrives,
-  NOT_SET,
-  suspendUntilSet,
-} from "./utils.js";
 
 /* Processor Manager */
 

@@ -3,7 +3,7 @@ import {
   extractDriveFromPath,
   makeDriveUrlComponent,
   makeNodeUrlComponent,
-} from "./utils.js";
+} from "../utils/url.js";
 
 export type SetDriveEvent = CustomEvent<{ driveId: string | undefined }>;
 export type SetNodeEvent = CustomEvent<{ nodeId: string | undefined }>;

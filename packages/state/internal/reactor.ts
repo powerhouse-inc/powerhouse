@@ -1,6 +1,8 @@
-import { childLogger, logger } from "document-drive";
+import { logger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
+import { useSelectedDriveId } from "../hooks/drives.js";
+import { useReactor } from "../hooks/reactor.js";
 import {
   documentsInitializedAtom,
   driveIdInitializedAtom,
@@ -9,11 +11,7 @@ import {
   selectedNodeAtom,
 } from "./atoms.js";
 import { useRefreshDocuments, useSetDocuments } from "./documents.js";
-import {
-  useRefreshDrives,
-  useSelectedDriveId,
-  useSetDrives,
-} from "./drives.js";
+import { useRefreshDrives, useSetDrives } from "./drives.js";
 import {
   handleSetDriveEvent,
   handleSetNodeEvent,
@@ -22,11 +20,6 @@ import {
 } from "./events.js";
 import { type Reactor } from "./types.js";
 
-/** Returns the reactor. */
-export function useReactor() {
-  return window.reactor;
-}
-
 /** Initializes the reactor.
  *
  * Creates the reactor and sets the selected drive and node from the URL.
@@ -34,7 +27,9 @@ export function useReactor() {
 export function useInitializeReactor(
   createReactor: () => Promise<Reactor> | Reactor | undefined,
 ) {
-  const [reactorInitialized, setReactorInitialized] = useState(false);
+  const [reactorInitialized, setReactorInitialized] = useState(
+    !!window.reactor,
+  );
   const drivesInitialized = useAtomValue(drivesInitializedAtom);
   const selectedDriveIdInitialized = useAtomValue(driveIdInitializedAtom);
   const selectedDriveId = useSelectedDriveId();

@@ -2,21 +2,11 @@ import { type DocumentDriveDocument } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
+import { useReactor } from "../hooks/reactor.js";
 import {
-  loadableProcessorManagerAtom,
   processorManagerAtom,
   processorManagerInitializedAtom,
-  unwrappedProcessorManagerAtom,
 } from "./atoms.js";
-import { useReactor } from "./reactor.js";
-
-export function useLoadableProcessorManager() {
-  return useAtomValue(loadableProcessorManagerAtom);
-}
-
-export function useProcessorManager() {
-  return useAtomValue(unwrappedProcessorManagerAtom);
-}
 
 export function useInitializeProcessorManager() {
   const reactor = useReactor();

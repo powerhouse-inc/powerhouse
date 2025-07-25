@@ -31,9 +31,6 @@ export default function Content() {
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
-    const documents = useDocuments();
-
-    console.log('documents', documents);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
