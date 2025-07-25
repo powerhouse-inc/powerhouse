@@ -119,10 +119,11 @@ type BaseDocumentState = {
 }
 
 export type PHDocument<TState extends BaseDocumentState> = {
-  header: PHDocumentHeader;
+  // elided
+
   state: TState;
-  mutations: PHDocumentMutations<TState>;
-  history: PHDocumentHistory<TState>;
+
+  // elided
 }
 ```
 
@@ -137,17 +138,11 @@ console.log(`Drive icon: ${drive.state.document.icon}`);
 Custom document types extend this:
 
 ```tsx
-type MyDocumentDocumentState = {
-  title: string;
+type MyDocModelState = BaseDocumentState & {
+  myScope: MyScopeState;
 }
 
-type MyOtherScopeState = {
-  foo: number;
-}
-
-type MyDocument = PHDocument<MyDocumentDocumentState> & {
-  myOtherScope: MyOtherScopeState;
-};
+type MyDocument = PHDocument<MyDocModelState>;
 ```
 
 #### Mutations
