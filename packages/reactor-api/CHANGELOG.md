@@ -1,3 +1,20 @@
+## 4.0.0-staging.7 (2025-07-26)
+
+### 🚀 Features
+
+- **reactor-api:** load auth config ([e1c90c4bd](https://github.com/powerhouse-inc/powerhouse/commit/e1c90c4bd))
+- **state:** make all atom states derivative ([68a4bfece](https://github.com/powerhouse-inc/powerhouse/commit/68a4bfece))
+
+### 🩹 Fixes
+
+- **reactor-api:** register pullresponder as guest ([abc323cc1](https://github.com/powerhouse-inc/powerhouse/commit/abc323cc1))
+- **reactor-api:** add user to graphql context ([b20c94d03](https://github.com/powerhouse-inc/powerhouse/commit/b20c94d03))
+
+### ❤️ Thank You
+
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.6 (2025-07-25)
 
 ### 🚀 Features

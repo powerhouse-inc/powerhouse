@@ -1,3 +1,16 @@
+## 4.0.0-staging.7 (2025-07-26)
+
+### 🚀 Features
+
+- **state:** separate internal and external functions ([cd13a75aa](https://github.com/powerhouse-inc/powerhouse/commit/cd13a75aa))
+- **state:** simplify hook names ([220bfbb90](https://github.com/powerhouse-inc/powerhouse/commit/220bfbb90))
+- **state:** make all atom states derivative ([68a4bfece](https://github.com/powerhouse-inc/powerhouse/commit/68a4bfece))
+- **state,connect:** remove unused code ([323155126](https://github.com/powerhouse-inc/powerhouse/commit/323155126))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.6 (2025-07-25)
 
 ### 🚀 Features

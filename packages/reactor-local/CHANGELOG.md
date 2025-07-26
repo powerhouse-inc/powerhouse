@@ -1,3 +1,13 @@
+## 4.0.0-staging.7 (2025-07-26)
+
+### 🚀 Features
+
+- **state:** make all atom states derivative ([68a4bfece](https://github.com/powerhouse-inc/powerhouse/commit/68a4bfece))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.6 (2025-07-25)
 
 ### 🚀 Features

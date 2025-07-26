@@ -1,3 +1,27 @@
+## 4.0.0-staging.7 (2025-07-26)
+
+### 🚀 Features
+
+- **reactor-api:** load auth config ([e1c90c4bd](https://github.com/powerhouse-inc/powerhouse/commit/e1c90c4bd))
+- **state:** make all atom states derivative ([68a4bfece](https://github.com/powerhouse-inc/powerhouse/commit/68a4bfece))
+- **state:** use initialized atoms to avoid exporting base atoms ([55f114672](https://github.com/powerhouse-inc/powerhouse/commit/55f114672))
+- **state:** simplify hook names ([220bfbb90](https://github.com/powerhouse-inc/powerhouse/commit/220bfbb90))
+- **state:** separate internal and external functions ([cd13a75aa](https://github.com/powerhouse-inc/powerhouse/commit/cd13a75aa))
+- **state,connect:** remove unused code ([323155126](https://github.com/powerhouse-inc/powerhouse/commit/323155126))
+- **state,connect:** cleanup hooks and clarify names ([#1710](https://github.com/powerhouse-inc/powerhouse/pull/1710))
+
+### 🩹 Fixes
+
+- **reactor-api:** add user to graphql context ([b20c94d03](https://github.com/powerhouse-inc/powerhouse/commit/b20c94d03))
+- **reactor-api:** register pullresponder as guest ([abc323cc1](https://github.com/powerhouse-inc/powerhouse/commit/abc323cc1))
+- **switchboard:** remove auth from switchboard config ([ff3410afc](https://github.com/powerhouse-inc/powerhouse/commit/ff3410afc))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.6 (2025-07-25)
 
 ### 🚀 Features
