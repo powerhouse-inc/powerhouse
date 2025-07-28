@@ -1,4 +1,5 @@
 import { useFeatureFlag } from '#hooks';
+import { type PHPackage } from '@powerhousedao/state/internal/types';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     documentModelDocumentModelModule,
@@ -14,6 +15,19 @@ export const baseDocumentModels = [
     driveDocumentModelModule,
     documentModelDocumentModelModule,
 ] as DocumentModelModule[];
+
+export function loadBaseDocumentModels() {
+    return [
+        {
+            id: 'powerhouse/document-drive',
+            documentModels: [driveDocumentModelModule],
+        },
+        {
+            id: 'powerhouse/document-model',
+            documentModels: [documentModelDocumentModelModule],
+        },
+    ] as PHPackage[];
+}
 
 // removes document models with the same id, keeping the one that appears later
 function getUniqueDocumentModels(

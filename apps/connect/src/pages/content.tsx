@@ -3,18 +3,20 @@ import {
     useDocumentDriveServer,
     useShowAddDriveModal,
 } from '#hooks';
-import { useGetAppNameForEditorId } from '#store';
+import { useApps, useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    useDocuments,
+    useDocumentModelModules,
     useDrives,
+    useEditorModules,
     useLoadableSelectedDocument,
     useLoadableSelectedDrive,
     useLoadableSelectedFolder,
+    usePHPackages,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
@@ -31,6 +33,14 @@ export default function Content() {
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
+    const editorModules = useEditorModules();
+    const documentModelModules = useDocumentModelModules();
+    const apps = useApps();
+    const phPackages = usePHPackages();
+    console.log('apps', apps);
+    console.log('editorModules', editorModules);
+    console.log('documentModelModules', documentModelModules);
+    console.log('phPackages', phPackages);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

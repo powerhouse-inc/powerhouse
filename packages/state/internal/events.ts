@@ -4,9 +4,13 @@ import {
   makeDriveUrlComponent,
   makeNodeUrlComponent,
 } from "../utils/url.js";
+import { type PHPackage } from "./types.js";
 
 export type SetDriveEvent = CustomEvent<{ driveId: string | undefined }>;
 export type SetNodeEvent = CustomEvent<{ nodeId: string | undefined }>;
+export type UpdatePHPackagesEvent = CustomEvent<{
+  phPackages: PHPackage[] | undefined;
+}>;
 
 export function dispatchSetDriveEvent(driveId: string | undefined) {
   const event = new CustomEvent("ph:setDrive", { detail: { driveId } });
@@ -66,4 +70,21 @@ export function handleSetNodeEvent(
       window.history.pushState(null, "", `/d/${driveSlugFromPath}/${nodeSlug}`);
     })
     .catch((error: unknown) => logger.error(error));
+}
+
+export function dispatchUpdatePHPackagesEvent(
+  phPackages: PHPackage[] | undefined,
+) {
+  const event = new CustomEvent("ph:updatePHPackages", {
+    detail: { phPackages },
+  });
+  window.dispatchEvent(event);
+}
+
+export function handleUpdatePHPackagesEvent(
+  event: UpdatePHPackagesEvent,
+  setPHPackages: (phPackages: PHPackage[] | undefined) => void,
+) {
+  const phPackages = event.detail.phPackages;
+  setPHPackages(phPackages);
 }

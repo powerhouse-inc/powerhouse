@@ -15,18 +15,19 @@ import { useRefreshDrives, useSetDrives } from "./drives.js";
 import {
   handleSetDriveEvent,
   handleSetNodeEvent,
+  handleUpdatePHPackagesEvent,
   type SetDriveEvent,
   type SetNodeEvent,
+  type UpdatePHPackagesEvent,
 } from "./events.js";
+import { useSetPHPackages } from "./ph-packages.js";
 import { type Reactor } from "./types.js";
 
 /** Initializes the reactor.
  *
  * Creates the reactor and sets the selected drive and node from the URL.
  */
-export function useInitializeReactor(
-  createReactor?: () => Promise<Reactor> | undefined,
-) {
+export function useInitializeReactor(reactor?: Promise<Reactor> | undefined) {
   const [reactorInitialized, setReactorInitialized] = useState(
     !!window.reactor,
   );
@@ -42,13 +43,13 @@ export function useInitializeReactor(
     if (reactorInitialized) return;
     async function initializeReactor() {
       // Create the reactor instance.
-      const initializedReactor = await createReactor?.();
+      const initializedReactor = await reactor;
       // Set the reactor instance in the window object.
       window.reactor = initializedReactor;
       setReactorInitialized(true);
     }
     initializeReactor().catch(logger.error);
-  }, [createReactor, reactorInitialized]);
+  }, [reactor, reactorInitialized]);
 
   useEffect(() => {
     // Wait for the reactor to be initialized.
@@ -87,6 +88,7 @@ export function useInitializeReactor(
 export function useSubscribeToWindowEvents() {
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(selectedNodeAtom);
+  const setPHPackages = useSetPHPackages();
 
   const handleSetDrive = useCallback(
     (event: SetDriveEvent) => {
@@ -100,6 +102,14 @@ export function useSubscribeToWindowEvents() {
       handleSetNodeEvent(event, setSelectedNode);
     },
     [setSelectedNode],
+  );
+
+  const handleUpdatePHPackages = useCallback(
+    (event: UpdatePHPackagesEvent) => {
+      console.log("updatePHPackages", event);
+      handleUpdatePHPackagesEvent(event, setPHPackages);
+    },
+    [setPHPackages],
   );
 
   useEffect(() => {
@@ -119,6 +129,15 @@ export function useSubscribeToWindowEvents() {
       window.removeEventListener("ph:setNode", handleSetNode);
     };
   }, [handleSetNode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.addEventListener("ph:updatePHPackages", handleUpdatePHPackages);
+
+    return () => {
+      window.removeEventListener("ph:updatePHPackages", handleUpdatePHPackages);
+    };
+  }, [handleUpdatePHPackages]);
 }
 
 export function useSubscribeToReactorEvents() {

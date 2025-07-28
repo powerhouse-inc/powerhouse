@@ -1,19 +1,33 @@
 import { useDefaultDocumentModelEditor } from '#hooks';
+import { type PHPackage } from '@powerhousedao/state/internal/types';
 import { type DocumentModelLib, type EditorModule } from 'document-model';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
 import { externalPackagesAtom } from './external-packages.js';
 
-async function loadBaseEditors() {
+export async function loadBaseEditors() {
     const documentModelEditor = await import(
         '@powerhousedao/builder-tools/document-model-editor'
     );
     await import('@powerhousedao/builder-tools/style.css');
-    const module = documentModelEditor.documentModelEditorModule;
-    return [module] as EditorModule[];
+    const module = {
+        id: 'document-model-editor-v2',
+        ...documentModelEditor.documentModelEditorModule,
+    };
+    return [module];
 }
 
+export async function loadBaseDocumentModelEditor() {
+    const documentModelEditor = await import(
+        '@powerhousedao/builder-tools/document-model-editor'
+    );
+    await import('@powerhousedao/builder-tools/style.css');
+    return {
+        id: 'document-model-editor-v2',
+        editors: [documentModelEditor.documentModelEditorModule],
+    } as PHPackage;
+}
 function getEditorsFromModules(modules: DocumentModelLib[]) {
     return modules
         .map(module => module.editors)
@@ -23,7 +37,7 @@ function getEditorsFromModules(modules: DocumentModelLib[]) {
 const baseEditorsAtom = atomWithLazy(loadBaseEditors);
 baseEditorsAtom.debugLabel = 'baseEditorsAtomInConnect';
 export const editorsAtom = atom(async get => {
-    const baseEditors = await get(baseEditorsAtom);
+    const baseEditors = (await get(baseEditorsAtom)) as EditorModule[];
     const externalModules = await get(externalPackagesAtom);
     const externalEditors = getEditorsFromModules(externalModules);
 

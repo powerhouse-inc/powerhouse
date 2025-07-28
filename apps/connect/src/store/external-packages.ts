@@ -13,7 +13,7 @@ const externalPackagesUrl =
     connectConfig.routerBasename + 'external-packages.js';
 const externalPackagesEnabled = import.meta.env.PROD;
 
-async function loadExternalPackages() {
+export async function loadExternalPackages() {
     try {
         if (!externalPackagesEnabled) return [];
         const module = (await import(

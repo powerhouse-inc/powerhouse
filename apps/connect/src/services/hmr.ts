@@ -1,4 +1,8 @@
 import { type ExternalPackage } from '#store';
+import { useUpdatePHPackages } from '@powerhousedao/state';
+import { type PHPackage } from '@powerhousedao/state/internal/types';
+import { logger } from 'document-drive';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ViteHotContext } from 'vite/types/hot.js';
 
 export type PackagesUpdate = {
@@ -84,4 +88,37 @@ export async function subscribeExternalPackages(
     return () => {
         hmr?.off('studio:external-packages-updated', handler);
     };
+}
+
+export function useSubscribeToPHPackages() {
+    const updatePHPackages = useUpdatePHPackages();
+    const hasSubscribed = useRef(false);
+    const hmrRef = useRef<ViteHotContext>();
+
+    const handler = useCallback(async (data: PackagesUpdate) => {
+        const modulesImport = import(
+            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
+        ) as Promise<{
+            default: PHPackage[];
+        }>;
+        const modules = await modulesImport;
+        const defaultModules = modules.default;
+        updatePHPackages(defaultModules);
+    }, []);
+
+    useEffect(() => {
+        if (hasSubscribed.current) {
+            return;
+        }
+        async function subscribe() {
+            const hmr = await getHMRModule();
+            hmrRef.current = hmr;
+            hmr?.on('studio:external-packages-updated', handler);
+        }
+        subscribe().catch(logger.error);
+
+        return () => {
+            hmrRef.current?.off('studio:external-packages-updated', handler);
+        };
+    }, [handler]);
 }

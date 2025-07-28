@@ -1,10 +1,15 @@
 import {
+  driveDocumentModelModule,
   type DocumentDriveDocument,
   type FolderNode,
   type Node,
 } from "document-drive";
 import { type ProcessorManager } from "document-drive/processors/processor-manager";
-import { type PHDocument } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+  type PHDocument,
+} from "document-model";
 import isEqual from "fast-deep-equal";
 import { atom } from "jotai";
 import { loadable, unwrap } from "jotai/utils";
@@ -12,7 +17,7 @@ import { getDocumentsForDriveId, getDrives } from "../utils/drives.js";
 import { isFolderNodeKind } from "../utils/nodes.js";
 import { NOT_SET } from "./constants.js";
 import { suspendUntilSet } from "./suspend.js";
-import { type UnsetAtomValue } from "./types.js";
+import { type PHPackage, type UnsetAtomValue } from "./types.js";
 
 /* Processor Manager */
 
@@ -307,3 +312,38 @@ loadableSelectedDocumentAtom.debugLabel = "loadableSelectedDocumentAtom";
 /** Returns a resolved promise of the selected document. */
 export const unwrappedSelectedDocumentAtom = unwrap(selectedDocumentAtom);
 unwrappedSelectedDocumentAtom.debugLabel = "unwrappedSelectedDocumentAtom";
+
+const basePHPackagesAtom = atom<UnsetAtomValue | PHPackage[] | undefined>(
+  NOT_SET,
+);
+basePHPackagesAtom.debugLabel = "basePHPackagesAtom";
+
+export const pHPackagesInitializedAtom = atom((get) => {
+  const pHPackages = get(basePHPackagesAtom);
+  return pHPackages !== NOT_SET;
+});
+pHPackagesInitializedAtom.debugLabel = "pHPackagesInitializedAtom";
+
+export const pHPackagesAtom = atom(
+  (get) => {
+    const pHPackages = get(basePHPackagesAtom);
+    if (pHPackages === NOT_SET) return suspendUntilSet<PHPackage[]>();
+    return pHPackages;
+  },
+  async (
+    get,
+    set,
+    pHPackages: Promise<PHPackage[] | undefined> | PHPackage[] | undefined,
+  ) => {
+    const oldPHPackages = get(basePHPackagesAtom);
+    if (isEqual(pHPackages, oldPHPackages)) return;
+    set(basePHPackagesAtom, await pHPackages);
+  },
+);
+pHPackagesAtom.debugLabel = "pHPackagesAtom";
+
+export const loadablePHPackagesAtom = loadable(pHPackagesAtom);
+loadablePHPackagesAtom.debugLabel = "loadablePHPackagesAtom";
+
+export const unwrappedPHPackagesAtom = unwrap(pHPackagesAtom);
+unwrappedPHPackagesAtom.debugLabel = "unwrappedPHPackagesAtom";

@@ -26,7 +26,7 @@ function Load() {
 export const AppLoader = (
     <StrictMode>
         <Provider>
-            {import.meta.env.DEV && <DevTools />}
+            {import.meta.env.DEV && <DevTools position="bottom-right" />}
             <Suspense fallback={<AppSkeleton />} name="AppLoader">
                 <Load />
                 <App />
