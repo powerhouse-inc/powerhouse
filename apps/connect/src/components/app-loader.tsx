@@ -26,10 +26,10 @@ function Load() {
 export const AppLoader = (
     <StrictMode>
         <Provider>
-            <DevTools />
+            {import.meta.env.DEV && <DevTools />}
             <Suspense fallback={<AppSkeleton />} name="AppLoader">
                 <Load />
-                {import.meta.env.DEV && <App />}
+                <App />
             </Suspense>
             <Suspense name="CookieBanner">
                 <ModalManager>
