@@ -16,11 +16,9 @@ export function dispatchSetDriveEvent(driveId: string | undefined) {
 export function handleSetDriveEvent(
   event: SetDriveEvent,
   setSelectedDrive: (driveId: string | undefined) => void,
-  setDocuments: (driveId: string | undefined) => void,
 ) {
   const driveId = event.detail.driveId;
   setSelectedDrive(driveId);
-  setDocuments(driveId);
   if (typeof window === "undefined") return;
   if (!driveId) {
     window.history.pushState(null, "", "/");
@@ -44,23 +42,23 @@ export function dispatchSetNodeEvent(nodeId: string | undefined) {
 
 export function handleSetNodeEvent(
   event: SetNodeEvent,
-  selectedDriveId: string | undefined,
   setSelectedNode: (nodeId: string | undefined) => void,
 ) {
   const nodeId = event.detail.nodeId;
   setSelectedNode(nodeId);
   if (typeof window === "undefined") return;
-  if (!selectedDriveId) return;
   const reactor = window.reactor;
   if (!reactor) return;
   const driveSlugFromPath = extractDriveFromPath(window.location.pathname);
+  if (!driveSlugFromPath) return;
+
   if (!nodeId) {
     window.history.pushState(null, "", `/d/${driveSlugFromPath}`);
     return;
   }
 
   reactor
-    .getDrive(selectedDriveId)
+    .getDriveBySlug(driveSlugFromPath)
     .then((drive) => {
       const nodes = drive.state.global.nodes;
       const node = nodes.find((n) => n.id === nodeId);

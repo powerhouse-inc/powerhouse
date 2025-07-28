@@ -1,6 +1,6 @@
 import { logger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSelectedDriveId } from "../hooks/drives.js";
 import { useReactor } from "../hooks/reactor.js";
 import {
@@ -25,7 +25,7 @@ import { type Reactor } from "./types.js";
  * Creates the reactor and sets the selected drive and node from the URL.
  */
 export function useInitializeReactor(
-  createReactor: () => Promise<Reactor> | Reactor | undefined,
+  createReactor?: () => Promise<Reactor> | undefined,
 ) {
   const [reactorInitialized, setReactorInitialized] = useState(
     !!window.reactor,
@@ -40,10 +40,9 @@ export function useInitializeReactor(
   useEffect(() => {
     // If the reactor is already initialized, do nothing.
     if (reactorInitialized) return;
-
     async function initializeReactor() {
       // Create the reactor instance.
-      const initializedReactor = await createReactor();
+      const initializedReactor = await createReactor?.();
       // Set the reactor instance in the window object.
       window.reactor = initializedReactor;
       setReactorInitialized(true);
@@ -86,26 +85,40 @@ export function useInitializeReactor(
 }
 
 export function useSubscribeToWindowEvents() {
-  const selectedDriveId = useSelectedDriveId();
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(selectedNodeAtom);
-  const setDocuments = useSetDocuments();
+
+  const handleSetDrive = useCallback(
+    (event: SetDriveEvent) => {
+      handleSetDriveEvent(event, setSelectedDrive);
+    },
+    [setSelectedDrive],
+  );
+
+  const handleSetNode = useCallback(
+    (event: SetNodeEvent) => {
+      handleSetNodeEvent(event, setSelectedNode);
+    },
+    [setSelectedNode],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const handleSetDrive = (event: SetDriveEvent) => {
-      handleSetDriveEvent(event, setSelectedDrive, setDocuments);
-    };
-    const handleSetNode = (event: SetNodeEvent) => {
-      handleSetNodeEvent(event, selectedDriveId, setSelectedNode);
-    };
     window.addEventListener("ph:setDrive", handleSetDrive);
-    window.addEventListener("ph:setNode", handleSetNode);
+
     return () => {
       window.removeEventListener("ph:setDrive", handleSetDrive);
+    };
+  }, [handleSetDrive]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.addEventListener("ph:setNode", handleSetNode);
+
+    return () => {
       window.removeEventListener("ph:setNode", handleSetNode);
     };
-  }, [selectedDriveId, setSelectedDrive, setSelectedNode, setDocuments]);
+  }, [handleSetNode]);
 }
 
 export function useSubscribeToReactorEvents() {
