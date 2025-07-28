@@ -10,11 +10,11 @@ We break PHDocument into four objects:
 {
   header,    // header information
 
-	state,     // plain, serializable object
-	
-	mutations, // typed API for creting and/or executing operations
-	
-	history,   // typed API for fetching document history
+  state,     // plain, serializable object
+  
+  mutations, // typed API for creting and/or executing operations
+  
+  history,   // typed API for fetching document history
 }
 ```
 
@@ -111,7 +111,7 @@ See the header section below for more information.
 
 The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers. For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
 
-The `header` scope is a "special case" scope that is always populated, and the `document` scope is a default scope used for upgrades and initial scope, but is not necessarily populated.
+The `auth` scope is always present, but populated only with state that is available to that user. The `document` scope is a "special case" scope that is always present and is a default scope used for upgrades and initial scope, but is not necessarily populated.
 
 ```tsx
 type BaseDocumentState = {
@@ -126,14 +126,6 @@ export type PHDocument<TState extends BaseDocumentState> = {
 
   // elided
 }
-```
-
-Querying looks like:
-
-```tsx
-let drive = await client.get<DocumentDriveDocument>("mine");
-
-console.log(`Drive icon: ${drive.state.document.icon}`);
 ```
 
 Custom document types extend this:
