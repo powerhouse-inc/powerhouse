@@ -1,0 +1,46 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "resolveJsonModule": true
+  },
+  "include": [
+    "**/*",
+    "*.json"
+  ],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../common"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../builder-tools"
+    },
+    {
+      "path": "../codegen"
+    },
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../reactor-api"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../reactor-local"
+    },
+    {
+      "path": "../document-drive"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "name": "@powerhousedao/vetra",
+  "version": "3.3.0-dev.16",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./document-models": {
+      "types": "./dist/document-models/index.d.ts",
+      "default": "./dist/document-models/index.js"
+    },
+    "./editors": {
+      "types": "./dist/editors/index.d.ts",
+      "default": "./dist/editors/index.js"
+    },
+    "./subgraphs": {
+      "types": "./dist/subgraphs/index.d.ts",
+      "default": "./dist/subgraphs/index.js"
+    },
+    "./processors": {
+      "types": "./dist/processors/index.d.ts",
+      "default": "./dist/processors/index.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "build:tsc": "tsc",
+    "build:tsc:watch": "tsc --watch",
+    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "build:css:watch": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css --watch",
+    "build": "npm run build:tsc && npm run build:css",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "document-model": "workspace:*",
+    "graphql": "^16.10.0",
+    "graphql-tag": "^2.12.6",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.2.12",
+    "@eslint/js": "^9.22.0",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "@tailwindcss/cli": "^4.0.15",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.13.11",
+    "@types/react": "^18.3.19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "document-drive": "workspace:*",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "package-manager-detector": "^0.2.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.15",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.27.0",
+    "vite": "^6.2.3",
+    "vitest": "^3.0.9"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "description": ""
+}
