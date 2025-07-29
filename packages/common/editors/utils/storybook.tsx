@@ -57,8 +57,6 @@ export function createDriveStory(
             onAddAndSelectNewFolder: () => Promise.resolve(),
             getSyncStatusSync: () => undefined,
             showDeleteNodeModal: () => {},
-            getDocumentModelModule: () => undefined,
-            getEditor: () => undefined,
             useDocumentEditorProps: () => ({
               dispatch: () => {},
               document: context.args.document,
@@ -66,9 +64,6 @@ export function createDriveStory(
             }),
             showSearchBar: false,
             isAllowedToCreateDocuments: true,
-            documentModels: [
-              documentModelDocumentModelModule as DocumentModelModule,
-            ],
             addFile() {
               throw new Error("addFile not implemented");
             },

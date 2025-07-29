@@ -6,16 +6,11 @@ import {
     useNodeActions,
     useShowDeleteNodeModal,
 } from '#hooks';
-import {
-    useDriveEditor,
-    useFilteredDocumentModels,
-    useGetDocumentModelModule,
-    useGetEditor,
-} from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
+    useDriveEditor,
     useSelectedDocument,
     useSelectedDrive,
 } from '@powerhousedao/state';
@@ -78,9 +73,6 @@ export function DriveEditorContainer() {
     );
     const showDeleteNodeModal = useShowDeleteNodeModal();
     const { addFile, addDocument } = useDocumentDriveServer();
-    const documentModels = useFilteredDocumentModels() ?? [];
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
 
@@ -89,11 +81,8 @@ export function DriveEditorContainer() {
             ...nodeActions,
             showSearchBar,
             isAllowedToCreateDocuments,
-            documentModels,
             analyticsDatabaseName,
             getSyncStatusSync,
-            getDocumentModelModule,
-            getEditor,
             addFile,
             showCreateDocumentModal,
             showDeleteNodeModal,
@@ -103,12 +92,9 @@ export function DriveEditorContainer() {
         [
             nodeActions,
             isAllowedToCreateDocuments,
-            documentModels,
             addFile,
             addDocument,
             getSyncStatusSync,
-            getDocumentModelModule,
-            getEditor,
             showDeleteNodeModal,
             showCreateDocumentModal,
         ],

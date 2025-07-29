@@ -13,6 +13,7 @@ import {
   getDriveAvailableOffline,
   getDriveSharingType,
 } from "../utils/drives.js";
+import { useEditorModuleById } from "./ph-packages.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives() {
@@ -137,4 +138,32 @@ export function useDriveAvailableOffline(driveId: string | null | undefined) {
   const drive = useDriveById(driveId);
   if (!drive) return false;
   return getDriveAvailableOffline(drive);
+}
+
+/** Returns the id of the preferred editor for a drive. */
+export function useDrivePreferredEditorId(driveId: string | null | undefined) {
+  const drive = useDriveById(driveId);
+  if (!drive) return undefined;
+  return drive.header.meta?.preferredEditor;
+}
+
+/** Returns the preferred editor for the selected drive. */
+export function useSelectedDrivePreferredEditorId() {
+  const drive = useSelectedDrive();
+  if (!drive) return undefined;
+  return drive.header.meta?.preferredEditor;
+}
+
+export function useDrivePreferredEditor(driveId: string | null | undefined) {
+  const editorId = useDrivePreferredEditorId(driveId);
+  if (!editorId) return undefined;
+  const editorModule = useEditorModuleById(editorId);
+  return editorModule;
+}
+
+export function useSelectedDrivePreferredEditor() {
+  const editorId = useSelectedDrivePreferredEditorId();
+  if (!editorId) return undefined;
+  const editorModule = useEditorModuleById(editorId);
+  return editorModule;
 }

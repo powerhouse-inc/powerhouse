@@ -1,8 +1,8 @@
 import { logger } from "document-drive";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
+import { type PHPackage } from "../types.js";
 import { pHPackagesAtom, pHPackagesInitializedAtom } from "./atoms.js";
-import { type PHPackage } from "./types.js";
 
 export function useSetPHPackages() {
   return useSetAtom(pHPackagesAtom);
@@ -15,15 +15,17 @@ export function useInitializePHPackages(
   const setPHPackages = useSetPHPackages();
 
   useEffect(() => {
-    if (phPackagesInitialized) return;
-
     async function initializePHPackages() {
+      if (phPackagesInitialized) return;
+
       const initializedPhPackages = await phPackages;
-      window.phPackages = initializedPhPackages;
-      setPHPackages(initializedPhPackages ?? window.phPackages).catch(
-        logger.error,
-      );
+      console.log("initializedPhPackages", initializedPhPackages);
+      console.log("window.phPackages", window.phPackages);
+      if (initializedPhPackages) {
+        window.phPackages = initializedPhPackages;
+      }
+      setPHPackages(window.phPackages).catch(logger.error);
     }
     initializePHPackages().catch(logger.error);
-  }, [phPackagesInitialized, setPHPackages]);
+  }, [phPackagesInitialized, setPHPackages, phPackages]);
 }

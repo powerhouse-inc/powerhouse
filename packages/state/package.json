@@ -24,12 +24,14 @@
   },
   "types": "./dist/index.d.ts",
   "devDependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/react": "^19.1.8",
     "@types/slug": "^5.0.9",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vite": "^6.3.5"
   },
   "peerDependencies": {
     "document-drive": "workspace:*",

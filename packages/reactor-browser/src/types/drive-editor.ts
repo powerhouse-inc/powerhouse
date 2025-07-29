@@ -26,8 +26,6 @@ export type IDriveContext = {
   showSearchBar: boolean;
   /** Indicates whether the current user has permissions to create new documents */
   isAllowedToCreateDocuments: boolean;
-  /** Array of available document models that can be created */
-  documentModels: DocumentModelModule[];
   /**
    * The name of the analytics database to use for the drive editor
    */
@@ -135,22 +133,6 @@ export type IDriveContext = {
    * @param node - The node to be deleted
    */
   showDeleteNodeModal: (node: Node) => void;
-  /**
-   * Retrieves the document model module for a given document type
-   * @param documentType - The type of document to retrieve the model for
-   * @returns The document model module for the given document type, or undefined if not found
-   */
-  getDocumentModelModule: (
-    documentType: string | undefined,
-  ) => DocumentModelModule<PHDocument> | undefined;
-  /**
-   * Retrieves the editor module for a given document type
-   * @param documentType - The type of document to retrieve the editor for
-   * @returns The editor module for the given document type, or null if not found
-   */
-  getEditor: (
-    documentType: string | undefined,
-  ) => EditorModule | null | undefined;
   useDocumentEditorProps: (props: {
     driveId: string | undefined;
     documentId: string | undefined;

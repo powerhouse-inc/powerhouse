@@ -4,12 +4,7 @@ import {
     useUndoRedoShortcuts,
     useUserPermissions,
 } from '#hooks';
-import {
-    themeAtom,
-    useGetDocumentModelModule,
-    useGetEditor,
-    useUser,
-} from '#store';
+import { themeAtom, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatchCallback,
@@ -23,6 +18,10 @@ import {
     RevisionHistory,
     type TimelineItem,
 } from '@powerhousedao/design-system';
+import {
+    useDocumentModelModuleByDocumentType,
+    useEditorModuleByDocumentType,
+} from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -80,18 +79,9 @@ export const DocumentEditor: React.FC<Props> = props => {
     const user = useUser() || undefined;
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
     const documentType = document.header.documentType;
-    const documentModel = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
-    );
-
-    const editor = useMemo(
-        () => (documentType ? getEditor(documentType) : undefined),
-        [documentType, getEditor],
-    );
+    const documentModel = useDocumentModelModuleByDocumentType(documentType);
+    const editor = useEditorModuleByDocumentType(documentType);
 
     const [, _dispatch, error] = useDocumentDispatch(
         documentModel?.reducer,

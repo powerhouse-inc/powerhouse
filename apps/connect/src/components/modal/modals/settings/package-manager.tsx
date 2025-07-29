@@ -1,8 +1,7 @@
 import { addExternalPackage, removeExternalPackage } from '#services';
-import { useExternalPackages, useMutableExternalPackages } from '#store';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { useDrives } from '@powerhousedao/state';
+import { useDrives, useHmr, usePHPackages } from '@powerhousedao/state';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,7 +9,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
 
-function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
+function manifestToDetails(
+    manifest: Manifest | undefined,
+    id: string,
+    removable: boolean,
+) {
+    if (!manifest) {
+        return undefined;
+    }
+
     const documentModels =
         manifest.documentModels?.map(dm => `Document Model: ${dm.name}`) ?? [];
     const editors =
@@ -33,9 +40,10 @@ export interface SettingsModalProps {
 }
 
 export const PackageManager: React.FC = () => {
-    const packages = useExternalPackages();
-    const isMutable = useMutableExternalPackages();
+    const phPackages = usePHPackages();
     const drives = useDrives();
+    const hmr = useHmr();
+    const isMutable = !!hmr;
     const [reactor, setReactor] = useState('');
 
     const options = useMemo(() => {
@@ -81,13 +89,10 @@ export const PackageManager: React.FC = () => {
         });
     }, [reactor, options]);
 
-    const packagesInfo = useMemo(() => {
-        return [
-            ...packages.map(pkg =>
-                manifestToDetails(pkg.manifest, pkg.id, true),
-            ),
-        ];
-    }, [packages]);
+    const packagesInfo =
+        phPackages
+            ?.map(pkg => manifestToDetails(pkg.manifest, pkg.id, true))
+            .filter(pkg => pkg !== undefined) ?? [];
 
     const handleReactorChange = useCallback(
         (reactor?: string) => setReactor(reactor ?? ''),

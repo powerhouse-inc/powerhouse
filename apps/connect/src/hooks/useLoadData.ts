@@ -1,14 +1,16 @@
-import { useSubscribeToPHPackages } from '#services';
+import { getHMRModule, useSubscribeToPHPackages } from '#services';
 import {
     createReactor,
-    documentModelsAtom,
     loadBaseDocumentModelEditor,
     loadBaseDocumentModels,
     loadExternalPackages,
     storageAtom,
     useCreateFirstLocalDrive,
 } from '#store';
-import { useInitializePHApp } from '@powerhousedao/state';
+import {
+    useDocumentModelModules,
+    useInitializePHApp,
+} from '@powerhousedao/state';
 import { useAtomValue } from 'jotai';
 import { useRenown } from './useRenown';
 
@@ -21,11 +23,12 @@ async function loadPHPackages() {
 
 export function useLoadData() {
     const storage = useAtomValue(storageAtom);
-    const documentModels = useAtomValue(documentModelsAtom);
+    const documentModels = useDocumentModelModules();
     const renown = useRenown();
     useInitializePHApp(
-        createReactor(storage, documentModels, renown),
+        createReactor(storage, documentModels || [], renown),
         loadPHPackages(),
+        getHMRModule(),
     );
     useCreateFirstLocalDrive();
     useSubscribeToPHPackages();

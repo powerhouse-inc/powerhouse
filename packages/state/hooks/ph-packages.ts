@@ -1,9 +1,19 @@
+import { type DocumentModelModule, type EditorModule } from "document-model";
+import { useAtomValue } from "jotai";
 import { useCallback } from "react";
-import { CommonPackage } from "../internal/constants.js";
+import {
+  loadableAppsAtom,
+  loadableDocumentModelModulesAtom,
+  loadableEditorModulesAtom,
+  unwrappedAppsAtom,
+  unwrappedDocumentModelModulesAtom,
+  unwrappedEditorModulesAtom,
+  unwrappedPHPackagesAtom,
+} from "../internal/atoms.js";
 import { dispatchUpdatePHPackagesEvent } from "../internal/events.js";
-import { type PHPackage } from "../internal/types.js";
+import { type PHPackage } from "../types.js";
 export function usePHPackages() {
-  return window.phPackages;
+  return useAtomValue(unwrappedPHPackagesAtom);
 }
 
 export function useUpdatePHPackages() {
@@ -13,44 +23,96 @@ export function useUpdatePHPackages() {
   }, []);
 }
 
-export function useDocumentModelModules() {
-  const phPackages = usePHPackages();
-  return phPackages
-    ?.flatMap((phPackage) => phPackage.documentModels)
-    .filter((module) => module !== undefined);
+export function useDocumentModelModules(): DocumentModelModule[] | undefined {
+  return useAtomValue(unwrappedDocumentModelModulesAtom);
+}
+
+export function useLoadableDocumentModelModules() {
+  return useAtomValue(loadableDocumentModelModulesAtom);
 }
 
 export function useEditorModules() {
-  const phPackages = usePHPackages();
-  return phPackages
-    ?.flatMap((phPackage) => phPackage.editors)
-    .filter((module) => module !== undefined);
+  return useAtomValue(unwrappedEditorModulesAtom);
 }
 
-export function useDocumentModelModuleById(id: string | null | undefined) {
+export function useLoadableEditorModules() {
+  return useAtomValue(loadableEditorModulesAtom);
+}
+
+export function useDocumentModelModuleById<
+  T extends DocumentModelModule = DocumentModelModule,
+>(id: string | null | undefined) {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find((module) => module.documentModel.id === id);
+  return documentModelModules?.find(
+    (module) => module.documentModel.id === id,
+  ) as T | undefined;
 }
 
-export function useEditorModuleById(id: string | null | undefined) {
+export function useEditorModuleById<T extends EditorModule = EditorModule>(
+  id: string | null | undefined,
+) {
   const editorModules = useEditorModules();
-  return editorModules?.find((module) => module.config.id === id);
+  return editorModules?.find((module) => module.config.id === id) as
+    | T
+    | undefined;
+}
+
+export function useEditorModuleByDocumentType<
+  T extends EditorModule = EditorModule,
+>(documentType: string | null | undefined) {
+  const editorModules = useEditorModules();
+  const modulesForType = editorModules?.filter(
+    (module) => module.config.documentType === documentType,
+  );
+  if (!modulesForType) return undefined;
+  if (modulesForType.length !== 1) {
+    console.warn(
+      `Multiple editor modules found for document type ${documentType}`,
+      "Returning first module",
+      modulesForType,
+    );
+  }
+  return modulesForType[0] as T | undefined;
+}
+
+export function useDocumentModelModuleByDocumentType<
+  T extends DocumentModelModule = DocumentModelModule,
+>(documentType: string | null | undefined) {
+  const documentModelModules = useDocumentModelModules();
+  const modulesForType = documentModelModules?.filter(
+    (module) => module.documentModel.id === documentType,
+  );
+  if (modulesForType && modulesForType.length > 1) {
+    console.warn(
+      `Multiple document model modules found for document type ${documentType}`,
+      "Returning first module",
+      modulesForType,
+    );
+  }
+  return modulesForType?.[0] as T | undefined;
 }
 
 export function useApps() {
-  const phPackages = usePHPackages();
-  const appsFromPHPackages =
-    phPackages
-      ?.flatMap((phPackage) => phPackage.manifest?.apps)
-      .filter((app) => app !== undefined) ?? [];
-  return [CommonPackage, ...appsFromPHPackages];
+  return useAtomValue(unwrappedAppsAtom);
 }
 
-export function useDriveEditor(editorId: string | null | undefined) {
-  const phPackages = usePHPackages();
-  if (!editorId) return undefined;
-  const pkg = phPackages?.find((pkg) =>
-    pkg.manifest?.apps?.find((app) => app.driveEditor === editorId),
+export function useLoadableApps() {
+  return useAtomValue(loadableAppsAtom);
+}
+
+export function useDriveEditor(
+  preferredDriveEditorId: string | null | undefined,
+) {
+  const apps = useApps();
+  const editorModules = useEditorModules();
+  if (!preferredDriveEditorId) return undefined;
+  const appWithDriveEditorForPreferredEditorId = apps?.find(
+    (app) => app.driveEditor === preferredDriveEditorId,
   );
-  return pkg?.editors?.find((editor) => editor.config.id === editorId);
+  if (!appWithDriveEditorForPreferredEditorId) return undefined;
+  const appDriveEditorId = appWithDriveEditorForPreferredEditorId.driveEditor;
+  const editorModuleForAppDriveEditorId = editorModules?.find(
+    (editor) => editor.config.id === appDriveEditorId,
+  );
+  return editorModuleForAppDriveEditorId;
 }

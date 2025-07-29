@@ -3,13 +3,13 @@ import {
     useDocumentDriveServer,
     useShowAddDriveModal,
 } from '#hooks';
-import { useApps, useGetAppNameForEditorId } from '#store';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
+    useApps,
     useDocumentModelModules,
     useDrives,
     useEditorModules,
@@ -17,6 +17,7 @@ import {
     useLoadableSelectedDrive,
     useLoadableSelectedFolder,
     usePHPackages,
+    useProcessors,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
@@ -37,10 +38,15 @@ export default function Content() {
     const documentModelModules = useDocumentModelModules();
     const apps = useApps();
     const phPackages = usePHPackages();
+    const processors = useProcessors();
+    console.log('selectedDrive', selectedDrive);
+    console.log('selectedFolder', selectedFolder);
+    console.log('selectedDocument', selectedDocument);
     console.log('apps', apps);
     console.log('editorModules', editorModules);
     console.log('documentModelModules', documentModelModules);
     console.log('phPackages', phPackages);
+    console.log('processors', processors);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -87,7 +93,7 @@ function HomeScreenContainer() {
     const loadableSelectedDocument = useLoadableSelectedDocument();
     const showAddDriveModal = useShowAddDriveModal();
     const setSelectedDrive = useSetSelectedDrive();
-    const getAppDescriptionForEditorId = useGetAppNameForEditorId();
+    const apps = useApps();
     const [config] = useConnectConfig();
     const handleDriveClick = useCallback(
         (drive: DocumentDriveDocument) => {
@@ -129,9 +135,9 @@ function HomeScreenContainer() {
         <HomeScreen>
             {drives?.map(drive => {
                 const editorId = drive.header.meta?.preferredEditor;
-                const appName = editorId
-                    ? getAppDescriptionForEditorId(editorId)
-                    : undefined;
+                const appName = apps?.find(
+                    app => app.driveEditor === editorId,
+                )?.name;
                 return (
                     <HomeScreenItem
                         key={drive.header.id}

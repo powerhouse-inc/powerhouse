@@ -1,8 +1,4 @@
-import {
-    useDocumentAdminStorage,
-    useGetDocumentModelModule,
-    useUser,
-} from '#store';
+import { useDocumentAdminStorage, useUser } from '#store';
 import {
     addActionContext,
     loadFile,
@@ -10,7 +6,12 @@ import {
     uploadDocumentOperations,
 } from '#utils';
 import { ERROR, LOCAL, type SharingType } from '@powerhousedao/design-system';
-import { useDrives, useReactor, useSelectedDrive } from '@powerhousedao/state';
+import {
+    useDocumentModelModules,
+    useDrives,
+    useReactor,
+    useSelectedDrive,
+} from '@powerhousedao/state';
 import {
     type DocumentDriveAction,
     type DocumentDriveDocument,
@@ -147,7 +148,7 @@ export function useDocumentDriveServer() {
     const { sign } = useConnectCrypto();
     const reactor = useReactor();
     const storage = useDocumentAdminStorage();
-    const getDocumentModelModule = useGetDocumentModelModule();
+    const documentModelModules = useDocumentModelModules();
     const drives = useDrives();
     const selectedDrive = useSelectedDrive();
 
@@ -290,7 +291,9 @@ export function useDocumentDriveServer() {
             }
 
             const documentId = id ?? generateId();
-            const documentModelModule = getDocumentModelModule(documentType);
+            const documentModelModule = documentModelModules?.find(
+                module => module.documentModel.id === documentType,
+            );
             if (!documentModelModule) {
                 throw new Error(
                     `Document model module for type ${documentType} not found`,
@@ -346,7 +349,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to create files');
             }
-            const document = await loadFile(file, getDocumentModelModule);
+            const document = await loadFile(file, documentModelModules || []);
 
             // first create the file with the initial state of document
             const initialDocument: PHDocument = {
@@ -394,7 +397,7 @@ export function useDocumentDriveServer() {
         [
             addDocument,
             addDocumentOperations,
-            getDocumentModelModule,
+            documentModelModules,
             drives,
             isAllowedToCreateDocuments,
             reactor,
@@ -568,6 +571,7 @@ export function useDocumentDriveServer() {
 
     const addDrive = useCallback(
         async (drive: DriveInput, preferredEditor?: string) => {
+            console.log('addDrive', drive, preferredEditor);
             if (!reactor) {
                 return;
             }

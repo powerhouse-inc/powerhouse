@@ -1,5 +1,6 @@
 export * from "./documents.js";
 export * from "./drives.js";
+export * from "./hmr.js";
 export * from "./initialize.js";
 export * from "./modals.js";
 export * from "./nodes.js";

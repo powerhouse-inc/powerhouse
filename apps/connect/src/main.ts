@@ -17,14 +17,13 @@ import path, { basename } from 'path';
 import { addDeeplink } from './app/deeplink.js';
 import initDocumentDrive from './app/document-drive.js';
 import store from './app/store.js';
-import { ConnectCrypto } from './services/crypto/index.js';
 import {
     ElectronKeyStorage,
     type KeyStorageElectronStore,
 } from './services/crypto/electron.js';
+import { ConnectCrypto } from './services/crypto/index.js';
 import { initRenownElectron } from './services/renown/electron.js';
-import { type Theme, isTheme } from './store/index.js';
-import { baseDocumentModels } from './store/document-model.js';
+import { type Theme, isTheme, loadBaseDocumentModels } from './store/index.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -77,7 +76,9 @@ async function initApp() {
 
         // initializes document drive server
         await initDocumentDrive(
-            baseDocumentModels,
+            loadBaseDocumentModels()
+                .flatMap(m => m.documentModels)
+                .filter(m => m !== undefined),
             app.getPath('userData'),
             ipcMain,
         );

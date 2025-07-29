@@ -26,16 +26,11 @@ const downloadFile = async (document: PHDocument) => {
 
 export async function exportFile(
     document: PHDocument,
-    getDocumentModelModule: (
-        documentType: string,
-    ) => DocumentModelModule | undefined,
+    documentModelModule: DocumentModelModule | undefined,
 ) {
-    const documentModelModule = getDocumentModelModule(
-        document.header.documentType,
-    );
     if (!documentModelModule) {
         throw new Error(
-            `Document model not supported: ${document.header.documentType}`,
+            `Document model not specified: ${document.header.documentType}`,
         );
     }
 
@@ -70,17 +65,15 @@ export async function exportFile(
 
 export async function loadFile(
     path: string | File,
-    getDocumentModelModule: (
-        documentType: string,
-    ) => DocumentModelModule | undefined,
+    documentModelModules: DocumentModelModule[],
 ) {
     const baseDocument = await baseLoadFromInput(
         path,
         (state: PHDocument) => state,
         { checkHashes: true },
     );
-    const documentModelModule = getDocumentModelModule(
-        baseDocument.header.documentType,
+    const documentModelModule = documentModelModules.find(
+        module => module.documentModel.id === baseDocument.header.documentType,
     );
     if (!documentModelModule) {
         throw new Error(

@@ -15,7 +15,6 @@ export * from './useInitSentry.js';
 export * from './useLoadInitialData.js';
 export * from './useLogin.js';
 export * from './useNodeActions.js';
-export * from './useOpenFile.js';
 export * from './useRenown.js';
 export * from './useUndoRedoShortcuts.js';
 export * from './useUserPermissions.js';

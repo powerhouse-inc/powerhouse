@@ -1,10 +1,11 @@
 import { useConnectCrypto } from '#hooks';
-import { useApps, useUser } from '#store';
+import { useUser } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
+import { useApps } from '@powerhousedao/state';
 import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
@@ -55,7 +56,7 @@ export function AddDriveModal(props: Props) {
             onOpenChange={status => {
                 if (!status) return onClose();
             }}
-            appOptions={apps}
+            appOptions={apps || []}
         />
     );
 }

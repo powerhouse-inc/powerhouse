@@ -1,6 +1,4 @@
-import { type ExternalPackage } from '#store';
-import { useUpdatePHPackages } from '@powerhousedao/state';
-import { type PHPackage } from '@powerhousedao/state/internal/types';
+import { type PHPackage, useUpdatePHPackages } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import { useCallback, useEffect, useRef } from 'react';
 import type { ViteHotContext } from 'vite/types/hot.js';
@@ -73,14 +71,14 @@ export async function handlePackageEvents(
 }
 
 export async function subscribeExternalPackages(
-    callback: (modules: Promise<ExternalPackage[]>) => void,
+    callback: (modules: Promise<PHPackage[]>) => void,
 ) {
     const hmr = await getHMRModule();
     const handler = (data: PackagesUpdate) => {
         const modules = import(
             /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
         ) as Promise<{
-            default: ExternalPackage[];
+            default: PHPackage[];
         }>;
         callback(modules.then(m => m.default));
     };

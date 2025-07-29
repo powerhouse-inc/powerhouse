@@ -1,23 +1,20 @@
 import {
-  driveDocumentModelModule,
   type DocumentDriveDocument,
   type FolderNode,
   type Node,
 } from "document-drive";
 import { type ProcessorManager } from "document-drive/processors/processor-manager";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type PHDocument,
-} from "document-model";
+import { type PHDocument } from "document-model";
 import isEqual from "fast-deep-equal";
 import { atom } from "jotai";
 import { loadable, unwrap } from "jotai/utils";
+import type { ViteHotContext } from "vite/types/hot.js";
+import { type PHPackage } from "../types.js";
 import { getDocumentsForDriveId, getDrives } from "../utils/drives.js";
 import { isFolderNodeKind } from "../utils/nodes.js";
-import { NOT_SET } from "./constants.js";
+import { CommonPackage, NOT_SET } from "./constants.js";
 import { suspendUntilSet } from "./suspend.js";
-import { type PHPackage, type UnsetAtomValue } from "./types.js";
+import { type UnsetAtomValue } from "./types.js";
 
 /* Processor Manager */
 
@@ -347,3 +344,100 @@ loadablePHPackagesAtom.debugLabel = "loadablePHPackagesAtom";
 
 export const unwrappedPHPackagesAtom = unwrap(pHPackagesAtom);
 unwrappedPHPackagesAtom.debugLabel = "unwrappedPHPackagesAtom";
+
+const documentModelModulesAtom = atom(async (get) => {
+  const phPackages = await get(pHPackagesAtom);
+  const documentModelModules = phPackages
+    ?.map((pkg) => pkg.documentModels)
+    .filter((m) => m !== undefined)
+    .flat();
+  return documentModelModules ?? [];
+});
+documentModelModulesAtom.debugLabel = "documentModelModulesAtom";
+
+export const unwrappedDocumentModelModulesAtom = unwrap(
+  documentModelModulesAtom,
+);
+unwrappedDocumentModelModulesAtom.debugLabel =
+  "unwrappedDocumentModelModulesAtom";
+
+export const loadableDocumentModelModulesAtom = loadable(
+  documentModelModulesAtom,
+);
+loadableDocumentModelModulesAtom.debugLabel =
+  "loadableDocumentModelModulesAtom";
+
+const editorModulesAtom = atom(async (get) => {
+  const phPackages = await get(pHPackagesAtom);
+  const editorModules = phPackages
+    ?.map((pkg) => pkg.editors)
+    .filter((m) => m !== undefined)
+    .flat();
+  return editorModules ?? [];
+});
+editorModulesAtom.debugLabel = "editorModulesAtom";
+
+export const unwrappedEditorModulesAtom = unwrap(editorModulesAtom);
+unwrappedEditorModulesAtom.debugLabel = "unwrappedEditorModulesAtom";
+
+export const loadableEditorModulesAtom = loadable(editorModulesAtom);
+loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
+
+const appsAtom = atom(async (get) => {
+  const phPackages = await get(pHPackagesAtom);
+  const apps =
+    phPackages
+      ?.map((pkg) => pkg.manifest?.apps)
+      .filter((a) => a !== undefined)
+      .flat() ?? [];
+  return [CommonPackage, ...apps];
+});
+appsAtom.debugLabel = "appsAtom";
+
+export const unwrappedAppsAtom = unwrap(appsAtom);
+unwrappedAppsAtom.debugLabel = "unwrappedAppsAtom";
+
+export const loadableAppsAtom = loadable(appsAtom);
+loadableAppsAtom.debugLabel = "loadableAppsAtom";
+
+export const processorsAtom = atom(async (get) => {
+  const phPackages = await get(pHPackagesAtom);
+  const processors = phPackages
+    ?.map((pkg) => pkg.processors)
+    .filter((p) => p !== undefined);
+  return processors ?? [];
+});
+processorsAtom.debugLabel = "processorsAtom";
+
+export const loadableProcessorsAtom = loadable(processorsAtom);
+loadableProcessorsAtom.debugLabel = "loadableProcessorsAtom";
+
+export const unwrappedProcessorsAtom = unwrap(processorsAtom);
+unwrappedProcessorsAtom.debugLabel = "unwrappedProcessorsAtom";
+
+const baseHmrAtom = atom<UnsetAtomValue | ViteHotContext | undefined>(NOT_SET);
+baseHmrAtom.debugLabel = "baseHmrAtom";
+
+export const hmrInitializedAtom = atom((get) => {
+  const hmr = get(baseHmrAtom);
+  return hmr !== NOT_SET;
+});
+hmrInitializedAtom.debugLabel = "hmrInitializedAtom";
+
+export const hmrAtom = atom(
+  async (get) => {
+    const hmr = get(baseHmrAtom);
+    if (hmr === NOT_SET) return suspendUntilSet<ViteHotContext>();
+    return hmr;
+  },
+  (_get, set, hmr: ViteHotContext | undefined) => {
+    set(baseHmrAtom, hmr);
+  },
+);
+hmrAtom.debugLabel = "hmrAtom";
+
+export const loadableHmrAtom = loadable(hmrAtom);
+loadableHmrAtom.debugLabel = "loadableHmrAtom";
+
+export const unwrappedHmrAtom = unwrap(hmrAtom);
+unwrappedHmrAtom.debugLabel = "unwrappedHmrAtom";

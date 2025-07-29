@@ -1,10 +1,10 @@
 import { logger } from "document-drive";
+import { type PHPackage } from "../types.js";
 import {
   extractDriveFromPath,
   makeDriveUrlComponent,
   makeNodeUrlComponent,
 } from "../utils/url.js";
-import { type PHPackage } from "./types.js";
 
 export type SetDriveEvent = CustomEvent<{ driveId: string | undefined }>;
 export type SetNodeEvent = CustomEvent<{ nodeId: string | undefined }>;

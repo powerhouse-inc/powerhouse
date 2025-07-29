@@ -1,3 +1,5 @@
+import { type ViteHotContext } from "vite/types/hot.js";
+import { useInitializeHmr } from "../internal/hmr.js";
 import { useInitializePHPackages } from "../internal/ph-packages.js";
 import { useInitializeProcessorManager } from "../internal/processors.js";
 import {
@@ -5,16 +7,19 @@ import {
   useSubscribeToReactorEvents,
   useSubscribeToWindowEvents,
 } from "../internal/reactor.js";
-import { type PHPackage, type Reactor } from "../internal/types.js";
+import { type Reactor } from "../internal/types.js";
 import { useSetSelectedDriveAndNodeFromUrl } from "../internal/url.js";
+import { type PHPackage } from "../types.js";
 
 /** Initializes the PH app. */
 export function useInitializePHApp(
   reactor?: Promise<Reactor> | undefined,
   phPackages?: Promise<PHPackage[] | undefined>,
+  hmr?: Promise<ViteHotContext | undefined>,
 ) {
   useInitializeReactor(reactor);
   useInitializePHPackages(phPackages);
+  useInitializeHmr(hmr);
   useSubscribeToReactorEvents();
   useSubscribeToWindowEvents();
   useInitializeProcessorManager();

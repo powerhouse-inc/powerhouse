@@ -1,5 +1,4 @@
 import { useModal } from '#components';
-import { useApps } from '#store';
 import {
     toast,
     type AddLocalDriveInput,
@@ -7,6 +6,7 @@ import {
     type SharingType,
 } from '@powerhousedao/design-system';
 import {
+    useApps,
     useDrives,
     useSelectedDrive,
     useSelectedParentFolder,
@@ -25,8 +25,10 @@ export function useShowAddDriveModal() {
     const apps = useApps();
     const onAddLocalDrive = useCallback(
         async (data: AddLocalDriveInput) => {
+            console.log('apps', apps);
+            console.log('data', data);
             try {
-                const app = apps.find(a => a.id === data.appId);
+                const app = apps?.find(a => a.id === data.appId);
                 const newDrive = await addDrive(
                     {
                         id: '',
@@ -58,7 +60,7 @@ export function useShowAddDriveModal() {
                 console.error(e);
             }
         },
-        [addDrive, setSelectedDrive, t],
+        [addDrive, setSelectedDrive, t, apps],
     );
 
     const onAddRemoteDrive = useCallback(

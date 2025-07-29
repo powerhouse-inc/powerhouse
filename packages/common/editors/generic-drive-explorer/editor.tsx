@@ -1,20 +1,21 @@
 import {
-    Breadcrumbs,
-    useBreadcrumbs,
-    useDrop,
+  Breadcrumbs,
+  useBreadcrumbs,
+  useDrop,
 } from "@powerhousedao/design-system";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
-    DriveContextProvider,
-    useDriveContext,
+  DriveContextProvider,
+  useDriveContext,
 } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
 import {
-    getDriveSharingType,
-    makeFolderNodeFromDrive,
-    useSelectedDrive,
-    useSelectedFolder,
-    useSelectedNodePath,
-    useSetSelectedNode,
+  getDriveSharingType,
+  makeFolderNodeFromDrive,
+  useDocumentModelModules,
+  useSelectedDrive,
+  useSelectedFolder,
+  useSelectedNodePath,
+  useSetSelectedNode,
 } from "@powerhousedao/state";
 import { type DocumentDriveDocument } from "document-drive";
 import { type DocumentModelModule } from "document-model";
@@ -34,7 +35,6 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const {
     showSearchBar,
     isAllowedToCreateDocuments,
-    documentModels,
     getSyncStatusSync,
     showCreateDocumentModal,
     onRenameNode,
@@ -49,6 +49,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const selectedDrive = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
+  const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
   const setSelectedNode = useSetSelectedNode();
   const onCreateDocument = useCallback(
@@ -110,7 +111,10 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
       <DriveLayout.Footer>
         {isAllowedToCreateDocuments && (
           <CreateDocument
-            documentModels={documentModels}
+            documentModels={documentModels?.filter(
+              (module) =>
+                module.documentModel.id !== "powerhouse/document-drive",
+            )}
             createDocument={onCreateDocument}
           />
         )}

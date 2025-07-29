@@ -1,5 +1,5 @@
 import { useModal } from '#components';
-import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
+import { themeAtom, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -9,8 +9,8 @@ import {
     validateDocument,
 } from '#utils';
 import {
+    useDocumentModelModuleByDocumentType,
     useParentFolder,
-    useSelectedDrive,
     useSetSelectedNode,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
@@ -51,11 +51,8 @@ export function useEditorDispatch<T extends PHDocument = PHDocument>(
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const documentType = document?.header.documentType;
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const documentModelModule = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
-    );
+    const documentModelModule =
+        useDocumentModelModuleByDocumentType(documentType);
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
@@ -114,11 +111,12 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
-    const selectedDrive = useSelectedDrive();
     const parentFolder = useParentFolder(document?.header.id);
     const setSelectedNode = useSetSelectedNode();
+    const documentModelModule = useDocumentModelModuleByDocumentType(
+        document?.header.documentType,
+    );
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-    const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
         !!document &&
@@ -168,14 +166,14 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
                     },
                     onContinue(closeModal) {
                         closeModal();
-                        return exportFile(document, getDocumentModelModule);
+                        return exportFile(document, documentModelModule);
                     },
                 });
             } else {
-                return exportFile(document, getDocumentModelModule);
+                return exportFile(document, documentModelModule);
             }
         },
-        [getDocumentModelModule, showModal, t],
+        [documentModelModule, showModal, t],
     );
 
     const onExport = useCallback(() => {

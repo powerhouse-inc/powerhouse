@@ -1,10 +1,10 @@
 import { type IDocumentDriveServer } from "document-drive";
+import { type PHPackage } from "../types.js";
 import {
   type SetDriveEvent,
   type SetNodeEvent,
   type UpdatePHPackagesEvent,
 } from "./events.js";
-import { type PHPackage } from "./types.js";
 
 declare global {
   interface Window {

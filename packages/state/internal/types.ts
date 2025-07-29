@@ -1,7 +1,11 @@
+import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IDocumentDriveServer } from "document-drive";
+import {
+  type IRelationalDb,
+  type ProcessorRecord,
+} from "document-drive/processors/types";
 import { type DocumentModelLib } from "document-model";
 import { type NOT_SET } from "./constants.js";
-
 /** The type for the reactor instance.
  * Alias for the legacy IDocumentDriveServer type.
  */
@@ -16,5 +20,3 @@ export { type Loadable } from "jotai/vanilla/utils/loadable";
 export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
 
 export type NodeKind = "FOLDER" | "FILE";
-
-export type PHPackage = Partial<DocumentModelLib> & { id: string };
