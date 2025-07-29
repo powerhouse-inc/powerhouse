@@ -1,3 +1,13 @@
+## 4.0.0-staging.8 (2025-07-29)
+
+### 🚀 Features
+
+- **state:** simplify events ([39ead5990](https://github.com/powerhouse-inc/powerhouse/commit/39ead5990))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.7 (2025-07-26)
 
 ### 🚀 Features

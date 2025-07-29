@@ -1,3 +1,7 @@
+## 4.0.0-staging.8 (2025-07-29)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 4.0.0-staging.7 (2025-07-26)
 
 ### 🚀 Features

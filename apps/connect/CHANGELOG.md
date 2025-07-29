@@ -1,3 +1,13 @@
+## 4.0.0-staging.8 (2025-07-29)
+
+### 🩹 Fixes
+
+- **connect:** fix fat finger mistake ([c315d95bc](https://github.com/powerhouse-inc/powerhouse/commit/c315d95bc))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.7 (2025-07-26)
 
 ### 🚀 Features
