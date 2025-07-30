@@ -1,5 +1,34 @@
 # Release Changelog
 
+## 🚀 **v5.1.0** (PRE-RELEASE)
+
+## BREAKING CHANGES
+
+### `OperationScope` has been removed
+
+Previously, an enum existed called `OperationScope` that was used to define the scope of an operation. This has been removed and replaced with a string type.
+
+**Before (v5.0):**
+
+```typescript
+const operation: Operation = {
+  scope: OperationScope.Global,
+};
+```
+
+**After (v5.1):**
+
+```typescript
+const operation: Operation = {
+  scope: "global",
+};
+```
+
+**Migration Steps:**
+
+1. Update to the lastest `codegen` package.
+2. Regenerate your document models.s
+
 ## 🚀 **v5.0.0**
 
 ## BREAKING CHANGES
