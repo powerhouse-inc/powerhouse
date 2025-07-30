@@ -16,7 +16,6 @@ import {
   type DefaultAction,
   type Operation,
   type OperationFromDocument,
-  type OperationScope,
   type PHDocument,
   type ReducerOptions,
   type StateReducer,
@@ -48,7 +47,7 @@ import {
  */
 function getNextRevision(
   document: PHDocument,
-  operation: { index?: number; scope: OperationScope },
+  operation: { index?: number; scope: string },
 ) {
   let latestOperationIndex: number | undefined;
 
@@ -292,7 +291,7 @@ function processSkipOperation<TDocument extends PHDocument>(
         operationResultingStateParser: resultingStateParser,
       },
     );
-    scopeState = state[scope];
+    scopeState = (state as any)[scope];
   }
 
   return {
@@ -309,7 +308,7 @@ function processSkipOperation<TDocument extends PHDocument>(
 
 function processUndoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  scope: OperationScope,
+  scope: string,
   customReducer: StateReducer<TDocument>,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
@@ -522,7 +521,9 @@ export function baseReducer<TDocument extends PHDocument>(
     lastOperation.hash = hash;
 
     if (reuseOperationResultingState) {
-      lastOperation.resultingState = JSON.stringify(newDocument.state[scope]);
+      lastOperation.resultingState = JSON.stringify(
+        (newDocument.state as any)[scope],
+      );
     }
 
     // if the action has attachments then adds them to the document

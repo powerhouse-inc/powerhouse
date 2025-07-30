@@ -53,28 +53,23 @@ export type ActionContext = {
 /**
  * Defines the basic structure of an action.
  */
-export type BaseAction<
-  TType extends string,
-  TInput,
-  TScope extends OperationScope = OperationScope,
-> = {
+export type BaseAction<TType extends string, TInput> = {
   /** The name of the action. */
   type: TType;
   /** The payload of the action. */
   input: TInput;
-  /** The scope of the action, can either be 'global' or 'local' */
-  scope: TScope;
+  /** The scope of the action */
+  scope: string;
   /** The attachments included in the action. */
   attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */
   context?: ActionContext;
 };
 
-export type BaseActionWithAttachment<
-  TType extends string,
-  TInput,
-  TScope extends OperationScope,
-> = BaseAction<TType, TInput, TScope> & {
+export type BaseActionWithAttachment<TType extends string, TInput> = BaseAction<
+  TType,
+  TInput
+> & {
   attachments: AttachmentInput[];
 };
 
@@ -85,8 +80,7 @@ export type CustomAction = BaseAction<string, unknown>;
 export type Action<
   TType extends string = string,
   TInput = unknown,
-  TScope extends OperationScope = OperationScope,
-> = BaseAction<TType, TInput, TScope>;
+> = BaseAction<TType, TInput>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -132,12 +126,6 @@ export type StateReducer<TDocument extends PHDocument> = <
 export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
   StateReducer<TDocument>;
 
-/**
- * Scope of an operation.
- * Global: The operation is synchronized everywhere in the network. This is the default document operation.
- * Local: The operation is applied only locally (to a local state). Used for local settings such as a drive's local path
- */
-export type OperationScope = "global" | "local";
 /**
  * An operation that was applied to a {@link BaseDocument}.
  *
@@ -273,7 +261,7 @@ export type ExtendedState<TDocumentState, TLocalState> = {
 };
 
 export type DocumentOperations<TAction extends Action = Action> = Record<
-  OperationScope,
+  string,
   Operation<TAction>[]
 >;
 
@@ -283,7 +271,7 @@ export type MappedOperation<TAction extends Action = Action> = {
 };
 
 export type DocumentOperationsIgnoreMap<TAction extends Action = Action> =
-  Record<OperationScope, MappedOperation<TAction>[]>;
+  Record<string, MappedOperation<TAction>[]>;
 
 export type OperationSignatureContext<TAction extends Action = Action> = {
   documentId: string;
@@ -371,7 +359,7 @@ export type PartialRecord<K extends keyof any, T> = {
   [P in K]?: T;
 };
 
-export type RevisionsFilter = PartialRecord<OperationScope, number>;
+export type RevisionsFilter = PartialRecord<string, number>;
 
 export type GetDocumentOptions = ReducerOptions & {
   revisions?: RevisionsFilter;

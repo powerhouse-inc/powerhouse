@@ -7,7 +7,6 @@ import {
   type BaseState,
   type DefaultAction,
   type Operation,
-  type OperationScope,
   type Reducer,
   type ReducerOptions,
 } from "./types.js";
@@ -142,7 +141,7 @@ export abstract class BaseDocumentClass<
     return this._document.header.lastModifiedAtUtcIso;
   }
 
-  getRevision(scope: OperationScope) {
+  getRevision(scope: string) {
     return this._document.header.revision[scope] || 0;
   }
 

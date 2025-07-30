@@ -1,7 +1,6 @@
 import {
   type BaseAction,
   type Operation,
-  type OperationScope,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
@@ -113,7 +112,7 @@ export const mapOperations = (operations: Operation[]) => {
 export const createFakeOperation = (
   index = 0,
   skip = 0,
-  scope: OperationScope = "global",
+  scope: string = "global",
 ) =>
   ({
     type: "FAKE_OP",

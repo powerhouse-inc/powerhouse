@@ -1,5 +1,3 @@
-import { type OperationScope } from "../types.js";
-
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends Record<string, unknown>> = {
@@ -75,7 +73,7 @@ export type Load_State = "LOAD_STATE";
 export type LoadStateAction = {
   input: LoadStateActionInput;
   type: Load_State;
-  scope: OperationScope;
+  scope: string;
 };
 
 export type LoadStateActionInput = {
@@ -130,7 +128,7 @@ export type Prune = "PRUNE";
 export type PruneAction = {
   input: PruneActionInput;
   type: Prune;
-  scope: OperationScope;
+  scope: string;
 };
 
 export type PruneActionInput = {
@@ -148,7 +146,7 @@ export type Redo = "REDO";
 export type RedoAction = {
   input: Scalars["Int"]["input"];
   type: Redo;
-  scope: OperationScope;
+  scope: string;
 };
 
 export type Set_Name = "SET_NAME";
@@ -173,7 +171,7 @@ export type Undo = "UNDO";
 export type UndoAction = {
   input: Scalars["Int"]["input"];
   type: Undo;
-  scope: OperationScope;
+  scope: string;
 };
 
 export type NOOP = "NOOP";
@@ -181,5 +179,5 @@ export type NOOP = "NOOP";
 export type NOOPAction = {
   input: Scalars["Unknown"]["input"];
   type: NOOP;
-  scope: OperationScope;
+  scope: string;
 };

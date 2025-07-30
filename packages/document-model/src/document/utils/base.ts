@@ -27,7 +27,6 @@ import {
   type LocalStateFromDocument,
   type MappedOperation,
   type Operation,
-  type OperationScope,
   type OperationsFromDocument,
   type PartialState,
   type PHDocument,
@@ -100,7 +99,7 @@ export function createAction<TAction extends BaseAction<string, unknown>>(
   input?: TAction["input"],
   attachments?: TAction["attachments"],
   validator?: () => { parse(v: unknown): TAction["input"] },
-  scope: OperationScope = "global",
+  scope: string = "global",
 ): TAction {
   if (!type) {
     throw new Error("Empty action type");
@@ -213,10 +212,10 @@ export function baseCreateDocument<TDocument extends PHDocument>(
 export function hashDocumentStateForScope(
   document: {
     state: {
-      [key in OperationScope]: unknown;
+      [key: string]: unknown;
     };
   },
-  scope: OperationScope = "global",
+  scope: string = "global",
 ) {
   const stateString = stringifyJson(document.state[scope] || "");
   return hash(stateString);
@@ -329,7 +328,7 @@ export function replayOperations<TDocument extends PHDocument>(
   );
 }
 
-export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;
+export type SkipHeaderOperations = Partial<Record<string, number>>;
 
 export type ReplayDocumentOptions = {
   // if false then reuses the hash from the operations

@@ -3,7 +3,6 @@ import {
   type Action,
   type DocumentOperations,
   type Operation,
-  type OperationScope,
 } from "../types.js";
 
 export type OperationIndex = {
@@ -403,7 +402,7 @@ export function checkOperationsIntegrity(operations: Operation[]) {
   );
 }
 
-export type OperationsByScope = Partial<Record<OperationScope, Operation[]>>;
+export type OperationsByScope = Partial<Record<string, Operation[]>>;
 
 export function groupOperationsByScope(operations: Operation[]) {
   const result = operations.reduce<OperationsByScope>((acc, operation) => {
@@ -553,7 +552,7 @@ export function garbageCollectDocumentOperations<
 
       return {
         ...acc,
-        [scope as OperationScope]: garbageCollect(sortOperations(ops)),
+        [scope]: garbageCollect(sortOperations(ops)),
       };
     },
     {},

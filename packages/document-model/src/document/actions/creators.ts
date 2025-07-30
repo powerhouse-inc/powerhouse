@@ -5,11 +5,7 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import {
-  type DefaultAction,
-  type ExtendedState,
-  type OperationScope,
-} from "../types.js";
+import { type DefaultAction, type ExtendedState } from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
   type LoadStateAction,
@@ -41,7 +37,7 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (skip = 1, scope: OperationScope = "global") =>
+export const undo = (skip = 1, scope: string = "global") =>
   createAction<UndoAction>(
     "UNDO",
     skip,
@@ -56,7 +52,7 @@ export const undo = (skip = 1, scope: OperationScope = "global") =>
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1, scope: OperationScope = "global") =>
+export const redo = (count = 1, scope: string = "global") =>
   createAction<RedoAction>(
     "REDO",
     count,
@@ -79,7 +75,7 @@ export const redo = (count = 1, scope: OperationScope = "global") =>
 export const prune = (
   start?: number | undefined,
   end?: number | undefined,
-  scope: OperationScope = "global",
+  scope: string = "global",
 ) =>
   createAction<PruneAction>(
     "PRUNE",
@@ -110,7 +106,7 @@ export const loadState = <S, T>(
     LoadStateActionInputSchema,
   );
 
-export const noop = (scope: OperationScope = "global") =>
+export const noop = (scope: string = "global") =>
   createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
 
 export const actions = {
