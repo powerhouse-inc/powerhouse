@@ -12,7 +12,10 @@
   },
   "type": "module",
   "types": "./dist/index.d.ts",
-  "exports": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./document-model/*": "./dist/src/document-model/*.js"
+  },
   "imports": {
     "#*": "./dist/src/*",
     "#utils/env": {
