@@ -25,7 +25,6 @@
     "build": "tsc --build",
     "build:tsc": "tsc --build",
     "prebuild": "npm run clean",
-    "test": "vitest run",
     "lint": "eslint",
     "bench": "vitest bench",
     "clean": "rimraf dist",
