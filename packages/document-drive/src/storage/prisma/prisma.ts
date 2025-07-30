@@ -12,7 +12,6 @@ import type {
   FileRegistry,
   Operation,
   OperationFromDocument,
-  OperationScope,
   OperationsFromDocument,
   PHDocument,
   PHDocumentHeader,
@@ -62,7 +61,7 @@ function storageToOperation(
     timestamp: new Date(op.timestamp).toISOString(),
     input: JSON.parse(op.input),
     type: op.type,
-    scope: op.scope as OperationScope,
+    scope: op.scope,
     resultingState: op.resultingState
       ? op.resultingState.toString()
       : undefined,
@@ -370,10 +369,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     }
 
     const scopeIndex = Object.keys(cachedOperations).reduceRight<
-      Record<OperationScope, number>
+      Record<string, number>
     >(
       (acc, value) => {
-        const scope = value as OperationScope;
+        const scope = value;
         const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
         acc[scope] = lastIndex;
         return acc;
@@ -438,7 +437,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     const fileRegistry: FileRegistry = {};
 
     const operationsByScope = queryOperations.reduce((acc, operation) => {
-      const scope = operation.scope as OperationScope;
+      const scope = operation.scope;
       if (!acc[scope]) {
         acc[scope] = [];
       }
@@ -463,7 +462,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       documentType: dbDoc.documentType,
       createdAtUtcIso: dbDoc.created.toISOString(),
       lastModifiedAtUtcIso: dbDoc.lastModified.toISOString(),
-      revision: JSON.parse(dbDoc.revision) as Record<OperationScope, number>,
+      revision: JSON.parse(dbDoc.revision) as Record<string, number>,
       meta: dbDoc.meta ? (JSON.parse(dbDoc.meta) as object) : undefined,
       slug: dbDoc.slug ? dbDoc.slug : "",
       name: dbDoc.name ? dbDoc.name : "",
@@ -914,7 +913,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       {
         documentId: string;
         lastUpdated: string;
-        scope: OperationScope;
+        scope: string;
         branch: string;
         revision: number;
       }[]

@@ -3,7 +3,6 @@ import { Pagination, usePagination } from "#powerhouse";
 import {
   garbageCollect,
   type Operation,
-  type OperationScope,
   sortOperations,
 } from "document-model";
 import { useMemo, useState } from "react";
@@ -29,7 +28,7 @@ export function RevisionHistory(props: Props) {
     itemsPerPage = 100,
   } = props;
 
-  const [scope, setScope] = useState<OperationScope>("global");
+  const [scope, setScope] = useState<string>("global");
 
   const visibleOperations = useMemo(() => {
     const operations = scope === "global" ? globalOperations : localOperations;
@@ -53,7 +52,7 @@ export function RevisionHistory(props: Props) {
     itemsPerPage,
   });
 
-  function onChangeScope(scope: OperationScope) {
+  function onChangeScope(scope: string) {
     goToFirstPage();
     setScope(scope);
   }

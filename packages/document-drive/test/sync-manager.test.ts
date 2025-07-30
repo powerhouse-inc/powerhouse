@@ -1,10 +1,6 @@
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
-import {
-  DocumentModelModule,
-  generateId,
-  OperationScope,
-} from "../../document-model/index.js";
+import { DocumentModelModule, generateId } from "../../document-model/index.js";
 import { documentModelDocumentModelModule as DocumentModel } from "../../document-model/src/document-model/module.js";
 import InMemoryCache from "../src/cache/memory.js";
 import * as DriveActions from "../src/drive-document-model/gen/creators.js";
@@ -218,7 +214,7 @@ describe("Synchronization Manager with memory adapters", () => {
         timestamp: new Date("2025-01-01").toISOString(),
         id: "op1",
         skip: 0,
-        scope: "global" as OperationScope,
+        scope: "global",
         context: undefined,
       },
       {
@@ -229,7 +225,7 @@ describe("Synchronization Manager with memory adapters", () => {
         timestamp: new Date("2025-01-02").toISOString(),
         id: "op2",
         skip: 0,
-        scope: "global" as OperationScope,
+        scope: "global",
         context: undefined,
       },
     ];
@@ -310,7 +306,7 @@ describe("Synchronization Manager with memory adapters", () => {
         timestamp: new Date("2025-01-01T10:00:00.000Z").toISOString(),
         id: "op1",
         skip: 0,
-        scope: "global" as OperationScope,
+        scope: "global",
         context: undefined,
       },
       {
@@ -321,7 +317,7 @@ describe("Synchronization Manager with memory adapters", () => {
         timestamp: new Date("2025-01-02T10:00:00.000Z").toISOString(),
         id: "op2",
         skip: 0,
-        scope: "global" as OperationScope,
+        scope: "global",
         context: undefined,
       },
       {
@@ -332,7 +328,7 @@ describe("Synchronization Manager with memory adapters", () => {
         timestamp: new Date("2025-01-03T10:00:00.000Z").toISOString(),
         id: "op3",
         skip: 0,
-        scope: "global" as OperationScope,
+        scope: "global",
         context: undefined,
       },
     ];

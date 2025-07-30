@@ -20,7 +20,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_NAME":
       z.SetPackageNameInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageNameOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -29,7 +29,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_DESCRIPTION":
       z.SetPackageDescriptionInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageDescriptionOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -38,7 +38,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_CATEGORY":
       z.SetPackageCategoryInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageCategoryOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -47,7 +47,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_PUBLISHER":
       z.SetPackagePublisherInputSchema().parse(action.input);
       PackageOperationsReducer.setPackagePublisherOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -56,7 +56,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_PUBLISHER_URL":
       z.SetPackagePublisherUrlInputSchema().parse(action.input);
       PackageOperationsReducer.setPackagePublisherUrlOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -65,7 +65,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_KEYWORDS":
       z.SetPackageKeywordsInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageKeywordsOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -74,7 +74,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_GITHUB_URL":
       z.SetPackageGithubUrlInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageGithubUrlOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );
@@ -83,7 +83,7 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     case "SET_PACKAGE_NPM_URL":
       z.SetPackageNpmUrlInputSchema().parse(action.input);
       PackageOperationsReducer.setPackageNpmUrlOperation(
-        state[action.scope],
+        (state as any)[action.scope],
         action,
         dispatch,
       );

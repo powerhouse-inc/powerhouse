@@ -1,10 +1,5 @@
 import { type AddOperationOptions, type IOperationResult } from "#server/types";
-import type {
-  Action,
-  Operation,
-  OperationScope,
-  PHDocument,
-} from "document-model";
+import type { Action, Operation, PHDocument } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
@@ -35,7 +30,7 @@ export interface QueueEvents {
   jobStarted: (job: IJob<Job>) => void;
   jobCompleted: (job: IJob<Job>, result: IOperationResult) => void;
   jobFailed: (job: IJob<Job>, error: Error) => void;
-  queueRemoved: (queue: { documentId: string; scope: OperationScope }) => void;
+  queueRemoved: (queue: { documentId: string; scope: string }) => void;
 }
 
 export interface IServerDelegate {

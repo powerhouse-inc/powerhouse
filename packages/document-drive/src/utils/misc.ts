@@ -1,7 +1,6 @@
 import {
   type Operation,
   type OperationFromDocument,
-  type OperationScope,
   type OperationsFromDocument,
   type PHDocument,
 } from "document-model";
@@ -27,9 +26,9 @@ export function mergeOperations<TDocument extends PHDocument>(
   newOperations: OperationFromDocument<TDocument>[],
 ): OperationsFromDocument<TDocument> {
   const minIndexByScope = Object.keys(currentOperations).reduce<
-    Partial<Record<OperationScope, number>>
+    Partial<Record<string, number>>
   >((acc, curr) => {
-    const scope = curr as OperationScope;
+    const scope = curr;
     acc[scope] = currentOperations[scope].at(-1)?.index ?? 0;
     return acc;
   }, {});

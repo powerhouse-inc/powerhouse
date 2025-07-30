@@ -1,6 +1,4 @@
-import { type OperationScope } from "document-model";
-
-export type Scope = OperationScope;
+export type Scope = string;
 
 export type DocumentActionHandlers = {
   // Creation handlers that return IDs

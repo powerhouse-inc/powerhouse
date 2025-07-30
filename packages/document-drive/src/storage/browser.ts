@@ -12,7 +12,7 @@ import { type SynchronizationUnitQuery } from "#server/types";
 import { AbortError } from "#utils/errors";
 import { migrateDocumentOperationSignatures } from "#utils/migrations";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
-import type { Operation, OperationScope, PHDocument } from "document-model";
+import type { Operation, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {
   type IDocumentAdminStorage,
@@ -565,10 +565,10 @@ export class BrowserStorage
       units.map(async (unit) => {
         try {
           const document = await this.get<PHDocument>(unit.documentId);
-          if (!document || !document.operations[unit.scope as OperationScope]) {
+          if (!document || !document.operations[unit.scope]) {
             return undefined;
           }
-          const operations = document.operations[unit.scope as OperationScope];
+          const operations = document.operations[unit.scope];
 
           return {
             documentId: unit.documentId,

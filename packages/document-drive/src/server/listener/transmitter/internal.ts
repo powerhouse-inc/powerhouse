@@ -13,7 +13,6 @@ import {
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
   type OperationFromDocument,
-  type OperationScope,
   type PHDocument,
 } from "document-model";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
@@ -32,7 +31,7 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
   documentType: string;
-  scope: OperationScope;
+  scope: string;
   branch: string;
   operations: InternalOperationUpdate<TDocument>[];
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
@@ -84,9 +83,12 @@ export class InternalTransmitter implements ITransmitter {
           ));
 
       if (index < 0) {
-        stateByIndex.set(index, document.initialState.state[strand.scope]);
+        stateByIndex.set(
+          index,
+          (document.initialState.state as any)[strand.scope],
+        );
       } else {
-        stateByIndex.set(index, document.state[strand.scope]);
+        stateByIndex.set(index, (document.state as any)[strand.scope]);
       }
       return stateByIndex.get(index);
     };

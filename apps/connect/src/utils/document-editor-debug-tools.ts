@@ -1,6 +1,5 @@
 import {
     type Operation,
-    type OperationScope,
     type PHDocument,
 } from 'document-model';
 
@@ -52,7 +51,7 @@ export class DocumentEditorDebugTools {
         if (!this.document) {
             console.warn('No document');
         }
-        const ops = this.document?.operations[scope as OperationScope] || [];
+        const ops = this.document?.operations[scope] || [];
         console.table(this.operationsToTableObject(ops));
     }
 

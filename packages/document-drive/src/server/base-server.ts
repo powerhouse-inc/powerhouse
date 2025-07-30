@@ -41,7 +41,6 @@ import {
   type Action,
   type DocumentModelModule,
   type Operation,
-  type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
   type PHDocumentMeta,
@@ -1074,12 +1073,11 @@ export class BaseDocumentDriveServer
     const operationsByScope = groupOperationsByScope(operations);
 
     for (const scope of Object.keys(operationsByScope)) {
-      const storageDocumentOperations =
-        documentStorage.operations[scope as OperationScope];
+      const storageDocumentOperations = documentStorage.operations[scope];
 
       // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
       const branch = removeExistingOperations(
-        operationsByScope[scope as OperationScope] || [],
+        operationsByScope[scope] || [],
         storageDocumentOperations,
       );
 
@@ -1173,8 +1171,7 @@ export class BaseDocumentDriveServer
     const documentOperations = garbageCollectDocumentOperations(operations);
 
     for (const scope of Object.keys(documentOperations)) {
-      const lastRemainingOperation =
-        documentOperations[scope as OperationScope].at(-1);
+      const lastRemainingOperation = documentOperations[scope].at(-1);
       // if the latest operation doesn't have a resulting state then tries
       // to retrieve it from the db to avoid rerunning all the operations
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {

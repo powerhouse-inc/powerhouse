@@ -48,7 +48,6 @@ import {
 import {
     type Action,
     type Operation,
-    type OperationScope,
     type PHDocument,
     createPresignedHeader,
     generateId,
@@ -58,12 +57,12 @@ import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 function deduplicateOperations<TAction extends Action = Action>(
-    existingOperations: Record<OperationScope, Operation<TAction>[]>,
+    existingOperations: Record<string, Operation<TAction>[]>,
     operationsToDeduplicate: Operation<TAction>[],
 ) {
     // make a set of all the operation indices for each scope to avoid duplicates
-    const operationIndicesByScope = {} as Record<OperationScope, Set<number>>;
-    for (const scope of Object.keys(existingOperations) as OperationScope[]) {
+    const operationIndicesByScope = {} as Record<string, Set<number>>;
+    for (const scope of Object.keys(existingOperations)) {
         operationIndicesByScope[scope] = new Set(
             existingOperations[scope].map(op => op.index),
         );

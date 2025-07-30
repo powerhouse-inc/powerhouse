@@ -1,54 +1,46 @@
 import { type BaseAction } from "document-model";
 import type {
-  SetPackageNameInput,
-  SetPackageDescriptionInput,
   SetPackageCategoryInput,
+  SetPackageDescriptionInput,
+  SetPackageGithubUrlInput,
+  SetPackageKeywordsInput,
+  SetPackageNameInput,
+  SetPackageNpmUrlInput,
   SetPackagePublisherInput,
   SetPackagePublisherUrlInput,
-  SetPackageKeywordsInput,
-  SetPackageGithubUrlInput,
-  SetPackageNpmUrlInput,
 } from "../types.js";
 
 export type SetPackageNameAction = BaseAction<
   "SET_PACKAGE_NAME",
-  SetPackageNameInput,
-  "global"
+  SetPackageNameInput
 >;
 export type SetPackageDescriptionAction = BaseAction<
   "SET_PACKAGE_DESCRIPTION",
-  SetPackageDescriptionInput,
-  "global"
+  SetPackageDescriptionInput
 >;
 export type SetPackageCategoryAction = BaseAction<
   "SET_PACKAGE_CATEGORY",
-  SetPackageCategoryInput,
-  "global"
+  SetPackageCategoryInput
 >;
 export type SetPackagePublisherAction = BaseAction<
   "SET_PACKAGE_PUBLISHER",
-  SetPackagePublisherInput,
-  "global"
+  SetPackagePublisherInput
 >;
 export type SetPackagePublisherUrlAction = BaseAction<
   "SET_PACKAGE_PUBLISHER_URL",
-  SetPackagePublisherUrlInput,
-  "global"
+  SetPackagePublisherUrlInput
 >;
 export type SetPackageKeywordsAction = BaseAction<
   "SET_PACKAGE_KEYWORDS",
-  SetPackageKeywordsInput,
-  "global"
+  SetPackageKeywordsInput
 >;
 export type SetPackageGithubUrlAction = BaseAction<
   "SET_PACKAGE_GITHUB_URL",
-  SetPackageGithubUrlInput,
-  "global"
+  SetPackageGithubUrlInput
 >;
 export type SetPackageNpmUrlAction = BaseAction<
   "SET_PACKAGE_NPM_URL",
-  SetPackageNpmUrlInput,
-  "global"
+  SetPackageNpmUrlInput
 >;
 
 export type VetraPackagePackageOperationsAction =

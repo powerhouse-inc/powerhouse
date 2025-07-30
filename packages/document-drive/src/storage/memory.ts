@@ -11,7 +11,6 @@ import { mergeOperations, operationsToRevision } from "#utils/misc";
 import {
   type Operation,
   type OperationFromDocument,
-  type OperationScope,
   type PHDocument,
 } from "document-model";
 import {
@@ -365,7 +364,7 @@ export class MemoryStorage
             return undefined;
           }
 
-          const operations = document.operations[unit.scope as OperationScope];
+          const operations = document.operations[unit.scope];
 
           return {
             documentId: unit.documentId,

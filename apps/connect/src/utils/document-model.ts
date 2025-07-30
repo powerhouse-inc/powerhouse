@@ -5,7 +5,6 @@ import type {
     ActionFromDocument,
     Operation,
     OperationFromDocument,
-    OperationScope,
     PHDocument,
     Reducer,
 } from 'document-model';
@@ -111,7 +110,7 @@ export function useDocumentDispatch<TDocument extends PHDocument>(
 async function waitForUpdate(
     timeout: number,
     documentId: string,
-    scope: OperationScope,
+    scope: string,
     lastIndex: number,
     reactor: IDocumentDriveServer,
 ) {

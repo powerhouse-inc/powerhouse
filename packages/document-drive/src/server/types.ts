@@ -17,7 +17,6 @@ import {
   type DocumentModelModule,
   type Operation,
   type OperationFromDocument,
-  type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
   type PHDocumentMeta,
@@ -192,7 +191,7 @@ export type StrandUpdate = {
   driveId: string;
   documentId: string;
   documentType: string;
-  scope: OperationScope;
+  scope: string;
   branch: string;
   operations: OperationUpdate[];
 };
@@ -253,7 +252,7 @@ export type PartialRecord<K extends keyof any, T> = {
   [P in K]?: T;
 };
 
-export type RevisionsFilter = PartialRecord<OperationScope, number>;
+export type RevisionsFilter = PartialRecord<string, number>;
 
 export type GetDocumentOptions = ReducerOptions & {
   revisions?: RevisionsFilter;
