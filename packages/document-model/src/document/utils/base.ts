@@ -99,7 +99,7 @@ export function createAction<TAction extends BaseAction<string, unknown>>(
   input?: TAction["input"],
   attachments?: TAction["attachments"],
   validator?: () => { parse(v: unknown): TAction["input"] },
-  scope: string = "global",
+  scope = "global",
 ): TAction {
   if (!type) {
     throw new Error("Empty action type");
@@ -215,7 +215,7 @@ export function hashDocumentStateForScope(
       [key: string]: unknown;
     };
   },
-  scope: string = "global",
+  scope = "global",
 ) {
   const stateString = stringifyJson(document.state[scope] || "");
   return hash(stateString);

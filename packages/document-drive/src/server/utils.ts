@@ -79,7 +79,11 @@ export function isAfterRevision(
       if (revision === -1) {
         return operation !== undefined;
       }
-      return operation !== undefined && revision !== undefined && operation.index > revision;
+      return (
+        operation !== undefined &&
+        revision !== undefined &&
+        operation.index > revision
+      );
     })
   );
 }

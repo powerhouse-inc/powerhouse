@@ -1,7 +1,4 @@
-import {
-    type Operation,
-    type PHDocument,
-} from 'document-model';
+import { type Operation, type PHDocument } from 'document-model';
 
 export class DocumentEditorDebugTools {
     private document: PHDocument | undefined;

@@ -109,11 +109,7 @@ export const mapOperations = (operations: Operation[]) => {
   }));
 };
 
-export const createFakeOperation = (
-  index = 0,
-  skip = 0,
-  scope: string = "global",
-) =>
+export const createFakeOperation = (index = 0, skip = 0, scope = "global") =>
   ({
     type: "FAKE_OP",
     input: `TEST_${index}`,

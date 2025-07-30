@@ -291,6 +291,7 @@ function processSkipOperation<TDocument extends PHDocument>(
         operationResultingStateParser: resultingStateParser,
       },
     );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     scopeState = (state as any)[scope];
   }
 
@@ -522,6 +523,7 @@ export function baseReducer<TDocument extends PHDocument>(
 
     if (reuseOperationResultingState) {
       lastOperation.resultingState = JSON.stringify(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (newDocument.state as any)[scope],
       );
     }

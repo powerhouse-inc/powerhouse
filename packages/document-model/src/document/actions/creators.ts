@@ -37,7 +37,7 @@ export const setName = (name: string) =>
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (skip = 1, scope: string = "global") =>
+export const undo = (skip = 1, scope = "global") =>
   createAction<UndoAction>(
     "UNDO",
     skip,
@@ -52,7 +52,7 @@ export const undo = (skip = 1, scope: string = "global") =>
  * @param count - Number of UNDO operations to cancel
  * @category Actions
  */
-export const redo = (count = 1, scope: string = "global") =>
+export const redo = (count = 1, scope = "global") =>
   createAction<RedoAction>(
     "REDO",
     count,
@@ -75,7 +75,7 @@ export const redo = (count = 1, scope: string = "global") =>
 export const prune = (
   start?: number | undefined,
   end?: number | undefined,
-  scope: string = "global",
+  scope = "global",
 ) =>
   createAction<PruneAction>(
     "PRUNE",
@@ -106,7 +106,7 @@ export const loadState = <S, T>(
     LoadStateActionInputSchema,
   );
 
-export const noop = (scope: string = "global") =>
+export const noop = (scope = "global") =>
   createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
 
 export const actions = {

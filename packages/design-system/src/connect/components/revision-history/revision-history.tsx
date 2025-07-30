@@ -1,10 +1,6 @@
 import { TooltipProvider } from "#connect";
 import { Pagination, usePagination } from "#powerhouse";
-import {
-  garbageCollect,
-  type Operation,
-  sortOperations,
-} from "document-model";
+import { garbageCollect, type Operation, sortOperations } from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header/index.js";
 import { Timeline } from "./timeline/index.js";
