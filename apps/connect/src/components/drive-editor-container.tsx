@@ -49,9 +49,7 @@ export function DriveEditorContainer() {
             if (!selectedDrive?.header.id) {
                 throw new Error('No drive selected');
             }
-            await addDriveOperations(selectedDrive.header.id, [
-                operation,
-            ]);
+            await addDriveOperations(selectedDrive.header.id, [operation]);
         },
         [addDriveOperations, selectedDrive?.header.id],
     );

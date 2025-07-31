@@ -196,10 +196,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action:
-    | ActionFromDocument<TDocument>
-    | Operation
-    | DefaultAction,
+  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -227,10 +224,7 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action:
-    | ActionFromDocument<TDocument>
-    | Operation
-    | DefaultAction,
+  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
   skip: number,
 ): {
   document: TDocument;

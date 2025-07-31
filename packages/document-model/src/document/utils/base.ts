@@ -56,21 +56,15 @@ export function isNoopOperation<
   );
 }
 
-export function isUndoRedo(
-  action: Action,
-): action is UndoRedoAction {
+export function isUndoRedo(action: Action): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
-export function isUndo(
-  action: Action,
-): action is UndoAction {
+export function isUndo(action: Action): action is UndoAction {
   return action.type === UNDO;
 }
 
-export function isDocumentAction(
-  action: Action,
-): action is DocumentAction {
+export function isDocumentAction(action: Action): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
 

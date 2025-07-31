@@ -449,7 +449,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       });
       acc[scope].push(result);
       return acc;
-    }, cachedOperations) as OperationsFromDocument;
+    }, cachedOperations);
     const dbDoc = result;
 
     const header: PHDocumentHeader = {

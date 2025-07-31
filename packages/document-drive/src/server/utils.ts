@@ -1,4 +1,9 @@
-import type { Action, DocumentOperations, PHDocument } from "document-model";
+import type {
+  Action,
+  DocumentOperations,
+  Operation,
+  PHDocument,
+} from "document-model";
 import {
   type CreateDocumentInput,
   type RevisionsFilter,
@@ -43,7 +48,9 @@ export function filterOperationsByRevision(
     (acc, scope) => {
       const revision = revisions[scope];
       if (revision !== undefined) {
-        acc[scope] = operations[scope].filter((op: any) => op.index <= revision);
+        acc[scope] = operations[scope].filter(
+          (op: Operation) => op.index <= revision,
+        );
       }
       return acc;
     },

@@ -35,9 +35,7 @@ export function buildOperation<TDocument extends PHDocument>(
 ): Operation {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const operation = newDocument.operations[action.scope]
-    .slice()
-    .pop()! as Operation;
+  const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return { ...operation, index: index ?? operation.index } as Operation;
 }
@@ -51,9 +49,7 @@ export function buildOperations<TDocument extends PHDocument>(
   for (const action of actions) {
     document = reducer(document, action);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const operation = document.operations[action.scope]
-      .slice()
-      .pop()! as Operation;
+    const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
   }
   return operations;
@@ -120,7 +116,7 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
 
     const remoteDocumentOperations = Object.values(
       remoteDocument.operations,
-    ).flat() as Operation[];
+    ).flat();
 
     const result = await this.server._processOperations(
       this.documentId,
@@ -192,7 +188,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
 
     const remoteDocumentOperations = Object.values(
       remoteDocument.operations,
-    ).flat() as Operation[];
+    ).flat();
 
     const result = await (
       this.server as unknown as BaseDocumentDriveServer

@@ -218,10 +218,7 @@ export function useDocumentDriveServer() {
 
     // TODO: why does addDriveOperation do signing but adding multiple operations does not?
     const addDriveOperations = useCallback(
-        async (
-            driveId: string,
-            operationsToAdd: Operation[],
-        ) => {
+        async (driveId: string, operationsToAdd: Operation[]) => {
             if (!reactor) {
                 return;
             }

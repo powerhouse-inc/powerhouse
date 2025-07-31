@@ -454,7 +454,7 @@ export class BaseDocumentDriveServer
               });
 
               const pushListener = drive.state.local.listeners.find(
-                (listener: any) => trigger.data.url === listener.callInfo?.data,
+                (listener) => trigger.data.url === listener.callInfo?.data,
               );
               if (pushListener) {
                 for (const revision of revisions) {
@@ -1505,7 +1505,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !document.operations[op.scope].find(
-            (existingOp: any) =>
+            (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2082,7 +2082,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !drive.operations[op.scope].find(
-            (existingOp: any) =>
+            (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2193,9 +2193,7 @@ export class BaseDocumentDriveServer
           operations.slice(),
         );
         document = result.document as DocumentDriveDocument;
-        operationsApplied.push(
-          ...(result.operationsApplied as Operation[]),
-        );
+        operationsApplied.push(...result.operationsApplied);
         signals.push(...result.signals);
         error = result.error;
 
@@ -2339,7 +2337,7 @@ export class BaseDocumentDriveServer
       if (!operation) {
         throw new Error("Error creating operations");
       }
-      operations.push(operation as Operation);
+      operations.push(operation);
     }
     return operations;
   }

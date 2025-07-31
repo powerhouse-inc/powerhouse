@@ -18,17 +18,17 @@ export const wrappedEmptyReducer = createReducer(emptyReducer);
 export type IncrementAction = Action & { type: "INCREMENT"; input: {} };
 export type DecrementAction = Action & { type: "DECREMENT"; input: {} };
 export type ErrorAction = Action & { type: "ERROR"; input: {} };
-export type SetLocalNameAction = Action & { type: "SET_LOCAL_NAME"; input: string };
+export type SetLocalNameAction = Action & {
+  type: "SET_LOCAL_NAME";
+  input: string;
+};
 export type CountAction =
   | IncrementAction
   | DecrementAction
   | SetLocalNameAction
   | ErrorAction;
 
-export type CountDocument = PHDocument<
-  CountState,
-  CountLocalState
->;
+export type CountDocument = PHDocument<CountState, CountLocalState>;
 export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
