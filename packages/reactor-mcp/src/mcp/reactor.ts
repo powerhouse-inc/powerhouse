@@ -1,4 +1,5 @@
 import type { IDocumentDriveServer } from "document-drive";
+import { generateId } from "document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback } from "./utils.js";
@@ -71,16 +72,7 @@ export const addActionTool = {
     action: z
       .object({
         type: z.string().describe("The name of the action"),
-        input: z
-          .union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            z.object({}),
-            z.array(z.any()),
-            z.null(),
-          ])
-          .describe("The payload of the action"),
+        input: z.unknown().describe("The payload of the action"),
         scope: z.string().describe("The scope of the action"),
         context: z.object({}).optional().describe("Optional action context"), // TODO: Define context schema
       })
@@ -115,16 +107,7 @@ export const addOperationTool = {
     operation: z
       .object({
         type: z.string().describe("The name of the action"),
-        input: z
-          .union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            z.object({}),
-            z.array(z.any()),
-            z.null(),
-          ])
-          .describe("The payload of the action"),
+        input: z.unknown().describe("The payload of the action"),
         scope: z.string().describe("The scope of the action"),
         index: z.number().describe("Position of the operation in the history"),
         timestamp: z
@@ -334,7 +317,7 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       // Create document input based on provided parameters
       const createInput = {
         documentType: params.documentType,
-        ...(params.documentId && { id: params.documentId }),
+        id: params.documentId ?? generateId(),
       };
 
       const result = await reactor.queueDocument(createInput);
@@ -361,7 +344,10 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     addAction: toolWithCallback(addActionTool, async (params) => {
-      const result = await reactor.addAction(params.documentId, params.action);
+      const result = await reactor.addAction(params.documentId, {
+        ...params.action,
+        input: params.action.input ?? {},
+      });
       return {
         result: {
           ...result,
@@ -371,10 +357,10 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     addOperation: toolWithCallback(addOperationTool, async (params) => {
-      const result = await reactor.addOperation(
-        params.documentId,
-        params.operation,
-      );
+      const result = await reactor.addOperation(params.documentId, {
+        ...params.operation,
+        input: params.operation.input ?? {},
+      });
       return {
         result: {
           ...result,

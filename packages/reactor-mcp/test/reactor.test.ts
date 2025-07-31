@@ -13,6 +13,7 @@ import {
 import { DocumentNotFoundError } from "document-drive/server/error";
 import {
   documentModelDocumentModelModule,
+  generateId,
   type DocumentModelModule,
 } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -185,6 +186,8 @@ describe("ReactorMcpProvider", () => {
 
   describe("createDocument tool", () => {
     it("should create a document successfully", async () => {
+      const initialDoc =
+        documentModelDocumentModelModule.utils.createDocument();
       const provider = await createReactorMcpProvider(reactor);
       const result = await provider.tools.createDocument.callback(
         {
@@ -201,6 +204,7 @@ describe("ReactorMcpProvider", () => {
           operations: [],
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           document: expect.objectContaining({
+            ...initialDoc,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             header: expect.objectContaining({
               id: "test-doc-id",
@@ -211,36 +215,13 @@ describe("ReactorMcpProvider", () => {
         },
       });
     });
-
-    it("should create a document without optional params", async () => {
-      const provider = await createReactorMcpProvider(reactor);
-      const result = await provider.tools.createDocument.callback(
-        {
-          documentType: "powerhouse/document-model",
-        },
-        mockExtra,
-      );
-
-      // Document creation might fail due to validation or other reasons
-      if (result.isError) {
-        expect(result.content).toBeDefined();
-        expect(result.structuredContent).toHaveProperty("error");
-      } else {
-        expect(result.structuredContent).toMatchObject({
-          result: {
-            status: expect.stringMatching(/SUCCESS|ERROR/) as string,
-            operations: expect.any(Array) as unknown[],
-            signals: expect.any(Array) as unknown[],
-          },
-        });
-      }
-    });
   });
 
   describe("getDocuments tool", () => {
     it("should get documents from a drive", async () => {
-      const drive = driveDocumentModelModule.utils.createDocument();
-      await reactor.addDrive({ global: { name: "Test Drive" } });
+      const drive = await reactor.addDrive({
+        global: { name: "Test Drive" },
+      });
       const provider = await createReactorMcpProvider(reactor);
       const result = await provider.tools.getDocuments.callback(
         {
@@ -251,7 +232,33 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        documentIds: expect.any(Array) as string[],
+        documentIds: [],
+      });
+
+      const { document } = await reactor.queueDocument({
+        documentType: "powerhouse/document-model",
+        id: generateId(),
+      });
+
+      const addResult = await reactor.addAction(
+        drive.header.id,
+        driveDocumentModelModule.actions.addFile({
+          id: document?.header.id,
+          documentType: "powerhouse/document-model",
+          name: "test-doc",
+        }),
+      );
+      expect(addResult.error).toBeUndefined();
+
+      const result2 = await provider.tools.getDocuments.callback(
+        {
+          parentId: drive.header.id,
+        },
+        mockExtra,
+      );
+
+      expect(result2.structuredContent).toMatchObject({
+        documentIds: [document?.header.id],
       });
     });
   });
@@ -298,25 +305,41 @@ describe("ReactorMcpProvider", () => {
       await reactor.addDocument(document);
 
       const provider = await createReactorMcpProvider(reactor);
+
+      const action = documentModelDocumentModelModule.actions.setModelName({
+        input: "Test Name",
+      });
       const result = await provider.tools.addAction.callback(
         {
           documentId: document.header.id,
-          action: {
-            type: "SET_NAME",
-            input: "Test Name",
-            scope: "global",
-          },
+          action,
         },
         mockExtra,
       );
 
+      const expectedResult = documentModelDocumentModelModule.reducer(
+        document,
+        action,
+      );
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
         result: {
           status: "SUCCESS",
-          operations: expect.any(Array) as unknown[],
-          document: expect.any(Object) as object,
-          signals: expect.any(Array) as unknown[],
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          operations: expect.arrayContaining([
+            expect.objectContaining({
+              ...action,
+            }),
+          ]),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          document: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            header: expect.objectContaining({
+              documentType: "powerhouse/document-model",
+            }),
+            state: expectedResult.state,
+          }),
+          signals: [],
         },
       });
     });
@@ -337,8 +360,15 @@ describe("ReactorMcpProvider", () => {
 
       // Action on non-existent document returns an error
       expect(result.isError).toBe(true);
-      expect(result.content).toBeDefined();
-      expect(result.structuredContent).toHaveProperty("error");
+      expect(result.content).toStrictEqual([
+        {
+          text: "Error: Document with id non-existent-id not found",
+          type: "text",
+        },
+      ]);
+      expect(result.structuredContent).toStrictEqual({
+        error: "Document with id non-existent-id not found",
+      });
     });
   });
 
@@ -367,11 +397,11 @@ describe("ReactorMcpProvider", () => {
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
         result: {
-          status: expect.stringMatching(
-            /SUCCESS|CONFLICT|MISSING|ERROR/,
-          ) as string,
-          operations: expect.any(Array) as unknown[],
-          signals: expect.any(Array) as unknown[],
+          status: "ERROR",
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          error: expect.any(String),
+          operations: [],
+          signals: [],
         },
       });
     });
@@ -387,7 +417,8 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        driveIds: expect.any(Array) as string[],
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        driveIds: expect.arrayContaining([]),
       });
     });
   });
@@ -416,7 +447,21 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        drive: expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          header: expect.objectContaining({
+            documentType: "powerhouse/document-drive",
+          }),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          state: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            global: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              name: expect.any(String),
+            }),
+          }),
+        }),
       });
     });
 
@@ -435,7 +480,21 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        drive: expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          header: expect.objectContaining({
+            documentType: "powerhouse/document-drive",
+          }),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          state: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            global: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              name: expect.any(String),
+            }),
+          }),
+        }),
       });
     });
   });
@@ -454,7 +513,21 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        drive: expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          header: expect.objectContaining({
+            documentType: "powerhouse/document-drive",
+          }),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          state: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            global: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              name: expect.any(String),
+            }),
+          }),
+        }),
       });
     });
 
@@ -474,7 +547,21 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        drive: expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          header: expect.objectContaining({
+            documentType: "powerhouse/document-drive",
+          }),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          state: expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            global: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              name: expect.any(String),
+            }),
+          }),
+        }),
       });
     });
   });
@@ -543,7 +630,10 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        drive: {
+          header: { id: "remote-drive-id" },
+          state: { global: { name: "Remote Drive" } },
+        },
       });
       expect(mockReactor.addRemoteDrive).toHaveBeenCalledWith(
         "https://example.com/remote-drive",
@@ -582,7 +672,10 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        drive: expect.any(Object) as object,
+        drive: {
+          header: { id: "remote-drive-id" },
+          state: { global: { name: "Remote Drive" } },
+        },
       });
       expect(mockReactor.addRemoteDrive).toHaveBeenCalledWith(
         "https://example.com/remote-drive",
