@@ -1,9 +1,8 @@
-import tailwindPostcssPlugin from "@tailwindcss/postcss";
 import { build } from "esbuild";
 import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import { existsSync } from "fs";
 import { cp, mkdir, readFile, writeFile } from "fs/promises";
-import postcss from "postcss";
+import { dirname, resolve } from "path";
 
 /** Runs esbuild to bundle the external packages */
 export async function bundleExternalPackages(
@@ -68,14 +67,44 @@ export async function copyAssets(
 /** Builds and bundles the CSS with tailwind */
 export async function buildAndBundleCss(inputPath: string, outputPath: string) {
   try {
-    const inputCss = await readFile(inputPath, "utf8");
-    const result = await postcss([tailwindPostcssPlugin]).process(inputCss, {
-      from: inputPath,
-      to: outputPath,
+    const projectDir = dirname(inputPath);
+    const tempCssPath = resolve(projectDir, "dist/style.css");
+
+    // Ensure directories exist
+    await mkdir(dirname(outputPath), { recursive: true });
+    await mkdir(dirname(tempCssPath), { recursive: true });
+
+    const { spawn } = await import("child_process");
+
+    // Use a proper spawn wrapper instead of promisify(spawn)
+    await new Promise((resolve, reject) => {
+      const child = spawn(
+        "npx",
+        ["@tailwindcss/cli", "-i", inputPath, "-o", tempCssPath],
+        {
+          cwd: projectDir,
+          stdio: "inherit",
+        },
+      );
+
+      child.on("close", (code) => {
+        if (code === 0) {
+          resolve(code);
+        } else {
+          reject(new Error(`CSS build failed with exit code ${code}`));
+        }
+      });
+
+      child.on("error", (error) => {
+        reject(error);
+      });
     });
-    await writeFile(outputPath, result.css, "utf8");
-    return result;
+
+    const builtCss = await readFile(tempCssPath, "utf8");
+    await writeFile(outputPath, builtCss, "utf8");
+    return { css: builtCss };
   } catch (error) {
     console.error("Error building and bundling CSS", { error });
+    throw error;
   }
 }
