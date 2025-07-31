@@ -22,7 +22,7 @@ const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>Documen
         '                ' + (o.schema !== null ? 
             'z.' + h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' : 
             'if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ' + h.changeCase.constant(o.name) + '");\n') +
-        '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation((state as any)[action.scope], action, dispatch);\n' +
+        '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation((state as any)[action.scope], action as any, dispatch);\n' +
         '                break;\n'        
     ).join('\n')).join('\n')
 %>
