@@ -6,7 +6,7 @@
 
 ### Type parameters have been removed
 
-The `Action` type parameters have been removed.
+The `Action` type parameters have been removed, `Operation` type parameters have been removed, and the last `PHDocument` type parameter has been removed.
 
 **Before (v5.0):**
 
