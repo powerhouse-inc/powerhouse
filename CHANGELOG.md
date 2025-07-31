@@ -1,3 +1,13 @@
+## 4.0.2 (2025-07-31)
+
+### 🩹 Fixes
+
+- **connect:** fix document upload regression ([2f8c97fad](https://github.com/powerhouse-inc/powerhouse/commit/2f8c97fad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.0.1 (2025-07-25)
 
 ### 🚀 Features
