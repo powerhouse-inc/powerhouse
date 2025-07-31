@@ -12,6 +12,7 @@ import {
   setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
+  updateStylesFile,
 } from "../utils.js";
 
 export function installDependency(
@@ -158,6 +159,15 @@ export const install: CommandActionType<
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
+    throw error;
+  }
+
+  try {
+    console.log("⚙️ Updating styles.css file...");
+    updateStylesFile(parsedDependencies, projectInfo.path);
+    console.log("Styles file updated successfully 🎉");
+  } catch (error) {
+    console.error("❌ Failed to update styles file");
     throw error;
   }
 };
