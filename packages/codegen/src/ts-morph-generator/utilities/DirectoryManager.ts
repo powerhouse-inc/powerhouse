@@ -2,8 +2,22 @@ import { paramCase, pascalCase } from "change-case";
 import fs from "fs/promises";
 import path from "path";
 import { type Project, type SourceFile } from "ts-morph";
+import { type PHProjectDirectories } from "../core/GenerationContext.js";
 
 export class DirectoryManager {
+  private directories: Required<PHProjectDirectories> = {
+    documentModelDir: "document-model",
+    editorsDir: "editors",
+    processorsDir: "processors",
+    subgraphsDir: "subgraphs",
+  };
+
+  constructor(directories: PHProjectDirectories = {}) {
+    this.directories = {
+      ...this.directories,
+      ...directories,
+    };
+  }
   async ensureExists(dirPath: string): Promise<void> {
     try {
       await fs.mkdir(dirPath, { recursive: true });
@@ -21,7 +35,7 @@ export class DirectoryManager {
   ): string {
     return path.join(
       rootDir,
-      "document-model",
+      this.directories.documentModelDir,
       paramCase(docModelName),
       "src",
       "reducers",
@@ -36,7 +50,7 @@ export class DirectoryManager {
   ): string {
     return path.join(
       rootDir,
-      "document-model",
+      this.directories.documentModelDir,
       paramCase(docModelName),
       "src",
       "actions",
@@ -51,7 +65,7 @@ export class DirectoryManager {
   ): string {
     return path.join(
       rootDir,
-      "document-model",
+      this.directories.documentModelDir,
       paramCase(docModelName),
       "src",
       "components",
@@ -62,7 +76,7 @@ export class DirectoryManager {
   getTypesPath(rootDir: string, docModelName: string): string {
     return path.join(
       rootDir,
-      "document-model",
+      this.directories.documentModelDir,
       paramCase(docModelName),
       "src",
       "types.ts",

@@ -5,6 +5,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { type DocumentTypesMap } from "./index.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -92,6 +93,9 @@ export async function generateDocumentModel(
   dir: string,
   { watch = false, skipFormat = false, verbose = true } = {},
 ) {
+  const projectDir = path.dirname(dir);
+  const documentModelDir = path.basename(dir);
+
   // Generate the singular files for the document model logic
   await run(
     [
@@ -112,6 +116,12 @@ export async function generateDocumentModel(
 
   // Generate the module-specific files for the document model logic
   for (const module of latestSpec.modules) {
+    const generator = new TSMorphCodeGenerator(
+      projectDir,
+      [documentModelState],
+      { directories: { documentModelDir } },
+    );
+
     await run(
       [
         "powerhouse",
@@ -125,6 +135,8 @@ export async function generateDocumentModel(
       ],
       { watch, skipFormat, verbose },
     );
+
+    await generator.generateReducers();
   }
 }
 

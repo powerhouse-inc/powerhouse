@@ -20,3 +20,14 @@ export interface GenerationContext {
   project: Project;
   actions: Actions[];
 }
+
+export type PHProjectDirectories = {
+  documentModelDir?: string;
+  editorsDir?: string;
+  processorsDir?: string;
+  subgraphsDir?: string;
+};
+
+export type CodeGeneratorOptions = {
+  directories?: PHProjectDirectories;
+};

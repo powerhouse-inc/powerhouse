@@ -7,24 +7,37 @@ import { ImportManager } from "../utilities/ImportManager.js";
 import { type FileGenerator } from "./FileGenerator.js";
 import {
   type Actions,
+  type CodeGeneratorOptions,
   type GenerationContext,
   type ModuleSpec,
+  type PHProjectDirectories,
 } from "./GenerationContext.js";
-
 export class TSMorphCodeGenerator {
   private project = new Project();
   private generators = new Map<string, FileGenerator>();
+  private directories: PHProjectDirectories = {
+    documentModelDir: "document-model",
+    editorsDir: "editors",
+    processorsDir: "processors",
+    subgraphsDir: "subgraphs",
+  };
 
   constructor(
     private rootDir: string,
     private docModels: DocumentModelState[],
+    options: CodeGeneratorOptions = { directories: {} },
   ) {
+    this.directories = {
+      ...this.directories,
+      ...options.directories,
+    };
+
     this.setupGenerators();
   }
 
   private setupGenerators(): void {
     const importManager = new ImportManager();
-    const directoryManager = new DirectoryManager();
+    const directoryManager = new DirectoryManager(this.directories);
 
     // Register all generators
     this.generators.set(
