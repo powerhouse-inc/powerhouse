@@ -15,12 +15,12 @@ export const PRUNE = "PRUNE";
 export const LOAD_STATE = "LOAD_STATE";
 export const NOOP = "NOOP";
 
-export type LoadStateAction = BaseAction<"LOAD_STATE", LoadStateActionInput>;
-export type PruneAction = BaseAction<"PRUNE", PruneActionInput>;
-export type RedoAction = BaseAction<"REDO", _RedoAction["input"]>;
-export type SetNameAction = BaseAction<"SET_NAME", _SetNameAction["input"]>;
-export type UndoAction = BaseAction<"UNDO", _UndoAction["input"]>;
-export type NOOPAction = BaseAction<"NOOP", _NOOPAction["input"]>;
+export type LoadStateAction = BaseAction<LoadStateActionInput> & { type: "LOAD_STATE" };
+export type PruneAction = BaseAction<PruneActionInput> & { type: "PRUNE" };
+export type RedoAction = BaseAction<_RedoAction["input"]> & { type: "REDO" };
+export type SetNameAction = BaseAction<_SetNameAction["input"]> & { type: "SET_NAME" };
+export type UndoAction = BaseAction<_UndoAction["input"]> & { type: "UNDO" };
+export type NOOPAction = BaseAction<_NOOPAction["input"]> & { type: "NOOP" };
 
 export type DocumentAction =
   | LoadStateAction

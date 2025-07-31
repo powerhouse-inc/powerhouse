@@ -15,10 +15,10 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 export const wrappedEmptyReducer = createReducer(emptyReducer);
 
 // Counter reducer that supports increment/decrement actions
-export type IncrementAction = BaseAction<"INCREMENT", undefined>;
-export type DecrementAction = BaseAction<"DECREMENT", undefined>;
-export type ErrorAction = BaseAction<"ERROR", undefined>;
-export type SetLocalNameAction = BaseAction<"SET_LOCAL_NAME", string>;
+export type IncrementAction = BaseAction<undefined> & { type: "INCREMENT" };
+export type DecrementAction = BaseAction<undefined> & { type: "DECREMENT" };
+export type ErrorAction = BaseAction<undefined> & { type: "ERROR" };
+export type SetLocalNameAction = BaseAction<string> & { type: "SET_LOCAL_NAME" };
 export type CountAction =
   | IncrementAction
   | DecrementAction

@@ -53,9 +53,9 @@ export type ActionContext = {
 /**
  * Defines the basic structure of an action.
  */
-export type BaseAction<TType extends string, TInput> = {
+export type BaseAction<TInput> = {
   /** The name of the action. */
-  type: TType;
+  type: string;
   /** The payload of the action. */
   input: TInput;
   /** The scope of the action */
@@ -66,21 +66,15 @@ export type BaseAction<TType extends string, TInput> = {
   context?: ActionContext;
 };
 
-export type BaseActionWithAttachment<TType extends string, TInput> = BaseAction<
-  TType,
-  TInput
-> & {
+export type BaseActionWithAttachment<TInput> = BaseAction<TInput> & {
   attachments: AttachmentInput[];
 };
 
 export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
 
-export type CustomAction = BaseAction<string, unknown>;
+export type CustomAction = BaseAction<unknown>;
 
-export type Action<
-  TType extends string = string,
-  TInput = unknown,
-> = BaseAction<TType, TInput>;
+export type Action<TInput = unknown> = BaseAction<TInput>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */

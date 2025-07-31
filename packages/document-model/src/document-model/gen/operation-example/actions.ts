@@ -6,22 +6,18 @@ import {
   UpdateOperationExampleInput,
 } from "../schema/types.js";
 
-export type AddOperationExampleAction = BaseAction<
-  "ADD_OPERATION_EXAMPLE",
-  AddOperationExampleInput
->;
-export type UpdateOperationExampleAction = BaseAction<
-  "UPDATE_OPERATION_EXAMPLE",
-  UpdateOperationExampleInput
->;
-export type DeleteOperationExampleAction = BaseAction<
-  "DELETE_OPERATION_EXAMPLE",
-  DeleteOperationExampleInput
->;
-export type ReorderOperationExamplesAction = BaseAction<
-  "REORDER_OPERATION_EXAMPLES",
-  ReorderOperationExamplesInput
->;
+export type AddOperationExampleAction = BaseAction<AddOperationExampleInput> & {
+  type: "ADD_OPERATION_EXAMPLE";
+};
+export type UpdateOperationExampleAction = BaseAction<UpdateOperationExampleInput> & {
+  type: "UPDATE_OPERATION_EXAMPLE";
+};
+export type DeleteOperationExampleAction = BaseAction<DeleteOperationExampleInput> & {
+  type: "DELETE_OPERATION_EXAMPLE";
+};
+export type ReorderOperationExamplesAction = BaseAction<ReorderOperationExamplesInput> & {
+  type: "REORDER_OPERATION_EXAMPLES";
+};
 
 export type DocumentModelOperationExampleAction =
   | AddOperationExampleAction

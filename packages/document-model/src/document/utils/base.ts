@@ -57,19 +57,19 @@ export function isNoopOperation<
 }
 
 export function isUndoRedo(
-  action: BaseAction<string, unknown>,
+  action: BaseAction<unknown>,
 ): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
 export function isUndo(
-  action: BaseAction<string, unknown>,
+  action: BaseAction<unknown>,
 ): action is UndoAction {
   return action.type === UNDO;
 }
 
 export function isDocumentAction(
-  action: BaseAction<string, unknown>,
+  action: BaseAction<unknown>,
 ): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
@@ -94,7 +94,7 @@ export function isDocumentAction(
  *
  * @returns The new action.
  */
-export function createAction<TAction extends BaseAction<string, unknown>>(
+export function createAction<TAction extends BaseAction<unknown>>(
   type: TAction["type"],
   input?: TAction["input"],
   attachments?: TAction["attachments"],
@@ -109,7 +109,7 @@ export function createAction<TAction extends BaseAction<string, unknown>>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
   }
 
-  const action: BaseAction<string, unknown> = {
+  const action: BaseAction<unknown> = {
     type,
     input,
     scope,

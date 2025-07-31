@@ -36,4 +36,4 @@ export type LegacyAddFileInput = AddFileInput & {
   synchronizationUnits: Array<LegacySynchronizationUnit>;
 };
 
-export type LegacyAddFileAction = BaseAction<"ADD_FILE", LegacyAddFileInput>;
+export type LegacyAddFileAction = BaseAction<LegacyAddFileInput> & { type: "ADD_FILE" };

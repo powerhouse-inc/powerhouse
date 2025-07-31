@@ -9,13 +9,13 @@ import type {
   UpdateNodeInput,
 } from "../types.js";
 
-export type AddFileAction = BaseAction<"ADD_FILE", AddFileInput>;
-export type AddFolderAction = BaseAction<"ADD_FOLDER", AddFolderInput>;
-export type DeleteNodeAction = BaseAction<"DELETE_NODE", DeleteNodeInput>;
-export type UpdateFileAction = BaseAction<"UPDATE_FILE", UpdateFileInput>;
-export type UpdateNodeAction = BaseAction<"UPDATE_NODE", UpdateNodeInput>;
-export type CopyNodeAction = BaseAction<"COPY_NODE", CopyNodeInput>;
-export type MoveNodeAction = BaseAction<"MOVE_NODE", MoveNodeInput>;
+export type AddFileAction = BaseAction<AddFileInput> & { type: "ADD_FILE" };
+export type AddFolderAction = BaseAction<AddFolderInput> & { type: "ADD_FOLDER" };
+export type DeleteNodeAction = BaseAction<DeleteNodeInput> & { type: "DELETE_NODE" };
+export type UpdateFileAction = BaseAction<UpdateFileInput> & { type: "UPDATE_FILE" };
+export type UpdateNodeAction = BaseAction<UpdateNodeInput> & { type: "UPDATE_NODE" };
+export type CopyNodeAction = BaseAction<CopyNodeInput> & { type: "COPY_NODE" };
+export type MoveNodeAction = BaseAction<MoveNodeInput> & { type: "MOVE_NODE" };
 
 export type DocumentDriveNodeAction =
   | AddFileAction

@@ -9,34 +9,27 @@ import {
   SetOperationErrorTemplateInput,
 } from "../schema/types.js";
 
-export type AddOperationErrorAction = BaseAction<
-  "ADD_OPERATION_ERROR",
-  AddOperationErrorInput
->;
-export type SetOperationErrorCodeAction = BaseAction<
-  "SET_OPERATION_ERROR_CODE",
-  SetOperationErrorCodeInput
->;
-export type SetOperationErrorNameAction = BaseAction<
-  "SET_OPERATION_ERROR_NAME",
-  SetOperationErrorNameInput
->;
-export type SetOperationErrorDescriptionAction = BaseAction<
-  "SET_OPERATION_ERROR_DESCRIPTION",
-  SetOperationErrorDescriptionInput
->;
-export type SetOperationErrorTemplateAction = BaseAction<
-  "SET_OPERATION_ERROR_TEMPLATE",
-  SetOperationErrorTemplateInput
->;
-export type DeleteOperationErrorAction = BaseAction<
-  "DELETE_OPERATION_ERROR",
-  DeleteOperationErrorInput
->;
-export type ReorderOperationErrorsAction = BaseAction<
-  "REORDER_OPERATION_ERRORS",
-  ReorderOperationErrorsInput
->;
+export type AddOperationErrorAction = BaseAction<AddOperationErrorInput> & {
+  type: "ADD_OPERATION_ERROR";
+};
+export type SetOperationErrorCodeAction = BaseAction<SetOperationErrorCodeInput> & {
+  type: "SET_OPERATION_ERROR_CODE";
+};
+export type SetOperationErrorNameAction = BaseAction<SetOperationErrorNameInput> & {
+  type: "SET_OPERATION_ERROR_NAME";
+};
+export type SetOperationErrorDescriptionAction = BaseAction<SetOperationErrorDescriptionInput> & {
+  type: "SET_OPERATION_ERROR_DESCRIPTION";
+};
+export type SetOperationErrorTemplateAction = BaseAction<SetOperationErrorTemplateInput> & {
+  type: "SET_OPERATION_ERROR_TEMPLATE";
+};
+export type DeleteOperationErrorAction = BaseAction<DeleteOperationErrorInput> & {
+  type: "DELETE_OPERATION_ERROR";
+};
+export type ReorderOperationErrorsAction = BaseAction<ReorderOperationErrorsInput> & {
+  type: "REORDER_OPERATION_ERRORS";
+};
 
 export type DocumentModelOperationErrorAction =
   | AddOperationErrorAction
