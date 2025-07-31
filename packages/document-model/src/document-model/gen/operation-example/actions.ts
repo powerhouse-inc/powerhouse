@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   AddOperationExampleInput,
   DeleteOperationExampleInput,
@@ -6,17 +6,21 @@ import {
   UpdateOperationExampleInput,
 } from "../schema/types.js";
 
-export type AddOperationExampleAction = BaseAction<AddOperationExampleInput> & {
+export type AddOperationExampleAction = Action & {
   type: "ADD_OPERATION_EXAMPLE";
+  input: AddOperationExampleInput;
 };
-export type UpdateOperationExampleAction = BaseAction<UpdateOperationExampleInput> & {
+export type UpdateOperationExampleAction = Action & {
   type: "UPDATE_OPERATION_EXAMPLE";
+  input: UpdateOperationExampleInput;
 };
-export type DeleteOperationExampleAction = BaseAction<DeleteOperationExampleInput> & {
+export type DeleteOperationExampleAction = Action & {
   type: "DELETE_OPERATION_EXAMPLE";
+  input: DeleteOperationExampleInput;
 };
-export type ReorderOperationExamplesAction = BaseAction<ReorderOperationExamplesInput> & {
+export type ReorderOperationExamplesAction = Action & {
   type: "REORDER_OPERATION_EXAMPLES";
+  input: ReorderOperationExamplesInput;
 };
 
 export type DocumentModelOperationExampleAction =

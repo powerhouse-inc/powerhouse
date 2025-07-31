@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   AddStateExampleInput,
   DeleteStateExampleInput,
@@ -8,23 +8,29 @@ import {
   UpdateStateExampleInput,
 } from "../schema/types.js";
 
-export type SetStateSchemaAction = BaseAction<SetStateSchemaInput> & {
+export type SetStateSchemaAction = Action & {
   type: "SET_STATE_SCHEMA";
+  input: SetStateSchemaInput;
 };
-export type SetInitialStateAction = BaseAction<SetInitialStateInput> & {
+export type SetInitialStateAction = Action & {
   type: "SET_INITIAL_STATE";
+  input: SetInitialStateInput;
 };
-export type AddStateExampleAction = BaseAction<AddStateExampleInput> & {
+export type AddStateExampleAction = Action & {
   type: "ADD_STATE_EXAMPLE";
+  input: AddStateExampleInput;
 };
-export type UpdateStateExampleAction = BaseAction<UpdateStateExampleInput> & {
+export type UpdateStateExampleAction = Action & {
   type: "UPDATE_STATE_EXAMPLE";
+  input: UpdateStateExampleInput;
 };
-export type DeleteStateExampleAction = BaseAction<DeleteStateExampleInput> & {
+export type DeleteStateExampleAction = Action & {
   type: "DELETE_STATE_EXAMPLE";
+  input: DeleteStateExampleInput;
 };
-export type ReorderStateExamplesAction = BaseAction<ReorderStateExamplesInput> & {
+export type ReorderStateExamplesAction = Action & {
   type: "REORDER_STATE_EXAMPLES";
+  input: ReorderStateExamplesInput;
 };
 
 export type DocumentModelStateAction =

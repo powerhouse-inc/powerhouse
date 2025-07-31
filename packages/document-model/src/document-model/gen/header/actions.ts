@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   SetAuthorNameInput,
   SetAuthorWebsiteInput,
@@ -8,23 +8,29 @@ import {
   SetModelNameInput,
 } from "../schema/types.js";
 
-export type SetModelNameAction = BaseAction<SetModelNameInput> & {
+export type SetModelNameAction = Action & {
   type: "SET_MODEL_NAME";
+  input: SetModelNameInput;
 };
-export type SetModelIdAction = BaseAction<SetModelIdInput> & {
+export type SetModelIdAction = Action & {
   type: "SET_MODEL_ID";
+  input: SetModelIdInput;
 };
-export type SetModelExtensionAction = BaseAction<SetModelExtensionInput> & {
+export type SetModelExtensionAction = Action & {
   type: "SET_MODEL_EXTENSION";
+  input: SetModelExtensionInput;
 };
-export type SetModelDescriptionAction = BaseAction<SetModelDescriptionInput> & {
+export type SetModelDescriptionAction = Action & {
   type: "SET_MODEL_DESCRIPTION";
+  input: SetModelDescriptionInput;
 };
-export type SetAuthorNameAction = BaseAction<SetAuthorNameInput> & {
+export type SetAuthorNameAction = Action & {
   type: "SET_AUTHOR_NAME";
+  input: SetAuthorNameInput;
 };
-export type SetAuthorWebsiteAction = BaseAction<SetAuthorWebsiteInput> & {
+export type SetAuthorWebsiteAction = Action & {
   type: "SET_AUTHOR_WEBSITE";
+  input: SetAuthorWebsiteInput;
 };
 
 export type DocumentModelHeaderAction =

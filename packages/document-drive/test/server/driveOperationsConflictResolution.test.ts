@@ -4,7 +4,7 @@ import { PrismaClient } from "#storage/prisma/client/index";
 import { PrismaStorage } from "#storage/prisma/prisma";
 import { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
 import {
-  BaseAction,
+  Action,
   documentModelDocumentModelModule,
   DocumentModelModule,
   Operation,
@@ -170,7 +170,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
       const syncedOperations = client1.getDocument().operations
         .global as Operation<
-        DocumentDriveAction | BaseAction<unknown>
+        DocumentDriveAction | Action
       >[];
       client1.setUnsyncedOperations(syncedOperations);
 
@@ -260,7 +260,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       // Clien1 push already synced operations to server (this should not create new operations in the server document)
       const syncedOperations = client1.getDocument().operations
         .global as Operation<
-        DocumentDriveAction | BaseAction<unknown>
+        DocumentDriveAction | Action
       >[];
 
       client1.setUnsyncedOperations(syncedOperations);

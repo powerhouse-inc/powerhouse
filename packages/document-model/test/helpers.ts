@@ -1,5 +1,5 @@
 import {
-  type BaseAction,
+  type Action,
   type Operation,
   type PHDocument,
   type StateReducer,
@@ -15,10 +15,10 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 export const wrappedEmptyReducer = createReducer(emptyReducer);
 
 // Counter reducer that supports increment/decrement actions
-export type IncrementAction = BaseAction<undefined> & { type: "INCREMENT" };
-export type DecrementAction = BaseAction<undefined> & { type: "DECREMENT" };
-export type ErrorAction = BaseAction<undefined> & { type: "ERROR" };
-export type SetLocalNameAction = BaseAction<string> & { type: "SET_LOCAL_NAME" };
+export type IncrementAction = Action & { type: "INCREMENT"; input: {} };
+export type DecrementAction = Action & { type: "DECREMENT"; input: {} };
+export type ErrorAction = Action & { type: "ERROR"; input: {} };
+export type SetLocalNameAction = Action & { type: "SET_LOCAL_NAME"; input: string };
 export type CountAction =
   | IncrementAction
   | DecrementAction
@@ -34,11 +34,11 @@ export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
 
-export const increment = () => createAction<IncrementAction>("INCREMENT");
+export const increment = () => createAction<IncrementAction>("INCREMENT", {});
 
-export const decrement = () => createAction<DecrementAction>("DECREMENT");
+export const decrement = () => createAction<DecrementAction>("DECREMENT", {});
 
-export const error = () => createAction<ErrorAction>("ERROR");
+export const error = () => createAction<ErrorAction>("ERROR", {});
 
 export const setLocalName = (name: string) =>
   createAction<SetLocalNameAction>(

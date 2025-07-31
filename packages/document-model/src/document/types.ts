@@ -53,11 +53,11 @@ export type ActionContext = {
 /**
  * Defines the basic structure of an action.
  */
-export type BaseAction<TInput> = {
+export type Action = {
   /** The name of the action. */
   type: string;
   /** The payload of the action. */
-  input: TInput;
+  input: unknown;
   /** The scope of the action */
   scope: string;
   /** The attachments included in the action. */
@@ -66,15 +66,11 @@ export type BaseAction<TInput> = {
   context?: ActionContext;
 };
 
-export type BaseActionWithAttachment<TInput> = BaseAction<TInput> & {
+export type ActionWithAttachment = Action & {
   attachments: AttachmentInput[];
 };
 
 export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
-
-export type CustomAction = BaseAction<unknown>;
-
-export type Action<TInput = unknown> = BaseAction<TInput>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -373,7 +369,7 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorDispatch<TAction extends Action | CustomAction = Action> = (
+export type EditorDispatch<TAction extends Action = Action> = (
   action: TAction,
   onErrorCallback?: ActionErrorCallback,
 ) => void;

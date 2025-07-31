@@ -161,7 +161,7 @@ describe("UNDO/REDO", () => {
 
       expect(result.action.type).toBe("INCREMENT");
       expect(result.action.scope).toBe("global");
-      expect(result.action.input).toBe(undefined);
+      expect(result.action.input).toStrictEqual({});
     });
 
     it("should remove the latest valid action from the clipboard", () => {
@@ -388,7 +388,7 @@ describe("UNDO/REDO", () => {
   describe("NOOP operations", () => {
     it("should apply NOOP operations", () => {
       const op = {
-        input: undefined,
+        input: {},
         type: "NOOP",
         skip: 1,
         index: 5,
@@ -413,7 +413,7 @@ describe("UNDO/REDO", () => {
 
     it("should replace previous noop operation and update skip number when a new noop is dispatched after another one", () => {
       const baseOperation = {
-        input: undefined,
+        input: {},
         type: "NOOP",
         skip: 0,
         index: 5,
@@ -442,7 +442,7 @@ describe("UNDO/REDO", () => {
 
     it("NOOP operation should not add skipped operation to the clipboard", () => {
       const op = {
-        input: undefined,
+        input: {},
         type: "NOOP",
         skip: 1,
         index: 5,

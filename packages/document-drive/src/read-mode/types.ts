@@ -10,7 +10,6 @@ import {
 import { type DriveInfo } from "#utils/graphql";
 import {
   Action,
-  CustomAction,
   type DocumentModelModule,
   type PHDocument,
 } from "document-model";

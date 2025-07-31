@@ -1,4 +1,4 @@
-import type { BaseAction, ExtendedState, PHDocument } from "document-model";
+import type { Action, ExtendedState, PHDocument } from "document-model";
 import type { DocumentDriveAction } from "./actions.js";
 import type {
   AddFileInput,
@@ -36,4 +36,4 @@ export type LegacyAddFileInput = AddFileInput & {
   synchronizationUnits: Array<LegacySynchronizationUnit>;
 };
 
-export type LegacyAddFileAction = BaseAction<LegacyAddFileInput> & { type: "ADD_FILE" };
+export type LegacyAddFileAction = Action & { type: "ADD_FILE"; input: LegacyAddFileInput; };

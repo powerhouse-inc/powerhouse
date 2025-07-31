@@ -14,8 +14,8 @@ import { baseReducer, updateHeader } from "../reducer.js";
 import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
+  type Action,
   type ActionFromDocument,
-  type BaseAction,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
@@ -57,19 +57,19 @@ export function isNoopOperation<
 }
 
 export function isUndoRedo(
-  action: BaseAction<unknown>,
+  action: Action,
 ): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
 export function isUndo(
-  action: BaseAction<unknown>,
+  action: Action,
 ): action is UndoAction {
   return action.type === UNDO;
 }
 
 export function isDocumentAction(
-  action: BaseAction<unknown>,
+  action: Action,
 ): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
@@ -94,7 +94,7 @@ export function isDocumentAction(
  *
  * @returns The new action.
  */
-export function createAction<TAction extends BaseAction<unknown>>(
+export function createAction<TAction extends Action>(
   type: TAction["type"],
   input?: TAction["input"],
   attachments?: TAction["attachments"],
@@ -109,7 +109,7 @@ export function createAction<TAction extends BaseAction<unknown>>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
   }
 
-  const action: BaseAction<unknown> = {
+  const action: Action = {
     type,
     input,
     scope,

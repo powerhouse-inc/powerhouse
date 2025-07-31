@@ -28,7 +28,7 @@ export const setName = (name: string) =>
     name,
     undefined,
     SetNameActionInputSchema,
-    undefined,
+    "global",
   );
 
 /**

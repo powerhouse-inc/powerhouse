@@ -1,4 +1,4 @@
-import { type BaseAction } from "document-model";
+import { type Action } from "document-model";
 import type {
   AddListenerInput,
   AddTriggerInput,
@@ -10,29 +10,37 @@ import type {
   SetSharingTypeInput,
 } from "../types.js";
 
-export type SetDriveNameAction = BaseAction<SetDriveNameInput> & {
+export type SetDriveNameAction = Action & {
   type: "SET_DRIVE_NAME";
+  input: SetDriveNameInput;
 };
-export type SetDriveIconAction = BaseAction<SetDriveIconInput> & {
+export type SetDriveIconAction = Action & {
   type: "SET_DRIVE_ICON";
+  input: SetDriveIconInput;
 };
-export type SetSharingTypeAction = BaseAction<SetSharingTypeInput> & {
+export type SetSharingTypeAction = Action & {
   type: "SET_SHARING_TYPE";
+  input: SetSharingTypeInput;
 };
-export type SetAvailableOfflineAction = BaseAction<SetAvailableOfflineInput> & {
+export type SetAvailableOfflineAction = Action & {
   type: "SET_AVAILABLE_OFFLINE";
+  input: SetAvailableOfflineInput;
 };
-export type AddListenerAction = BaseAction<AddListenerInput> & {
+export type AddListenerAction = Action & {
   type: "ADD_LISTENER";
+  input: AddListenerInput;
 };
-export type RemoveListenerAction = BaseAction<RemoveListenerInput> & {
+export type RemoveListenerAction = Action & {
   type: "REMOVE_LISTENER";
+  input: RemoveListenerInput;
 };
-export type AddTriggerAction = BaseAction<AddTriggerInput> & {
+export type AddTriggerAction = Action & {
   type: "ADD_TRIGGER";
+  input: AddTriggerInput;
 };
-export type RemoveTriggerAction = BaseAction<RemoveTriggerInput> & {
+export type RemoveTriggerAction = Action & {
   type: "REMOVE_TRIGGER";
+  input: RemoveTriggerInput;
 };
 
 export type DocumentDriveDriveAction =

@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   AddChangeLogItemInput,
   DeleteChangeLogItemInput,
@@ -6,20 +6,25 @@ import {
   UpdateChangeLogItemInput,
 } from "../schema/types.js";
 
-export type AddChangeLogItemAction = BaseAction<AddChangeLogItemInput> & {
+export type AddChangeLogItemAction = Action & {
   type: "ADD_CHANGE_LOG_ITEM";
+  input: AddChangeLogItemInput;
 };
-export type UpdateChangeLogItemAction = BaseAction<UpdateChangeLogItemInput> & {
+export type UpdateChangeLogItemAction = Action & {
   type: "UPDATE_CHANGE_LOG_ITEM";
+  input: UpdateChangeLogItemInput;
 };
-export type DeleteChangeLogItemAction = BaseAction<DeleteChangeLogItemInput> & {
+export type DeleteChangeLogItemAction = Action & {
   type: "DELETE_CHANGE_LOG_ITEM";
+  input: DeleteChangeLogItemInput;
 };
-export type ReorderChangeLogItemsAction = BaseAction<ReorderChangeLogItemsInput> & {
+export type ReorderChangeLogItemsAction = Action & {
   type: "REORDER_CHANGE_LOG_ITEMS";
+  input: ReorderChangeLogItemsInput;
 };
-export type ReleaseNewVersionAction = BaseAction<never> & {
+export type ReleaseNewVersionAction = Action & {
   type: "RELEASE_NEW_VERSION";
+  input: {};
 };
 
 export type DocumentModelVersioningAction =
