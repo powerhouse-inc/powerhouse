@@ -4,6 +4,32 @@
 
 ## BREAKING CHANGES
 
+### Type parameters have been removed
+
+The `Action` type parameters have been removed.
+
+**Before (v5.0):**
+
+```typescript
+const action: Action<MyDocModelActionType, unknown> = {
+  type: "my-action",
+  input: {
+    name: "John Doe",
+  },
+};
+```
+
+**After (v5.1):**
+
+```typescript
+const action: Action<unknown> = {
+  type: "my-action",
+  input: {
+    name: "John Doe",
+  },
+};
+```
+
 ### `OperationScope` has been removed
 
 Previously, an enum existed called `OperationScope` that was used to define the scope of an operation. This has been removed and replaced with a string type.
@@ -24,10 +50,10 @@ const operation: Operation = {
 };
 ```
 
-**Migration Steps:**
+## Migration Steps
 
 1. Update to the lastest `codegen` package.
-2. Regenerate your document models.s
+2. Regenerate your document models.
 
 ## 🚀 **v5.0.0**
 

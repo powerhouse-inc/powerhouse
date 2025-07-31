@@ -10,10 +10,10 @@ import type {
 } from '../types.js';
 
 <% actions.filter(a => a.hasInput).forEach(actionType => { _%>
-export <%= 'type ' + h.changeCase.pascal(actionType.name) %>Action = BaseAction<%if(actionType.hasAttachment){ %>WithAttachment<% } %><'<%= h.changeCase.constantCase(actionType.name) %>', <%= h.changeCase.pascal(actionType.name) %>Input>;
+export <%= 'type ' + h.changeCase.pascal(actionType.name) %>Action = BaseAction<%if(actionType.hasAttachment){ %>WithAttachment<% } %><<%= h.changeCase.pascal(actionType.name) %>Input> & { type: '<%= h.changeCase.constantCase(actionType.name) %>' };
 <% }); _%>
 <% actions.filter(a => !a.hasInput).forEach(actionType => { _%>
-export <%= 'type ' + h.changeCase.pascal(actionType.name) %>Action = BaseAction<'<%= h.changeCase.constantCase(actionType.name) %>', never>;
+export <%= 'type ' + h.changeCase.pascal(actionType.name) %>Action = BaseAction<never> & { type: '<%= h.changeCase.constantCase(actionType.name) %>' };
 <% }); _%>
 
 export <%= 'type ' + h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module) %>Action = 
