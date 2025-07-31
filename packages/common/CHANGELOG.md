@@ -1,3 +1,7 @@
+## 4.0.4 (2025-07-31)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 4.0.3 (2025-07-31)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
