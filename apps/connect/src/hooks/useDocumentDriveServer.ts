@@ -352,7 +352,7 @@ export function useDocumentDriveServer() {
                 header: document.header,
                 history: document.history,
                 initialState: document.initialState,
-                state: document.state,
+                state: document.initialState.state,
                 operations: {
                     global: [],
                     local: [],
