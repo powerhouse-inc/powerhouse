@@ -32,10 +32,10 @@ export function buildDocumentRevisionsFilter(
   );
 }
 
-export function filterOperationsByRevision<TAction extends Action = Action>(
-  operations: DocumentOperations<TAction>,
+export function filterOperationsByRevision(
+  operations: DocumentOperations,
   revisions?: RevisionsFilter,
-): DocumentOperations<TAction> {
+): DocumentOperations {
   if (!revisions) {
     return operations;
   }
@@ -43,11 +43,11 @@ export function filterOperationsByRevision<TAction extends Action = Action>(
     (acc, scope) => {
       const revision = revisions[scope];
       if (revision !== undefined) {
-        acc[scope] = operations[scope].filter((op) => op.index <= revision);
+        acc[scope] = operations[scope].filter((op: any) => op.index <= revision);
       }
       return acc;
     },
-    { global: [], local: [] } as DocumentOperations<TAction>,
+    { global: [], local: [] } as DocumentOperations,
   );
 }
 

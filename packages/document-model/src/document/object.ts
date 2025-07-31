@@ -24,9 +24,9 @@ export abstract class BaseDocumentClass<
   TLocalState,
   TCustomAction extends Action,
 > {
-  protected _document: BaseDocument<TGlobalState, TLocalState, TCustomAction>;
+  protected _document: BaseDocument<TGlobalState, TLocalState>;
   private _reducer: Reducer<
-    BaseDocument<TGlobalState, TLocalState, TCustomAction>
+    BaseDocument<TGlobalState, TLocalState>
   >;
   private _signalDispatch?: SignalDispatch;
 
@@ -36,8 +36,8 @@ export abstract class BaseDocumentClass<
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
-    document: BaseDocument<TGlobalState, TLocalState, TCustomAction>,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>,
+    document: BaseDocument<TGlobalState, TLocalState>,
     signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
@@ -93,7 +93,7 @@ export abstract class BaseDocumentClass<
     TCustomAction extends Action,
   >(
     path: string,
-    reducer: Reducer<BaseDocument<TGlobalState, TLocalState, TCustomAction>>,
+    reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>,
   ) {
     const state = await baseLoadFromFile(path, reducer);
     return state;

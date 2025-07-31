@@ -16,75 +16,81 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
     return state;
   }
 
-  switch (action.type) {
+  // Skip Operations (they have an index property)
+  if ("index" in action) {
+    return state;
+  }
+
+  const typedAction = action as any;
+  switch (typedAction.type) {
     case "SET_PACKAGE_NAME":
-      z.SetPackageNameInputSchema().parse(action.input);
+      z.SetPackageNameInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageNameOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_DESCRIPTION":
-      z.SetPackageDescriptionInputSchema().parse(action.input);
+      z.SetPackageDescriptionInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageDescriptionOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_CATEGORY":
-      z.SetPackageCategoryInputSchema().parse(action.input);
+      z.SetPackageCategoryInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageCategoryOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_PUBLISHER":
-      z.SetPackagePublisherInputSchema().parse(action.input);
+      z.SetPackagePublisherInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackagePublisherOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_PUBLISHER_URL":
-      z.SetPackagePublisherUrlInputSchema().parse(action.input);
+      z.SetPackagePublisherUrlInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackagePublisherUrlOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_KEYWORDS":
-      z.SetPackageKeywordsInputSchema().parse(action.input);
+      z.SetPackageKeywordsInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageKeywordsOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_GITHUB_URL":
-      z.SetPackageGithubUrlInputSchema().parse(action.input);
+      z.SetPackageGithubUrlInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageGithubUrlOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;
 
     case "SET_PACKAGE_NPM_URL":
-      z.SetPackageNpmUrlInputSchema().parse(action.input);
+      z.SetPackageNpmUrlInputSchema().parse(typedAction.input);
       PackageOperationsReducer.setPackageNpmUrlOperation(
-        (state as any)[action.scope],
-        action,
+        (state as any)[typedAction.scope],
+        action as any,
         dispatch,
       );
       break;

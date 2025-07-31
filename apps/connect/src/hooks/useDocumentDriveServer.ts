@@ -57,8 +57,8 @@ import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 function deduplicateOperations<TAction extends Action = Action>(
-    existingOperations: Record<string, Operation<TAction>[]>,
-    operationsToDeduplicate: Operation<TAction>[],
+    existingOperations: Record<string, Operation[]>,
+    operationsToDeduplicate: Operation[],
 ) {
     // make a set of all the operation indices for each scope to avoid duplicates
     const operationIndicesByScope = {} as Record<string, Set<number>>;
@@ -68,7 +68,7 @@ function deduplicateOperations<TAction extends Action = Action>(
         );
     }
 
-    const newOperations: Operation<TAction>[] = [];
+    const newOperations: Operation[] = [];
 
     for (const operation of operationsToDeduplicate) {
         const scope = operation.scope;
@@ -97,7 +97,7 @@ function deduplicateOperations<TAction extends Action = Action>(
     }
 
     const uniqueOperationHashes = new Set<string>();
-    const operationsDedupedByHash: Operation<TAction>[] = [];
+    const operationsDedupedByHash: Operation[] = [];
 
     for (const [scope, operations] of Object.entries(existingOperations)) {
         for (const operation of operations) {
@@ -188,7 +188,7 @@ export function useDocumentDriveServer() {
             }
 
             // sign operation
-            const signedOperation = await signOperation<DocumentDriveDocument>(
+            const signedOperation = await signOperation(
                 operation,
                 sign,
                 driveId,
@@ -220,7 +220,7 @@ export function useDocumentDriveServer() {
     const addDriveOperations = useCallback(
         async (
             driveId: string,
-            operationsToAdd: Operation<DocumentDriveAction>[],
+            operationsToAdd: Operation[],
         ) => {
             if (!reactor) {
                 return;

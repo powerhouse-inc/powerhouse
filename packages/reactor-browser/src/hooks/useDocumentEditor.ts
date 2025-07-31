@@ -3,7 +3,7 @@ import {
   type ActionErrorCallback,
   type ActionFromDocument,
   type DocumentModelModule,
-  type OperationFromDocument,
+  type Operation,
   type PHDocument,
 } from "document-model";
 import { type DID, type IConnectCrypto } from "../crypto/index.js";
@@ -14,7 +14,7 @@ import { useConnectCrypto, useConnectDid } from "./useConnectCrypto.js";
 import { useDocumentDispatch } from "./useDocumentDispatch.js";
 
 export type DocumentDispatchCallback<TDocument extends PHDocument> = (
-  operation: OperationFromDocument<TDocument>,
+  operation: Operation,
   state: {
     prevState: TDocument;
     newState: TDocument;

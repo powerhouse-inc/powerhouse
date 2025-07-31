@@ -16,7 +16,6 @@ import {
   type ActionContext,
   type DocumentModelModule,
   type Operation,
-  type OperationFromDocument,
   type PHDocument,
   type PHDocumentHeader,
   type PHDocumentMeta,
@@ -100,7 +99,7 @@ export type CreateDocumentInput<TDocument extends PHDocument> =
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
   error?: OperationError;
-  operations: OperationFromDocument<TDocument>[];
+  operations: Operation[];
   document: TDocument | undefined;
   signals: SignalResult[];
 };
@@ -524,7 +523,7 @@ export interface IBaseDocumentDriveServer {
    */
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
@@ -533,7 +532,7 @@ export interface IBaseDocumentDriveServer {
    */
   addDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
@@ -542,7 +541,7 @@ export interface IBaseDocumentDriveServer {
    */
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 
@@ -551,7 +550,7 @@ export interface IBaseDocumentDriveServer {
    */
   queueDriveOperations(
     driveId: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
 

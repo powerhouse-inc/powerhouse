@@ -83,7 +83,7 @@ describe("processOperations", () => {
           name: "test",
           documentType: "powerhouse/document-model",
         }),
-      ) as Operation<DocumentDriveAction>,
+      ) as Operation,
     );
 
     let document = await server.getDocument<DocumentModelDocument>(documentId);

@@ -106,13 +106,13 @@ const electronDocumentDrive = {
     },
     addDriveOperation: (
         drive: string,
-        operation: Operation<DocumentDriveAction | Action>,
+        operation: Operation,
     ) =>
         ipcRenderer.invoke('documentDrive:addDriveOperation', drive, operation),
     clearStorage: () => ipcRenderer.invoke('documentDrive:clearStorage'),
     addDriveOperations: (
         drive: string,
-        operations: Operation<DocumentDriveAction | Action>[],
+        operations: Operation[],
     ) =>
         ipcRenderer.invoke(
             'documentDrive:addDriveOperations',

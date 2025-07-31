@@ -169,9 +169,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       expect(client1.getUnsyncedOperations()).toMatchObject([]);
 
       const syncedOperations = client1.getDocument().operations
-        .global as Operation<
-        DocumentDriveAction | Action
-      >[];
+        .global as Operation[];
       client1.setUnsyncedOperations(syncedOperations);
 
       pushOperationResult = await client1.pushOperationsToServer();
@@ -259,9 +257,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
       // Clien1 push already synced operations to server (this should not create new operations in the server document)
       const syncedOperations = client1.getDocument().operations
-        .global as Operation<
-        DocumentDriveAction | Action
-      >[];
+        .global as Operation[];
 
       client1.setUnsyncedOperations(syncedOperations);
       pushOperationResult = await client1.pushOperationsToServer();

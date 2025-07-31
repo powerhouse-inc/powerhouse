@@ -275,16 +275,16 @@ describe.each(queueLayers)(
 
       // add file 1 operation has to be processed after add folder 1
       expect(
-        drive.state.global.nodes.findIndex((n) => n.id === fileId),
+        drive.state.global.nodes.findIndex((n: any) => n.id === fileId),
       ).toBeGreaterThan(
-        drive.state.global.nodes.findIndex((n) => n.id === folderId),
+        drive.state.global.nodes.findIndex((n: any) => n.id === folderId),
       );
 
       // add folder 2 operation has to be processed before add folder 1
       expect(
-        drive.state.global.nodes.findIndex((n) => n.id === folderId2),
+        drive.state.global.nodes.findIndex((n: any) => n.id === folderId2),
       ).toBeGreaterThan(
-        drive.state.global.nodes.findIndex((n) => n.id === folderId),
+        drive.state.global.nodes.findIndex((n: any) => n.id === folderId),
       );
 
       const docModelDocument = (await server.getDocument(
@@ -385,14 +385,14 @@ describe.each(queueLayers)(
         }),
       );
       const driveResults = await Promise.all(
-        drives.map((drive) => {
+        drives.map((drive: any) => {
           expect(drive).toBeDefined();
           return addOperationsToDrive(server, drive, false);
         }),
       );
 
       expect(
-        driveResults.flat().filter((f) => f.status === "ERROR").length,
+        driveResults.flat().filter((f: any) => f.status === "ERROR").length,
       ).toBe(0);
     });
 
@@ -411,21 +411,21 @@ describe.each(queueLayers)(
       );
 
       const driveResults = await Promise.all(
-        drives.map((drive) => {
+        drives.map((drive: any) => {
           expect(drive).toBeDefined();
           return addOperationsToDrive(server, drive);
         }),
       );
 
       // log errors
-      driveResults.flat().forEach((f) => {
+      driveResults.flat().forEach((f: any) => {
         if (f.status === "ERROR") {
           console.error(f.error);
         }
       });
 
       expect(
-        driveResults.flat().filter((f) => f.status !== "SUCCESS").length,
+        driveResults.flat().filter((f: any) => f.status !== "SUCCESS").length,
       ).toBe(0);
     });
 

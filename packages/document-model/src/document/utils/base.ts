@@ -157,7 +157,7 @@ export function createReducer<TDocument extends PHDocument>(
   type TAction = ActionFromDocument<TDocument>;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
-    action: TAction | Operation<TAction>,
+    action: TAction | Operation,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
   ) => {
@@ -305,7 +305,7 @@ export function getDocumentLastModified(document: PHDocument) {
 // This rebuilds the document according to the provided actions.
 export function replayOperations<TDocument extends PHDocument>(
   initialState: ExtendedStateFromDocument<TDocument>,
-  clearedOperations: OperationsFromDocument<TDocument>,
+  clearedOperations: OperationsFromDocument,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   header?: PHDocumentHeader,

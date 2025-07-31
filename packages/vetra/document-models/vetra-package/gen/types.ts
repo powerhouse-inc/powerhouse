@@ -11,7 +11,6 @@ export type ExtendedVetraPackageState = ExtendedState<
 >;
 export type VetraPackageDocument = PHDocument<
   VetraPackageState,
-  VetraPackageLocalState,
-  VetraPackageAction
+  VetraPackageLocalState
 >;
 export type { VetraPackageState, VetraPackageLocalState, VetraPackageAction };

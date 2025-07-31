@@ -543,9 +543,9 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
   return clearedOperations.slice(0, -1) as TOpIndex[]; //clearedOperation ? [clearedOperation as TOpIndex] : [];
 }
 
-export function garbageCollectDocumentOperations<
-  TAction extends Action = Action,
->(documentOperations: DocumentOperations<TAction>) {
+export function garbageCollectDocumentOperations(
+  documentOperations: DocumentOperations,
+) {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
@@ -558,7 +558,7 @@ export function garbageCollectDocumentOperations<
     {},
   );
 
-  return clearedOperations as DocumentOperations<TAction>;
+  return clearedOperations as DocumentOperations;
 }
 
 /**

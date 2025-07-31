@@ -90,7 +90,7 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction>,
+            operation: Operation,
             forceSync?: boolean,
         ) => documentDrive.addOperation(drive, operation, { forceSync }),
     );
@@ -100,12 +100,12 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | DocumentAction>[],
+            operations: Operation[],
             forceSync?: boolean,
         ) =>
             documentDrive.addOperations(
                 drive,
-                operations as Operation<DocumentDriveAction>[],
+                operations,
                 { forceSync },
             ),
     );
@@ -115,12 +115,12 @@ export default (
         (
             _e,
             drive: string,
-            operation: Operation<DocumentDriveAction | DocumentAction>,
+            operation: Operation,
             forceSync?: boolean,
         ) =>
             documentDrive.queueOperations(
                 drive,
-                [operation] as Operation<DocumentDriveAction>[],
+                [operation],
                 {
                     forceSync,
                 },
@@ -132,12 +132,12 @@ export default (
         (
             _e,
             drive: string,
-            operations: Operation<DocumentDriveAction | DocumentAction>[],
+            operations: Operation[],
             forceSync?: boolean,
         ) =>
             documentDrive.queueOperations(
                 drive,
-                operations as Operation<DocumentDriveAction>[],
+                operations,
                 {
                     forceSync,
                 },

@@ -454,7 +454,7 @@ export class BaseDocumentDriveServer
               });
 
               const pushListener = drive.state.local.listeners.find(
-                (listener) => trigger.data.url === listener.callInfo?.data,
+                (listener: any) => trigger.data.url === listener.callInfo?.data,
               );
               if (pushListener) {
                 for (const revision of revisions) {
@@ -1505,7 +1505,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !document.operations[op.scope].find(
-            (existingOp) =>
+            (existingOp: any) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2027,7 +2027,7 @@ export class BaseDocumentDriveServer
    */
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.addDriveOperations(driveId, [operation], options);
@@ -2066,7 +2066,7 @@ export class BaseDocumentDriveServer
    */
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.queueDriveOperations(driveId, [operation], options);
@@ -2082,7 +2082,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !drive.operations[op.scope].find(
-            (existingOp) =>
+            (existingOp: any) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2172,7 +2172,7 @@ export class BaseDocumentDriveServer
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     let document: DocumentDriveDocument | undefined;
-    const operationsApplied: Operation<DocumentDriveAction>[] = [];
+    const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
@@ -2194,7 +2194,7 @@ export class BaseDocumentDriveServer
         );
         document = result.document as DocumentDriveDocument;
         operationsApplied.push(
-          ...(result.operationsApplied as Operation<DocumentDriveAction>[]),
+          ...(result.operationsApplied as Operation[]),
         );
         signals.push(...result.signals);
         error = result.error;
@@ -2328,8 +2328,8 @@ export class BaseDocumentDriveServer
   private _buildOperations<TAction extends Action = Action>(
     documentId: PHDocument,
     actions: TAction[],
-  ): Operation<TAction>[] {
-    const operations: Operation<TAction>[] = [];
+  ): Operation[] {
+    const operations: Operation[] = [];
     const { reducer } = this.getDocumentModelModule(
       documentId.header.documentType,
     );
@@ -2339,7 +2339,7 @@ export class BaseDocumentDriveServer
       if (!operation) {
         throw new Error("Error creating operations");
       }
-      operations.push(operation as Operation<TAction>);
+      operations.push(operation as Operation);
     }
     return operations;
   }

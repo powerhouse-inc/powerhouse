@@ -27,8 +27,7 @@ describe("DocumentModel Class", () => {
   };
   const initialDocument: BaseDocument<
     CountState,
-    CountLocalState,
-    CountAction
+    CountLocalState
   > = {
     header: {
       id: "",

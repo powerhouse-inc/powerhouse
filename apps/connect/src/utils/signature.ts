@@ -3,7 +3,7 @@ import {
     type Action,
     type ActionSigner,
     buildSignedOperation,
-    type OperationFromDocument,
+    type Operation,
     type OperationSignatureContext,
     type PHDocument,
     type Reducer,
@@ -11,13 +11,13 @@ import {
 } from 'document-model';
 
 export async function signOperation<TDocument extends PHDocument>(
-    operation: OperationFromDocument<TDocument>,
+    operation: Operation,
     sign: (data: Uint8Array) => Promise<Uint8Array>,
     documentId: string,
     document: TDocument,
     reducer?: Reducer<TDocument>,
     user?: User,
-): Promise<OperationFromDocument<TDocument>> {
+): Promise<Operation> {
     if (!user) return operation;
     if (!operation.context) return operation;
     if (!operation.context.signer) return operation;

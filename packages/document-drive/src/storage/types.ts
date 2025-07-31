@@ -2,7 +2,6 @@ import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type SynchronizationUnitQuery } from "#server/types";
 import type {
   Operation,
-  OperationFromDocument,
   PHDocument,
 } from "document-model";
 
@@ -192,14 +191,14 @@ export interface IDocumentAdminStorage extends IDocumentStorage {
 export interface IDocumentOperationStorage {
   addDocumentOperations<TDocument extends PHDocument>(
     id: string,
-    operations: OperationFromDocument<TDocument>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void>;
 
   addDocumentOperationsWithTransaction?<TDocument extends PHDocument>(
     id: string,
     callback: (document: TDocument) => Promise<{
-      operations: OperationFromDocument<TDocument>[];
+      operations: Operation[];
       document: PHDocument;
     }>,
   ): Promise<void>;

@@ -12,13 +12,13 @@ import { RunAsap } from "#utils/run-asap";
 import {
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
-  type OperationFromDocument,
+  type Operation,
   type PHDocument,
 } from "document-model";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
-  OperationFromDocument<TDocument>,
+  Operation,
   "scope"
 > & {
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;

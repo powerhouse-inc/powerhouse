@@ -27,8 +27,7 @@ export type CountAction =
 
 export type CountDocument = PHDocument<
   CountState,
-  CountLocalState,
-  CountAction
+  CountLocalState
 >;
 export type CountState = { count: number };
 
@@ -61,7 +60,7 @@ export const baseCountReducer: StateReducer<CountDocument> = (
       state.global.count -= 1;
       break;
     case "SET_LOCAL_NAME":
-      state.local.name = action.input;
+      state.local.name = action.input as string;
       break;
     case "ERROR":
       throw new Error("Error action");
@@ -88,7 +87,7 @@ export const mutableCountReducer: StateReducer<CountDocument> = (
     case "SET_LOCAL_NAME":
       return {
         ...state,
-        local: { ...state.local, name: action.input },
+        local: { ...state.local, name: action.input as string },
       };
     case "ERROR":
       throw new Error("Error action");

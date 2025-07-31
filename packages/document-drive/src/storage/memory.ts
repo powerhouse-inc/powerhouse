@@ -10,7 +10,6 @@ import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
 import {
   type Operation,
-  type OperationFromDocument,
   type PHDocument,
 } from "document-model";
 import {
@@ -328,11 +327,11 @@ export class MemoryStorage
 
   async addDriveOperations(
     id: string,
-    operations: OperationFromDocument<DocumentDriveDocument>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+    const mergedOperations = mergeOperations(
       drive.operations,
       operations,
     );

@@ -504,11 +504,11 @@ export class FilesystemStorage
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void> {
     const existingDocument = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+    const mergedOperations = mergeOperations(
       existingDocument.operations,
       operations,
     );

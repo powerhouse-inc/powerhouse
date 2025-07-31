@@ -9,7 +9,7 @@ import {
   type DocumentModelModule,
   type DocumentModelState,
   type GlobalStateFromDocument,
-  type OperationFromDocument,
+  type Operation,
   type PHDocument,
 } from "document-model";
 import {
@@ -202,7 +202,7 @@ export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
   revision: number;
   state: GlobalStateFromDocument<TDocument>;
   initialState: GlobalStateFromDocument<TDocument>;
-  operations: (OperationFromDocument<TDocument> & {
+  operations: (Operation & {
     inputText: string;
   })[];
 };

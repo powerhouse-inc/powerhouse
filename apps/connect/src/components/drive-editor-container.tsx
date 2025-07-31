@@ -50,7 +50,7 @@ export function DriveEditorContainer() {
                 throw new Error('No drive selected');
             }
             await addDriveOperations(selectedDrive.header.id, [
-                operation as Operation<DocumentDriveAction>,
+                operation,
             ]);
         },
         [addDriveOperations, selectedDrive?.header.id],

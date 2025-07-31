@@ -76,7 +76,6 @@ export type {
   Maybe,
   NOOPAction,
   Operation,
-  OperationFromDocument,
   OperationSignatureContext,
   OperationsFromDocument,
   PHDocument,

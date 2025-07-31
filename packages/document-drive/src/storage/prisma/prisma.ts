@@ -11,7 +11,6 @@ import type {
   ExtendedStateFromDocument,
   FileRegistry,
   Operation,
-  OperationFromDocument,
   OperationsFromDocument,
   PHDocument,
   PHDocumentHeader,
@@ -450,7 +449,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       });
       acc[scope].push(result);
       return acc;
-    }, cachedOperations) as OperationsFromDocument<TDocument>;
+    }, cachedOperations) as OperationsFromDocument;
     const dbDoc = result;
 
     const header: PHDocumentHeader = {
@@ -688,7 +687,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void> {
     await this.addDocumentOperations(id, operations, document);
@@ -805,12 +804,12 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
   async addDocumentOperationsWithTransaction<TDocument extends PHDocument>(
     id: string,
     callback: (document: TDocument) => Promise<{
-      operations: OperationFromDocument<TDocument>[];
+      operations: Operation[];
       document: PHDocument;
     }>,
   ) {
     let result: {
-      operations: OperationFromDocument<TDocument>[];
+      operations: Operation[];
       document: PHDocument;
     } | null = null;
 

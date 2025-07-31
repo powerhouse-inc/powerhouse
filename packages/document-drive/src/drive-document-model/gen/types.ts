@@ -21,8 +21,7 @@ export type ExtendedDocumentDriveState = ExtendedState<
 >;
 export type DocumentDriveDocument = PHDocument<
   DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
+  DocumentDriveLocalState
 >;
 
 export type LegacySynchronizationUnit = {

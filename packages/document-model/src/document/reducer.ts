@@ -15,7 +15,6 @@ import {
   type ActionFromDocument,
   type DefaultAction,
   type Operation,
-  type OperationFromDocument,
   type PHDocument,
   type ReducerOptions,
   type StateReducer,
@@ -199,7 +198,7 @@ function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
   action:
     | ActionFromDocument<TDocument>
-    | OperationFromDocument<TDocument>
+    | Operation
     | DefaultAction,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
@@ -230,12 +229,12 @@ export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
   action:
     | ActionFromDocument<TDocument>
-    | OperationFromDocument<TDocument>
+    | Operation
     | DefaultAction,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  action: ActionFromDocument<TDocument> | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
