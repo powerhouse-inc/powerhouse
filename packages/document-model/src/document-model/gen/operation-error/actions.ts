@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   AddOperationErrorInput,
   DeleteOperationErrorInput,
@@ -9,34 +9,34 @@ import {
   SetOperationErrorTemplateInput,
 } from "../schema/types.js";
 
-export type AddOperationErrorAction = BaseAction<
-  "ADD_OPERATION_ERROR",
-  AddOperationErrorInput
->;
-export type SetOperationErrorCodeAction = BaseAction<
-  "SET_OPERATION_ERROR_CODE",
-  SetOperationErrorCodeInput
->;
-export type SetOperationErrorNameAction = BaseAction<
-  "SET_OPERATION_ERROR_NAME",
-  SetOperationErrorNameInput
->;
-export type SetOperationErrorDescriptionAction = BaseAction<
-  "SET_OPERATION_ERROR_DESCRIPTION",
-  SetOperationErrorDescriptionInput
->;
-export type SetOperationErrorTemplateAction = BaseAction<
-  "SET_OPERATION_ERROR_TEMPLATE",
-  SetOperationErrorTemplateInput
->;
-export type DeleteOperationErrorAction = BaseAction<
-  "DELETE_OPERATION_ERROR",
-  DeleteOperationErrorInput
->;
-export type ReorderOperationErrorsAction = BaseAction<
-  "REORDER_OPERATION_ERRORS",
-  ReorderOperationErrorsInput
->;
+export type AddOperationErrorAction = Action & {
+  type: "ADD_OPERATION_ERROR";
+  input: AddOperationErrorInput;
+};
+export type SetOperationErrorCodeAction = Action & {
+  type: "SET_OPERATION_ERROR_CODE";
+  input: SetOperationErrorCodeInput;
+};
+export type SetOperationErrorNameAction = Action & {
+  type: "SET_OPERATION_ERROR_NAME";
+  input: SetOperationErrorNameInput;
+};
+export type SetOperationErrorDescriptionAction = Action & {
+  type: "SET_OPERATION_ERROR_DESCRIPTION";
+  input: SetOperationErrorDescriptionInput;
+};
+export type SetOperationErrorTemplateAction = Action & {
+  type: "SET_OPERATION_ERROR_TEMPLATE";
+  input: SetOperationErrorTemplateInput;
+};
+export type DeleteOperationErrorAction = Action & {
+  type: "DELETE_OPERATION_ERROR";
+  input: DeleteOperationErrorInput;
+};
+export type ReorderOperationErrorsAction = Action & {
+  type: "REORDER_OPERATION_ERRORS";
+  input: ReorderOperationErrorsInput;
+};
 
 export type DocumentModelOperationErrorAction =
   | AddOperationErrorAction

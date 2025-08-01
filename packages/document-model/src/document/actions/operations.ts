@@ -3,7 +3,7 @@ import { type PruneActionInput } from "../schema/types.js";
 import {
   type ActionFromDocument,
   type BaseState,
-  type OperationFromDocument,
+  type Operation,
   type PHDocument,
   type StateReducer,
 } from "../types.js";
@@ -21,11 +21,11 @@ export function setNameOperation<TDocument extends PHDocument>(
 
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
+  action: ActionFromDocument<TDocument> | Operation,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  action: ActionFromDocument<TDocument> | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -44,7 +44,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const sortedOperations = sortOperations(operations);
 
     draft.action = noop(scope) as Draft<
-      ActionFromDocument<TDocument> | OperationFromDocument<TDocument>
+      ActionFromDocument<TDocument> | Operation
     >;
 
     const lastOperation = sortedOperations.at(-1);
@@ -80,11 +80,11 @@ export function undoOperation<TDocument extends PHDocument>(
 
 export function redoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
+  action: ActionFromDocument<TDocument> | Operation,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  action: ActionFromDocument<TDocument> | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -131,7 +131,7 @@ export function redoOperation<TDocument extends PHDocument>(
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as ActionFromDocument<TDocument> | OperationFromDocument<TDocument>);
+    } as ActionFromDocument<TDocument> | Operation);
   });
 }
 

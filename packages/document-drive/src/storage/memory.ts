@@ -8,12 +8,7 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
-import {
-  type Operation,
-  type OperationFromDocument,
-  type OperationScope,
-  type PHDocument,
-} from "document-model";
+import { type Operation, type PHDocument } from "document-model";
 import {
   type IDocumentAdminStorage,
   type IDocumentStorage,
@@ -329,14 +324,11 @@ export class MemoryStorage
 
   async addDriveOperations(
     id: string,
-    operations: OperationFromDocument<DocumentDriveDocument>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void> {
     const drive = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations<DocumentDriveDocument>(
-      drive.operations,
-      operations,
-    );
+    const mergedOperations = mergeOperations(drive.operations, operations);
 
     this.documents[id] = {
       ...drive,
@@ -365,7 +357,7 @@ export class MemoryStorage
             return undefined;
           }
 
-          const operations = document.operations[unit.scope as OperationScope];
+          const operations = document.operations[unit.scope];
 
           return {
             documentId: unit.documentId,

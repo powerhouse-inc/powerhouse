@@ -1,7 +1,6 @@
 import {
-  type BaseAction,
+  type Action,
   type Operation,
-  type OperationScope,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
@@ -16,30 +15,29 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 export const wrappedEmptyReducer = createReducer(emptyReducer);
 
 // Counter reducer that supports increment/decrement actions
-export type IncrementAction = BaseAction<"INCREMENT", undefined>;
-export type DecrementAction = BaseAction<"DECREMENT", undefined>;
-export type ErrorAction = BaseAction<"ERROR", undefined>;
-export type SetLocalNameAction = BaseAction<"SET_LOCAL_NAME", string>;
+export type IncrementAction = Action & { type: "INCREMENT"; input: {} };
+export type DecrementAction = Action & { type: "DECREMENT"; input: {} };
+export type ErrorAction = Action & { type: "ERROR"; input: {} };
+export type SetLocalNameAction = Action & {
+  type: "SET_LOCAL_NAME";
+  input: string;
+};
 export type CountAction =
   | IncrementAction
   | DecrementAction
   | SetLocalNameAction
   | ErrorAction;
 
-export type CountDocument = PHDocument<
-  CountState,
-  CountLocalState,
-  CountAction
->;
+export type CountDocument = PHDocument<CountState, CountLocalState>;
 export type CountState = { count: number };
 
 export type CountLocalState = { name: string };
 
-export const increment = () => createAction<IncrementAction>("INCREMENT");
+export const increment = () => createAction<IncrementAction>("INCREMENT", {});
 
-export const decrement = () => createAction<DecrementAction>("DECREMENT");
+export const decrement = () => createAction<DecrementAction>("DECREMENT", {});
 
-export const error = () => createAction<ErrorAction>("ERROR");
+export const error = () => createAction<ErrorAction>("ERROR", {});
 
 export const setLocalName = (name: string) =>
   createAction<SetLocalNameAction>(
@@ -62,7 +60,7 @@ export const baseCountReducer: StateReducer<CountDocument> = (
       state.global.count -= 1;
       break;
     case "SET_LOCAL_NAME":
-      state.local.name = action.input;
+      state.local.name = action.input as string;
       break;
     case "ERROR":
       throw new Error("Error action");
@@ -89,7 +87,7 @@ export const mutableCountReducer: StateReducer<CountDocument> = (
     case "SET_LOCAL_NAME":
       return {
         ...state,
-        local: { ...state.local, name: action.input },
+        local: { ...state.local, name: action.input as string },
       };
     case "ERROR":
       throw new Error("Error action");
@@ -110,11 +108,7 @@ export const mapOperations = (operations: Operation[]) => {
   }));
 };
 
-export const createFakeOperation = (
-  index = 0,
-  skip = 0,
-  scope: OperationScope = "global",
-) =>
+export const createFakeOperation = (index = 0, skip = 0, scope = "global") =>
   ({
     type: "FAKE_OP",
     input: `TEST_${index}`,

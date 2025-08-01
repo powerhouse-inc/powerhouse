@@ -1,12 +1,8 @@
-import {
-  type DocumentOperations,
-  type OperationScope,
-  type ValidationError,
-} from "../types.js";
+import { type DocumentOperations, type ValidationError } from "../types.js";
 
 export function validateOperations(operations: DocumentOperations) {
   const errors: ValidationError[] = [];
-  const scopes = Object.keys(operations) as OperationScope[];
+  const scopes = Object.keys(operations);
 
   for (const scope of scopes) {
     const ops = operations[scope].sort((a, b) => a.index - b.index);

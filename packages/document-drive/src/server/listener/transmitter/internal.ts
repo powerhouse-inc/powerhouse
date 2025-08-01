@@ -12,14 +12,13 @@ import { RunAsap } from "#utils/run-asap";
 import {
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
-  type OperationFromDocument,
-  type OperationScope,
+  type Operation,
   type PHDocument,
 } from "document-model";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
-  OperationFromDocument<TDocument>,
+  Operation,
   "scope"
 > & {
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
@@ -32,7 +31,7 @@ export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
   driveId: string;
   documentId: string;
   documentType: string;
-  scope: OperationScope;
+  scope: string;
   branch: string;
   operations: InternalOperationUpdate<TDocument>[];
   state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
@@ -84,9 +83,14 @@ export class InternalTransmitter implements ITransmitter {
           ));
 
       if (index < 0) {
-        stateByIndex.set(index, document.initialState.state[strand.scope]);
+        stateByIndex.set(
+          index,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+          (document.initialState.state as any)[strand.scope],
+        );
       } else {
-        stateByIndex.set(index, document.state[strand.scope]);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        stateByIndex.set(index, (document.state as any)[strand.scope]);
       }
       return stateByIndex.get(index);
     };

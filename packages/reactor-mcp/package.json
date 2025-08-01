@@ -1,0 +1,54 @@
+{
+  "name": "@powerhousedao/reactor-mcp",
+  "version": "4.1.0-dev.3",
+  "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "imports": {
+    "#*": "./dist/src/*"
+  },
+  "bin": {
+    "reactor-mcp": "./dist/src/cli.js"
+  },
+  "files": [
+    "./dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --build",
+    "build:tsc": "tsc --build",
+    "prebuild": "npm run clean",
+    "lint": "eslint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "bench": "vitest bench",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "vitest": "^3.1.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "change-case": "^5.4.4",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "zod": "^3.24.3"
+  }
+}

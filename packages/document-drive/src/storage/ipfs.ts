@@ -16,7 +16,6 @@ import { mergeOperations } from "#utils/misc";
 import { mfs, type MFS } from "@helia/mfs";
 import {
   type Operation,
-  type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
 } from "document-model";
@@ -472,7 +471,7 @@ export class IPFSStorage
             return undefined;
           }
           const operation =
-            document.operations[unit.scope as OperationScope].at(-1);
+            document.operations[unit.scope].at(-1);
           if (operation) {
             return {
               documentId: unit.documentId,

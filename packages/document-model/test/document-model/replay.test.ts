@@ -25,11 +25,7 @@ describe("DocumentModel Class", () => {
     },
     attachments: {},
   };
-  const initialDocument: BaseDocument<
-    CountState,
-    CountLocalState,
-    CountAction
-  > = {
+  const initialDocument: BaseDocument<CountState, CountLocalState> = {
     header: {
       id: "",
       sig: { publicKey: {}, nonce: "" },

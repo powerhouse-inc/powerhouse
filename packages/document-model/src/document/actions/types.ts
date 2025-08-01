@@ -6,7 +6,7 @@ import type {
   UndoAction as _UndoAction,
   NOOPAction as _NOOPAction,
 } from "../schema/types.js";
-import type { BaseAction } from "../types.js";
+import type { Action } from "../types.js";
 
 export const SET_NAME = "SET_NAME";
 export const UNDO = "UNDO";
@@ -15,12 +15,18 @@ export const PRUNE = "PRUNE";
 export const LOAD_STATE = "LOAD_STATE";
 export const NOOP = "NOOP";
 
-export type LoadStateAction = BaseAction<"LOAD_STATE", LoadStateActionInput>;
-export type PruneAction = BaseAction<"PRUNE", PruneActionInput>;
-export type RedoAction = BaseAction<"REDO", _RedoAction["input"]>;
-export type SetNameAction = BaseAction<"SET_NAME", _SetNameAction["input"]>;
-export type UndoAction = BaseAction<"UNDO", _UndoAction["input"]>;
-export type NOOPAction = BaseAction<"NOOP", _NOOPAction["input"]>;
+export type LoadStateAction = Action & {
+  type: "LOAD_STATE";
+  input: LoadStateActionInput;
+};
+export type PruneAction = Action & { type: "PRUNE"; input: PruneActionInput };
+export type RedoAction = Action & { type: "REDO"; input: _RedoAction["input"] };
+export type SetNameAction = Action & {
+  type: "SET_NAME";
+  input: _SetNameAction["input"];
+};
+export type UndoAction = Action & { type: "UNDO"; input: _UndoAction["input"] };
+export type NOOPAction = Action & { type: "NOOP"; input: _NOOPAction["input"] };
 
 export type DocumentAction =
   | LoadStateAction

@@ -5,6 +5,7 @@ import {
   DefaultStartServerOptions,
   startServer,
   type LocalReactor,
+  type RemoteDriveInputSimple,
   type StartServerOptions,
 } from "@powerhousedao/reactor-local";
 import { type IProcessor } from "document-drive/processors/types";
@@ -14,18 +15,52 @@ import {
 } from "document-drive/server/listener/transmitter/internal";
 import { type Listener } from "document-drive/server/types";
 import { type DocumentModelDocument } from "document-model";
+import { readFileSync } from "node:fs";
 
 export type ReactorOptions = StartServerOptions & {
   configFile?: string;
   generate?: boolean;
   watch?: boolean;
   dbPath?: string;
+  disableDefaultDrive?: boolean;
+  remoteDrives?: string;
+  remoteDrivesConfig?: string;
 };
 
 export const DefaultReactorOptions = {
   ...DefaultStartServerOptions,
   dev: true,
 };
+
+function parseRemoteDrives(
+  remoteDrivesInput?: string,
+  configFile?: string,
+): RemoteDriveInputSimple[] {
+  let drives: RemoteDriveInputSimple[] = [];
+
+  // Parse URLs from --remote-drives
+  if (remoteDrivesInput) {
+    drives = remoteDrivesInput
+      .split(",")
+      .map((url) => url.trim())
+      .filter((url) => url);
+  }
+
+  // Parse config file from --remote-drives-config
+  if (configFile) {
+    try {
+      const fileContent = readFileSync(configFile, "utf-8");
+      const configDrives = JSON.parse(fileContent) as RemoteDriveInputSimple[];
+      drives = drives.concat(configDrives);
+    } catch (error) {
+      throw new Error(
+        `Failed to read remote drives config file: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  return drives;
+}
 
 export async function startLocalReactor(reactorOptions: ReactorOptions) {
   const baseConfig = getConfig(reactorOptions.configFile);
@@ -36,11 +71,18 @@ export async function startLocalReactor(reactorOptions: ReactorOptions) {
 
   const { https } = baseConfig.reactor ?? { https: false };
 
+  // Parse remote drives configuration
+  const remoteDrives = parseRemoteDrives(
+    reactorOptions.remoteDrives,
+    reactorOptions.remoteDrivesConfig,
+  );
+
   const reactor = await startServer({
     ...options,
     https,
     logLevel: baseConfig.logLevel,
     storage: baseConfig.reactor?.storage || options.storage,
+    remoteDrives,
   });
 
   if (options.generate) {

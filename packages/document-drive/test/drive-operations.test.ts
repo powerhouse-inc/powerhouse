@@ -20,7 +20,7 @@ function buildOperation(
   document: DocumentDriveDocument,
   action: DocumentDriveAction,
   index?: number,
-): Operation<DocumentDriveAction> {
+): Operation {
   const newDocument = documentDriveReducer(document, action);
   const operation = newDocument.operations[action.scope].slice().pop()!;
   return { ...operation, index: index ?? operation.index };
@@ -29,8 +29,8 @@ function buildOperation(
 function buildOperations(
   document: DocumentDriveDocument,
   actions: Array<DocumentDriveAction>,
-): Operation<DocumentDriveAction>[] {
-  const operations: Operation<DocumentDriveAction>[] = [];
+): Operation[] {
+  const operations: Operation[] = [];
   for (const action of actions) {
     document = documentDriveReducer(document, action);
     const operation = document.operations[action.scope].slice().pop()!;

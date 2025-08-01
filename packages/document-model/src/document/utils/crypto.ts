@@ -4,7 +4,6 @@ import {
   type ActionFromDocument,
   type ActionSigner,
   type Operation,
-  type OperationFromDocument,
   type OperationSignatureContext,
   type OperationSigningHandler,
   type OperationVerificationHandler,
@@ -81,7 +80,7 @@ export async function buildOperationSignature(
 }
 
 export async function buildSignedOperation<TDocument extends PHDocument>(
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>,
+  action: ActionFromDocument<TDocument> | Operation,
   reducer: Reducer<TDocument>,
   document: TDocument,
   context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,

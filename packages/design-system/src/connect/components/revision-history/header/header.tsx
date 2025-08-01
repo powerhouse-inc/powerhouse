@@ -1,5 +1,4 @@
 import { Icon } from "#powerhouse";
-import { type OperationScope } from "document-model";
 import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { Branch } from "./branch.js";
@@ -9,8 +8,8 @@ import { Scope } from "./scope.js";
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly title: ReactNode;
   readonly docId: string;
-  readonly scope: OperationScope;
-  readonly onChangeScope: (scope: OperationScope) => void;
+  readonly scope: string;
+  readonly onChangeScope: (scope: string) => void;
   readonly onClose: () => void;
 }
 

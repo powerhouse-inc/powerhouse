@@ -38,7 +38,7 @@ export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
-export { applyMixins, BaseDocumentClass } from "#document/object.js";
+export { BaseDocumentClass, applyMixins } from "#document/object.js";
 export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
 export type {
   Action,
@@ -48,8 +48,7 @@ export type {
   ActionSigner,
   App,
   AttachmentInput,
-  BaseAction,
-  BaseActionWithAttachment,
+  ActionWithAttachment,
   BaseDocument,
   BaseState,
   BaseStateFromDocument,
@@ -57,7 +56,6 @@ export type {
   CreateDocument,
   CreateExtendedState,
   CreateState,
-  CustomAction,
   DocumentAction,
   DocumentModelLib,
   DocumentModelModule,
@@ -78,13 +76,11 @@ export type {
   Maybe,
   NOOPAction,
   Operation,
-  OperationFromDocument,
-  OperationScope,
-  OperationsFromDocument,
   OperationSignatureContext,
-  PartialState,
+  OperationsFromDocument,
   PHDocument,
   PHReducer,
+  PartialState,
   Reducer,
   ReducerOptions,
   SaveToFile,

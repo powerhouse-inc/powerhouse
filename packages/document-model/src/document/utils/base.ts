@@ -14,8 +14,8 @@ import { baseReducer, updateHeader } from "../reducer.js";
 import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
+  type Action,
   type ActionFromDocument,
-  type BaseAction,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
@@ -27,7 +27,6 @@ import {
   type LocalStateFromDocument,
   type MappedOperation,
   type Operation,
-  type OperationScope,
   type OperationsFromDocument,
   type PartialState,
   type PHDocument,
@@ -57,21 +56,15 @@ export function isNoopOperation<
   );
 }
 
-export function isUndoRedo(
-  action: BaseAction<string, unknown>,
-): action is UndoRedoAction {
+export function isUndoRedo(action: Action): action is UndoRedoAction {
   return [UNDO, REDO].includes(action.type);
 }
 
-export function isUndo(
-  action: BaseAction<string, unknown>,
-): action is UndoAction {
+export function isUndo(action: Action): action is UndoAction {
   return action.type === UNDO;
 }
 
-export function isDocumentAction(
-  action: BaseAction<string, unknown>,
-): action is DocumentAction {
+export function isDocumentAction(action: Action): action is DocumentAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
 
@@ -95,12 +88,12 @@ export function isDocumentAction(
  *
  * @returns The new action.
  */
-export function createAction<TAction extends BaseAction<string, unknown>>(
+export function createAction<TAction extends Action>(
   type: TAction["type"],
   input?: TAction["input"],
   attachments?: TAction["attachments"],
   validator?: () => { parse(v: unknown): TAction["input"] },
-  scope: OperationScope = "global",
+  scope = "global",
 ): TAction {
   if (!type) {
     throw new Error("Empty action type");
@@ -110,7 +103,7 @@ export function createAction<TAction extends BaseAction<string, unknown>>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
   }
 
-  const action: BaseAction<string, unknown> = {
+  const action: Action = {
     type,
     input,
     scope,
@@ -158,7 +151,7 @@ export function createReducer<TDocument extends PHDocument>(
   type TAction = ActionFromDocument<TDocument>;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
-    action: TAction | Operation<TAction>,
+    action: TAction | Operation,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
   ) => {
@@ -213,10 +206,10 @@ export function baseCreateDocument<TDocument extends PHDocument>(
 export function hashDocumentStateForScope(
   document: {
     state: {
-      [key in OperationScope]: unknown;
+      [key: string]: unknown;
     };
   },
-  scope: OperationScope = "global",
+  scope = "global",
 ) {
   const stateString = stringifyJson(document.state[scope] || "");
   return hash(stateString);
@@ -306,7 +299,7 @@ export function getDocumentLastModified(document: PHDocument) {
 // This rebuilds the document according to the provided actions.
 export function replayOperations<TDocument extends PHDocument>(
   initialState: ExtendedStateFromDocument<TDocument>,
-  clearedOperations: OperationsFromDocument<TDocument>,
+  clearedOperations: OperationsFromDocument,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   header?: PHDocumentHeader,
@@ -329,7 +322,7 @@ export function replayOperations<TDocument extends PHDocument>(
   );
 }
 
-export type SkipHeaderOperations = Partial<Record<OperationScope, number>>;
+export type SkipHeaderOperations = Partial<Record<string, number>>;
 
 export type ReplayDocumentOptions = {
   // if false then reuses the hash from the operations

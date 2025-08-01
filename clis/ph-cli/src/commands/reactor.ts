@@ -37,8 +37,17 @@ export function reactorCommand(program: Command) {
       "if the reactor should watch for local changes to document models and processors",
     )
     .option(
+      "--disable-default-drive",
+      "disable automatic creation of the default 'powerhouse' drive",
+    )
+    .option(
       "--packages <packages...>",
       "list of packages to be loaded, if defined then packages on config file are ignored",
+    )
+    .option("--remote-drives <urls>", "comma-separated remote drive URLs")
+    .option(
+      "--remote-drives-config <configFile>",
+      "path to JSON file containing remote drive configurations",
     )
     .action(async (...args: [ReactorOptions]) => {
       await switchboard(...args);
@@ -51,8 +60,8 @@ if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
   const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
   startLocalSwitchboard(options)
-    .then((switchboard) => {
-      process.send?.(`driveUrl:${switchboard.driveUrl}`);
+    .then((reactor) => {
+      process.send?.(`reactorUrl:${reactor.driveUrl}`);
     })
     .catch((e: unknown) => {
       throw e;

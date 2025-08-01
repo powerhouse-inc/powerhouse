@@ -53,40 +53,24 @@ export type ActionContext = {
 /**
  * Defines the basic structure of an action.
  */
-export type BaseAction<
-  TType extends string,
-  TInput,
-  TScope extends OperationScope = OperationScope,
-> = {
+export type Action = {
   /** The name of the action. */
-  type: TType;
+  type: string;
   /** The payload of the action. */
-  input: TInput;
-  /** The scope of the action, can either be 'global' or 'local' */
-  scope: TScope;
+  input: unknown;
+  /** The scope of the action */
+  scope: string;
   /** The attachments included in the action. */
   attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */
   context?: ActionContext;
 };
 
-export type BaseActionWithAttachment<
-  TType extends string,
-  TInput,
-  TScope extends OperationScope,
-> = BaseAction<TType, TInput, TScope> & {
+export type ActionWithAttachment = Action & {
   attachments: AttachmentInput[];
 };
 
 export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
-
-export type CustomAction = BaseAction<string, unknown>;
-
-export type Action<
-  TType extends string = string,
-  TInput = unknown,
-  TScope extends OperationScope = OperationScope,
-> = BaseAction<TType, TInput, TScope>;
 
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
@@ -113,7 +97,7 @@ export type Reducer<TDocument extends PHDocument> = <
   TAction extends ActionFromDocument<TDocument>,
 >(
   document: TDocument,
-  action: TAction | Operation<TAction> | DefaultAction,
+  action: TAction | Operation | DefaultAction,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
 ) => TDocument;
@@ -125,19 +109,13 @@ export type StateReducer<TDocument extends PHDocument> = <
   TAction extends ActionFromDocument<TDocument>,
 >(
   state: Draft<BaseStateFromDocument<TDocument>>,
-  action: TAction | DefaultAction | Operation<TAction>,
+  action: TAction | DefaultAction | Operation,
   dispatch?: SignalDispatch,
 ) => BaseStateFromDocument<TDocument> | undefined;
 
 export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
   StateReducer<TDocument>;
 
-/**
- * Scope of an operation.
- * Global: The operation is synchronized everywhere in the network. This is the default document operation.
- * Local: The operation is applied only locally (to a local state). Used for local settings such as a drive's local path
- */
-export type OperationScope = "global" | "local";
 /**
  * An operation that was applied to a {@link BaseDocument}.
  *
@@ -148,7 +126,7 @@ export type OperationScope = "global" | "local";
  *
  * @typeParam A - The type of the action.
  */
-export type Operation<TAction extends Action = Action> = TAction & {
+export type Operation = Action & {
   /** Position of the operation in the history */
   index: number;
   /** Timestamp of when the operation was added */
@@ -224,16 +202,15 @@ export type CreateState<TDocument extends PHDocument> = (
   >,
 ) => BaseStateFromDocument<TDocument>;
 
-export type CreateExtendedState<TDocument extends BaseDocument<any, any, any>> =
-  (
-    extendedState?: Partial<
-      ExtendedState<
-        PartialState<GlobalStateFromDocument<TDocument>>,
-        PartialState<LocalStateFromDocument<TDocument>>
-      >
-    >,
-    createState?: CreateState<TDocument>,
-  ) => ExtendedStateFromDocument<TDocument>;
+export type CreateExtendedState<TDocument extends BaseDocument<any, any>> = (
+  extendedState?: Partial<
+    ExtendedState<
+      PartialState<GlobalStateFromDocument<TDocument>>,
+      PartialState<LocalStateFromDocument<TDocument>>
+    >
+  >,
+  createState?: CreateState<TDocument>,
+) => ExtendedStateFromDocument<TDocument>;
 
 export type SaveToFileHandle = (
   document: PHDocument,
@@ -246,15 +223,15 @@ export type SaveToFile = (
   name?: string,
 ) => string | Promise<string>;
 
-export type LoadFromInput<TDocument extends BaseDocument<any, any, any>> = (
+export type LoadFromInput<TDocument extends BaseDocument<any, any>> = (
   input: FileInput,
 ) => TDocument | Promise<TDocument>;
 
-export type LoadFromFile<TDocument extends BaseDocument<any, any, any>> = (
+export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
   path: string,
 ) => TDocument | Promise<TDocument>;
 
-export type CreateDocument<TDocument extends BaseDocument<any, any, any>> = (
+export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
   initialState?: Partial<
     ExtendedState<
       PartialState<GlobalStateFromDocument<TDocument>>,
@@ -272,23 +249,19 @@ export type ExtendedState<TDocumentState, TLocalState> = {
   attachments?: FileRegistry;
 };
 
-export type DocumentOperations<TAction extends Action = Action> = Record<
-  OperationScope,
-  Operation<TAction>[]
->;
+export type DocumentOperations = Record<string, Operation[]>;
 
-export type MappedOperation<TAction extends Action = Action> = {
+export type MappedOperation = {
   ignore: boolean;
-  operation: Operation<TAction>;
+  operation: Operation;
 };
 
-export type DocumentOperationsIgnoreMap<TAction extends Action = Action> =
-  Record<OperationScope, MappedOperation<TAction>[]>;
+export type DocumentOperationsIgnoreMap = Record<string, MappedOperation[]>;
 
-export type OperationSignatureContext<TAction extends Action = Action> = {
+export type OperationSignatureContext = {
   documentId: string;
   signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
-  operation: Operation<TAction>;
+  operation: Operation;
   previousStateHash: string;
 };
 
@@ -311,11 +284,7 @@ export type OperationVerificationHandler = (
  * @typeParam Data - The type of the document data attribute.
  * @typeParam A - The type of the actions supported by the Document.
  */
-export type BaseDocument<
-  TDocumentState,
-  TLocalState,
-  TAction extends Action,
-> = {
+export type BaseDocument<TDocumentState, TLocalState> = {
   /** The header of the document. */
   header: PHDocumentHeader;
 
@@ -323,18 +292,17 @@ export type BaseDocument<
   history: PHDocumentHistory;
 } & ExtendedState<TDocumentState, TLocalState> & {
     /** The operations history of the document. */
-    operations: DocumentOperations<TAction>;
+    operations: DocumentOperations;
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<TDocumentState, TLocalState>;
     /** A list of undone operations */
-    clipboard: Operation<TAction>[];
+    clipboard: Operation[];
   };
 
 export type PHDocument<
   TGlobalState = unknown,
   TLocalState = unknown,
-  TAction extends Action = Action,
-> = BaseDocument<TGlobalState, TLocalState, TAction>;
+> = BaseDocument<TGlobalState, TLocalState>;
 
 /**
  * String type representing an attachment in a Document.
@@ -371,7 +339,7 @@ export type PartialRecord<K extends keyof any, T> = {
   [P in K]?: T;
 };
 
-export type RevisionsFilter = PartialRecord<OperationScope, number>;
+export type RevisionsFilter = PartialRecord<string, number>;
 
 export type GetDocumentOptions = ReducerOptions & {
   revisions?: RevisionsFilter;
@@ -391,7 +359,7 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorDispatch<TAction extends Action | CustomAction = Action> = (
+export type EditorDispatch<TAction extends Action = Action> = (
   action: TAction,
   onErrorCallback?: ActionErrorCallback,
 ) => void;
@@ -486,7 +454,7 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 export type ValidationError = { message: string; details: object };
 
 type ExtractPHDocumentGenerics<T> =
-  T extends BaseDocument<infer DocumentState, infer LocalState, infer Action>
+  T extends BaseDocument<infer DocumentState, infer LocalState>
     ? {
         documentState: DocumentState;
         action: Action;
@@ -530,12 +498,7 @@ export type ExtendedStateFromDocument<TDocument extends PHDocument> =
 export type ActionFromDocument<TDocument extends PHDocument> =
   ExtractPHDocumentGenerics<TDocument>["action"];
 
-export type OperationFromDocument<TDocument extends PHDocument> = Operation<
-  ActionFromDocument<TDocument>
->;
-
-export type OperationsFromDocument<TDocument extends PHDocument> =
-  DocumentOperations<ActionFromDocument<TDocument>>;
+export type OperationsFromDocument = DocumentOperations;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

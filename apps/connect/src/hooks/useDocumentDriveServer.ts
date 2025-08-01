@@ -49,7 +49,6 @@ import {
 import {
     type Action,
     type Operation,
-    type OperationScope,
     type PHDocument,
     createPresignedHeader,
     generateId,
@@ -59,18 +58,18 @@ import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
 function deduplicateOperations<TAction extends Action = Action>(
-    existingOperations: Record<OperationScope, Operation<TAction>[]>,
-    operationsToDeduplicate: Operation<TAction>[],
+    existingOperations: Record<string, Operation[]>,
+    operationsToDeduplicate: Operation[],
 ) {
     // make a set of all the operation indices for each scope to avoid duplicates
-    const operationIndicesByScope = {} as Record<OperationScope, Set<number>>;
-    for (const scope of Object.keys(existingOperations) as OperationScope[]) {
+    const operationIndicesByScope = {} as Record<string, Set<number>>;
+    for (const scope of Object.keys(existingOperations)) {
         operationIndicesByScope[scope] = new Set(
             existingOperations[scope].map(op => op.index),
         );
     }
 
-    const newOperations: Operation<TAction>[] = [];
+    const newOperations: Operation[] = [];
 
     for (const operation of operationsToDeduplicate) {
         const scope = operation.scope;
@@ -99,7 +98,7 @@ function deduplicateOperations<TAction extends Action = Action>(
     }
 
     const uniqueOperationHashes = new Set<string>();
-    const operationsDedupedByHash: Operation<TAction>[] = [];
+    const operationsDedupedByHash: Operation[] = [];
 
     for (const [scope, operations] of Object.entries(existingOperations)) {
         for (const operation of operations) {
@@ -190,7 +189,7 @@ export function useDocumentDriveServer() {
             }
 
             // sign operation
-            const signedOperation = await signOperation<DocumentDriveDocument>(
+            const signedOperation = await signOperation(
                 operation,
                 sign,
                 driveId,
@@ -220,10 +219,7 @@ export function useDocumentDriveServer() {
 
     // TODO: why does addDriveOperation do signing but adding multiple operations does not?
     const addDriveOperations = useCallback(
-        async (
-            driveId: string,
-            operationsToAdd: Operation<DocumentDriveAction>[],
-        ) => {
+        async (driveId: string, operationsToAdd: Operation[]) => {
             if (!reactor) {
                 return;
             }
@@ -356,7 +352,7 @@ export function useDocumentDriveServer() {
                 header: document.header,
                 history: document.history,
                 initialState: document.initialState,
-                state: document.state,
+                state: document.initialState.state,
                 operations: {
                     global: [],
                     local: [],

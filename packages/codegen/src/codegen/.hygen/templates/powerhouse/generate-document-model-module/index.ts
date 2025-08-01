@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { type DocumentModelState, type OperationScope } from "document-model";
+import { type DocumentModelState } from "document-model";
 import { type Args } from "../generate-document-model/index.js";
 
 type ModuleArgs = Args & { module: string };
@@ -7,7 +7,7 @@ type Actions = {
   name: string | null;
   hasInput: boolean;
   hasAttachment: boolean | undefined;
-  scope: OperationScope;
+  scope: string;
   state: string;
 };
 

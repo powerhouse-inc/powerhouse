@@ -1,6 +1,14 @@
 import { type LogLevel } from "@powerhousedao/config";
-import { type DriveInput, type IDocumentDriveServer } from "document-drive";
+import {
+  type DefaultRemoteDriveInput,
+  type DriveInput,
+  type IDocumentDriveServer,
+} from "document-drive";
 import path from "node:path";
+
+import { type DefaultProcessors } from "./default-processors.js";
+
+export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
@@ -15,6 +23,7 @@ export type StartServerOptions = {
   storage?: StorageOptions;
   dbPath?: string;
   drive?: DriveInput;
+  disableDefaultDrive?: boolean;
   packages?: string[];
   https?:
     | {
@@ -24,6 +33,8 @@ export type StartServerOptions = {
     | boolean
     | undefined;
   logLevel?: LogLevel;
+  remoteDrives?: RemoteDriveInputSimple[];
+  processors?: Array<DefaultProcessors>;
 };
 
 export const DefaultStartServerOptions = {
@@ -50,7 +61,7 @@ export const DefaultStartServerOptions = {
 } satisfies StartServerOptions;
 
 export type LocalReactor = {
-  driveUrl: string;
+  driveUrl: string | null;
   getDocumentPath: (driveId: string, documentId: string) => string;
   server: IDocumentDriveServer;
 };

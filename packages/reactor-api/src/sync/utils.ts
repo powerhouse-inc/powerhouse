@@ -5,7 +5,7 @@ import {
   type StrandUpdate,
 } from "document-drive";
 import { operationsToRevision } from "document-drive/utils/misc";
-import { type Operation, type OperationScope } from "document-model";
+import { type Operation } from "document-model";
 
 // define types
 export type InternalStrandUpdate = {
@@ -13,7 +13,7 @@ export type InternalStrandUpdate = {
   documentId: string;
   documentType: string;
   driveId: string;
-  scope: OperationScope;
+  scope: string;
   branch: string;
 };
 

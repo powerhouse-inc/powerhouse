@@ -94,14 +94,14 @@ describe("Crypto utils", () => {
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "ltP0ii+7eM14VIz0UY/SVrZS2ag=",
+      "SUbVbaz+OkPN+PXSDLx0iiK+JmI=",
       "",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n4417040672000xtestltP0ii+7eM14VIz0UY/SVrZS2ag=",
+        "\x19Signed Operation:\n4417040672000xtestSUbVbaz+OkPN+PXSDLx0iiK+JmI=",
       ),
     );
   });
@@ -134,14 +134,14 @@ describe("Crypto utils", () => {
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "ltP0ii+7eM14VIz0UY/SVrZS2ag=",
+      "SUbVbaz+OkPN+PXSDLx0iiK+JmI=",
       "qA97yBec1rrOyf2eVsYdWwFPOso=",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n7217040672000xtestltP0ii+7eM14VIz0UY/SVrZS2ag=qA97yBec1rrOyf2eVsYdWwFPOso=",
+        "\x19Signed Operation:\n7217040672000xtestSUbVbaz+OkPN+PXSDLx0iiK+JmI=qA97yBec1rrOyf2eVsYdWwFPOso=",
       ),
     );
   });
@@ -196,7 +196,7 @@ describe("Crypto utils", () => {
         [
           "1704067200",
           publicKey,
-          "oshEuhs/lncjvixPlkOSZiq0OxE=",
+          "iKXthoUck0TB+qt+HANRfcLBGRw=",
           "",
           expect.stringMatching(/0x[a-f0-9]{128}/),
         ],

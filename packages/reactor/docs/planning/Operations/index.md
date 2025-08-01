@@ -20,15 +20,12 @@ The data structure for an `Action` is as follows:
 /**
  * Base structure for all actions
  */
-type BaseAction<
-  TType extends string,
-  TInput,
-> = {
+type BaseAction = {
   /** The unique id of the action */
   id: string;
 
   /** The name of the action */
-  type: TType;
+  type: string;
 
   /** The version of the document model */
   version: string;
@@ -37,7 +34,7 @@ type BaseAction<
   scope: string;
 
   /** The payload of the action */
-  input: TInput;
+  input: object;
 
   /** The context of the action */
   context: ActionContext;
@@ -186,7 +183,7 @@ Each `Operation` is stored with the original `Action` that produced it. This all
 /**
  * Core Operation type that represents a command in the Command Sourcing architecture
  */
-type Operation<T extends Action = Action> = {
+type Operation = {
   /** Unique operation id */
   id: string;
   
@@ -200,7 +197,7 @@ type Operation<T extends Action = Action> = {
   timestampUtcMs: number;
 
   /** The action that was executed to produce this operation */
-  action: T;
+  action: Action;
 };
 ```
 

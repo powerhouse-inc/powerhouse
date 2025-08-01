@@ -1,37 +1,21 @@
-import { type BaseAction } from "document-model";
+import { type Action } from "document-model";
 import type {
   AddFileInput,
   AddFolderInput,
+  CopyNodeInput,
   DeleteNodeInput,
+  MoveNodeInput,
   UpdateFileInput,
   UpdateNodeInput,
-  CopyNodeInput,
-  MoveNodeInput,
 } from "../types.js";
 
-export type AddFileAction = BaseAction<"ADD_FILE", AddFileInput, "global">;
-export type AddFolderAction = BaseAction<
-  "ADD_FOLDER",
-  AddFolderInput,
-  "global"
->;
-export type DeleteNodeAction = BaseAction<
-  "DELETE_NODE",
-  DeleteNodeInput,
-  "global"
->;
-export type UpdateFileAction = BaseAction<
-  "UPDATE_FILE",
-  UpdateFileInput,
-  "global"
->;
-export type UpdateNodeAction = BaseAction<
-  "UPDATE_NODE",
-  UpdateNodeInput,
-  "global"
->;
-export type CopyNodeAction = BaseAction<"COPY_NODE", CopyNodeInput, "global">;
-export type MoveNodeAction = BaseAction<"MOVE_NODE", MoveNodeInput, "global">;
+export type AddFileAction = Action & { type: "ADD_FILE"; input: AddFileInput; };
+export type AddFolderAction = Action & { type: "ADD_FOLDER"; input: AddFolderInput; };
+export type DeleteNodeAction = Action & { type: "DELETE_NODE"; input: DeleteNodeInput; };
+export type UpdateFileAction = Action & { type: "UPDATE_FILE"; input: UpdateFileInput; };
+export type UpdateNodeAction = Action & { type: "UPDATE_NODE"; input: UpdateNodeInput; };
+export type CopyNodeAction = Action & { type: "COPY_NODE"; input: CopyNodeInput; };
+export type MoveNodeAction = Action & { type: "MOVE_NODE"; input: MoveNodeInput; };
 
 export type DocumentDriveNodeAction =
   | AddFileAction

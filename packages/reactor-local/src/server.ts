@@ -1,26 +1,66 @@
 import { isLogLevel } from "@powerhousedao/config";
-import { startAPI } from "@powerhousedao/reactor-api";
+import { startAPI, type Processor } from "@powerhousedao/reactor-api";
 import {
-  driveDocumentModelModule,
   InMemoryCache,
   logger,
   ReactorBuilder,
+  type DefaultRemoteDriveInput,
 } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
 import dotenv from "dotenv";
 import path from "node:path";
+import { DEFAULT_PROCESSORS } from "./default-processors.js";
 import {
   DefaultStartServerOptions,
   type LocalReactor,
+  type RemoteDriveInputSimple,
   type StartServerOptions,
 } from "./types.js";
 import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
 import { VitePackageLoader } from "./vite-loader.js";
 
 dotenv.config();
+
+/**
+ * Normalizes remote drive input to DefaultRemoteDriveInput format.
+ * If a string URL is provided, it uses Connect-compatible defaults.
+ */
+function normalizeRemoteDriveInput(
+  input: RemoteDriveInputSimple,
+): DefaultRemoteDriveInput {
+  if (typeof input === "string") {
+    // URL-only input, use Connect-compatible defaults
+    return {
+      url: input,
+      options: {
+        sharingType: "public",
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: input,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: "1",
+            system: true,
+          },
+        ],
+        triggers: [],
+      },
+    };
+  }
+
+  // Already a complete configuration, return as-is
+  return input;
+}
 
 const startServer = async (
   options?: StartServerOptions,
@@ -35,6 +75,7 @@ const startServer = async (
     packages = [],
     configFile,
     logLevel,
+    remoteDrives = [],
   } = {
     ...DefaultStartServerOptions,
     ...options,
@@ -59,20 +100,28 @@ const startServer = async (
 
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
-  const driveServer = new ReactorBuilder([
-    driveDocumentModelModule as DocumentModelModule,
-    documentModelDocumentModelModule as DocumentModelModule,
-  ])
+  const reactorBuilder = new ReactorBuilder([])
     .withCache(cache)
-    .withStorage(createStorage(storage, cache))
-    .build();
+    .withStorage(createStorage(storage, cache));
 
-  // init drive server + add a default drive
+  const driveServer = reactorBuilder.build();
+
+  // init drive server + conditionally add a default drive
   await driveServer.initialize();
-  const driveUrl = await addDefaultDrive(driveServer, drive, serverPort);
+  const driveUrl = options?.disableDefaultDrive
+    ? null
+    : await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
   const packageLoader = vite ? new VitePackageLoader(vite) : undefined;
+
+  const processors = options?.processors?.reduce(
+    (acc, processor) => {
+      acc[processor] = DEFAULT_PROCESSORS[processor];
+      return acc;
+    },
+    {} as Record<string, Processor>,
+  );
 
   // start api
   const api = await startAPI(driveServer, {
@@ -82,9 +131,7 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
-    // processors: {
-    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-    // },
+    processors,
   });
 
   // add vite middleware after express app is initialized if applicable
@@ -92,7 +139,29 @@ const startServer = async (
     api.app.use(vite.middlewares);
   }
 
-  logger.info(`  ➜  Reactor:   ${driveUrl}`);
+  // Add remote drives after full initialization (including PackageManager)
+  if (remoteDrives.length > 0) {
+    const processedRemoteDrives = remoteDrives.map(normalizeRemoteDriveInput);
+
+    for (const remoteDrive of processedRemoteDrives) {
+      try {
+        await driveServer.addRemoteDrive(remoteDrive.url, remoteDrive.options);
+      } catch (error) {
+        logger.error(
+          `  ➜  Failed to connect to remote drive ${remoteDrive.url}:`,
+          error,
+        );
+      }
+    }
+  }
+
+  if (driveUrl) {
+    logger.info(`  ➜  Reactor:   ${driveUrl}`);
+  } else {
+    logger.info(
+      `  ➜  Reactor:   http://localhost:${serverPort}/graphql (no default drive)`,
+    );
+  }
 
   return {
     driveUrl,

@@ -1,3 +1,61 @@
+## 4.1.0-dev.3 (2025-08-01)
+
+### 🚀 Features
+
+- **reactor-mcp:** setup of modular reactor tools ([ceab98b08](https://github.com/powerhouse-inc/powerhouse/commit/ceab98b08))
+- **reactor-mcp:** implemented remaining reactor mcp tools ([aca00a96e](https://github.com/powerhouse-inc/powerhouse/commit/aca00a96e))
+
+### 🩹 Fixes
+
+- linter errors from refactor ([11e8a1b16](https://github.com/powerhouse-inc/powerhouse/commit/11e8a1b16))
+- **codegen:** generate actions and documents without the third type parameter ([4bf98510c](https://github.com/powerhouse-inc/powerhouse/commit/4bf98510c))
+- **connect:** fix document upload regression ([6743d0061](https://github.com/powerhouse-inc/powerhouse/commit/6743d0061))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.2 (2025-07-31)
+
+### 🚀 Features
+
+- **reactor-mcp,document/model:** initial implementation of reactor mcp ([4eaab9ab0](https://github.com/powerhouse-inc/powerhouse/commit/4eaab9ab0))
+
+### 🩹 Fixes
+
+- remove operation scope from codegen output ([3127fd20d](https://github.com/powerhouse-inc/powerhouse/commit/3127fd20d))
+- linter issues ([e55a16456](https://github.com/powerhouse-inc/powerhouse/commit/e55a16456))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.1 (2025-07-29)
+
+### 🚀 Features
+
+- added vetra command and vetra project ([#1713](https://github.com/powerhouse-inc/powerhouse/pull/1713))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.0.0-staging.8 (2025-07-29)
+
+### 🚀 Features
+
+- **state:** simplify events ([39ead5990](https://github.com/powerhouse-inc/powerhouse/commit/39ead5990))
+
+### 🩹 Fixes
+
+- **connect:** fix fat finger mistake ([c315d95bc](https://github.com/powerhouse-inc/powerhouse/commit/c315d95bc))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.0.0-staging.7 (2025-07-26)
 
 ### 🚀 Features

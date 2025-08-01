@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "4.0.0-staging.7",
+  "version": "4.1.0-dev.3",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
@@ -33,6 +33,7 @@
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",

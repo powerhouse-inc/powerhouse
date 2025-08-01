@@ -1,14 +1,14 @@
 import type {
   ActionErrorCallback,
   ActionFromDocument,
-  OperationFromDocument,
+  Operation,
   PHDocument,
   Reducer,
 } from "document-model";
 import { useEffect, useState } from "react";
 
 export type DocumentDispatchCallback<TDocument extends PHDocument> = (
-  operation: OperationFromDocument<TDocument>,
+  operation: Operation,
   state: {
     prevState: TDocument;
     newState: TDocument;

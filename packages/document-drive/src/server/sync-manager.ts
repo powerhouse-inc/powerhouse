@@ -9,7 +9,6 @@ import { childLogger } from "#utils/logger";
 import { isBefore, operationsToRevision } from "#utils/misc";
 import {
   type DocumentModelModule,
-  type OperationScope,
   type PHDocument,
   garbageCollectDocumentOperations,
   replayDocument,
@@ -130,7 +129,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       return undefined;
     }
 
-    const operations = document.operations[scope as OperationScope] ?? [];
+    const operations = document.operations[scope] ?? [];
     const lastOperation = operations.at(-1);
 
     return {
@@ -158,8 +157,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       `[SYNC DEBUG] Retrieved document ${document.header.id} with type: ${document.header.documentType}`,
     );
 
-    const operations =
-      document.operations[syncId.scope as OperationScope] ?? []; // TODO filter by branch also
+    const operations = document.operations[syncId.scope] ?? []; // TODO filter by branch also
 
     this.logger.verbose(
       `[SYNC DEBUG] Found ${operations.length} total operations in scope ${syncId.scope}`,

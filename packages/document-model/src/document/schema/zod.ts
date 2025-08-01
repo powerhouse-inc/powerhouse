@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type OperationScope } from "../types.js";
+
 import {
   type Action,
   type DocumentFile,
@@ -45,8 +45,8 @@ export function ActionSchema(): z.ZodObject<Properties<Action>> {
   });
 }
 
-export function OperationScopeSchema(): z.ZodType<OperationScope> {
-  return z.literal("global").or(z.literal("local"));
+export function OperationScopeSchema(): z.ZodString {
+  return z.string();
 }
 
 export function DocumentActionSchema() {

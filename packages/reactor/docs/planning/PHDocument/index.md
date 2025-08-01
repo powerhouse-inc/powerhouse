@@ -2,25 +2,48 @@
 
 ### Summary
 
-`PHDocument` is the core object that represents a document in the Reactor system. It is a typed API for interacting with a document.
+`PHDocument` is the core object that represents a document's data in the Reactor system.
 
-We break PHDocument into four objects:
+We break PHDocument into two objects:
 
 ```tsx
-{
-  header,    // header information
+class PHDocument {
+  header: PHDocumentHeader;
+  state: PHDocumentState;
 
-	state,     // plain, serializable object
-	
-	mutations, // typed API for creting and/or executing operations
-	
-	history,   // typed API for fetching document history
+  constructor(header: PHDocumentHeader, state: PHDocumentState) {
+    this.header = header;
+    this.state = state;
+  }
 }
 ```
 
-#### Header
+We also define a `PHDocumentController` object that is used to wrap and interact with the document.
 
-The special case `header` scope contains a number of key elements:
+```tsx
+class PHDocumentController {
+  document: PHDocument;
+
+  mutations: PHDocumentMutations;
+  history: PHDocumentHistory;
+
+  constructor(document: PHDocument) {
+    this.document = document;
+
+    ...
+  }
+
+  get header(): PHDocumentHeader {
+    return this.document.header;
+  }
+
+  // elided
+}
+```
+
+### Header
+
+The `header` object contains a number of key elements:
 
 ```tsx
 export type PHDocumentSignatureInfo = {
@@ -97,7 +120,7 @@ export type PHDocumentHeader = {
 };
 ```
 
-##### Id
+#### Id
 
 The `id` is a unique, Ed25519 signature on the header object. It is used to verify the creator of a document to a document id. The payload will be formed deterministically from document header data (like `createdAtUtcMs`, `documentType`), plus a `nonce` present in the signature information.
 
@@ -107,46 +130,80 @@ This has effects on storage mechanisms, as currently the document id is used as 
 
 See the header section below for more information.
 
-#### State
+### State
 
 The state object is a plain, serializable object that has keys for each populated scope. The scopes will generally be filled in according to the `ViewFilter` that is passed into the reactor client or storage layers. For example, when scopes on the `ViewFilter` are set to `["global", "public"]`, then the state state object will have `global` and `public` keys.
 
-The `header` scope is a "special case" scope that is always populated, and the `document` scope is a default scope used for upgrades and initial scope, but is not necessarily populated.
+The `auth` scope is always present, but populated only with state that is available to that user. The `document` scope is a "special case" scope that is always present and is a default scope used for upgrades and initial scope, but is not necessarily populated.
 
 ```tsx
-type BaseDocumentState = {
+type PHDocumentState = {
   auth: AuthScopeState;
   document: DocumentScopeState;
 }
 
-export type PHDocument<TState extends BaseDocumentState> = {
-  // elided
+//
 
-  state: TState;
-
-  // elided
-}
+const state = { ...prevState, myScope: { ...prevState.myScope, foo: 4 } };
 ```
 
-Querying looks like:
+Custom document types extend the `PHDocument` class:
 
 ```tsx
-let drive = await client.get<DocumentDriveDocument>("mine");
-
-console.log(`Drive icon: ${drive.state.document.icon}`);
-```
-
-Custom document types extend this:
-
-```tsx
-type MyDocModelState = BaseDocumentState & {
+// simple type intersection for state
+type MyDocModelState = PHDocumentState & {
   myScope: MyScopeState;
 }
 
-type MyDocument = PHDocument<MyDocModelState>;
+// subclass of PHDocument, overriding the state
+class MyDocument extends PHDocument {
+  state: MyDocModelState;
+
+  constructor(header: PHDocumentHeader, state: MyDocModelState) {
+    super(header, state);
+  }
+
+  // elided
+}
 ```
 
-#### Mutations
+This means that references to `state` are dependent on the reference to the `PHDocument` type.
+
+```tsx
+const myDocument: MyDocument = getDocument();
+
+// this is safe because `state` is typed to `MyDocModelState`
+const myCustomScopeField = myDocument.state.myScope.foo;
+
+const superClass: PHDocument = myDocument;
+
+// this is a compile error, since we hold a reference to the PHDocument typse
+const superClassField = superClass.state.myScope.foo;
+```
+
+We can provide factory methods to correctly create the derived documents with specific mutations:
+
+```tsx
+class MyDocument extends PHDocument {
+  constructor(header: PHDocumentHeader, state: MyDocModelState) {
+    super(header, state);
+  }
+
+  ...
+
+  static fromRevisions(document: PHDocument, scope: string, revision: number): MyDocument {
+    return new MyDocument({
+      ...document.header,
+      revision: {
+        ...document.header.revision,
+        [scope]: revision,
+      },
+    }, state);
+  }
+}
+```
+
+### Mutations
 
 The mutations object is a typed API for creating and/or executing operations. It has operation-specific methods that pertain to the specific scope.
 

@@ -1,7 +1,7 @@
 import type {
   Action,
   DocumentOperations,
-  OperationScope,
+  Operation,
   PHDocument,
 } from "document-model";
 import {
@@ -30,31 +30,31 @@ export function buildDocumentRevisionsFilter(
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
-      acc[scope as OperationScope] = operations.at(-1)?.index ?? -1;
+      acc[scope] = operations.at(-1)?.index ?? -1;
       return acc;
     },
     {} as RevisionsFilter,
   );
 }
 
-export function filterOperationsByRevision<TAction extends Action = Action>(
-  operations: DocumentOperations<TAction>,
+export function filterOperationsByRevision(
+  operations: DocumentOperations,
   revisions?: RevisionsFilter,
-): DocumentOperations<TAction> {
+): DocumentOperations {
   if (!revisions) {
     return operations;
   }
   return Object.keys(operations).reduce(
     (acc, scope) => {
-      const revision = revisions[scope as OperationScope];
+      const revision = revisions[scope];
       if (revision !== undefined) {
-        acc[scope as OperationScope] = operations[
-          scope as OperationScope
-        ].filter((op) => op.index <= revision);
+        acc[scope] = operations[scope].filter(
+          (op: Operation) => op.index <= revision,
+        );
       }
       return acc;
     },
-    { global: [], local: [] } as DocumentOperations<TAction>,
+    { global: [], local: [] } as DocumentOperations,
   );
 }
 
@@ -65,7 +65,7 @@ export function isAtRevision(
   return (
     !revisions ||
     Object.entries(revisions).find(([scope, revision]) => {
-      const operation = document.operations[scope as OperationScope].at(-1);
+      const operation = document.operations[scope].at(-1);
       if (revision === -1) {
         return operation !== undefined;
       }
@@ -81,12 +81,16 @@ export function isAfterRevision(
   return (
     !revisions ||
     Object.entries(revisions).every(([scope, revision]) => {
-      const operation = document.operations[scope as OperationScope].at(-1);
+      const operation = document.operations[scope].at(-1);
 
       if (revision === -1) {
         return operation !== undefined;
       }
-      return operation && operation.index > revision;
+      return (
+        operation !== undefined &&
+        revision !== undefined &&
+        operation.index > revision
+      );
     })
   );
 }

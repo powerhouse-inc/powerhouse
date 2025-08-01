@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OperationScope } from "../../../document/types.js";
+
 import {
   AddChangeLogItemInput,
   AddModuleInput,
@@ -203,8 +203,8 @@ export function DeleteStateExampleInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationScopeSchema(): z.ZodType<OperationScope> {
-  return z.literal("global").or(z.literal("local"));
+export function OperationScopeSchema(): z.ZodString {
+  return z.string();
 }
 
 export function DocumentModelInputSchema() {

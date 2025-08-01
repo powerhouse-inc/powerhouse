@@ -4,8 +4,6 @@ import type {
     ActionErrorCallback,
     ActionFromDocument,
     Operation,
-    OperationFromDocument,
-    OperationScope,
     PHDocument,
     Reducer,
 } from 'document-model';
@@ -21,7 +19,7 @@ export const FILE_UPLOAD_OPERATIONS_CHUNK_SIZE = parseInt(
 );
 
 export type DocumentDispatchCallback<TDocument extends PHDocument> = (
-    operation: OperationFromDocument<TDocument>,
+    operation: Operation,
     state: {
         prevState: TDocument;
         newState: TDocument;
@@ -111,7 +109,7 @@ export function useDocumentDispatch<TDocument extends PHDocument>(
 async function waitForUpdate(
     timeout: number,
     documentId: string,
-    scope: OperationScope,
+    scope: string,
     lastIndex: number,
     reactor: IDocumentDriveServer,
 ) {

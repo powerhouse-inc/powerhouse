@@ -1,4 +1,4 @@
-import { BaseAction } from "../../../document/types.js";
+import { Action, ActionWithAttachment } from "../../../document/types.js";
 import {
   AddOperationInput,
   DeleteOperationInput,
@@ -12,43 +12,46 @@ import {
   SetOperationTemplateInput,
 } from "../schema/types.js";
 
-export type AddOperationAction = BaseAction<"ADD_OPERATION", AddOperationInput>;
-export type SetOperationNameAction = BaseAction<
-  "SET_OPERATION_NAME",
-  SetOperationNameInput
->;
-export type SetOperationScopeAction = BaseAction<
-  "SET_OPERATION_SCOPE",
-  SetOperationScopeInput
->;
-export type SetOperationSchemaAction = BaseAction<
-  "SET_OPERATION_SCHEMA",
-  SetOperationSchemaInput
->;
-export type SetOperationDescriptionAction = BaseAction<
-  "SET_OPERATION_DESCRIPTION",
-  SetOperationDescriptionInput
->;
-export type SetOperationTemplateAction = BaseAction<
-  "SET_OPERATION_TEMPLATE",
-  SetOperationTemplateInput
->;
-export type SetOperationReducerAction = BaseAction<
-  "SET_OPERATION_REDUCER",
-  SetOperationReducerInput
->;
-export type MoveOperationAction = BaseAction<
-  "MOVE_OPERATION",
-  MoveOperationInput
->;
-export type DeleteOperationAction = BaseAction<
-  "DELETE_OPERATION",
-  DeleteOperationInput
->;
-export type ReorderModuleOperationsAction = BaseAction<
-  "REORDER_MODULE_OPERATIONS",
-  ReorderModuleOperationsInput
->;
+export type AddOperationAction = Action & {
+  type: "ADD_OPERATION";
+  input: AddOperationInput;
+};
+export type SetOperationNameAction = Action & {
+  type: "SET_OPERATION_NAME";
+  input: SetOperationNameInput;
+};
+export type SetOperationScopeAction = Action & {
+  type: "SET_OPERATION_SCOPE";
+  input: SetOperationScopeInput;
+};
+export type SetOperationSchemaAction = Action & {
+  type: "SET_OPERATION_SCHEMA";
+  input: SetOperationSchemaInput;
+};
+export type SetOperationDescriptionAction = Action & {
+  type: "SET_OPERATION_DESCRIPTION";
+  input: SetOperationDescriptionInput;
+};
+export type SetOperationTemplateAction = Action & {
+  type: "SET_OPERATION_TEMPLATE";
+  input: SetOperationTemplateInput;
+};
+export type SetOperationReducerAction = Action & {
+  type: "SET_OPERATION_REDUCER";
+  input: SetOperationReducerInput;
+};
+export type MoveOperationAction = Action & {
+  type: "MOVE_OPERATION";
+  input: MoveOperationInput;
+};
+export type DeleteOperationAction = Action & {
+  type: "DELETE_OPERATION";
+  input: DeleteOperationInput;
+};
+export type ReorderModuleOperationsAction = Action & {
+  type: "REORDER_MODULE_OPERATIONS";
+  input: ReorderModuleOperationsInput;
+};
 
 export type DocumentModelOperationAction =
   | AddOperationAction

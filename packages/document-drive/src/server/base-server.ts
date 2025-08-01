@@ -41,7 +41,6 @@ import {
   type Action,
   type DocumentModelModule,
   type Operation,
-  type OperationScope,
   type PHDocument,
   type PHDocumentHeader,
   type PHDocumentMeta,
@@ -1074,12 +1073,11 @@ export class BaseDocumentDriveServer
     const operationsByScope = groupOperationsByScope(operations);
 
     for (const scope of Object.keys(operationsByScope)) {
-      const storageDocumentOperations =
-        documentStorage.operations[scope as OperationScope];
+      const storageDocumentOperations = documentStorage.operations[scope];
 
       // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
       const branch = removeExistingOperations(
-        operationsByScope[scope as OperationScope] || [],
+        operationsByScope[scope] || [],
         storageDocumentOperations,
       );
 
@@ -1173,8 +1171,7 @@ export class BaseDocumentDriveServer
     const documentOperations = garbageCollectDocumentOperations(operations);
 
     for (const scope of Object.keys(documentOperations)) {
-      const lastRemainingOperation =
-        documentOperations[scope as OperationScope].at(-1);
+      const lastRemainingOperation = documentOperations[scope].at(-1);
       // if the latest operation doesn't have a resulting state then tries
       // to retrieve it from the db to avoid rerunning all the operations
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
@@ -1508,7 +1505,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !document.operations[op.scope].find(
-            (existingOp) =>
+            (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2030,7 +2027,7 @@ export class BaseDocumentDriveServer
    */
   addDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.addDriveOperations(driveId, [operation], options);
@@ -2069,7 +2066,7 @@ export class BaseDocumentDriveServer
    */
   queueDriveOperation(
     driveId: string,
-    operation: Operation<DocumentDriveAction>,
+    operation: Operation,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     return this.queueDriveOperations(driveId, [operation], options);
@@ -2085,7 +2082,7 @@ export class BaseDocumentDriveServer
         (op) =>
           !op.id ||
           !drive.operations[op.scope].find(
-            (existingOp) =>
+            (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
               existingOp.type === op.type &&
@@ -2175,7 +2172,7 @@ export class BaseDocumentDriveServer
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult> {
     let document: DocumentDriveDocument | undefined;
-    const operationsApplied: Operation<DocumentDriveAction>[] = [];
+    const operationsApplied: Operation[] = [];
     const signals: SignalResult[] = [];
     let error: Error | undefined;
 
@@ -2196,9 +2193,7 @@ export class BaseDocumentDriveServer
           operations.slice(),
         );
         document = result.document as DocumentDriveDocument;
-        operationsApplied.push(
-          ...(result.operationsApplied as Operation<DocumentDriveAction>[]),
-        );
+        operationsApplied.push(...result.operationsApplied);
         signals.push(...result.signals);
         error = result.error;
 
@@ -2331,8 +2326,8 @@ export class BaseDocumentDriveServer
   private _buildOperations<TAction extends Action = Action>(
     documentId: PHDocument,
     actions: TAction[],
-  ): Operation<TAction>[] {
-    const operations: Operation<TAction>[] = [];
+  ): Operation[] {
+    const operations: Operation[] = [];
     const { reducer } = this.getDocumentModelModule(
       documentId.header.documentType,
     );
@@ -2342,7 +2337,7 @@ export class BaseDocumentDriveServer
       if (!operation) {
         throw new Error("Error creating operations");
       }
-      operations.push(operation as Operation<TAction>);
+      operations.push(operation);
     }
     return operations;
   }

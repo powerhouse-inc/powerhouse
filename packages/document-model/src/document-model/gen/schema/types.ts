@@ -1,5 +1,3 @@
-import { OperationScope } from "#document/types.js";
-
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -66,7 +64,7 @@ export type AddOperationInput = {
   reducer?: InputMaybe<Scalars["String"]["input"]>;
   schema?: InputMaybe<Scalars["String"]["input"]>;
   template?: InputMaybe<Scalars["String"]["input"]>;
-  scope?: InputMaybe<OperationScope>;
+  scope?: InputMaybe<string>;
 };
 
 export type AddStateExampleInput = {
@@ -415,7 +413,7 @@ export type Operation = {
   reducer: Maybe<Scalars["String"]["output"]>;
   schema: Maybe<Scalars["String"]["output"]>;
   template: Maybe<Scalars["String"]["output"]>;
-  scope: OperationScope;
+  scope: string;
 };
 
 export type OperationError = {
@@ -527,7 +525,7 @@ export type SetOperationNameInput = {
 
 export type SetOperationScopeInput = {
   id: Scalars["ID"]["input"];
-  scope: InputMaybe<OperationScope>;
+  scope: InputMaybe<string>;
 };
 
 export type SetOperationReducerInput = {

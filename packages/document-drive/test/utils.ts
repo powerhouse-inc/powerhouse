@@ -7,7 +7,6 @@ import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
   type Operation,
-  type OperationFromDocument,
   type PHDocument,
   type PHReducer,
 } from "document-model";
@@ -33,12 +32,10 @@ export function buildOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
   index?: number,
-): Operation<ActionFromDocument<TDocument>> {
+): Operation {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const operation = newDocument.operations[action.scope]
-    .slice()
-    .pop()! as Operation;
+  const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return { ...operation, index: index ?? operation.index } as Operation;
 }
@@ -47,14 +44,12 @@ export function buildOperations<TDocument extends PHDocument>(
   reducer: PHReducer<TDocument>,
   document: TDocument,
   actions: Array<Action>,
-): Operation<ActionFromDocument<TDocument>>[] {
+): Operation[] {
   const operations: Operation[] = [];
   for (const action of actions) {
     document = reducer(document, action);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const operation = document.operations[action.scope]
-      .slice()
-      .pop()! as Operation;
+    const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
   }
   return operations;
@@ -67,7 +62,7 @@ export function buildOperationAndDocument<TDocument extends PHDocument>(
   index?: number,
 ): {
   document: TDocument;
-  operation: OperationFromDocument<TDocument>;
+  operation: Operation;
 } {
   const newDocument = reducer(document, action);
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -78,7 +73,7 @@ export function buildOperationAndDocument<TDocument extends PHDocument>(
     operation: {
       ...operation,
       index: index ?? operation.index,
-    } as OperationFromDocument<TDocument>,
+    } as Operation,
   };
 }
 

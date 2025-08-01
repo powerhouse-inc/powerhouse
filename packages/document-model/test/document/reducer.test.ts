@@ -3,7 +3,7 @@ import { generateId } from "../../index.js";
 import { setName } from "../../src/document/actions/creators.js";
 import { SET_NAME } from "../../src/document/actions/types.js";
 import { type CreateChildDocumentInput } from "../../src/document/signal.js";
-import { type CustomAction } from "../../src/document/types.js";
+import { type Action } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   baseCreateExtendedState,
@@ -133,7 +133,7 @@ describe("Base reducer", () => {
       return _state;
     });
 
-    const triggerAction: CustomAction = {
+    const triggerAction: Action = {
       type: "CREATE_DOCUMENT",
       input: "",
       scope: "global",

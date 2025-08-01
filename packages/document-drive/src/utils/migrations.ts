@@ -1,7 +1,6 @@
 import {
   type DocumentOperations,
   type Operation,
-  type OperationScope,
   type PHDocument,
   type Signature,
 } from "document-model";
@@ -14,7 +13,7 @@ export function migrateDocumentOperationSignatures(
     document.operations,
   ).reduce<DocumentOperations>(
     (acc, [key, operations]) => {
-      const scope = key as OperationScope;
+      const scope = key;
       for (const op of operations) {
         const newOp = migrateLegacyOperationSignature(op);
         acc[scope].push(newOp);

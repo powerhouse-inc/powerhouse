@@ -1,7 +1,6 @@
 import { getReactorDefaultDrivesConfig } from '#utils';
 import {
     BaseQueueManager,
-    type DocumentDriveAction,
     type DriveInput,
     type IDocumentDriveServer,
     InMemoryCache,
@@ -13,7 +12,6 @@ import {
 import { type Listener } from 'document-drive/server/types';
 import { FilesystemStorage } from 'document-drive/storage/filesystem';
 import {
-    type DocumentAction,
     type DocumentModelModule,
     generateId,
     type Operation,
@@ -87,61 +85,30 @@ export default (
 
     ipcMain.handle(
         'documentDrive:addDriveOperation',
-        (
-            _e,
-            drive: string,
-            operation: Operation<DocumentDriveAction>,
-            forceSync?: boolean,
-        ) => documentDrive.addOperation(drive, operation, { forceSync }),
+        (_e, drive: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.addOperation(drive, operation, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:addDriveOperations',
-        (
-            _e,
-            drive: string,
-            operations: Operation<DocumentDriveAction | DocumentAction>[],
-            forceSync?: boolean,
-        ) =>
-            documentDrive.addOperations(
-                drive,
-                operations as Operation<DocumentDriveAction>[],
-                { forceSync },
-            ),
+        (_e, drive: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.addOperations(drive, operations, { forceSync }),
     );
 
     ipcMain.handle(
         'documentDrive:queueDriveOperation',
-        (
-            _e,
-            drive: string,
-            operation: Operation<DocumentDriveAction | DocumentAction>,
-            forceSync?: boolean,
-        ) =>
-            documentDrive.queueOperations(
-                drive,
-                [operation] as Operation<DocumentDriveAction>[],
-                {
-                    forceSync,
-                },
-            ),
+        (_e, drive: string, operation: Operation, forceSync?: boolean) =>
+            documentDrive.queueOperations(drive, [operation], {
+                forceSync,
+            }),
     );
 
     ipcMain.handle(
         'documentDrive:queueDriveOperations',
-        (
-            _e,
-            drive: string,
-            operations: Operation<DocumentDriveAction | DocumentAction>[],
-            forceSync?: boolean,
-        ) =>
-            documentDrive.queueOperations(
-                drive,
-                operations as Operation<DocumentDriveAction>[],
-                {
-                    forceSync,
-                },
-            ),
+        (_e, drive: string, operations: Operation[], forceSync?: boolean) =>
+            documentDrive.queueOperations(drive, operations, {
+                forceSync,
+            }),
     );
 
     ipcMain.handle('documentDrive:clearStorage', async () => {

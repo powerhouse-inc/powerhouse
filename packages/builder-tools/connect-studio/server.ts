@@ -119,6 +119,9 @@ export async function startServer(
       fs: {
         allow: generateAllowedPaths(projectRoot),
       },
+      watch: {
+        ignored: ["**/document-models/**", "**/subgraphs/**"],
+      },
     },
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],

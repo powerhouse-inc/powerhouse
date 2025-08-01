@@ -11,11 +11,7 @@ import {
 import { type SynchronizationUnitQuery } from "#server/types";
 import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
-import {
-  type Operation,
-  type OperationScope,
-  type PHDocument,
-} from "document-model";
+import { type Operation, type PHDocument } from "document-model";
 import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
@@ -508,11 +504,11 @@ export class FilesystemStorage
 
   async addDriveOperations(
     id: string,
-    operations: Operation<DocumentDriveAction>[],
+    operations: Operation[],
     document: PHDocument,
   ): Promise<void> {
     const existingDocument = await this.get<DocumentDriveDocument>(id);
-    const mergedOperations = mergeOperations<DocumentDriveDocument>(
+    const mergedOperations = mergeOperations(
       existingDocument.operations,
       operations,
     );
@@ -547,11 +543,11 @@ export class FilesystemStorage
       units.map(async (unit) => {
         try {
           const document = await this.get<PHDocument>(unit.documentId);
-          if (!document || !document.operations[unit.scope as OperationScope]) {
+          if (!document || !document.operations[unit.scope]) {
             return undefined;
           }
 
-          const operations = document.operations[unit.scope as OperationScope];
+          const operations = document.operations[unit.scope];
 
           return {
             documentId: unit.documentId,

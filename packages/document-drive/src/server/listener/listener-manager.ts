@@ -19,7 +19,7 @@ import {
   type SyncronizationUnitState,
 } from "#server/types";
 import { childLogger, type ListenerFilter } from "document-drive";
-import { type OperationScope } from "document-model";
+
 import { debounce } from "./util.js";
 
 export class ListenerManager implements IListenerManager {
@@ -284,7 +284,7 @@ export class ListenerManager implements IListenerManager {
             documentId: syncUnit.documentId,
             branch: syncUnit.branch,
             operations: opData,
-            scope: syncUnit.scope as OperationScope,
+            scope: syncUnit.scope,
           });
         });
 
@@ -565,7 +565,7 @@ export class ListenerManager implements IListenerManager {
             driveId,
             documentId,
             documentType: syncUnit.documentType,
-            scope: scope as OperationScope,
+            scope: scope,
             branch,
             operations,
           });

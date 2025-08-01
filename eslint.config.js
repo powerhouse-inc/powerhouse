@@ -47,6 +47,7 @@ export default tseslint.config(
       "**/forge.config.js",
       "**/vite.config.ts.timestamp-*.mjs",
       "apps/connect/src/vite-env.d.ts",
+      "apps/connect/src/external-packages.js",
       "**/*.config.*",
       "clis/ph-cli/.ph/",
       "packages/document-drive/src/storage/prisma/client/",

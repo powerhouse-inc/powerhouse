@@ -1,6 +1,6 @@
 import { type IOperationResult } from "#server/types";
 import { childLogger, logger } from "#utils/logger";
-import { generateId, type OperationScope } from "document-model";
+import { generateId } from "document-model";
 import { createNanoEvents, type Unsubscribe } from "nanoevents";
 import { MemoryQueue } from "./base.js";
 import {
@@ -20,14 +20,14 @@ type DocId = string;
 interface EnqueuedJob {
   jobId: string;
   documentId: string;
-  scope: OperationScope;
+  scope: string;
   timestamp: string;
 }
 
 export class EventQueueManager implements IQueueManager {
   protected logger = childLogger(["EventQueueManager"]);
   protected emitter = createNanoEvents<QueueEvents>();
-  protected queues = new Map<DocId, Map<OperationScope, IJobQueue>>();
+  protected queues = new Map<DocId, Map<string, IJobQueue>>();
   protected globalQueue = new Array<EnqueuedJob>();
   protected isFindingJob = false;
   protected maxWorkers: number;
@@ -149,7 +149,7 @@ export class EventQueueManager implements IQueueManager {
     return jobId;
   }
 
-  getQueue(documentId: string, scope: OperationScope) {
+  getQueue(documentId: string, scope: string) {
     let docQueue = this.queues.get(documentId);
     if (!docQueue) {
       docQueue = new Map();
@@ -169,7 +169,7 @@ export class EventQueueManager implements IQueueManager {
     return this.queues.get(documentId);
   }
 
-  removeQueue(documentId: string, scope: OperationScope) {
+  removeQueue(documentId: string, scope: string) {
     const docQueues = this.queues.get(documentId);
     const deleted = docQueues?.delete(scope);
     if (deleted) {

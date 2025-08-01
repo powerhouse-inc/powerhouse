@@ -1,9 +1,11 @@
 import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { type PHDocument } from "document-model";
 import { type Kysely, type QueryCreator } from "kysely";
 import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
+
+// TODO: Add @powerhousedao/analytics-engine-core dependency when needed
+type IAnalyticsStore = any;
 
 export type IRelationalQueryMethods =
   | "selectFrom"

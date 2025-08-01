@@ -132,7 +132,7 @@ describe.each(storageLayers)(
         migratedDrive.operations.global.length,
       );
 
-      expect(storedDrive.operations.global.map((o) => o.context)).toStrictEqual(
+      expect(storedDrive.operations.global.map((o: any) => o.context)).toStrictEqual(
         [undefined],
       );
     });
@@ -196,7 +196,7 @@ describe.each(storageLayers)(
       );
 
       expect(
-        migratedDrive.operations.global.map((o) => o.context),
+        migratedDrive.operations.global.map((o: any) => o.context),
       ).toStrictEqual([
         {
           signer: {
@@ -272,7 +272,7 @@ describe.each(storageLayers)(
       );
 
       expect(
-        migratedDrive.operations.global.map((o) => o.context),
+        migratedDrive.operations.global.map((o: any) => o.context),
       ).toStrictEqual([
         {
           signer: {

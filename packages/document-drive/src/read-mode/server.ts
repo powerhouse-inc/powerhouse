@@ -42,7 +42,7 @@ export function ReadModeServer(
       const driveIds = await this.getReadDrives();
       const drives = (
         await Promise.all(driveIds.map((driveId) => this.getReadDrive(driveId)))
-      ).filter((drive) => !(drive instanceof Error)) as ReadDrive[];
+      ).filter((drive: any) => !(drive instanceof Error)) as ReadDrive[];
       return drives;
     }
 

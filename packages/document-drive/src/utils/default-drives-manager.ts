@@ -8,6 +8,7 @@ import {
   type RemoveDriveStrategy,
   type RemoveOldRemoteDrivesOption,
 } from "#server/types";
+import { type DocumentDriveDocument } from "../drive-document-model/gen/types.js";
 import { requestPublicDriveWithTokenFromReactor } from "./graphql.js";
 import { logger } from "./logger.js";
 
@@ -81,13 +82,18 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
 
     const drivesToRemove = (await Promise.all(getAllDrives))
       .filter(
-        (drive) =>
+        (drive: DocumentDriveDocument) =>
           drive.state.local.listeners.length > 0 ||
           drive.state.local.triggers.length > 0,
       )
-      .filter((drive) => !driveIdsToPreserve.includes(drive.header.id));
+      .filter(
+        (drive: DocumentDriveDocument) =>
+          !driveIdsToPreserve.includes(drive.header.id),
+      );
 
-    const driveIds = drivesToRemove.map((drive) => drive.header.id);
+    const driveIds = drivesToRemove.map(
+      (drive: DocumentDriveDocument) => drive.header.id,
+    );
 
     if (removeStrategy === "detach") {
       await this.detachDrivesById(driveIds);
@@ -176,11 +182,11 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
         const drives = await Promise.all(getDrives);
         const drivesToRemove = drives
           .filter(
-            (drive) =>
+            (drive: DocumentDriveDocument) =>
               drive.state.local.listeners.length > 0 ||
               drive.state.local.triggers.length > 0,
           )
-          .map((drive) => drive.header.id);
+          .map((drive: DocumentDriveDocument) => drive.header.id);
 
         await this.removeDrivesById(drivesToRemove);
         break;

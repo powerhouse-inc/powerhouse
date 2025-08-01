@@ -15,8 +15,6 @@ import {
   type ActionFromDocument,
   type DefaultAction,
   type Operation,
-  type OperationFromDocument,
-  type OperationScope,
   type PHDocument,
   type ReducerOptions,
   type StateReducer,
@@ -48,7 +46,7 @@ import {
  */
 function getNextRevision(
   document: PHDocument,
-  operation: { index?: number; scope: OperationScope },
+  operation: { index?: number; scope: string },
 ) {
   let latestOperationIndex: number | undefined;
 
@@ -198,10 +196,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action:
-    | ActionFromDocument<TDocument>
-    | OperationFromDocument<TDocument>
-    | DefaultAction,
+  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -229,14 +224,11 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action:
-    | ActionFromDocument<TDocument>
-    | OperationFromDocument<TDocument>
-    | DefaultAction,
+  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | OperationFromDocument<TDocument>;
+  action: ActionFromDocument<TDocument> | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -292,7 +284,8 @@ function processSkipOperation<TDocument extends PHDocument>(
         operationResultingStateParser: resultingStateParser,
       },
     );
-    scopeState = state[scope];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    scopeState = (state as any)[scope];
   }
 
   return {
@@ -309,7 +302,7 @@ function processSkipOperation<TDocument extends PHDocument>(
 
 function processUndoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  scope: OperationScope,
+  scope: string,
   customReducer: StateReducer<TDocument>,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
@@ -522,7 +515,10 @@ export function baseReducer<TDocument extends PHDocument>(
     lastOperation.hash = hash;
 
     if (reuseOperationResultingState) {
-      lastOperation.resultingState = JSON.stringify(newDocument.state[scope]);
+      lastOperation.resultingState = JSON.stringify(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        (newDocument.state as any)[scope],
+      );
     }
 
     // if the action has attachments then adds them to the document

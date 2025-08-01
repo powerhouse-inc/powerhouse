@@ -3,7 +3,6 @@ import {
   type Action,
   type DocumentOperations,
   type Operation,
-  type OperationScope,
 } from "../types.js";
 
 export type OperationIndex = {
@@ -403,7 +402,7 @@ export function checkOperationsIntegrity(operations: Operation[]) {
   );
 }
 
-export type OperationsByScope = Partial<Record<OperationScope, Operation[]>>;
+export type OperationsByScope = Partial<Record<string, Operation[]>>;
 
 export function groupOperationsByScope(operations: Operation[]) {
   const result = operations.reduce<OperationsByScope>((acc, operation) => {
@@ -544,22 +543,22 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
   return clearedOperations.slice(0, -1) as TOpIndex[]; //clearedOperation ? [clearedOperation as TOpIndex] : [];
 }
 
-export function garbageCollectDocumentOperations<
-  TAction extends Action = Action,
->(documentOperations: DocumentOperations<TAction>) {
+export function garbageCollectDocumentOperations(
+  documentOperations: DocumentOperations,
+) {
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
 
       return {
         ...acc,
-        [scope as OperationScope]: garbageCollect(sortOperations(ops)),
+        [scope]: garbageCollect(sortOperations(ops)),
       };
     },
     {},
   );
 
-  return clearedOperations as DocumentOperations<TAction>;
+  return clearedOperations as DocumentOperations;
 }
 
 /**

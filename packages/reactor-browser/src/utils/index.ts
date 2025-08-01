@@ -1,11 +1,11 @@
 import { type DocumentDriveDocument } from "document-drive";
-import { type OperationScope, type PHDocument } from "document-model";
+import { type PHDocument } from "document-model";
 
 export function documentToHash(drive: PHDocument): string {
   return Object.keys(drive.operations)
     .map(
       (key) =>
-        `${key}:${drive.operations[key as OperationScope].length}:${drive.operations[key as OperationScope].at(-1)?.hash}`,
+        `${key}:${drive.operations[key].length}:${drive.operations[key].at(-1)?.hash}`,
     )
     .join(":");
 }
