@@ -1,3 +1,19 @@
+## 4.1.0-dev.3 (2025-08-01)
+
+### 🚀 Features
+
+- **reactor-mcp:** setup of modular reactor tools ([ceab98b08](https://github.com/powerhouse-inc/powerhouse/commit/ceab98b08))
+
+### 🩹 Fixes
+
+- linter errors from refactor ([11e8a1b16](https://github.com/powerhouse-inc/powerhouse/commit/11e8a1b16))
+- **connect:** fix document upload regression ([6743d0061](https://github.com/powerhouse-inc/powerhouse/commit/6743d0061))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.2 (2025-07-31)
 
 ### 🚀 Features

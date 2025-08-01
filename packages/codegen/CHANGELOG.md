@@ -1,3 +1,18 @@
+## 4.1.0-dev.3 (2025-08-01)
+
+### 🚀 Features
+
+- **reactor-mcp:** setup of modular reactor tools ([ceab98b08](https://github.com/powerhouse-inc/powerhouse/commit/ceab98b08))
+
+### 🩹 Fixes
+
+- **codegen:** generate actions and documents without the third type parameter ([4bf98510c](https://github.com/powerhouse-inc/powerhouse/commit/4bf98510c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.2 (2025-07-31)
 
 ### 🚀 Features
