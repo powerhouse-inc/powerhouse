@@ -1,11 +1,11 @@
-import { type DocumentModelState, type OperationScope } from "document-model";
+import { type DocumentModelState } from "document-model";
 import { type Project } from "ts-morph";
 
 export type Actions = {
   name: string | null;
   hasInput: boolean;
   hasAttachment: boolean | undefined;
-  scope: OperationScope;
+  scope: string;
   state: string;
   errors?: unknown;
 };
