@@ -1,7 +1,7 @@
 import { castDraft, create, type Draft } from "mutative";
 import { type PruneActionInput } from "../schema/types.js";
 import {
-  type ActionFromDocument,
+  type Action,
   type BaseState,
   type Operation,
   type PHDocument,
@@ -21,11 +21,11 @@ export function setNameOperation<TDocument extends PHDocument>(
 
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | Operation,
+  action: Action | Operation,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | Operation;
+  action: Action | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -43,9 +43,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<
-      ActionFromDocument<TDocument> | Operation
-    >;
+    draft.action = noop(scope) as Draft<Action | Operation>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -80,11 +78,11 @@ export function undoOperation<TDocument extends PHDocument>(
 
 export function redoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | Operation,
+  action: Action | Operation,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | Operation;
+  action: Action | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -131,7 +129,7 @@ export function redoOperation<TDocument extends PHDocument>(
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as ActionFromDocument<TDocument> | Operation);
+    } as Action | Operation);
   });
 }
 

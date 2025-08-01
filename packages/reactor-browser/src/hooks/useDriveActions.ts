@@ -117,7 +117,7 @@ export interface IDriveActions {
  */
 function createDriveActions(
   document: DocumentDriveDocument,
-  dispatch: EditorDispatch<DocumentDriveAction>,
+  dispatch: EditorDispatch,
   context: IDriveContext,
 ): IDriveActions {
   const drive = document;
@@ -257,7 +257,7 @@ function createDriveActions(
  */
 export function useDriveActions(
   document: DocumentDriveDocument,
-  dispatch: EditorDispatch<DocumentDriveAction>,
+  dispatch: EditorDispatch,
   context: IDriveContext,
 ): IDriveActions {
   return useMemo(

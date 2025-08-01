@@ -4,8 +4,8 @@ import { useArgs, useChannel } from "@storybook/preview-api";
 import { type Decorator, type Meta, type StoryObj } from "@storybook/react";
 import {
   baseCreateDocument,
+  type Action,
   type ActionContext,
-  type ActionFromDocument,
   type EditorProps,
   type ExtendedState,
   type GlobalStateFromDocument,
@@ -30,7 +30,7 @@ export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
     backgroundUpdateRate: number;
     backgroundUpdateActions: ((
       document: TDocument,
-    ) => ActionFromDocument<TDocument>)[];
+    ) => Action)[];
   };
 }>;
 
@@ -113,7 +113,7 @@ export function createDocumentStory<TDocument extends PHDocument>(
           setError(error);
         },
       );
-      function dispatch(action: ActionFromDocument<TDocument>) {
+      function dispatch(action: Action) {
         const context: ActionContext = {};
         if (args.context.user) {
           context.signer = {
@@ -265,7 +265,7 @@ export function createDocumentStory<TDocument extends PHDocument>(
 //           setError(error);
 //         },
 //       );
-//       function dispatch(action: ActionFromDocument<TDocument>) {
+//       function dispatch(action: Action) {
 //         const context: ActionContext = {};
 //         if (args.context.user) {
 //           context.signer = {

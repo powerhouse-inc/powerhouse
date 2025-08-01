@@ -1,6 +1,6 @@
 import type {
+  Action,
   ActionErrorCallback,
-  ActionFromDocument,
   Operation,
   PHDocument,
   Reducer,
@@ -11,11 +11,11 @@ export function useDocumentReducer<TDocument extends PHDocument>(
   reducer: Reducer<TDocument>,
   initialState: TDocument,
   onError?: (error: unknown) => void,
-): readonly [TDocument, (action: ActionFromDocument<TDocument>) => void] {
+): readonly [TDocument, (action: Action) => void] {
   const [state, setState] = useState(initialState);
 
   const dispatch = (
-    action: ActionFromDocument<TDocument> | Operation,
+    action: Action | Operation,
     onErrorCallback?: ActionErrorCallback,
   ) => {
     setState((_state) => {
