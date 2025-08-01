@@ -26,8 +26,9 @@
     "build:tsc": "tsc --build",
     "prebuild": "npm run clean",
     "lint": "eslint",
-    "test": "vitest",
+    "test": "vitest run",
     "test:run": "vitest run",
+    "test:watch": "vitest",
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
