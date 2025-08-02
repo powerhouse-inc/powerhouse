@@ -1,8 +1,9 @@
 import type { IDocumentDriveServer } from "document-drive";
-import { generateId } from "document-model";
+import { type DocumentModelState, generateId } from "document-model";
+import { DocumentModelStateSchema } from "document-model/document-model/gen/schema/zod";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
-import { toolWithCallback } from "./utils.js";
+import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 
 export const getDocumentTool = {
   name: "getDocument",
@@ -281,6 +282,45 @@ export const addRemoteDriveTool = {
   },
 } as const satisfies ToolSchema;
 
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+}>;
+
+export const getDocumentModelSchemaTool = {
+  name: "getDocumentModelSchema",
+  description: "Get the schema of a document model",
+  inputSchema: {
+    type: z.string().describe("Type of the document model"),
+  },
+  outputSchema: {
+    schema: DocumentModelStateSchema().describe(
+      "Schema of the document model",
+    ) as z.ZodObject<Properties<DocumentModelState>>,
+  },
+} as const satisfies ToolSchema;
+
+export const getDocumentModelsTool = {
+  name: "getDocumentModels",
+  description: "Get the list of document models",
+  inputSchema: {},
+  outputSchema: {
+    documentModels: z
+      .array(
+        z.object({
+          name: z.string().describe("Name of the document model"),
+          type: z.string().describe("Type of the document model"),
+          description: z.string().describe("Description of the document model"),
+          extension: z.string().describe("Extension of the document model"),
+          authorName: z.string().describe("Author name of the document model"),
+          authorWebsite: z
+            .string()
+            .describe("Author website of the document model"),
+        }),
+      )
+      .describe("List of available document models"),
+  },
+} as const satisfies ToolSchema;
+
 type ToolRecord<T extends readonly ToolSchema[]> = {
   [K in T[number]["name"]]: ToolWithCallback<Extract<T[number], { name: K }>>;
 };
@@ -299,6 +339,8 @@ const allTools = [
   getDriveTool,
   deleteDriveTool,
   addRemoteDriveTool,
+  getDocumentModelSchemaTool,
+  getDocumentModelsTool,
 ] as const;
 
 // Inferred interface from tools
@@ -307,7 +349,15 @@ export type ReactorMcpTools = ToolRecord<typeof allTools>;
 export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
   await reactor.initialize();
 
-  const tools: ReactorMcpTools = {
+  function getDocumentModelModule(documentType: string) {
+    const documentModels = reactor.getDocumentModelModules();
+    const documentModel = documentModels.find(
+      (model) => model.documentModel.id === documentType,
+    );
+    return documentModel;
+  }
+
+  const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
       const doc = await reactor.getDocument(params.id);
       return { document: doc };
@@ -344,10 +394,28 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     addAction: toolWithCallback(addActionTool, async (params) => {
-      const result = await reactor.addAction(params.documentId, {
+      const document = await reactor.getDocument(params.documentId);
+      const documentModel = getDocumentModelModule(
+        document.header.documentType,
+      );
+      if (!documentModel) {
+        throw new Error(
+          `Document model for document type '${document.header.documentType}' not found`,
+        );
+      }
+
+      const action = {
         ...params.action,
         input: params.action.input ?? {},
-      });
+      };
+      const actionValidation = validateDocumentModelAction(
+        documentModel,
+        action,
+      );
+      if (!actionValidation.isValid) {
+        throw new Error(actionValidation.errors.join(", "));
+      }
+      const result = await reactor.addAction(params.documentId, action);
       return {
         result: {
           ...result,
@@ -421,7 +489,36 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       });
       return { drive };
     }),
-  };
+
+    getDocumentModels: toolWithCallback(getDocumentModelsTool, () => {
+      const documentModels = reactor.getDocumentModelModules();
+      return {
+        documentModels: documentModels.map((model) => {
+          const schema = model.documentModel;
+          return {
+            name: schema.name,
+            type: schema.id,
+            description: schema.description,
+            extension: schema.extension,
+            authorName: schema.author.name,
+            authorWebsite: schema.author.website ?? "",
+          };
+        }),
+      };
+    }),
+
+    getDocumentModelSchema: toolWithCallback(
+      getDocumentModelSchemaTool,
+      (params) => {
+        const documentModel = getDocumentModelModule(params.type);
+        const schema = documentModel?.documentModel;
+        if (!schema) {
+          throw new Error(`Document model '${params.type}' not found`);
+        }
+        return { schema };
+      },
+    ),
+  } as const;
 
   const resources = {};
 
@@ -431,5 +528,5 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     tools,
     resources,
     prompts,
-  };
+  } as const;
 }
