@@ -19,8 +19,8 @@ import {
     type TimelineItem,
 } from '@powerhousedao/design-system';
 import {
-    useDocumentModelModuleByDocumentType,
-    useEditorModuleByDocumentType,
+    useDocumentModelModuleById,
+    useEditorModuleById,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
@@ -80,8 +80,8 @@ export const DocumentEditor: React.FC<Props> = props => {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const documentType = document.header.documentType;
-    const documentModel = useDocumentModelModuleByDocumentType(documentType);
-    const editor = useEditorModuleByDocumentType(documentType);
+    const documentModel = useDocumentModelModuleById(documentType);
+    const editor = useEditorModuleById(document.header.meta?.preferredEditor);
 
     const [, _dispatch, error] = useDocumentDispatch(
         documentModel?.reducer,

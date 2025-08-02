@@ -23,7 +23,7 @@ import {
 } from './services/crypto/electron.js';
 import { ConnectCrypto } from './services/crypto/index.js';
 import { initRenownElectron } from './services/renown/electron.js';
-import { type Theme, isTheme, loadBaseDocumentModels } from './store/index.js';
+import { type Theme, isTheme } from './store/index.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -75,13 +75,7 @@ async function initApp() {
         });
 
         // initializes document drive server
-        await initDocumentDrive(
-            loadBaseDocumentModels()
-                .flatMap(m => m.documentModels)
-                .filter(m => m !== undefined),
-            app.getPath('userData'),
-            ipcMain,
-        );
+        await initDocumentDrive([], app.getPath('userData'), ipcMain);
 
         // creates window
         const browserWindow = await createWindow({

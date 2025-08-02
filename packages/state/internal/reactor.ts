@@ -15,13 +15,13 @@ import { useRefreshDrives, useSetDrives } from "./drives.js";
 import {
   handleSetDriveEvent,
   handleSetNodeEvent,
-  handleUpdatePHPackagesEvent,
+  handleUpdateVetraPackagesEvent,
   type SetDriveEvent,
   type SetNodeEvent,
-  type UpdatePHPackagesEvent,
+  type UpdateVetraPackagesEvent,
 } from "./events.js";
-import { useSetPHPackages } from "./ph-packages.js";
 import { type Reactor } from "./types.js";
+import { useSetVetraPackages } from "./vetra-packages.js";
 
 /** Initializes the reactor.
  *
@@ -88,7 +88,7 @@ export function useInitializeReactor(reactor?: Promise<Reactor> | undefined) {
 export function useSubscribeToWindowEvents() {
   const setSelectedDrive = useSetAtom(selectedDriveAtom);
   const setSelectedNode = useSetAtom(selectedNodeAtom);
-  const setPHPackages = useSetPHPackages();
+  const setVetraPackages = useSetVetraPackages();
 
   const handleSetDrive = useCallback(
     (event: SetDriveEvent) => {
@@ -104,12 +104,12 @@ export function useSubscribeToWindowEvents() {
     [setSelectedNode],
   );
 
-  const handleUpdatePHPackages = useCallback(
-    (event: UpdatePHPackagesEvent) => {
-      console.log("updatePHPackages", event);
-      handleUpdatePHPackagesEvent(event, setPHPackages);
+  const handleUpdateVetraPackages = useCallback(
+    (event: UpdateVetraPackagesEvent) => {
+      console.log("updateVetraPackages", event);
+      handleUpdateVetraPackagesEvent(event, setVetraPackages);
     },
-    [setPHPackages],
+    [setVetraPackages],
   );
 
   useEffect(() => {
@@ -132,12 +132,18 @@ export function useSubscribeToWindowEvents() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.addEventListener("ph:updatePHPackages", handleUpdatePHPackages);
+    window.addEventListener(
+      "ph:updateVetraPackages",
+      handleUpdateVetraPackages,
+    );
 
     return () => {
-      window.removeEventListener("ph:updatePHPackages", handleUpdatePHPackages);
+      window.removeEventListener(
+        "ph:updateVetraPackages",
+        handleUpdateVetraPackages,
+      );
     };
-  }, [handleUpdatePHPackages]);
+  }, [handleUpdateVetraPackages]);
 }
 
 export function useSubscribeToReactorEvents() {

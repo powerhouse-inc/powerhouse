@@ -1,7 +1,7 @@
 import { useDocumentDriveServer } from '#hooks';
 import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import {
-    useDocumentModelModuleByDocumentType,
+    useDocumentModelModuleById,
     useDriveIsRemote,
     useDriveRemoteUrl,
     useParentFolderId,
@@ -27,8 +27,7 @@ export function DocumentEditorContainer() {
     const documentType = selectedDocument?.header.documentType;
     const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
     const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
-    const documentModelModule =
-        useDocumentModelModuleByDocumentType(documentType);
+    const documentModelModule = useDocumentModelModuleById(documentType);
     const setSelectedNode = useSetSelectedNode();
 
     const onAddOperation = useCallback(

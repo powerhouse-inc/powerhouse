@@ -1,7 +1,12 @@
 import { addExternalPackage, removeExternalPackage } from '#services';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { useDrives, useHmr, usePHPackages } from '@powerhousedao/state';
+import {
+    makeVetraPackageManifest,
+    useDrives,
+    useHmr,
+    useVetraPackages,
+} from '@powerhousedao/state';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,7 +45,7 @@ export interface SettingsModalProps {
 }
 
 export const PackageManager: React.FC = () => {
-    const phPackages = usePHPackages();
+    const vetraPackages = useVetraPackages();
     const drives = useDrives();
     const hmr = useHmr();
     const isMutable = !!hmr;
@@ -89,10 +94,9 @@ export const PackageManager: React.FC = () => {
         });
     }, [reactor, options]);
 
-    const packagesInfo =
-        phPackages
-            ?.map(pkg => manifestToDetails(pkg.manifest, pkg.id, true))
-            .filter(pkg => pkg !== undefined) ?? [];
+    const packagesInfo = vetraPackages?.map(pkg =>
+        makeVetraPackageManifest(pkg),
+    );
 
     const handleReactorChange = useCallback(
         (reactor?: string) => setReactor(reactor ?? ''),
@@ -127,7 +131,20 @@ export const PackageManager: React.FC = () => {
             mutable={isMutable}
             reactorOptions={options ?? []}
             reactor={reactor}
-            packages={packagesInfo}
+            packages={
+                packagesInfo?.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    description: pkg.description,
+                    category: pkg.category,
+                    publisher: pkg.author.name,
+                    publisherUrl: pkg.author.website ?? '',
+                    modules: Object.values(pkg.modules).flatMap(modules =>
+                        modules.map(module => module.name),
+                    ),
+                    removable: true,
+                })) ?? []
+            }
             onReactorChange={handleReactorChange}
             onInstall={handleInstall}
             onUninstall={handleUninstall}

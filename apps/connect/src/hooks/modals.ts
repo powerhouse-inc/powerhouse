@@ -6,7 +6,7 @@ import {
     type SharingType,
 } from '@powerhousedao/design-system';
 import {
-    useApps,
+    useDriveEditorModules,
     useDrives,
     useSelectedDrive,
     useSelectedParentFolder,
@@ -22,98 +22,90 @@ export function useShowAddDriveModal() {
     const { showModal } = useModal();
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const setSelectedDrive = useSetSelectedDrive();
-    const apps = useApps();
-    const onAddLocalDrive = useCallback(
-        async (data: AddLocalDriveInput) => {
-            console.log('apps', apps);
-            console.log('data', data);
-            try {
-                const app = apps?.find(a => a.id === data.appId);
-                const newDrive = await addDrive(
-                    {
-                        id: '',
-                        slug: '',
-                        global: {
-                            name: data.name,
-                            icon: null,
-                        },
-                        local: {
-                            availableOffline: data.availableOffline,
-                            sharingType: data.sharingType.toLowerCase(),
-                            listeners: [],
-                            triggers: [],
-                        },
+    const driveEditorModules = useDriveEditorModules();
+    const onAddLocalDrive = async (data: AddLocalDriveInput) => {
+        console.log('data', data);
+        try {
+            const app = driveEditorModules?.find(a => a.id === data.appId);
+            const newDrive = await addDrive(
+                {
+                    id: '',
+                    slug: '',
+                    global: {
+                        name: data.name,
+                        icon: null,
                     },
-                    app?.driveEditor,
-                );
+                    local: {
+                        availableOffline: data.availableOffline,
+                        sharingType: data.sharingType.toLowerCase(),
+                        listeners: [],
+                        triggers: [],
+                    },
+                },
+                app?.id,
+            );
 
-                toast(t('notifications.addDriveSuccess'), {
-                    type: 'connect-success',
-                });
+            toast(t('notifications.addDriveSuccess'), {
+                type: 'connect-success',
+            });
 
-                if (!newDrive) {
-                    return;
-                }
-
-                setSelectedDrive(newDrive.header.id);
-            } catch (e) {
-                console.error(e);
+            if (!newDrive) {
+                return;
             }
-        },
-        [addDrive, setSelectedDrive, t, apps],
-    );
 
-    const onAddRemoteDrive = useCallback(
-        async (data: AddRemoteDriveInput) => {
-            try {
-                const newDrive = await addRemoteDrive(data.url, {
-                    sharingType: data.sharingType,
-                    availableOffline: data.availableOffline,
-                    listeners: [
-                        {
-                            block: true,
-                            callInfo: {
-                                data: data.url,
-                                name: 'switchboard-push',
-                                transmitterType: 'SwitchboardPush',
-                            },
-                            filter: {
-                                branch: ['main'],
-                                documentId: ['*'],
-                                documentType: ['*'],
-                                scope: ['global'],
-                            },
-                            label: 'Switchboard Sync',
-                            listenerId: '1',
-                            system: true,
+            setSelectedDrive(newDrive.header.id);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
+        try {
+            const newDrive = await addRemoteDrive(data.url, {
+                sharingType: data.sharingType,
+                availableOffline: data.availableOffline,
+                listeners: [
+                    {
+                        block: true,
+                        callInfo: {
+                            data: data.url,
+                            name: 'switchboard-push',
+                            transmitterType: 'SwitchboardPush',
                         },
-                    ],
-                    triggers: [],
-                });
+                        filter: {
+                            branch: ['main'],
+                            documentId: ['*'],
+                            documentType: ['*'],
+                            scope: ['global'],
+                        },
+                        label: 'Switchboard Sync',
+                        listenerId: '1',
+                        system: true,
+                    },
+                ],
+                triggers: [],
+            });
 
-                toast(t('notifications.addDriveSuccess'), {
-                    type: 'connect-success',
-                });
+            toast(t('notifications.addDriveSuccess'), {
+                type: 'connect-success',
+            });
 
-                if (!newDrive) {
-                    return;
-                }
-
-                setSelectedDrive(newDrive.header.id);
-            } catch (e) {
-                console.error(e);
+            if (!newDrive) {
+                return;
             }
-        },
-        [addRemoteDrive, setSelectedDrive, t],
-    );
-    const showAddDriveModal = useCallback(
-        () =>
-            showModal('addDriveModal', {
-                onAddLocalDrive,
-                onAddRemoteDrive,
-            }),
-        [onAddLocalDrive, onAddRemoteDrive, showModal],
-    );
+
+            setSelectedDrive(newDrive.header.id);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const showAddDriveModal = () => {
+        showModal('addDriveModal', {
+            onAddLocalDrive,
+            onAddRemoteDrive,
+        });
+    };
 
     return showAddDriveModal;
 }

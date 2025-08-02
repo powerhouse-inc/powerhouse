@@ -2,12 +2,11 @@ import { type ProcessorManager } from "document-drive/processors/processor-manag
 import { useAtomValue } from "jotai";
 import {
   loadableProcessorManagerAtom,
-  loadableProcessorsAtom,
+  loadableProcessorModulesAtom,
   unwrappedProcessorManagerAtom,
-  unwrappedProcessorsAtom,
+  unwrappedProcessorModulesAtom,
 } from "../internal/atoms.js";
 import { type Loadable } from "../internal/types.js";
-import { type Processors } from "../types.js";
 
 export function useLoadableProcessorManager(): Loadable<
   ProcessorManager | undefined
@@ -19,10 +18,20 @@ export function useProcessorManager(): ProcessorManager | undefined {
   return useAtomValue(unwrappedProcessorManagerAtom);
 }
 
-export function useProcessors(): Processors[] | undefined {
-  return useAtomValue(unwrappedProcessorsAtom);
+export function useProcessorModules() {
+  return useAtomValue(unwrappedProcessorModulesAtom);
 }
 
-export function useLoadableProcessors() {
-  return useAtomValue(loadableProcessorsAtom);
+export function useLoadableProcessorModules() {
+  return useAtomValue(loadableProcessorModulesAtom);
+}
+
+export function useProcessorModuleById(id: string | null | undefined) {
+  const processorModules = useProcessorModules();
+  return processorModules?.find((module) => module.id === id);
+}
+
+export function useProcessors() {
+  const processorModules = useProcessorModules();
+  return processorModules?.map((module) => module.processors);
 }

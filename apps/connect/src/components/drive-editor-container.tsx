@@ -7,17 +7,13 @@ import {
     useShowDeleteNodeModal,
 } from '#hooks';
 import { useDocumentDispatch } from '#utils';
-import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
-    useDriveEditor,
+    useDriveEditorModuleById,
     useSelectedDocument,
     useSelectedDrive,
 } from '@powerhousedao/state';
-import {
-    type DocumentDriveAction,
-    driveDocumentModelModule,
-} from 'document-drive';
+import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
@@ -98,14 +94,14 @@ export function DriveEditorContainer() {
         ],
     );
 
-    const driveEditor = useDriveEditor(
+    const driveEditor = useDriveEditorModuleById(
         selectedDrive?.header.meta?.preferredEditor,
     );
 
-    const DriveEditorComponent =
-        driveEditor?.Component ?? GenericDriveExplorer.Component;
+    const DriveEditorComponent = driveEditor?.Component;
 
-    if (selectedDocument || !selectedDrive) return null;
+    if (selectedDocument || !selectedDrive || !DriveEditorComponent)
+        return null;
 
     return (
         <ErrorBoundary

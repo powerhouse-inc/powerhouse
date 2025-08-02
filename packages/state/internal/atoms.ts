@@ -9,10 +9,10 @@ import isEqual from "fast-deep-equal";
 import { atom } from "jotai";
 import { loadable, unwrap } from "jotai/utils";
 import type { ViteHotContext } from "vite/types/hot.js";
-import { type PHPackage } from "../types.js";
+import { type VetraPackage } from "../types.js";
 import { getDocumentsForDriveId, getDrives } from "../utils/drives.js";
 import { isFolderNodeKind } from "../utils/nodes.js";
-import { CommonPackage, NOT_SET } from "./constants.js";
+import { NOT_SET } from "./constants.js";
 import { suspendUntilSet } from "./suspend.js";
 import { type UnsetAtomValue } from "./types.js";
 
@@ -310,45 +310,48 @@ loadableSelectedDocumentAtom.debugLabel = "loadableSelectedDocumentAtom";
 export const unwrappedSelectedDocumentAtom = unwrap(selectedDocumentAtom);
 unwrappedSelectedDocumentAtom.debugLabel = "unwrappedSelectedDocumentAtom";
 
-const basePHPackagesAtom = atom<UnsetAtomValue | PHPackage[] | undefined>(
+const baseVetraPackagesAtom = atom<UnsetAtomValue | VetraPackage[] | undefined>(
   NOT_SET,
 );
-basePHPackagesAtom.debugLabel = "basePHPackagesAtom";
+baseVetraPackagesAtom.debugLabel = "baseVetraPackagesAtom";
 
-export const pHPackagesInitializedAtom = atom((get) => {
-  const pHPackages = get(basePHPackagesAtom);
-  return pHPackages !== NOT_SET;
+export const vetraPackagesInitializedAtom = atom((get) => {
+  const vetraPackages = get(baseVetraPackagesAtom);
+  return vetraPackages !== NOT_SET;
 });
-pHPackagesInitializedAtom.debugLabel = "pHPackagesInitializedAtom";
+vetraPackagesInitializedAtom.debugLabel = "vetraPackagesInitializedAtom";
 
-export const pHPackagesAtom = atom(
+export const vetraPackagesAtom = atom(
   (get) => {
-    const pHPackages = get(basePHPackagesAtom);
-    if (pHPackages === NOT_SET) return suspendUntilSet<PHPackage[]>();
-    return pHPackages;
+    const vetraPackages = get(baseVetraPackagesAtom);
+    if (vetraPackages === NOT_SET) return suspendUntilSet<VetraPackage[]>();
+    return vetraPackages;
   },
   async (
     get,
     set,
-    pHPackages: Promise<PHPackage[] | undefined> | PHPackage[] | undefined,
+    vetraPackages:
+      | Promise<VetraPackage[] | undefined>
+      | VetraPackage[]
+      | undefined,
   ) => {
-    const oldPHPackages = get(basePHPackagesAtom);
-    if (isEqual(pHPackages, oldPHPackages)) return;
-    set(basePHPackagesAtom, await pHPackages);
+    const oldVetraPackages = get(baseVetraPackagesAtom);
+    if (isEqual(vetraPackages, oldVetraPackages)) return;
+    set(baseVetraPackagesAtom, await vetraPackages);
   },
 );
-pHPackagesAtom.debugLabel = "pHPackagesAtom";
+vetraPackagesAtom.debugLabel = "vetraPackagesAtom";
 
-export const loadablePHPackagesAtom = loadable(pHPackagesAtom);
-loadablePHPackagesAtom.debugLabel = "loadablePHPackagesAtom";
+export const loadableVetraPackagesAtom = loadable(vetraPackagesAtom);
+loadableVetraPackagesAtom.debugLabel = "loadableVetraPackagesAtom";
 
-export const unwrappedPHPackagesAtom = unwrap(pHPackagesAtom);
-unwrappedPHPackagesAtom.debugLabel = "unwrappedPHPackagesAtom";
+export const unwrappedVetraPackagesAtom = unwrap(vetraPackagesAtom);
+unwrappedVetraPackagesAtom.debugLabel = "unwrappedVetraPackagesAtom";
 
 const documentModelModulesAtom = atom(async (get) => {
-  const phPackages = await get(pHPackagesAtom);
-  const documentModelModules = phPackages
-    ?.map((pkg) => pkg.documentModels)
+  const vetraPackages = await get(vetraPackagesAtom);
+  const documentModelModules = vetraPackages
+    ?.map((pkg) => pkg.modules.documentModelModules)
     .filter((m) => m !== undefined)
     .flat();
   return documentModelModules ?? [];
@@ -368,9 +371,9 @@ loadableDocumentModelModulesAtom.debugLabel =
   "loadableDocumentModelModulesAtom";
 
 const editorModulesAtom = atom(async (get) => {
-  const phPackages = await get(pHPackagesAtom);
-  const editorModules = phPackages
-    ?.map((pkg) => pkg.editors)
+  const vetraPackages = await get(vetraPackagesAtom);
+  const editorModules = vetraPackages
+    ?.map((pkg) => pkg.modules.editorModules)
     .filter((m) => m !== undefined)
     .flat();
   return editorModules ?? [];
@@ -383,37 +386,36 @@ unwrappedEditorModulesAtom.debugLabel = "unwrappedEditorModulesAtom";
 export const loadableEditorModulesAtom = loadable(editorModulesAtom);
 loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
 
-const appsAtom = atom(async (get) => {
-  const phPackages = await get(pHPackagesAtom);
-  const apps =
-    phPackages
-      ?.map((pkg) => pkg.manifest?.apps)
-      .filter((a) => a !== undefined)
-      .flat() ?? [];
-  return [CommonPackage, ...apps];
+export const driveEditorModulesAtom = atom(async (get) => {
+  const editorModules = await get(editorModulesAtom);
+  const driveEditorModules = editorModules.filter((m) =>
+    m.documentTypes.includes("powerhouse/document-drive"),
+  );
+  return driveEditorModules;
 });
-appsAtom.debugLabel = "appsAtom";
+driveEditorModulesAtom.debugLabel = "driveEditorModulesAtom";
 
-export const unwrappedAppsAtom = unwrap(appsAtom);
-unwrappedAppsAtom.debugLabel = "unwrappedAppsAtom";
+export const loadableDriveEditorModulesAtom = loadable(driveEditorModulesAtom);
+loadableDriveEditorModulesAtom.debugLabel = "loadableDriveEditorModulesAtom";
 
-export const loadableAppsAtom = loadable(appsAtom);
-loadableAppsAtom.debugLabel = "loadableAppsAtom";
+export const unwrappedDriveEditorModulesAtom = unwrap(driveEditorModulesAtom);
+unwrappedDriveEditorModulesAtom.debugLabel = "unwrappedDriveEditorModulesAtom";
 
-export const processorsAtom = atom(async (get) => {
-  const phPackages = await get(pHPackagesAtom);
-  const processors = phPackages
-    ?.map((pkg) => pkg.processors)
-    .filter((p) => p !== undefined);
-  return processors ?? [];
+export const processorModulesAtom = atom(async (get) => {
+  const vetraPackages = await get(vetraPackagesAtom);
+  const processorModules = vetraPackages
+    ?.map((pkg) => pkg.modules.processorModules)
+    .filter((p) => p !== undefined)
+    .flat();
+  return processorModules ?? [];
 });
-processorsAtom.debugLabel = "processorsAtom";
+processorModulesAtom.debugLabel = "processorModulesAtom";
 
-export const loadableProcessorsAtom = loadable(processorsAtom);
-loadableProcessorsAtom.debugLabel = "loadableProcessorsAtom";
+export const loadableProcessorModulesAtom = loadable(processorModulesAtom);
+loadableProcessorModulesAtom.debugLabel = "loadableProcessorModulesAtom";
 
-export const unwrappedProcessorsAtom = unwrap(processorsAtom);
-unwrappedProcessorsAtom.debugLabel = "unwrappedProcessorsAtom";
+export const unwrappedProcessorModulesAtom = unwrap(processorModulesAtom);
+unwrappedProcessorModulesAtom.debugLabel = "unwrappedProcessorModulesAtom";
 
 const baseHmrAtom = atom<UnsetAtomValue | ViteHotContext | undefined>(NOT_SET);
 baseHmrAtom.debugLabel = "baseHmrAtom";

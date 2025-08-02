@@ -8,9 +8,9 @@
     "resolveJsonModule": true
   },
   "include": [
-    "**/*",
-    "*.json"
+    "**/*"
   ],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-model"

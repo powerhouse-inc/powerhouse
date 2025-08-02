@@ -1,5 +1,5 @@
 import { logger } from "document-drive";
-import { type PHPackage } from "../types.js";
+import { type VetraPackage } from "../types.js";
 import {
   extractDriveFromPath,
   makeDriveUrlComponent,
@@ -8,8 +8,8 @@ import {
 
 export type SetDriveEvent = CustomEvent<{ driveId: string | undefined }>;
 export type SetNodeEvent = CustomEvent<{ nodeId: string | undefined }>;
-export type UpdatePHPackagesEvent = CustomEvent<{
-  phPackages: PHPackage[] | undefined;
+export type UpdateVetraPackagesEvent = CustomEvent<{
+  vetraPackages: VetraPackage[] | undefined;
 }>;
 
 export function dispatchSetDriveEvent(driveId: string | undefined) {
@@ -72,19 +72,19 @@ export function handleSetNodeEvent(
     .catch((error: unknown) => logger.error(error));
 }
 
-export function dispatchUpdatePHPackagesEvent(
-  phPackages: PHPackage[] | undefined,
+export function dispatchUpdateVetraPackagesEvent(
+  vetraPackages: VetraPackage[] | undefined,
 ) {
-  const event = new CustomEvent("ph:updatePHPackages", {
-    detail: { phPackages },
+  const event = new CustomEvent("ph:updateVetraPackages", {
+    detail: { vetraPackages },
   });
   window.dispatchEvent(event);
 }
 
-export function handleUpdatePHPackagesEvent(
-  event: UpdatePHPackagesEvent,
-  setPHPackages: (phPackages: PHPackage[] | undefined) => void,
+export function handleUpdateVetraPackagesEvent(
+  event: UpdateVetraPackagesEvent,
+  setVetraPackages: (vetraPackages: VetraPackage[] | undefined) => void,
 ) {
-  const phPackages = event.detail.phPackages;
-  setPHPackages(phPackages);
+  const vetraPackages = event.detail.vetraPackages;
+  setVetraPackages(vetraPackages);
 }

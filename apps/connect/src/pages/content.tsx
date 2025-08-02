@@ -9,22 +9,21 @@ import {
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    useApps,
     useDocumentModelModules,
+    useDriveEditorModules,
     useDrives,
     useEditorModules,
     useLoadableSelectedDocument,
     useLoadableSelectedDrive,
     useLoadableSelectedFolder,
-    usePHPackages,
     useProcessors,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
     useSetSelectedDrive,
+    useVetraPackages,
 } from '@powerhousedao/state';
-import { type DocumentDriveDocument } from 'document-drive';
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
@@ -34,18 +33,18 @@ export default function Content() {
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
+    const vetraPackages = useVetraPackages();
+    const driveEditorModules = useDriveEditorModules();
     const editorModules = useEditorModules();
     const documentModelModules = useDocumentModelModules();
-    const apps = useApps();
-    const phPackages = usePHPackages();
     const processors = useProcessors();
     console.log('selectedDrive', selectedDrive);
     console.log('selectedFolder', selectedFolder);
     console.log('selectedDocument', selectedDocument);
-    console.log('apps', apps);
+    console.log('vetraPackages', vetraPackages);
+    console.log('driveEditorModules', driveEditorModules);
     console.log('editorModules', editorModules);
     console.log('documentModelModules', documentModelModules);
-    console.log('phPackages', phPackages);
     console.log('processors', processors);
 
     useEffect(() => {
@@ -93,18 +92,7 @@ function HomeScreenContainer() {
     const loadableSelectedDocument = useLoadableSelectedDocument();
     const showAddDriveModal = useShowAddDriveModal();
     const setSelectedDrive = useSetSelectedDrive();
-    const apps = useApps();
     const [config] = useConnectConfig();
-    const handleDriveClick = useCallback(
-        (drive: DocumentDriveDocument) => {
-            setSelectedDrive(drive.header.id);
-        },
-        [setSelectedDrive],
-    );
-
-    const onAddDriveClick = useCallback(() => {
-        showAddDriveModal();
-    }, [showAddDriveModal]);
 
     const isLoading =
         loadableSelectedDrive.state === 'loading' ||
@@ -134,22 +122,18 @@ function HomeScreenContainer() {
     return (
         <HomeScreen>
             {drives?.map(drive => {
-                const editorId = drive.header.meta?.preferredEditor;
-                const appName = apps?.find(
-                    app => app.driveEditor === editorId,
-                )?.name;
                 return (
                     <HomeScreenItem
                         key={drive.header.id}
                         title={drive.state.global.name}
-                        description={appName || 'Drive Explorer App'}
+                        description={'Drive Explorer App'}
                         icon={<DriveIcon drive={drive} />}
-                        onClick={() => handleDriveClick(drive)}
+                        onClick={() => setSelectedDrive(drive.header.id)}
                     />
                 );
             })}
             {config.drives.addDriveEnabled && (
-                <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+                <HomeScreenAddDriveItem onClick={showAddDriveModal} />
             )}
         </HomeScreen>
     );

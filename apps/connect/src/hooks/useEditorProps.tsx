@@ -9,7 +9,7 @@ import {
     validateDocument,
 } from '#utils';
 import {
-    useDocumentModelModuleByDocumentType,
+    useDocumentModelModuleById,
     useParentFolder,
     useSetSelectedNode,
 } from '@powerhousedao/state';
@@ -51,8 +51,7 @@ export function useEditorDispatch<T extends PHDocument = PHDocument>(
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const documentType = document?.header.documentType;
-    const documentModelModule =
-        useDocumentModelModuleByDocumentType(documentType);
+    const documentModelModule = useDocumentModelModuleById(documentType);
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
@@ -113,7 +112,7 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     const userPermissions = useUserPermissions();
     const parentFolder = useParentFolder(document?.header.id);
     const setSelectedNode = useSetSelectedNode();
-    const documentModelModule = useDocumentModelModuleByDocumentType(
+    const documentModelModule = useDocumentModelModuleById(
         document?.header.documentType,
     );
     const context = useMemo(() => ({ theme, user }), [theme, user]);

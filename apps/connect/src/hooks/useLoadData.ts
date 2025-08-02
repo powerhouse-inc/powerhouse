@@ -1,8 +1,7 @@
-import { getHMRModule, useSubscribeToPHPackages } from '#services';
+import { getHMRModule, useSubscribeToVetraPackages } from '#services';
 import {
     createReactor,
-    loadBaseDocumentModelEditor,
-    loadBaseDocumentModels,
+    loadCommonPackage,
     loadExternalPackages,
     storageAtom,
     useCreateFirstLocalDrive,
@@ -14,11 +13,10 @@ import {
 import { useAtomValue } from 'jotai';
 import { useRenown } from './useRenown';
 
-async function loadPHPackages() {
-    const basePackages = await loadExternalPackages();
-    const baseDocumentModels = loadBaseDocumentModels();
-    const baseDocumentModelEditor = await loadBaseDocumentModelEditor();
-    return [...basePackages, ...baseDocumentModels, baseDocumentModelEditor];
+async function loadVetraPackages() {
+    const commonPackage = await loadCommonPackage();
+    const externalPackages = await loadExternalPackages();
+    return [commonPackage, ...externalPackages];
 }
 
 export function useLoadData() {
@@ -27,9 +25,9 @@ export function useLoadData() {
     const renown = useRenown();
     useInitializePHApp(
         createReactor(storage, documentModels || [], renown),
-        loadPHPackages(),
+        loadVetraPackages(),
         getHMRModule(),
     );
     useCreateFirstLocalDrive();
-    useSubscribeToPHPackages();
+    useSubscribeToVetraPackages();
 }

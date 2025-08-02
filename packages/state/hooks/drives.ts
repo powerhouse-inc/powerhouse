@@ -13,7 +13,7 @@ import {
   getDriveAvailableOffline,
   getDriveSharingType,
 } from "../utils/drives.js";
-import { useEditorModuleById } from "./ph-packages.js";
+import { useEditorModuleById } from "./vetra-packages.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives() {

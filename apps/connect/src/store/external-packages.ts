@@ -1,5 +1,6 @@
 import connectConfig from '#connect-config';
-import { type PHPackage } from '@powerhousedao/state';
+import { convertLegacyLibToVetraPackage } from '@powerhousedao/state';
+import { type DocumentModelLib } from 'document-model';
 
 const externalPackagesUrl =
     connectConfig.routerBasename + 'external-packages.js';
@@ -12,11 +13,12 @@ export async function loadExternalPackages() {
             /* @vite-ignore */ externalPackagesUrl
         )) as
             | {
-                  default?: PHPackage[];
+                  default?: DocumentModelLib[];
               }
             | undefined;
-        if (!module?.default) return [];
-        return module.default;
+        const legacyLibs = module?.default;
+        if (!legacyLibs) return [];
+        return legacyLibs.map(convertLegacyLibToVetraPackage);
     } catch (error) {
         console.error(error);
         return [];

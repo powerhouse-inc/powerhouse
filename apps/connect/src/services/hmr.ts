@@ -1,6 +1,10 @@
-import { type PHPackage, useUpdatePHPackages } from '@powerhousedao/state';
+import {
+    convertLegacyLibToVetraPackage,
+    useUpdateVetraPackages,
+} from '@powerhousedao/state';
 import { logger } from 'document-drive';
-import { useCallback, useEffect, useRef } from 'react';
+import { type DocumentModelLib } from 'document-model';
+import { useEffect, useRef } from 'react';
 import type { ViteHotContext } from 'vite/types/hot.js';
 
 export type PackagesUpdate = {
@@ -70,44 +74,24 @@ export async function handlePackageEvents(
     return hmr.off('studio:external-package-added', handler);
 }
 
-export async function subscribeExternalPackages(
-    callback: (modules: Promise<PHPackage[]>) => void,
-) {
-    const hmr = await getHMRModule();
-    const handler = (data: PackagesUpdate) => {
-        const modules = import(
-            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-        ) as Promise<{
-            default: PHPackage[];
-        }>;
-        callback(modules.then(m => m.default));
-    };
-    hmr?.on('studio:external-packages-updated', handler);
-    return () => {
-        hmr?.off('studio:external-packages-updated', handler);
-    };
-}
-
-export function useSubscribeToPHPackages() {
-    const updatePHPackages = useUpdatePHPackages();
-    const hasSubscribed = useRef(false);
+export function useSubscribeToVetraPackages() {
+    const updateVetraPackages = useUpdateVetraPackages();
     const hmrRef = useRef<ViteHotContext>();
 
-    const handler = useCallback(async (data: PackagesUpdate) => {
-        const modulesImport = import(
-            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-        ) as Promise<{
-            default: PHPackage[];
-        }>;
-        const modules = await modulesImport;
-        const defaultModules = modules.default;
-        updatePHPackages(defaultModules);
-    }, []);
-
     useEffect(() => {
-        if (hasSubscribed.current) {
-            return;
-        }
+        const handler = async (data: PackagesUpdate) => {
+            const modulesImport = import(
+                /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
+            ) as Promise<{
+                default: DocumentModelLib[];
+            }>;
+            const modules = await modulesImport;
+            const legacyLibs = modules.default;
+            const vetraPackages = legacyLibs.map(
+                convertLegacyLibToVetraPackage,
+            );
+            updateVetraPackages(vetraPackages);
+        };
         async function subscribe() {
             const hmr = await getHMRModule();
             hmrRef.current = hmr;
@@ -118,5 +102,5 @@ export function useSubscribeToPHPackages() {
         return () => {
             hmrRef.current?.off('studio:external-packages-updated', handler);
         };
-    }, [handler]);
+    }, [updateVetraPackages]);
 }

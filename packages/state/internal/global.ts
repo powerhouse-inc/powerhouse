@@ -1,20 +1,20 @@
 import { type IDocumentDriveServer } from "document-drive";
-import { type PHPackage } from "../types.js";
+import { type VetraPackage } from "../types.js";
 import {
   type SetDriveEvent,
   type SetNodeEvent,
-  type UpdatePHPackagesEvent,
+  type UpdateVetraPackagesEvent,
 } from "./events.js";
 
 declare global {
   interface Window {
     reactor?: IDocumentDriveServer | undefined;
-    phPackages?: PHPackage[] | undefined;
+    vetraPackages?: VetraPackage[] | undefined;
   }
 
   interface WindowEventMap {
     "ph:setDrive": SetDriveEvent;
     "ph:setNode": SetNodeEvent;
-    "ph:updatePHPackages": UpdatePHPackagesEvent;
+    "ph:updateVetraPackages": UpdateVetraPackagesEvent;
   }
 }

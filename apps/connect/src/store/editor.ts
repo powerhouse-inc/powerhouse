@@ -1,24 +1,35 @@
-import { type PHPackage } from '@powerhousedao/state';
+import {
+    DEFAULT_DRIVE_EDITOR_ID,
+    type VetraEditorModule,
+} from '@powerhousedao/state';
 
-export async function loadBaseEditors() {
-    const documentModelEditor = await import(
-        '@powerhousedao/builder-tools/document-model-editor'
+export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
+    const genericDriveExplorerEditorModule = await import(
+        '@powerhousedao/common/editors/generic-drive-explorer/index'
     );
-    await import('@powerhousedao/builder-tools/style.css');
-    const module = {
-        id: 'document-model-editor-v2',
-        ...documentModelEditor.documentModelEditorModule,
+    const vetraEditorModule: VetraEditorModule = {
+        id: DEFAULT_DRIVE_EDITOR_ID,
+        name: 'Generic Drive Explorer',
+        documentTypes: ['powerhouse/document-drive'],
+        Component:
+            genericDriveExplorerEditorModule.GenericDriveExplorer.Component,
+        config: genericDriveExplorerEditorModule.GenericDriveExplorer.config,
     };
-    return [module];
+    return vetraEditorModule;
 }
 
-export async function loadBaseDocumentModelEditor() {
-    const documentModelEditor = await import(
+export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
+    const documentModelEditorModule = await import(
         '@powerhousedao/builder-tools/document-model-editor'
     );
     await import('@powerhousedao/builder-tools/style.css');
-    return {
-        id: 'document-model-editor-v2',
-        editors: [documentModelEditor.documentModelEditorModule],
-    } as PHPackage;
+    const vetraEditorModule: VetraEditorModule = {
+        id: documentModelEditorModule.documentModelEditorModule.config.id,
+        name: 'Document Model Editor',
+        documentTypes: ['powerhouse/document-model'],
+        Component:
+            documentModelEditorModule.documentModelEditorModule.Component,
+        config: documentModelEditorModule.documentModelEditorModule.config,
+    };
+    return vetraEditorModule;
 }
