@@ -1,3 +1,18 @@
+## 4.1.0-dev.4 (2025-08-02)
+
+### 🚀 Features
+
+- ts morph integration ([#1729](https://github.com/powerhouse-inc/powerhouse/pull/1729))
+
+### 🩹 Fixes
+
+- **reactor-mcp:** make test:watch the test watcher, and test the single shot, so that the root test:all does not hang ([fcb997186](https://github.com/powerhouse-inc/powerhouse/commit/fcb997186))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.3 (2025-08-01)
 
 ### 🚀 Features
