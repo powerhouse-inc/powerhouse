@@ -116,7 +116,7 @@ export function validateDocumentModelAction(
     return { isValid: false, errors };
   }
 
-  // Validate the operation using the action creator
+  // Validate the operation using the action creator. TODO: Use document model exported validators directly
   let inputError: Error | null = null;
   try {
     actionCreator(action.input);
