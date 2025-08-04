@@ -1,0 +1,325 @@
+# Tutorial Verification System - Technical Architecture
+
+## Overview
+
+This document outlines the technical architecture for an automated tutorial verification system that ensures the Powerhouse Academy tutorials remain accurate and functional as the codebase evolves.
+
+## System Architecture
+
+### 1. Test Execution Environment
+
+```
+┌─────────────────────────────────────────┐
+│  GitHub Actions Runner (Ubuntu)         │
+│  ┌─────────────────────────────────────┐ │
+│  │  Isolated Docker Container          │ │
+│  │  ├── Node.js 22                    │ │
+│  │  ├── pnpm                          │ │
+│  │  ├── Powerhouse CLI (ph-cli)       │ │
+│  │  ├── Playwright browsers           │ │
+│  │  └── Temporary filesystem          │ │
+│  └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Execution Environments:**
+- **Development**: Local machine (`pnpm test:e2e`)
+- **CI/CD**: GitHub Actions runners (automatically on PRs)
+- **Scheduled**: Nightly runs to catch regressions
+
+### 2. Tutorial Agent Architecture
+
+The "agent" is a test orchestrator that processes tutorials through a structured workflow:
+
+```typescript
+// packages/tutorial-verifier/src/tutorial-agent.ts
+class TutorialAgent {
+  async verifyTutorial(tutorialPath: string) {
+    // 1. Parse tutorial markdown
+    const steps = await this.parseTutorialSteps(tutorialPath);
+    
+    // 2. Create isolated environment
+    const sandbox = await this.createSandbox();
+    
+    // 3. Execute each step sequentially
+    for (const step of steps) {
+      await this.executeStep(step, sandbox);
+      await this.verifyStepOutcome(step, sandbox);
+    }
+    
+    // 4. Generate report
+    return this.generateReport();
+  }
+}
+```
+
+## Component Integration
+
+### 3. E2E Test Framework Integration
+
+**Extends existing Playwright E2E infrastructure:**
+
+```typescript
+// test/connect-e2e/tests/tutorial-get-started.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('Tutorial: Create new to-do list document', async ({ page }) => {
+  const agent = new TutorialAgent();
+  
+  // Phase 1: CLI Commands (no browser needed)
+  await agent.executeCliStep('ph init my-todo-project');
+  await agent.verifyFileExists('my-todo-project/package.json');
+  
+  // Phase 2: Browser Automation (uses Playwright)
+  await agent.startConnect(); // Starts ph connect in background
+  await page.goto('http://localhost:3000');
+  
+  // Phase 3: UI Verification (Playwright E2E)
+  await page.click('text=Local Drive');
+  await page.click('button:has-text("DocumentModel")');
+  await expect(page.locator('text=Document Model Editor')).toBeVisible();
+  
+  // Phase 4: Cleanup
+  await agent.cleanup();
+});
+```
+
+### 4. Playwright Browser Automation
+
+**UI automation for Connect Studio interactions:**
+
+```typescript
+// UI automation for Connect Studio
+class ConnectUIAgent {
+  constructor(private page: Page) {}
+  
+  async createDocumentModel(name: string) {
+    // Navigate to document creation
+    await this.page.click('button:has-text("DocumentModel")');
+    
+    // Fill in model details
+    await this.page.fill('input[placeholder="Document Name"]', name);
+    await this.page.fill('input[placeholder="Document Type"]', `powerhouse/${name.toLowerCase()}`);
+    
+    // Define schema in code editor
+    await this.page.click('.monaco-editor');
+    await this.page.keyboard.type(`
+      type ${name}State {
+        items: [TodoItem!]!
+      }
+    `);
+    
+    // Save and verify
+    await this.page.click('button:has-text("Save")');
+    await expect(this.page.locator(`text=${name}.phdm.zip`)).toBeVisible();
+  }
+}
+```
+
+## Execution Flow
+
+### 5. Tutorial Processing Pipeline
+
+```
+Tutorial Markdown File
+        ↓
+   [Tutorial Parser]
+        ↓
+   ┌─────────────────┐
+   │  Execution Steps │
+   ├─────────────────┤
+   │ 1. CLI Commands │ ← Uses child_process.spawn()
+   │ 2. File Checks  │ ← Uses fs.existsSync()
+   │ 3. UI Actions   │ ← Uses Playwright page.click()
+   │ 4. Verifications│ ← Custom assertion logic
+   └─────────────────┘
+        ↓
+   [Report Generator]
+        ↓
+   Test Results + Screenshots
+```
+
+### 6. Step-by-Step Processing Example
+
+**Tutorial Markdown:**
+```markdown
+## Quick start
+Create a new Powerhouse project with a single command:
+```bash
+ph init
+```
+
+Then start Connect:
+```bash
+ph connect
+```
+
+Navigate to http://localhost:3000 and click on "Local Drive".
+```
+
+**Agent Processing:**
+
+```typescript
+// 1. Tutorial Parser extracts executable steps
+const steps = [
+  { type: 'cli', command: 'ph init', expectedFiles: ['package.json'] },
+  { type: 'cli', command: 'ph connect', background: true },
+  { type: 'browser', action: 'navigate', url: 'http://localhost:3000' },
+  { type: 'browser', action: 'click', selector: 'text=Local Drive' }
+];
+
+// 2. Agent executes each step
+for (const step of steps) {
+  switch (step.type) {
+    case 'cli':
+      const result = execSync(step.command);
+      if (step.expectedFiles) {
+        for (const file of step.expectedFiles) {
+          assert(existsSync(file), `Expected file ${file} not found`);
+        }
+      }
+      break;
+      
+    case 'browser':
+      if (step.action === 'navigate') {
+        await page.goto(step.url);
+      } else if (step.action === 'click') {
+        await page.click(step.selector);
+      }
+      break;
+  }
+}
+```
+
+## Deployment Architecture
+
+### 7. Runtime Environment Distribution
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  GitHub Actions Runner                                  │
+│                                                         │
+│  ┌─────────────────┐  ┌─────────────────────────────────┐ │
+│  │ Tutorial Agent  │  │  Sandbox Environment           │ │
+│  │ (Node.js)       │  │                                 │ │
+│  │                 │  │  ┌─────────────┐               │ │
+│  │ • Parse MD      │  │  │ ph connect  │ :3000         │ │
+│  │ • Execute CLI   │  │  └─────────────┘               │ │
+│  │ • Control tests │  │                                 │ │
+│  └─────────────────┘  │  ┌─────────────┐               │ │
+│                       │  │ Playwright  │               │ │
+│  ┌─────────────────┐  │  │ Browser     │               │ │
+│  │ Report Gen      │  │  └─────────────┘               │ │
+│  │ • Screenshots   │  │                                 │ │
+│  │ • Error logs    │  │  /tmp/tutorial-test-xyz/        │ │
+│  │ • Success rates │  │  ├── my-todo-project/           │ │
+│  └─────────────────┘  │  │   ├── package.json          │ │
+│                       │  │   └── ...                   │ │
+│                       └─────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 8. Integration with Existing Test Suite
+
+**File Structure Extension:**
+
+```
+Your Current E2E Tests:
+test/connect-e2e/tests/
+├── todo-document.spec.ts     ← Existing
+├── drive.spec.ts            ← Existing
+└── app.spec.ts              ← Existing
+
+Added Tutorial Tests:
+test/connect-e2e/tests/tutorials/
+├── get-started.spec.ts      ← New: Tests "Get Started" tutorial
+├── mastery-track.spec.ts    ← New: Tests "Mastery Track" tutorials
+└── cookbook.spec.ts         ← New: Tests "Cookbook" recipes
+```
+
+**No changes to existing code** - just additional test files that run alongside current tests.
+
+## Performance & Timing
+
+### 9. Execution Timeline
+
+```
+0s    │ Start test
+2s    │ ├── Parse tutorial markdown
+4s    │ ├── Create temp directory
+6s    │ ├── Run 'ph init'
+15s   │ ├── Verify project structure  
+20s   │ ├── Start 'ph connect' (background)
+35s   │ ├── Wait for Connect to be ready
+40s   │ ├── Launch Playwright browser
+45s   │ ├── Navigate to localhost:3000
+50s   │ ├── Perform UI interactions
+55s   │ ├── Verify expected elements
+60s   │ ├── Take screenshots
+65s   │ ├── Cleanup (kill processes, delete files)
+70s   │ └── Generate report
+```
+
+## Implementation Phases
+
+### Phase 1: Proof of Concept (1-2 days)
+- Single tutorial verification (Get Started)
+- Basic CLI command execution
+- Simple file existence checks
+- Integration with existing Playwright setup
+
+### Phase 2: Core Features (1-2 weeks)
+- Tutorial markdown parser
+- Comprehensive step execution engine
+- Browser automation for Connect Studio
+- Error reporting and screenshots
+
+### Phase 3: Advanced Features (2-3 weeks)
+- Multiple tutorial support
+- Parallel execution
+- Detailed reporting dashboard
+- Integration with CI/CD pipeline
+
+### Phase 4: Intelligence Layer (2-3 weeks)
+- Failure pattern analysis
+- Automated suggestion generation
+- Historical trend tracking
+- LLM-powered issue diagnosis
+
+## Key Technical Decisions
+
+### Technology Stack
+- **Test Framework**: Playwright (existing)
+- **Runtime**: Node.js 22 + TypeScript
+- **CLI Execution**: child_process.spawn()
+- **File Operations**: Node.js fs module
+- **Browser Automation**: Playwright
+- **CI/CD**: GitHub Actions (existing)
+
+### Design Principles
+- **Isolation**: Each test runs in isolated environment
+- **Repeatability**: Tests can run multiple times with same results
+- **Extensibility**: Easy to add new tutorials
+- **Integration**: Builds on existing infrastructure
+- **Cleanup**: Automatic resource cleanup after tests
+
+## Success Metrics
+
+- **Tutorial Success Rate**: % of tutorials that pass verification
+- **Time to Detection**: How quickly outdated tutorials are identified
+- **False Positive Rate**: % of failures due to test issues vs actual problems
+- **Coverage**: Number of tutorial steps automatically verified
+- **Developer Confidence**: Reduced manual testing effort
+
+## Risk Mitigation
+
+### Technical Risks
+- **Flaky Tests**: Use retry mechanisms and wait strategies
+- **Environment Dependencies**: Containerized execution environments
+- **Resource Cleanup**: Comprehensive cleanup in finally blocks
+- **Process Management**: Proper process lifecycle management
+
+### Operational Risks
+- **Maintenance Overhead**: Gradual rollout with proven patterns
+- **CI/CD Load**: Efficient test execution and parallel processing
+- **Team Adoption**: Clear documentation and training materials 

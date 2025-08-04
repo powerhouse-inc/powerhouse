@@ -74,6 +74,29 @@ You have several options for styling your editor components:
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Connect Studio (`ph connect`) will allow you to see your styles applied in real-time.
 
+:::warning  **Best practices for consistent reliable styles**
+
+In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package. 
+
+**1. Centralize style imports**
+
+- Do not import styles directly in .tsx files.
+- This works in development mode but will not be picked up in static production builds.
+- Move all style imports into your main styles.css file.
+
+**2. Use file imports instead of URL imports**
+
+- @import url("...") → **Incorrect**, Ignored by tailwindcss/cli
+- @import "..." → **Correct**, resolves from local files or node_modules
+- Always prefer the file import syntax.
+
+**Using `ph install` includes package styles automatically**
+
+- When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
+:::
+
+
+
 ### State management in editors
 
 When you build an editor in Powerhouse, your main editor component receives `EditorProps`. These props are crucial for interacting with the document:
