@@ -1,6 +1,6 @@
 import { init } from "./index.js";
 
-init().catch((error: unknown) => {
+init(process.argv.at(2)).catch((error: unknown) => {
   console.error(error);
   process.exit(1);
 });
