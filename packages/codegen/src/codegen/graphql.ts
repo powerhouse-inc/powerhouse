@@ -81,7 +81,7 @@ export function schemaConfig(
   };
 }
 
-export const generateSchema = (
+export const generateSchema = async (
   model: string,
   inDir: string,
   { watch = false, skipFormat = false, outDir = inDir, verbose = true } = {},
@@ -93,11 +93,45 @@ export const generateSchema = (
     generates: documentModelConfig,
     watch,
     silent: !verbose,
-    hooks: {
-      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
-    },
   };
-  return generate(config, !verbose);
+
+  // GraphQL Codegen hooks are not working reliably - write files manually
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+
+  const result = (await generate(config, !verbose)) as Array<{
+    filename: string;
+    content: string;
+    hooks: Record<string, unknown>;
+  }>;
+
+  for (const fileResult of result) {
+    const { filename, content } = fileResult;
+    const fullPath = path.resolve(filename);
+    const dir = path.dirname(fullPath);
+
+    // Ensure directory exists
+    fs.mkdirSync(dir, { recursive: true });
+
+    // Write content (content is already typed as string)
+    let finalContent: string = content;
+
+    // Format if not skipped
+    if (!skipFormat) {
+      try {
+        const { format } = await import("prettier");
+        finalContent = await format(content, { parser: "typescript" });
+      } catch (error) {
+        if (verbose) {
+          console.warn(`Failed to format ${filename}:`, error);
+        }
+      }
+    }
+
+    fs.writeFileSync(fullPath, finalContent);
+  }
+
+  return result;
 };
 
 export const generateSchemas = (
@@ -121,5 +155,6 @@ export const generateSchemas = (
       beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
     },
   };
+
   return generate(config, true);
 };
