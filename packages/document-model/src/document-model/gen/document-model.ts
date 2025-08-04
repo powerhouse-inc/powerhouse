@@ -14,15 +14,29 @@ export const documentModelState: DocumentModelState = {
     {
       version: 1,
       changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type CodeExample {\n    id: ID!\n    value: String!\n}\n\ntype OperationError {\n    id: ID!\n    code: String\n    name: String\n    description: String\n    template: String\n}\n\ntype Operation {\n    id: ID!\n    name: String\n    schema: String\n    description: String\n    template: String\n    errors: [OperationError!]!\n    examples: [CodeExample!]!\n    reducer: String\n    scope: String\n}\n\ntype Module {\n    id: ID!\n    name: String!\n    description: String\n    operations: [Operation!]!\n}\n\ntype State {\n    schema: String!\n    initialValue: String!\n    examples: [CodeExample!]!\n}\n\ntype ScopeState {\n    global: State!\n    local: State!\n}\n\ntype Author {\n    name: String!\n    website: String\n}\n\ntype DocumentSpecification {\n    version: Int!\n    state: ScopeState!\n    modules: [Module!]!\n    changeLog: [String!]!\n}\n\ntype DocumentModelState {\n    name: String!\n    id: String!\n    extension: String!\n    description: String!\n    author: Author!\n    specifications: [DocumentSpecification!]!\n}",
+          initialValue:
+            '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
+          examples: [],
+        },
+        local: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+      },
       modules: [
         {
           name: "header",
           operations: [
             {
-              name: "SetModelName",
+              name: "SET_MODEL_NAME",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the name of the document model",
+              schema: "input SetModelNameInput {\n    name: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -30,10 +44,10 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetModelId",
+              name: "SET_MODEL_ID",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the unique identifier for the document model",
+              schema: "input SetModelIdInput {\n    id: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -41,10 +55,11 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetModelExtension",
+              name: "SET_MODEL_EXTENSION",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the file extension associated with this document model",
+              schema:
+                "input SetModelExtensionInput {\n    extension: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -52,10 +67,11 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetModelDescription",
+              name: "SET_MODEL_DESCRIPTION",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the description text for the document model",
+              schema:
+                "input SetModelDescriptionInput {\n    description: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -63,10 +79,10 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetAuthorName",
+              name: "SET_AUTHOR_NAME",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the name of the document model author",
+              schema: "input SetAuthorNameInput {\n    authorName: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -74,10 +90,11 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetAuthorWebsite",
+              name: "SET_AUTHOR_WEBSITE",
               id: "",
-              description: "",
-              schema: "",
+              description: "Sets the website URL of the document model author",
+              schema:
+                "input SetAuthorWebsiteInput {\n    authorWebsite: String!\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -92,7 +109,7 @@ export const documentModelState: DocumentModelState = {
           name: "versioning",
           operations: [
             {
-              name: "AddChangeLogItem",
+              name: "ADD_CHANGE_LOG_ITEM",
               id: "",
               description: "",
               schema: "",
@@ -103,7 +120,7 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "UpdateChangeLogItem",
+              name: "UPDATE_CHANGE_LOG_ITEM",
               id: "",
               description: "",
               schema: "",
@@ -114,7 +131,7 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteChangeLogItem",
+              name: "DELETE_CHANGE_LOG_ITEM",
               id: "",
               description: "",
               schema: "",
@@ -125,7 +142,7 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderChangeLogItems",
+              name: "REORDER_CHANGE_LOG_ITEMS",
               id: "",
               description: "",
               schema: "",
@@ -136,7 +153,7 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReleaseNewVersion",
+              name: "RELEASE_NEW_VERSION",
               schema: null,
               id: "",
               description: "",
@@ -154,9 +171,9 @@ export const documentModelState: DocumentModelState = {
           name: "module",
           operations: [
             {
-              name: "AddModule",
+              name: "ADD_MODULE",
               id: "",
-              description: "",
+              description: "Adds a new module to the document model specification",
               schema: "",
               template: "",
               reducer: "",
@@ -165,9 +182,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetModuleName",
+              name: "SET_MODULE_NAME",
               id: "",
-              description: "",
+              description: "Sets the name of an existing module",
               schema: "",
               template: "",
               reducer: "",
@@ -176,9 +193,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetModuleDescription",
+              name: "SET_MODULE_DESCRIPTION",
               id: "",
-              description: "",
+              description: "Sets the description of an existing module",
               schema: "",
               template: "",
               reducer: "",
@@ -187,9 +204,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteModule",
+              name: "DELETE_MODULE",
               id: "",
-              description: "",
+              description: "Removes a module from the document model specification",
               schema: "",
               template: "",
               reducer: "",
@@ -198,9 +215,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderModules",
+              name: "REORDER_MODULES",
               id: "",
-              description: "",
+              description: "Changes the order of modules in the document model specification",
               schema: "",
               template: "",
               reducer: "",
@@ -216,9 +233,9 @@ export const documentModelState: DocumentModelState = {
           name: "operation-error",
           operations: [
             {
-              name: "AddOperationError",
+              name: "ADD_OPERATION_ERROR",
               id: "",
-              description: "",
+              description: "Adds a new error definition to an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -227,9 +244,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationErrorCode",
+              name: "SET_OPERATION_ERROR_CODE",
               id: "",
-              description: "",
+              description: "Sets the error code for an operation error",
               schema: "",
               template: "",
               reducer: "",
@@ -238,9 +255,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationErrorName",
+              name: "SET_OPERATION_ERROR_NAME",
               id: "",
-              description: "",
+              description: "Sets the name of an operation error",
               schema: "",
               template: "",
               reducer: "",
@@ -249,9 +266,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationErrorDescription",
+              name: "SET_OPERATION_ERROR_DESCRIPTION",
               id: "",
-              description: "",
+              description: "Sets the description of an operation error",
               schema: "",
               template: "",
               reducer: "",
@@ -260,9 +277,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationErrorTemplate",
+              name: "SET_OPERATION_ERROR_TEMPLATE",
               id: "",
-              description: "",
+              description: "Sets the template for an operation error",
               schema: "",
               template: "",
               reducer: "",
@@ -271,9 +288,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteOperationError",
+              name: "DELETE_OPERATION_ERROR",
               id: "",
-              description: "",
+              description: "Removes an error definition from an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -282,9 +299,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderOperationErrors",
+              name: "REORDER_OPERATION_ERRORS",
               id: "",
-              description: "",
+              description: "Changes the order of error definitions for an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -300,9 +317,9 @@ export const documentModelState: DocumentModelState = {
           name: "operation-example",
           operations: [
             {
-              name: "AddOperationExample",
+              name: "ADD_OPERATION_EXAMPLE",
               id: "",
-              description: "",
+              description: "Adds a new code example to an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -311,9 +328,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "UpdateOperationExample",
+              name: "UPDATE_OPERATION_EXAMPLE",
               id: "",
-              description: "",
+              description: "Updates an existing code example for an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -322,9 +339,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteOperationExample",
+              name: "DELETE_OPERATION_EXAMPLE",
               id: "",
-              description: "",
+              description: "Removes a code example from an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -333,9 +350,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderOperationExamples",
+              name: "REORDER_OPERATION_EXAMPLES",
               id: "",
-              description: "",
+              description: "Changes the order of code examples for an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -351,9 +368,9 @@ export const documentModelState: DocumentModelState = {
           name: "operation",
           operations: [
             {
-              name: "AddOperation",
+              name: "ADD_OPERATION",
               id: "",
-              description: "",
+              description: "Adds a new operation to a module",
               schema: "",
               template: "",
               reducer: "",
@@ -362,9 +379,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationName",
+              name: "SET_OPERATION_NAME",
               id: "",
-              description: "",
+              description: "Sets the name of an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -373,9 +390,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationSchema",
+              name: "SET_OPERATION_SCHEMA",
               id: "",
-              description: "",
+              description: "Sets the GraphQL schema definition for an operation's input",
               schema: "",
               template: "",
               reducer: "",
@@ -384,9 +401,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationDescription",
+              name: "SET_OPERATION_DESCRIPTION",
               id: "",
-              description: "",
+              description: "Sets the description of an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -395,9 +412,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationTemplate",
+              name: "SET_OPERATION_TEMPLATE",
               id: "",
-              description: "",
+              description: "Sets the template code for an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -406,9 +423,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetOperationReducer",
+              name: "SET_OPERATION_REDUCER",
               id: "",
-              description: "",
+              description: "Sets the reducer function code for an operation",
               schema: "",
               template: "",
               reducer: "",
@@ -417,9 +434,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "MoveOperation",
+              name: "MOVE_OPERATION",
               id: "",
-              description: "",
+              description: "Moves an operation from one module to another",
               schema: "",
               template: "",
               reducer: "",
@@ -428,9 +445,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteOperation",
+              name: "DELETE_OPERATION",
               id: "",
-              description: "",
+              description: "Removes an operation from a module",
               schema: "",
               template: "",
               reducer: "",
@@ -439,9 +456,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderModuleOperations",
+              name: "REORDER_MODULE_OPERATIONS",
               id: "",
-              description: "",
+              description: "Changes the order of operations within a module",
               schema: "",
               template: "",
               reducer: "",
@@ -457,9 +474,9 @@ export const documentModelState: DocumentModelState = {
           name: "state",
           operations: [
             {
-              name: "SetStateSchema",
+              name: "SET_STATE_SCHEMA",
               id: "",
-              description: "",
+              description: "Sets the GraphQL schema definition for document state",
               schema: "",
               template: "",
               reducer: "",
@@ -468,9 +485,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "SetInitialState",
+              name: "SET_INITIAL_STATE",
               id: "",
-              description: "",
+              description: "Sets the initial state value for a document scope",
               schema: "",
               template: "",
               reducer: "",
@@ -479,9 +496,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "AddStateExample",
+              name: "ADD_STATE_EXAMPLE",
               id: "",
-              description: "",
+              description: "Adds a new state example to a document scope",
               schema: "",
               template: "",
               reducer: "",
@@ -490,9 +507,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "UpdateStateExample",
+              name: "UPDATE_STATE_EXAMPLE",
               id: "",
-              description: "",
+              description: "Updates an existing state example for a document scope",
               schema: "",
               template: "",
               reducer: "",
@@ -501,9 +518,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "DeleteStateExample",
+              name: "DELETE_STATE_EXAMPLE",
               id: "",
-              description: "",
+              description: "Removes a state example from a document scope",
               schema: "",
               template: "",
               reducer: "",
@@ -512,9 +529,9 @@ export const documentModelState: DocumentModelState = {
               scope: "global",
             },
             {
-              name: "ReorderStateExamples",
+              name: "REORDER_STATE_EXAMPLES",
               id: "",
-              description: "",
+              description: "Changes the order of state examples for a document scope",
               schema: "",
               template: "",
               reducer: "",
@@ -527,19 +544,6 @@ export const documentModelState: DocumentModelState = {
           description: "",
         },
       ],
-      state: {
-        global: {
-          schema: "",
-          initialValue:
-            '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
-          examples: [],
-        },
-        local: {
-          schema: "",
-          initialValue: `{}`,
-          examples: [],
-        },
-      },
     },
   ],
 };

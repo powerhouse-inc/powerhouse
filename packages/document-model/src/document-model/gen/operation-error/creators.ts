@@ -1,13 +1,14 @@
 import { createAction } from "../../../document/utils/base.js";
 import {
-  AddOperationErrorInput,
-  DeleteOperationErrorInput,
-  ReorderOperationErrorsInput,
-  SetOperationErrorCodeInput,
-  SetOperationErrorDescriptionInput,
-  SetOperationErrorNameInput,
-  SetOperationErrorTemplateInput,
-} from "../schema/types.js";
+  z,
+  type AddOperationErrorInput,
+  type DeleteOperationErrorInput,
+  type ReorderOperationErrorsInput,
+  type SetOperationErrorCodeInput,
+  type SetOperationErrorDescriptionInput,
+  type SetOperationErrorNameInput,
+  type SetOperationErrorTemplateInput,
+} from "../schema/index.js";
 import {
   AddOperationErrorAction,
   DeleteOperationErrorAction,
@@ -19,17 +20,31 @@ import {
 } from "./actions.js";
 
 export const addOperationError = (input: AddOperationErrorInput) =>
-  createAction<AddOperationErrorAction>("ADD_OPERATION_ERROR", { ...input });
+  createAction<AddOperationErrorAction>(
+    "ADD_OPERATION_ERROR",
+    { ...input },
+    undefined,
+    z.AddOperationErrorInputSchema,
+    "global"
+  );
 
 export const setOperationErrorCode = (input: SetOperationErrorCodeInput) =>
-  createAction<SetOperationErrorCodeAction>("SET_OPERATION_ERROR_CODE", {
-    ...input,
-  });
+  createAction<SetOperationErrorCodeAction>(
+    "SET_OPERATION_ERROR_CODE",
+    { ...input },
+    undefined,
+    z.SetOperationErrorCodeInputSchema,
+    "global"
+  );
 
 export const setOperationErrorName = (input: SetOperationErrorNameInput) =>
-  createAction<SetOperationErrorNameAction>("SET_OPERATION_ERROR_NAME", {
-    ...input,
-  });
+  createAction<SetOperationErrorNameAction>(
+    "SET_OPERATION_ERROR_NAME",
+    { ...input },
+    undefined,
+    z.SetOperationErrorNameInputSchema,
+    "global"
+  );
 
 export const setOperationErrorDescription = (
   input: SetOperationErrorDescriptionInput,
@@ -37,6 +52,9 @@ export const setOperationErrorDescription = (
   createAction<SetOperationErrorDescriptionAction>(
     "SET_OPERATION_ERROR_DESCRIPTION",
     { ...input },
+    undefined,
+    z.SetOperationErrorDescriptionInputSchema,
+    "global"
   );
 
 export const setOperationErrorTemplate = (
@@ -45,14 +63,25 @@ export const setOperationErrorTemplate = (
   createAction<SetOperationErrorTemplateAction>(
     "SET_OPERATION_ERROR_TEMPLATE",
     { ...input },
+    undefined,
+    z.SetOperationErrorTemplateInputSchema,
+    "global"
   );
 
 export const deleteOperationError = (input: DeleteOperationErrorInput) =>
-  createAction<DeleteOperationErrorAction>("DELETE_OPERATION_ERROR", {
-    ...input,
-  });
+  createAction<DeleteOperationErrorAction>(
+    "DELETE_OPERATION_ERROR",
+    { ...input },
+    undefined,
+    z.DeleteOperationErrorInputSchema,
+    "global"
+  );
 
 export const reorderOperationErrors = (input: ReorderOperationErrorsInput) =>
-  createAction<ReorderOperationErrorsAction>("REORDER_OPERATION_ERRORS", {
-    ...input,
-  });
+  createAction<ReorderOperationErrorsAction>(
+    "REORDER_OPERATION_ERRORS",
+    { ...input },
+    undefined,
+    z.ReorderOperationErrorsInputSchema,
+    "global"
+  );
