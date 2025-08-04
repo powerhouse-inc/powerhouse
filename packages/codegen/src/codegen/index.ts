@@ -132,7 +132,13 @@ async function generateFromDocumentModel(
   filePath?: string | null,
   options: CodegenOptions = {},
 ) {
-  const { verbose = false } = options;
+  // Derive verbose from config.logLevel if not explicitly provided
+  // Show hygen logs for verbose, debug, and info levels (default behavior before ts-morph)
+  const {
+    verbose = config.logLevel === "verbose" ||
+      config.logLevel === "debug" ||
+      config.logLevel === "info",
+  } = options;
   const name = paramCase(documentModel.name);
 
   // create document model folder and spec as json

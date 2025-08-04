@@ -79,9 +79,36 @@ export class TSMorphCodeGenerator {
   }
 
   private async setupProject(): Promise<void> {
-    await this.ensureDirectoryExists(this.rootDir);
-    const sourcePath = `${this.rootDir}/**/*.ts`;
-    this.project.addSourceFilesAtPaths(sourcePath);
+    // Only load files from configured directories
+    const sourcePaths: string[] = [];
+
+    if (this.directories.documentModelDir) {
+      const dirPath = `${this.rootDir}/${this.directories.documentModelDir}`;
+      await this.ensureDirectoryExists(dirPath);
+      sourcePaths.push(`${dirPath}/**/*.ts`);
+    }
+    if (this.directories.editorsDir) {
+      const dirPath = `${this.rootDir}/${this.directories.editorsDir}`;
+      await this.ensureDirectoryExists(dirPath);
+      sourcePaths.push(`${dirPath}/**/*.ts`);
+    }
+    if (this.directories.processorsDir) {
+      const dirPath = `${this.rootDir}/${this.directories.processorsDir}`;
+      await this.ensureDirectoryExists(dirPath);
+      sourcePaths.push(`${dirPath}/**/*.ts`);
+    }
+    if (this.directories.subgraphsDir) {
+      const dirPath = `${this.rootDir}/${this.directories.subgraphsDir}`;
+      await this.ensureDirectoryExists(dirPath);
+      sourcePaths.push(`${dirPath}/**/*.ts`);
+    }
+
+    // Exclude node_modules from all paths
+    sourcePaths.push(`!${this.rootDir}/**/node_modules/**`);
+
+    if (sourcePaths.length > 0) {
+      this.project.addSourceFilesAtPaths(sourcePaths);
+    }
   }
 
   private createGenerationContext(
