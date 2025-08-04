@@ -63,6 +63,8 @@ export async function generateAll(
   { watch = false, skipFormat = false, verbose = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
+  const documentModelStates: DocumentModelState[] = [];
+
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
       dir,
@@ -75,10 +77,12 @@ export async function generateAll(
 
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
+      documentModelStates.push(documentModel);
       await generateDocumentModel(documentModel, dir, {
         watch,
         skipFormat,
         verbose,
+        generateReducers: false,
       });
     } catch (error) {
       if (verbose) {
@@ -86,12 +90,26 @@ export async function generateAll(
       }
     }
   }
+
+  const projectDir = path.dirname(dir);
+  const documentModelDir = path.basename(dir);
+
+  const generator = new TSMorphCodeGenerator(projectDir, documentModelStates, {
+    directories: { documentModelDir },
+  });
+
+  await generator.generateReducers();
 }
 
 export async function generateDocumentModel(
   documentModelState: DocumentModelState,
   dir: string,
-  { watch = false, skipFormat = false, verbose = true } = {},
+  {
+    watch = false,
+    skipFormat = false,
+    verbose = true,
+    generateReducers = true,
+  } = {},
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
@@ -116,12 +134,6 @@ export async function generateDocumentModel(
 
   // Generate the module-specific files for the document model logic
   for (const module of latestSpec.modules) {
-    const generator = new TSMorphCodeGenerator(
-      projectDir,
-      [documentModelState],
-      { directories: { documentModelDir } },
-    );
-
     await run(
       [
         "powerhouse",
@@ -134,6 +146,14 @@ export async function generateDocumentModel(
         module.name,
       ],
       { watch, skipFormat, verbose },
+    );
+  }
+
+  if (generateReducers) {
+    const generator = new TSMorphCodeGenerator(
+      projectDir,
+      [documentModelState],
+      { directories: { documentModelDir } },
     );
 
     await generator.generateReducers();
