@@ -1,3 +1,4 @@
+import { type PHDocument } from "document-model";
 import { useAtomValue } from "jotai";
 import {
   loadableDocumentsAtom,
@@ -5,6 +6,7 @@ import {
   unwrappedDocumentsAtom,
   unwrappedSelectedDocumentAtom,
 } from "../internal/atoms.js";
+import { type Loadable } from "../internal/types.js";
 
 /** Returns the documents for the selected drive. */
 export function useDocuments() {
@@ -46,7 +48,9 @@ export function useDocumentById(id: string | null | undefined) {
 }
 
 /** Returns a loadable of a document by id. */
-export function useLoadableDocumentById(id: string | null | undefined) {
+export function useLoadableDocumentById(
+  id: string | null | undefined,
+): Loadable<PHDocument | undefined> {
   const loadableDocuments = useLoadableDocuments();
   if (loadableDocuments.state !== "hasData") return loadableDocuments;
 
