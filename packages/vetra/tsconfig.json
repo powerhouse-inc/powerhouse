@@ -9,7 +9,9 @@
   },
   "include": [
     "**/*",
-    "*.json"
+    "package.json",
+    "powerhouse.config.json",
+    "powerhouse.manifest.json"
   ],
   "references": [
     {
