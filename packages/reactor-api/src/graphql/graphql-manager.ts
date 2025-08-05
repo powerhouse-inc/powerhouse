@@ -14,8 +14,9 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { type IDocumentDriveServer } from "document-drive";
+import { childLogger, type IDocumentDriveServer } from "document-drive";
 import { type IRelationalDb } from "document-drive/processors/types";
+import { debounce } from "document-drive/server/listener/util";
 import type express from "express";
 import { Router, type IRouter } from "express";
 import { type GraphQLSchema } from "graphql";
@@ -37,6 +38,7 @@ export class GraphQLManager {
   private coreSubgraphsMap = new Map<string, Subgraph[]>();
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
+  private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
   constructor(
     private readonly path: string,
@@ -49,7 +51,7 @@ export class GraphQLManager {
   ) {}
 
   async init() {
-    console.log(`> Initializing Subgraph Manager...`);
+    this.logger.debug(`Initializing Subgraph Manager...`);
 
     // check if Document Drive model is available
     const models = this.reactor.getDocumentModelModules();
@@ -72,7 +74,7 @@ export class GraphQLManager {
     await this.#setupCoreSubgraphs("graphql");
 
     this.reactor.on("documentModelModules", () => {
-      this.updateRouter().catch((error: unknown) => console.error(error));
+      this.updateRouter().catch((error: unknown) => this.logger.error(error));
     });
 
     return this.updateRouter();
@@ -117,14 +119,16 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    console.log(
-      `> Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+    this.logger.info(
+      `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
   }
 
-  async updateRouter() {
-    console.log("> Updating router");
+  updateRouter = debounce(this._updateRouter.bind(this), 100);
+
+  private async _updateRouter() {
+    this.logger.debug("Updating router");
     const newRouter = Router();
     newRouter.use(cors());
     newRouter.use(bodyParser.json());
@@ -278,13 +282,13 @@ export class GraphQLManager {
         this.reactorRouter,
         superGraphPath,
       );
-      console.log(`> Registered ${superGraphPath} supergraph `);
+      this.logger.info(`Registered ${superGraphPath} supergraph `);
       return server;
     } catch (e) {
       if (e instanceof Error) {
-        console.error("> " + e.message);
+        this.logger.error(e.message);
       } else {
-        console.error("> Could not create Apollo Gateway");
+        this.logger.error("Could not create Apollo Gateway", e);
       }
     }
   }
