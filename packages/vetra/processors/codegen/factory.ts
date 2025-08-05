@@ -15,7 +15,7 @@ import { CodegenProcessor } from "./index.js";
           filter: {
             branch: ["main"],
             documentId: ["*"],
-            documentType: ["powerhouse/document-model"],
+            documentType: ["powerhouse/document-model", "powerhouse/package", "powerhouse/document-editor"],
             scope: ["global"],
           },
         },
