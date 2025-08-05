@@ -13,6 +13,30 @@ export interface IPackageLoader {
   ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null>;
 }
 
+export interface ISubscriptionOptions {
+  debounce?: number; // defaults to 100ms
+}
+
+export interface ISubscribablePackageLoader extends IPackageLoader {
+  onDocumentModelsChange?(
+    identifier: string,
+    handler: (documentModels: DocumentModelModule[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void;
+  onSubgraphsChange?(
+    identifier: string,
+    handler: (subgraphs: SubgraphClass[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void;
+  onProcessorsChange?(
+    identifier: string,
+    handler: (
+      processors: ((module: IProcessorHostModule) => ProcessorFactory) | null,
+    ) => void,
+    options?: ISubscriptionOptions,
+  ): () => void;
+}
+
 export interface IPackageManager {
   onDocumentModelsChange(
     handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
