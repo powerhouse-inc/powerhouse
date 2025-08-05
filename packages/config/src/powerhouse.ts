@@ -93,3 +93,37 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
     admins: [],
   },
 };
+
+export type Module = {
+  id: string;
+  name: string;
+  documentTypes: string[];
+};
+
+export type DocumentModelModule = {
+  id: string;
+  name: string;
+};
+
+export type Publisher = {
+  name: string;
+  url: string;
+};
+
+export type PowerhouseManifest = {
+  name: string;
+  description: string;
+  category: string;
+  publisher: Publisher;
+  documentModels: DocumentModelModule[];
+  editors: Module[];
+  apps: Module[];
+  subgraphs: Module[];
+  importScripts: Module[];
+};
+
+export type PartialPowerhouseManifest = Partial<
+  Omit<PowerhouseManifest, "publisher">
+> & {
+  publisher?: Partial<Publisher>;
+};

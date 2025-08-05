@@ -1,4 +1,8 @@
-import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import {
+  type PartialPowerhouseManifest,
+  type PowerhouseConfig,
+  type PowerhouseManifest,
+} from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {
@@ -297,4 +301,61 @@ export async function generateImportScript(
   return _generateImportScript(name, config.importScriptsDir, {
     skipFormat: config.skipFormat,
   });
+}
+
+export function generateManifest(
+  manifestData: PartialPowerhouseManifest,
+  projectRoot?: string,
+) {
+  const rootDir = projectRoot || process.cwd();
+  const manifestPath = join(rootDir, "powerhouse.manifest.json");
+
+  // Create default manifest structure
+  const defaultManifest: PowerhouseManifest = {
+    name: "",
+    description: "",
+    category: "",
+    publisher: {
+      name: "",
+      url: "",
+    },
+    documentModels: [],
+    editors: [],
+    apps: [],
+    subgraphs: [],
+    importScripts: [],
+  };
+
+  // Read existing manifest if it exists
+  let existingManifest: PowerhouseManifest = defaultManifest;
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const existingData = fs.readFileSync(manifestPath, "utf-8");
+      existingManifest = JSON.parse(existingData) as PowerhouseManifest;
+    } catch (error) {
+      console.warn(`Failed to parse existing manifest: ${String(error)}`);
+      existingManifest = defaultManifest;
+    }
+  }
+
+  // Merge partial data with existing manifest
+  const updatedManifest: PowerhouseManifest = {
+    ...existingManifest,
+    ...manifestData,
+    publisher: {
+      ...existingManifest.publisher,
+      ...(manifestData.publisher || {}),
+    },
+    documentModels:
+      manifestData.documentModels || existingManifest.documentModels,
+    editors: manifestData.editors || existingManifest.editors,
+    apps: manifestData.apps || existingManifest.apps,
+    subgraphs: manifestData.subgraphs || existingManifest.subgraphs,
+    importScripts: manifestData.importScripts || existingManifest.importScripts,
+  };
+
+  // Write updated manifest to file
+  fs.writeFileSync(manifestPath, JSON.stringify(updatedManifest, null, 4));
+
+  return manifestPath;
 }
