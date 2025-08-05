@@ -165,7 +165,6 @@ export class ListenerManager implements IListenerManager {
       }
 
       for (const syncUnit of syncUnits) {
-        // TODO how to check document type?
         if (!this._checkFilter(listenerState.listener.filter, syncUnit)) {
           continue;
         }
@@ -429,9 +428,8 @@ export class ListenerManager implements IListenerManager {
     return listenerUpdates;
   }
 
-  // does not check for documentType filter
   private _checkFilter(filter: ListenerFilter, syncUnit: SynchronizationUnit) {
-    const { branch, documentId, scope } = syncUnit;
+    const { branch, documentId, scope, documentType } = syncUnit;
     // TODO: Needs to be optimized
     if (
       (!filter.branch ||
@@ -442,7 +440,10 @@ export class ListenerManager implements IListenerManager {
         filter.documentId.includes("*")) &&
       (!filter.scope ||
         filter.scope.includes(scope) ||
-        filter.scope.includes("*"))
+        filter.scope.includes("*")) &&
+      (!filter.documentType ||
+        filter.documentType.includes(documentType) ||
+        filter.documentType.includes("*"))
     ) {
       return true;
     }
