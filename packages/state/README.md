@@ -167,7 +167,6 @@ function MyEditorComponent() {
 
 #### useSelectedDrive/useLoadableSelectedDrive/useSelectedDriveId
 ```ts
-Returns the selected drive */
 function useSelectedDrive(): DocumentDriveDocument | undefined
 ```
 
