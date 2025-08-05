@@ -12,6 +12,8 @@ export class CodegenProcessor implements IProcessor {
     strands: InternalTransmitterUpdate<TDocument>[],
   ): Promise<void> {
     console.log(">>> onStrands", strands);
+
+    // TODO: refactor document handlers into a class
     
     // Process document models first to ensure they exist before generating editors
     const documentModelStrands = strands.filter(s => s.documentType === "powerhouse/document-model");
