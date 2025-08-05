@@ -10,13 +10,16 @@ async function startVetraEnv(options: DevOptions) {
   return startVetra(options);
 }
 
-export const vetra: CommandActionType<[DevOptions]> = async (options) => {
-  return startVetraEnv(options);
+export const vetra: CommandActionType<
+  [DevOptions & { logs?: boolean }]
+> = async (options) => {
+  return startVetraEnv({ ...options, verbose: options.logs });
 };
 
 export function vetraCommand(program: Command) {
   const cmd = program
     .command("vetra")
+    .option("--logs", "Show additional logs")
     .description(
       "Starts Vetra development environment with switchboard, reactor, and connect",
     )
