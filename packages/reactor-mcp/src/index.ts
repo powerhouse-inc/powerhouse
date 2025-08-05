@@ -5,13 +5,22 @@ import {
   generateId,
   type DocumentModelModule,
 } from "document-model";
+import { VitePackageLoader } from "./loader.js";
 import { createServer } from "./server.js";
 
-async function createReactor() {
-  const builder = new ReactorBuilder([
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as DocumentModelModule[]);
+export interface IMcpOptions {
+  remoteDrive?: string;
+  root?: string;
+  documentModelsDir?: string;
+}
+
+const baseDocumentModels = [
+  documentModelDocumentModelModule,
+  driveDocumentModelModule,
+] as DocumentModelModule[];
+
+async function createReactor(documentModels: DocumentModelModule[] = []) {
+  const builder = new ReactorBuilder(baseDocumentModels.concat(documentModels));
   // .withStorage(
   //   new FilesystemStorage("./.ph/mcp/storage"),
   // );
@@ -21,10 +30,48 @@ async function createReactor() {
   return reactor;
 }
 
-export async function init(remoteDrive?: string) {
-  const reactor = await createReactor();
-  const server = await createServer(reactor);
+export async function init(options?: IMcpOptions) {
+  const {
+    remoteDrive,
+    root,
+    documentModelsDir = "./document-models",
+  } = options ?? {};
 
+  // if root of project is passed then loads local document models
+  let documentModelsLoader: VitePackageLoader | undefined;
+  const documentModels: DocumentModelModule[] = [];
+
+  if (root) {
+    documentModelsLoader = new VitePackageLoader(root, documentModelsDir);
+    try {
+      const loadedModels = await documentModelsLoader.load();
+      documentModels.push(...loadedModels);
+      console.log(
+        "Loaded document models:",
+        loadedModels.map((m) => m.documentModel.name).join(", "),
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // initializes reactor with loaded document models
+  const reactor = await createReactor(documentModels);
+
+  // listens for changes in the local document models to update the reactor
+  if (documentModelsLoader) {
+    const unsubscribe = await documentModelsLoader.onDocumentModelsChange(
+      (models) => {
+        reactor.setDocumentModelModules(baseDocumentModels.concat(models));
+      },
+    );
+
+    process.on("exit", () => {
+      unsubscribe();
+    });
+  }
+
+  // if a remote drive is passed then adds it to the reactor
   if (remoteDrive) {
     await reactor.addRemoteDrive(remoteDrive, {
       sharingType: "PUBLIC",
@@ -52,7 +99,10 @@ export async function init(remoteDrive?: string) {
     });
   }
 
-  // Start receiving messages on stdin and sending messages on stdout
+  // starts the server
+  const server = await createServer(reactor);
+
+  // starts Stdio transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
