@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-mcp",
-  "version": "4.1.0-dev.3",
+  "version": "4.1.0-dev.5",
   "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -26,8 +26,9 @@
     "build:tsc": "tsc --build",
     "prebuild": "npm run clean",
     "lint": "eslint",
-    "test": "vitest",
+    "test": "vitest run",
     "test:run": "vitest run",
+    "test:watch": "vitest",
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
@@ -43,12 +44,15 @@
     "vitest": "^3.1.2"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "ai": "^5.0.0",
     "change-case": "^5.4.4",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "vite": "^6.3.5",
     "zod": "^3.24.3"
   }
 }

@@ -1,7 +1,7 @@
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  type ActionFromDocument,
+  type Action,
   type ActionSigner,
   type Operation,
   type OperationSignatureContext,
@@ -80,7 +80,7 @@ export async function buildOperationSignature(
 }
 
 export async function buildSignedOperation<TDocument extends PHDocument>(
-  action: ActionFromDocument<TDocument> | Operation,
+  action: Action | Operation,
   reducer: Reducer<TDocument>,
   document: TDocument,
   context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,

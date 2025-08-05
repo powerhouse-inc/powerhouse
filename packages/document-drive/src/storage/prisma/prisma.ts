@@ -11,7 +11,6 @@ import type {
   ExtendedStateFromDocument,
   FileRegistry,
   Operation,
-  OperationsFromDocument,
   PHDocument,
   PHDocumentHeader,
 } from "document-model";

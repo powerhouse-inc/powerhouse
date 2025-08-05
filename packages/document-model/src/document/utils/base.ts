@@ -15,7 +15,6 @@ import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
   type Action,
-  type ActionFromDocument,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
@@ -27,7 +26,6 @@ import {
   type LocalStateFromDocument,
   type MappedOperation,
   type Operation,
-  type OperationsFromDocument,
   type PartialState,
   type PHDocument,
   type Reducer,
@@ -148,7 +146,7 @@ export function createReducer<TDocument extends PHDocument>(
   stateReducer: StateReducer<TDocument>,
   documentReducer = baseReducer,
 ): Reducer<TDocument> {
-  type TAction = ActionFromDocument<TDocument>;
+  type TAction = Action;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
     action: TAction | Operation,
@@ -299,7 +297,7 @@ export function getDocumentLastModified(document: PHDocument) {
 // This rebuilds the document according to the provided actions.
 export function replayOperations<TDocument extends PHDocument>(
   initialState: ExtendedStateFromDocument<TDocument>,
-  clearedOperations: OperationsFromDocument,
+  clearedOperations: DocumentOperations,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   header?: PHDocumentHeader,

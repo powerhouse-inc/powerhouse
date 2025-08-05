@@ -3,7 +3,6 @@ import { type BaseDocumentDriveServer } from "#server/base-server";
 import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
-  type ActionFromDocument,
   documentModelDocumentModelModule,
   type DocumentModelModule,
   type Operation,
@@ -58,7 +57,7 @@ export function buildOperations<TDocument extends PHDocument>(
 export function buildOperationAndDocument<TDocument extends PHDocument>(
   reducer: PHReducer<TDocument>,
   document: TDocument,
-  action: ActionFromDocument<TDocument>,
+  action: Action,
   index?: number,
 ): {
   document: TDocument;

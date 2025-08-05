@@ -1,10 +1,11 @@
 import { createAction } from "../../../document/utils/base.js";
 import {
-  AddChangeLogItemInput,
-  DeleteChangeLogItemInput,
-  ReorderChangeLogItemsInput,
-  UpdateChangeLogItemInput,
-} from "../schema/types.js";
+  z,
+  type AddChangeLogItemInput,
+  type DeleteChangeLogItemInput,
+  type ReorderChangeLogItemsInput,
+  type UpdateChangeLogItemInput,
+} from "../schema/index.js";
 import {
   AddChangeLogItemAction,
   DeleteChangeLogItemAction,
@@ -14,22 +15,46 @@ import {
 } from "./actions.js";
 
 export const addChangeLogItem = (input: AddChangeLogItemInput) =>
-  createAction<AddChangeLogItemAction>("ADD_CHANGE_LOG_ITEM", { ...input });
+  createAction<AddChangeLogItemAction>(
+    "ADD_CHANGE_LOG_ITEM",
+    { ...input },
+    undefined,
+    z.AddChangeLogItemInputSchema,
+    "global"
+  );
 
 export const updateChangeLogItem = (input: UpdateChangeLogItemInput) =>
-  createAction<UpdateChangeLogItemAction>("UPDATE_CHANGE_LOG_ITEM", {
-    ...input,
-  });
+  createAction<UpdateChangeLogItemAction>(
+    "UPDATE_CHANGE_LOG_ITEM",
+    { ...input },
+    undefined,
+    z.UpdateChangeLogItemInputSchema,
+    "global"
+  );
 
 export const deleteChangeLogItem = (input: DeleteChangeLogItemInput) =>
-  createAction<DeleteChangeLogItemAction>("DELETE_CHANGE_LOG_ITEM", {
-    ...input,
-  });
+  createAction<DeleteChangeLogItemAction>(
+    "DELETE_CHANGE_LOG_ITEM",
+    { ...input },
+    undefined,
+    z.DeleteChangeLogItemInputSchema,
+    "global"
+  );
 
 export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput) =>
-  createAction<ReorderChangeLogItemsAction>("REORDER_CHANGE_LOG_ITEMS", {
-    ...input,
-  });
+  createAction<ReorderChangeLogItemsAction>(
+    "REORDER_CHANGE_LOG_ITEMS",
+    { ...input },
+    undefined,
+    z.ReorderChangeLogItemsInputSchema,
+    "global"
+  );
 
 export const releaseNewVersion = () =>
-  createAction<ReleaseNewVersionAction>("RELEASE_NEW_VERSION");
+  createAction<ReleaseNewVersionAction>(
+    "RELEASE_NEW_VERSION",
+    {},
+    undefined,
+    undefined,
+    "global"
+  );

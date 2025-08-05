@@ -1,6 +1,6 @@
 import {
   type Operation,
-  type OperationsFromDocument,
+  type DocumentOperations,
   type PHDocument,
 } from "document-model";
 
@@ -21,9 +21,9 @@ export function isDocumentDrive(
 }
 
 export function mergeOperations(
-  currentOperations: OperationsFromDocument,
+  currentOperations: DocumentOperations,
   newOperations: Operation[],
-): OperationsFromDocument {
+): DocumentOperations {
   const minIndexByScope = Object.keys(currentOperations).reduce<
     Partial<Record<string, number>>
   >((acc, curr) => {
@@ -45,7 +45,7 @@ export function mergeOperations(
 
   return newOperations
     .sort((a, b) => a.index - b.index)
-    .reduce<OperationsFromDocument>((acc, curr) => {
+    .reduce<DocumentOperations>((acc, curr) => {
       const existingOperations = acc[curr.scope] || [];
       return { ...acc, [curr.scope]: [...existingOperations, curr] };
     }, currentOperations);

@@ -1,3 +1,35 @@
+## 4.1.0-dev.5 (2025-08-05)
+
+### 🚀 Features
+
+- **document-model:** updated document model module ([f8827bf9f](https://github.com/powerhouse-inc/powerhouse/commit/f8827bf9f))
+- **reactor-mcp:** provide generic reactor mcp instead of document-model specific ([eaeb0065b](https://github.com/powerhouse-inc/powerhouse/commit/eaeb0065b))
+- **reactor-mcp:** changed addAction tool to addActions for more efficient tool calling and reduced output result to optimize token usage ([1bf58fe6e](https://github.com/powerhouse-inc/powerhouse/commit/1bf58fe6e))
+- **reactor-mcp:** allow setting remote drive to connect to ([6d0516ffc](https://github.com/powerhouse-inc/powerhouse/commit/6d0516ffc))
+
+### 🩹 Fixes
+
+- **reactor-mcp:** made action input non restrictive ([46d48b757](https://github.com/powerhouse-inc/powerhouse/commit/46d48b757))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.4 (2025-08-02)
+
+### 🚀 Features
+
+- ts morph integration ([#1729](https://github.com/powerhouse-inc/powerhouse/pull/1729))
+
+### 🩹 Fixes
+
+- **reactor-mcp:** make test:watch the test watcher, and test the single shot, so that the root test:all does not hang ([fcb997186](https://github.com/powerhouse-inc/powerhouse/commit/fcb997186))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.3 (2025-08-01)
 
 ### 🚀 Features

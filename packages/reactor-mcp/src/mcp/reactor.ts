@@ -1,18 +1,9 @@
 import type { IDocumentDriveServer } from "document-drive";
+import { type DocumentModelState, generateId } from "document-model";
+import { DocumentModelStateSchema } from "document-model/document-model/gen/schema/zod";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
-import { toolWithCallback } from "./utils.js";
-
-export const getDocumentTool = {
-  name: "getDocument",
-  description: "Retrieve a document by its ID",
-  inputSchema: {
-    id: z.string().describe("ID of the document to retrieve"),
-  },
-  outputSchema: {
-    document: z.object({}).describe("Document object"), // TODO: Define document schema
-  },
-} as const satisfies ToolSchema;
+import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 
 export const createDocumentTool = {
   name: "createDocument",
@@ -22,22 +13,18 @@ export const createDocumentTool = {
     documentId: z.string().optional().describe("Optional ID for the document"),
   },
   outputSchema: {
-    result: z
-      .object({
-        status: z
-          .enum(["SUCCESS", "CONFLICT", "MISSING", "ERROR"])
-          .describe("Operation status"),
-        error: z
-          .string()
-          .optional()
-          .describe("Error details if operation failed"), // TODO: Define error schema
-        operations: z
-          .array(z.object({}))
-          .describe("Array of operations created"), // TODO: Define operation schema
-        document: z.object({}).optional().describe("Updated document"), // TODO: Define document schema
-        signals: z.array(z.object({})).describe("Array of signals generated"), // TODO: Define signal schema
-      })
-      .describe("Operation result"),
+    documentId: z.string().describe("ID of the created document"),
+  },
+} as const satisfies ToolSchema;
+
+export const getDocumentTool = {
+  name: "getDocument",
+  description: "Retrieve a document by its ID",
+  inputSchema: {
+    id: z.string().describe("ID of the document to retrieve"),
+  },
+  outputSchema: {
+    document: z.object({}).describe("The retrieved Document"),
   },
 } as const satisfies ToolSchema;
 
@@ -63,104 +50,77 @@ export const deleteDocumentTool = {
   },
 } as const satisfies ToolSchema;
 
-export const addActionTool = {
-  name: "addAction",
-  description: "Add an action to a document",
+export const addActionsTool = {
+  name: "addActions",
+  description: "Adds actions to a document",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
-    action: z
-      .object({
-        type: z.string().describe("The name of the action"),
-        input: z
-          .union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            z.object({}),
-            z.array(z.any()),
-            z.null(),
-          ])
-          .describe("The payload of the action"),
-        scope: z.string().describe("The scope of the action"),
-        context: z.object({}).optional().describe("Optional action context"), // TODO: Define context schema
-      })
-      .strict()
+    actions: z
+      .array(
+        z
+          .object({
+            type: z.string().describe("The name of the action"),
+            input: z.unknown().describe("The payload of the action"),
+            scope: z.string().describe("The scope of the action"),
+            context: z
+              .object({})
+              .optional()
+              .describe("Optional action context"), // TODO: Define context schema
+          })
+          .strict(),
+      )
       .describe("Action to add to the document"),
   },
   outputSchema: {
-    result: z
-      .object({
-        status: z
-          .enum(["SUCCESS", "CONFLICT", "MISSING", "ERROR"])
-          .describe("Operation status"),
-        error: z
-          .string()
-          .optional()
-          .describe("Error details if operation failed"), // TODO: Define error schema
-        operations: z
-          .array(z.object({}))
-          .describe("Array of operations created"), // TODO: Define operation schema
-        document: z.object({}).optional().describe("Updated document"), // TODO: Define document schema
-        signals: z.array(z.object({})).describe("Array of signals generated"), // TODO: Define signal schema
-      })
-      .describe("Operation result"),
+    success: z.boolean().describe("Whether the actions were added"),
   },
 } as const satisfies ToolSchema;
 
-export const addOperationTool = {
-  name: "addOperation",
-  description: "Add an operation to a document",
-  inputSchema: {
-    documentId: z.string().describe("ID of the document"),
-    operation: z
-      .object({
-        type: z.string().describe("The name of the action"),
-        input: z
-          .union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            z.object({}),
-            z.array(z.any()),
-            z.null(),
-          ])
-          .describe("The payload of the action"),
-        scope: z.string().describe("The scope of the action"),
-        index: z.number().describe("Position of the operation in the history"),
-        timestamp: z
-          .string()
-          .describe("Timestamp of when the operation was added"),
-        hash: z.string().describe("Hash of the resulting document data"),
-        skip: z.number().describe("The number of operations skipped"),
-        error: z
-          .string()
-          .optional()
-          .describe("Error message for a failed action"),
-        id: z.string().optional().describe("Unique operation id"),
-        context: z.object({}).optional().describe("Optional action context"), // TODO: Define context schema
-      })
-      .strict()
-      .describe("Operation to add to the document"),
-  },
-  outputSchema: {
-    result: z
-      .object({
-        status: z
-          .enum(["SUCCESS", "CONFLICT", "MISSING", "ERROR"])
-          .describe("Operation status"),
-        error: z
-          .string()
-          .optional()
-          .describe("Error details if operation failed"), // TODO: Define error schema
-        operations: z
-          .array(z.object({}))
-          .describe("Array of operations created"), // TODO: Define operation schema
-        document: z.object({}).optional().describe("Updated document"), // TODO: Define document schema
-        signals: z.array(z.object({})).describe("Array of signals generated"), // TODO: Define signal schema
-      })
-      .describe("Operation result"),
-  },
-} as const satisfies ToolSchema;
+// export const addOperationTool = {
+//   name: "addOperation",
+//   description: "Add an operation to a document",
+//   inputSchema: {
+//     documentId: z.string().describe("ID of the document"),
+//     operation: z
+//       .object({
+//         type: z.string().describe("The name of the action"),
+//         input: z.unknown().describe("The payload of the action"),
+//         scope: z.string().describe("The scope of the action"),
+//         index: z.number().describe("Position of the operation in the history"),
+//         timestamp: z
+//           .string()
+//           .describe("Timestamp of when the operation was added"),
+//         hash: z.string().describe("Hash of the resulting document data"),
+//         skip: z.number().describe("The number of operations skipped"),
+//         error: z
+//           .string()
+//           .optional()
+//           .describe("Error message for a failed action"),
+//         id: z.string().optional().describe("Unique operation id"),
+//         context: z.object({}).optional().describe("Optional action context"), // TODO: Define context schema
+//       })
+//       .strict()
+//       .describe("Operation to add to the document"),
+//   },
+//   outputSchema: {
+//     result: z
+//       .object({
+//         status: z
+//           .enum(["SUCCESS", "CONFLICT", "MISSING", "ERROR"])
+//           .describe("Operation status"),
+//         error: z
+//           .string()
+//           .optional()
+//           .describe("Error details if operation failed"), // TODO: Define error schema
+//         operations: z
+//           .array(z.object({}))
+//           .describe("Array of operations created"), // TODO: Define operation schema
+//         document: z.object({}).optional().describe("Updated document"), // TODO: Define document schema
+//         signals: z.array(z.object({})).describe("Array of signals generated"), // TODO: Define signal schema
+//       })
+//       .describe("Operation result"),
+//   },
+// } as const satisfies ToolSchema;
 
 // Drive Operation Tools
 
@@ -213,7 +173,7 @@ export const addDriveTool = {
       .describe("Drive configuration"),
   },
   outputSchema: {
-    drive: z.object({}).describe("Created drive document"), // TODO: Define DocumentDriveDocument schema
+    driveId: z.string().describe("ID of the created drive"),
   },
 } as const satisfies ToolSchema;
 
@@ -294,7 +254,46 @@ export const addRemoteDriveTool = {
       .describe("Remote drive options"),
   },
   outputSchema: {
-    drive: z.object({}).describe("Connected remote drive document"), // TODO: Define DocumentDriveDocument schema
+    driveId: z.string().describe("ID of the added remote drive"),
+  },
+} as const satisfies ToolSchema;
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+}>;
+
+export const getDocumentModelSchemaTool = {
+  name: "getDocumentModelSchema",
+  description: "Get the schema of a document model",
+  inputSchema: {
+    type: z.string().describe("Type of the document model"),
+  },
+  outputSchema: {
+    schema: DocumentModelStateSchema().describe(
+      "Schema of the document model",
+    ) as z.ZodObject<Properties<DocumentModelState>>,
+  },
+} as const satisfies ToolSchema;
+
+export const getDocumentModelsTool = {
+  name: "getDocumentModels",
+  description: "Get the list of document models",
+  inputSchema: {},
+  outputSchema: {
+    documentModels: z
+      .array(
+        z.object({
+          name: z.string().describe("Name of the document model"),
+          type: z.string().describe("Type of the document model"),
+          description: z.string().describe("Description of the document model"),
+          extension: z.string().describe("Extension of the document model"),
+          authorName: z.string().describe("Author name of the document model"),
+          authorWebsite: z
+            .string()
+            .describe("Author website of the document model"),
+        }),
+      )
+      .describe("List of available document models"),
   },
 } as const satisfies ToolSchema;
 
@@ -309,13 +308,15 @@ const allTools = [
   createDocumentTool,
   getDocumentsTool,
   deleteDocumentTool,
-  addActionTool,
-  addOperationTool,
+  addActionsTool,
+  // addOperationTool,
   getDrivesTool,
   addDriveTool,
   getDriveTool,
   deleteDriveTool,
   addRemoteDriveTool,
+  getDocumentModelSchemaTool,
+  getDocumentModelsTool,
 ] as const;
 
 // Inferred interface from tools
@@ -324,25 +325,37 @@ export type ReactorMcpTools = ToolRecord<typeof allTools>;
 export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
   await reactor.initialize();
 
-  const tools: ReactorMcpTools = {
+  function getDocumentModelModule(documentType: string) {
+    const documentModels = reactor.getDocumentModelModules();
+    const documentModel = documentModels.find(
+      (model) => model.documentModel.id === documentType,
+    );
+    return documentModel;
+  }
+
+  const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const doc = await reactor.getDocument(params.id);
-      return { document: doc };
+      const { header, state } = await reactor.getDocument(params.id);
+      return { document: { header, state } };
     }),
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
       // Create document input based on provided parameters
       const createInput = {
         documentType: params.documentType,
-        ...(params.documentId && { id: params.documentId }),
+        id: params.documentId ?? generateId(),
       };
 
       const result = await reactor.queueDocument(createInput);
+      if (result.status !== "SUCCESS") {
+        throw new Error(`${result.status}: ${result.error?.message}`);
+      }
+
+      if (!result.document?.header.id) {
+        throw new Error("Created document doesn't have an Id");
+      }
       return {
-        result: {
-          ...result,
-          error: result.error?.message,
-        },
+        documentId: result.document.header.id,
       };
     }),
 
@@ -360,31 +373,70 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       }
     }),
 
-    addAction: toolWithCallback(addActionTool, async (params) => {
-      const result = await reactor.addAction(params.documentId, params.action);
+    addActions: toolWithCallback(addActionsTool, async (params) => {
+      const document = await reactor.getDocument(params.documentId);
+      const documentModel = getDocumentModelModule(
+        document.header.documentType,
+      );
+      if (!documentModel) {
+        throw new Error(
+          `Document model for document type '${document.header.documentType}' not found`,
+        );
+      }
+      const actions = params.actions.map((paramAction) => {
+        const action = {
+          ...paramAction,
+          input: paramAction.input ?? {},
+        };
+        const actionValidation = validateDocumentModelAction(
+          documentModel,
+          action,
+        );
+        if (!actionValidation.isValid) {
+          throw new Error(
+            `Invalid action ${JSON.stringify(action)}: ${actionValidation.errors.join(", ")}`,
+          );
+        }
+        return action;
+      });
+
+      const result = await reactor.addActions(params.documentId, actions);
+
+      if (result.status !== "SUCCESS") {
+        throw new Error(`${result.status}: ${result.error?.message}`);
+      }
+      const operationErrors = result.operations
+        .filter((operation) => operation.error !== undefined)
+        .map((operation) => ({
+          type: operation.type,
+          input: operation.input,
+          error: operation.error,
+        }));
+      if (operationErrors.length > 0) {
+        throw new Error(
+          `Some of the actions failed: ${JSON.stringify(operationErrors)}`,
+        );
+      }
       return {
-        result: {
-          ...result,
-          error: result.error?.message,
-        },
+        success: true,
       };
     }),
 
-    addOperation: toolWithCallback(addOperationTool, async (params) => {
-      const result = await reactor.addOperation(
-        params.documentId,
-        params.operation,
-      );
-      return {
-        result: {
-          ...result,
-          error:
-            typeof result.error === "string"
-              ? result.error
-              : result.error?.message,
-        },
-      };
-    }),
+    // addOperation: toolWithCallback(addOperationTool, async (params) => {
+    //   const result = await reactor.addOperation(params.documentId, {
+    //     ...params.operation,
+    //     input: params.operation.input ?? {},
+    //   });
+    //   return {
+    //     result: {
+    //       ...result,
+    //       error:
+    //         typeof result.error === "string"
+    //           ? result.error
+    //           : result.error?.message,
+    //     },
+    //   };
+    // }),
 
     // Drive operation implementations
     getDrives: toolWithCallback(getDrivesTool, async () => {
@@ -395,13 +447,16 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     addDrive: toolWithCallback(addDriveTool, async (params) => {
       // Extract preferredEditor and create proper DriveInput
       const { preferredEditor, ...driveInput } = params.driveInput;
-      const drive = await reactor.addDrive(driveInput, preferredEditor);
-      return { drive };
+      const result = await reactor.addDrive(driveInput, preferredEditor);
+      return { driveId: result.header.id };
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
-      const drive = await reactor.getDrive(params.driveId, params.options);
-      return { drive };
+      const { header, state } = await reactor.getDrive(
+        params.driveId,
+        params.options,
+      );
+      return { drive: { header, state } };
     }),
 
     deleteDrive: toolWithCallback(deleteDriveTool, async (params) => {
@@ -433,9 +488,38 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
           },
         }),
       });
-      return { drive };
+      return { driveId: drive.header.id };
     }),
-  };
+
+    getDocumentModels: toolWithCallback(getDocumentModelsTool, () => {
+      const documentModels = reactor.getDocumentModelModules();
+      return {
+        documentModels: documentModels.map((model) => {
+          const schema = model.documentModel;
+          return {
+            name: schema.name,
+            type: schema.id,
+            description: schema.description,
+            extension: schema.extension,
+            authorName: schema.author.name,
+            authorWebsite: schema.author.website ?? "",
+          };
+        }),
+      };
+    }),
+
+    getDocumentModelSchema: toolWithCallback(
+      getDocumentModelSchemaTool,
+      (params) => {
+        const documentModel = getDocumentModelModule(params.type);
+        const schema = documentModel?.documentModel;
+        if (!schema) {
+          throw new Error(`Document model '${params.type}' not found`);
+        }
+        return { schema };
+      },
+    ),
+  } as const;
 
   const resources = {};
 
@@ -445,5 +529,5 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     tools,
     resources,
     prompts,
-  };
+  } as const;
 }

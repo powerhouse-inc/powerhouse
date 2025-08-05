@@ -93,11 +93,9 @@ export type ReducerOptions = {
  * A pure function that takes an action and the previous state
  * of the document and returns the new state.
  */
-export type Reducer<TDocument extends PHDocument> = <
-  TAction extends ActionFromDocument<TDocument>,
->(
+export type Reducer<TDocument extends PHDocument> = (
   document: TDocument,
-  action: TAction | Operation | DefaultAction,
+  action: Action | Operation | DefaultAction,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
 ) => TDocument;
@@ -105,11 +103,9 @@ export type Reducer<TDocument extends PHDocument> = <
 export type PHReducer<TDocument extends PHDocument = PHDocument> =
   Reducer<TDocument>;
 
-export type StateReducer<TDocument extends PHDocument> = <
-  TAction extends ActionFromDocument<TDocument>,
->(
+export type StateReducer<TDocument extends PHDocument> = (
   state: Draft<BaseStateFromDocument<TDocument>>,
-  action: TAction | DefaultAction | Operation,
+  action: Action | DefaultAction | Operation,
   dispatch?: SignalDispatch,
 ) => BaseStateFromDocument<TDocument> | undefined;
 
@@ -359,14 +355,14 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorDispatch<TAction extends Action = Action> = (
-  action: TAction,
+export type EditorDispatch = (
+  action: Action,
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
 export type EditorProps<TDocument extends PHDocument> = {
   document: TDocument;
-  dispatch: EditorDispatch<ActionFromDocument<TDocument>>;
+  dispatch: EditorDispatch;
   context: EditorContext;
   error?: unknown;
   documentNodeName?: string;
@@ -467,10 +463,7 @@ type ExtractPHDocumentGenerics<T> =
 
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   reducer: Reducer<TDocument>;
-  actions: Record<
-    string,
-    (input: any) => ActionFromDocument<TDocument> | DefaultAction
-  >;
+  actions: Record<string, (input: any) => Action | DefaultAction>;
   utils: DocumentModelUtils<TDocument>;
   documentModel: DocumentModelState;
 };
@@ -494,11 +487,6 @@ export type ExtendedStateFromDocument<TDocument extends PHDocument> =
     PartialState<DocumentStateFromDocument<TDocument>>,
     PartialState<LocalStateFromDocument<TDocument>>
   >;
-
-export type ActionFromDocument<TDocument extends PHDocument> =
-  ExtractPHDocumentGenerics<TDocument>["action"];
-
-export type OperationsFromDocument = DocumentOperations;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

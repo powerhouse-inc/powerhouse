@@ -1,3 +1,23 @@
+## 4.1.0-dev.5 (2025-08-05)
+
+### 🚀 Features
+
+- **document-model:** updated document model module ([f8827bf9f](https://github.com/powerhouse-inc/powerhouse/commit/f8827bf9f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.4 (2025-08-02)
+
+### 🚀 Features
+
+- ts morph integration ([#1729](https://github.com/powerhouse-inc/powerhouse/pull/1729))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.3 (2025-08-01)
 
 ### 🚀 Features

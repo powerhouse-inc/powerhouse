@@ -18,7 +18,7 @@ Queries: <%= h.changeCase.pascal(documentType) %>
 
 type <%- h.changeCase.pascal(documentType) %>Queries {
     getDocument(driveId: String, docId: PHID): <%- h.changeCase.pascal(documentType) %>
-    getDocuments: [<%- h.changeCase.pascal(documentType) %>!]
+    getDocuments(driveId: String): [<%- h.changeCase.pascal(documentType) %>!]
 }
 
 type Query {

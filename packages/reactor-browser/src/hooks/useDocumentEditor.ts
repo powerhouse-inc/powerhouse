@@ -1,7 +1,7 @@
 import { type IDocumentDriveServer } from "document-drive";
 import {
+  type Action,
   type ActionErrorCallback,
-  type ActionFromDocument,
   type DocumentModelModule,
   type Operation,
   type PHDocument,
@@ -58,7 +58,7 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
   );
 
   function dispatch(
-    action: ActionFromDocument<TDocument>,
+    action: Action,
     onErrorCallback?: ActionErrorCallback,
   ) {
     const callback: DocumentDispatchCallback<TDocument> = (

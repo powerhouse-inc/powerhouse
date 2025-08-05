@@ -1,3 +1,17 @@
+## 4.1.0-dev.5 (2025-08-05)
+
+This was a version bump only for @powerhousedao/state to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.4 (2025-08-02)
+
+### 🚀 Features
+
+- ts morph integration ([#1729](https://github.com/powerhouse-inc/powerhouse/pull/1729))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.3 (2025-08-01)
 
 ### 🚀 Features

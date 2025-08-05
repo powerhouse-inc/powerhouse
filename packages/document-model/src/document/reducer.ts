@@ -12,7 +12,6 @@ import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
   type Action,
-  type ActionFromDocument,
   type DefaultAction,
   type Operation,
   type PHDocument,
@@ -196,7 +195,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
+  action: Action | Operation | DefaultAction,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -224,11 +223,11 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action: ActionFromDocument<TDocument> | Operation | DefaultAction,
+  action: Action | Operation | DefaultAction,
   skip: number,
 ): {
   document: TDocument;
-  action: ActionFromDocument<TDocument> | Operation;
+  action: Action | Operation;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {

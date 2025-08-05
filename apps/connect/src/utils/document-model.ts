@@ -1,8 +1,8 @@
 import { type Unsubscribe } from '#services';
 import { childLogger, type IDocumentDriveServer } from 'document-drive';
 import type {
+    Action,
     ActionErrorCallback,
-    ActionFromDocument,
     Operation,
     PHDocument,
     Reducer,
@@ -27,7 +27,7 @@ export type DocumentDispatchCallback<TDocument extends PHDocument> = (
 ) => void;
 
 export type DocumentDispatch<TDocument extends PHDocument> = (
-    action: ActionFromDocument<TDocument>,
+    action: Action,
     callback?: DocumentDispatchCallback<TDocument>,
     onErrorCallback?: ActionErrorCallback,
 ) => void;

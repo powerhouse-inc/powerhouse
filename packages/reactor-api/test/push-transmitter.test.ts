@@ -215,7 +215,7 @@ describe("Push Transmitter", () => {
     const result = await reactor.queueAction(
       documentId,
       documentModelDocumentModelModule.actions.setAuthorName({
-        name: "test",
+        authorName: "test",
       }),
     );
 

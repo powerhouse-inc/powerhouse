@@ -193,7 +193,7 @@ describe("Pull Responder Transmitter", () => {
     const result = await remoteReactor.queueAction(
       documentId,
       documentModelDocumentModelModule.actions.setAuthorName({
-        name: "test",
+        authorName: "test",
       }),
     );
 

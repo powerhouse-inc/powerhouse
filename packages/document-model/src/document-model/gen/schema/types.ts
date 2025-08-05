@@ -525,7 +525,7 @@ export type SetOperationNameInput = {
 
 export type SetOperationScopeInput = {
   id: Scalars["ID"]["input"];
-  scope: InputMaybe<string>;
+  scope?: InputMaybe<string>;
 };
 
 export type SetOperationReducerInput = {

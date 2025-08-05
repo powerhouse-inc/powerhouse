@@ -129,7 +129,7 @@ export function useFileChildNodes(): FileNode[] {
   return sortNodesByName(childNodes.filter((n) => isFileNodeKind(n)));
 }
 
-/** Returns the child nodes for a node by id. */
+/** Returns the child nodes for a drive or folder by id. */
 export function useChildNodesForId(id: string | null | undefined) {
   const nodes = useNodes();
   const drives = useDrives();
@@ -141,7 +141,7 @@ export function useChildNodesForId(id: string | null | undefined) {
   return sortNodesByName(childNodes);
 }
 
-/** Returns the folder child nodes for a node by id. */
+/** Returns the folder child nodes for a drive or folder by id. */
 export function useFolderChildNodesForId(
   id: string | null | undefined,
 ): FolderNode[] {
@@ -149,7 +149,7 @@ export function useFolderChildNodesForId(
   return sortNodesByName(childNodes.filter((n) => isFolderNodeKind(n)));
 }
 
-/** Returns the file (document) child nodes for a node by id. */
+/** Returns the file (document) child nodes for a drive or folder by id. */
 export function useFileChildNodesForId(
   id: string | null | undefined,
 ): FileNode[] {
