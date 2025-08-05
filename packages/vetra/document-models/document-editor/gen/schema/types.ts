@@ -55,64 +55,30 @@ export type Scalars = {
   URL: { input: string; output: string };
 };
 
-export type AddPackageKeywordInput = {
-  id: Scalars["String"]["input"];
-  label: Scalars["String"]["input"];
+export type AddDocumentTypeInput = {
+  documentType: Scalars["String"]["input"];
+  id: Scalars["OID"]["input"];
 };
 
-export type Author = {
+export type DocumentEditorState = {
+  documentTypes: Array<DocumentTypeItem>;
+  id: Maybe<Scalars["OID"]["output"]>;
   name: Maybe<Scalars["String"]["output"]>;
-  website: Maybe<Scalars["URL"]["output"]>;
 };
 
-export type Keyword = {
+export type DocumentTypeItem = {
+  documentType: Scalars["String"]["output"];
   id: Scalars["OID"]["output"];
-  label: Scalars["String"]["output"];
 };
 
-export type RemovePackageKeywordInput = {
-  id: Scalars["String"]["input"];
+export type RemoveDocumentTypeInput = {
+  id: Scalars["OID"]["input"];
 };
 
-export type SetPackageAuthorInput = {
-  name?: InputMaybe<Scalars["OID"]["input"]>;
-  website?: InputMaybe<Scalars["URL"]["input"]>;
+export type SetEditorIdInput = {
+  id: Scalars["OID"]["input"];
 };
 
-export type SetPackageAuthorNameInput = {
+export type SetEditorNameInput = {
   name: Scalars["String"]["input"];
-};
-
-export type SetPackageAuthorWebsiteInput = {
-  website: Scalars["URL"]["input"];
-};
-
-export type SetPackageCategoryInput = {
-  category: Scalars["String"]["input"];
-};
-
-export type SetPackageDescriptionInput = {
-  description: Scalars["String"]["input"];
-};
-
-export type SetPackageGithubUrlInput = {
-  url: Scalars["URL"]["input"];
-};
-
-export type SetPackageNameInput = {
-  name: Scalars["String"]["input"];
-};
-
-export type SetPackageNpmUrlInput = {
-  url: Scalars["URL"]["input"];
-};
-
-export type VetraPackageState = {
-  author: Author;
-  category: Maybe<Scalars["String"]["output"]>;
-  description: Maybe<Scalars["String"]["output"]>;
-  githubUrl: Maybe<Scalars["URL"]["output"]>;
-  keywords: Array<Keyword>;
-  name: Maybe<Scalars["String"]["output"]>;
-  npmUrl: Maybe<Scalars["URL"]["output"]>;
 };

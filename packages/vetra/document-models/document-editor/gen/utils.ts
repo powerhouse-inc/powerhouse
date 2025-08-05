@@ -9,27 +9,20 @@ import {
   generateId,
 } from "document-model";
 import {
-  type VetraPackageDocument,
-  type VetraPackageState,
-  type VetraPackageLocalState,
+  type DocumentEditorDocument,
+  type DocumentEditorState,
+  type DocumentEditorLocalState,
 } from "./types.js";
 import { reducer } from "./reducer.js";
 
-export const initialGlobalState: VetraPackageState = {
+export const initialGlobalState: DocumentEditorState = {
   name: null,
-  description: null,
-  category: null,
-  author: {
-    name: null,
-    website: null,
-  },
-  keywords: [],
-  githubUrl: null,
-  npmUrl: null,
+  id: null,
+  documentTypes: [],
 };
-export const initialLocalState: VetraPackageLocalState = {};
+export const initialLocalState: DocumentEditorLocalState = {};
 
-const utils: DocumentModelUtils<VetraPackageDocument> = {
+const utils: DocumentModelUtils<DocumentEditorDocument> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
@@ -46,7 +39,7 @@ const utils: DocumentModelUtils<VetraPackageDocument> = {
       utils.createState,
     );
 
-    document.header.documentType = "powerhouse/package";
+    document.header.documentType = "powerhouse/document-editor";
 
     // for backwards compatibility, but this is NOT a valid signed document id
     document.header.id = generateId();

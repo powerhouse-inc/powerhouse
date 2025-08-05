@@ -6,32 +6,32 @@ import {
   type SignalDispatch,
 } from "document-model";
 import {
-  type VetraPackageState,
-  type VetraPackageLocalState,
+  type DocumentEditorState,
+  type DocumentEditorLocalState,
 } from "./types.js";
-import { type VetraPackageAction } from "./actions.js";
+import { type DocumentEditorAction } from "./actions.js";
 import { reducer } from "./reducer.js";
 import utils from "./utils.js";
-import VetraPackage_BaseOperations from "./base-operations/object.js";
+import DocumentEditor_BaseOperations from "./base-operations/object.js";
 
 export * from "./base-operations/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-interface VetraPackage extends VetraPackage_BaseOperations {}
+interface DocumentEditor extends DocumentEditor_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class VetraPackage extends BaseDocumentClass<
-  VetraPackageState,
-  VetraPackageLocalState,
-  VetraPackageAction
+class DocumentEditor extends BaseDocumentClass<
+  DocumentEditorState,
+  DocumentEditorLocalState,
+  DocumentEditorAction
 > {
   static fileExtension = ".phdm";
 
   constructor(
     initialState?: Partial<
       ExtendedState<
-        PartialState<VetraPackageState>,
-        PartialState<VetraPackageLocalState>
+        PartialState<DocumentEditorState>,
+        PartialState<DocumentEditorLocalState>
       >
     >,
     dispatch?: SignalDispatch,
@@ -40,7 +40,7 @@ class VetraPackage extends BaseDocumentClass<
   }
 
   public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, VetraPackage.fileExtension, name);
+    return super.saveToFile(path, DocumentEditor.fileExtension, name);
   }
 
   public loadFromFile(path: string) {
@@ -54,6 +54,6 @@ class VetraPackage extends BaseDocumentClass<
   }
 }
 
-applyMixins(VetraPackage, [VetraPackage_BaseOperations]);
+applyMixins(DocumentEditor, [DocumentEditor_BaseOperations]);
 
-export { VetraPackage };
+export { DocumentEditor };

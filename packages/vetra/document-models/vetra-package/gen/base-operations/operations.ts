@@ -3,15 +3,17 @@ import {
   type SetPackageNameAction,
   type SetPackageDescriptionAction,
   type SetPackageCategoryAction,
-  type SetPackagePublisherAction,
-  type SetPackagePublisherUrlAction,
-  type SetPackageKeywordsAction,
+  type SetPackageAuthorAction,
+  type SetPackageAuthorNameAction,
+  type SetPackageAuthorWebsiteAction,
+  type AddPackageKeywordAction,
+  type RemovePackageKeywordAction,
   type SetPackageGithubUrlAction,
   type SetPackageNpmUrlAction,
 } from "./actions.js";
 import { type VetraPackageState } from "../types.js";
 
-export interface VetraPackagePackageOperationsOperations {
+export interface VetraPackageBaseOperationsOperations {
   setPackageNameOperation: (
     state: VetraPackageState,
     action: SetPackageNameAction,
@@ -27,19 +29,29 @@ export interface VetraPackagePackageOperationsOperations {
     action: SetPackageCategoryAction,
     dispatch?: SignalDispatch,
   ) => void;
-  setPackagePublisherOperation: (
+  setPackageAuthorOperation: (
     state: VetraPackageState,
-    action: SetPackagePublisherAction,
+    action: SetPackageAuthorAction,
     dispatch?: SignalDispatch,
   ) => void;
-  setPackagePublisherUrlOperation: (
+  setPackageAuthorNameOperation: (
     state: VetraPackageState,
-    action: SetPackagePublisherUrlAction,
+    action: SetPackageAuthorNameAction,
     dispatch?: SignalDispatch,
   ) => void;
-  setPackageKeywordsOperation: (
+  setPackageAuthorWebsiteOperation: (
     state: VetraPackageState,
-    action: SetPackageKeywordsAction,
+    action: SetPackageAuthorWebsiteAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addPackageKeywordOperation: (
+    state: VetraPackageState,
+    action: AddPackageKeywordAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  removePackageKeywordOperation: (
+    state: VetraPackageState,
+    action: RemovePackageKeywordAction,
     dispatch?: SignalDispatch,
   ) => void;
   setPackageGithubUrlOperation: (

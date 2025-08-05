@@ -4,9 +4,11 @@ import {
   type SetPackageNameInput,
   type SetPackageDescriptionInput,
   type SetPackageCategoryInput,
-  type SetPackagePublisherInput,
-  type SetPackagePublisherUrlInput,
-  type SetPackageKeywordsInput,
+  type SetPackageAuthorInput,
+  type SetPackageAuthorNameInput,
+  type SetPackageAuthorWebsiteInput,
+  type AddPackageKeywordInput,
+  type RemovePackageKeywordInput,
   type SetPackageGithubUrlInput,
   type SetPackageNpmUrlInput,
 } from "../types.js";
@@ -14,9 +16,11 @@ import {
   type SetPackageNameAction,
   type SetPackageDescriptionAction,
   type SetPackageCategoryAction,
-  type SetPackagePublisherAction,
-  type SetPackagePublisherUrlAction,
-  type SetPackageKeywordsAction,
+  type SetPackageAuthorAction,
+  type SetPackageAuthorNameAction,
+  type SetPackageAuthorWebsiteAction,
+  type AddPackageKeywordAction,
+  type RemovePackageKeywordAction,
   type SetPackageGithubUrlAction,
   type SetPackageNpmUrlAction,
 } from "./actions.js";
@@ -48,30 +52,48 @@ export const setPackageCategory = (input: SetPackageCategoryInput) =>
     "global",
   );
 
-export const setPackagePublisher = (input: SetPackagePublisherInput) =>
-  createAction<SetPackagePublisherAction>(
-    "SET_PACKAGE_PUBLISHER",
+export const setPackageAuthor = (input: SetPackageAuthorInput) =>
+  createAction<SetPackageAuthorAction>(
+    "SET_PACKAGE_AUTHOR",
     { ...input },
     undefined,
-    z.SetPackagePublisherInputSchema,
+    z.SetPackageAuthorInputSchema,
     "global",
   );
 
-export const setPackagePublisherUrl = (input: SetPackagePublisherUrlInput) =>
-  createAction<SetPackagePublisherUrlAction>(
-    "SET_PACKAGE_PUBLISHER_URL",
+export const setPackageAuthorName = (input: SetPackageAuthorNameInput) =>
+  createAction<SetPackageAuthorNameAction>(
+    "SET_PACKAGE_AUTHOR_NAME",
     { ...input },
     undefined,
-    z.SetPackagePublisherUrlInputSchema,
+    z.SetPackageAuthorNameInputSchema,
     "global",
   );
 
-export const setPackageKeywords = (input: SetPackageKeywordsInput) =>
-  createAction<SetPackageKeywordsAction>(
-    "SET_PACKAGE_KEYWORDS",
+export const setPackageAuthorWebsite = (input: SetPackageAuthorWebsiteInput) =>
+  createAction<SetPackageAuthorWebsiteAction>(
+    "SET_PACKAGE_AUTHOR_WEBSITE",
     { ...input },
     undefined,
-    z.SetPackageKeywordsInputSchema,
+    z.SetPackageAuthorWebsiteInputSchema,
+    "global",
+  );
+
+export const addPackageKeyword = (input: AddPackageKeywordInput) =>
+  createAction<AddPackageKeywordAction>(
+    "ADD_PACKAGE_KEYWORD",
+    { ...input },
+    undefined,
+    z.AddPackageKeywordInputSchema,
+    "global",
+  );
+
+export const removePackageKeyword = (input: RemovePackageKeywordInput) =>
+  createAction<RemovePackageKeywordAction>(
+    "REMOVE_PACKAGE_KEYWORD",
+    { ...input },
+    undefined,
+    z.RemovePackageKeywordInputSchema,
     "global",
   );
 

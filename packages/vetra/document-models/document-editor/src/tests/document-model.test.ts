@@ -9,15 +9,15 @@ import utils, {
   initialLocalState,
 } from "../../gen/utils.js";
 
-describe("Vetra Package Document Model", () => {
-  it("should create a new Vetra Package document", () => {
+describe("Document Editor Document Model", () => {
+  it("should create a new Document Editor document", () => {
     const document = utils.createDocument();
 
     expect(document).toBeDefined();
-    expect(document.header.documentType).toBe("powerhouse/package");
+    expect(document.header.documentType).toBe("powerhouse/document-editor");
   });
 
-  it("should create a new Vetra Package document with a valid initial state", () => {
+  it("should create a new Document Editor document with a valid initial state", () => {
     const document = utils.createDocument();
     expect(document.state.global).toStrictEqual(initialGlobalState);
     expect(document.state.local).toStrictEqual(initialLocalState);
