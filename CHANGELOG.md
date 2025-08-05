@@ -1,3 +1,20 @@
+## 4.1.0-dev.5 (2025-08-05)
+
+### 🚀 Features
+
+- **document-model:** updated document model module ([f8827bf9f](https://github.com/powerhouse-inc/powerhouse/commit/f8827bf9f))
+- **reactor-mcp:** provide generic reactor mcp instead of document-model specific ([eaeb0065b](https://github.com/powerhouse-inc/powerhouse/commit/eaeb0065b))
+- **reactor-mcp:** changed addAction tool to addActions for more efficient tool calling and reduced output result to optimize token usage ([1bf58fe6e](https://github.com/powerhouse-inc/powerhouse/commit/1bf58fe6e))
+- **reactor-mcp:** allow setting remote drive to connect to ([6d0516ffc](https://github.com/powerhouse-inc/powerhouse/commit/6d0516ffc))
+
+### 🩹 Fixes
+
+- **reactor-mcp:** made action input non restrictive ([46d48b757](https://github.com/powerhouse-inc/powerhouse/commit/46d48b757))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.4 (2025-08-02)
 
 ### 🚀 Features
