@@ -52,6 +52,7 @@
     "change-case": "^5.4.4",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "vite": "^6.3.5",
     "zod": "^3.24.3"
   }
 }
