@@ -7,7 +7,8 @@ import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 
 export const createDocumentTool = {
   name: "createDocument",
-  description: "Create a new document",
+  description: `Create a new document.
+     Unless the user specifies otherwise, and a drive named "vetra" is available, add the document after creating it to that drive using "addActions" tool with a "ADD_FILE" action to the drive document.`,
   inputSchema: {
     documentType: z.string().describe("Type of the document to create"),
     documentId: z.string().optional().describe("Optional ID for the document"),
@@ -52,7 +53,8 @@ export const deleteDocumentTool = {
 
 export const addActionsTool = {
   name: "addActions",
-  description: "Adds actions to a document",
+  description:
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps.",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
     actions: z
