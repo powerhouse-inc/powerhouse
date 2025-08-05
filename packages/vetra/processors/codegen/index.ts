@@ -1,4 +1,4 @@
-import { generateFromDocument, validateDocumentModelState } from "@powerhousedao/codegen";
+import { generateFromDocument, generateSubgraphFromDocumentModel, validateDocumentModelState } from "@powerhousedao/codegen";
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
@@ -21,6 +21,7 @@ export class CodegenProcessor implements IProcessor {
         console.log(`🔄 Starting code generation for document model: ${state.name}`);
         try {
           await generateFromDocument(state, PH_CONFIG, { verbose: false });
+          await generateSubgraphFromDocumentModel(state.name, state, PH_CONFIG, { verbose: false });
           console.log(`✅ Code generation completed successfully for: ${state.name}`);
         } catch (error) {
           console.error(`❌ Error during code generation for ${state.name}:`, error);

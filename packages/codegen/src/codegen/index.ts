@@ -235,11 +235,23 @@ export async function generateEditor(
   );
 }
 
+export async function generateSubgraphFromDocumentModel(
+  name: string,
+  documentModel: DocumentModelState,
+  config: PowerhouseConfig,
+  options: CodegenOptions = {},
+) {
+  return _generateSubgraph(name, documentModel, config.subgraphsDir, {
+    skipFormat: config.skipFormat,
+    verbose: options.verbose,
+  });
+}
+
 export async function generateSubgraph(
   name: string,
   file: string | null,
   config: PowerhouseConfig,
-  options: { verbose?: boolean } = {},
+  options: CodegenOptions = {},
 ) {
   return _generateSubgraph(
     name,
