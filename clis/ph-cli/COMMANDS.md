@@ -538,7 +538,7 @@ Options:
                         
   --remote-drive <url>     URL of remote drive to connect to (skips switchboard initialization).
                         
-  --verbose                Enable verbose logging for all services. This provides detailed
+  --logs                   Enable verbose logging for all services. This provides detailed
                           output from Switchboard, Reactor, and Connect during startup and operation.
 
 Examples:
@@ -547,7 +547,7 @@ Examples:
   $ ph vetra --switchboard-port 5000 --reactor-port 5001  # Use custom ports
   $ ph vetra --config-file custom.powerhouse.config.js # Use custom configuration
   $ ph vetra --watch                                   # Watch for changes and auto-update
-  $ ph vetra --verbose                                 # Enable detailed logging from all services
+  $ ph vetra --logs                                    # Enable detailed logging from all services
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 
