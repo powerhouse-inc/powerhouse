@@ -1485,6 +1485,9 @@ importers:
       '@powerhousedao/document-engineering':
         specifier: ^1.15.0
         version: 1.16.1(@types/react-dom@18.3.7(@types/react@19.1.8))(@types/react@19.1.8)(bufferutil@4.0.9)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.8.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown
@@ -1955,15 +1958,6 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
-      '@powerhousedao/reactor-api':
-        specifier: workspace:*
-        version: link:../reactor-api
-      '@powerhousedao/reactor-browser':
-        specifier: workspace:*
-        version: link:../reactor-browser
-      '@powerhousedao/switchboard':
-        specifier: workspace:*
-        version: link:../../apps/switchboard
       '@tailwindcss/cli':
         specifier: ^4.0.15
         version: 4.1.11

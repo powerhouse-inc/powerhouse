@@ -9,6 +9,10 @@ import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
 } from "document-model";
+import {
+  VetraPackage as VetraPackageDocumentModel,
+  DocumentEditor as DocumentEditorDocumentModel,
+} from "@powerhousedao/vetra/document-models";
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
 import type {
@@ -85,6 +89,11 @@ export class PackageManager implements IPackageManager {
 
     documentModelModuleMap.set("document-model", [
       documentModelDocumentModelModule as DocumentModelModule,
+    ]);
+
+    documentModelModuleMap.set("@powerhousedao/vetra", [
+      VetraPackageDocumentModel as DocumentModelModule,
+      DocumentEditorDocumentModel as DocumentModelModule,
     ]);
 
     for (const pkg of packages) {
