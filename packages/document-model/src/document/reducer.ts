@@ -37,24 +37,14 @@ import {
 } from "./utils/document-helpers.js";
 
 /**
- * Gets the next revision number based on the provided action.
+ * Gets the next revision number based on the provided scope.
  *
  * @param state The current state of the document.
- * @param operation The action being applied to the document.
+ * @param scope The scope of the operation.
  * @returns The next revision number.
  */
-function getNextRevision(
-  document: PHDocument,
-  operation: { index?: number; scope: string },
-) {
-  let latestOperationIndex: number | undefined;
-
-  if ("index" in operation) {
-    latestOperationIndex = operation.index;
-  } else {
-    latestOperationIndex =
-      document.operations[operation.scope].at(-1)?.index ?? -1;
-  }
+function getNextRevision(document: PHDocument, scope: string) {
+  const latestOperationIndex = document.operations[scope].at(-1)?.index ?? -1;
 
   return (latestOperationIndex ?? -1) + 1;
 }
@@ -67,15 +57,15 @@ function getNextRevision(
  * @param operation The action being applied to the document.
  * @returns The updated document state.
  */
-export function updateHeader<TDocument extends PHDocument>(
-  document: TDocument,
-  action: Action | DefaultAction | Operation,
-): TDocument {
+export function updateHeaderRevision(
+  document: PHDocument,
+  scope: string,
+): PHDocument {
   const header: PHDocumentHeader = {
     ...document.header,
     revision: {
       ...document.header.revision,
-      [action.scope]: getNextRevision(document, action),
+      [scope]: getNextRevision(document, scope),
     },
     lastModifiedAtUtcIso: getDocumentLastModified(document),
   };
@@ -181,7 +171,7 @@ export function updateDocument<TDocument extends PHDocument>(
     skip,
     reuseLastOperationIndex,
   );
-  newDocument = updateHeader(newDocument, action);
+  newDocument = updateHeaderRevision(newDocument, action.scope) as TDocument;
   return newDocument;
 }
 
