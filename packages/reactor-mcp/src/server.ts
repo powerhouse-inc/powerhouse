@@ -2,7 +2,7 @@ import { createReactorMcpProvider } from "#mcp/reactor.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { type IDocumentDriveServer } from "document-drive";
 
-export const ReactorMcpInstructions = `MUST BE USED when creating, updating or deleting documents or document-models for the Powerhouse/Vetra ecosystem.
+export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
 There are 5 main concepts to know of: 
 - Document Model: A template for creating documents. It defines the schema and allowed operations for a type of document.
 - Document: An instance of a document model. It contains actual data following the structure defined by the document model and can be changed using operations.
@@ -19,9 +19,6 @@ Examples:
 `;
 
 export async function createServer(reactor: IDocumentDriveServer) {
-  // Create an MCP server for document model operations.
-  // For document model creation tasks, consider using the document-model-creator agent
-  // which provides a more guided experience.
   const server = new McpServer(
     {
       name: "reactor-mcp-server",
