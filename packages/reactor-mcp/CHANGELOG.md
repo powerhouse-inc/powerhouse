@@ -1,3 +1,13 @@
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** improved error message when remote drive is not available ([bb6861655](https://github.com/powerhouse-inc/powerhouse/commit/bb6861655))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

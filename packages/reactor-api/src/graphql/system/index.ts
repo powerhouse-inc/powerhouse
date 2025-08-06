@@ -23,6 +23,7 @@ export class SystemSubgraph extends Subgraph {
         slug: String
         preferredEditor: String
       ): AddDriveResult
+      deleteDrive(id: String!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
     }
@@ -99,6 +100,27 @@ export class SystemSubgraph extends Subgraph {
           throw e instanceof Error ? e : new Error(e as string);
         }
       },
+    },
+
+    deleteDrive: async (
+      parent: unknown,
+      args: { id: string },
+      ctx: SystemContext,
+    ): Promise<boolean> => {
+      const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+      if (!isAdmin) {
+        throw new GraphQLError("Forbidden");
+      }
+
+      try {
+        await this.reactor.deleteDrive(args.id);
+
+        return true;
+      } catch (e) {
+        logger.error(e);
+
+        return false;
+      }
     },
   };
 

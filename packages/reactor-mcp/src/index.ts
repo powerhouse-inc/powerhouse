@@ -73,30 +73,39 @@ export async function init(options?: IMcpOptions) {
 
   // if a remote drive is passed then adds it to the reactor
   if (remoteDrive) {
-    await reactor.addRemoteDrive(remoteDrive, {
-      sharingType: "PUBLIC",
-      availableOffline: true,
-      listeners: [
+    try {
+      await reactor.addRemoteDrive(remoteDrive, {
+        sharingType: "PUBLIC",
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: remoteDrive,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: generateId(),
+            system: true,
+          },
+        ],
+        triggers: [],
+      });
+    } catch (e) {
+      throw new Error(
+        `Failed to add remote drive "${remoteDrive}": ${e instanceof Error ? e.message : e}`,
         {
-          block: true,
-          callInfo: {
-            data: remoteDrive,
-            name: "switchboard-push",
-            transmitterType: "SwitchboardPush",
-          },
-          filter: {
-            branch: ["main"],
-            documentId: ["*"],
-            documentType: ["*"],
-            scope: ["global"],
-          },
-          label: "Switchboard Sync",
-          listenerId: generateId(),
-          system: true,
+          cause: e,
         },
-      ],
-      triggers: [],
-    });
+      );
+    }
   }
 
   // starts the server
