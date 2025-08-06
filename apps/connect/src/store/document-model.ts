@@ -22,13 +22,18 @@ async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentMode
             id: 'powerhouse/document-model',
             name: 'Document Model',
             specifications:
-                documentModelDocumentModelModule.default
+                documentModelDocumentModelModule
                     .documentModelDocumentModelModule.documentModel
                     .specifications,
         },
-        reducer: documentModelDocumentModelModule.default.documentModelReducer,
-        actions: documentModelDocumentModelModule.default.actions,
-        utils: documentModelDocumentModelModule.default,
+        reducer:
+            documentModelDocumentModelModule.documentModelDocumentModelModule
+                .reducer,
+        actions:
+            documentModelDocumentModelModule.documentModelDocumentModelModule
+                .actions,
+        utils: documentModelDocumentModelModule.documentModelDocumentModelModule
+            .utils,
     };
     return vetraDocumentModelModule;
 }
@@ -39,13 +44,10 @@ async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule>
         id: 'powerhouse/document-drive',
         name: 'Document Drive',
         documentModel:
-            driveDocumentModelModule.default.driveDocumentModelModule
-                .documentModel,
-        reducer:
-            driveDocumentModelModule.default.driveDocumentModelModule.reducer,
-        actions:
-            driveDocumentModelModule.default.driveDocumentModelModule.actions,
-        utils: driveDocumentModelModule.default.driveDocumentModelModule.utils,
+            driveDocumentModelModule.driveDocumentModelModule.documentModel,
+        reducer: driveDocumentModelModule.driveDocumentModelModule.reducer,
+        actions: driveDocumentModelModule.driveDocumentModelModule.actions,
+        utils: driveDocumentModelModule.driveDocumentModelModule.utils,
     };
     return vetraDocumentModelModule;
 }

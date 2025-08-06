@@ -66,11 +66,6 @@ export function useDefaultDriveEditorModule() {
   const defaultDriveEditorModule = useDriveEditorModuleById(
     DEFAULT_DRIVE_EDITOR_ID,
   );
-  if (!defaultDriveEditorModule) {
-    throw new Error(
-      `No default drive editor module found for id ${DEFAULT_DRIVE_EDITOR_ID}`,
-    );
-  }
   return defaultDriveEditorModule;
 }
 

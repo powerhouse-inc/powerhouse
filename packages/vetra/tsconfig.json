@@ -8,7 +8,8 @@
     "resolveJsonModule": true
   },
   "include": [
-    "**/*"
+    "**/*",
+    "./powerhouse.manifest.json"
   ],
   "exclude": ["dist", "node_modules"],
   "references": [

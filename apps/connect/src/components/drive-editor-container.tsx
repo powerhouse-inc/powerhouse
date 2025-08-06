@@ -9,6 +9,7 @@ import {
 import { useDocumentDispatch } from '#utils';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
+    useDefaultDriveEditorModule,
     useDriveEditorModuleById,
     useSelectedDocument,
     useSelectedDrive,
@@ -97,8 +98,10 @@ export function DriveEditorContainer() {
     const driveEditor = useDriveEditorModuleById(
         selectedDrive?.header.meta?.preferredEditor,
     );
+    const defaultDriveEditor = useDefaultDriveEditorModule();
 
-    const DriveEditorComponent = driveEditor?.Component;
+    const DriveEditorComponent =
+        driveEditor?.Component ?? defaultDriveEditor?.Component;
 
     if (selectedDocument || !selectedDrive || !DriveEditorComponent)
         return null;

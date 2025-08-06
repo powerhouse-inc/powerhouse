@@ -9,8 +9,10 @@ import {
 import {
     useDocumentModelModules,
     useInitializePHApp,
+    useReactor,
 } from '@powerhousedao/state';
 import { useAtomValue } from 'jotai';
+import { useEffect } from 'react';
 import { useRenown } from './useRenown';
 
 async function loadVetraPackages() {
@@ -23,6 +25,8 @@ export function useLoadData() {
     const storage = useAtomValue(storageAtom);
     const documentModels = useDocumentModelModules();
     const renown = useRenown();
+    const reactor = useReactor();
+
     useInitializePHApp(
         createReactor(storage, documentModels || [], renown),
         loadVetraPackages(),
@@ -30,4 +34,9 @@ export function useLoadData() {
     );
     useCreateFirstLocalDrive();
     useSubscribeToVetraPackages();
+
+    useEffect(() => {
+        if (!reactor) return;
+        reactor.setDocumentModelModules(documentModels || []);
+    }, [reactor, documentModels]);
 }
