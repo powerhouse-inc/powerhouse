@@ -1,3 +1,13 @@
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🚀 Features
+
+- **ph-cli:** add functions to update and remove CSS imports in styles.css during install/uninstall ([3643a44c8](https://github.com/powerhouse-inc/powerhouse/commit/3643a44c8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

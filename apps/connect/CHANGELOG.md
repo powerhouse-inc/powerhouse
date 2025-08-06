@@ -1,3 +1,13 @@
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🩹 Fixes
+
+- **connect:** fix document upload regression ([2f8c97fad](https://github.com/powerhouse-inc/powerhouse/commit/2f8c97fad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

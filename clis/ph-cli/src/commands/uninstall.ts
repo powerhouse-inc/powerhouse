@@ -9,6 +9,7 @@ import {
   getProjectInfo,
   type PackageManager,
   packageManagers,
+  removeStylesImports,
   setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
@@ -148,6 +149,15 @@ export const uninstall: CommandActionType<
     console.log("Config file updated successfully 🎉");
   } catch (error) {
     console.error("❌ Failed to update config file");
+    throw error;
+  }
+
+  try {
+    console.log("⚙️ Updating styles.css file...");
+    removeStylesImports(parsedDependencies, projectInfo.path);
+    console.log("Styles file updated successfully 🎉");
+  } catch (error) {
+    console.error("❌ Failed to update styles file");
     throw error;
   }
 };
