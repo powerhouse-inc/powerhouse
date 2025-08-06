@@ -20,6 +20,7 @@ export function BaseEditor(props: IProps) {
     documentModels,
     showCreateDocumentModal,
     addDocument,
+    setSelectedNode,
   } = useDriveContext();
   const driveId = document.header.id;
 
@@ -47,12 +48,12 @@ export function BaseEditor(props: IProps) {
     [addDocument, driveId],
   );
 
-  // TODO: set selected document
+  // TODO: set selected document from @powerhousedao/state
   const onOpenDocument = useCallback(
     (node: FileNode) => {
-      console.log("open document", node);
+      setSelectedNode(node.id);
     },
-    [],
+    [setSelectedNode],
   );
 
   return (
