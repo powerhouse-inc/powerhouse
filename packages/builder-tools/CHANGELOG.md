@@ -1,3 +1,13 @@
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🩹 Fixes
+
+- **builder-tools:** update css bundling process and html head injection ([09b508038](https://github.com/powerhouse-inc/powerhouse/commit/09b508038))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
