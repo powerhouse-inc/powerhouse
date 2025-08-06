@@ -245,4 +245,103 @@ export function setCustomHelp(command: Command, helpText: string): Command {
   return command;
 }
 
+/**
+ * Updates the styles.css file to include imports for newly installed packages
+ * @param dependencies - Array of dependencies that were installed
+ * @param projectPath - Path to the project root
+ */
+export function updateStylesFile(
+  dependencies: { name: string; version: string | undefined; full: string }[],
+  projectPath: string,
+) {
+  const stylesPath = path.join(projectPath, "style.css");
+
+  // Check if styles.css exists
+  if (!fs.existsSync(stylesPath)) {
+    console.warn("⚠️ Warning: style.css file not found in project root");
+    return;
+  }
+
+  const currentStyles = fs.readFileSync(stylesPath, "utf-8");
+  let updatedStyles = currentStyles;
+
+  for (const dep of dependencies) {
+    const cssPath = `./node_modules/${dep.name}/dist/style.css`;
+    const fullCssPath = path.join(projectPath, cssPath);
+    const importStatement = `@import '${cssPath}';`;
+
+    // Check if the CSS file exists
+    if (!fs.existsSync(fullCssPath)) {
+      console.warn(`⚠️ Warning: CSS file not found at ${cssPath}`);
+      continue;
+    }
+
+    // Check if import already exists
+    if (currentStyles.includes(importStatement)) {
+      continue;
+    }
+
+    // Find the last @import statement
+    const importLines = currentStyles
+      .split("\n")
+      .filter((line) => line.trim().startsWith("@import"));
+    const lastImport = importLines[importLines.length - 1];
+
+    if (lastImport) {
+      // Insert new import after the last existing import
+      updatedStyles = currentStyles.replace(
+        lastImport,
+        `${lastImport}\n${importStatement}`,
+      );
+    } else {
+      // If no imports exist, add at the top of the file
+      updatedStyles = `${importStatement}\n${currentStyles}`;
+    }
+  }
+
+  // Only write if changes were made
+  if (updatedStyles !== currentStyles) {
+    fs.writeFileSync(stylesPath, updatedStyles);
+  }
+}
+
+/**
+ * Removes CSS imports for uninstalled packages from styles.css
+ */
+export function removeStylesImports(
+  dependencies: { name: string; version: string | undefined; full: string }[],
+  projectPath: string,
+) {
+  const stylesPath = path.join(projectPath, "style.css");
+
+  // Check if styles.css exists
+  if (!fs.existsSync(stylesPath)) {
+    console.warn("⚠️ Warning: style.css file not found in project root");
+    return;
+  }
+
+  const currentStyles = fs.readFileSync(stylesPath, "utf-8");
+  let updatedStyles = currentStyles;
+
+  for (const dep of dependencies) {
+    const cssPath = `./node_modules/${dep.name}/dist/style.css`;
+    const importStatement = `@import '${cssPath}';`;
+
+    // Remove the import line if it exists
+    const lines = updatedStyles.split("\n");
+    const filteredLines = lines.filter(
+      (line) => !line.trim().includes(importStatement),
+    );
+
+    if (filteredLines.length !== lines.length) {
+      updatedStyles = filteredLines.join("\n");
+    }
+  }
+
+  // Only write if changes were made
+  if (updatedStyles !== currentStyles) {
+    fs.writeFileSync(stylesPath, updatedStyles);
+  }
+}
+
 export { getConfig } from "@powerhousedao/config/utils";
