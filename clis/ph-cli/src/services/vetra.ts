@@ -141,9 +141,9 @@ function spawnLocalReactor(
         } else {
           // Only show specific logs when not verbose
           if (
-            line.includes("🔄 Starting code generation") ||
-            line.includes("✅ Code generation completed") ||
-            line.includes("❌ Error during code generation")
+            line.includes("🔄") ||
+            line.includes("✅") ||
+            line.includes("❌")
           ) {
             process.stdout.write(cyan(`[Codegen]: ${line}\n`));
           }

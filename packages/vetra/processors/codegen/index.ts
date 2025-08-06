@@ -1,6 +1,7 @@
 import {
   generateEditor,
   generateFromDocument,
+  generateManifest,
   generateSubgraphFromDocumentModel,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
@@ -12,8 +13,10 @@ import {
   type DocumentModelState,
 } from "document-model";
 import { type DocumentEditorState } from "../../document-models/document-editor/index.js";
+import { type VetraPackageState } from "../../document-models/vetra-package/index.js";
 
 const PH_CONFIG = getConfig();
+const CURRENT_WORKING_DIR = process.cwd();
 
 export class CodegenProcessor implements IProcessor {
   async onStrands<TDocument extends DocumentModelDocument>(
@@ -70,7 +73,19 @@ export class CodegenProcessor implements IProcessor {
     // Then process other document types
     for (const strand of otherStrands) {
       if (strand.documentType === "powerhouse/package") {
-        console.log(">>> generate powerhouse/package", strand.state);
+        const state = strand.state as VetraPackageState;
+
+        console.log("🔄 Generating manifest for package");
+        generateManifest({
+          name: state.name ?? "",
+          category: state.category ?? "",
+          description: state.description ?? "",
+          publisher: {
+            name: state.author.name ?? "",
+            url: state.author.website ?? "",
+          },
+        }, CURRENT_WORKING_DIR);
+        console.log("✅ Manifest generated successfully");
       } else if (strand.documentType === "powerhouse/document-editor") {
         const state = strand.state as DocumentEditorState;
 
