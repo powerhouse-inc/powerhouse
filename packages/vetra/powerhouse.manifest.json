@@ -28,7 +28,13 @@
             "documentTypes": ["powerhouse/document-editor"]
         }
     ],
-    "apps": [],
+    "apps": [
+        {
+            "id": "vetra-drive-app",
+            "name": "Vetra Drive App",
+            "driveEditor": "vetra-drive-app"
+        }
+    ],
     "subgraphs": [],
     "importScripts": []
 }

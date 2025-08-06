@@ -1958,6 +1958,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@tailwindcss/cli':
         specifier: ^4.0.15
         version: 4.1.11
