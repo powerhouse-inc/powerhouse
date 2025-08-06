@@ -3,7 +3,7 @@ export function debounce<T extends unknown[], R>(
   delay = 250,
 ) {
   let timer: number;
-  return (immediate: boolean, ...args: T) => {
+  return (immediate = false, ...args: T) => {
     if (timer) {
       clearTimeout(timer);
     }

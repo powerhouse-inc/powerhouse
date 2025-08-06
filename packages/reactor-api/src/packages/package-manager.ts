@@ -19,6 +19,7 @@ import type {
   IPackageLoader,
   IPackageManager,
   IPackageManagerOptions,
+  ISubscribablePackageLoader,
   PackageManagerResult,
 } from "./types.js";
 export function getUniqueDocumentModels(
@@ -37,7 +38,7 @@ export function getUniqueDocumentModels(
 
 export class PackageManager implements IPackageManager {
   private readonly logger = childLogger(["reactor-api", "package-manager"]);
-  private loaders: IPackageLoader[];
+  private loaders: ISubscribablePackageLoader[];
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
@@ -75,12 +76,37 @@ export class PackageManager implements IPackageManager {
   ): Promise<PackageManagerResult> {
     this.logger.info(`Loading packages: ${packages.join(", ")}`);
 
+    const documentModelsMap = await this.loadDocumentModels(packages);
+    const subgraphsMap = await this.loadSubgraphs(packages);
+    const processorsMap = await this.loadProcessors(packages);
+
+    this.updatePackagesMap(documentModelsMap);
+    this.updateSubgraphsMap(subgraphsMap);
+    this.updateProcessorsMap(processorsMap);
+
+    try {
+      this.subscribePackages(packages);
+    } catch (error) {
+      this.logger.error("Failed to subscribe to packages", error);
+    }
+
+    return {
+      documentModels: getUniqueDocumentModels(
+        ...Array.from(documentModelsMap.values()),
+      ),
+      subgraphs: subgraphsMap,
+      processors: processorsMap,
+    };
+  }
+
+  private async loadDocumentModels(
+    packages: string[],
+  ): Promise<Map<string, DocumentModelModule[]>> {
+    this.logger.debug(
+      `Loading document models from packages: ${packages.join(", ")}`,
+    );
+
     const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
-    const subgraphsMap = new Map<string, SubgraphClass[]>();
-    const processorsMap = new Map<
-      string,
-      ((module: IProcessorHostModule) => ProcessorFactory)[]
-    >();
 
     // static prereqs
     documentModelModuleMap.set("document-drive", [
@@ -98,38 +124,98 @@ export class PackageManager implements IPackageManager {
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];
+
+      for (const loader of this.loaders) {
+        const documentModels = await loader.loadDocumentModels(pkg);
+
+        allDocumentModels.push(...documentModels);
+      }
+
+      documentModelModuleMap.set(pkg, allDocumentModels);
+    }
+
+    return documentModelModuleMap;
+  }
+
+  private async loadSubgraphs(
+    packages: string[],
+  ): Promise<Map<string, SubgraphClass[]>> {
+    this.logger.debug(
+      `Loading subgraphs from packages: ${packages.join(", ")}`,
+    );
+
+    const subgraphsMap = new Map<string, SubgraphClass[]>();
+
+    for (const pkg of packages) {
       const allSubgraphs: SubgraphClass[] = [];
+
+      for (const loader of this.loaders) {
+        const subgraphs = await loader.loadSubgraphs(pkg);
+
+        allSubgraphs.push(...subgraphs);
+      }
+
+      subgraphsMap.set(pkg, allSubgraphs);
+    }
+
+    return subgraphsMap;
+  }
+
+  private async loadProcessors(
+    packages: string[],
+  ): Promise<
+    Map<string, ((module: IProcessorHostModule) => ProcessorFactory)[]>
+  > {
+    this.logger.debug(
+      `Loading processors from packages: ${packages.join(", ")}`,
+    );
+
+    const processorsMap = new Map<
+      string,
+      ((module: IProcessorHostModule) => ProcessorFactory)[]
+    >();
+
+    for (const pkg of packages) {
       const allProcessors: ((
         module: IProcessorHostModule,
       ) => ProcessorFactory)[] = [];
 
       for (const loader of this.loaders) {
-        const documentModels = await loader.loadDocumentModels(pkg);
-        const subgraphs = await loader.loadSubgraphs(pkg);
         const processors = await loader.loadProcessors(pkg);
 
-        allDocumentModels.push(...documentModels);
-        allSubgraphs.push(...subgraphs);
         if (processors) {
           allProcessors.push(processors);
         }
       }
 
-      documentModelModuleMap.set(pkg, allDocumentModels);
-      subgraphsMap.set(pkg, allSubgraphs);
       processorsMap.set(pkg, allProcessors);
     }
-
-    this.updatePackagesMap(documentModelModuleMap);
-    this.updateSubgraphsMap(subgraphsMap);
     this.updateProcessorsMap(processorsMap);
 
-    return {
-      documentModels: getUniqueDocumentModels(
-        ...Array.from(documentModelModuleMap.values()),
-      ),
-      subgraphs: subgraphsMap,
-      processors: processorsMap,
+    return processorsMap;
+  }
+
+  private subscribePackages(packages: string[]) {
+    const unsubs: (() => void)[] = [];
+    for (const pkg of packages) {
+      for (const loader of this.loaders) {
+        if (loader.onDocumentModelsChange) {
+          const unsub = loader.onDocumentModelsChange(pkg, async () => {
+            this.logger.info(`Updating document models for package: ${pkg}`);
+            const documentModels = await this.loadDocumentModels([pkg]);
+            const documentModelsMap = new Map(this.docModelsMap);
+            documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
+            this.updatePackagesMap(documentModelsMap);
+          });
+          unsubs.push(unsub);
+        }
+      }
+    }
+
+    return () => {
+      for (const unsub of unsubs) {
+        unsub();
+      }
     };
   }
 
@@ -170,7 +256,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        this.logger.info(`> Removed package: ${pkg}`);
+        this.logger.info(`Removed package: ${pkg}`);
       });
     this.docModelsMap = packagesMap;
     this.eventEmitter.emit(
@@ -185,7 +271,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        this.logger.info(`> Removed Subgraphs from: ${pkg}`);
+        this.logger.info(`Removed Subgraphs from: ${pkg}`);
       });
     this.subgraphsMap = subgraphsMap;
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
@@ -202,7 +288,7 @@ export class PackageManager implements IPackageManager {
     oldPackages
       .filter((pkg) => !newPackages.includes(pkg))
       .forEach((pkg) => {
-        this.logger.info(`> Removed Processor Factories from: ${pkg}`);
+        this.logger.info(`Removed Processor Factories from: ${pkg}`);
       });
 
     this.processorMap = processorsMap;

@@ -1,3 +1,25 @@
+## 4.1.0-dev.7 (2025-08-06)
+
+This was a version bump only for @powerhousedao/state to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.6 (2025-08-06)
+
+### 🚀 Features
+
+- **reactor-mcp:** load local document models and reload when they change ([0408a017c](https://github.com/powerhouse-inc/powerhouse/commit/0408a017c))
+- **reactor-local,reactor-api,document-drive:** reload local document models when they change ([5d9af3951](https://github.com/powerhouse-inc/powerhouse/commit/5d9af3951))
+- **state:** update readme docs ([5f060220d](https://github.com/powerhouse-inc/powerhouse/commit/5f060220d))
+- **state:** remove dishonest generics ([780ea4ed7](https://github.com/powerhouse-inc/powerhouse/commit/780ea4ed7))
+
+### 🩹 Fixes
+
+- **state:** formatting mistake ([d3ab58292](https://github.com/powerhouse-inc/powerhouse/commit/d3ab58292))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.5 (2025-08-05)
 
 This was a version bump only for @powerhousedao/state to align it with other projects, there were no code changes.

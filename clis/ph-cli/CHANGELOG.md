@@ -1,3 +1,23 @@
+## 4.1.0-dev.7 (2025-08-06)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.6 (2025-08-06)
+
+### 🚀 Features
+
+- **reactor-mcp:** load local document models and reload when they change ([0408a017c](https://github.com/powerhouse-inc/powerhouse/commit/0408a017c))
+- **reactor-local,reactor-api,document-drive:** reload local document models when they change ([5d9af3951](https://github.com/powerhouse-inc/powerhouse/commit/5d9af3951))
+
+### 🩹 Fixes
+
+- **ph-cli:** restart services ([1c5016dd0](https://github.com/powerhouse-inc/powerhouse/commit/1c5016dd0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.5 (2025-08-05)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
