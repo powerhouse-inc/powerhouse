@@ -28,9 +28,7 @@ export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
   onShowRevisionHistory: () => void;
   simulateBackgroundUpdates?: {
     backgroundUpdateRate: number;
-    backgroundUpdateActions: ((
-      document: TDocument,
-    ) => Action)[];
+    backgroundUpdateActions: ((document: TDocument) => Action)[];
   };
 }>;
 

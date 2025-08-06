@@ -57,10 +57,7 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
     initialDocument,
   );
 
-  function dispatch(
-    action: Action,
-    onErrorCallback?: ActionErrorCallback,
-  ) {
+  function dispatch(action: Action, onErrorCallback?: ActionErrorCallback) {
     const callback: DocumentDispatchCallback<TDocument> = (
       operation,
       state,

@@ -1,8 +1,8 @@
 import {
-  Action,
-  Operation,
-  OperationSignatureContext,
-  Signature,
+  type Action,
+  type Operation,
+  type OperationSignatureContext,
+  type Signature,
 } from "./types.js";
 import { generateId } from "./utils/crypto.js";
 

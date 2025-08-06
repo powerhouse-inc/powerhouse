@@ -1,10 +1,9 @@
 import {
-  Action,
-  DefaultAction,
-  Operation,
+  type Action,
+  type Operation,
   type PHReducer,
-  ReducerOptions,
-  SignalDispatch,
+  type ReducerOptions,
+  type SignalDispatch,
 } from "#document/types.js";
 import { generateUUID } from "#utils/env";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -177,7 +176,7 @@ describe("Crypto utils", () => {
     const action = increment();
     const reducer = ((
       document: CountDocument,
-      action: Action | Operation | DefaultAction,
+      action: Action | Operation,
       dispatch?: SignalDispatch,
       options?: ReducerOptions,
     ) => {

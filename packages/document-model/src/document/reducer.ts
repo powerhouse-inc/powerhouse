@@ -13,7 +13,6 @@ import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
   type Action,
-  type DefaultAction,
   type Operation,
   type PHDocument,
   type ReducerOptions,
@@ -90,7 +89,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
   reuseLastOperationIndex = false,
-  skip: number = 0,
+  skip = 0,
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
@@ -104,7 +103,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
 
-  let index = reuseLastOperationIndex
+  const index = reuseLastOperationIndex
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
@@ -137,7 +136,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
 
-  let nextIndex = reuseLastOperationIndex
+  const nextIndex = reuseLastOperationIndex
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
@@ -208,7 +207,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation | DefaultAction,
+  action: Action | Operation,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -236,7 +235,7 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation | DefaultAction,
+  action: Action | Operation,
   skip: number,
 ): {
   document: TDocument;
