@@ -1,3 +1,13 @@
+## 4.1.0-dev.7 (2025-08-06)
+
+### 🚀 Features
+
+- **switchboard:** added readme ([fbadfca11](https://github.com/powerhouse-inc/powerhouse/commit/fbadfca11))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.6 (2025-08-06)
 
 ### 🚀 Features
