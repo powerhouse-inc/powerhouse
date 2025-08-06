@@ -1,4 +1,11 @@
-import { type PHReducer } from "#document/types.js";
+import {
+  Action,
+  DefaultAction,
+  Operation,
+  type PHReducer,
+  ReducerOptions,
+  SignalDispatch,
+} from "#document/types.js";
 import { generateUUID } from "#utils/env";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -74,12 +81,12 @@ describe("Crypto utils", () => {
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    const action = {
-      ...increment(),
-      id: "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2",
-    };
+    const action = increment();
     const documentWithOp = countReducer(document, action);
     const operation = documentWithOp.operations.global[0];
+
+    // overwrite id
+    operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
 
     const signer = {
       user: { address: "0x123", chainId: 1, networkId: "1" },
@@ -114,12 +121,12 @@ describe("Crypto utils", () => {
     document = countReducer(document, increment());
     const hash = hashDocumentStateForScope(document, "global");
 
-    const action = {
-      ...increment(),
-      id: "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2",
-    };
+    const action = increment();
     const documentWithOp = countReducer(document, action);
     const operation = documentWithOp.operations.global[1];
+
+    // overwrite id
+    operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
 
     const signer = {
       user: { address: "0x123", chainId: 1, networkId: "1" },
@@ -167,9 +174,24 @@ describe("Crypto utils", () => {
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
+    const action = increment();
+    const reducer = ((
+      document: CountDocument,
+      action: Action | Operation | DefaultAction,
+      dispatch?: SignalDispatch,
+      options?: ReducerOptions,
+    ) => {
+      const documentWithOp = countReducer(document, action);
+
+      // overwrite last operation id
+      documentWithOp.operations.global.at(-1)!.id = "123";
+
+      return documentWithOp;
+    }) as PHReducer;
+
     const operation = await buildSignedOperation(
-      { ...increment(), id: "123" },
-      countReducer as PHReducer,
+      action,
+      reducer,
       document,
       {
         documentId: "1",

@@ -80,27 +80,28 @@ export function updateHeaderRevision(
  * Updates the operations history of the document based on the provided action.
  *
  * @param state The current state of the document.
- * @param actionOrOperation The action being applied to the document.
+ * @param action The action being applied to the document.
+ * @param index The index of the operation to update.
  * @param skip The number of operations to skip before applying the action.
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-function updateOperations<TDocument extends PHDocument>(
+function updateOperationsForAction<TDocument extends PHDocument>(
   document: TDocument,
-  actionOrOperation: Action | DefaultAction | Operation,
-  skip = 0,
+  action: Action,
+  index: number = -1,
+  skip: number = 0,
+  id: string | undefined = undefined,
+  timestamp: string | undefined = undefined,
   reuseLastOperationIndex = false,
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
-  if (
-    "type" in actionOrOperation &&
-    [UNDO, REDO, PRUNE].includes(actionOrOperation.type)
-  ) {
+  if ([UNDO, REDO, PRUNE].includes(action.type)) {
     return document;
   }
 
-  const { scope } = actionOrOperation;
+  const { scope } = action;
   const operations: Operation[] = document.operations[scope].slice();
   let operationId: string | undefined;
 
@@ -111,28 +112,23 @@ function updateOperations<TDocument extends PHDocument>(
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
-  let timestamp = new Date().toISOString();
-
-  if ("index" in actionOrOperation) {
-    if (actionOrOperation.index - skip > nextIndex) {
+  if (index !== -1) {
+    if (index - skip > nextIndex) {
       throw new Error(
-        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${actionOrOperation.index} with skip ${skip}`,
+        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${index} with skip ${skip}`,
       );
     }
 
-    nextIndex = actionOrOperation.index;
-    operationId = actionOrOperation.id;
-
-    timestamp = actionOrOperation.timestamp;
+    nextIndex = index;
+    operationId = id;
   } else {
-    operationId =
-      "id" in actionOrOperation
-        ? (actionOrOperation.id as string)
-        : generateId();
+    operationId = id || generateId();
   }
 
+  timestamp = timestamp || new Date().toISOString();
+
   operations.push({
-    ...actionOrOperation,
+    ...action,
     id: operationId,
     index: nextIndex,
     timestamp,
@@ -165,12 +161,26 @@ export function updateDocument<TDocument extends PHDocument>(
   skip = 0,
   reuseLastOperationIndex = false,
 ): TDocument {
-  let newDocument = updateOperations(
+  // duck type
+  let index = -1;
+  let id = undefined;
+  let timestamp = undefined;
+
+  if ("index" in action) {
+    index = action.index;
+    id = action.id;
+    timestamp = action.timestamp;
+  }
+
+  let newDocument = updateOperationsForAction(
     document,
     action,
+    index,
     skip,
+    id,
+    timestamp,
     reuseLastOperationIndex,
-  );
+  ) as TDocument;
   newDocument = updateHeaderRevision(newDocument, action.scope) as TDocument;
   return newDocument;
 }
