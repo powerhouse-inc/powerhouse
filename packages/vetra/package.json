@@ -34,6 +34,10 @@
       "types": "./dist/manifest.d.ts",
       "default": "./dist/manifest.js"
     },
+    "./vetra-drive-app": {
+      "types": "./dist/editors/vetra-drive-app/index.d.ts",
+      "default": "./dist/editors/vetra-drive-app/index.js"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {

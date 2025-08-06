@@ -629,9 +629,10 @@ export class BaseDocumentDriveServer
       document.header.slug = input.slug;
     }
 
-    if (preferredEditor) {
+    const editorToUse = input.preferredEditor || preferredEditor;
+    if (editorToUse) {
       document.header.meta = {
-        preferredEditor: preferredEditor,
+        preferredEditor: editorToUse,
       };
     }
 
