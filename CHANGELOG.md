@@ -1,3 +1,29 @@
+## 4.1.0-dev.6 (2025-08-06)
+
+### 🚀 Features
+
+- **codegen:** added generation of document model subgraphs to vetra processor ([0efa4b56e](https://github.com/powerhouse-inc/powerhouse/commit/0efa4b56e))
+- **reactor-local,reactor-api,document-drive:** reload local document models when they change ([5d9af3951](https://github.com/powerhouse-inc/powerhouse/commit/5d9af3951))
+- **reactor-mcp:** load local document models and reload when they change ([0408a017c](https://github.com/powerhouse-inc/powerhouse/commit/0408a017c))
+- **state:** remove dishonest generics ([780ea4ed7](https://github.com/powerhouse-inc/powerhouse/commit/780ea4ed7))
+- **state:** update readme docs ([5f060220d](https://github.com/powerhouse-inc/powerhouse/commit/5f060220d))
+- **vetra:** do not include all json files in vetra ts config ([6178e7cdd](https://github.com/powerhouse-inc/powerhouse/commit/6178e7cdd))
+
+### 🩹 Fixes
+
+- **codegen:** added driveId to getDocuments Query ([7e84ce2df](https://github.com/powerhouse-inc/powerhouse/commit/7e84ce2df))
+- **document-model:** added missing operation schemas ([5f5a7207f](https://github.com/powerhouse-inc/powerhouse/commit/5f5a7207f))
+- **ph-cli:** restart services ([1c5016dd0](https://github.com/powerhouse-inc/powerhouse/commit/1c5016dd0))
+- **reactor-api:** debounce updateRouter calls and improved logging ([d3ab9978c](https://github.com/powerhouse-inc/powerhouse/commit/d3ab9978c))
+- **reactor/mcp:** improved mcp instructions ([c08155e7c](https://github.com/powerhouse-inc/powerhouse/commit/c08155e7c))
+- **state:** formatting mistake ([d3ab58292](https://github.com/powerhouse-inc/powerhouse/commit/d3ab58292))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.5 (2025-08-05)
 
 ### 🚀 Features

@@ -167,9 +167,10 @@ function setupEventListeners(
   },
 ): void {
   pkgManager.onDocumentModelsChange(async (documentModels) => {
-    const uniqueModels = getUniqueDocumentModels(
-      Object.values(documentModels).flat(),
-    );
+    const uniqueModels = getUniqueDocumentModels([
+      ...reactor.getDocumentModelModules(),
+      ...Object.values(documentModels).flat(),
+    ]);
     reactor.setDocumentModelModules(uniqueModels);
     await graphqlManager.updateRouter();
   });

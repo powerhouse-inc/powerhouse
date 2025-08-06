@@ -1,5 +1,4 @@
 import {
-  type IPackageLoader,
   isSubgraphClass,
   type SubgraphClass,
 } from "@powerhousedao/reactor-api";
@@ -12,8 +11,13 @@ import { type DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import { type ViteDevServer } from "vite";
+import {
+  type ISubscribablePackageLoader,
+  type ISubscriptionOptions,
+} from "../../reactor-api/src/packages/types.js";
+import { debounce } from "./util.js";
 
-export class VitePackageLoader implements IPackageLoader {
+export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-local", "vite-loader"]);
 
   private readonly vite: ViteDevServer;
@@ -22,9 +26,20 @@ export class VitePackageLoader implements IPackageLoader {
     this.vite = vite;
   }
 
-  async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
-    const fullPath = path.join(identifier, "./document-models");
+  private getDocumentModelsPath(identifier: string): string {
+    return path.join(identifier, "./document-models");
+  }
 
+  private getSubgraphsPath(identifier: string): string {
+    return path.join(identifier, "./subgraphs");
+  }
+
+  private getProcessorsPath(identifier: string): string {
+    return path.join(identifier, "./processors");
+  }
+
+  async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
+    const fullPath = this.getDocumentModelsPath(identifier);
     this.logger.verbose("Loading document models from", fullPath);
 
     try {
@@ -58,7 +73,7 @@ export class VitePackageLoader implements IPackageLoader {
   }
 
   async loadSubgraphs(identifier: string): Promise<SubgraphClass[]> {
-    const fullPath = path.join(identifier, "./subgraphs");
+    const fullPath = this.getSubgraphsPath(identifier);
 
     this.logger.verbose("Loading subgraphs from", fullPath);
 
@@ -91,7 +106,7 @@ export class VitePackageLoader implements IPackageLoader {
   async loadProcessors(
     identifier: string,
   ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
-    const fullPath = path.join(identifier, "./processors");
+    const fullPath = this.getProcessorsPath(identifier);
 
     this.logger.verbose("Loading processors from", fullPath);
 
@@ -120,5 +135,66 @@ export class VitePackageLoader implements IPackageLoader {
 
     // return empty processor factory
     return null;
+  }
+
+  onDocumentModelsChange(
+    identifier: string,
+    handler: (documentModels: DocumentModelModule[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void {
+    const documentModelsPath = this.getDocumentModelsPath(identifier);
+
+    const listener = debounce(async (changedPath: string) => {
+      if (path.matchesGlob(changedPath, path.join(documentModelsPath, "**"))) {
+        const documentModels = await this.loadDocumentModels(identifier);
+        handler(documentModels);
+      }
+    }, options?.debounce ?? 100);
+
+    this.vite.watcher.on("change", listener);
+
+    return () => {
+      this.vite.watcher.off("change", listener);
+    };
+  }
+
+  onSubgraphsChange(
+    identifier: string,
+    handler: (subgraphs: SubgraphClass[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void {
+    const subgraphsPath = this.getSubgraphsPath(identifier);
+    const listener = debounce(async (changedPath: string) => {
+      if (path.matchesGlob(changedPath, path.join(subgraphsPath, "**"))) {
+        const subgraphs = await this.loadSubgraphs(identifier);
+        handler(subgraphs);
+      }
+    }, options?.debounce ?? 100);
+    this.vite.watcher.on("change", listener);
+
+    return () => {
+      this.vite.watcher.off("change", listener);
+    };
+  }
+
+  onProcessorsChange(
+    identifier: string,
+    handler: (
+      processors: ((module: IProcessorHostModule) => ProcessorFactory) | null,
+    ) => void,
+    options?: ISubscriptionOptions,
+  ): () => void {
+    const processorsPath = this.getProcessorsPath(identifier);
+    const listener = debounce(async (changedPath: string) => {
+      if (path.matchesGlob(changedPath, path.join(processorsPath, "**"))) {
+        const processors = await this.loadProcessors(identifier);
+        handler(processors);
+      }
+    }, options?.debounce ?? 100);
+    this.vite.watcher.on("change", listener);
+
+    return () => {
+      this.vite.watcher.off("change", listener);
+    };
   }
 }

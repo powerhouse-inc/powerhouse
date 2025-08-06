@@ -86,61 +86,55 @@ else
         esac
     }
 
+    # Function to start services
+    start_services() {
+        check_setup "$PROJECT_NAME"
+        echo "Starting services..."
+        # Build Connect
+        echo "Building Connect..."
+        ph connect build
+        sudo rm -rf /var/www/html/${PROJECT_NAME}
+        sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
+        
+        # Enable Nginx site
+        manage_nginx_site "enable"
+        
+        # Start Switchboard via PM2
+        if ! pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+            cd $PROJECT_NAME
+            pm2 start "pnpm switchboard --port $SWITCHBOARD_PORT" --name "switchboard_${PROJECT_NAME}"
+            pm2 save
+        else
+            pm2 start "switchboard_${PROJECT_NAME}"
+        fi
+    }
+
+    # Function to stop services
+    stop_services() {
+        check_setup "$PROJECT_NAME"
+        echo "Stopping services..."
+        # Stop Switchboard via PM2
+        if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
+            pm2 stop "switchboard_${PROJECT_NAME}"
+        fi
+        
+        # Disable Nginx site
+        manage_nginx_site "disable"
+    }
+
     case "$ACTION" in
         "start")
-            check_setup "$PROJECT_NAME"
-            echo "Starting services..."
-            # Build Connect
-            echo "Building Connect..."
-            ph connect build
-            sudo rm -rf /var/www/html/${PROJECT_NAME}
-            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
-            
-            # Enable Nginx site
-            manage_nginx_site "enable"
-            
-            # Start Switchboard via PM2
-            if ! pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
-                cd $PROJECT_NAME
-                pm2 start "pnpm switchboard --port $SWITCHBOARD_PORT" --name "switchboard_${PROJECT_NAME}"
-                pm2 save
-            else
-                pm2 start "switchboard_${PROJECT_NAME}"
-            fi
+            start_services
             ;;
             
         "stop")
-            check_setup "$PROJECT_NAME"
-            echo "Stopping services..."
-            # Stop Switchboard via PM2
-            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
-                pm2 stop "switchboard_${PROJECT_NAME}"
-            fi
-            
-            # Disable Nginx site
-            manage_nginx_site "disable"
+            stop_services
             ;;
             
         "restart")
-            check_setup "$PROJECT_NAME"
             echo "Restarting services..."
-            # Build Connect
-            echo "Building Connect..."
-            ph connect build
-            sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
-            
-            # Restart Nginx site
-            manage_nginx_site "disable"
-            manage_nginx_site "enable"
-            
-            # Restart Switchboard via PM2
-            if pm2 list | grep -q "switchboard_${PROJECT_NAME}"; then
-                pm2 restart "switchboard_${PROJECT_NAME}"
-            else
-                cd $PROJECT_NAME
-                pm2 start "pnpm switchboard" --name "switchboard_${PROJECT_NAME}"
-                pm2 save
-            fi
+            stop_services
+            start_services
             ;;
             
         "status")
