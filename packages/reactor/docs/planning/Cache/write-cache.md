@@ -1,6 +1,6 @@
 # IWriteCache
 
-The goal of the `IWriteCache` is to reduce operations across many related documents into a single stream of operations. This allows a `Listener`, for example, to have a simple, optimized cursor to iterate over operations that affect it.
+The goal of the `IWriteCache` is to reduce operations across many related documents into a single stream of operations to optimize the flow of operations to listeners. This allows a `Listener`, for example, to have a simple, optimized cursor to iterate over operations that affect it. Additionally, the object will allow us to reduce the complexity of the storage adapters.
 
 ### Ideal Command-Sourcing v Reactor Command-Sourcing
 
@@ -24,7 +24,7 @@ Thus, `IWriteCache` is a write model and approach (1) is the more viable option.
 
 ### Requirements
 
-- `IWriteCache` must have a rollback mechanism.
+- `IWriteCache` must have a rollback mechanism, in order to support optimistic writes, in the case that writes to the `IOperationStore` fail.
 
 - Ideally, collections are not created lazily, they are created when new operations are made available.
 
@@ -40,7 +40,7 @@ Operations are kept in the `IOperationStore` as a table of `Operation`s. The ful
 | 2 | 1 | 2 | 1 | 2021-01-01 00:00:00 | doc1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2 | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0 |
 | 3 | 1 | 3 | 2 | 2021-01-01 00:00:00 | doc1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3 | { "type": "delete", "data": { "id": "1" } } | 0 |
 
-The `IWriteCache` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. While documents are free to exist in a graph structure (with some restrictions), the `IWriteCache` only stores flat collections of documents.
+The `IWriteCache` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been in that drive. A drive is always a member of it's own collection. While documents are free to exist in a graph structure (with some restrictions), the `IWriteCache` only stores flat collections of documents.
 
 | documentId | collectionId |
 | --- | --- |
