@@ -1,3 +1,14 @@
+## 4.1.0-dev.6 (2025-08-06)
+
+### 🚀 Features
+
+- **reactor-mcp:** load local document models and reload when they change ([0408a017c](https://github.com/powerhouse-inc/powerhouse/commit/0408a017c))
+- **reactor-local,reactor-api,document-drive:** reload local document models when they change ([5d9af3951](https://github.com/powerhouse-inc/powerhouse/commit/5d9af3951))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.5 (2025-08-05)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
