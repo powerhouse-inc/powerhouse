@@ -1,3 +1,25 @@
+## 4.1.0-dev.11 (2025-08-07)
+
+### 🚀 Features
+
+- **switchboard,reactor-local,reactor-api:** moved vite loader to reactor-api package ([c84f0a2a3](https://github.com/powerhouse-inc/powerhouse/commit/c84f0a2a3))
+- vetra package documents and app integration ([0e4053302](https://github.com/powerhouse-inc/powerhouse/commit/0e4053302))
+- added setSelectedNode to driveContext (remove this after integration with powerhousedao/state) ([69f0c6b3a](https://github.com/powerhouse-inc/powerhouse/commit/69f0c6b3a))
+- **vetra:** enhance logging and update ignored paths in server configuration ([4e1e0024b](https://github.com/powerhouse-inc/powerhouse/commit/4e1e0024b))
+- add vetra drive editor support and fix preferredEditor handling ([bd0d9fe9f](https://github.com/powerhouse-inc/powerhouse/commit/bd0d9fe9f))
+- **vetra:** added vetra drive editor ([4ebafd143](https://github.com/powerhouse-inc/powerhouse/commit/4ebafd143))
+- **vetra:** enabled codegen for document editors ([0f704353a](https://github.com/powerhouse-inc/powerhouse/commit/0f704353a))
+- **vetra:** enabled support for new documents in codegen processor ([dd63103ac](https://github.com/powerhouse-inc/powerhouse/commit/dd63103ac))
+- integrate package documents into reactor system ([939fe8e80](https://github.com/powerhouse-inc/powerhouse/commit/939fe8e80))
+- **connect:** integrate Vetra package documents and editors ([2ecb9bd15](https://github.com/powerhouse-inc/powerhouse/commit/2ecb9bd15))
+- **vetra:** add document-editor document model and refactor operations ([03017dcf2](https://github.com/powerhouse-inc/powerhouse/commit/03017dcf2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.10 (2025-08-07)
 
 ### 🚀 Features
