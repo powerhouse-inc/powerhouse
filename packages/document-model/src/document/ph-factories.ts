@@ -1,4 +1,12 @@
-import { ActionContext, type Action, type Operation } from "./types.js";
+import {
+  ActionContext,
+  ActionSigner,
+  AppActionSigner,
+  Signature,
+  UserActionSigner,
+  type Action,
+  type Operation,
+} from "./types.js";
 import { generateId } from "./utils/crypto.js";
 
 export const operationFromAction = (
@@ -49,22 +57,12 @@ export const operationWithContext = (
   };
 };
 
-/*
-export const operationWithSignatureDeprecated = (
-  operation: Operation,
-  context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
-  signature: Signature,
-): Operation => {
-  return {
-    ...operation,
-    context: {
-      ...operation.context,
-      signer: {
-        ...operation.context?.signer,
-        ...context.signer,
-        signatures: [...(context.signer.signatures ?? []), signature],
-      },
-    },
-  } as Operation;
-};
-*/
+export const actionSigner = (
+  user: UserActionSigner,
+  app: AppActionSigner,
+  signatures: Signature[] = [],
+): ActionSigner => ({
+  user,
+  app,
+  signatures,
+});

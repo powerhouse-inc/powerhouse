@@ -1,4 +1,4 @@
-import { operationWithContext } from "#document/ph-factories.js";
+import { actionSigner, operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
@@ -109,15 +109,13 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   );
 
   const actionContext: ActionContext = {
-    signer: {
-      user: signer.user,
-      app: signer.app,
-      signatures: [...signer.signatures, signature],
-    },
+    signer: actionSigner(signer.user, signer.app, [
+      ...signer.signatures,
+      signature,
+    ]),
   };
 
   return operationWithContext(operation, actionContext);
-  //return operationWithSignatureDeprecated(operation, context, signature);
 }
 
 export async function verifyOperationSignature(

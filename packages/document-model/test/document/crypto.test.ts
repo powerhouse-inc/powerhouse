@@ -1,3 +1,4 @@
+import { actionSigner } from "#document/ph-factories.js";
 import {
   type Action,
   ActionSigner,
@@ -196,11 +197,10 @@ describe("Crypto utils", () => {
       action,
       reducer,
       document,
-      {
-        user: { address: "0x123", chainId: 1, networkId: "1" },
-        app: { name: "test", key: publicKey },
-        signatures: [],
-      },
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
       async (data) =>
         new Uint8Array(
           await crypto.subtle.sign(
@@ -257,11 +257,10 @@ describe("Crypto utils", () => {
       { ...increment(), id: "123" },
       countReducer as PHReducer,
       document,
-      {
-        user: { address: "0x123", chainId: 1, networkId: "1" },
-        app: { name: "test", key: publicKey },
-        signatures: [],
-      },
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
       async (data) =>
         new Uint8Array(
           await crypto.subtle.sign(
@@ -310,16 +309,16 @@ describe("Crypto utils", () => {
     const document = baseCreateDocument<CountDocument>({
       state: { global: { count: 0 }, local: { name: "" } },
     });
+    document.header.id = "1";
 
     const operation = await buildSignedOperation(
       { ...increment(), id: "123" },
       countReducer as PHReducer,
       document,
-      {
-        user: { address: "0x123", chainId: 1, networkId: "1" },
-        app: { name: "test", key: publicKey },
-        signatures: [],
-      },
+      actionSigner(
+        { address: "0x123", chainId: 1, networkId: "1" },
+        { name: "test", key: publicKey },
+      ),
       async (data) =>
         new Uint8Array(
           await crypto.subtle.sign(
