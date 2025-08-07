@@ -57,6 +57,8 @@ export const operationWithContext = (
   };
 };
 
+export const actionContext = (): ActionContext => ({});
+
 export const actionSigner = (
   user: UserActionSigner,
   app: AppActionSigner,
