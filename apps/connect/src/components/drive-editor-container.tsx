@@ -14,7 +14,10 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { type IDriveContext } from '@powerhousedao/reactor-browser';
+import {
+    type DriveEditorProps,
+    type IDriveContext,
+} from '@powerhousedao/reactor-browser';
 import {
     useSelectedDocument,
     useSelectedDrive,
@@ -23,7 +26,11 @@ import {
 // Dynamic import for vetra to avoid build issues when vetra is not available
 let VetraDriveExplorer: any;
 import { driveDocumentModelModule } from 'document-drive';
-import { type DocumentModelModule, type Operation } from 'document-model';
+import {
+    type DocumentModelModule,
+    type Operation,
+    type PHDocument,
+} from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
@@ -130,9 +137,16 @@ export function DriveEditorContainer() {
                 // This will be resolved at runtime if vetra is available
                 DriveEditorComponent = GenericDriveExplorer.Component;
             } else {
-                DriveEditorComponent = VetraDriveExplorer.Component;
+                DriveEditorComponent = (
+                    VetraDriveExplorer as {
+                        Component: React.FC<
+                            DriveEditorProps<PHDocument> &
+                                Record<string, unknown>
+                        >;
+                    }
+                ).Component;
             }
-        } catch (error) {
+        } catch {
             DriveEditorComponent = GenericDriveExplorer.Component;
         }
     }

@@ -31,7 +31,9 @@ export function makeRows(operations: Operation[]) {
       chainId: operation.action?.context?.signer?.user.chainId,
       timestamp: operation.timestamp,
       signatures: makeSignatures(
-        (operation.action?.context?.signer?.signatures as string[][] | undefined) ?? [],
+        (operation.action?.context?.signer?.signatures as
+          | string[][]
+          | undefined) ?? [],
       ),
       errors: operation.error ? [operation.error] : undefined,
     });

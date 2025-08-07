@@ -50,14 +50,17 @@ export const documentModelsAtom = atom(async get => {
     // Try to load vetra document models dynamically
     const vetraDocumentModels: DocumentModelModule[] = [];
     try {
-        const vetraPath = "@powerhousedao/vetra/document-models";
-        const vetraModules = await import(vetraPath);
+        const vetraPath = '@powerhousedao/vetra/document-models';
+        const vetraModules = (await import(vetraPath)) as {
+            VetraPackage: DocumentModelModule;
+            DocumentEditor: DocumentModelModule;
+        };
         vetraDocumentModels.push(
-            vetraModules.VetraPackage as DocumentModelModule,
-            vetraModules.DocumentEditor as DocumentModelModule,
+            vetraModules.VetraPackage,
+            vetraModules.DocumentEditor,
         );
     } catch (error) {
-        console.warn("Vetra document models not available:", error);
+        console.warn('Vetra document models not available:', error);
     }
 
     const result = getUniqueDocumentModels(

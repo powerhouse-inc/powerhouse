@@ -1,7 +1,7 @@
 import { actionSigner } from "#document/ph-factories.js";
 import {
   type Action,
-  ActionSigner,
+  type ActionSigner,
   type Operation,
   type PHReducer,
   type ReducerOptions,

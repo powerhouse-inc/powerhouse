@@ -2,7 +2,7 @@ import { actionSigner, operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  ActionContext,
+  type ActionContext,
   type Action,
   type ActionSigner,
   type Operation,

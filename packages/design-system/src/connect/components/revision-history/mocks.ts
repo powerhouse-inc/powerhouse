@@ -65,7 +65,10 @@ export const mockOperations = [
   mockOperation,
   mockOperation,
   mockOperation,
-  { ...mockOperation, action: { ...mockOperation.action!, context: undefined } },
+  {
+    ...mockOperation,
+    action: { ...mockOperation.action!, context: undefined },
+  },
   mockOperation,
   {
     ...mockOperation,

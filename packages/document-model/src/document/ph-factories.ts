@@ -1,9 +1,9 @@
 import {
-  ActionContext,
-  ActionSigner,
-  AppActionSigner,
-  Signature,
-  UserActionSigner,
+  type ActionContext,
+  type ActionSigner,
+  type AppActionSigner,
+  type Signature,
+  type UserActionSigner,
   type Action,
   type Operation,
 } from "./types.js";

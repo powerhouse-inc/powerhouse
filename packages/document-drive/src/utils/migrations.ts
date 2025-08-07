@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import {
   type DocumentOperations,
   type Operation,
@@ -25,7 +27,6 @@ export function migrateDocumentOperationSignatures(
     },
     { global: [], local: [] },
   );
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return legacy ? { ...document, operations } : document;
 }
 

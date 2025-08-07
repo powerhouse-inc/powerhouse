@@ -13,21 +13,26 @@ async function loadBaseEditors() {
         '@powerhousedao/builder-tools/document-model-editor'
     );
     await import('@powerhousedao/builder-tools/style.css');
-    
-    const baseEditors = [documentModelEditor.documentModelEditorModule] as EditorModule[];
-    
+
+    const baseEditors = [
+        documentModelEditor.documentModelEditorModule,
+    ] as EditorModule[];
+
     // Try to load vetra editors dynamically
     try {
-        const vetraPath = "@powerhousedao/vetra/editors";
-        const vetraEditors = await import(vetraPath);
+        const vetraPath = '@powerhousedao/vetra/editors';
+        const vetraEditors = (await import(vetraPath)) as {
+            VetraPackage: EditorModule;
+            DocumentEditor: EditorModule;
+        };
         baseEditors.push(
-            vetraEditors.VetraPackage as EditorModule,
-            vetraEditors.DocumentEditor as EditorModule,
+            vetraEditors.VetraPackage,
+            vetraEditors.DocumentEditor,
         );
     } catch (error) {
-        console.warn("Vetra editors not available:", error);
+        console.warn('Vetra editors not available:', error);
     }
-    
+
     return baseEditors;
 }
 
