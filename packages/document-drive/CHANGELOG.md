@@ -1,3 +1,13 @@
+## 4.1.0-dev.9 (2025-08-07)
+
+### 🩹 Fixes
+
+- **document-drive:** schema failures on server tests ([be5472ada](https://github.com/powerhouse-inc/powerhouse/commit/be5472ada))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.8 (2025-08-06)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
