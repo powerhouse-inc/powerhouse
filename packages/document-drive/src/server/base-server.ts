@@ -603,8 +603,21 @@ export class BaseDocumentDriveServer
   addDocument<TDocument extends PHDocument>(
     document: TDocument,
     meta?: PHDocumentMeta,
+  ): Promise<TDocument>;
+  addDocument<TDocument extends PHDocument>(
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
+    type: string,
+    meta?: PHDocumentMeta,
+  ): Promise<TDocument>;
+  addDocument<TDocument extends PHDocument>(
+    documentOrType: TDocument | string,
+    meta?: PHDocumentMeta,
   ): Promise<TDocument> {
-    return this.createDocument({ document }, { type: "local" }, meta);
+    const input =
+      typeof documentOrType === "string"
+        ? { documentType: documentOrType }
+        : { document: documentOrType };
+    return this.createDocument<TDocument>(input, { type: "local" }, meta);
   }
 
   async addDrive(

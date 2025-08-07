@@ -211,6 +211,20 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
   });
 
+  it("adds document to server with documentType", async ({ expect }) => {
+    const documentId = generateId();
+    const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
+      .withStorage(await buildStorage())
+      .build();
+
+    const document = await server.addDocument("powerhouse/document-model");
+
+    const expectedDocument =
+      documentModelDocumentModelModule.utils.createDocument();
+    expect(document.state).toStrictEqual(expectedDocument.state);
+  });
+
   it("adds document as child when file is added to server", async ({
     expect,
   }) => {
