@@ -9,10 +9,9 @@ import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
 } from "document-model";
-import {
-  VetraPackage as VetraPackageDocumentModel,
-  DocumentEditor as DocumentEditorDocumentModel,
-} from "@powerhousedao/vetra/document-models";
+// Dynamic import for vetra to avoid circular dependency
+let VetraPackageDocumentModel: any;
+let DocumentEditorDocumentModel: any;
 import EventEmitter from "node:events";
 import { type StatWatcher, watchFile } from "node:fs";
 import type {
@@ -117,10 +116,17 @@ export class PackageManager implements IPackageManager {
       documentModelDocumentModelModule as DocumentModelModule,
     ]);
 
-    documentModelModuleMap.set("@powerhousedao/vetra", [
-      VetraPackageDocumentModel as DocumentModelModule,
-      DocumentEditorDocumentModel as DocumentModelModule,
-    ]);
+    // Dynamically load vetra modules to avoid circular dependency
+    try {
+      const vetraPath = "@powerhousedao/vetra/document-models";
+      const vetraModules = await import(vetraPath);
+      documentModelModuleMap.set("@powerhousedao/vetra", [
+        vetraModules.VetraPackage as DocumentModelModule,
+        vetraModules.DocumentEditor as DocumentModelModule,
+      ]);
+    } catch (error) {
+      this.logger.warn("Failed to load vetra document models", error);
+    }
 
     for (const pkg of packages) {
       const allDocumentModels: DocumentModelModule[] = [];

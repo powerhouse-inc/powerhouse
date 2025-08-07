@@ -9,6 +9,14 @@ export const mockSignature: SignatureArray = [
   "0x1234",
 ];
 
+const mockDocumentSignature: [string, string, string, string, string] = [
+  "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "onCoFcadHQoqpoie/XuS7ItuNOQ=",
+  "onCoFcadHQoqpoie/XuS7ItuNOQ=",
+  "0x1234",
+  "extra-signature-field",
+];
+
 export const mockOperation: Operation = {
   id: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
   hash: "onCoFcadHQoqpoie/XuS7ItuNOQ=",
@@ -21,15 +29,27 @@ export const mockOperation: Operation = {
   timestamp: "2024-06-13T14:39:12.936Z",
   type: "EXAMPLE_OPERATION",
   error: undefined,
-  context: {
-    signer: {
-      user: {
-        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-        chainId: 1,
-        networkId: "eip155:1",
+  scope: "global",
+  action: {
+    type: "EXAMPLE_OPERATION",
+    input: {
+      id: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
+      name: "Example input",
+    },
+    scope: "global",
+    context: {
+      signer: {
+        user: {
+          address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+          chainId: 1,
+          networkId: "eip155:1",
+        },
+        app: {
+          name: "Connect",
+          key: "mock-key",
+        },
+        signatures: [mockDocumentSignature, mockDocumentSignature],
       },
-      // @ts-expect-error mock
-      signatures: [mockSignature, mockSignature],
     },
   },
 };
@@ -45,7 +65,7 @@ export const mockOperations = [
   mockOperation,
   mockOperation,
   mockOperation,
-  { ...mockOperation, context: undefined },
+  { ...mockOperation, action: { ...mockOperation.action!, context: undefined } },
   mockOperation,
   {
     ...mockOperation,
