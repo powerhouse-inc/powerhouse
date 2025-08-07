@@ -32,26 +32,98 @@ export function migrateDocumentOperationSignatures(
 export function migrateLegacyOperationSignature<TGlobalState, TLocalState>(
   operation: Operation,
 ): Operation {
-  if (!operation.context?.signer || operation.context.signer.signatures) {
-    return operation;
+  let needsMigration = false;
+  let newOperation = { ...operation };
+
+  // Check both top-level context and action.context for legacy signatures
+  const topLevelSigner = (operation as any).context?.signer;
+  const actionSigner = operation.action?.context?.signer;
+
+  // Handle top-level context migration (legacy structure)
+  if (topLevelSigner) {
+    if ("signature" in topLevelSigner) {
+      const signature = topLevelSigner.signature as string | undefined;
+      (newOperation as any) = {
+        ...newOperation,
+        context: {
+          ...(newOperation as any).context,
+          signer: {
+            user: topLevelSigner.user,
+            app: topLevelSigner.app,
+            signatures: (signature?.length
+              ? [signature]
+              : []) as unknown as Signature[],
+          },
+        },
+      };
+      needsMigration = true;
+    } else if (topLevelSigner.signatures) {
+      const cleanSignatures = topLevelSigner.signatures.filter(
+        (sig: any) => sig && sig.length > 0,
+      );
+      if (cleanSignatures.length !== topLevelSigner.signatures.length) {
+        (newOperation as any) = {
+          ...newOperation,
+          context: {
+            ...(newOperation as any).context,
+            signer: {
+              ...topLevelSigner,
+              signatures: cleanSignatures as unknown as Signature[],
+            },
+          },
+        };
+        needsMigration = true;
+      }
+    }
   }
-  const { signer } = operation.context;
-  if ("signature" in signer) {
-    const signature = signer.signature as string | undefined;
-    return {
-      ...operation,
-      context: {
-        ...operation.context,
+
+  // Handle action.context migration
+  if (actionSigner) {
+    if ("signature" in actionSigner) {
+      const signature = actionSigner.signature as string | undefined;
+      const migratedContext = {
+        ...newOperation.action!.context,
         signer: {
-          user: signer.user,
-          app: signer.app,
+          user: actionSigner.user,
+          app: actionSigner.app,
           signatures: (signature?.length
             ? [signature]
             : []) as unknown as Signature[],
         },
-      },
-    };
-  } else {
-    return operation;
+      };
+      (newOperation as any) = {
+        ...newOperation,
+        action: {
+          ...newOperation.action!,
+          context: migratedContext,
+        },
+        context: migratedContext, // Also set top-level context
+      };
+      needsMigration = true;
+    } else if (actionSigner.signatures) {
+      const cleanSignatures = actionSigner.signatures.filter(
+        (sig: any) => sig && sig.length > 0,
+      );
+      if (cleanSignatures.length !== actionSigner.signatures.length) {
+        const migratedContext = {
+          ...newOperation.action!.context,
+          signer: {
+            ...actionSigner,
+            signatures: cleanSignatures as unknown as Signature[],
+          },
+        };
+        (newOperation as any) = {
+          ...newOperation,
+          action: {
+            ...newOperation.action!,
+            context: migratedContext,
+          },
+          context: migratedContext, // Also set top-level context
+        };
+        needsMigration = true;
+      }
+    }
   }
+
+  return needsMigration ? newOperation : operation;
 }

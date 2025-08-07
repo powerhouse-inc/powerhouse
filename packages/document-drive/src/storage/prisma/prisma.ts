@@ -15,8 +15,8 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
+import { actionContext } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
-import { actionContext } from "../../../../document-model/src/document/ph-factories.js";
 import { type ICache } from "../../cache/types.js";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import {

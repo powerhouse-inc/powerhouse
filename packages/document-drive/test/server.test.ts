@@ -926,7 +926,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(operationResult.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive.operations.global[0]?.context).toStrictEqual(context);
+    expect(drive.operations.global[0]?.action?.context).toStrictEqual(context);
   });
 
   it("get drives by slug", async ({ expect }) => {
