@@ -1,3 +1,13 @@
+## 4.1.0-dev.10 (2025-08-07)
+
+### 🚀 Features
+
+- **builder-tools,codegen,design-system,reactor-api:** updated document-engineering version ([e74068b43](https://github.com/powerhouse-inc/powerhouse/commit/e74068b43))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.9 (2025-08-07)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
