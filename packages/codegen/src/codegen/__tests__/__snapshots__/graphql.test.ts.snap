@@ -216,6 +216,7 @@ export type Scalars = {
   Amount_Currency: { input: { unit: string, value: string }; output: { unit: string, value: string }; }
   Amount_Crypto: { input: { unit: string, value: string }; output: { unit: string, value: string }; }
   Amount: { input: { unit?: string, value?: number }; output: { unit?: string, value?: number }; }
+  Upload: { input: FileUpload; output: FileUpload; }
 };
 
 export type User = {
