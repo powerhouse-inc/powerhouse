@@ -1,3 +1,20 @@
+## 4.1.0-dev.11 (2025-08-07)
+
+### 🚀 Features
+
+- **switchboard:** added dev mode to switchboard where local document models are loaded ([449e730b6](https://github.com/powerhouse-inc/powerhouse/commit/449e730b6))
+- **switchboard,reactor-local,reactor-api:** moved vite loader to reactor-api package ([c84f0a2a3](https://github.com/powerhouse-inc/powerhouse/commit/c84f0a2a3))
+- vetra package documents and app integration ([0e4053302](https://github.com/powerhouse-inc/powerhouse/commit/0e4053302))
+- **vetra:** added vetra drive editor ([4ebafd143](https://github.com/powerhouse-inc/powerhouse/commit/4ebafd143))
+- integrate package documents into reactor system ([939fe8e80](https://github.com/powerhouse-inc/powerhouse/commit/939fe8e80))
+- **connect:** integrate Vetra package documents and editors ([2ecb9bd15](https://github.com/powerhouse-inc/powerhouse/commit/2ecb9bd15))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.10 (2025-08-07)
 
 ### 🚀 Features

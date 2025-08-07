@@ -2,49 +2,55 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/resolvers.ts"
 force: true
 ---
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { actions } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
-import { generateId } from "document-model";
+import { actions <% modules.forEach(module => { %><% module.operations.forEach(op => { %>, type <%- h.changeCase.pascal(op.name) %>Input<%_ })}); %> } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
+import { setName } from "document-model";
 
-const DEFAULT_DRIVE_ID = "powerhouse";
-
-export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
+export const getResolvers = (subgraph: Subgraph) => {
   const reactor = subgraph.reactor;
 
   return ({
     Query: {
-      <%- h.changeCase.pascal(documentType) %>: async (_: any, args: any, ctx: any) => {
+      <%- h.changeCase.pascal(documentType) %>: async () => {
         return {
-          getDocument: async (args: any) => {
-            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-            const docId: string = args.docId || "";
-            const doc = await reactor.getDocument(driveId, docId);
-             return {
+          getDocument: async (args: { docId: string, driveId: string }) => {
+            const { docId, driveId } = args;
+
+            if(!docId) {
+              throw new Error("Document id is required");
+            }
+            
+            if(driveId) {
+              const docIds = await reactor.getDocuments(driveId);
+              if(!docIds.includes(docId)) {
+                throw new Error(`Document with id ${docId} is not part of ${driveId}`);
+              }
+            }
+
+            const doc = await reactor.getDocument(docId);
+            return {
               driveId: driveId,
               ...doc,
               ...doc.header,
               state: doc.state.global,
               stateJSON: doc.state.global,
-              revision: doc.header.revision["global"] ?? 0,
+              revision: doc.header?.revision?.global ?? 0,
             };
           },
-          getDocuments: async (args: any) => {
-            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
+          getDocuments: async (args: { driveId: string }) => {
+            const { driveId } = args;
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(driveId, docId);
+                const doc = await reactor.getDocument(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
                   state: doc.state.global,
                   stateJSON: doc.state.global,
-                  revision: doc.header.revision["global"] ?? 0,
+                  revision: doc.header?.revision?.global ?? 0,
                 };
               }),
             );
@@ -57,47 +63,50 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
       },
     },
     Mutation: {
-
-      <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId = generateId();
+      <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: unknown, args: { name: string, driveId?: string }) => {
+        const { driveId, name } = args;
+        const document = await reactor.addDocument("<%- documentTypeId %>");
         
-        await reactor.addDriveAction(driveId, addFile({
-          id: docId,
-          name: args.name,
-          documentType: "<%- documentTypeId %>",
-          synchronizationUnits:[
-            { 
-              branch: "main", 
-              scope: "global", 
-              syncId: generateId(), 
-            },
-            { 
-              branch: "main", 
-              scope: "local", 
-              syncId: generateId(), 
-            }
-          ],
-        }));
+        if(driveId) {
+          await reactor.addAction(
+            driveId,
+            addFile({
+              name,
+              id: document.header.id,
+              documentType: "<%- documentTypeId %>",
+            }),
+          );
+        }
 
-        return docId;
+        if(name) {
+          await reactor.addAction(
+            document.header.id,
+            setName(name),
+          );
+        }
+
+        return document.header.id;
       },
 
 <% modules.forEach(module => { _%>
 <% module.operations.forEach(op => { _%>
-        <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) 
-        %>: async (_: any, args: any) => {
-            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-            const docId: string = args.docId || "";
-            const doc = await reactor.getDocument(driveId, docId);
+        <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) %>: async (_: unknown, args: { docId: string, input: <%- h.changeCase.pascal(op.name) %>Input}) => {
+            const { docId, input } = args;
+            const doc = await reactor.getDocument(docId);
+            if(!doc) {
+              throw new Error("Document not found");
+            }
 
-            await reactor.addAction(
-                driveId,
+            const result = await reactor.addAction(
                 docId,
-                actions.<%- h.changeCase.camel(op.name) %>({...args.input})
+                actions.<%- h.changeCase.camel(op.name) %>(input)
             );
             
-            return (doc.header.revision["global"] ?? 0) + 1;
+            if(result.status !== "SUCCESS") {
+              throw new Error(result.error?.message ?? "Failed to <%- h.changeCase.camel(op.name) %>");
+            }
+
+            return true;
         },
 
 <%_ })}); %>
