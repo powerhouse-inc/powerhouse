@@ -6,20 +6,20 @@ import {
     type DocumentModelModule,
     type PHDocument,
 } from 'document-model';
-import {
-    VetraPackage as VetraPackageDocumentModel,
-    DocumentEditor as DocumentEditorDocumentModel,
-} from '@powerhousedao/vetra/document-models';
+// Dynamic imports for vetra to avoid build issues when vetra is not available
+let VetraPackageDocumentModel: any;
+let DocumentEditorDocumentModel: any;
 import { atom, useAtomValue } from 'jotai';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
 
-export const baseDocumentModels = [
+// Base document models - vetra modules will be loaded dynamically if available
+const staticBaseDocumentModels = [
     driveDocumentModelModule,
     documentModelDocumentModelModule,
-    VetraPackageDocumentModel,
-    DocumentEditorDocumentModel,
 ] as DocumentModelModule[];
+
+export const baseDocumentModels = staticBaseDocumentModels;
 
 // removes document models with the same id, keeping the one that appears later
 function getUniqueDocumentModels(
@@ -47,8 +47,22 @@ export const documentModelsAtom = atom(async get => {
     const externalDocumentModels =
         getDocumentModelsFromModules(externalModules);
 
+    // Try to load vetra document models dynamically
+    const vetraDocumentModels: DocumentModelModule[] = [];
+    try {
+        const vetraPath = "@powerhousedao/vetra/document-models";
+        const vetraModules = await import(vetraPath);
+        vetraDocumentModels.push(
+            vetraModules.VetraPackage as DocumentModelModule,
+            vetraModules.DocumentEditor as DocumentModelModule,
+        );
+    } catch (error) {
+        console.warn("Vetra document models not available:", error);
+    }
+
     const result = getUniqueDocumentModels(
         ...baseDocumentModels,
+        ...vetraDocumentModels,
         ...externalDocumentModels,
     );
     return result;

@@ -19,8 +19,8 @@ export async function signOperation<TDocument extends PHDocument>(
     user?: User,
 ): Promise<Operation> {
     if (!user) return operation;
-    if (!operation.context) return operation;
-    if (!operation.context.signer) return operation;
+    if (!operation.action?.context) return operation;
+    if (!operation.action.context.signer) return operation;
     if (!reducer) {
         logger.error(
             `Document model '${document.header.documentType}' does not have a reducer`,
@@ -28,13 +28,7 @@ export async function signOperation<TDocument extends PHDocument>(
         return operation;
     }
 
-    const context: Omit<
-        OperationSignatureContext,
-        'operation' | 'previousStateHash'
-    > = {
-        documentId,
-        signer: operation.context.signer,
-    };
+    const context: ActionSigner = operation.action.context.signer;
 
     const signedOperation = await buildSignedOperation(
         operation,

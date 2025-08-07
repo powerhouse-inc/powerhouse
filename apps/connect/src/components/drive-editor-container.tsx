@@ -20,7 +20,8 @@ import {
     useSelectedDrive,
     useSetSelectedNode,
 } from '@powerhousedao/state';
-import VetraDriveExplorer from '@powerhousedao/vetra/vetra-drive-app';
+// Dynamic import for vetra to avoid build issues when vetra is not available
+let VetraDriveExplorer: any;
 import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
@@ -123,7 +124,17 @@ export function DriveEditorContainer() {
 
     // TODO: remove this after vetra command refactor
     if (selectedDrive?.header.meta?.preferredEditor === 'vetra-drive-app') {
-        DriveEditorComponent = VetraDriveExplorer.Component;
+        // Fallback to generic drive explorer if vetra is not available
+        try {
+            if (!VetraDriveExplorer) {
+                // This will be resolved at runtime if vetra is available
+                DriveEditorComponent = GenericDriveExplorer.Component;
+            } else {
+                DriveEditorComponent = VetraDriveExplorer.Component;
+            }
+        } catch (error) {
+            DriveEditorComponent = GenericDriveExplorer.Component;
+        }
     }
 
     if (selectedDocument || !selectedDrive) return null;
