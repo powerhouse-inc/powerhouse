@@ -30,6 +30,7 @@ export type DevOptions = {
 const defaultVetraSwitchboardOptions: Partial<SwitchboardStartServerOptions> = {
   port: 4001,
   dbPath: path.join(process.cwd(), ".ph/read-model.db"),
+  dev: true,
   drive: {
     id: "vetra",
     slug: "vetra",
