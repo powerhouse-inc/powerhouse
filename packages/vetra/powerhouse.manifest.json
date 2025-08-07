@@ -1,25 +1,40 @@
 {
-    "name": "your-model-name",
-    "description": "A brief description of your PH package.",
-    "category": "your-category",
+    "name": "@powerhousedao/vetra",
+    "description": "Vetra package",
+    "category": "",
     "publisher": {
-        "name": "your-publisher-name",
-        "url": "your-publisher-url"
+        "name": "@powerhousedao",
+        "url": "https://github.com/powerhouse-inc/powerhouse/tree/main/packages/vetra"
     },
     "documentModels": [
         {
-            "id": "your-model-id",
-            "name": "your-model-name"
+            "id": "powerhouse/package",
+            "name": "Vetra Package"
+        },
+        {
+            "id": "powerhouse/document-editor",
+            "name": "Document Editor"
         }
     ],
     "editors": [
         {
-            "id": "your-editor-id",
-            "name": "your-editor-name",
-            "documentTypes": ["your-model-id"]
+            "id": "vetra-package-editor",
+            "name": "Vetra Package Editor",
+            "documentTypes": ["powerhouse/package"]
+        },
+        {
+            "id": "document-editor-editor",
+            "name": "Document Editor",
+            "documentTypes": ["powerhouse/document-editor"]
         }
     ],
-    "apps": [],
+    "apps": [
+        {
+            "id": "vetra-drive-app",
+            "name": "Vetra Drive App",
+            "driveEditor": "vetra-drive-app"
+        }
+    ],
     "subgraphs": [],
     "importScripts": []
 }

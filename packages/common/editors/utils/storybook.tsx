@@ -57,6 +57,7 @@ export function createDriveStory(
             onAddAndSelectNewFolder: () => Promise.resolve(),
             getSyncStatusSync: () => undefined,
             showDeleteNodeModal: () => {},
+            setSelectedNode: () => {},
             getDocumentModelModule: () => undefined,
             getEditor: () => undefined,
             useDocumentEditorProps: () => ({

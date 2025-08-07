@@ -16,11 +16,13 @@ import {
 import { reducer } from "./reducer.js";
 
 export const initialGlobalState: VetraPackageState = {
-  name: "",
+  name: null,
   description: null,
-  category: "",
-  publisher: null,
-  publisherUrl: null,
+  category: null,
+  author: {
+    name: null,
+    website: null,
+  },
   keywords: [],
   githubUrl: null,
   npmUrl: null,
@@ -44,7 +46,7 @@ const utils: DocumentModelUtils<VetraPackageDocument> = {
       utils.createState,
     );
 
-    document.header.documentType = "vetra/package-information";
+    document.header.documentType = "powerhouse/package";
 
     // for backwards compatibility, but this is NOT a valid signed document id
     document.header.id = generateId();

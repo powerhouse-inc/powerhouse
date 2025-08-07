@@ -6,6 +6,10 @@ import {
     type DocumentModelModule,
     type PHDocument,
 } from 'document-model';
+import {
+    VetraPackage as VetraPackageDocumentModel,
+    DocumentEditor as DocumentEditorDocumentModel,
+} from '@powerhousedao/vetra/document-models';
 import { atom, useAtomValue } from 'jotai';
 import { unwrap } from 'jotai/utils';
 import { externalPackagesAtom } from './external-packages.js';
@@ -13,6 +17,8 @@ import { externalPackagesAtom } from './external-packages.js';
 export const baseDocumentModels = [
     driveDocumentModelModule,
     documentModelDocumentModelModule,
+    VetraPackageDocumentModel,
+    DocumentEditorDocumentModel,
 ] as DocumentModelModule[];
 
 // removes document models with the same id, keeping the one that appears later

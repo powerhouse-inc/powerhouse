@@ -15,11 +15,13 @@ import {
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
-import { useSelectedDocument, useSelectedDrive } from '@powerhousedao/state';
 import {
-    type DocumentDriveAction,
-    driveDocumentModelModule,
-} from 'document-drive';
+    useSelectedDocument,
+    useSelectedDrive,
+    useSetSelectedNode,
+} from '@powerhousedao/state';
+import VetraDriveExplorer from '@powerhousedao/vetra/vetra-drive-app';
+import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
@@ -78,6 +80,7 @@ export function DriveEditorContainer() {
     const getEditor = useGetEditor();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
+    const setSelectedNode = useSetSelectedNode();
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -94,6 +97,7 @@ export function DriveEditorContainer() {
             showDeleteNodeModal,
             useDocumentEditorProps,
             addDocument,
+            setSelectedNode,
         }),
         [
             nodeActions,
@@ -106,6 +110,7 @@ export function DriveEditorContainer() {
             getEditor,
             showDeleteNodeModal,
             showCreateDocumentModal,
+            setSelectedNode,
         ],
     );
 
@@ -113,8 +118,13 @@ export function DriveEditorContainer() {
         selectedDrive?.header.meta?.preferredEditor,
     );
 
-    const DriveEditorComponent =
+    let DriveEditorComponent =
         driveEditor?.Component ?? GenericDriveExplorer.Component;
+
+    // TODO: remove this after vetra command refactor
+    if (selectedDrive?.header.meta?.preferredEditor === 'vetra-drive-app') {
+        DriveEditorComponent = VetraDriveExplorer.Component;
+    }
 
     if (selectedDocument || !selectedDrive) return null;
 

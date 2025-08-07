@@ -1,5 +1,9 @@
 import { useDefaultDocumentModelEditor } from '#hooks';
 import { type DocumentModelLib, type EditorModule } from 'document-model';
+import {
+    VetraPackage as VetraPackageEditor,
+    DocumentEditor as DocumentEditorEditor,
+} from '@powerhousedao/vetra/editors';
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
@@ -10,8 +14,9 @@ async function loadBaseEditors() {
         '@powerhousedao/builder-tools/document-model-editor'
     );
     await import('@powerhousedao/builder-tools/style.css');
+    await import('@powerhousedao/vetra/style.css');
     const module = documentModelEditor.documentModelEditorModule;
-    return [module] as EditorModule[];
+    return [module, VetraPackageEditor, DocumentEditorEditor] as EditorModule[];
 }
 
 function getEditorsFromModules(modules: DocumentModelLib[]) {

@@ -58,6 +58,7 @@
     "@powerhousedao/analytics-engine-pg": "^0.6.0",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "^1.26.1",
+    "@powerhousedao/vetra": "workspace:*",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",

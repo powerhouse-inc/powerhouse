@@ -35,8 +35,9 @@ const defaultVetraSwitchboardOptions: Partial<SwitchboardStartServerOptions> = {
     slug: "vetra",
     global: {
       name: "Vetra",
-      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreiccw6piv55gk6pkbfzlhj2snfsncjz5fmmlue5njsukuaeapffggi",
     },
+    preferredEditor: "vetra-drive-app",
     local: {
       availableOffline: true,
       listeners: [],
@@ -140,9 +141,9 @@ function spawnLocalReactor(
         } else {
           // Only show specific logs when not verbose
           if (
-            line.includes("🔄 Starting code generation") ||
-            line.includes("✅ Code generation completed") ||
-            line.includes("❌ Error during code generation")
+            line.includes("🔄") ||
+            line.includes("✅") ||
+            line.includes("❌")
           ) {
             process.stdout.write(cyan(`[Codegen]: ${line}\n`));
           }

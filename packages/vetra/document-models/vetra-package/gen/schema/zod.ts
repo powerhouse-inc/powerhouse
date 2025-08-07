@@ -1,13 +1,17 @@
 import { z } from "zod";
 import type {
+  AddPackageKeywordInput,
+  Author,
+  Keyword,
+  RemovePackageKeywordInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
   SetPackageCategoryInput,
   SetPackageDescriptionInput,
   SetPackageGithubUrlInput,
-  SetPackageKeywordsInput,
   SetPackageNameInput,
   SetPackageNpmUrlInput,
-  SetPackagePublisherInput,
-  SetPackagePublisherUrlInput,
   VetraPackageState,
 } from "./types.js";
 
@@ -24,6 +28,64 @@ export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
 
+export function AddPackageKeywordInputSchema(): z.ZodObject<
+  Properties<AddPackageKeywordInput>
+> {
+  return z.object({
+    id: z.string(),
+    label: z.string(),
+  });
+}
+
+export function AuthorSchema(): z.ZodObject<Properties<Author>> {
+  return z.object({
+    __typename: z.literal("Author").optional(),
+    name: z.string().nullable(),
+    website: z.string().url().nullable(),
+  });
+}
+
+export function KeywordSchema(): z.ZodObject<Properties<Keyword>> {
+  return z.object({
+    __typename: z.literal("Keyword").optional(),
+    id: z.string(),
+    label: z.string(),
+  });
+}
+
+export function RemovePackageKeywordInputSchema(): z.ZodObject<
+  Properties<RemovePackageKeywordInput>
+> {
+  return z.object({
+    id: z.string(),
+  });
+}
+
+export function SetPackageAuthorInputSchema(): z.ZodObject<
+  Properties<SetPackageAuthorInput>
+> {
+  return z.object({
+    name: z.string().nullish(),
+    website: z.string().url().nullish(),
+  });
+}
+
+export function SetPackageAuthorNameInputSchema(): z.ZodObject<
+  Properties<SetPackageAuthorNameInput>
+> {
+  return z.object({
+    name: z.string(),
+  });
+}
+
+export function SetPackageAuthorWebsiteInputSchema(): z.ZodObject<
+  Properties<SetPackageAuthorWebsiteInput>
+> {
+  return z.object({
+    website: z.string().url(),
+  });
+}
+
 export function SetPackageCategoryInputSchema(): z.ZodObject<
   Properties<SetPackageCategoryInput>
 > {
@@ -36,7 +98,7 @@ export function SetPackageDescriptionInputSchema(): z.ZodObject<
   Properties<SetPackageDescriptionInput>
 > {
   return z.object({
-    description: z.string().nullish(),
+    description: z.string(),
   });
 }
 
@@ -44,15 +106,7 @@ export function SetPackageGithubUrlInputSchema(): z.ZodObject<
   Properties<SetPackageGithubUrlInput>
 > {
   return z.object({
-    url: z.string().url().nullish(),
-  });
-}
-
-export function SetPackageKeywordsInputSchema(): z.ZodObject<
-  Properties<SetPackageKeywordsInput>
-> {
-  return z.object({
-    keywords: z.array(z.string()),
+    url: z.string().url(),
   });
 }
 
@@ -68,23 +122,7 @@ export function SetPackageNpmUrlInputSchema(): z.ZodObject<
   Properties<SetPackageNpmUrlInput>
 > {
   return z.object({
-    url: z.string().url().nullish(),
-  });
-}
-
-export function SetPackagePublisherInputSchema(): z.ZodObject<
-  Properties<SetPackagePublisherInput>
-> {
-  return z.object({
-    publisher: z.string().nullish(),
-  });
-}
-
-export function SetPackagePublisherUrlInputSchema(): z.ZodObject<
-  Properties<SetPackagePublisherUrlInput>
-> {
-  return z.object({
-    url: z.string().url().nullish(),
+    url: z.string().url(),
   });
 }
 
@@ -93,13 +131,12 @@ export function VetraPackageStateSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("VetraPackageState").optional(),
-    category: z.string(),
+    author: AuthorSchema(),
+    category: z.string().nullable(),
     description: z.string().nullable(),
     githubUrl: z.string().url().nullable(),
-    keywords: z.array(z.string()),
-    name: z.string(),
+    keywords: z.array(KeywordSchema()),
+    name: z.string().nullable(),
     npmUrl: z.string().url().nullable(),
-    publisher: z.string().nullable(),
-    publisherUrl: z.string().url().nullable(),
   });
 }

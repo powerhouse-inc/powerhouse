@@ -67,6 +67,7 @@
         "@powerhousedao/common": "workspace:*",
         "@powerhousedao/config": "workspace:*",
         "@powerhousedao/design-system": "workspace:*",
+        "@powerhousedao/vetra": "workspace:*",
         "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@powerhousedao/state": "workspace:*",

@@ -55,20 +55,48 @@ export type Scalars = {
   URL: { input: string; output: string };
 };
 
+export type AddPackageKeywordInput = {
+  id: Scalars["String"]["input"];
+  label: Scalars["String"]["input"];
+};
+
+export type Author = {
+  name: Maybe<Scalars["String"]["output"]>;
+  website: Maybe<Scalars["URL"]["output"]>;
+};
+
+export type Keyword = {
+  id: Scalars["OID"]["output"];
+  label: Scalars["String"]["output"];
+};
+
+export type RemovePackageKeywordInput = {
+  id: Scalars["String"]["input"];
+};
+
+export type SetPackageAuthorInput = {
+  name?: InputMaybe<Scalars["OID"]["input"]>;
+  website?: InputMaybe<Scalars["URL"]["input"]>;
+};
+
+export type SetPackageAuthorNameInput = {
+  name: Scalars["String"]["input"];
+};
+
+export type SetPackageAuthorWebsiteInput = {
+  website: Scalars["URL"]["input"];
+};
+
 export type SetPackageCategoryInput = {
   category: Scalars["String"]["input"];
 };
 
 export type SetPackageDescriptionInput = {
-  description?: InputMaybe<Scalars["String"]["input"]>;
+  description: Scalars["String"]["input"];
 };
 
 export type SetPackageGithubUrlInput = {
-  url?: InputMaybe<Scalars["URL"]["input"]>;
-};
-
-export type SetPackageKeywordsInput = {
-  keywords: Array<Scalars["String"]["input"]>;
+  url: Scalars["URL"]["input"];
 };
 
 export type SetPackageNameInput = {
@@ -76,24 +104,15 @@ export type SetPackageNameInput = {
 };
 
 export type SetPackageNpmUrlInput = {
-  url?: InputMaybe<Scalars["URL"]["input"]>;
-};
-
-export type SetPackagePublisherInput = {
-  publisher?: InputMaybe<Scalars["String"]["input"]>;
-};
-
-export type SetPackagePublisherUrlInput = {
-  url?: InputMaybe<Scalars["URL"]["input"]>;
+  url: Scalars["URL"]["input"];
 };
 
 export type VetraPackageState = {
-  category: Scalars["String"]["output"];
+  author: Author;
+  category: Maybe<Scalars["String"]["output"]>;
   description: Maybe<Scalars["String"]["output"]>;
   githubUrl: Maybe<Scalars["URL"]["output"]>;
-  keywords: Array<Scalars["String"]["output"]>;
-  name: Scalars["String"]["output"];
+  keywords: Array<Keyword>;
+  name: Maybe<Scalars["String"]["output"]>;
   npmUrl: Maybe<Scalars["URL"]["output"]>;
-  publisher: Maybe<Scalars["String"]["output"]>;
-  publisherUrl: Maybe<Scalars["URL"]["output"]>;
 };

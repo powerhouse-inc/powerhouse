@@ -3,9 +3,11 @@ import {
   type SetPackageNameInput,
   type SetPackageDescriptionInput,
   type SetPackageCategoryInput,
-  type SetPackagePublisherInput,
-  type SetPackagePublisherUrlInput,
-  type SetPackageKeywordsInput,
+  type SetPackageAuthorInput,
+  type SetPackageAuthorNameInput,
+  type SetPackageAuthorWebsiteInput,
+  type AddPackageKeywordInput,
+  type RemovePackageKeywordInput,
   type SetPackageGithubUrlInput,
   type SetPackageNpmUrlInput,
   type VetraPackageState,
@@ -15,15 +17,17 @@ import {
   setPackageName,
   setPackageDescription,
   setPackageCategory,
-  setPackagePublisher,
-  setPackagePublisherUrl,
-  setPackageKeywords,
+  setPackageAuthor,
+  setPackageAuthorName,
+  setPackageAuthorWebsite,
+  addPackageKeyword,
+  removePackageKeyword,
   setPackageGithubUrl,
   setPackageNpmUrl,
 } from "./creators.js";
 import { type VetraPackageAction } from "../actions.js";
 
-export default class VetraPackage_PackageOperations extends BaseDocumentClass<
+export default class VetraPackage_BaseOperations extends BaseDocumentClass<
   VetraPackageState,
   VetraPackageLocalState,
   VetraPackageAction
@@ -40,16 +44,24 @@ export default class VetraPackage_PackageOperations extends BaseDocumentClass<
     return this.dispatch(setPackageCategory(input));
   }
 
-  public setPackagePublisher(input: SetPackagePublisherInput) {
-    return this.dispatch(setPackagePublisher(input));
+  public setPackageAuthor(input: SetPackageAuthorInput) {
+    return this.dispatch(setPackageAuthor(input));
   }
 
-  public setPackagePublisherUrl(input: SetPackagePublisherUrlInput) {
-    return this.dispatch(setPackagePublisherUrl(input));
+  public setPackageAuthorName(input: SetPackageAuthorNameInput) {
+    return this.dispatch(setPackageAuthorName(input));
   }
 
-  public setPackageKeywords(input: SetPackageKeywordsInput) {
-    return this.dispatch(setPackageKeywords(input));
+  public setPackageAuthorWebsite(input: SetPackageAuthorWebsiteInput) {
+    return this.dispatch(setPackageAuthorWebsite(input));
+  }
+
+  public addPackageKeyword(input: AddPackageKeywordInput) {
+    return this.dispatch(addPackageKeyword(input));
+  }
+
+  public removePackageKeyword(input: RemovePackageKeywordInput) {
+    return this.dispatch(removePackageKeyword(input));
   }
 
   public setPackageGithubUrl(input: SetPackageGithubUrlInput) {
