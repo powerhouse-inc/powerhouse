@@ -1,3 +1,14 @@
+## 4.1.0-dev.10 (2025-08-07)
+
+### 🚀 Features
+
+- **builder-tools,codegen,design-system,reactor-api:** updated document-engineering version ([e74068b43](https://github.com/powerhouse-inc/powerhouse/commit/e74068b43))
+- **document-drive:** added support for adding document by providing only document type ([7e093800d](https://github.com/powerhouse-inc/powerhouse/commit/7e093800d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.9 (2025-08-07)
 
 ### 🩹 Fixes
