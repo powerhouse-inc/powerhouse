@@ -1041,7 +1041,7 @@ export class BaseDocumentDriveServer
       }
     }
 
-    return document as TDocument;
+    return await this.getDocument<TDocument>(documentStorage.header.id);
   }
 
   async deleteDocument(documentId: string) {

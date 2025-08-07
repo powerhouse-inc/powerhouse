@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 import { startAPI } from "@powerhousedao/reactor-api";
+import {
+  VitePackageLoader,
+  startViteServer,
+} from "@powerhousedao/reactor-api/packages/vite-loader";
 import * as Sentry from "@sentry/node";
 import {
   InMemoryCache,
@@ -39,6 +43,90 @@ if (process.env.SENTRY_DSN) {
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
+async function initServer(serverPort: number, options: StartServerOptions) {
+  const { dev, packages = [] } = options;
+
+  // start redis if configured
+  const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
+  let redis: RedisClientType | undefined;
+  if (redisUrl) {
+    try {
+      redis = await initRedis(redisUrl);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
+  const dbUrl =
+    connectionString.includes("amazonaws") &&
+    !connectionString.includes("sslmode=no-verify")
+      ? connectionString + "?sslmode=no-verify"
+      : connectionString;
+
+  const cache = redis ? new RedisCache(redis) : new InMemoryCache();
+  const storageFactory = dbUrl.startsWith("postgresql")
+    ? new PrismaStorageFactory(dbUrl, cache)
+    : undefined;
+  const storage = storageFactory
+    ? storageFactory.build()
+    : new FilesystemStorage(path.join(process.cwd(), dbUrl));
+
+  const reactor = new ReactorBuilder([
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[])
+    .withStorage(storage)
+    .withCache(cache)
+    .build();
+
+  // init drive server
+  await reactor.initialize();
+
+  const dbPath = dbUrl.startsWith("postgresql") ? dbUrl : ".ph/read-storage";
+
+  let defaultDriveUrl: undefined | string = undefined;
+
+  if (options.drive) {
+    defaultDriveUrl = await addDefaultDrive(reactor, options.drive, serverPort);
+  }
+
+  // start vite server if dev mode is enabled
+  const vite = dev ? await startViteServer() : undefined;
+
+  // get paths to local document models
+  if (dev) {
+    // TODO get path from powerhouse config
+    const basePath = process.cwd();
+    packages.push(basePath);
+  }
+
+  // create loader
+  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
+
+  // Start the API with the reactor and options
+  const api = await startAPI(reactor, {
+    express: app,
+    port: serverPort,
+    dbPath: options.dbPath ?? dbPath,
+    https: options.https,
+    packageLoader,
+    packages: options.packages,
+    configFile:
+      options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+  });
+
+  // add vite middleware after express app is initialized if applicable
+  if (vite) {
+    api.app.use(vite.middlewares);
+  }
+
+  return {
+    defaultDriveUrl,
+    api,
+    reactor,
+  };
+}
+
 export const startSwitchboard = async (
   options: StartServerOptions = {},
 ): Promise<SwitchboardReactor> => {
@@ -54,69 +142,7 @@ export const startSwitchboard = async (
   }
 
   try {
-    const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
-    let redis: RedisClientType | undefined;
-    if (redisUrl) {
-      try {
-        redis = await initRedis(redisUrl);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
-    const dbUrl =
-      connectionString.includes("amazonaws") &&
-      !connectionString.includes("sslmode=no-verify")
-        ? connectionString + "?sslmode=no-verify"
-        : connectionString;
-
-    const cache = redis ? new RedisCache(redis) : new InMemoryCache();
-    const storageFactory = dbUrl.startsWith("postgresql")
-      ? new PrismaStorageFactory(dbUrl, cache)
-      : undefined;
-    const storage = storageFactory
-      ? storageFactory.build()
-      : new FilesystemStorage(path.join(process.cwd(), dbUrl));
-
-    const reactor = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as DocumentModelModule[])
-      .withStorage(storage)
-      .withCache(cache)
-      .build();
-
-    // init drive server
-    await reactor.initialize();
-
-    const dbPath = dbUrl.startsWith("postgresql") ? dbUrl : ".ph/read-storage";
-
-    let defaultDriveUrl: undefined | string = undefined;
-
-    if (options.drive) {
-      defaultDriveUrl = await addDefaultDrive(
-        reactor,
-        options.drive,
-        serverPort,
-      );
-    }
-
-    // Start the API with the reactor and options
-    await startAPI(reactor, {
-      express: app,
-      port: serverPort,
-      dbPath: options.dbPath ?? dbPath,
-      https: options.https,
-      packages: options.packages,
-      configFile:
-        options.configFile ??
-        path.join(process.cwd(), "powerhouse.config.json"),
-    });
-
-    return {
-      defaultDriveUrl,
-      reactor,
-    };
+    return await initServer(serverPort, options);
   } catch (e) {
     Sentry.captureException(e);
     console.error("App crashed", e);

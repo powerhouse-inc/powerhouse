@@ -9,6 +9,7 @@ export type StorageOptions = {
 export type StartServerOptions = {
   configFile?: string;
   port?: number;
+  dev?: boolean;
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
