@@ -1,5 +1,6 @@
 import {
   type Action,
+  ActionSigner,
   type Operation,
   type PHReducer,
   type ReducerOptions,
@@ -87,9 +88,10 @@ describe("Crypto utils", () => {
     // overwrite id
     operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
 
-    const signer = {
+    const signer: ActionSigner = {
       user: { address: "0x123", chainId: 1, networkId: "1" },
       app: { name: "test", key: "0xtest" },
+      signatures: [],
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
@@ -127,9 +129,10 @@ describe("Crypto utils", () => {
     // overwrite id
     operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
 
-    const signer = {
+    const signer: ActionSigner = {
       user: { address: "0x123", chainId: 1, networkId: "1" },
       app: { name: "test", key: "0xtest" },
+      signatures: [],
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
@@ -172,6 +175,7 @@ describe("Crypto utils", () => {
     const document = baseCreateDocument<CountDocument>({
       state: { global: { count: 0 }, local: { name: "" } },
     });
+    document.header.id = "1";
 
     const action = increment();
     const reducer = ((
@@ -193,11 +197,9 @@ describe("Crypto utils", () => {
       reducer,
       document,
       {
-        documentId: "1",
-        signer: {
-          user: { address: "0x123", chainId: 1, networkId: "1" },
-          app: { name: "test", key: publicKey },
-        },
+        user: { address: "0x123", chainId: 1, networkId: "1" },
+        app: { name: "test", key: publicKey },
+        signatures: [],
       },
       async (data) =>
         new Uint8Array(
@@ -208,7 +210,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    expect(operation.context?.signer).toStrictEqual({
+    expect(operation.action?.context?.signer).toStrictEqual({
       app: {
         key: publicKey,
         name: "test",
@@ -256,11 +258,9 @@ describe("Crypto utils", () => {
       countReducer as PHReducer,
       document,
       {
-        documentId: "1",
-        signer: {
-          user: { address: "0x123", chainId: 1, networkId: "1" },
-          app: { name: "test", key: publicKey },
-        },
+        user: { address: "0x123", chainId: 1, networkId: "1" },
+        app: { name: "test", key: publicKey },
+        signatures: [],
       },
       async (data) =>
         new Uint8Array(
@@ -271,7 +271,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.context!.signer!;
+    const signer = operation.action!.context!.signer!;
     const verified = await verifyOperationSignature(
       signer.signatures.at(0)!,
       signer,
@@ -316,11 +316,9 @@ describe("Crypto utils", () => {
       countReducer as PHReducer,
       document,
       {
-        documentId: "1",
-        signer: {
-          user: { address: "0x123", chainId: 1, networkId: "1" },
-          app: { name: "test", key: publicKey },
-        },
+        user: { address: "0x123", chainId: 1, networkId: "1" },
+        app: { name: "test", key: publicKey },
+        signatures: [],
       },
       async (data) =>
         new Uint8Array(
@@ -331,7 +329,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.context!.signer!;
+    const signer = operation.action!.context!.signer!;
     const signature = signer.signatures.at(0)!;
 
     signature[4] = "FAKE SIGNATURE";

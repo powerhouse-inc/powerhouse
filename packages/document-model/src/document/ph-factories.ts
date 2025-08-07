@@ -1,9 +1,4 @@
-import {
-  type Action,
-  type Operation,
-  type OperationSignatureContext,
-  type Signature,
-} from "./types.js";
+import { ActionContext, type Action, type Operation } from "./types.js";
 import { generateId } from "./utils/crypto.js";
 
 export const operationFromAction = (
@@ -13,6 +8,7 @@ export const operationFromAction = (
 ): Operation => {
   return {
     ...action,
+    action,
     id: generateId(),
     timestamp: new Date().toISOString(),
     hash: "",
@@ -36,42 +32,24 @@ export const operationFromOperation = (
   };
 };
 
-export const operationWithSignature = (
+export const operationWithContext = (
   operation: Operation,
-  signature: Signature,
+  context: ActionContext,
 ): Operation => {
   if (!operation.action) {
     throw new Error("Operation has no action");
   }
 
-  if (!operation.action.context) {
-    throw new Error("Operation has no context");
-  }
-
-  if (!operation.action.context.signer) {
-    throw new Error("Operation has no signer");
-  }
-
-  const action = operation.action;
-  const context = action.context!;
-  const signer = context.signer!;
-  const signatures = signer.signatures ?? [];
-
   return {
     ...operation,
     action: {
-      ...action,
-      context: {
-        ...context,
-        signer: {
-          ...signer,
-          signatures: [...signatures, signature],
-        },
-      },
+      ...operation.action,
+      context,
     },
   };
 };
 
+/*
 export const operationWithSignatureDeprecated = (
   operation: Operation,
   context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
@@ -89,3 +67,4 @@ export const operationWithSignatureDeprecated = (
     },
   } as Operation;
 };
+*/

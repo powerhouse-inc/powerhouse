@@ -32,16 +32,20 @@ export type {
 //  ]
 export type Signature = [string, string, string, string, string];
 
+export type UserActionSigner = {
+  address: string;
+  networkId: string; // CAIP-2
+  chainId: number; // CAIP-10
+};
+
+export type AppActionSigner = {
+  name: string; // Connect
+  key: string;
+};
+
 export type ActionSigner = {
-  user: {
-    address: string;
-    networkId: string; // CAIP-2
-    chainId: number; // CAIP-10
-  };
-  app: {
-    name: string; // Connect
-    key: string;
-  };
+  user: UserActionSigner;
+  app: AppActionSigner;
   signatures: Signature[];
 };
 
@@ -132,7 +136,7 @@ export type Operation = {
   /** The attachments included in the action. */
   attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */
-  context?: ActionContext;
+  //context?: ActionContext;
   /////////////////////////////////////////////////////////////////////////////
 
   /** Position of the operation in the history */
@@ -274,7 +278,7 @@ export type DocumentOperationsIgnoreMap = Record<string, MappedOperation[]>;
 
 export type OperationSignatureContext = {
   documentId: string;
-  signer: Omit<ActionSigner, "signatures"> & { signatures?: Signature[] };
+  signer: ActionSigner;
   operation: Operation;
   previousStateHash: string;
 };

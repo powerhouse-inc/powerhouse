@@ -1,7 +1,8 @@
-import { operationWithSignatureDeprecated } from "#document/ph-factories.js";
+import { operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
+  ActionContext,
   type Action,
   type ActionSigner,
   type Operation,
@@ -84,7 +85,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   action: Action | Operation,
   reducer: Reducer<TDocument>,
   document: TDocument,
-  context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
+  signer: ActionSigner,
   signHandler: OperationSigningHandler,
 ) {
   const result = reducer(document, action, undefined, {
@@ -99,14 +100,24 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   const previousStateHash = result.operations[action.scope].at(-2)?.hash ?? "";
   const signature = await buildOperationSignature(
     {
-      ...context,
+      documentId: document.header.id,
+      signer,
       operation,
       previousStateHash,
     },
     signHandler,
   );
 
-  return operationWithSignatureDeprecated(operation, context, signature);
+  const actionContext: ActionContext = {
+    signer: {
+      user: signer.user,
+      app: signer.app,
+      signatures: [...signer.signatures, signature],
+    },
+  };
+
+  return operationWithContext(operation, actionContext);
+  //return operationWithSignatureDeprecated(operation, context, signature);
 }
 
 export async function verifyOperationSignature(

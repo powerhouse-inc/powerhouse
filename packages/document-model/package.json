@@ -31,6 +31,7 @@
     "build:watch": "tsc --build --watch",
     "prebuild": "npm run clean",
     "test": "vitest run",
+    "test:watch": "vitest watch",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },
