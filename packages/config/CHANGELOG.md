@@ -1,3 +1,17 @@
+## 4.1.0-dev.9 (2025-08-07)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🚀 Features
+
+- **switchboard,config,reactor-api:** handle auth in reactor-api ([f33c921ee](https://github.com/powerhouse-inc/powerhouse/commit/f33c921ee))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

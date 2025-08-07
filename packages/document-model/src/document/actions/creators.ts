@@ -5,7 +5,7 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { type DefaultAction, type ExtendedState } from "../types.js";
+import { type Action, type ExtendedState } from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
   type LoadStateAction,
@@ -116,5 +116,5 @@ export const actions = {
   prune,
   loadState,
   noop,
-} as unknown as Record<string, (input: any) => DefaultAction>;
+} as unknown as Record<string, (input: any) => Action>;
 // TODO improve base actions type

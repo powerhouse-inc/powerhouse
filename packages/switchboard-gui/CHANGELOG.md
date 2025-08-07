@@ -1,3 +1,11 @@
+## 4.1.0-dev.9 (2025-08-07)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.8 (2025-08-06)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

@@ -211,6 +211,20 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
   });
 
+  it("adds document to server with documentType", async ({ expect }) => {
+    const documentId = generateId();
+    const server = new ReactorBuilder(documentModels)
+      .withCache(cache)
+      .withStorage(await buildStorage())
+      .build();
+
+    const document = await server.addDocument("powerhouse/document-model");
+
+    const expectedDocument =
+      documentModelDocumentModelModule.utils.createDocument();
+    expect(document.state).toStrictEqual(expectedDocument.state);
+  });
+
   it("adds document as child when file is added to server", async ({
     expect,
   }) => {
@@ -792,13 +806,15 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     document = documentModelDocumentModelModule.reducer(
       document,
-      documentModelDocumentModelModule.actions.setModelName("Test"),
+      documentModelDocumentModelModule.actions.setModelName({ name: "Test" }),
     );
     document = documentModelDocumentModelModule.reducer(
       document,
-      documentModelDocumentModelModule.actions.setStateSchema(
-        'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
-      ),
+      documentModelDocumentModelModule.actions.setStateSchema({
+        schema:
+          'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
+        scope: "global",
+      }),
     );
     const operations = document.operations.global;
     const result = await server.addOperations(documentId, operations);

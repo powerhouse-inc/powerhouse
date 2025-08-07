@@ -1,4 +1,3 @@
-import { type DocumentModelHeaderAction } from "#document-model/gen/actions.js";
 import { type DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
@@ -70,8 +69,6 @@ export type ActionWithAttachment = Action & {
   attachments: AttachmentInput[];
 };
 
-export type DefaultAction = DocumentAction | DocumentModelHeaderAction;
-
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied */
   skip?: number;
@@ -95,7 +92,7 @@ export type ReducerOptions = {
  */
 export type Reducer<TDocument extends PHDocument> = (
   document: TDocument,
-  action: Action | Operation | DefaultAction,
+  action: Action | Operation,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
 ) => TDocument;
@@ -105,7 +102,7 @@ export type PHReducer<TDocument extends PHDocument = PHDocument> =
 
 export type StateReducer<TDocument extends PHDocument> = (
   state: Draft<BaseStateFromDocument<TDocument>>,
-  action: Action | DefaultAction | Operation,
+  action: Action | Operation,
   dispatch?: SignalDispatch,
 ) => BaseStateFromDocument<TDocument> | undefined;
 
@@ -122,7 +119,22 @@ export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
  *
  * @typeParam A - The type of the action.
  */
-export type Operation = Action & {
+export type Operation = {
+  /////////////////////////////////////////////////////////////////////////////
+  // Temporary action fields.
+  /////////////////////////////////////////////////////////////////////////////
+  /** The name of the action. */
+  type: string;
+  /** The payload of the action. */
+  input: unknown;
+  /** The scope of the action */
+  scope: string;
+  /** The attachments included in the action. */
+  attachments?: AttachmentInput[] | undefined;
+  /** The context of the action. */
+  context?: ActionContext;
+  /////////////////////////////////////////////////////////////////////////////
+
   /** Position of the operation in the history */
   index: number;
   /** Timestamp of when the operation was added */
@@ -137,6 +149,12 @@ export type Operation = Action & {
   resultingState?: string;
   /** Unique operation id */
   id?: string;
+  /**
+   * The action that was applied to the document to produce this operation.
+   *
+   * TODO: this will not be optional in the future.
+   */
+  action?: Action;
 };
 
 export type Meta = {
@@ -463,7 +481,7 @@ type ExtractPHDocumentGenerics<T> =
 
 export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
   reducer: Reducer<TDocument>;
-  actions: Record<string, (input: any) => Action | DefaultAction>;
+  actions: Record<string, (input: any) => Action>;
   utils: DocumentModelUtils<TDocument>;
   documentModel: DocumentModelState;
 };

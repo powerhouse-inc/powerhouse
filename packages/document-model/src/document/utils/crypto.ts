@@ -1,3 +1,4 @@
+import { operationWithSignatureDeprecated } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
@@ -105,17 +106,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
     signHandler,
   );
 
-  return {
-    ...operation,
-    context: {
-      ...operation.context,
-      signer: {
-        ...operation.context?.signer,
-        ...context.signer,
-        signatures: [...(context.signer.signatures ?? []), signature],
-      },
-    },
-  } as Operation;
+  return operationWithSignatureDeprecated(operation, context, signature);
 }
 
 export async function verifyOperationSignature(

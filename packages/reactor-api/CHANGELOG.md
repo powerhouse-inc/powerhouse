@@ -1,3 +1,19 @@
+## 4.1.0-dev.9 (2025-08-07)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🚀 Features
+
+- **reactor-api:** add delete drive mutation on system subgraph ([97640da41](https://github.com/powerhouse-inc/powerhouse/commit/97640da41))
+- **switchboard,config,reactor-api:** handle auth in reactor-api ([f33c921ee](https://github.com/powerhouse-inc/powerhouse/commit/f33c921ee))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

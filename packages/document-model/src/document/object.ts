@@ -5,7 +5,6 @@ import {
   type AttachmentRef,
   type BaseDocument,
   type BaseState,
-  type DefaultAction,
   type Operation,
   type Reducer,
   type ReducerOptions,
@@ -49,7 +48,7 @@ export abstract class BaseDocumentClass<
    * @returns The Document instance.
    */
   protected dispatch(
-    action: TCustomAction | DefaultAction | Operation,
+    action: TCustomAction | Operation,
     options?: ReducerOptions,
   ) {
     this._document = this._reducer(
@@ -167,7 +166,7 @@ export abstract class BaseDocumentClass<
    * @param name - The new name of the document.
    */
   public setName(name: string) {
-    this.dispatch(setName(name));
+    this.dispatch(setName(name) as TCustomAction);
     return this;
   }
 
@@ -176,7 +175,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to revert.
    */
   public undo(count: number) {
-    this.dispatch(undo(count));
+    this.dispatch(undo(count) as TCustomAction);
     return this;
   }
 
@@ -185,7 +184,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to reapply.
    */
   public redo(count: number) {
-    this.dispatch(redo(count));
+    this.dispatch(redo(count) as TCustomAction);
     return this;
   }
   /**
@@ -194,7 +193,7 @@ export abstract class BaseDocumentClass<
    * @param end - The ending index of the range to remove.
    */
   public prune(start?: number | undefined, end?: number | undefined) {
-    this.dispatch(prune(start, end));
+    this.dispatch(prune(start, end) as TCustomAction);
     return this;
   }
 
@@ -210,7 +209,7 @@ export abstract class BaseDocumentClass<
     },
     operations: number,
   ) {
-    this.dispatch(loadState(state, operations));
+    this.dispatch(loadState(state, operations) as TCustomAction);
     return this;
   }
 }

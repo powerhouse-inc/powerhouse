@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.7",
+  "version": "4.1.0-dev.9",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -26,6 +26,7 @@
     "lint": "eslint .",
     "lint:nx": "eslint . --fix --quiet",
     "build": "tsc --build",
+    "build:watch": "pnpm build:tsc:watch",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",

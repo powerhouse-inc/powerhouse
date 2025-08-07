@@ -1,3 +1,33 @@
+## 4.1.0-dev.9 (2025-08-07)
+
+### 🩹 Fixes
+
+- **document-drive:** schema failures on server tests ([be5472ada](https://github.com/powerhouse-inc/powerhouse/commit/be5472ada))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🚀 Features
+
+- **ph-cli:** add functions to update and remove CSS imports in styles.css during install/uninstall ([3643a44c8](https://github.com/powerhouse-inc/powerhouse/commit/3643a44c8))
+- **reactor-api:** add delete drive mutation on system subgraph ([97640da41](https://github.com/powerhouse-inc/powerhouse/commit/97640da41))
+- **switchboard,config,reactor-api:** handle auth in reactor-api ([f33c921ee](https://github.com/powerhouse-inc/powerhouse/commit/f33c921ee))
+
+### 🩹 Fixes
+
+- **builder-tools:** update css bundling process and html head injection ([09b508038](https://github.com/powerhouse-inc/powerhouse/commit/09b508038))
+- **connect:** fix document upload regression ([2f8c97fad](https://github.com/powerhouse-inc/powerhouse/commit/2f8c97fad))
+- **reactor-mcp:** improved error message when remote drive is not available ([bb6861655](https://github.com/powerhouse-inc/powerhouse/commit/bb6861655))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.7 (2025-08-06)
 
 ### 🚀 Features
