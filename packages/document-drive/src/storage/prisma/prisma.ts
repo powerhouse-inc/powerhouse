@@ -6,6 +6,7 @@ import {
 import { AbortError } from "#utils/errors";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
+  Action,
   AttachmentInput,
   DocumentOperations,
   ExtendedStateFromDocument,
@@ -14,12 +15,10 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
+import { actionContext } from "document-model";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
 import { type ICache } from "../../cache/types.js";
-import {
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-} from "../../drive-document-model/gen/types.js";
+import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import {
   ConflictOperationError,
   DocumentAlreadyExistsError,
@@ -46,12 +45,30 @@ type Transaction =
     >
   | ExtendedPrismaClient;
 
-function storageToOperation(
+/**
+ * Converts a storage payload to a typed operation.
+ *
+ * @param op - The storage operation.
+ * @returns The typed operation.
+ */
+function operationFromStorage(
   op: Prisma.$OperationPayload["scalars"] & {
     attachments?: AttachmentInput[];
   },
 ): Operation {
-  const operation = {
+  const action: Action = {
+    type: op.type,
+    input: JSON.parse(op.input),
+    scope: op.scope,
+  };
+
+  if (op.context) {
+    action.context = op.context as Prisma.JsonObject;
+  } else {
+    action.context = actionContext();
+  }
+
+  const operation: Operation = {
     id: op.opId || undefined,
     skip: op.skip,
     hash: op.hash,
@@ -64,10 +81,9 @@ function storageToOperation(
       ? op.resultingState.toString()
       : undefined,
     attachments: op.attachments,
-  } as Operation;
-  if (op.context) {
-    operation.context = op.context as Prisma.JsonObject;
-  }
+    action,
+  };
+
   return operation;
 }
 
@@ -439,7 +455,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       if (!acc[scope]) {
         acc[scope] = [];
       }
-      const result = storageToOperation(operation);
+      const result = operationFromStorage(operation);
       result.attachments = attachments.filter(
         (a) => a.operationId === operation.id,
       );
@@ -723,7 +739,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           branch: "main",
           opId: op.id,
           skip: op.skip,
-          context: op.context,
+          context: op.action?.context,
           resultingState: op.resultingState
             ? Buffer.from(op.resultingState)
             : undefined,
@@ -790,7 +806,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           throw e;
         } else {
           throw new ConflictOperationError(
-            storageToOperation(existingOperation),
+            operationFromStorage(existingOperation),
             conflictOp,
           );
         }

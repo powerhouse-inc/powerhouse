@@ -127,6 +127,7 @@ export {
   validateModules,
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
+export { actionContext } from "#document/ph-factories.js";
 export type { OperationError as DocumentModelOperationError } from "#document-model/gen/schema/types.js";
 export { createDocument, createState } from "#document-model/gen/utils.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";

@@ -205,7 +205,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       type: operation.type,
       input: operation.input as object,
       skip: operation.skip,
-      context: operation.context,
+      context: operation.action?.context,
       id: operation.id,
     }));
   }

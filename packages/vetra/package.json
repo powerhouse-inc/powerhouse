@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "4.1.0-dev.6",
+  "version": "4.1.0-dev.12",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -26,10 +26,6 @@
       "types": "./dist/editors/index.d.ts",
       "default": "./dist/editors/index.js"
     },
-    "./subgraphs": {
-      "types": "./dist/subgraphs/index.d.ts",
-      "default": "./dist/subgraphs/index.js"
-    },
     "./processors": {
       "types": "./dist/processors/index.d.ts",
       "default": "./dist/processors/index.js"
@@ -37,6 +33,10 @@
     "./manifest": {
       "types": "./dist/manifest.d.ts",
       "default": "./dist/manifest.js"
+    },
+    "./vetra-drive-app": {
+      "types": "./dist/editors/vetra-drive-app/index.d.ts",
+      "default": "./dist/editors/vetra-drive-app/index.js"
     },
     "./style.css": "./dist/style.css"
   },
@@ -67,9 +67,7 @@
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/switchboard": "workspace:*",
     "@tailwindcss/cli": "^4.0.15",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.13.11",

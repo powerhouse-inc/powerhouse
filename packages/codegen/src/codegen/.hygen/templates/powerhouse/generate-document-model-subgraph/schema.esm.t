@@ -17,8 +17,8 @@ Queries: <%= h.changeCase.pascal(documentType) %>
 """
 
 type <%- h.changeCase.pascal(documentType) %>Queries {
-    getDocument(driveId: String, docId: PHID): <%- h.changeCase.pascal(documentType) %>
-    getDocuments(driveId: String): [<%- h.changeCase.pascal(documentType) %>!]
+    getDocument(docId: PHID!, driveId: PHID): <%- h.changeCase.pascal(documentType) %>
+    getDocuments(driveId: String!): [<%- h.changeCase.pascal(documentType) %>!]
 }
 
 type Query {
@@ -30,7 +30,7 @@ Mutations: <%= h.changeCase.pascal(documentType) %>
 """
 type Mutation {
 
-    <%- h.changeCase.pascal(documentType) %>_createDocument(driveId:String, name:String): String
+    <%- h.changeCase.pascal(documentType) %>_createDocument(name:String!, driveId:String): String
 
 <% modules.forEach(module => { _%>
 <% module.operations.forEach(op => { _%>

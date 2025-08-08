@@ -7,12 +7,12 @@ import {
   undoOperation,
 } from "./actions/operations.js";
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
+import { operationFromAction, operationFromOperation } from "./ph-factories.js";
 import { type PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
   type Action,
-  type DefaultAction,
   type Operation,
   type PHDocument,
   type ReducerOptions,
@@ -27,7 +27,6 @@ import {
   parseResultingState,
   replayOperations,
 } from "./utils/base.js";
-import { generateId } from "./utils/crypto.js";
 import {
   diffOperations,
   garbageCollect,
@@ -37,24 +36,14 @@ import {
 } from "./utils/document-helpers.js";
 
 /**
- * Gets the next revision number based on the provided action.
+ * Gets the next revision number based on the provided scope.
  *
  * @param state The current state of the document.
- * @param operation The action being applied to the document.
+ * @param scope The scope of the operation.
  * @returns The next revision number.
  */
-function getNextRevision(
-  document: PHDocument,
-  operation: { index?: number; scope: string },
-) {
-  let latestOperationIndex: number | undefined;
-
-  if ("index" in operation) {
-    latestOperationIndex = operation.index;
-  } else {
-    latestOperationIndex =
-      document.operations[operation.scope].at(-1)?.index ?? -1;
-  }
+function getNextRevision(document: PHDocument, scope: string) {
+  const latestOperationIndex = document.operations[scope].at(-1)?.index ?? -1;
 
   return (latestOperationIndex ?? -1) + 1;
 }
@@ -67,15 +56,15 @@ function getNextRevision(
  * @param operation The action being applied to the document.
  * @returns The updated document state.
  */
-export function updateHeader<TDocument extends PHDocument>(
-  document: TDocument,
-  action: Action | DefaultAction | Operation,
-): TDocument {
+export function updateHeaderRevision(
+  document: PHDocument,
+  scope: string,
+): PHDocument {
   const header: PHDocumentHeader = {
     ...document.header,
     revision: {
       ...document.header.revision,
-      [action.scope]: getNextRevision(document, action),
+      [scope]: getNextRevision(document, scope),
     },
     lastModifiedAtUtcIso: getDocumentLastModified(document),
   };
@@ -90,67 +79,75 @@ export function updateHeader<TDocument extends PHDocument>(
  * Updates the operations history of the document based on the provided action.
  *
  * @param state The current state of the document.
- * @param actionOrOperation The action being applied to the document.
+ * @param action The action being applied to the document.
+ * @param index The index of the operation to update.
  * @param skip The number of operations to skip before applying the action.
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
  * @returns The updated document state.
  */
-function updateOperations<TDocument extends PHDocument>(
+function updateOperationsForAction<TDocument extends PHDocument>(
   document: TDocument,
-  actionOrOperation: Action | DefaultAction | Operation,
-  skip = 0,
+  action: Action,
   reuseLastOperationIndex = false,
+  skip = 0,
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
-  if (
-    "type" in actionOrOperation &&
-    [UNDO, REDO, PRUNE].includes(actionOrOperation.type)
-  ) {
+  if ([UNDO, REDO, PRUNE].includes(action.type)) {
     return document;
   }
 
-  const { scope } = actionOrOperation;
+  const scope = action.scope;
   const operations: Operation[] = document.operations[scope].slice();
-  let operationId: string | undefined;
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
 
-  let nextIndex = reuseLastOperationIndex
+  const index = reuseLastOperationIndex
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
-  let timestamp = new Date().toISOString();
+  const newOperation = operationFromAction(action, index, skip);
+  operations.push(newOperation);
 
-  if ("index" in actionOrOperation) {
-    if (actionOrOperation.index - skip > nextIndex) {
-      throw new Error(
-        `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${actionOrOperation.index} with skip ${skip}`,
-      );
-    }
+  // adds the action to the operations history with
+  // the latest index and current timestamp
+  return {
+    ...document,
+    operations: { ...document.operations, [scope]: operations },
+  };
+}
 
-    nextIndex = actionOrOperation.index;
-    operationId = actionOrOperation.id;
-
-    timestamp = actionOrOperation.timestamp;
-  } else {
-    operationId =
-      "id" in actionOrOperation
-        ? (actionOrOperation.id as string)
-        : generateId();
+function updateOperationsForOperation<TDocument extends PHDocument>(
+  document: TDocument,
+  operation: Operation,
+  reuseLastOperationIndex = false,
+  skip = 0,
+): TDocument {
+  // UNDO, REDO and PRUNE are meta operations
+  // that alter the operations history themselves
+  if ([UNDO, REDO, PRUNE].includes(operation.type)) {
+    return document;
   }
 
-  operations.push({
-    ...actionOrOperation,
-    id: operationId,
-    index: nextIndex,
-    timestamp,
-    hash: "",
-    scope,
-    skip,
-    error: undefined,
-  });
+  const scope = operation.scope;
+  const operations: Operation[] = document.operations[scope].slice();
+
+  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
+  const lastOperationIndex = latestOperation?.index ?? -1;
+
+  const nextIndex = reuseLastOperationIndex
+    ? lastOperationIndex
+    : lastOperationIndex + 1;
+
+  if (operation.index - skip > nextIndex) {
+    throw new Error(
+      `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${operation.index} with skip ${skip}`,
+    );
+  }
+
+  const newOperation = operationFromOperation(operation, skip);
+  operations.push(newOperation);
 
   // adds the action to the operations history with
   // the latest index and current timestamp
@@ -175,13 +172,28 @@ export function updateDocument<TDocument extends PHDocument>(
   skip = 0,
   reuseLastOperationIndex = false,
 ): TDocument {
-  let newDocument = updateOperations(
-    document,
-    action,
-    skip,
-    reuseLastOperationIndex,
-  );
-  newDocument = updateHeader(newDocument, action);
+  // duck type -- this determines if it's an operation or an action
+  // TEMPORARY
+  let newDocument: TDocument;
+  if ("index" in action) {
+    // operation
+    newDocument = updateOperationsForOperation(
+      document,
+      action,
+      reuseLastOperationIndex,
+      skip,
+    ) as TDocument;
+  } else {
+    // action
+    newDocument = updateOperationsForAction(
+      document,
+      action,
+      reuseLastOperationIndex,
+      skip,
+    ) as TDocument;
+  }
+
+  newDocument = updateHeaderRevision(newDocument, action.scope) as TDocument;
   return newDocument;
 }
 
@@ -195,7 +207,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation | DefaultAction,
+  action: Action | Operation,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -223,7 +235,7 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation | DefaultAction,
+  action: Action | Operation,
   skip: number,
 ): {
   document: TDocument;

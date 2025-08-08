@@ -10,7 +10,7 @@ import {
   SET_NAME,
   UNDO,
 } from "../actions/types.js";
-import { baseReducer, updateHeader } from "../reducer.js";
+import { baseReducer, updateHeaderRevision } from "../reducer.js";
 import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
@@ -424,7 +424,7 @@ export function replayDocument<TDocument extends PHDocument>(
     for (const scopeOperations of Object.values(initialOperations)) {
       const lastOperation = scopeOperations.at(-1);
       if (lastOperation) {
-        result = updateHeader(result, lastOperation);
+        result = updateHeaderRevision(result, lastOperation.scope) as TDocument;
       }
     }
   }

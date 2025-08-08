@@ -15,48 +15,67 @@ scalar Amount_Currency
 scalar Amount_Crypto
 scalar Amount
 type VetraPackageState {
-  name: String!
+  name: String
   description: String
-  category: String!
-  publisher: String
-  publisherUrl: URL
-  keywords: [String!]!
+  category: String
+  author: Author!
+  keywords: [Keyword!]!
   githubUrl: URL
   npmUrl: URL
 }
 
+type Author {
+  name: String
+  website: URL
+}
+
+type Keyword {
+  id: OID!
+  label: String!
+}
 
 
-# package_operations
+
+# base_operations
 
 input SetPackageNameInput {
   name: String!
 }
 
 input SetPackageDescriptionInput {
-  description: String
+  description: String!
 }
 
 input SetPackageCategoryInput {
   category: String!
 }
 
-input SetPackagePublisherInput {
-  publisher: String
+input SetPackageAuthorInput {
+  name: OID
+  website: URL
 }
 
-input SetPackagePublisherUrlInput {
-  url: URL
+input SetPackageAuthorNameInput {
+  name: String!
 }
 
-input SetPackageKeywordsInput {
-  keywords: [String!]!
+input SetPackageAuthorWebsiteInput {
+  website: URL!
+}
+
+input AddPackageKeywordInput {
+  id: String!
+  label: String!
+}
+
+input RemovePackageKeywordInput {
+  id: String!
 }
 
 input SetPackageGithubUrlInput {
-  url: URL
+  url: URL!
 }
 
 input SetPackageNpmUrlInput {
-  url: URL
+  url: URL!
 }

@@ -25,13 +25,15 @@ export function makeRows(operations: Operation[]) {
       stateHash: operation.hash,
       operationType: operation.type,
       operationInput: operation.input ?? {},
-      address: operation.context?.signer?.user.address as
+      address: operation.action?.context?.signer?.user.address as
         | `0x${string}`
         | undefined,
-      chainId: operation.context?.signer?.user.chainId,
+      chainId: operation.action?.context?.signer?.user.chainId,
       timestamp: operation.timestamp,
       signatures: makeSignatures(
-        (operation.context?.signer?.signatures as string[][] | undefined) ?? [],
+        (operation.action?.context?.signer?.signatures as
+          | string[][]
+          | undefined) ?? [],
       ),
       errors: operation.error ? [operation.error] : undefined,
     });

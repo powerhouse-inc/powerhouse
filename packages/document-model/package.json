@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "4.1.0-dev.6",
+  "version": "4.1.0-dev.12",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -31,6 +31,7 @@
     "build:watch": "tsc --build --watch",
     "prebuild": "npm run clean",
     "test": "vitest run",
+    "test:watch": "vitest watch",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },

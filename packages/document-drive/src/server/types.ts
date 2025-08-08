@@ -85,7 +85,7 @@ export type CreateDocumentInputWithHeader = {
   header: PHDocumentHeader;
 };
 
-export type CreateDocumentInputWithDocumentId = {
+export type CreateDocumentInputWithDocumentType = {
   documentType: string;
 };
 
@@ -94,7 +94,7 @@ export type CreateDocumentInput<TDocument extends PHDocument> =
   | LegacyCreateDocumentInput
   | CreateDocumentInputWithDocument<TDocument>
   | CreateDocumentInputWithHeader
-  | CreateDocumentInputWithDocumentId;
+  | CreateDocumentInputWithDocumentType;
 
 export type IOperationResult<TDocument extends PHDocument = PHDocument> = {
   status: UpdateStatus;
@@ -403,6 +403,11 @@ export interface IBaseDocumentDriveServer {
 
   addDocument<TDocument extends PHDocument>(
     input: TDocument,
+    meta?: PHDocumentMeta,
+  ): Promise<TDocument>;
+  addDocument<TDocument extends PHDocument>(
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
+    documentType: string,
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   deleteDocument(documentId: string): Promise<void>;

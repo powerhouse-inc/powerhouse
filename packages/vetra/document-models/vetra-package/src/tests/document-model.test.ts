@@ -14,7 +14,7 @@ describe("Vetra Package Document Model", () => {
     const document = utils.createDocument();
 
     expect(document).toBeDefined();
-    expect(document.header.documentType).toBe("vetra/package-information");
+    expect(document.header.documentType).toBe("powerhouse/package");
   });
 
   it("should create a new Vetra Package document with a valid initial state", () => {

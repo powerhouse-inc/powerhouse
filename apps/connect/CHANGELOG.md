@@ -1,3 +1,60 @@
+## 4.1.0-dev.12 (2025-08-08)
+
+### 🩹 Fixes
+
+- linter fixes ([56366e88d](https://github.com/powerhouse-inc/powerhouse/commit/56366e88d))
+- **connect:** dynamically load vetra to avoid build issues ([98f8521c5](https://github.com/powerhouse-inc/powerhouse/commit/98f8521c5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.11 (2025-08-07)
+
+### 🚀 Features
+
+- **switchboard,reactor-local,reactor-api:** moved vite loader to reactor-api package ([c84f0a2a3](https://github.com/powerhouse-inc/powerhouse/commit/c84f0a2a3))
+- vetra package documents and app integration ([0e4053302](https://github.com/powerhouse-inc/powerhouse/commit/0e4053302))
+- added setSelectedNode to driveContext (remove this after integration with powerhousedao/state) ([69f0c6b3a](https://github.com/powerhouse-inc/powerhouse/commit/69f0c6b3a))
+- add vetra drive editor support and fix preferredEditor handling ([bd0d9fe9f](https://github.com/powerhouse-inc/powerhouse/commit/bd0d9fe9f))
+- **vetra:** added vetra drive editor ([4ebafd143](https://github.com/powerhouse-inc/powerhouse/commit/4ebafd143))
+- integrate package documents into reactor system ([939fe8e80](https://github.com/powerhouse-inc/powerhouse/commit/939fe8e80))
+- **connect:** integrate Vetra package documents and editors ([2ecb9bd15](https://github.com/powerhouse-inc/powerhouse/commit/2ecb9bd15))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.10 (2025-08-07)
+
+### 🚀 Features
+
+- **builder-tools,codegen,design-system,reactor-api:** updated document-engineering version ([e74068b43](https://github.com/powerhouse-inc/powerhouse/commit/e74068b43))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.9 (2025-08-07)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.8 (2025-08-06)
+
+### 🩹 Fixes
+
+- **connect:** fix document upload regression ([2f8c97fad](https://github.com/powerhouse-inc/powerhouse/commit/2f8c97fad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.7 (2025-08-06)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.6 (2025-08-06)
 
 ### 🚀 Features

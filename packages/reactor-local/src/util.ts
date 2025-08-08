@@ -4,14 +4,12 @@ import {
   MemoryStorage,
 } from "document-drive";
 
-import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import { type DriveInput, type IDocumentDriveServer } from "document-drive";
 import { type ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
 import { type IDriveOperationStorage } from "document-drive/storage/types";
-import { createServer } from "vite";
 import { type StorageOptions } from "./types.js";
 
 export const createStorage = (
@@ -70,38 +68,4 @@ export async function addDefaultDrive(
   }
 
   return `http://localhost:${serverPort}/d/${driveId}`;
-}
-
-export async function startViteServer() {
-  const vite = await createServer({
-    server: { middlewareMode: true },
-    appType: "custom",
-    build: {
-      rollupOptions: {
-        input: [],
-      },
-    },
-    plugins: [
-      viteCommonjs(),
-      {
-        name: "suppress-hmr",
-        handleHotUpdate() {
-          return []; // return empty array to suppress server refresh
-        },
-      },
-    ],
-  });
-
-  return vite;
-}
-
-export function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  delay = 100,
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>): void => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
 }

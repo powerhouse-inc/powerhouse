@@ -1,6 +1,8 @@
+import { actionSigner, operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
+  type ActionContext,
   type Action,
   type ActionSigner,
   type Operation,
@@ -83,7 +85,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   action: Action | Operation,
   reducer: Reducer<TDocument>,
   document: TDocument,
-  context: Omit<OperationSignatureContext, "operation" | "previousStateHash">,
+  signer: ActionSigner,
   signHandler: OperationSigningHandler,
 ) {
   const result = reducer(document, action, undefined, {
@@ -98,24 +100,22 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   const previousStateHash = result.operations[action.scope].at(-2)?.hash ?? "";
   const signature = await buildOperationSignature(
     {
-      ...context,
+      documentId: document.header.id,
+      signer,
       operation,
       previousStateHash,
     },
     signHandler,
   );
 
-  return {
-    ...operation,
-    context: {
-      ...operation.context,
-      signer: {
-        ...operation.context?.signer,
-        ...context.signer,
-        signatures: [...(context.signer.signatures ?? []), signature],
-      },
-    },
-  } as Operation;
+  const actionContext: ActionContext = {
+    signer: actionSigner(signer.user, signer.app, [
+      ...signer.signatures,
+      signature,
+    ]),
+  };
+
+  return operationWithContext(operation, actionContext);
 }
 
 export async function verifyOperationSignature(

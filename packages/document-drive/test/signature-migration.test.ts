@@ -34,18 +34,22 @@ describe("Signature migration", () => {
       hash: "hash",
       skip: 1,
       resultingState: {},
-      context: {
-        signer: {
-          app: {
-            name: "name",
-            key: "key",
+      action: {
+        type: "TEST",
+        input: { test: "test" },
+        context: {
+          signer: {
+            app: {
+              name: "name",
+              key: "key",
+            },
+            user: {
+              address: "address",
+              chainId: 1,
+              networkId: "1",
+            },
+            signature: "0x456",
           },
-          user: {
-            address: "address",
-            chainId: 1,
-            networkId: "1",
-          },
-          signature: null,
         },
       },
     };
@@ -62,6 +66,24 @@ describe("Signature migration", () => {
       hash: "hash",
       skip: 1,
       resultingState: {},
+      action: {
+        type: "TEST",
+        input: { test: "test" },
+        context: {
+          signer: {
+            app: {
+              name: "name",
+              key: "key",
+            },
+            user: {
+              address: "address",
+              chainId: 1,
+              networkId: "1",
+            },
+            signatures: ["0x456"],
+          },
+        },
+      },
       context: {
         signer: {
           app: {
@@ -73,7 +95,7 @@ describe("Signature migration", () => {
             chainId: 1,
             networkId: "1",
           },
-          signatures: [],
+          signatures: ["0x456"],
         },
       },
     });
@@ -119,7 +141,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      expect(driveOperation.context).toBeUndefined();
+      expect(driveOperation.action?.context).toBeUndefined();
 
       await storage.addDriveOperations(driveId, [driveOperation], drive);
 
@@ -132,9 +154,9 @@ describe.each(storageLayers)(
         migratedDrive.operations.global.length,
       );
 
-      expect(storedDrive.operations.global.map((o: any) => o.context)).toStrictEqual(
-        [undefined],
-      );
+      expect(
+        storedDrive.operations.global.map((o: any) => o.context),
+      ).toStrictEqual([undefined]);
     });
 
     it("should migrate operation with empty string signature", async ({
@@ -169,7 +191,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.context = {
+      driveOperation.action!.context = {
         signer: {
           app: {
             name: "name",
@@ -180,7 +202,7 @@ describe.each(storageLayers)(
             chainId: 1,
             networkId: "1",
           },
-          signature: "",
+          signatures: [""],
         },
       } as unknown as ActionContext;
 
@@ -245,7 +267,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.context = {
+      driveOperation.action!.context = {
         signer: {
           app: {
             name: "name",

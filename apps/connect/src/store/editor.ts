@@ -1,3 +1,15 @@
+import { useDefaultDocumentModelEditor } from '#hooks';
+import { type DocumentModelLib, type EditorModule } from 'document-model';
+// Dynamic imports for vetra to avoid build issues when vetra is not available
+let VetraPackageEditor: any;
+let DocumentEditorEditor: any;
+import { atom, useAtomValue } from 'jotai';
+import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
+import { useCallback, useEffect, useRef } from 'react';
+import { externalPackagesAtom } from './external-packages.js';
+
+async function loadBaseEditors() {
+    const documentModelEditor = await import(
 import {
     DEFAULT_DRIVE_EDITOR_ID,
     type VetraEditorModule,

@@ -1,6 +1,10 @@
 import { isLogLevel } from "@powerhousedao/config";
 import { startAPI, type Processor } from "@powerhousedao/reactor-api";
 import {
+  startViteServer,
+  VitePackageLoader,
+} from "@powerhousedao/reactor-api/packages/vite-loader";
+import {
   InMemoryCache,
   logger,
   ReactorBuilder,
@@ -15,8 +19,7 @@ import {
   type RemoteDriveInputSimple,
   type StartServerOptions,
 } from "./types.js";
-import { addDefaultDrive, createStorage, startViteServer } from "./util.js";
-import { VitePackageLoader } from "./vite-loader.js";
+import { addDefaultDrive, createStorage } from "./util.js";
 
 dotenv.config();
 
@@ -92,7 +95,7 @@ const startServer = async (
   const vite = dev ? await startViteServer() : undefined;
 
   // get paths to local document models
-  if (vite) {
+  if (dev) {
     // TODO get path from powerhouse config
     const basePath = process.cwd();
     packages.push(basePath);
@@ -113,7 +116,7 @@ const startServer = async (
     : await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
-  const packageLoader = vite ? new VitePackageLoader(vite) : undefined;
+  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
   const processors = options?.processors?.reduce(
     (acc, processor) => {

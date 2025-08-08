@@ -12,12 +12,12 @@ import {
 import { type VetraPackageAction } from "./actions.js";
 import { reducer } from "./reducer.js";
 import utils from "./utils.js";
-import VetraPackage_PackageOperations from "./package-operations/object.js";
+import VetraPackage_BaseOperations from "./base-operations/object.js";
 
-export * from "./package-operations/object.js";
+export * from "./base-operations/object.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-interface VetraPackage extends VetraPackage_PackageOperations {}
+interface VetraPackage extends VetraPackage_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class VetraPackage extends BaseDocumentClass<
@@ -54,6 +54,6 @@ class VetraPackage extends BaseDocumentClass<
   }
 }
 
-applyMixins(VetraPackage, [VetraPackage_PackageOperations]);
+applyMixins(VetraPackage, [VetraPackage_BaseOperations]);
 
 export { VetraPackage };

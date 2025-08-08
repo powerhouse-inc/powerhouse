@@ -120,7 +120,11 @@ export async function startServer(
         allow: generateAllowedPaths(projectRoot),
       },
       watch: {
-        ignored: ["**/document-models/**", "**/subgraphs/**"],
+        ignored: [
+          "**/document-models/**",
+          "**/subgraphs/**",
+          "**/powerhouse.manifest.json",
+        ],
       },
     },
     optimizeDeps: {

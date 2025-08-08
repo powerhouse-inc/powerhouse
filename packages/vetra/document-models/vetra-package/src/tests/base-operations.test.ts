@@ -11,17 +11,19 @@ import {
   type SetPackageNameInput,
   type SetPackageDescriptionInput,
   type SetPackageCategoryInput,
-  type SetPackagePublisherInput,
-  type SetPackagePublisherUrlInput,
-  type SetPackageKeywordsInput,
+  type SetPackageAuthorInput,
+  type SetPackageAuthorNameInput,
+  type SetPackageAuthorWebsiteInput,
+  type AddPackageKeywordInput,
+  type RemovePackageKeywordInput,
   type SetPackageGithubUrlInput,
   type SetPackageNpmUrlInput,
 } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
-import * as creators from "../../gen/package-operations/creators.js";
+import * as creators from "../../gen/base-operations/creators.js";
 import type { VetraPackageDocument } from "../../gen/types.js";
 
-describe("PackageOperations Operations", () => {
+describe("BaseOperations Operations", () => {
   let document: VetraPackageDocument;
 
   beforeEach(() => {
@@ -74,53 +76,84 @@ describe("PackageOperations Operations", () => {
     expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-  it("should handle setPackagePublisher operation", () => {
-    const input: SetPackagePublisherInput = generateMock(
-      z.SetPackagePublisherInputSchema(),
+  it("should handle setPackageAuthor operation", () => {
+    const input: SetPackageAuthorInput = generateMock(
+      z.SetPackageAuthorInputSchema(),
     );
 
-    const updatedDocument = reducer(
-      document,
-      creators.setPackagePublisher(input),
-    );
+    const updatedDocument = reducer(document, creators.setPackageAuthor(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].type).toBe(
-      "SET_PACKAGE_PUBLISHER",
+      "SET_PACKAGE_AUTHOR",
     );
     expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-  it("should handle setPackagePublisherUrl operation", () => {
-    const input: SetPackagePublisherUrlInput = generateMock(
-      z.SetPackagePublisherUrlInputSchema(),
+  it("should handle setPackageAuthorName operation", () => {
+    const input: SetPackageAuthorNameInput = generateMock(
+      z.SetPackageAuthorNameInputSchema(),
     );
 
     const updatedDocument = reducer(
       document,
-      creators.setPackagePublisherUrl(input),
+      creators.setPackageAuthorName(input),
     );
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].type).toBe(
-      "SET_PACKAGE_PUBLISHER_URL",
+      "SET_PACKAGE_AUTHOR_NAME",
     );
     expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-  it("should handle setPackageKeywords operation", () => {
-    const input: SetPackageKeywordsInput = generateMock(
-      z.SetPackageKeywordsInputSchema(),
+  it("should handle setPackageAuthorWebsite operation", () => {
+    const input: SetPackageAuthorWebsiteInput = generateMock(
+      z.SetPackageAuthorWebsiteInputSchema(),
     );
 
     const updatedDocument = reducer(
       document,
-      creators.setPackageKeywords(input),
+      creators.setPackageAuthorWebsite(input),
     );
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].type).toBe(
-      "SET_PACKAGE_KEYWORDS",
+      "SET_PACKAGE_AUTHOR_WEBSITE",
+    );
+    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+  it("should handle addPackageKeyword operation", () => {
+    const input: AddPackageKeywordInput = generateMock(
+      z.AddPackageKeywordInputSchema(),
+    );
+
+    const updatedDocument = reducer(
+      document,
+      creators.addPackageKeyword(input),
+    );
+
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].type).toBe(
+      "ADD_PACKAGE_KEYWORD",
+    );
+    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+  it("should handle removePackageKeyword operation", () => {
+    const input: RemovePackageKeywordInput = generateMock(
+      z.RemovePackageKeywordInputSchema(),
+    );
+
+    const updatedDocument = reducer(
+      document,
+      creators.removePackageKeyword(input),
+    );
+
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].type).toBe(
+      "REMOVE_PACKAGE_KEYWORD",
     );
     expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);

@@ -11,14 +11,14 @@ test.describe('Drive', () => {
     });
 
     test('should render drive sections', async () => {
-        const page = (await getApp().firstWindow()) as Page;
+        const page = await getApp().firstWindow();
         await expect(page.getByText('Public Drives')).toBeVisible();
         await expect(page.getByText('Secure Cloud Drives')).toBeVisible();
         await expect(page.getByText('My Local Drives')).toBeVisible();
     });
 
     test('should allow user to add a local drive', async () => {
-        const page = (await getApp().firstWindow()) as Page;
+        const page = await getApp().firstWindow();
         await page
             .locator(
                 '//*[@id="app"]/div/div/div[1]/div[1]/div[2]/div[3]/div[1]/div/button[1]',
@@ -30,7 +30,7 @@ test.describe('Drive', () => {
     });
 
     test('should delete local drive', async () => {
-        const page = (await getApp().firstWindow()) as Page;
+        const page = await getApp().firstWindow();
         await page.getByText('Test Drive').hover();
 
         await page

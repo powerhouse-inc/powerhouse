@@ -792,13 +792,15 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     document = documentModelDocumentModelModule.reducer(
       document,
-      documentModelDocumentModelModule.actions.setModelName("Test"),
+      documentModelDocumentModelModule.actions.setModelName({ name: "Test" }),
     );
     document = documentModelDocumentModelModule.reducer(
       document,
-      documentModelDocumentModelModule.actions.setStateSchema(
-        'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
-      ),
+      documentModelDocumentModelModule.actions.setStateSchema({
+        schema:
+          'type TestState {\n  "Add your global state fields here"\n  _placeholder: String\n}',
+        scope: "global",
+      }),
     );
     const operations = document.operations.global;
     const result = await server.addOperations(documentId, operations);
@@ -910,7 +912,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     expect(operationResult.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive.operations.global[0]?.context).toStrictEqual(context);
+    expect(drive.operations.global[0]?.action?.context).toStrictEqual(context);
   });
 
   it("get drives by slug", async ({ expect }) => {

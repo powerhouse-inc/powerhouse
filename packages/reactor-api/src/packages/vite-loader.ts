@@ -1,3 +1,4 @@
+import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import {
   isSubgraphClass,
   type SubgraphClass,
@@ -10,17 +11,22 @@ import {
 import { type DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { type ViteDevServer } from "vite";
+import { createServer, type ViteDevServer } from "vite";
 import {
   type ISubscribablePackageLoader,
   type ISubscriptionOptions,
-} from "../../reactor-api/src/packages/types.js";
+} from "./types.js";
 import { debounce } from "./util.js";
 
 export class VitePackageLoader implements ISubscribablePackageLoader {
-  private readonly logger = childLogger(["reactor-local", "vite-loader"]);
+  private readonly logger = childLogger(["reactor-api", "vite-loader"]);
 
   private readonly vite: ViteDevServer;
+
+  static async build(vite?: ViteDevServer) {
+    const server = vite ?? (await startViteServer());
+    return new VitePackageLoader(server);
+  }
 
   constructor(vite: ViteDevServer) {
     this.vite = vite;
@@ -197,4 +203,27 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       this.vite.watcher.off("change", listener);
     };
   }
+}
+
+export async function startViteServer() {
+  const vite = await createServer({
+    server: { middlewareMode: true },
+    appType: "custom",
+    build: {
+      rollupOptions: {
+        input: [],
+      },
+    },
+    plugins: [
+      viteCommonjs(),
+      {
+        name: "suppress-hmr",
+        handleHotUpdate() {
+          return []; // return empty array to suppress server refresh
+        },
+      },
+    ],
+  });
+
+  return vite;
 }
