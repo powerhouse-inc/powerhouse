@@ -2,19 +2,20 @@ import { camelCase, paramCase, pascalCase } from "change-case";
 import {
   SyntaxKind,
   VariableDeclarationKind,
+  type MethodDeclaration,
   type ObjectLiteralExpression,
   type SourceFile,
 } from "ts-morph";
 import { FileGenerator } from "../core/FileGenerator.js";
 import {
-  type Actions,
   type GenerationContext,
+  type Operation,
 } from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
   async generate(context: GenerationContext): Promise<void> {
     // Skip if no actions to generate
-    if (context.actions.length === 0) return;
+    if (context.operations.length === 0) return;
 
     const filePath = this.getOutputPath(context);
     const sourceFile = await this.directoryManager.createSourceFile(
@@ -34,9 +35,21 @@ export class ReducerGenerator extends FileGenerator {
     );
 
     // AST logic (specific to reducers)
-    this.createReducerObject(sourceFile, typeImportName, context.actions);
+    this.createReducerObject(
+      sourceFile,
+      typeImportName,
+      context.operations,
+      context.forceUpdate,
+    );
 
     await sourceFile.save();
+  }
+
+  private static getDefaultReducerCode(methodName: string): string[] {
+    return [
+      `// TODO: Implement "${methodName}" reducer`,
+      `throw new Error('Reducer "${methodName}" not yet implemented');`,
+    ];
   }
 
   private getOutputPath(context: GenerationContext): string {
@@ -50,7 +63,8 @@ export class ReducerGenerator extends FileGenerator {
   private createReducerObject(
     sourceFile: SourceFile,
     typeName: string,
-    actions: Actions[],
+    operations: Operation[],
+    forceUpdate = false,
   ): void {
     let reducerVar = sourceFile.getVariableDeclaration("reducer");
 
@@ -79,30 +93,47 @@ export class ReducerGenerator extends FileGenerator {
       SyntaxKind.ObjectLiteralExpression,
     );
 
-    for (const action of actions) {
-      this.addReducerMethod(initializer, action);
+    for (const operation of operations) {
+      this.addReducerMethod(initializer, operation, forceUpdate);
     }
   }
 
   private addReducerMethod(
     objectLiteral: ObjectLiteralExpression,
-    action: Actions,
+    operation: Operation,
+    forceUpdate = false,
   ): void {
-    const actionName = camelCase(action.name ?? "");
+    const actionName = camelCase(operation.name ?? "");
     if (!actionName) return;
 
     const methodName = `${actionName}Operation`;
 
-    // Skip if method already exists
-    if (objectLiteral.getProperty(methodName)) return;
+    const reducerCode = operation.reducer?.trim();
 
-    objectLiteral.addMethod({
+    const existingReducer = objectLiteral
+      .getProperty(methodName)
+      ?.asKind(SyntaxKind.MethodDeclaration);
+
+    // if reducer already exists but forceUpdate is true, update it
+    if (existingReducer) {
+      if (forceUpdate && reducerCode) {
+        existingReducer.setBodyText("");
+        this.setReducerMethodCode(existingReducer, reducerCode);
+      }
+      return;
+    }
+
+    // if reducer doesn't exist, create it and set the code with the default code if no code is provided
+    const method = objectLiteral.addMethod({
       name: methodName,
       parameters: [{ name: "state" }, { name: "action" }, { name: "dispatch" }],
-      statements: [
-        `// TODO: Implement "${methodName}" reducer`,
-        `throw new Error('Reducer "${methodName}" not yet implemented');`,
-      ],
     });
+    this.setReducerMethodCode(method, reducerCode);
+  }
+
+  private setReducerMethodCode(reducer: MethodDeclaration, code?: string) {
+    reducer.addStatements(
+      code ? [code] : ReducerGenerator.getDefaultReducerCode(reducer.getName()),
+    );
   }
 }

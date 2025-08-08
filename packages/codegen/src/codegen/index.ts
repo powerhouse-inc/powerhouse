@@ -27,6 +27,7 @@ export { generateDBSchema } from "./kysely.js";
 
 export type CodegenOptions = {
   verbose?: boolean;
+  force?: boolean;
 };
 
 function generateGraphqlSchema(documentModel: DocumentModelState) {
@@ -142,6 +143,7 @@ async function generateFromDocumentModel(
     verbose = config.logLevel === "verbose" ||
       config.logLevel === "debug" ||
       config.logLevel === "info",
+    force = false,
   } = options;
   const name = paramCase(documentModel.name);
 
@@ -172,6 +174,7 @@ async function generateFromDocumentModel(
   await generateDocumentModel(documentModel, config.documentModelsDir, {
     skipFormat: config.skipFormat,
     verbose,
+    force,
   });
   await generateSubgraph(name, filePath || null, config, { verbose });
 }

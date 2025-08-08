@@ -60,7 +60,7 @@ export async function run(
 
 export async function generateAll(
   dir: string,
-  { watch = false, skipFormat = false, verbose = true } = {},
+  { watch = false, skipFormat = false, verbose = true, force = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   const documentModelStates: DocumentModelState[] = [];
@@ -83,6 +83,7 @@ export async function generateAll(
         skipFormat,
         verbose,
         generateReducers: false,
+        force,
       });
     } catch (error) {
       if (verbose) {
@@ -96,6 +97,7 @@ export async function generateAll(
 
   const generator = new TSMorphCodeGenerator(projectDir, documentModelStates, {
     directories: { documentModelDir },
+    forceUpdate: force,
   });
 
   await generator.generateReducers();
@@ -109,6 +111,7 @@ export async function generateDocumentModel(
     skipFormat = false,
     verbose = true,
     generateReducers = true,
+    force = true,
   } = {},
 ) {
   const projectDir = path.dirname(dir);
@@ -153,7 +156,7 @@ export async function generateDocumentModel(
     const generator = new TSMorphCodeGenerator(
       projectDir,
       [documentModelState],
-      { directories: { documentModelDir } },
+      { directories: { documentModelDir }, forceUpdate: force },
     );
 
     await generator.generateReducers();

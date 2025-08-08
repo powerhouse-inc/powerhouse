@@ -6,12 +6,13 @@ import { DirectoryManager } from "../utilities/DirectoryManager.js";
 import { ImportManager } from "../utilities/ImportManager.js";
 import { type FileGenerator } from "./FileGenerator.js";
 import {
-  type Actions,
   type CodeGeneratorOptions,
   type GenerationContext,
   type ModuleSpec,
+  type Operation,
   type PHProjectDirectories,
 } from "./GenerationContext.js";
+
 export class TSMorphCodeGenerator {
   private project = new Project();
   private generators = new Map<string, FileGenerator>();
@@ -21,16 +22,19 @@ export class TSMorphCodeGenerator {
     processorsDir: "processors",
     subgraphsDir: "subgraphs",
   };
+  private forceUpdate = false;
 
   constructor(
     private rootDir: string,
     private docModels: DocumentModelState[],
-    options: CodeGeneratorOptions = { directories: {} },
+    options: CodeGeneratorOptions = { directories: {}, forceUpdate: false },
   ) {
     this.directories = {
       ...this.directories,
       ...options.directories,
     };
+
+    this.forceUpdate = options.forceUpdate ?? false;
 
     this.setupGenerators();
   }
@@ -71,7 +75,11 @@ export class TSMorphCodeGenerator {
         docModel.specifications[docModel.specifications.length - 1];
 
       for (const module of latestSpec.modules) {
-        const context = this.createGenerationContext(docModel, module);
+        const context = this.createGenerationContext(
+          docModel,
+          module,
+          this.forceUpdate,
+        );
 
         await generator.generate(context);
       }
@@ -114,14 +122,14 @@ export class TSMorphCodeGenerator {
   private createGenerationContext(
     docModel: DocumentModelState,
     module: ModuleSpec,
+    forceUpdate = false,
   ): GenerationContext {
-    const actions: Actions[] = module.operations.map((op) => ({
-      name: op.name,
+    const operations: Operation[] = module.operations.map((op) => ({
+      ...op,
       hasInput: op.schema !== null,
       hasAttachment: op.schema?.includes(": Attachment"),
       scope: op.scope || "global",
       state: op.scope === "global" ? "" : op.scope,
-      errors: op.errors,
     }));
 
     return {
@@ -129,7 +137,8 @@ export class TSMorphCodeGenerator {
       docModel,
       module,
       project: this.project,
-      actions,
+      operations,
+      forceUpdate,
     };
   }
 
