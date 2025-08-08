@@ -1,3 +1,7 @@
+## 4.1.0-dev.12 (2025-08-08)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.11 (2025-08-07)
 
 ### 🚀 Features

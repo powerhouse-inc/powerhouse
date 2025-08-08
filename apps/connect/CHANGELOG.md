@@ -1,3 +1,14 @@
+## 4.1.0-dev.12 (2025-08-08)
+
+### 🩹 Fixes
+
+- linter fixes ([56366e88d](https://github.com/powerhouse-inc/powerhouse/commit/56366e88d))
+- **connect:** dynamically load vetra to avoid build issues ([98f8521c5](https://github.com/powerhouse-inc/powerhouse/commit/98f8521c5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.11 (2025-08-07)
 
 ### 🚀 Features
