@@ -35,7 +35,7 @@ export async function loadDependency(
         e.code as string,
       )
     ) {
-      logger.debug(e);
+      logger.error(e);
     }
     return null;
   }
