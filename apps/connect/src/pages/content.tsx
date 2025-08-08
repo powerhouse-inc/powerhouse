@@ -9,19 +9,14 @@ import {
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    useDocumentModelModules,
-    useDriveEditorModules,
     useDrives,
-    useEditorModules,
     useLoadableSelectedDocument,
     useLoadableSelectedDrive,
     useLoadableSelectedFolder,
-    useProcessors,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
     useSetSelectedDrive,
-    useVetraPackages,
 } from '@powerhousedao/state';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -33,19 +28,6 @@ export default function Content() {
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
-    const vetraPackages = useVetraPackages();
-    const driveEditorModules = useDriveEditorModules();
-    const editorModules = useEditorModules();
-    const documentModelModules = useDocumentModelModules();
-    const processors = useProcessors();
-    console.log('selectedDrive', selectedDrive);
-    console.log('selectedFolder', selectedFolder);
-    console.log('selectedDocument', selectedDocument);
-    console.log('vetraPackages', vetraPackages);
-    console.log('driveEditorModules', driveEditorModules);
-    console.log('editorModules', editorModules);
-    console.log('documentModelModules', documentModelModules);
-    console.log('processors', processors);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

@@ -121,6 +121,7 @@ export type IDriveContext = {
     parentFolder?: string,
     document?: PHDocument,
     id?: string,
+    preferredEditor?: string,
   ) => Promise<FileNode | undefined>;
   /**
    * Shows a modal for creating a new document

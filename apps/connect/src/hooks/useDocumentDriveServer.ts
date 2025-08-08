@@ -272,6 +272,7 @@ export function useDocumentDriveServer() {
             parentFolder?: string,
             document?: PHDocument,
             id?: string,
+            preferredEditor?: string,
         ) => {
             if (!reactor) {
                 throw new Error('Reactor is not loaded');
@@ -281,13 +282,15 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create documents');
             }
 
-            const oldDrive = drives?.find(d => d.header.id === driveId);
-            if (!oldDrive) {
-                return;
-            }
-
             const documentId = id ?? generateId();
-            const documentModelModule = documentModelModules?.find(
+            const documentModelModules = reactor.getDocumentModelModules();
+            console.log(
+                'documentModelModules in reactor:',
+                documentModelModules,
+            );
+            console.log('documentType:', documentType);
+            console.log('preferredEditor:', preferredEditor);
+            const documentModelModule = documentModelModules.find(
                 module => module.documentModel.id === documentType,
             );
             if (!documentModelModule) {
@@ -305,7 +308,9 @@ export function useDocumentDriveServer() {
             );
             newDocument.header.name = name;
 
-            await reactor.addDocument(newDocument);
+            await reactor.addDocument(newDocument, {
+                preferredEditor,
+            });
 
             const action = baseAddFile({
                 id: documentId,

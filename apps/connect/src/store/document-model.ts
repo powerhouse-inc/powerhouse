@@ -1,6 +1,7 @@
 import {
     type VetraDocumentModelModule,
     type VetraPackage,
+    COMMON_PACKAGE_ID,
 } from '@powerhousedao/state';
 import {
     loadDocumentModelEditor,
@@ -8,46 +9,51 @@ import {
 } from './editor';
 
 async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
-    const documentModelDocumentModelModule = await import('document-model');
+    const { documentModelDocumentModelModule } = await import('document-model');
+    const documentModel = documentModelDocumentModelModule.documentModel;
+    const name = documentModel.name;
+    const documentType = documentModel.id;
+    const unsafeIdFromDocumentType = documentType;
+    const extension = documentModel.extension;
+    const specifications = documentModel.specifications;
+    const reducer = documentModelDocumentModelModule.reducer;
+    const actions = documentModelDocumentModelModule.actions;
+    const utils = documentModelDocumentModelModule.utils;
     const vetraDocumentModelModule: VetraDocumentModelModule = {
-        id: 'powerhouse/document-model',
-        name: 'Document Model',
-        documentModel: {
-            author: {
-                name: 'Powerhouse',
-                website: 'https://powerhousedao.com',
-            },
-            description: 'Document Model',
-            extension: '.phdm',
-            id: 'powerhouse/document-model',
-            name: 'Document Model',
-            specifications:
-                documentModelDocumentModelModule
-                    .documentModelDocumentModelModule.documentModel
-                    .specifications,
-        },
-        reducer:
-            documentModelDocumentModelModule.documentModelDocumentModelModule
-                .reducer,
-        actions:
-            documentModelDocumentModelModule.documentModelDocumentModelModule
-                .actions,
-        utils: documentModelDocumentModelModule.documentModelDocumentModelModule
-            .utils,
+        id: unsafeIdFromDocumentType,
+        name,
+        documentType,
+        extension,
+        specifications,
+        reducer,
+        actions,
+        utils,
+        documentModel,
     };
     return vetraDocumentModelModule;
 }
 
 async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule> {
-    const driveDocumentModelModule = await import('document-drive');
+    const { driveDocumentModelModule } = await import('document-drive');
+    const documentModel = driveDocumentModelModule.documentModel;
+    const name = documentModel.name;
+    const documentType = documentModel.id;
+    const unsafeIdFromDocumentType = documentType;
+    const extension = documentModel.extension;
+    const specifications = documentModel.specifications;
+    const reducer = driveDocumentModelModule.reducer;
+    const actions = driveDocumentModelModule.actions;
+    const utils = driveDocumentModelModule.utils;
     const vetraDocumentModelModule: VetraDocumentModelModule = {
-        id: 'powerhouse/document-drive',
-        name: 'Document Drive',
-        documentModel:
-            driveDocumentModelModule.driveDocumentModelModule.documentModel,
-        reducer: driveDocumentModelModule.driveDocumentModelModule.reducer,
-        actions: driveDocumentModelModule.driveDocumentModelModule.actions,
-        utils: driveDocumentModelModule.driveDocumentModelModule.utils,
+        id: unsafeIdFromDocumentType,
+        name,
+        documentType,
+        extension,
+        specifications,
+        reducer,
+        actions,
+        utils,
+        documentModel,
     };
     return vetraDocumentModelModule;
 }
@@ -60,7 +66,7 @@ export async function loadCommonPackage(): Promise<VetraPackage> {
     const genericDriveExplorerEditorModule =
         await loadGenericDriveExplorerEditorModule();
     const vetraPackage: VetraPackage = {
-        id: 'powerhouse/common',
+        id: COMMON_PACKAGE_ID,
         name: 'Common',
         description: 'Common',
         category: 'Common',

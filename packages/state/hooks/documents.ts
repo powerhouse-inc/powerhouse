@@ -7,6 +7,7 @@ import {
   unwrappedSelectedDocumentAtom,
 } from "../internal/atoms.js";
 import { type Loadable } from "../internal/types.js";
+import { type VetraDocumentModelModule } from "../types.js";
 
 /** Returns the documents for the selected drive. */
 export function useDocuments() {
@@ -58,4 +59,11 @@ export function useLoadableDocumentById(
 
   const document = loadableDocuments.data?.find((d) => d.header.id === id);
   return { state: "hasData", data: document };
+}
+
+export function useAddDocument() {
+  return function addDocument(
+    name: string,
+    documentModelModule: VetraDocumentModelModule,
+  ) {};
 }

@@ -372,11 +372,14 @@ loadableDocumentModelModulesAtom.debugLabel =
 
 const editorModulesAtom = atom(async (get) => {
   const vetraPackages = await get(vetraPackagesAtom);
-  const editorModules = vetraPackages
+  const allEditorModules = vetraPackages
     ?.map((pkg) => pkg.modules.editorModules)
     .filter((m) => m !== undefined)
     .flat();
-  return editorModules ?? [];
+  const documentEditorModules = allEditorModules?.filter(
+    (m) => !m.documentTypes.includes("powerhouse/document-drive"),
+  );
+  return documentEditorModules ?? [];
 });
 editorModulesAtom.debugLabel = "editorModulesAtom";
 
@@ -387,11 +390,15 @@ export const loadableEditorModulesAtom = loadable(editorModulesAtom);
 loadableEditorModulesAtom.debugLabel = "loadableEditorModulesAtom";
 
 export const driveEditorModulesAtom = atom(async (get) => {
-  const editorModules = await get(editorModulesAtom);
-  const driveEditorModules = editorModules.filter((m) =>
+  const vetraPackages = await get(vetraPackagesAtom);
+  const allEditorModules = vetraPackages
+    ?.map((pkg) => pkg.modules.editorModules)
+    .filter((m) => m !== undefined)
+    .flat();
+  const driveEditorModules = allEditorModules?.filter((m) =>
     m.documentTypes.includes("powerhouse/document-drive"),
   );
-  return driveEditorModules;
+  return driveEditorModules ?? [];
 });
 driveEditorModulesAtom.debugLabel = "driveEditorModulesAtom";
 

@@ -5,7 +5,7 @@ import {
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
-import { useVetraPackages } from '@powerhousedao/state';
+import { useDriveEditorModules } from '@powerhousedao/state';
 import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
@@ -17,7 +17,7 @@ type Props = {
 export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
     const user = useUser();
-    const driveEditorModules = useVetraPackages();
+    const driveEditorModules = useDriveEditorModules();
     const { getBearerToken } = useConnectCrypto();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {

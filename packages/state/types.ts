@@ -11,7 +11,7 @@ import {
   type Reducer,
   type SubgraphModule,
 } from "document-model";
-import { type ReactNode } from "react";
+import { type DocumentSpecification } from "document-model/document-model/gen/schema/types";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -43,6 +43,9 @@ type BaseVetraPackage<TModules extends { [K in keyof TModules]: VetraMeta[] }> =
 type DocumentModel = DocumentModelState;
 
 export type VetraDocumentModelModule = VetraMeta & {
+  documentType: string;
+  extension: string;
+  specifications: DocumentSpecification[];
   reducer: Reducer<any>;
   actions: Record<string, (input: any) => Action>;
   utils: any;

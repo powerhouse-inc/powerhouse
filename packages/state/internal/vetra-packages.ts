@@ -22,8 +22,6 @@ export function useInitializeVetraPackages(
       if (vetraPackagesInitialized) return;
 
       const initializedVetraPackages = await vetraPackages;
-      console.log("initializedVetraPackages", initializedVetraPackages);
-      console.log("window.vetraPackages", window.vetraPackages);
       if (initializedVetraPackages) {
         window.vetraPackages = initializedVetraPackages;
       }

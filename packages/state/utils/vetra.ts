@@ -16,11 +16,13 @@ import {
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,
 ): VetraPackage {
+  const id = generateId();
+
   const vetraPackage: VetraPackage = {
-    id: generateId(),
-    name: "Legacy lib",
-    description: "Legacy lib",
-    category: "Legacy lib",
+    id,
+    name: legacyLib.manifest.name,
+    description: legacyLib.manifest.description,
+    category: legacyLib.manifest.category,
     author: {
       name: "Powerhouse",
       website: "https://powerhousedao.com",
@@ -41,23 +43,24 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
   legacyDocumentModelModule: DocumentModelModule,
 ) {
   const documentModel = legacyDocumentModelModule.documentModel;
+  const name = documentModel.name;
+  const documentType = documentModel.id;
+  const unsafeIdFromDocumentType = documentType;
+  const extension = documentModel.extension;
+  const specifications = documentModel.specifications;
+  const reducer = legacyDocumentModelModule.reducer;
+  const actions = legacyDocumentModelModule.actions;
+  const utils = legacyDocumentModelModule.utils;
   const vetraDocumentModelModule: VetraDocumentModelModule = {
-    id: documentModel.id,
-    name: documentModel.name,
-    documentModel: {
-      author: {
-        name: "Powerhouse",
-        website: "https://powerhousedao.com",
-      },
-      description: "No description",
-      extension: documentModel.extension,
-      id: documentModel.id,
-      name: documentModel.name,
-      specifications: documentModel.specifications,
-    },
-    reducer: legacyDocumentModelModule.reducer,
-    actions: legacyDocumentModelModule.actions,
-    utils: legacyDocumentModelModule.utils,
+    id: unsafeIdFromDocumentType,
+    name,
+    documentType,
+    extension,
+    documentModel,
+    specifications,
+    reducer,
+    actions,
+    utils,
   };
   return vetraDocumentModelModule;
 }
@@ -65,12 +68,17 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
 export function convertLegacyEditorModuleToVetraEditorModule(
   legacyEditorModule: EditorModule,
 ): VetraEditorModule {
+  const config = legacyEditorModule.config;
+  const unsafeNameFromConfig = config.id;
+  const unsafeIdFromConfig = unsafeNameFromConfig;
+  const documentTypes = legacyEditorModule.documentTypes;
+  const Component = legacyEditorModule.Component;
   const vetraEditorModule: VetraEditorModule = {
-    id: legacyEditorModule.config.id,
-    name: "Legacy editor",
-    documentTypes: legacyEditorModule.documentTypes,
-    Component: legacyEditorModule.Component,
-    config: legacyEditorModule.config,
+    id: unsafeIdFromConfig,
+    name: unsafeNameFromConfig,
+    documentTypes,
+    Component,
+    config,
   };
   return vetraEditorModule;
 }

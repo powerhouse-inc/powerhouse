@@ -13,6 +13,7 @@ export type UpdateVetraPackagesEvent = CustomEvent<{
 }>;
 
 export function dispatchSetDriveEvent(driveId: string | undefined) {
+  console.log("dispatchSetDriveEvent", driveId);
   const event = new CustomEvent("ph:setDrive", { detail: { driveId } });
   window.dispatchEvent(event);
 }
@@ -22,6 +23,7 @@ export function handleSetDriveEvent(
   setSelectedDrive: (driveId: string | undefined) => void,
 ) {
   const driveId = event.detail.driveId;
+  console.log("handleSetDriveEvent", driveId);
   setSelectedDrive(driveId);
   if (typeof window === "undefined") return;
   if (!driveId) {
