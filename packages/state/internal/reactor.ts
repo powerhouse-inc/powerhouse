@@ -113,36 +113,18 @@ export function useSubscribeToWindowEvents() {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     window.addEventListener("ph:setDrive", handleSetDrive);
-
-    return () => {
-      window.removeEventListener("ph:setDrive", handleSetDrive);
-    };
   }, [handleSetDrive]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     window.addEventListener("ph:setNode", handleSetNode);
-
-    return () => {
-      window.removeEventListener("ph:setNode", handleSetNode);
-    };
   }, [handleSetNode]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     window.addEventListener(
       "ph:updateVetraPackages",
       handleUpdateVetraPackages,
     );
-
-    return () => {
-      window.removeEventListener(
-        "ph:updateVetraPackages",
-        handleUpdateVetraPackages,
-      );
-    };
   }, [handleUpdateVetraPackages]);
 }
 

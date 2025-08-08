@@ -1,5 +1,6 @@
 import { useAtomValue } from "jotai";
 import { useCallback } from "react";
+import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
 import {
   loadableDocumentModelModulesAtom,
   loadableDriveEditorModulesAtom,
@@ -11,7 +12,6 @@ import {
 } from "../internal/atoms.js";
 import { dispatchUpdateVetraPackagesEvent } from "../internal/events.js";
 import { type VetraPackage } from "../types.js";
-import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
 export function useVetraPackages() {
   return useAtomValue(unwrappedVetraPackagesAtom);
 }
@@ -55,6 +55,17 @@ export function useDocumentModelModuleById(id: string | null | undefined) {
 export function useEditorModuleById(id: string | null | undefined) {
   const editorModules = useEditorModules();
   return editorModules?.find((module) => module.id === id);
+}
+
+export function useFallbackEditorModule(
+  documentType: string | null | undefined,
+) {
+  const editorModules = useEditorModules();
+  if (!documentType) return undefined;
+  const modulesForType = editorModules?.filter((module) =>
+    module.documentTypes.includes(documentType),
+  );
+  return modulesForType?.[0];
 }
 
 export function useDriveEditorModuleById(id: string | null | undefined) {

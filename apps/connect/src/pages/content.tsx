@@ -9,7 +9,9 @@ import {
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
+    useDocumentModelModules,
     useDrives,
+    useEditorModules,
     useLoadableSelectedDocument,
     useLoadableSelectedDrive,
     useLoadableSelectedFolder,
@@ -25,9 +27,14 @@ import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
     const { addFile } = useDocumentDriveServer();
+    const editorModules = useEditorModules();
+    const documentModelModules = useDocumentModelModules();
+    console.log('editorModules', editorModules);
+    console.log('documentModelModules', documentModelModules);
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
+    console.log('selectedDocument', selectedDocument);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {

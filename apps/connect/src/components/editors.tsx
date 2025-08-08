@@ -21,6 +21,7 @@ import {
 import {
     useDocumentModelModuleById,
     useEditorModuleById,
+    useFallbackEditorModule,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
@@ -81,7 +82,13 @@ export const DocumentEditor: React.FC<Props> = props => {
     const { sign } = useConnectCrypto();
     const documentType = document.header.documentType;
     const documentModel = useDocumentModelModuleById(documentType);
-    const editor = useEditorModuleById(document.header.meta?.preferredEditor);
+    const preferredEditor = useEditorModuleById(
+        document.header.meta?.preferredEditor,
+    );
+    const fallbackEditor = useFallbackEditorModule(documentType);
+    const editor = preferredEditor ?? fallbackEditor;
+    console.log('editor', editor);
+    console.log('documentModel', documentModel);
 
     const [, _dispatch, error] = useDocumentDispatch(
         documentModel?.reducer,
