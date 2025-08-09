@@ -1,3 +1,14 @@
+## 4.1.0-dev.13 (2025-08-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add reducer code on codegen if it is set and allow --force option to overwrite reducers ([12751a8f5](https://github.com/powerhouse-inc/powerhouse/commit/12751a8f5))
+- **vetra:** run switchboard in dev mode to load local document models ([741c2ceb3](https://github.com/powerhouse-inc/powerhouse/commit/741c2ceb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.12 (2025-08-08)
 
 ### 🩹 Fixes
