@@ -32,7 +32,6 @@
     "@libsql/client": "^0.14.0",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/vetra": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",

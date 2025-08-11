@@ -282,7 +282,6 @@ export async function startVetra({
         https,
         disableDefaultDrive,
         configFile,
-        processors: ["ph/codegen/processor"],
         verbose,
       },
       driveUrl, // Pass the drive URL (either from switchboard or remote)
