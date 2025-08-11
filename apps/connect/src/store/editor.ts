@@ -1,8 +1,5 @@
 import { useDefaultDocumentModelEditor } from '#hooks';
 import { type DocumentModelLib, type EditorModule } from 'document-model';
-// Dynamic imports for vetra to avoid build issues when vetra is not available
-let VetraPackageEditor: any;
-let DocumentEditorEditor: any;
 import { atom, useAtomValue } from 'jotai';
 import { atomWithLazy, loadable, unwrap } from 'jotai/utils';
 import { useCallback, useEffect, useRef } from 'react';
@@ -17,21 +14,6 @@ async function loadBaseEditors() {
     const baseEditors = [
         documentModelEditor.documentModelEditorModule,
     ] as EditorModule[];
-
-    // Try to load vetra editors dynamically
-    try {
-        const vetraPath = '@powerhousedao/vetra/editors';
-        const vetraEditors = (await import(vetraPath)) as {
-            VetraPackage: EditorModule;
-            DocumentEditor: EditorModule;
-        };
-        baseEditors.push(
-            vetraEditors.VetraPackage,
-            vetraEditors.DocumentEditor,
-        );
-    } catch (error) {
-        console.warn('Vetra editors not available:', error);
-    }
 
     return baseEditors;
 }

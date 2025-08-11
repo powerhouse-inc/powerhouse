@@ -280,9 +280,6 @@ importers:
       '@powerhousedao/state':
         specifier: workspace:*
         version: link:../../packages/state
-      '@powerhousedao/vetra':
-        specifier: workspace:*
-        version: link:../../packages/vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
