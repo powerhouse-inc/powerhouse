@@ -9,7 +9,7 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": {
-    ".": "./dist/index.js"
+    "./*": "./dist/src/*.js"
   },
   "imports": {
     "#*": "./dist/src/*"
@@ -39,10 +39,6 @@
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",
-  "devDependencies": {
-    "@types/node": "^22.15.17",
-    "vitest": "^3.1.2"
-  },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.17.0",
@@ -52,7 +48,13 @@
     "change-case": "^5.4.4",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "express": "^4.21.1",
     "vite": "^6.3.5",
     "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.15.17",
+    "vitest": "^3.1.2"
   }
 }

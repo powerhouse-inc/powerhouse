@@ -49,6 +49,7 @@ export function reactorCommand(program: Command) {
       "--remote-drives-config <configFile>",
       "path to JSON file containing remote drive configurations",
     )
+    .option("--mcp", "enable Mcp route at /mcp. Default: true")
     .action(async (...args: [ReactorOptions]) => {
       await switchboard(...args);
     });

@@ -79,6 +79,7 @@ const startServer = async (
     configFile,
     logLevel,
     remoteDrives = [],
+    mcp,
   } = {
     ...DefaultStartServerOptions,
     ...options,
@@ -135,6 +136,7 @@ const startServer = async (
     configFile,
     packages,
     processors,
+    mcp,
   });
 
   // add vite middleware after express app is initialized if applicable

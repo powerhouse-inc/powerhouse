@@ -26,6 +26,7 @@ export type StartServerOptions = {
     users: string[];
     admins: string[];
   };
+  mcp?: boolean;
 };
 
 export type SwitchboardReactor = {

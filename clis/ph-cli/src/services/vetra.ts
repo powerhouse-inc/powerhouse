@@ -59,6 +59,7 @@ export async function startVetraSwitchboard(
     ...defaultVetraSwitchboardOptions,
     ...options,
     https,
+    mcp: true,
   });
 
   return switchboard;
@@ -113,6 +114,7 @@ function spawnLocalReactor(
   const finalOptions = {
     ...reactorOptions,
     remoteDrives: remoteDrives || "",
+    mcp: false,
   };
 
   const child = fork(

@@ -113,6 +113,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     packages: options.packages,
     configFile:
       options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+    mcp: options.mcp ?? true,
   });
 
   // add vite middleware after express app is initialized if applicable

@@ -35,6 +35,7 @@ export type StartServerOptions = {
   logLevel?: LogLevel;
   remoteDrives?: RemoteDriveInputSimple[];
   processors?: Array<DefaultProcessors>;
+  mcp?: boolean;
 };
 
 export const DefaultStartServerOptions = {
@@ -58,6 +59,7 @@ export const DefaultStartServerOptions = {
       triggers: [],
     },
   },
+  mcp: true,
 } satisfies StartServerOptions;
 
 export type LocalReactor = {

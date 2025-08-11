@@ -55,6 +55,7 @@ export function switchboardCommand(program: Command) {
       "--base-path <basePath>",
       "base path for the API endpoints (sets the BASE_PATH environment variable)",
     )
+    .option("--mcp", "enable Mcp route at /mcp. Default: true")
     .action(async (...args: [ReactorOptions]) => {
       const { defaultDriveUrl } = await switchboard(...args);
       console.log("   ➜  Switchboard:", defaultDriveUrl);
