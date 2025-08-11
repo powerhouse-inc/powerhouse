@@ -1491,9 +1491,6 @@ importers:
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../reactor-mcp
-      '@powerhousedao/vetra':
-        specifier: workspace:*
-        version: link:../vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown
