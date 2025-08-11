@@ -262,6 +262,18 @@ export async function generateSubgraph(
       ],
       { skipFormat, verbose },
     );
+  } else {
+    await run(
+      [
+        "powerhouse",
+        "generate-custom-subgraph",
+        "--subgraph",
+        name,
+        "--root-dir",
+        dir,
+      ],
+      { skipFormat, verbose },
+    );
   }
 }
 
