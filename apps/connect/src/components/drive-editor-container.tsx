@@ -15,11 +15,7 @@ import {
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import { type IDriveContext } from '@powerhousedao/reactor-browser';
-import {
-    useSelectedDocument,
-    useSelectedDrive,
-    useSetSelectedNode,
-} from '@powerhousedao/state';
+import { useSelectedDocument, useSelectedDrive } from '@powerhousedao/state';
 import { driveDocumentModelModule } from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
@@ -79,7 +75,6 @@ export function DriveEditorContainer() {
     const getEditor = useGetEditor();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
-    const setSelectedNode = useSetSelectedNode();
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -96,7 +91,6 @@ export function DriveEditorContainer() {
             showDeleteNodeModal,
             useDocumentEditorProps,
             addDocument,
-            setSelectedNode,
         }),
         [
             nodeActions,
@@ -109,7 +103,6 @@ export function DriveEditorContainer() {
             getEditor,
             showDeleteNodeModal,
             showCreateDocumentModal,
-            setSelectedNode,
         ],
     );
 
