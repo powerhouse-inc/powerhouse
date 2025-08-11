@@ -1,3 +1,13 @@
+## 4.1.0-dev.14 (2025-08-11)
+
+### 🚀 Features
+
+- update document engineering dep ([54dcee90d](https://github.com/powerhouse-inc/powerhouse/commit/54dcee90d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.13 (2025-08-09)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
