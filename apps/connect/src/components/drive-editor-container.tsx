@@ -14,23 +14,10 @@ import {
 } from '#store';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import {
-    type DriveEditorProps,
-    type IDriveContext,
-} from '@powerhousedao/reactor-browser';
-import {
-    useSelectedDocument,
-    useSelectedDrive,
-    useSetSelectedNode,
-} from '@powerhousedao/state';
-// Dynamic import for vetra to avoid build issues when vetra is not available
-let VetraDriveExplorer: any;
+import { type IDriveContext } from '@powerhousedao/reactor-browser';
+import { useSelectedDocument, useSelectedDrive } from '@powerhousedao/state';
 import { driveDocumentModelModule } from 'document-drive';
-import {
-    type DocumentModelModule,
-    type Operation,
-    type PHDocument,
-} from 'document-model';
+import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
@@ -88,7 +75,6 @@ export function DriveEditorContainer() {
     const getEditor = useGetEditor();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
-    const setSelectedNode = useSetSelectedNode();
 
     const driveContext: IDriveContext = useMemo(
         () => ({
@@ -105,7 +91,6 @@ export function DriveEditorContainer() {
             showDeleteNodeModal,
             useDocumentEditorProps,
             addDocument,
-            setSelectedNode,
         }),
         [
             nodeActions,
@@ -118,7 +103,6 @@ export function DriveEditorContainer() {
             getEditor,
             showDeleteNodeModal,
             showCreateDocumentModal,
-            setSelectedNode,
         ],
     );
 
@@ -126,30 +110,8 @@ export function DriveEditorContainer() {
         selectedDrive?.header.meta?.preferredEditor,
     );
 
-    let DriveEditorComponent =
+    const DriveEditorComponent =
         driveEditor?.Component ?? GenericDriveExplorer.Component;
-
-    // TODO: remove this after vetra command refactor
-    if (selectedDrive?.header.meta?.preferredEditor === 'vetra-drive-app') {
-        // Fallback to generic drive explorer if vetra is not available
-        try {
-            if (!VetraDriveExplorer) {
-                // This will be resolved at runtime if vetra is available
-                DriveEditorComponent = GenericDriveExplorer.Component;
-            } else {
-                DriveEditorComponent = (
-                    VetraDriveExplorer as {
-                        Component: React.FC<
-                            DriveEditorProps<PHDocument> &
-                                Record<string, unknown>
-                        >;
-                    }
-                ).Component;
-            }
-        } catch {
-            DriveEditorComponent = GenericDriveExplorer.Component;
-        }
-    }
 
     if (selectedDocument || !selectedDrive) return null;
 

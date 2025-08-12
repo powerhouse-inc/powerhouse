@@ -1,5 +1,5 @@
 import { isLogLevel } from "@powerhousedao/config";
-import { startAPI, type Processor } from "@powerhousedao/reactor-api";
+import { startAPI } from "@powerhousedao/reactor-api";
 import {
   startViteServer,
   VitePackageLoader,
@@ -12,7 +12,6 @@ import {
 } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
-import { DEFAULT_PROCESSORS } from "./default-processors.js";
 import {
   DefaultStartServerOptions,
   type LocalReactor,
@@ -119,14 +118,6 @@ const startServer = async (
   // create loader
   const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
-  const processors = options?.processors?.reduce(
-    (acc, processor) => {
-      acc[processor] = DEFAULT_PROCESSORS[processor];
-      return acc;
-    },
-    {} as Record<string, Processor>,
-  );
-
   // start api
   const api = await startAPI(driveServer, {
     port: serverPort,
@@ -135,8 +126,10 @@ const startServer = async (
     packageLoader,
     configFile,
     packages,
-    processors,
     mcp,
+    // processors: {
+    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
+    // },
   });
 
   // add vite middleware after express app is initialized if applicable

@@ -19,10 +19,17 @@ async function startLocalSwitchboard(options: SwitchboardOptions) {
   const Switchboard = await import("../services/switchboard.js");
   const { startSwitchboard } = Switchboard;
 
+  // Extract only the props that switchboard expects
+  const { port: rawPort, configFile, dev, dbPath, packages } = options;
+
+  const port = typeof rawPort === "string" ? parseInt(rawPort) : rawPort;
+
   return startSwitchboard({
-    ...options,
-    port:
-      typeof options.port === "string" ? parseInt(options.port) : options.port,
+    port,
+    configFile,
+    dev,
+    dbPath,
+    packages,
   });
 }
 

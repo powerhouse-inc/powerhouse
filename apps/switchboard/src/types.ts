@@ -13,6 +13,7 @@ export type StartServerOptions = {
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
+  remoteDrives?: string[];
   https?:
     | {
         keyPath: string;

@@ -14,6 +14,7 @@ import {
 } from "document-model";
 import { type DocumentEditorState } from "../../document-models/document-editor/index.js";
 import { type VetraPackageState } from "../../document-models/vetra-package/index.js";
+import { logger } from "./logger.js";
 
 const PH_CONFIG = getConfig();
 const CURRENT_WORKING_DIR = process.cwd();
@@ -22,7 +23,7 @@ export class CodegenProcessor implements IProcessor {
   async onStrands<TDocument extends DocumentModelDocument>(
     strands: InternalTransmitterUpdate<TDocument>[],
   ): Promise<void> {
-    console.log(">>> onStrands", strands);
+    logger.debug(">>> onStrands", strands);
 
     // TODO: refactor document handlers into a class
 
@@ -41,7 +42,7 @@ export class CodegenProcessor implements IProcessor {
         const validationResult = validateDocumentModelState(state);
 
         if (validationResult.isValid) {
-          console.log(
+          logger.info(
             `🔄 Starting code generation for document model: ${state.name}`,
           );
           try {
@@ -52,17 +53,17 @@ export class CodegenProcessor implements IProcessor {
               PH_CONFIG,
               { verbose: false },
             );
-            console.log(
+            logger.info(
               `✅ Code generation completed successfully for: ${state.name}`,
             );
           } catch (error) {
-            console.error(
+            logger.error(
               `❌ Error during code generation for ${state.name}:`,
               error,
             );
           }
         } else {
-          console.error(
+          logger.debug(
             `❌ Validation failed for document model: ${state.name}`,
             validationResult.errors,
           );
@@ -75,7 +76,7 @@ export class CodegenProcessor implements IProcessor {
       if (strand.documentType === "powerhouse/package") {
         const state = strand.state as VetraPackageState;
 
-        console.log("🔄 Generating manifest for package");
+        logger.info("🔄 Generating manifest for package");
         generateManifest({
           name: state.name ?? "",
           category: state.category ?? "",
@@ -85,13 +86,13 @@ export class CodegenProcessor implements IProcessor {
             url: state.author.website ?? "",
           },
         }, CURRENT_WORKING_DIR);
-        console.log("✅ Manifest generated successfully");
+        logger.info("✅ Manifest generated successfully");
       } else if (strand.documentType === "powerhouse/document-editor") {
         const state = strand.state as DocumentEditorState;
 
         // Check if we have a valid editor name and document types
         if (state.name && state.documentTypes.length > 0) {
-          console.log(`🔄 Starting editor generation for: ${state.name}`);
+          logger.info(`🔄 Starting editor generation for: ${state.name}`);
           try {
             // Extract document types from the state
             const documentTypes = state.documentTypes.map(
@@ -101,25 +102,25 @@ export class CodegenProcessor implements IProcessor {
             // Generate the editor using the codegen function
             await generateEditor(state.name, documentTypes, PH_CONFIG);
 
-            console.log(
+            logger.info(
               `✅ Editor generation completed successfully for: ${state.name}`,
             );
           } catch (error) {
-            console.error(
+            logger.error(
               `❌ Error during editor generation for ${state.name}:`,
               error,
             );
             if (error instanceof Error) {
-              console.error(`❌ Error message: ${error.message}`);
+              logger.error(`❌ Error message: ${error.message}`);
             }
           }
         } else {
-          console.warn(
+          logger.warn(
             `⚠️ Skipping editor generation - missing name or document types for editor`,
           );
         }
       } else {
-        console.log(">>> unknown document type", strand.documentType);
+        logger.debug(">>> unknown document type", strand.documentType);
       }
     }
   }

@@ -136,11 +136,6 @@ export type IDriveContext = {
    */
   showDeleteNodeModal: (node: Node) => void;
   /**
-   * Sets the selected node (document or folder) by node ID
-   * @param nodeId - The ID of the node to select, or undefined to deselect
-   */
-  setSelectedNode: (nodeId: string | undefined) => void;
-  /**
    * Retrieves the document model module for a given document type
    * @param documentType - The type of document to retrieve the model for
    * @returns The document model module for the given document type, or undefined if not found

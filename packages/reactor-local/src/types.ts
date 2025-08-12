@@ -6,8 +6,6 @@ import {
 } from "document-drive";
 import path from "node:path";
 
-import { type DefaultProcessors } from "./default-processors.js";
-
 export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
 
 export type StorageOptions = {
@@ -34,7 +32,6 @@ export type StartServerOptions = {
     | undefined;
   logLevel?: LogLevel;
   remoteDrives?: RemoteDriveInputSimple[];
-  processors?: Array<DefaultProcessors>;
   mcp?: boolean;
 };
 
