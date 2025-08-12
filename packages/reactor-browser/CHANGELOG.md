@@ -1,3 +1,13 @@
+## 4.1.0-dev.15 (2025-08-12)
+
+### 🚀 Features
+
+- **reactor-mcp,reactor-api,reactor-local,switchboard,ph-cli:** run mcp on express app ([d51fa590e](https://github.com/powerhouse-inc/powerhouse/commit/d51fa590e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.14 (2025-08-11)
 
 ### 🚀 Features
