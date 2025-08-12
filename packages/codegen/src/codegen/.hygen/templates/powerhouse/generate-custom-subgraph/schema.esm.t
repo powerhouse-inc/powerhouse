@@ -9,11 +9,6 @@ export const schema: DocumentNode = gql`
 """
 Subgraph definition
 """
-
-"""
-Queries: 
-"""
-
 type Query {
     example(driveId: String!): String
 }
