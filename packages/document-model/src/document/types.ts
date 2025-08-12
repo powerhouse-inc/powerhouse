@@ -162,7 +162,7 @@ export type Operation = {
    *
    * TODO: this will not be optional in the future.
    */
-  action?: Action;
+  action: Action;
 };
 
 export type Meta = {

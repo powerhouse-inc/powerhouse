@@ -2635,6 +2635,12 @@ export class BaseDocumentDriveServer
     const operations: Operation[] = strand.operations.map(
       (op: OperationUpdate) => ({
         ...op,
+        action: {
+          type: op.type,
+          input: op.input,
+          context: op.context,
+          scope: strand.scope,
+        },
         scope: strand.scope,
         branch: strand.branch,
       }),

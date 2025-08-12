@@ -10,6 +10,7 @@ import { logger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
+  type Action,
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
   type Operation,
@@ -56,8 +57,8 @@ export class InternalTransmitter implements ITransmitter {
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
     strand: StrandUpdate,
-  ) {
-    const operations = [];
+  ): Promise<InternalOperationUpdate<TDocument>[]> {
+    const operations: InternalOperationUpdate<TDocument>[] = [];
     const stateByIndex = new Map<
       number,
       GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
@@ -105,12 +106,21 @@ export class InternalTransmitter implements ITransmitter {
         ? RunAsap.runAsapAsync(previousStateTask, this.taskQueueMethod)
         : previousStateTask());
 
+      const action: Action = {
+        type: operation.type,
+        input: operation.input,
+        context: operation.context,
+        scope: strand.scope,
+      };
+
       operations.push({
         ...operation,
         state,
         previousState,
+        action,
       });
     }
+
     return operations;
   }
 

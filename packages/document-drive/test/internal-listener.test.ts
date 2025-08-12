@@ -125,6 +125,7 @@ describe("Internal Listener", () => {
         driveId: drive.header.id,
         operations: [
           {
+            action,
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
             context: undefined,
             id: expectUUID(expect) as string,
@@ -171,7 +172,8 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction(documentId, setModelName({ name: "test" }));
+    const setModelNameAction = setModelName({ name: "test" });
+    await server.addAction(documentId, setModelNameAction);
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(3));
 
@@ -213,6 +215,7 @@ describe("Internal Listener", () => {
         driveId,
         operations: [
           {
+            action: setModelNameAction,
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
             context: undefined,
             id: expectUUID(expect) as string,
@@ -232,7 +235,8 @@ describe("Internal Listener", () => {
       },
     ]);
 
-    await server.addAction(documentId, setModelName({ name: "test 2" }));
+    const setModelNameAction2 = setModelName({ name: "test 2" });
+    await server.addAction(documentId, setModelNameAction2);
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(4));
     expect(transmitFn).toHaveBeenLastCalledWith([
@@ -243,6 +247,7 @@ describe("Internal Listener", () => {
         driveId,
         operations: [
           {
+            action: setModelNameAction2,
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
             context: undefined,
             id: expectUUID(expect) as string,
