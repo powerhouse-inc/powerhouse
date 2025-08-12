@@ -290,7 +290,6 @@ function processSkipOperation<TDocument extends PHDocument>(
       undefined,
       undefined,
       {
-        reuseHash: true,
         reuseOperationResultingState,
         operationResultingStateParser: resultingStateParser,
       },
@@ -342,7 +341,6 @@ function processUndoOperation<TDocument extends PHDocument>(
     undefined,
     undefined,
     {
-      reuseHash: true,
       reuseOperationResultingState,
       operationResultingStateParser: resultingStateParser,
     },
@@ -369,7 +367,7 @@ function processUndoOperation<TDocument extends PHDocument>(
  */
 export function baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   customReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   options: ReducerOptions = {},
@@ -377,25 +375,18 @@ export function baseReducer<TDocument extends PHDocument>(
   const {
     skip,
     ignoreSkipOperations = false,
-    reuseHash = false,
     reuseOperationResultingState = false,
     operationResultingStateParser,
   } = options;
 
-  let _action = { ...action };
+  let _action: Action = { ...action };
   let skipValue = skip || 0;
   let newDocument = {
     ...document,
   };
   let reuseLastOperationIndex = false;
 
-  const shouldProcessSkipOperation =
-    !ignoreSkipOperations &&
-    (skipValue > 0 ||
-      ("index" in _action &&
-        "skip" in _action &&
-        typeof _action.skip === "number" &&
-        _action.skip > 0));
+  const shouldProcessSkipOperation = !ignoreSkipOperations && skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
@@ -515,10 +506,10 @@ export function baseReducer<TDocument extends PHDocument>(
   // if reuseHash is true, checks if the action has
   // an hash and uses it instead of generating it
   const scope = _action.scope || "global";
-  const hash =
-    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-      ? (_action as Operation).hash
-      : hashDocumentStateForScope(newDocument, scope);
+  let hash = hashDocumentStateForScope(newDocument, scope);
+  if (options.hash && options.hash !== "") {
+    hash = options.hash;
+  }
 
   // updates the last operation with the hash of the resulting state
   const lastOperation = newDocument.operations[scope].at(-1);

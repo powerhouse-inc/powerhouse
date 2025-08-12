@@ -2,8 +2,8 @@ import { actionSigner, operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  type ActionContext,
   type Action,
+  type ActionContext,
   type ActionSigner,
   type Operation,
   type OperationSignatureContext,
@@ -89,7 +89,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
   signHandler: OperationSigningHandler,
 ) {
   const result = reducer(document, action, undefined, {
-    reuseHash: true,
+    //reuseHash: true,
     reuseOperationResultingState: true,
   });
   const operation = result.operations[action.scope].at(-1);

@@ -303,7 +303,7 @@ export function replayOperations<TDocument extends PHDocument>(
   header?: PHDocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
-  options?: ReducerOptions,
+  options?: ReplayDocumentOptions,
 ): TDocument {
   // wraps the provided custom reducer with the
   // base document reducer
@@ -405,6 +405,7 @@ export function replayDocument<TDocument extends PHDocument>(
   document.operations = initialOperations;
 
   let result = document;
+
   // if there are operations left without resulting state
   // then replays them
   if (operationsToReplay.length) {
@@ -412,7 +413,7 @@ export function replayDocument<TDocument extends PHDocument>(
       const doc = reducer(document, operation, dispatch, {
         skip: operation.skip,
         ignoreSkipOperations: true,
-        reuseHash: !checkHashes,
+        hash: !checkHashes ? operation.hash : undefined,
       });
 
       return doc;

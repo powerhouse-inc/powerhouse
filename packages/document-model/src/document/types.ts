@@ -78,8 +78,8 @@ export type ReducerOptions = {
   skip?: number;
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
-  /** if true reuses the provided action hash  */
-  reuseHash?: boolean;
+  /** a hash to use */
+  hash?: string;
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
   /** if true checks the hashes of the operations */
@@ -134,7 +134,7 @@ export type Operation = {
   /** The scope of the action */
   scope: string;
   /** The attachments included in the action. */
-  attachments?: AttachmentInput[] | undefined;
+  //attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */
   //context?: ActionContext;
   /////////////////////////////////////////////////////////////////////////////
