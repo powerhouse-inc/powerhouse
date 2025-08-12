@@ -124,12 +124,6 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   reuseLastOperationIndex = false,
   skip = 0,
 ): TDocument {
-  // UNDO, REDO and PRUNE are meta operations
-  // that alter the operations history themselves
-  if ([UNDO, REDO, PRUNE].includes(operation.type)) {
-    return document;
-  }
-
   const scope = operation.scope;
   const operations: Operation[] = document.operations[scope].slice();
 
@@ -207,7 +201,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action

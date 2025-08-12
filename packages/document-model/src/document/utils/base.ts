@@ -149,7 +149,7 @@ export function createReducer<TDocument extends PHDocument>(
   type TAction = Action;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
-    action: TAction | Operation,
+    action: TAction,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
   ) => {
