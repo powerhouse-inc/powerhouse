@@ -27,11 +27,11 @@ export const PACKAGES = [
   "codegen",
   "reactor-api",
   "reactor-local",
+  "reactor-mcp",
   "scalars",
   "switchboard-gui",
   "renown",
   "config",
-  "switchboard",
   ...SPECIAL_PACKAGES,
 ];
 
