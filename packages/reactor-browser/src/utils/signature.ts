@@ -5,8 +5,8 @@ import {
   type PHDocument,
   type Reducer,
   type User,
+  buildSignedAction,
 } from "document-model";
-import { buildSignedAction } from "../../../document-model/src/document/utils/crypto.js";
 import type { User as RenownUser } from "../renown/types.js";
 
 export async function signOperation<TDocument extends PHDocument>(

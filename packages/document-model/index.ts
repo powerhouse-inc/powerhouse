@@ -38,7 +38,7 @@ export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
-export { BaseDocumentClass, applyMixins } from "#document/object.js";
+export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
 export type {
   Action,
@@ -76,9 +76,9 @@ export type {
   NOOPAction,
   Operation,
   ActionSignatureContext as OperationSignatureContext,
+  PartialState,
   PHDocument,
   PHReducer,
-  PartialState,
   Reducer,
   ReducerOptions,
   SaveToFile,
@@ -103,7 +103,7 @@ export {
 export {
   buildOperationSignature,
   buildOperationSignatureMessage,
-  buildSignedAction as buildSignedOperation,
+  buildSignedAction,
   generateId,
 } from "#document/utils/crypto.js";
 export {
