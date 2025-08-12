@@ -60,6 +60,7 @@ function operationFromStorage(
     type: op.type,
     input: JSON.parse(op.input),
     scope: op.scope,
+    attachments: op.attachments,
   };
 
   if (op.context) {
@@ -80,7 +81,6 @@ function operationFromStorage(
     resultingState: op.resultingState
       ? op.resultingState.toString()
       : undefined,
-    attachments: op.attachments,
     action,
   };
 
@@ -456,10 +456,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         acc[scope] = [];
       }
       const result = operationFromStorage(operation);
-      result.attachments = attachments.filter(
+      result.action!.attachments = attachments.filter(
         (a) => a.operationId === operation.id,
       );
-      result.attachments.forEach(({ hash, ...file }) => {
+      result.action!.attachments!.forEach(({ hash, ...file }) => {
         fileRegistry[hash] = file;
       });
       acc[scope].push(result);
@@ -759,7 +759,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
       await Promise.all(
         operations
-          .filter((o) => o.attachments?.length)
+          .filter((o) => o.action?.attachments?.length)
           .map((op) => {
             return tx.operation.update({
               where: {
@@ -773,7 +773,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
               data: {
                 attachments: {
                   createMany: {
-                    data: op.attachments ?? [],
+                    data: op.action?.attachments ?? [],
                   },
                 },
               },

@@ -235,11 +235,11 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   skip: number,
 ): {
   document: TDocument;
-  action: Action | Operation;
+  action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -255,7 +255,7 @@ export function processUndoRedo<TDocument extends PHDocument>(
 
 function processSkipOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   customReducer: StateReducer<TDocument>,
   skipValue: number,
   reuseOperationResultingState = false,
