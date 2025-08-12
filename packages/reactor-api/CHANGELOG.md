@@ -1,3 +1,7 @@
+## 4.1.0-dev.16 (2025-08-12)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.15 (2025-08-12)
 
 ### 🚀 Features

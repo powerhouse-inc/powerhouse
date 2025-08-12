@@ -1,3 +1,18 @@
+## 4.1.0-dev.16 (2025-08-12)
+
+### 🚀 Features
+
+- **codegen:** deduplicate operation errors and import them automatically with ts-morph ([e813b22b4](https://github.com/powerhouse-inc/powerhouse/commit/e813b22b4))
+
+### 🩹 Fixes
+
+- **codegen:** Unexpected BlockString ([00a31bba5](https://github.com/powerhouse-inc/powerhouse/commit/00a31bba5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.15 (2025-08-12)
 
 ### 🚀 Features
