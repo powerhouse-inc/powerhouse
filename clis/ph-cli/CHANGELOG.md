@@ -1,3 +1,18 @@
+## 4.1.0-dev.17 (2025-08-12)
+
+### 🚀 Features
+
+- refactor vetra command and remove vetra deps in connect and reactor ([#1753](https://github.com/powerhouse-inc/powerhouse/pull/1753))
+
+### 🩹 Fixes
+
+- **ph-cli:** added port option to connect command ([19a84f950](https://github.com/powerhouse-inc/powerhouse/commit/19a84f950))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.16 (2025-08-12)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

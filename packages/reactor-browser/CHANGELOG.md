@@ -1,3 +1,19 @@
+## 4.1.0-dev.17 (2025-08-12)
+
+### 🚀 Features
+
+- refactor vetra command and remove vetra deps in connect and reactor ([#1753](https://github.com/powerhouse-inc/powerhouse/pull/1753))
+
+### 🩹 Fixes
+
+- downstream fixes in other package from signature change ([4048d4152](https://github.com/powerhouse-inc/powerhouse/commit/4048d4152))
+- **reactor-browser:** updated signature function call to new format ([4b1ce55c0](https://github.com/powerhouse-inc/powerhouse/commit/4b1ce55c0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.16 (2025-08-12)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
