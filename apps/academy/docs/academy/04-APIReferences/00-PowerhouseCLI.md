@@ -709,48 +709,50 @@ Notes:
 
 ```
 Command Overview:
-  The vetra command sets up a complete Vetra development environment for working with Vetra projects.
-  It starts three coordinated services: a Vetra Switchboard, a Local Reactor, and Connect Studio,
-  enabling full document collaboration and real-time processing with a "Vetra" drive.
+  The vetra command sets up a Vetra development environment for working with Vetra projects.
+  It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+  and real-time processing with a "Vetra" drive or connection to remote drives.
 
   This command:
   1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
-  2. Starts a Local Reactor that connects to the Vetra Switchboard as a remote drive
-  3. Starts Connect Studio pointing to the Local Reactor for user interaction
-  4. Enables real-time updates, collaboration, and code generation across all services
+  2. Optionally connects to remote drives instead of creating a local drive
+  3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
+  4. Enables real-time updates, collaboration, and code generation
 
 Options:
-  --generate               Generate code automatically when document models are updated.
-                          This keeps your code in sync with model changes across all services.
+  --logs                     Enable verbose logging for all services. This provides detailed
+                            output from Switchboard and Connect during startup and operation.
                         
-  --switchboard-port <port> Specify the port to use for the Vetra Switchboard service.
-                          Default is 4001. The Switchboard handles document storage.
+  --switchboard-port <port>  Specify the port to use for the Vetra Switchboard service.
+                            Default is 4001. The Switchboard handles document storage.
                         
-  --reactor-port <port>    Specify the port to use for the Local Reactor service.
-                          Default is 4002. The Reactor provides the main API and connects to switchboard.
+  --connect-port <port>      Specify the port to use for Connect Studio.
+                            Default is 3000. Connect provides the user interface.
                         
-  --https-key-file <path>  Path to the SSL key file if using HTTPS for secure connections.
+  --https-key-file <path>    Path to the SSL key file if using HTTPS for secure connections.
                         
-  --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
+  --https-cert-file <path>   Path to the SSL certificate file if using HTTPS.
                         
-  --config-file <path>     Path to the powerhouse.config.js file. This allows you to
-                          customize the behavior of all services in the Vetra development environment.
+  --config-file <path>       Path to the powerhouse.config.js file. This allows you to
+                            customize the behavior of the Vetra development environment.
                         
-  -w, --watch              Watch for local changes to document models and processors,
-                          and automatically update both the Switchboard and Reactor accordingly.
+  -w, --watch                Watch for local changes to document models and processors,
+                            and automatically update the Switchboard accordingly.
                         
-  --remote-drive <url>     URL of remote drive to connect to (skips switchboard initialization).
+  --remote-drive <url>       URL of remote drive to connect to. When specified, the switchboard
+                            connects to this remote drive instead of creating a local Vetra drive.
                         
-  --logs                   Enable verbose logging for all services. This provides detailed
-                          output from Switchboard, Reactor, and Connect during startup and operation.
+  --disable-connect          Skip Connect initialization (only start switchboard and reactor).
+                            Use this when you only need the backend services running.
 
 Examples:
-  $ ph vetra                                           # Start complete Vetra environment with defaults
-  $ ph vetra --generate                                # Auto-generate code on model changes
-  $ ph vetra --switchboard-port 5000 --reactor-port 5001  # Use custom ports
-  $ ph vetra --config-file custom.powerhouse.config.js # Use custom configuration
-  $ ph vetra --watch                                   # Watch for changes and auto-update
-  $ ph vetra --logs                                    # Enable detailed logging from all services
+  $ ph vetra                                              # Start Vetra environment with defaults
+  $ ph vetra --switchboard-port 5000 --connect-port 3001 # Use custom ports
+  $ ph vetra --config-file custom.powerhouse.config.js   # Use custom configuration
+  $ ph vetra --watch                                      # Watch for changes and auto-update
+  $ ph vetra --logs                                       # Enable detailed logging
+  $ ph vetra --remote-drive http://localhost:4001/d/docs  # Connect to remote drive
+  $ ph vetra --disable-connect                            # Start only backend services
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 

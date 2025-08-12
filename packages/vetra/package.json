@@ -66,6 +66,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "colorette": "^2.0.20",
     "document-model": "workspace:*",
     "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6",
