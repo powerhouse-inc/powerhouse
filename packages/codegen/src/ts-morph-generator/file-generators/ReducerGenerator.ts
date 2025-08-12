@@ -10,6 +10,7 @@ import { FileGenerator } from "../core/FileGenerator.js";
 import {
   type GenerationContext,
   type Operation,
+  type OperationError,
 } from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
@@ -42,6 +43,9 @@ export class ReducerGenerator extends FileGenerator {
       context.forceUpdate,
     );
 
+    // Detect and import error classes used in the actual reducer code (after generation)
+    this.addErrorImports(sourceFile, context);
+
     await sourceFile.save();
   }
 
@@ -50,6 +54,79 @@ export class ReducerGenerator extends FileGenerator {
       `// TODO: Implement "${methodName}" reducer`,
       `throw new Error('Reducer "${methodName}" not yet implemented');`,
     ];
+  }
+
+  private addErrorImports(
+    sourceFile: SourceFile,
+    context: GenerationContext,
+  ): void {
+    // Collect all errors from all operations
+    const allErrors: OperationError[] = [];
+
+    context.operations.forEach((operation) => {
+      if (Array.isArray(operation.errors)) {
+        operation.errors
+          .filter((error) => error.name)
+          .forEach((error) => {
+            // Deduplicate errors by name
+            if (!allErrors.find((e) => e.name === error.name)) {
+              allErrors.push(error);
+            }
+          });
+      }
+    });
+
+    if (allErrors.length === 0) return;
+
+    // Analyze the actual source file content to find which errors are used
+    const sourceFileContent = sourceFile.getFullText();
+    const usedErrors = new Set<string>();
+
+    allErrors.forEach((error) => {
+      // Check if error class name is mentioned anywhere in the source file
+      // Look for patterns like "new ErrorName" or "throw ErrorName" or "ErrorName("
+      const errorPattern = new RegExp(`\\b${error.name}\\b`, "g");
+      if (errorPattern.test(sourceFileContent)) {
+        usedErrors.add(error.name!);
+      }
+    });
+
+    // Add imports for used errors (only if they're not already imported)
+    if (usedErrors.size > 0) {
+      const errorImportPath = `../../gen/${paramCase(context.module.name)}/error.js`;
+      const errorClassNames = Array.from(usedErrors);
+
+      // Check if imports already exist to avoid duplicates
+      const existingImports = sourceFile.getImportDeclarations();
+      const existingErrorImport = existingImports.find(
+        (importDecl) =>
+          importDecl.getModuleSpecifierValue() === errorImportPath,
+      );
+
+      if (existingErrorImport) {
+        // Get already imported error names
+        const existingNamedImports = existingErrorImport
+          .getNamedImports()
+          .map((namedImport) => namedImport.getName());
+
+        // Only import errors that aren't already imported
+        const newErrorsToImport = errorClassNames.filter(
+          (errorName) => !existingNamedImports.includes(errorName),
+        );
+
+        if (newErrorsToImport.length > 0) {
+          // Add new named imports to existing import declaration
+          existingErrorImport.addNamedImports(newErrorsToImport);
+        }
+      } else {
+        // Create new import declaration
+        this.importManager.addNamedImports(
+          sourceFile,
+          errorClassNames,
+          errorImportPath,
+        );
+      }
+    }
   }
 
   private getOutputPath(context: GenerationContext): string {

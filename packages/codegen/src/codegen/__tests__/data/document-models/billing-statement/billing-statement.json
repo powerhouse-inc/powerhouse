@@ -57,8 +57,23 @@
                             "description": "",
                             "schema": "input EditStatusInput {\n  status: BillingStatementStatusInput!\n}",
                             "template": "",
-                            "reducer": "",
-                            "errors": [],
+                            "reducer": "if (state.status === 'PAID') { throw new InvalidStatusTransition('Cannot change status from PAID'); } if (state.status === action.input.status) { throw new StatusAlreadySet('Status already set'); } state.status = action.input.status;",
+                            "errors": [
+                                {
+                                    "id": "invalidStatusTransition",
+                                    "name": "InvalidStatusTransition",
+                                    "code": "INVALID_STATUS_TRANSITION",
+                                    "description": "Cannot transition from current status to the requested status",
+                                    "template": ""
+                                },
+                                {
+                                    "id": "statusAlreadySet",
+                                    "name": "StatusAlreadySet",
+                                    "code": "STATUS_ALREADY_SET",
+                                    "description": "Status is already set to the requested value",
+                                    "template": ""
+                                }
+                            ],
                             "examples": [],
                             "scope": "global"
                         }
@@ -75,8 +90,23 @@
                             "description": "BillingStatementState.totalCash / .totalPowt will be a sum of the line item values.",
                             "schema": "input AddLineItemInput {\n  id: OID!\n  description: String!\n  quantity: Float!\n  unit: BillingStatementUnitInput!\n  unitPricePwt: Float!\n  unitPriceCash: Float!\n  totalPricePwt: Float!\n  totalPriceCash: Float!\n}",
                             "template": "",
-                            "reducer": "",
-                            "errors": [],
+                            "reducer": "const existingItem = state.lineItems.find(item => item.id === action.input.id); if (existingItem) { throw new DuplicateLineItem('Line item already exists'); } state.lineItems.push({ ...action.input, lineItemTag: [] });",
+                            "errors": [
+                                {
+                                    "id": "duplicateLineItem",
+                                    "name": "DuplicateLineItem",
+                                    "code": "DUPLICATE_LINE_ITEM",
+                                    "description": "Line item with this ID already exists",
+                                    "template": ""
+                                },
+                                {
+                                    "id": "invalidStatusTransition",
+                                    "name": "InvalidStatusTransition",
+                                    "code": "INVALID_STATUS_TRANSITION",
+                                    "description": "Cannot add line items to a billing statement in this status",
+                                    "template": ""
+                                }
+                            ],
                             "examples": [],
                             "scope": "global"
                         },
