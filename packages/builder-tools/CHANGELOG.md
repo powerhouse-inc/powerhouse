@@ -1,3 +1,13 @@
+## 4.0.5 (2025-08-13)
+
+### 🩹 Fixes
+
+- **builder-tools:** support cjs requires of react and react-dom on external packages ([c1c52a714](https://github.com/powerhouse-inc/powerhouse/commit/c1c52a714))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.0.4 (2025-07-31)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
