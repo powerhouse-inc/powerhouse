@@ -2,6 +2,7 @@ import {
   generateEditor,
   generateFromDocument,
   generateManifest,
+  generateSubgraph,
   generateSubgraphFromDocumentModel,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
@@ -13,6 +14,7 @@ import {
   type DocumentModelState,
 } from "document-model";
 import { type DocumentEditorState } from "../../document-models/document-editor/index.js";
+import { type SubgraphModuleState } from "../../document-models/subgraph-module/index.js";
 import { type VetraPackageState } from "../../document-models/vetra-package/index.js";
 import { logger } from "./logger.js";
 
@@ -117,6 +119,27 @@ export class CodegenProcessor implements IProcessor {
         } else {
           logger.warn(
             `⚠️ Skipping editor generation - missing name or document types for editor`,
+          );
+        }
+      } else if (strand.documentType === "powerhouse/subgraph") {
+        const state = strand.state as SubgraphModuleState;
+        
+        if (state.name) {
+          logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
+          try {
+            await generateSubgraph(state.name, null, PH_CONFIG);
+            logger.info(
+              `✅ Subgraph generation completed successfully for: ${state.name}`,
+            );
+          } catch (error) {
+            logger.error(
+              `❌ Error during subgraph generation for ${state.name}:`,
+              error,
+            );
+          }
+        } else {
+          logger.warn(
+            `⚠️ Skipping subgraph generation - missing name in subgraph state`,
           );
         }
       } else {
