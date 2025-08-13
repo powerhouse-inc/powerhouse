@@ -2,7 +2,7 @@ import type { DocumentModelState } from "document-model";
 
 export const documentModel: DocumentModelState = {
   id: "powerhouse/subgraph",
-  name: "subgraph-module",
+  name: "Subgraph Module",
   extension: ".phdm",
   description: "",
   author: {
