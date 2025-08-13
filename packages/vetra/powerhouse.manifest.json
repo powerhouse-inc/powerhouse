@@ -39,6 +39,11 @@
             "id": "subgraph-module-editor",
             "name": "Subgraph Module Editor",
             "documentTypes": ["powerhouse/subgraph-module"]
+        },
+        {
+            "id": "processor-module-editor",
+            "name": "Processor Module Editor",
+            "documentTypes": ["powerhouse/processor"]
         }
     ],
     "apps": [
