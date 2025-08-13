@@ -3,9 +3,10 @@ import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { type DocumentModelDocument } from "document-model";
 import {
+  DocumentEditorHandler,
   DocumentModelHandler,
   PackageHandler,
-  DocumentEditorHandler,
+  ProcessorHandler,
   SubgraphHandler,
   type DocumentHandler,
 } from "./document-handlers/index.js";
@@ -25,6 +26,7 @@ export class CodegenProcessor implements IProcessor {
     this.handlers.set("powerhouse/package", new PackageHandler(config));
     this.handlers.set("powerhouse/document-editor", new DocumentEditorHandler(config));
     this.handlers.set("powerhouse/subgraph", new SubgraphHandler(config));
+    this.handlers.set("powerhouse/processor", new ProcessorHandler(config));
   }
 
   async onStrands<TDocument extends DocumentModelDocument>(
