@@ -18,6 +18,7 @@ import { validateOperations } from "../../src/document/utils/validation.js";
 import {
   type CountDocument,
   countReducer,
+  fakeAction,
   increment,
   mutableCountReducer,
   setLocalName,
@@ -70,6 +71,21 @@ describe("Base utils", () => {
   });
 
   it("should find invalid index oprations", () => {
+    const a1 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "global",
+    });
+    const a2 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "global",
+    });
+    const a3 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "local",
+    });
     const errors = validateOperations({
       global: [
         {
@@ -80,11 +96,7 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "global",
-          },
+          action: a1,
         },
         {
           scope: "global",
@@ -94,11 +106,7 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "global",
-          },
+          action: a2,
         },
       ],
       local: [
@@ -110,11 +118,7 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "local",
-          },
+          action: a3,
         },
       ],
     });
@@ -136,11 +140,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
+          action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
             scope: "global",
-          },
+          }),
         },
         {
           scope: "global",
@@ -150,11 +154,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
+          action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
             scope: "global",
-          },
+          }),
         },
         {
           scope: "global",
@@ -164,11 +168,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
+          action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
             scope: "global",
-          },
+          }),
         },
       ],
       local: [
@@ -180,11 +184,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
-          action: {
+          action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
             scope: "local",
-          },
+          }),
         },
       ],
     });

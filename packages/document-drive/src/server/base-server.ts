@@ -1292,7 +1292,8 @@ export class BaseDocumentDriveServer
     const operationSignals: (() => Promise<SignalResult>)[] = [];
     newDocument = documentModelModule.reducer(
       newDocument,
-      operation,
+      // TODO: fix this once refactor is complete
+      operation as Action,
       (signal) => {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
@@ -2636,6 +2637,8 @@ export class BaseDocumentDriveServer
       (op: OperationUpdate) => ({
         ...op,
         action: {
+          id: op.actionId,
+          timestamp: op.timestamp,
           type: op.type,
           input: op.input,
           context: op.context,

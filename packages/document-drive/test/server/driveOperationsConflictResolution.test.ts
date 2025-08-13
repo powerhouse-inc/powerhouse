@@ -4,7 +4,6 @@ import { PrismaClient } from "#storage/prisma/client/index";
 import { PrismaStorage } from "#storage/prisma/prisma";
 import { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
 import {
-  Action,
   documentModelDocumentModelModule,
   DocumentModelModule,
   Operation,
@@ -19,7 +18,6 @@ import {
 } from "../../src/drive-document-model/gen/node/creators.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
 import {
-  DocumentDriveAction,
   DocumentDriveDocument,
   Node,
 } from "../../src/drive-document-model/gen/types.js";
@@ -70,6 +68,8 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   [
     "PrismaStorage",
     async () => {
+      process.env.DATABASE_URL =
+        "postgres://postgres:postgres@localhost:5444/postgres?sslmode=disable&connect_timeout=30";
       const prisma = new PrismaClient();
       await prisma.$executeRawUnsafe('DELETE FROM "Attachment";');
       await prisma.$executeRawUnsafe('DELETE FROM "Operation";');

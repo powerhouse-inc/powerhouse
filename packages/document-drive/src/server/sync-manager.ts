@@ -199,13 +199,14 @@ export default class SynchronizationManager implements ISynchronizationManager {
     }
 
     return limitedOperations.map((operation) => ({
+      actionId: operation.action.id,
       hash: operation.hash,
       index: operation.index,
       timestamp: operation.timestamp,
       type: operation.type,
       input: operation.input as object,
       skip: operation.skip,
-      context: operation.action?.context,
+      context: operation.action.context,
       id: operation.id,
     }));
   }

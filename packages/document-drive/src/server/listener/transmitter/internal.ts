@@ -107,6 +107,8 @@ export class InternalTransmitter implements ITransmitter {
         : previousStateTask());
 
       const action: Action = {
+        id: operation.actionId,
+        timestamp: operation.timestamp,
         type: operation.type,
         input: operation.input,
         context: operation.context,

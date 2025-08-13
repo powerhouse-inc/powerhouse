@@ -2,7 +2,7 @@
 // Event = operation => should keep the same operation information but execute the action input against the document
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
-import { wrappedEmptyReducer } from "../helpers.js";
+import { fakeAction, wrappedEmptyReducer } from "../helpers.js";
 
 describe("Event", () => {
   beforeAll(() => {
@@ -12,27 +12,33 @@ describe("Event", () => {
   it("should not re-assing index to an event", () => {
     let document = baseCreateDocument();
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_2",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     document = wrappedEmptyReducer(
       document,
-      {
+      fakeAction({
+        type: "TEST_2",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
         type: "TEST_4",
         input: {},
         index: 3,
         hash: "test-4-hash",
         scope: "global",
-      },
+      }),
       undefined,
       { skip: 1 },
     );
@@ -58,33 +64,42 @@ describe("Event", () => {
   it("should remove skipped operations", () => {
     let document = baseCreateDocument();
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_2",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_3",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     document = wrappedEmptyReducer(
       document,
-      {
+      fakeAction({
+        type: "TEST_2",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_3",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
         type: "TEST_4",
         input: {},
         index: 3,
         hash: "test-4-hash",
         scope: "global",
-      },
+      }),
       undefined,
       { skip: 1 },
     );
@@ -110,36 +125,45 @@ describe("Event", () => {
   it("should continue with next index after an operation", () => {
     let document = baseCreateDocument();
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_2",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     document = wrappedEmptyReducer(
       document,
-      {
+      fakeAction({
+        type: "TEST_2",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
         type: "TEST_4",
         input: {},
         index: 3,
         hash: "test-4-hash",
         scope: "global",
-      },
+      }),
       undefined,
       { skip: 1 },
     );
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_5",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_5",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     expect(document.header.revision.global).toBe(5);
     expect(document.operations.global).toMatchObject([
@@ -166,27 +190,33 @@ describe("Event", () => {
   it("should calculate the right document revision when last action is an event", () => {
     let document = baseCreateDocument();
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_2",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     document = wrappedEmptyReducer(
       document,
-      {
+      fakeAction({
+        type: "TEST_2",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
         type: "TEST_4",
         input: {},
         index: 3,
         hash: "test-4-hash",
         scope: "global",
-      },
+      }),
       undefined,
       { skip: 1 },
     );

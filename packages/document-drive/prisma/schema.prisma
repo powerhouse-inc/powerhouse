@@ -55,6 +55,7 @@ model Operation {
   skip        Int
   hash        String
   timestamp   DateTime
+  actionId    String
   input       String
   type        String
   attachments Attachment[]

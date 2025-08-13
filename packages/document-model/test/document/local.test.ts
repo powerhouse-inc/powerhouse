@@ -4,6 +4,7 @@ import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import {
   type CountDocument,
   countReducer,
+  fakeAction,
   setLocalName,
   wrappedEmptyReducer,
 } from "../helpers.js";
@@ -15,11 +16,14 @@ describe("Local reducer", () => {
 
   it("should update local revision", async () => {
     const document = baseCreateDocument();
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "local",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "local",
+      }),
+    );
     expect(newDocument.header.revision.local).toBe(1);
   });
 
@@ -30,11 +34,14 @@ describe("Local reducer", () => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
     });
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "local",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "local",
+      }),
+    );
     expect(
       new Date(document.header.lastModifiedAtUtcIso).getTime(),
     ).toBeLessThan(new Date(newDocument.header.lastModifiedAtUtcIso).getTime());
@@ -44,11 +51,14 @@ describe("Local reducer", () => {
   it("should not update global operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument();
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "local",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "local",
+      }),
+    );
 
     expect(newDocument.operations.local).toMatchObject([
       {
@@ -68,11 +78,14 @@ describe("Local reducer", () => {
   it("should update local operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument();
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "local",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "local",
+      }),
+    );
 
     expect(newDocument.operations.local).toMatchObject([
       {

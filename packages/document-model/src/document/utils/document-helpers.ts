@@ -25,11 +25,11 @@ type IntegrityIssue = {
   message: string;
 };
 
-type Reshuffle<TOp extends OperationIndex> = (
+type Reshuffle = (
   startIndex: OperationIndex,
-  opsA: TOp[],
-  opsB: TOp[],
-) => TOp[];
+  opsA: Operation[],
+  opsB: Operation[],
+) => Operation[];
 
 export function checkCleanedOperationsIntegrity(
   sortedOperations: OperationIndex[],
@@ -200,7 +200,7 @@ export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
 }
 
 // TODO: implement better operation equality function
-export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
+export function operationsAreEqual(op1: Operation, op2: Operation): boolean {
   return stringify(op1) === stringify(op2);
 }
 
@@ -212,17 +212,17 @@ export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
 // [T0:0 T1:0 T2:0 T3:0] + [B3:0 B3:2] = [T0:0 T1:0 T2:0 B3:0 B3:2]
 // [T0:0 T1:0 T2:0 T3:0] + [B2:3 B3:0] = [T0:0 T1:0 B2:3 B3:0]
 
-export function attachBranch<TOp extends OperationIndex>(
-  trunk: TOp[],
-  newBranch: TOp[],
-): [TOp[], TOp[]] {
+export function attachBranch(
+  trunk: Operation[],
+  newBranch: Operation[],
+): [Operation[], Operation[]] {
   const trunkCopy = garbageCollect(sortOperations(trunk.slice()));
   const newOperations = garbageCollect(sortOperations(newBranch.slice()));
   if (trunkCopy.length < 1) {
     return [newOperations, []];
   }
 
-  const result: TOp[] = [];
+  const result: Operation[] = [];
   let enteredBranch = false;
 
   while (newOperations.length > 0) {
@@ -276,13 +276,13 @@ export function precedes(op1: OperationIndex, op2: OperationIndex) {
   );
 }
 
-export function split<TOp extends OperationIndex>(
-  sortedTargetOperations: TOp[],
-  sortedMergeOperations: TOp[],
-): [TOp[], TOp[], TOp[]] {
-  const commonOperations: TOp[] = [];
-  const targetDiffOperations: TOp[] = [];
-  const mergeDiffOperations: TOp[] = [];
+export function split(
+  sortedTargetOperations: Operation[],
+  sortedMergeOperations: Operation[],
+): [Operation[], Operation[], Operation[]] {
+  const commonOperations: Operation[] = [];
+  const targetDiffOperations: Operation[] = [];
+  const mergeDiffOperations: Operation[] = [];
 
   // get bigger array length
   const maxLength = Math.max(
@@ -321,11 +321,11 @@ export function split<TOp extends OperationIndex>(
 // Split            => [0:0, 1:0] + [2:0, A3:0, A4:0, A5:0] + [B4:2, B5:0]
 // Reshuffle(6:4)   => [6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
 // merge            => [0:0, 1:0, 6:4, 7:0, 8:0, 9:0, 10:0, 11:0]
-export function merge<TOp extends OperationIndex>(
-  sortedTargetOperations: TOp[],
-  sortedMergeOperations: TOp[],
-  reshuffle: Reshuffle<TOp>,
-): TOp[] {
+export function merge(
+  sortedTargetOperations: Operation[],
+  sortedMergeOperations: Operation[],
+  reshuffle: Reshuffle,
+): Operation[] {
   const [_commonOperations, _targetOperations, _mergeOperations] = split(
     garbageCollect(sortedTargetOperations),
     garbageCollect(sortedMergeOperations),
@@ -522,10 +522,10 @@ export type SkipHeaderOperationIndex = Partial<Pick<OperationIndex, "index">> &
  * @param skipHeaderOperation - The skip header operation index.
  * @returns The remaining operations after skipping header operations.
  */
-export function skipHeaderOperations<TOpIndex extends OperationIndex>(
-  operations: TOpIndex[],
+export function skipHeaderOperations(
+  operations: Operation[],
   skipHeaderOperation: SkipHeaderOperationIndex,
-): TOpIndex[] {
+): Operation[] {
   const lastOperation = sortOperations(operations).at(-1);
   const lastIndex = lastOperation?.index ?? -1;
   const nextIndex = lastIndex + 1;
@@ -545,7 +545,7 @@ export function skipHeaderOperations<TOpIndex extends OperationIndex>(
     sortOperations([...operations, skipOperationIndex]),
   );
 
-  return clearedOperations.slice(0, -1) as TOpIndex[]; //clearedOperation ? [clearedOperation as TOpIndex] : [];
+  return clearedOperations.slice(0, -1) as Operation[]; //clearedOperation ? [clearedOperation as TOpIndex] : [];
 }
 
 export function garbageCollectDocumentOperations(

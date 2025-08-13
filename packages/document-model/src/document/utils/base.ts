@@ -412,7 +412,8 @@ export function replayDocument<TDocument extends PHDocument>(
   // then replays them
   if (operationsToReplay.length) {
     result = operationsToReplay.reduce((document, operation) => {
-      const doc = reducer(document, operation, dispatch, {
+      // TODO: fix this once refactor is complete
+      const doc = reducer(document, operation as Action, dispatch, {
         skip: operation.skip,
         ignoreSkipOperations: true,
         hash: !checkHashes ? operation.hash : undefined,

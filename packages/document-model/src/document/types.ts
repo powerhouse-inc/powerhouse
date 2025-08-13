@@ -100,7 +100,7 @@ export type ReducerOptions = {
  */
 export type Reducer<TDocument extends PHDocument> = (
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
 ) => TDocument;
@@ -155,8 +155,8 @@ export type Operation = {
   error?: string;
   /** The resulting state after the operation */
   resultingState?: string;
-  /** Unique operation id. This is distinct from the action id. */
-  id: string;
+  /** Unique operation id. This is distinct from the action id and can be undefined and assigned later. */
+  id?: string;
 
   /**
    * The action that was applied to the document to produce this operation.

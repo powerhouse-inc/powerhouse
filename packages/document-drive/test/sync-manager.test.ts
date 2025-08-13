@@ -8,6 +8,7 @@ import { driveDocumentModelModule as DocumentDrive } from "../src/drive-document
 import { SynchronizationUnitNotFoundError } from "../src/server/error.js";
 import SynchronizationManager from "../src/server/sync-manager.js";
 import { MemoryStorage } from "../src/storage/memory.js";
+import { fakeAction } from "./document-helpers/utils.js";
 
 const documentModels = [DocumentModel, DocumentDrive] as DocumentModelModule[];
 
@@ -207,11 +208,11 @@ describe("Synchronization Manager with memory adapters", () => {
     // Add document state operations using the document model's action creators
     const docOperations = [
       {
-        action: {
+        action: fakeAction({
           scope: "global",
           type: "SET_STATE",
           input: { state: { value: 1 } },
-        },
+        }),
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
@@ -223,11 +224,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
-        action: {
+        action: fakeAction({
           scope: "global",
           type: "SET_STATE",
           input: { state: { value: 2 } },
-        },
+        }),
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
@@ -309,11 +310,11 @@ describe("Synchronization Manager with memory adapters", () => {
     // Add document state operations with different timestamps
     const docOperations = [
       {
-        action: {
+        action: fakeAction({
           scope: "global",
           type: "SET_STATE",
           input: { state: { value: 1 } },
-        },
+        }),
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
@@ -325,11 +326,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
-        action: {
+        action: fakeAction({
           scope: "global",
           type: "SET_STATE",
           input: { state: { value: 2 } },
-        },
+        }),
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
@@ -341,11 +342,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
-        action: {
+        action: fakeAction({
           scope: "global",
           type: "SET_STATE",
           input: { state: { value: 3 } },
-        },
+        }),
         type: "SET_STATE",
         input: { state: { value: 3 } },
         hash: "hash3",
