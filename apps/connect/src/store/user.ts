@@ -4,16 +4,12 @@ import {
     setUser as setSentryUser,
     type User as SentryUser,
 } from '@sentry/react';
-import { atom, useAtom } from 'jotai';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 let userInit = false;
 
-const userAtom = atom<User | null | undefined>(undefined);
-userAtom.debugLabel = 'userAtomInConnect';
-
 export const useUser = () => {
-    const [user, setUser] = useAtom(userAtom);
+    const [user, setUser] = useState<User | null | undefined>(undefined);
     const renown = useRenown();
 
     useEffect(() => {

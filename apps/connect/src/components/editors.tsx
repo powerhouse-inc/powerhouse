@@ -4,7 +4,7 @@ import {
     useUndoRedoShortcuts,
     useUserPermissions,
 } from '#hooks';
-import { themeAtom, useUser } from '#store';
+import { useTheme, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatchCallback,
@@ -33,7 +33,6 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
@@ -76,8 +75,8 @@ export const DocumentEditor: React.FC<Props> = props => {
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
+    const theme = useTheme();
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const documentType = document.header.documentType;

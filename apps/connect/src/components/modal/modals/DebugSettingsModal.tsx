@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { useConnectConfig, useDocumentDriveServer } from '#hooks';
+import connectConfig from '#connect-config';
+import { useDocumentDriveServer } from '#hooks';
 import { serviceWorkerManager } from '#utils';
 import {
     Button,
@@ -22,7 +23,6 @@ type ComboboxOption = {
 };
 
 export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
-    const [connectConfig] = useConnectConfig();
     const { open, onClose } = props;
     const autoRegisterPullResponder =
         localStorage.getItem('AUTO_REGISTER_PULL_RESPONDER') !== 'false';

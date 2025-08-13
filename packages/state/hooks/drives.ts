@@ -1,78 +1,53 @@
 import { type DocumentDriveDocument, type Trigger } from "document-drive";
-import { useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import {
-  loadableDrivesAtom,
-  loadableSelectedDriveAtom,
-  unwrappedDrivesAtom,
-  unwrappedSelectedDriveAtom,
-} from "../internal/atoms.js";
-import { dispatchSetDriveEvent } from "../internal/events.js";
-import { type Loadable, type SharingType } from "../internal/types.js";
+  dispatchSetSelectedDriveIdEvent,
+  subscribeToDrives,
+  subscribeToSelectedDriveId,
+} from "../internal/events.js";
+import { type SharingType } from "../internal/types.js";
 import {
   getDriveAvailableOffline,
   getDriveSharingType,
 } from "../utils/drives.js";
-import { useEditorModuleById } from "./vetra-packages.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives() {
-  return useAtomValue(unwrappedDrivesAtom);
+  const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
+  return drives;
 }
 
-/** Returns a loadable of the drives for a reactor. */
-export function useLoadableDrives(): Loadable<
-  DocumentDriveDocument[] | undefined
-> {
-  return useAtomValue(loadableDrivesAtom);
-}
-
-/** Returns a drive by id. */
-export function useDriveById(
-  id: string | null | undefined,
-): DocumentDriveDocument | undefined {
+export function useDriveById(driveId: string | undefined | null) {
   const drives = useDrives();
-  if (!id) return undefined;
-  return drives?.find((d) => d.header.id === id);
+  return drives?.find((drive) => drive.header.id === driveId);
 }
 
-/** Returns a loadable of a drive by id. */
-export function useLoadableDriveById(
-  id: string | null | undefined,
-): Loadable<DocumentDriveDocument | undefined> {
-  const loadableDrives = useLoadableDrives();
-  if (loadableDrives.state !== "hasData") return loadableDrives;
-  if (!id) return { state: "hasData", data: undefined };
-  const data = loadableDrives.data;
-  return {
-    state: "hasData",
-    data: data?.find((d) => d.header.id === id),
-  };
+export function useSelectedDriveId() {
+  const selectedDriveId = useSyncExternalStore(
+    subscribeToSelectedDriveId,
+    () => window.phSelectedDriveId,
+  );
+  return selectedDriveId;
 }
 
 /** Returns the selected drive */
 export function useSelectedDrive(): DocumentDriveDocument | undefined {
-  return useAtomValue(unwrappedSelectedDriveAtom);
+  const selectedDriveId = useSelectedDriveId();
+  const drives = useDrives();
+  const selectedDrive = drives?.find(
+    (drive) => drive.header.id === selectedDriveId,
+  );
+  return selectedDrive;
 }
 
-/** Returns a loadable of the selected drive */
-export function useLoadableSelectedDrive(): Loadable<
-  DocumentDriveDocument | undefined
-> {
-  return useAtomValue(loadableSelectedDriveAtom);
-}
-
-/** Returns a function that sets the selected drive with a drive id. */
-export function useSetSelectedDrive() {
-  return useCallback((driveId: string | undefined) => {
-    dispatchSetDriveEvent(driveId);
-  }, []);
-}
-
-/** Returns the selected drive id. */
-export function useSelectedDriveId(): string | undefined {
-  const selectedDrive = useSelectedDrive();
-  return selectedDrive?.header.id;
+export function setSelectedDrive(
+  driveOrDriveSlug: string | DocumentDriveDocument | undefined,
+) {
+  const driveSlug =
+    typeof driveOrDriveSlug === "string"
+      ? driveOrDriveSlug
+      : driveOrDriveSlug?.header.slug;
+  dispatchSetSelectedDriveIdEvent(driveSlug);
 }
 
 /** Returns the remote URL for a drive. */
@@ -138,32 +113,4 @@ export function useDriveAvailableOffline(driveId: string | null | undefined) {
   const drive = useDriveById(driveId);
   if (!drive) return false;
   return getDriveAvailableOffline(drive);
-}
-
-/** Returns the id of the preferred editor for a drive. */
-export function useDrivePreferredEditorId(driveId: string | null | undefined) {
-  const drive = useDriveById(driveId);
-  if (!drive) return undefined;
-  return drive.header.meta?.preferredEditor;
-}
-
-/** Returns the preferred editor for the selected drive. */
-export function useSelectedDrivePreferredEditorId() {
-  const drive = useSelectedDrive();
-  if (!drive) return undefined;
-  return drive.header.meta?.preferredEditor;
-}
-
-export function useDrivePreferredEditor(driveId: string | null | undefined) {
-  const editorId = useDrivePreferredEditorId(driveId);
-  if (!editorId) return undefined;
-  const editorModule = useEditorModuleById(editorId);
-  return editorModule;
-}
-
-export function useSelectedDrivePreferredEditor() {
-  const editorId = useSelectedDrivePreferredEditorId();
-  if (!editorId) return undefined;
-  const editorModule = useEditorModuleById(editorId);
-  return editorModule;
 }

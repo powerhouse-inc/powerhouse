@@ -17,9 +17,9 @@ import {
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
+import { type FolderNode, type Node } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { type FolderNode, type Node } from "document-drive";
 
 export type FolderItemProps = TNodeActions & {
   folderNode: FolderNode;
@@ -30,7 +30,7 @@ export type FolderItemProps = TNodeActions & {
     syncId: string,
     sharingType: SharingType,
   ) => SyncStatus | undefined;
-  setSelectedNode: (id: string | undefined) => void;
+  setSelectedNode: (node: Node | string | undefined) => void;
   showDeleteNodeModal: (node: Node) => void;
 };
 
@@ -69,10 +69,6 @@ export function FolderItem(props: FolderItemProps) {
   function onSubmit(name: string) {
     onRenameNode(name, folderNode);
     setMode(READ);
-  }
-
-  function onClick() {
-    setSelectedNode(folderNode.id);
   }
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
@@ -123,7 +119,7 @@ export function FolderItem(props: FolderItemProps) {
   );
 
   return (
-    <div className="relative w-64" onClick={onClick}>
+    <div className="relative w-64" onClick={() => setSelectedNode(folderNode)}>
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
           <div className="p-1">

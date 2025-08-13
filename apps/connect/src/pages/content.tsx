@@ -1,40 +1,26 @@
-import {
-    useConnectConfig,
-    useDocumentDriveServer,
-    useShowAddDriveModal,
-} from '#hooks';
+import connectConfig from '#connect-config';
+import { useDocumentDriveServer, useShowAddDriveModal } from '#hooks';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    useDocumentModelModules,
+    setSelectedDrive,
     useDrives,
-    useEditorModules,
-    useLoadableSelectedDocument,
-    useLoadableSelectedDrive,
-    useLoadableSelectedFolder,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
-    useSetSelectedDrive,
 } from '@powerhousedao/state';
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
     const { addFile } = useDocumentDriveServer();
-    const editorModules = useEditorModules();
-    const documentModelModules = useDocumentModelModules();
-    console.log('editorModules', editorModules);
-    console.log('documentModelModules', documentModelModules);
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
-    console.log('selectedDocument', selectedDocument);
 
     useEffect(() => {
         return window.electronAPI?.handleFileOpen(async file => {
@@ -58,9 +44,11 @@ export default function Content() {
 
     return (
         <ContentContainer>
-            <DocumentEditorContainer />
-            <DriveEditorContainer />
-            <HomeScreenContainer />
+            {selectedDocument && <DocumentEditorContainer />}
+            {(!!selectedDrive || !!selectedFolder) && !selectedDocument && (
+                <DriveEditorContainer />
+            )}
+            {!selectedDocument && !selectedDrive && <HomeScreenContainer />}
         </ContentContainer>
     );
 }
@@ -74,39 +62,9 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 }
 
 function HomeScreenContainer() {
-    const { pathname } = useLocation();
     const drives = useDrives();
-    const loadableSelectedDrive = useLoadableSelectedDrive();
-    const loadableSelectedFolder = useLoadableSelectedFolder();
-    const loadableSelectedDocument = useLoadableSelectedDocument();
     const showAddDriveModal = useShowAddDriveModal();
-    const setSelectedDrive = useSetSelectedDrive();
-    const [config] = useConnectConfig();
-
-    const isLoading =
-        loadableSelectedDrive.state === 'loading' ||
-        loadableSelectedFolder.state === 'loading' ||
-        loadableSelectedDocument.state === 'loading';
-
-    const isError =
-        loadableSelectedDrive.state === 'hasError' ||
-        loadableSelectedFolder.state === 'hasError' ||
-        loadableSelectedDocument.state === 'hasError';
-
-    const hasSelectedDriveOrFolderOrDocument =
-        !isLoading &&
-        !isError &&
-        (!!loadableSelectedDrive.data ||
-            !!loadableSelectedFolder.data ||
-            !!loadableSelectedDocument.data);
-
-    if (pathname !== '/') {
-        return null;
-    }
-
-    if (hasSelectedDriveOrFolderOrDocument) {
-        return null;
-    }
+    const config = connectConfig;
 
     return (
         <HomeScreen>
@@ -117,7 +75,7 @@ function HomeScreenContainer() {
                         title={drive.state.global.name}
                         description={'Drive Explorer App'}
                         icon={<DriveIcon drive={drive} />}
-                        onClick={() => setSelectedDrive(drive.header.id)}
+                        onClick={() => setSelectedDrive(drive.header.slug)}
                     />
                 );
             })}

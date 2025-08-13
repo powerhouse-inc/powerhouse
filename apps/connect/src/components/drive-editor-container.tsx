@@ -13,15 +13,17 @@ import {
     type IDriveContext,
 } from '@powerhousedao/reactor-browser';
 import {
+    setSelectedNode,
     useDefaultDriveEditorModule,
+    useDocumentModelModules,
     useDriveEditorModuleById,
-    useSelectedDocument,
+    useEditorModules,
     useSelectedDrive,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { driveDocumentModelModule } from 'document-drive';
 import {
     type DocumentModelModule,
+    type EditorModule,
     type Operation,
     type PHDocument,
 } from 'document-model';
@@ -44,7 +46,6 @@ function DriveEditorError({ error }: FallbackProps) {
 export function DriveEditorContainer() {
     const { addDriveOperations, getSyncStatusSync } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
-    const selectedDocument = useSelectedDocument();
     const nodeActions = useNodeActions();
     const [, _dispatch, error] = useDocumentDispatch(
         driveDocumentModelModule.reducer,
@@ -81,11 +82,24 @@ export function DriveEditorContainer() {
     const { addFile, addDocument } = useDocumentDriveServer();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
-    const setSelectedNode = useSetSelectedNode();
+    const documentModelModules = useDocumentModelModules();
+    const editorModules = useEditorModules();
+    function getDocumentModelModule(documentType: string | undefined) {
+        return documentModelModules?.find(
+            module => module.documentModel.id === documentType,
+        ) as DocumentModelModule<PHDocument> | undefined;
+    }
+    function getEditor(documentType: string | undefined) {
+        return editorModules?.find(module =>
+            module.documentTypes.includes(documentType ?? ''),
+        ) as EditorModule | undefined;
+    }
 
     const driveContext: IDriveContext = useMemo(
         () => ({
             ...nodeActions,
+            getDocumentModelModule,
+            getEditor,
             showSearchBar,
             isAllowedToCreateDocuments,
             analyticsDatabaseName,
@@ -100,6 +114,8 @@ export function DriveEditorContainer() {
         [
             nodeActions,
             isAllowedToCreateDocuments,
+            getDocumentModelModule,
+            getEditor,
             addFile,
             addDocument,
             getSyncStatusSync,
@@ -141,7 +157,7 @@ export function DriveEditorContainer() {
         }
     }
 
-    if (selectedDocument || !selectedDrive) return null;
+    if (!selectedDrive) return null;
 
     return (
         <ErrorBoundary

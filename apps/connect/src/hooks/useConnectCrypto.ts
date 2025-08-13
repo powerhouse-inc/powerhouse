@@ -1,7 +1,6 @@
 import { type DID, type IConnectCrypto } from '#services';
 import { logger } from 'document-drive';
-import { atom, useAtom } from 'jotai';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // uses electron connect crypto if available,
 // otherwise dynamically loads browser crypto
@@ -59,11 +58,8 @@ export function useConnectCrypto(): IConnectCrypto {
     );
 }
 
-const didAtom = atom<DID | undefined>(undefined);
-didAtom.debugLabel = 'didAtomInConnect';
-
 export function useConnectDid(): DID | undefined {
-    const [did, setDid] = useAtom(didAtom);
+    const [did, setDid] = useState<DID | undefined>(undefined);
 
     useEffect(() => {
         if (did) {

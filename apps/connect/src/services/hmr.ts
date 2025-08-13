@@ -1,6 +1,6 @@
 import {
     convertLegacyLibToVetraPackage,
-    useUpdateVetraPackages,
+    setVetraPackages,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import { type DocumentModelLib } from 'document-model';
@@ -75,7 +75,6 @@ export async function handlePackageEvents(
 }
 
 export function useSubscribeToVetraPackages() {
-    const updateVetraPackages = useUpdateVetraPackages();
     const hmrRef = useRef<ViteHotContext>();
 
     useEffect(() => {
@@ -90,7 +89,7 @@ export function useSubscribeToVetraPackages() {
             const vetraPackages = legacyLibs.map(
                 convertLegacyLibToVetraPackage,
             );
-            updateVetraPackages(vetraPackages);
+            setVetraPackages(vetraPackages);
         };
         async function subscribe() {
             const hmr = await getHMRModule();
@@ -102,5 +101,5 @@ export function useSubscribeToVetraPackages() {
         return () => {
             hmrRef.current?.off('studio:external-packages-updated', handler);
         };
-    }, [updateVetraPackages]);
+    }, []);
 }

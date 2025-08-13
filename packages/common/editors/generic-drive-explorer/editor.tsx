@@ -11,11 +11,11 @@ import {
 import {
   getDriveSharingType,
   makeFolderNodeFromDrive,
+  setSelectedNode,
   useDocumentModelModules,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
-  useSetSelectedNode,
 } from "@powerhousedao/state";
 import { type DocumentDriveDocument } from "document-drive";
 import { type DocumentModelModule } from "document-model";
@@ -51,7 +51,6 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
-  const setSelectedNode = useSetSelectedNode();
   const onCreateDocument = useCallback(
     (documentModel: DocumentModelModule) => {
       showCreateDocumentModal(documentModel);

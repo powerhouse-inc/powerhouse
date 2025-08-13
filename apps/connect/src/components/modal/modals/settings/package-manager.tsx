@@ -4,7 +4,6 @@ import { PackageManager as BasePackageManager } from '@powerhousedao/design-syst
 import {
     makeVetraPackageManifest,
     useDrives,
-    useHmr,
     useVetraPackages,
 } from '@powerhousedao/state';
 import { type Manifest } from 'document-model';
@@ -47,8 +46,6 @@ export interface SettingsModalProps {
 export const PackageManager: React.FC = () => {
     const vetraPackages = useVetraPackages();
     const drives = useDrives();
-    const hmr = useHmr();
-    const isMutable = !!hmr;
     const [reactor, setReactor] = useState('');
 
     const options = useMemo(() => {
@@ -128,7 +125,7 @@ export const PackageManager: React.FC = () => {
 
     return (
         <BasePackageManager
-            mutable={isMutable}
+            mutable={true}
             reactorOptions={options ?? []}
             reactor={reactor}
             packages={

@@ -1,4 +1,5 @@
-import { useConnectConfig, useLogin, useShowAddDriveModal } from '#hooks';
+import connectConfig from '#connect-config';
+import { useLogin, useShowAddDriveModal } from '#hooks';
 import {
     ConnectSidebar,
     Icon,
@@ -6,9 +7,9 @@ import {
     SidebarItem,
 } from '@powerhousedao/design-system';
 import {
+    setSelectedDrive,
     useDrives,
     useSelectedDrive,
-    useSetSelectedDrive,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useCallback } from 'react';
@@ -20,23 +21,15 @@ import { useModal } from './modal/index.js';
 export default function Sidebar() {
     const { showModal } = useModal();
     const navigate = useNavigate();
-
     const { user, openRenown, logout } = useLogin();
     const drives = useDrives();
     const selectedDrive = useSelectedDrive();
-    const setSelectedDrive = useSetSelectedDrive();
-    const [config] = useConnectConfig();
     const showAddDriveModal = useShowAddDriveModal();
     const connectDebug = localStorage.getItem('CONNECT_DEBUG') === 'true';
 
     const onClickSettings = () => {
         showModal('settingsModal', { onRefresh: () => navigate(0) });
     };
-
-    const onRootClick = useCallback(() => {
-        setSelectedDrive(undefined);
-        navigate('/');
-    }, [navigate, setSelectedDrive]);
 
     const onAddDriveClick = useCallback(() => {
         showAddDriveModal();
@@ -47,7 +40,7 @@ export default function Sidebar() {
             <Icon
                 name="Connect"
                 className="!h-[30px] !w-[100px] cursor-pointer"
-                onClick={onRootClick}
+                onClick={() => setSelectedDrive(undefined)}
             />
             {connectDebug && (
                 <button
@@ -62,13 +55,6 @@ export default function Sidebar() {
         </div>
     );
 
-    const handleDriveClick = useCallback(
-        (drive: DocumentDriveDocument) => {
-            setSelectedDrive(drive.header.id);
-        },
-        [setSelectedDrive],
-    );
-
     const etherscanUrl = user?.address
         ? `https://etherscan.io/address/${user.address}`
         : '';
@@ -76,7 +62,7 @@ export default function Sidebar() {
     return (
         <ConnectSidebar
             id="sidebar"
-            onClick={() => onRootClick()}
+            onClick={() => setSelectedDrive(undefined)}
             onClickSettings={onClickSettings}
             headerContent={headerContent}
             address={user?.address}
@@ -96,12 +82,12 @@ export default function Sidebar() {
                     <SidebarItem
                         key={index}
                         title={drive.header.name}
-                        onClick={() => handleDriveClick(drive)}
+                        onClick={() => setSelectedDrive(drive.header.slug)}
                         active={selectedDrive?.header.id === drive.header.id}
                         icon={<DriveIcon drive={drive} />}
                     />
                 ))}
-                {config.drives.addDriveEnabled && (
+                {connectConfig.drives.addDriveEnabled && (
                     <SidebarAddDriveItem onClick={onAddDriveClick} />
                 )}
             </ErrorBoundary>

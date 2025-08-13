@@ -1,6 +1,11 @@
+import { useSyncExternalStore } from "react";
+import { subscribeToReactor } from "../internal/events.js";
 import { type Reactor } from "../internal/types.js";
 
-/** Returns the reactor. */
 export function useReactor(): Reactor | undefined {
-  return window.reactor;
+  const reactor = useSyncExternalStore(
+    subscribeToReactor,
+    () => window.reactor,
+  );
+  return reactor;
 }

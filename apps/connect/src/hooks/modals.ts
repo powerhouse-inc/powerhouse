@@ -6,12 +6,12 @@ import {
     type SharingType,
 } from '@powerhousedao/design-system';
 import {
+    setSelectedDrive,
+    setSelectedNode,
     useDriveEditorModules,
     useDrives,
     useSelectedDrive,
     useSelectedParentFolder,
-    useSetSelectedDrive,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { type DocumentDriveDocument, type Node } from 'document-drive';
 import { t } from 'i18next';
@@ -21,7 +21,6 @@ import { useDocumentDriveServer } from './useDocumentDriveServer';
 export function useShowAddDriveModal() {
     const { showModal } = useModal();
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
-    const setSelectedDrive = useSetSelectedDrive();
     const driveEditorModules = useDriveEditorModules();
     const onAddLocalDrive = async (data: AddLocalDriveInput) => {
         console.log('data', data);
@@ -53,7 +52,7 @@ export function useShowAddDriveModal() {
                 return;
             }
 
-            setSelectedDrive(newDrive.header.id);
+            setSelectedDrive(newDrive.header.slug);
         } catch (e) {
             console.error(e);
         }
@@ -94,7 +93,7 @@ export function useShowAddDriveModal() {
                 return;
             }
 
-            setSelectedDrive(newDrive.header.id);
+            setSelectedDrive(newDrive.header.slug);
         } catch (e) {
             console.error(e);
         }
@@ -119,7 +118,6 @@ export function useShowDriveSettingsModal() {
         deleteDrive,
     } = useDocumentDriveServer();
     const drives = useDrives();
-    const setSelectedDrive = useSetSelectedDrive();
     const onRenameDrive = useCallback(
         async (drive: DocumentDriveDocument, newName: string) => {
             await renameDrive(drive.header.id, newName);
@@ -151,7 +149,7 @@ export function useShowDriveSettingsModal() {
                     closeModal();
                     await deleteDrive(drive.header.id);
 
-                    setSelectedDrive(drives?.[0]?.header.id);
+                    setSelectedDrive(drives?.[0]?.header.slug);
 
                     toast(t('notifications.deleteDriveSuccess'), {
                         type: 'connect-deleted',
@@ -188,7 +186,6 @@ export function useShowDeleteNodeModal() {
     const { deleteNode } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedParentFolder = useSelectedParentFolder();
-    const setSelectedNode = useSetSelectedNode();
     const showDeleteNodeModal = useCallback(
         (node: Node) => {
             showModal('deleteItem', {
@@ -206,7 +203,7 @@ export function useShowDeleteNodeModal() {
 
                     await deleteNode(selectedDrive.header.id, node.id);
 
-                    setSelectedNode(selectedParentFolder?.id);
+                    setSelectedNode(selectedParentFolder);
 
                     toast(t(i18nKey), { type: 'connect-deleted' });
                 },

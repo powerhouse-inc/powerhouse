@@ -5,11 +5,11 @@ import {
 } from '#hooks';
 import { FolderItem, useDrop } from '@powerhousedao/design-system';
 import {
+    setSelectedNode,
     useFileChildNodes,
     useFolderChildNodes,
     useSelectedDriveSharingType,
     useSelectedFolder,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
@@ -18,7 +18,6 @@ import FileContentView from './file-content-view.js';
 
 export function FolderView(props: { isAllowedToCreateDocuments?: boolean }) {
     const selectedFolder = useSelectedFolder();
-    const setSelectedNode = useSetSelectedNode();
     const sharingType = useSelectedDriveSharingType();
     const { t } = useTranslation();
     const {

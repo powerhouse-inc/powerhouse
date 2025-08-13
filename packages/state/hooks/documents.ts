@@ -1,32 +1,40 @@
-import { type PHDocument } from "document-model";
-import { useAtomValue } from "jotai";
-import {
-  loadableDocumentsAtom,
-  loadableSelectedDocumentAtom,
-  unwrappedDocumentsAtom,
-  unwrappedSelectedDocumentAtom,
-} from "../internal/atoms.js";
-import { type Loadable } from "../internal/types.js";
-import { type VetraDocumentModelModule } from "../types.js";
+import { useSyncExternalStore } from "react";
+import { useFileNodes, useSelectedNodeId } from "./nodes.js";
 
-/** Returns the documents for the selected drive. */
-export function useDocuments() {
-  return useAtomValue(unwrappedDocumentsAtom);
+function getDocumentsSnapshot() {
+  const documents = window.phDocuments;
+  return documents;
 }
 
-/** Returns a loadable of the documents for the selected drive. */
-export function useLoadableDocuments() {
-  return useAtomValue(loadableDocumentsAtom);
+function subscribeToDocuments(onStoreChange: () => void) {
+  window.addEventListener("ph:setDocuments", onStoreChange);
+  return () => window.removeEventListener("ph:setDocuments", onStoreChange);
+}
+
+export function useAllDocuments() {
+  const documents = useSyncExternalStore(
+    subscribeToDocuments,
+    getDocumentsSnapshot,
+  );
+  return documents;
+}
+
+/** Returns the documents for the selected drive. */
+export function useSelectedDriveDocuments() {
+  const documents = useAllDocuments();
+  const fileNodes = useFileNodes();
+  const fileNodeIds = fileNodes?.map((node) => node.id);
+  return documents?.filter((d) => fileNodeIds?.includes(d.header.id));
 }
 
 /** Returns the selected document. */
 export function useSelectedDocument() {
-  return useAtomValue(unwrappedSelectedDocumentAtom);
-}
-
-/** Returns a loadable of the selected document. */
-export function useLoadableSelectedDocument() {
-  return useAtomValue(loadableSelectedDocumentAtom);
+  const selectedNodeId = useSelectedNodeId();
+  const documents = useSelectedDriveDocuments();
+  const selectedDocument = documents?.find(
+    (d) => d.header.id === selectedNodeId,
+  );
+  return selectedDocument;
 }
 
 /** Returns the document type of a document by id. */
@@ -43,27 +51,6 @@ export function useSelectedDocumentType() {
 
 /** Returns a document by id. */
 export function useDocumentById(id: string | null | undefined) {
-  const documents = useDocuments();
-  if (!id) return undefined;
+  const documents = useSelectedDriveDocuments();
   return documents?.find((d) => d.header.id === id);
-}
-
-/** Returns a loadable of a document by id. */
-export function useLoadableDocumentById(
-  id: string | null | undefined,
-): Loadable<PHDocument | undefined> {
-  const loadableDocuments = useLoadableDocuments();
-  if (loadableDocuments.state !== "hasData") return loadableDocuments;
-
-  if (!id) return { state: "hasData", data: undefined };
-
-  const document = loadableDocuments.data?.find((d) => d.header.id === id);
-  return { state: "hasData", data: document };
-}
-
-export function useAddDocument() {
-  return function addDocument(
-    name: string,
-    documentModelModule: VetraDocumentModelModule,
-  ) {};
 }

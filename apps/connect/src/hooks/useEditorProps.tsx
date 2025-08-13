@@ -1,5 +1,5 @@
 import { useModal } from '#components';
-import { themeAtom, useUser } from '#store';
+import { useTheme, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -9,9 +9,9 @@ import {
     validateDocument,
 } from '#utils';
 import {
+    setSelectedNode,
     useDocumentModelModuleById,
     useParentFolder,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
@@ -23,7 +23,6 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -107,11 +106,10 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
 ) {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const theme = useAtomValue(themeAtom);
+    const theme = useTheme();
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
     const parentFolder = useParentFolder(document?.header.id);
-    const setSelectedNode = useSetSelectedNode();
     const documentModelModule = useDocumentModelModuleById(
         document?.header.documentType,
     );
@@ -136,10 +134,6 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     const handleRedo = useCallback(() => {
         dispatch(redo());
     }, [dispatch]);
-
-    const onClose = useCallback(() => {
-        setSelectedNode(parentFolder?.id);
-    }, [parentFolder, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -195,7 +189,7 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
         canRedo,
         undo: handleUndo,
         redo: handleRedo,
-        onClose,
+        onClose: () => setSelectedNode(parentFolder),
         onExport,
         onShowRevisionHistory: showRevisionHistory,
         isAllowedToCreateDocuments:

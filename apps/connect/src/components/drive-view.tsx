@@ -1,14 +1,11 @@
-import {
-    useConnectConfig,
-    useDocumentDriveServer,
-    useUserPermissions,
-} from '#hooks';
+import connectConfig from '#connect-config';
+import { useDocumentDriveServer, useUserPermissions } from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import {
+    setSelectedNode,
     useDocumentModelModules,
     useSelectedDrive,
     useSelectedNodePath,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
@@ -25,12 +22,10 @@ const getDocumentModelName = (name: string) => {
 };
 
 export function DriveView() {
-    const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedNodePath = useSelectedNodePath();
-    const setSelectedNode = useSetSelectedNode();
     const documentModelModules = useDocumentModelModules();
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
     const createFolder = useCallback(

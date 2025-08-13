@@ -1,9 +1,9 @@
-import { type BreadcrumbNode } from "#connect";
+import { type Node } from "document-drive";
 import { useCallback } from "react";
 
 interface UseBreadcrumbsProps {
-  selectedNodePath: BreadcrumbNode[];
-  setSelectedNode: (id: string | undefined) => void;
+  selectedNodePath: Node[];
+  setSelectedNode: (node: Node | string | undefined) => void;
 }
 
 export function useBreadcrumbs({
@@ -11,8 +11,8 @@ export function useBreadcrumbs({
   setSelectedNode,
 }: UseBreadcrumbsProps) {
   const onBreadcrumbSelected = useCallback(
-    (breadcrumb: BreadcrumbNode) => {
-      setSelectedNode(breadcrumb.id);
+    (breadcrumb: Node) => {
+      setSelectedNode(breadcrumb);
     },
     [setSelectedNode],
   );

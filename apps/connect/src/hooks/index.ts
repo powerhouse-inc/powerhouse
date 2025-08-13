@@ -2,7 +2,6 @@ export * from './modals.js';
 export * from './useAcceptedCookies.js';
 export * from './useAllowList.js';
 export * from './useClientErrorHandler.js';
-export * from './useConnectConfig.js';
 export * from './useConnectCrypto.js';
 export * from './useCookiebanner.js';
 export * from './useDefaultDocumentModelEditor/index.js';

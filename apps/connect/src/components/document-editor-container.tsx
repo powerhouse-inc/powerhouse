@@ -1,13 +1,13 @@
 import { useDocumentDriveServer } from '#hooks';
 import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import {
+    setSelectedNode,
     useDocumentModelModuleById,
     useDriveIsRemote,
     useDriveRemoteUrl,
-    useParentFolderId,
+    useParentFolder,
     useSelectedDocument,
     useSelectedDrive,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { type Operation, type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
@@ -23,12 +23,11 @@ export function DocumentEditorContainer() {
     const { addDocumentOperations } = useDocumentDriveServer();
     const unwrappedSelectedDrive = useSelectedDrive();
     const selectedDocument = useSelectedDocument();
-    const parentFolderId = useParentFolderId(selectedDocument?.header.id);
+    const parentFolder = useParentFolder(selectedDocument?.header.id);
     const documentType = selectedDocument?.header.documentType;
     const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
     const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
     const documentModelModule = useDocumentModelModuleById(documentType);
-    const setSelectedNode = useSetSelectedNode();
 
     const onAddOperation = useCallback(
         async (operation: Operation) => {
@@ -41,10 +40,6 @@ export function DocumentEditorContainer() {
         },
         [addDocumentOperations, selectedDocument],
     );
-
-    const onClose = useCallback(() => {
-        setSelectedNode(parentFolderId);
-    }, [parentFolderId, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -124,7 +119,7 @@ export function DocumentEditorContainer() {
         <div className="flex-1 rounded-2xl bg-gray-50 p-4">
             <DocumentEditor
                 document={selectedDocument}
-                onClose={onClose}
+                onClose={() => setSelectedNode(parentFolder)}
                 onExport={onExport}
                 onAddOperation={onAddOperation}
                 onOpenSwitchboardLink={onOpenSwitchboardLink}

@@ -1,4 +1,4 @@
-import { useDocumentAdminStorage, useUser } from '#store';
+import { useUser } from '#store';
 import {
     addActionContext,
     loadFile,
@@ -146,7 +146,6 @@ export function useDocumentDriveServer() {
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const reactor = useReactor();
-    const storage = useDocumentAdminStorage();
     const documentModelModules = useDocumentModelModules();
     const drives = useDrives();
     const selectedDrive = useSelectedDrive();
@@ -716,8 +715,8 @@ export function useDocumentDriveServer() {
             return;
         }
 
-        await storage.clear();
-    }, [reactor, storage]);
+        await window.phStorage?.clear();
+    }, [reactor]);
 
     const removeTrigger = useCallback(
         async (driveId: string, triggerId: string) => {

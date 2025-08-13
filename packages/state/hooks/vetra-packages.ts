@@ -1,55 +1,54 @@
-import { useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { type DocumentModelModule } from "document-model";
+import { useSyncExternalStore } from "react";
 import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
+
 import {
-  loadableDocumentModelModulesAtom,
-  loadableDriveEditorModulesAtom,
-  loadableEditorModulesAtom,
-  unwrappedDocumentModelModulesAtom,
-  unwrappedDriveEditorModulesAtom,
-  unwrappedEditorModulesAtom,
-  unwrappedVetraPackagesAtom,
-} from "../internal/atoms.js";
-import { dispatchUpdateVetraPackagesEvent } from "../internal/events.js";
+  dispatchSetVetraPackagesEvent,
+  subscribeToVetraPackages,
+} from "../internal/events.js";
 import { type VetraPackage } from "../types.js";
+
 export function useVetraPackages() {
-  return useAtomValue(unwrappedVetraPackagesAtom);
+  return useSyncExternalStore(
+    subscribeToVetraPackages,
+    () => window.vetraPackages,
+  );
 }
 
-export function useUpdateVetraPackages() {
-  return useCallback((vetraPackages: VetraPackage[] | undefined) => {
-    window.vetraPackages = vetraPackages;
-    dispatchUpdateVetraPackagesEvent(vetraPackages);
-  }, []);
+export function setVetraPackages(packages: VetraPackage[]) {
+  dispatchSetVetraPackagesEvent(packages);
 }
 
-export function useDocumentModelModules() {
-  return useAtomValue(unwrappedDocumentModelModulesAtom);
-}
-
-export function useLoadableDocumentModelModules() {
-  return useAtomValue(loadableDocumentModelModulesAtom);
+export function useDocumentModelModules(): DocumentModelModule[] | undefined {
+  const vetraPackages = useVetraPackages();
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.documentModelModules)
+    .filter((module) => module !== undefined);
 }
 
 export function useEditorModules() {
-  return useAtomValue(unwrappedEditorModulesAtom);
-}
-
-export function useLoadableEditorModules() {
-  return useAtomValue(loadableEditorModulesAtom);
+  const vetraPackages = useVetraPackages();
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.editorModules)
+    .filter((module) => module !== undefined)
+    .filter(
+      (module) => !module.documentTypes.includes("powerhouse/document-drive"),
+    );
 }
 
 export function useDriveEditorModules() {
-  return useAtomValue(unwrappedDriveEditorModulesAtom);
-}
-
-export function useLoadableDriveEditorModules() {
-  return useAtomValue(loadableDriveEditorModulesAtom);
+  const vetraPackages = useVetraPackages();
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.editorModules)
+    .filter((module) => module !== undefined)
+    .filter((module) =>
+      module.documentTypes.includes("powerhouse/document-drive"),
+    );
 }
 
 export function useDocumentModelModuleById(id: string | null | undefined) {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find((module) => module.id === id);
+  return documentModelModules?.find((module) => module.documentModel.id === id);
 }
 
 export function useEditorModuleById(id: string | null | undefined) {
@@ -89,4 +88,30 @@ export function useEditorModulesForDocumentType(
     module.documentTypes.includes(documentType),
   );
   return modulesForType;
+}
+
+export function useProcessorModules() {
+  const vetraPackages = useVetraPackages();
+  return vetraPackages?.flatMap((pkg) => pkg.modules.processorModules);
+}
+
+export function useProcessors() {
+  const processorModules = useProcessorModules();
+  return processorModules
+    ?.flatMap((module) => module?.processors)
+    .filter((processor) => processor !== undefined);
+}
+
+export function useSubgraphModules() {
+  const vetraPackages = useVetraPackages();
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.subgraphModules)
+    .filter((module) => module !== undefined);
+}
+
+export function useImportScriptModules() {
+  const vetraPackages = useVetraPackages();
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.importScriptModules)
+    .filter((module) => module !== undefined);
 }

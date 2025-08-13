@@ -1,6 +1,6 @@
+import connectConfig from '#connect-config';
 import { useEffect } from 'react';
 import { useAcceptedCookies } from '../hooks/useAcceptedCookies';
-import { useConnectConfig } from '../hooks/useConnectConfig';
 
 declare global {
     interface Window {
@@ -14,7 +14,7 @@ function gtag(...args: (string | Date)[]) {
 }
 
 const Analytics = () => {
-    const [{ gaTrackingId }] = useConnectConfig();
+    const gaTrackingId = connectConfig.gaTrackingId;
     const [{ analytics }] = useAcceptedCookies();
     const useAnalytics = gaTrackingId && analytics;
 
