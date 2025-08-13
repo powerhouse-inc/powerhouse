@@ -32,6 +32,7 @@ export function BaseEditor(props: IProps) {
   const docModelsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentModel);
   const docEditorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentEditor);
   const docSubgraphsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentSubgraph);
+  const docProcessorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentProcessor);
 
   const onCreateDocument = useCallback(
     (documentType: string) => {
@@ -66,13 +67,13 @@ export function BaseEditor(props: IProps) {
         editors={docEditorsNodes}
         apps={[]}
         subgraphs={docSubgraphsNodes}
-        processors={[]}
+        processors={docProcessorsNodes}
         codegenProcessors={[]}
         onAddDocumentModel={() => onCreateDocument(DOCUMENT_TYPES.documentModel)}
         onAddEditor={() => onCreateDocument(DOCUMENT_TYPES.documentEditor)}
         onAddApp={() => console.log('add app')}
         onAddSubgraph={() => onCreateDocument(DOCUMENT_TYPES.documentSubgraph)}
-        onAddProcessor={() => console.log('add processor')}
+        onAddProcessor={() => onCreateDocument(DOCUMENT_TYPES.documentProcessor)}
         onAddCodegenProcessor={() => console.log('add codegen processor')}
         context={context}
         packageDocumentId={packageDocumentId}
