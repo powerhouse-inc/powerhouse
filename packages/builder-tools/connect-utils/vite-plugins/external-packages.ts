@@ -142,7 +142,9 @@ export const viteLoadExternalPackages = (
           !file.startsWith(targetDir) &&
           !file.includes("node_modules")
         ) {
-          const config = getConfig(file);
+          // When local files change, use the project's config file path instead of the changed file
+          const configPath = join(process.cwd(), "powerhouse.config.json");
+          const config = getConfig(configPath);
           generateImportScript(
             config.packages?.map((p) => p.packageName) ?? [],
             importPath,
