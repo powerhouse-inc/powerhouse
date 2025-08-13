@@ -2,6 +2,7 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import { DriveContextProvider, useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
+import { useInitializePHApp, useSetSelectedNode } from '@powerhousedao/state';
 import {
   type DocumentDriveDocument,
   type FileNode
@@ -22,6 +23,8 @@ export function BaseEditor(props: IProps) {
     addDocument,
   } = useDriveContext();
   const driveId = document.header.id;
+
+  const setSelectedNode = useSetSelectedNode();
 
   const fileNodes = document.state.global.nodes.filter((node) => node.kind === 'file') as Array<FileNode>
   const packageDocumentId = fileNodes.find((node) => node.documentType === DOCUMENT_TYPES.documentPackage)?.id;
@@ -50,9 +53,9 @@ export function BaseEditor(props: IProps) {
   // TODO: set selected document from @powerhousedao/state
   const onOpenDocument = useCallback(
     (node: FileNode) => {
-      console.log('onOpenDocument', node);
+      setSelectedNode(node.id)
     },
-    [],
+    [setSelectedNode],
   );
 
   return (
@@ -81,6 +84,8 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
+  useInitializePHApp();
+
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
