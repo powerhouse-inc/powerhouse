@@ -4,6 +4,7 @@ import { DOCUMENT_TYPES } from '../document-types.js';
 import { AddNewIcon } from '../icons/AddNewIcon.js';
 import { DocModelIcon } from '../icons/DocModelIcon.js';
 import { EditorIcon } from '../icons/EditorIcon.js';
+import { ProcessorIcon } from '../icons/ProcessorIcon.js';
 import { SubgraphIcon } from '../icons/SubgraphIcon.js';
 interface ModuleItemProps {
   fileNode: FileNode;
@@ -19,6 +20,8 @@ const getIconForDocumentType = (documentType: string) => {
       return EditorIcon;
     case DOCUMENT_TYPES.documentSubgraph:
       return SubgraphIcon;
+    case DOCUMENT_TYPES.documentProcessor:
+      return ProcessorIcon;
     case 'new':
       return AddNewIcon;
     default:
