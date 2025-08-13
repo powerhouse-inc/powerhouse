@@ -21,6 +21,7 @@ export async function bundleExternalPackages(
     logLevel: "warning",
     external: ["react", "react-dom", "react/*", "react-dom/*"],
     banner: {
+      // https://stackoverflow.com/a/77753164 - handle cjs requires of external dependencies
       js: `import * as requireReact from 'react';
            import * as requireReactDom from 'react-dom';
            import * as requireReactDomClient from 'react-dom/client';
