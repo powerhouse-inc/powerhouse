@@ -1,6 +1,7 @@
 import { FormInput } from "#connect";
 import { Button, Icon, Modal } from "#powerhouse";
-import { type ComponentPropsWithoutRef, useState } from "react";
+import { isValidName } from "document-drive";
+import { type ComponentPropsWithoutRef, useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 const buttonStyles =
@@ -19,16 +20,21 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     props;
 
   const [nodeName, setNodeName] = useState("");
+  const [isValid, setIsValid] = useState(false);
 
   const handleCancel = () => {
     onOpenChange?.(false);
     setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
   };
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
+    if (!isValid) {
+      return;
+    }
+
     onContinue(nodeName);
     setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
-  };
+  }, [isValid, nodeName, onContinue]);
 
   return (
     <Modal
@@ -48,9 +54,18 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
           Create a new document
         </div>
         <div className="my-6">
+          {!isValid && nodeName && (
+            <div className="text-red-500 mb-2">
+              Document name must be valid URL characters.
+            </div>
+          )}
           <FormInput
             icon={<Icon name="BrickGlobe" />}
-            onChange={(e) => setNodeName(e.target.value)}
+            onChange={(e) => {
+              const name = e.target.value;
+              setNodeName(name);
+              setIsValid(isValidName(name));
+            }}
             placeholder="Document name"
             required
             value={nodeName}
@@ -69,6 +84,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
           <Button
             className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
             onClick={handleCreate}
+            disabled={!isValid}
           >
             Create
           </Button>

@@ -41,6 +41,7 @@ export {
   generateNodesCopy,
   isFileNode,
   isFolderNode,
+  isValidName,
 } from "#drive-document-model/src/utils";
 export type { IProcessor } from "#processors/types";
 export { EventQueueManager as BaseQueueManager } from "#queue/event";
