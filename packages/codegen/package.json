@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "4.1.0-dev.12",
+  "version": "4.1.0-dev.17",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -32,6 +32,7 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "clean:node_modules": "rimraf node_modules",
+    "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
     "test": "vitest run"
   },
   "dependencies": {
@@ -41,7 +42,7 @@
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typescript": "^4.0.1",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.26.1",
+    "@powerhousedao/document-engineering": "^1.27.0",
     "@types/node": "^22.15.17",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",

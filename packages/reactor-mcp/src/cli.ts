@@ -1,9 +1,10 @@
-import { init } from "./index.js";
+import { logger } from "./logger.js";
+import { initStdioMcpServer } from "./stdio/index.js";
 
-init({
+initStdioMcpServer({
   remoteDrive: process.argv.at(2),
   root: process.cwd(),
 }).catch((error: unknown) => {
-  console.error(error);
+  logger.error(error);
   process.exit(1);
 });

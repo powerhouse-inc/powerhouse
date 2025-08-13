@@ -74,14 +74,9 @@ export function connectCommand(program: Command) {
   const cmd = program
     .command("connect")
     .description("Powerhouse Connect commands")
-    .addCommand(studioCommand)
+    .addCommand(studioCommand, { isDefault: true })
     .addCommand(buildCommand)
     .addCommand(previewCommand);
-
-  // Set studio as the default command
-  cmd.action(async (...args: [ConnectOptions]) => {
-    await connect(...args);
-  });
 }
 
 if (process.argv.at(2) === "spawn") {

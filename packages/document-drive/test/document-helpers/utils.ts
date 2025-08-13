@@ -11,6 +11,11 @@ export const buildOperation = (
 ): Operation => {
   if (shuffled) {
     return {
+      action: {
+        scope: "global",
+        type: "TEST",
+        input: {},
+      },
       scope: "global",
       type: "TEST",
       timestamp: new Date().toISOString(),
@@ -21,6 +26,11 @@ export const buildOperation = (
   }
 
   return {
+    action: {
+      scope: "global",
+      type: "TEST",
+      input: {},
+    },
     hash: `hash-${input.index}`,
     timestamp: new Date().toISOString(),
     input: {},

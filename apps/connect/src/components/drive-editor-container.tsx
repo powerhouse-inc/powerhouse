@@ -8,30 +8,17 @@ import {
 } from '#hooks';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
+import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
-    type DriveEditorProps,
-    type IDriveContext,
-} from '@powerhousedao/reactor-browser';
-import {
-    setSelectedNode,
     useDefaultDriveEditorModule,
-    useDocumentModelModules,
     useDriveEditorModuleById,
-    useEditorModules,
     useSelectedDrive,
 } from '@powerhousedao/state';
 import { driveDocumentModelModule } from 'document-drive';
-import {
-    type DocumentModelModule,
-    type EditorModule,
-    type Operation,
-    type PHDocument,
-} from 'document-model';
+import { type DocumentModelModule, type Operation } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
-// Dynamic import for vetra to avoid build issues when vetra is not available
-let VetraDriveExplorer: any;
 
 function DriveEditorError({ error }: FallbackProps) {
     return (
@@ -82,24 +69,10 @@ export function DriveEditorContainer() {
     const { addFile, addDocument } = useDocumentDriveServer();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
-    const documentModelModules = useDocumentModelModules();
-    const editorModules = useEditorModules();
-    function getDocumentModelModule(documentType: string | undefined) {
-        return documentModelModules?.find(
-            module => module.documentModel.id === documentType,
-        ) as DocumentModelModule<PHDocument> | undefined;
-    }
-    function getEditor(documentType: string | undefined) {
-        return editorModules?.find(module =>
-            module.documentTypes.includes(documentType ?? ''),
-        ) as EditorModule | undefined;
-    }
 
     const driveContext: IDriveContext = useMemo(
         () => ({
             ...nodeActions,
-            getDocumentModelModule,
-            getEditor,
             showSearchBar,
             isAllowedToCreateDocuments,
             analyticsDatabaseName,
@@ -109,19 +82,15 @@ export function DriveEditorContainer() {
             showDeleteNodeModal,
             useDocumentEditorProps,
             addDocument,
-            setSelectedNode,
         }),
         [
             nodeActions,
             isAllowedToCreateDocuments,
-            getDocumentModelModule,
-            getEditor,
             addFile,
             addDocument,
             getSyncStatusSync,
             showDeleteNodeModal,
             showCreateDocumentModal,
-            setSelectedNode,
         ],
     );
 
@@ -130,32 +99,10 @@ export function DriveEditorContainer() {
     );
     const defaultDriveEditor = useDefaultDriveEditorModule();
 
-    let DriveEditorComponent =
+    const DriveEditorComponent =
         driveEditor?.Component ??
         defaultDriveEditor?.Component ??
         GenericDriveExplorer.Component;
-
-    // TODO: remove this after vetra command refactor
-    if (selectedDrive?.header.meta?.preferredEditor === 'vetra-drive-app') {
-        // Fallback to generic drive explorer if vetra is not available
-        try {
-            if (!VetraDriveExplorer) {
-                // This will be resolved at runtime if vetra is available
-                DriveEditorComponent = GenericDriveExplorer.Component;
-            } else {
-                DriveEditorComponent = (
-                    VetraDriveExplorer as {
-                        Component: React.FC<
-                            DriveEditorProps<PHDocument> &
-                                Record<string, unknown>
-                        >;
-                    }
-                ).Component;
-            }
-        } catch {
-            DriveEditorComponent = GenericDriveExplorer.Component;
-        }
-    }
 
     if (!selectedDrive) return null;
 

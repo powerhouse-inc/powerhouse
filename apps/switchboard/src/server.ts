@@ -10,6 +10,7 @@ import {
   ReactorBuilder,
   driveDocumentModelModule,
 } from "document-drive";
+import { DocumentAlreadyExistsError } from "document-drive/server/error";
 import RedisCache from "document-drive/cache/redis";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
@@ -44,7 +45,7 @@ if (process.env.SENTRY_DSN) {
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
 async function initServer(serverPort: number, options: StartServerOptions) {
-  const { dev, packages = [] } = options;
+  const { dev, packages = [], remoteDrives = [] } = options;
 
   // start redis if configured
   const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
@@ -86,9 +87,11 @@ async function initServer(serverPort: number, options: StartServerOptions) {
 
   let defaultDriveUrl: undefined | string = undefined;
 
+  // Create default drive if provided
   if (options.drive) {
     defaultDriveUrl = await addDefaultDrive(reactor, options.drive, serverPort);
   }
+
 
   // start vite server if dev mode is enabled
   const vite = dev ? await startViteServer() : undefined;
@@ -113,11 +116,43 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     packages: options.packages,
     configFile:
       options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+    mcp: options.mcp ?? true,
   });
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
     api.app.use(vite.middlewares);
+  }
+
+  // Connect to remote drives AFTER packages are loaded
+  if (remoteDrives.length > 0) {
+    for (const remoteDriveUrl of remoteDrives) {
+      try {
+        await reactor.addRemoteDrive(remoteDriveUrl, {
+          availableOffline: true,
+          sharingType: "public",
+          listeners: [],
+          triggers: [],
+        });
+        // Use the first remote drive URL as the default
+        if (!defaultDriveUrl) {
+          defaultDriveUrl = remoteDriveUrl;
+        }
+      } catch (error) {
+        if (error instanceof DocumentAlreadyExistsError) {
+          console.info(`Remote drive already added: ${remoteDriveUrl}`);
+          // Still use this drive URL as default if not already set
+          if (!defaultDriveUrl) {
+            defaultDriveUrl = remoteDriveUrl;
+          }
+        } else {
+          console.error(
+            `Failed to connect to remote drive ${remoteDriveUrl}:`,
+            error,
+          );
+        }
+      }
+    }
   }
 
   return {

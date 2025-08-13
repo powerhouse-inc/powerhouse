@@ -71,7 +71,6 @@ export function useDocumentEditorProps<TDocument extends PHDocument>(
       signOperation<TDocument>(
         operation,
         sign,
-        nodeId,
         prevState,
         documentModelModule?.reducer,
         user,

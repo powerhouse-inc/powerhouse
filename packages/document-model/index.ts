@@ -38,16 +38,16 @@ export {
   createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
-export { BaseDocumentClass, applyMixins } from "#document/object.js";
+export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,
   ActionErrorCallback,
   ActionSigner,
+  ActionWithAttachment,
   App,
   AttachmentInput,
-  ActionWithAttachment,
   BaseDocument,
   BaseState,
   BaseStateFromDocument,
@@ -75,10 +75,10 @@ export type {
   Maybe,
   NOOPAction,
   Operation,
-  OperationSignatureContext,
+  ActionSignatureContext as OperationSignatureContext,
+  PartialState,
   PHDocument,
   PHReducer,
-  PartialState,
   Reducer,
   ReducerOptions,
   SaveToFile,
@@ -105,7 +105,7 @@ export {
 export {
   buildOperationSignature,
   buildOperationSignatureMessage,
-  buildSignedOperation,
+  buildSignedAction,
   generateId,
 } from "#document/utils/crypto.js";
 export {
@@ -127,7 +127,6 @@ export {
   validateModules,
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
-export { actionContext } from "#document/ph-factories.js";
 export type { OperationError as DocumentModelOperationError } from "#document-model/gen/schema/types.js";
 export { createDocument, createState } from "#document-model/gen/utils.js";
 export { documentModelDocumentModelModule } from "#document-model/module.js";
@@ -140,6 +139,7 @@ export {
   setName,
   undo,
 } from "#document/actions/creators.js";
+export { actionContext } from "#document/ph-factories.js";
 export type { EditorContext } from "#document/types.js";
 export {
   attachBranch,

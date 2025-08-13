@@ -7,6 +7,11 @@ describe("mergeOperations", () => {
       {
         global: [
           {
+            action: {
+              scope: "global",
+              type: "SET_MODEL_NAME",
+              input: { name: "1" },
+            },
             type: "SET_MODEL_NAME",
             input: { name: "1" },
             scope: "global",
@@ -21,6 +26,11 @@ describe("mergeOperations", () => {
       },
       [
         {
+          action: {
+            scope: "global",
+            type: "SET_MODEL_NAME",
+            input: { name: "1" },
+          },
           type: "SET_MODEL_NAME",
           input: { name: "1" },
           scope: "global",
@@ -31,6 +41,11 @@ describe("mergeOperations", () => {
           error: undefined,
         },
         {
+          action: {
+            scope: "global",
+            type: "SET_MODEL_NAME",
+            input: { name: "2" },
+          },
           type: "SET_MODEL_NAME",
           input: { name: "2" },
           scope: "global",
@@ -76,6 +91,11 @@ describe("mergeOperations", () => {
           {
             global: [
               {
+                action: {
+                  scope: "global",
+                  type: "SET_MODEL_NAME",
+                  input: { name: "1" },
+                },
                 type: "SET_MODEL_NAME",
                 input: { name: "1" },
                 scope: "global",
@@ -86,6 +106,11 @@ describe("mergeOperations", () => {
                 error: undefined,
               },
               {
+                action: {
+                  scope: "global",
+                  type: "SET_MODEL_NAME",
+                  input: { name: "1" },
+                },
                 type: "SET_MODEL_NAME",
                 input: { name: "1" },
                 scope: "global",
@@ -100,6 +125,11 @@ describe("mergeOperations", () => {
           },
           [
             {
+              action: {
+                scope: "global",
+                type: "SET_MODEL_NAME",
+                input: { name: "2" },
+              },
               type: "SET_MODEL_NAME",
               input: { name: "2" },
               scope: "global",

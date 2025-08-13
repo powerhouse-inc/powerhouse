@@ -3,12 +3,15 @@ import { type DocumentModelState } from "document-model";
 import { type Args } from "../generate-document-model/index.js";
 
 type ModuleArgs = Args & { module: string };
+type OperationError =
+  DocumentModelState["specifications"][number]["modules"][number]["operations"][number]["errors"][number];
 type Actions = {
   name: string | null;
   hasInput: boolean;
   hasAttachment: boolean | undefined;
   scope: string;
   state: string;
+  errors: OperationError[];
 };
 
 export default {
@@ -26,18 +29,32 @@ export default {
             name: a.name,
             hasInput: a.schema !== null,
             hasAttachment: a.schema?.includes(": Attachment"),
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             scope: a.scope || "global",
             state: a.scope === "global" ? "" : a.scope, // the state this action affects
             errors: a.errors,
           }))
         : [];
 
+    const errors = actions.reduce<OperationError[]>((acc, action) => {
+      action.errors.forEach((error) => {
+        const existingError = acc.find((e) => e.code === error.code);
+        if (!existingError) {
+          acc.push(error);
+        } else if (JSON.stringify(existingError) !== JSON.stringify(error)) {
+          console.warn(
+            `Warning: Duplicate error code "${error.code}" with different fields found`,
+          );
+        }
+      });
+      return acc;
+    }, []);
+
     return {
       rootDir: args.rootDir,
       documentType: documentModel.name,
       module: paramCase(args.module),
       actions,
+      errors,
     };
   },
 };

@@ -3,7 +3,6 @@ import { type PruneActionInput } from "../schema/types.js";
 import {
   type Action,
   type BaseState,
-  type Operation,
   type PHDocument,
   type StateReducer,
 } from "../types.js";
@@ -21,11 +20,11 @@ export function setNameOperation<TDocument extends PHDocument>(
 
 export function undoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   skip: number,
 ): {
   document: TDocument;
-  action: Action | Operation;
+  action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -43,7 +42,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<Action | Operation>;
+    draft.action = noop(scope) as Draft<Action>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -78,11 +77,11 @@ export function undoOperation<TDocument extends PHDocument>(
 
 export function redoOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   skip: number,
 ): {
   document: TDocument;
-  action: Action | Operation;
+  action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -129,7 +128,7 @@ export function redoOperation<TDocument extends PHDocument>(
       type: operation.type,
       scope: operation.scope,
       input: operation.input,
-    } as Action | Operation);
+    } as Action);
   });
 }
 
@@ -173,6 +172,8 @@ export function pruneOperation<TDocument extends PHDocument>(
       ? actionsToKeepEnd[0].timestamp
       : new Date().toISOString();
 
+  const action = loadState({ name, state: newState }, actionsToPrune.length);
+
   // replaces pruned operations with LOAD_STATE
   return replayOperations(
     document.initialState,
@@ -182,7 +183,8 @@ export function pruneOperation<TDocument extends PHDocument>(
         ...actionsToKeepStart,
         {
           skip: 0,
-          ...loadState({ name, state: newState }, actionsToPrune.length),
+          ...action,
+          action,
           timestamp: loadStateTimestamp,
           index: loadStateIndex,
           hash: hashDocumentStateForScope({ state: newState }, "global"),

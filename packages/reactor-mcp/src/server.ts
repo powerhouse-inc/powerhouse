@@ -1,4 +1,4 @@
-import { createReactorMcpProvider } from "#mcp/reactor.js";
+import { createReactorMcpProvider } from "#tools/reactor.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { type IDocumentDriveServer } from "document-drive";
 
@@ -18,7 +18,9 @@ Examples:
 <example>Context: User needs to create a new document instance of a given document model. user: 'I need to create a demo user profile document' assistant: 'I'll use the reactor-mcp-server to help you create this document with example values.' <commentary>Since the user is requesting document model creation, use the reactor-mcp-document-expert agent to ensure proper reactor-mcp tool usage.</commentary></example> <example>Context: User is building a content management system and needs create documents for certain types of document models. user: 'Can you help me create example documents for blog posts and categories document models?' assistant: 'Let me use the reactor-mcp-server to create these documents using the appropriate reactor-mcp tool calls.' <commentary>Document creation requires the reactor-mcp-server tool calls to ensure compliance.</commentary></example>
 `;
 
-export async function createServer(reactor: IDocumentDriveServer) {
+export async function createServer(
+  reactor: IDocumentDriveServer,
+): Promise<McpServer> {
   const server = new McpServer(
     {
       name: "reactor-mcp-server",

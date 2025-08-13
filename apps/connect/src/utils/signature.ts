@@ -1,10 +1,9 @@
 import { logger } from 'document-drive';
 import {
+    buildSignedAction,
     type Action,
     type ActionSigner,
-    buildSignedOperation,
     type Operation,
-    type OperationSignatureContext,
     type PHDocument,
     type Reducer,
     type User,
@@ -19,6 +18,7 @@ export async function signOperation<TDocument extends PHDocument>(
     user?: User,
 ): Promise<Operation> {
     if (!user) return operation;
+    if (!operation.action) return operation;
     if (!operation.action?.context) return operation;
     if (!operation.action.context.signer) return operation;
     if (!reducer) {
@@ -30,8 +30,8 @@ export async function signOperation<TDocument extends PHDocument>(
 
     const context: ActionSigner = operation.action.context.signer;
 
-    const signedOperation = await buildSignedOperation(
-        operation,
+    const signedOperation = await buildSignedAction(
+        operation.action,
         reducer,
         document,
         context,

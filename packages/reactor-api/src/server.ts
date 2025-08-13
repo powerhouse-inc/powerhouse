@@ -11,6 +11,7 @@ import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/utils";
+import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
@@ -59,6 +60,7 @@ type Options = {
     | undefined;
   packageLoader?: IPackageLoader;
   processors?: Record<string, Processor>;
+  mcp?: boolean;
 };
 
 const DEFAULT_PORT = 4000;
@@ -261,6 +263,7 @@ export async function startAPI(
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
+  const mcpServerEnabled = options.mcp ?? true;
 
   let admins: string[] = [];
   let users: string[] = [];
@@ -298,7 +301,7 @@ export async function startAPI(
   // add auth middleware if auth is enabled
   if (authEnabled) {
     // set admin, users and guest list
-    logger.info("> Setting up Auth middleware");
+    logger.info("Setting up Auth middleware");
     app.use(async (req, res, next) => {
       if (!authEnabled || req.method === "OPTIONS" || req.method === "GET") {
         next();
@@ -469,6 +472,11 @@ export async function startAPI(
     processorManager,
     module,
   );
+
+  if (mcpServerEnabled) {
+    await setupMcpServer(reactor, app);
+    logger.info(`MCP server available at http://localhost:${port}/mcp`);
+  }
 
   // Start the server
   await startServer(app, port, options.https);

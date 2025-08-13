@@ -13,7 +13,8 @@ import {
 export type InitOptions = {
   project?: string;
   interactive?: boolean;
-  version?: string;
+  branch?: string;
+  tag?: string;
   dev?: boolean;
   staging?: boolean;
   packageManager?: string;
@@ -26,12 +27,15 @@ export const init: CommandActionType<
   [string | undefined, InitOptions]
 > = async (projectName, options) => {
   console.log("Initializing a new project...");
-
   try {
     await createProject({
       name: options.project ?? projectName,
       interactive: options.interactive ?? false,
-      version: parseVersion(options),
+      version: parseVersion({
+        version: options.branch ?? options.tag,
+        dev: options.dev,
+        staging: options.staging,
+      }),
       packageManager:
         resolvePackageManagerOptions(options) ??
         getPackageManagerFromPath(PH_BIN_PATH),
@@ -49,10 +53,10 @@ export function initCommand(program: Command): Command {
     .option("-p, --project", "Name of the project")
     .option("-i, --interactive", "Run the command in interactive mode")
     .option(
-      "-v, --version",
-      'Specify development version to use. Defaults to "main"',
+      "--branch <branch>",
+      'Specify development branch to use. Defaults to "main"',
     )
-    .option("-t, --tag", "Same as -v/--version")
+    .option("--tag <tag>", "Same as --branch")
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
     .option("--package-manager <packageManager>", "package manager to be used")

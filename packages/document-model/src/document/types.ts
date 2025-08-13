@@ -57,6 +57,10 @@ export type ActionContext = {
  * Defines the basic structure of an action.
  */
 export type Action = {
+  /** TODO: The id of the action. */
+  //id: string;
+  /** TODO: The timestamp of the action. */
+  //timestamp: string;
   /** The name of the action. */
   type: string;
   /** The payload of the action. */
@@ -78,8 +82,8 @@ export type ReducerOptions = {
   skip?: number;
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
-  /** if true reuses the provided action hash  */
-  reuseHash?: boolean;
+  /** a hash to use */
+  hash?: string;
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
   /** if true checks the hashes of the operations */
@@ -106,7 +110,7 @@ export type PHReducer<TDocument extends PHDocument = PHDocument> =
 
 export type StateReducer<TDocument extends PHDocument> = (
   state: Draft<BaseStateFromDocument<TDocument>>,
-  action: Action | Operation,
+  action: Action,
   dispatch?: SignalDispatch,
 ) => BaseStateFromDocument<TDocument> | undefined;
 
@@ -134,7 +138,7 @@ export type Operation = {
   /** The scope of the action */
   scope: string;
   /** The attachments included in the action. */
-  attachments?: AttachmentInput[] | undefined;
+  //attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */
   //context?: ActionContext;
   /////////////////////////////////////////////////////////////////////////////
@@ -158,7 +162,7 @@ export type Operation = {
    *
    * TODO: this will not be optional in the future.
    */
-  action?: Action;
+  action: Action;
 };
 
 export type Meta = {
@@ -276,18 +280,16 @@ export type MappedOperation = {
 
 export type DocumentOperationsIgnoreMap = Record<string, MappedOperation[]>;
 
-export type OperationSignatureContext = {
+export type ActionSignatureContext = {
   documentId: string;
   signer: ActionSigner;
-  operation: Operation;
+  action: Action;
   previousStateHash: string;
 };
 
-export type OperationSigningHandler = (
-  message: Uint8Array,
-) => Promise<Uint8Array>;
+export type ActionSigningHandler = (message: Uint8Array) => Promise<Uint8Array>;
 
-export type OperationVerificationHandler = (
+export type ActionVerificationHandler = (
   publicKey: string,
   signature: Uint8Array,
   data: Uint8Array,

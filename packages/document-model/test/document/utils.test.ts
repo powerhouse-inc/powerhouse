@@ -80,6 +80,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "global",
+          },
         },
         {
           scope: "global",
@@ -89,6 +94,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "global",
+          },
         },
       ],
       local: [
@@ -100,6 +110,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "local",
+          },
         },
       ],
     });
@@ -121,6 +136,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "global",
+          },
         },
         {
           scope: "global",
@@ -130,6 +150,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "global",
+          },
         },
         {
           scope: "global",
@@ -139,6 +164,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "global",
+          },
         },
       ],
       local: [
@@ -150,6 +180,11 @@ describe("Base utils", () => {
           timestamp: "",
           type: "TEST_ACTION",
           input: { id: "test" },
+          action: {
+            type: "TEST_ACTION",
+            input: { id: "test" },
+            scope: "local",
+          },
         },
       ],
     });

@@ -1,24 +1,28 @@
-import { type DocumentModelState } from "document-model";
+import {
+  type DocumentModelState,
+  type Operation as ModuleOperation,
+} from "document-model/document-model/gen/schema/types";
 import { type Project } from "ts-morph";
 
-export type Actions = {
-  name: string | null;
+// Use the actual module type from document model specs
+export type ModuleSpec = DocumentModelState["specifications"][0]["modules"][0];
+export type OperationError = ModuleOperation["errors"][number];
+
+export type Operation = ModuleOperation & {
   hasInput: boolean;
   hasAttachment: boolean | undefined;
   scope: string;
   state: string;
-  errors?: unknown;
+  errors?: OperationError[];
 };
-
-// Use the actual module type from document model specs
-export type ModuleSpec = DocumentModelState["specifications"][0]["modules"][0];
 
 export interface GenerationContext {
   rootDir: string;
   docModel: DocumentModelState;
   module: ModuleSpec;
   project: Project;
-  actions: Actions[];
+  operations: Operation[];
+  forceUpdate: boolean;
 }
 
 export type PHProjectDirectories = {
@@ -30,4 +34,5 @@ export type PHProjectDirectories = {
 
 export type CodeGeneratorOptions = {
   directories?: PHProjectDirectories;
+  forceUpdate?: boolean;
 };

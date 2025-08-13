@@ -124,12 +124,6 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   reuseLastOperationIndex = false,
   skip = 0,
 ): TDocument {
-  // UNDO, REDO and PRUNE are meta operations
-  // that alter the operations history themselves
-  if ([UNDO, REDO, PRUNE].includes(operation.type)) {
-    return document;
-  }
-
   const scope = operation.scope;
   const operations: Operation[] = document.operations[scope].slice();
 
@@ -207,7 +201,7 @@ export function updateDocument<TDocument extends PHDocument>(
  */
 function _baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   wrappedReducer: StateReducer<TDocument>,
 ): TDocument {
   // throws if action is not valid base action
@@ -235,11 +229,11 @@ function _baseReducer<TDocument extends PHDocument>(
  */
 export function processUndoRedo<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   skip: number,
 ): {
   document: TDocument;
-  action: Action | Operation;
+  action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
@@ -255,7 +249,7 @@ export function processUndoRedo<TDocument extends PHDocument>(
 
 function processSkipOperation<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   customReducer: StateReducer<TDocument>,
   skipValue: number,
   reuseOperationResultingState = false,
@@ -290,7 +284,6 @@ function processSkipOperation<TDocument extends PHDocument>(
       undefined,
       undefined,
       {
-        reuseHash: true,
         reuseOperationResultingState,
         operationResultingStateParser: resultingStateParser,
       },
@@ -342,7 +335,6 @@ function processUndoOperation<TDocument extends PHDocument>(
     undefined,
     undefined,
     {
-      reuseHash: true,
       reuseOperationResultingState,
       operationResultingStateParser: resultingStateParser,
     },
@@ -369,7 +361,7 @@ function processUndoOperation<TDocument extends PHDocument>(
  */
 export function baseReducer<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
+  action: Action,
   customReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
   options: ReducerOptions = {},
@@ -377,25 +369,18 @@ export function baseReducer<TDocument extends PHDocument>(
   const {
     skip,
     ignoreSkipOperations = false,
-    reuseHash = false,
     reuseOperationResultingState = false,
     operationResultingStateParser,
   } = options;
 
-  let _action = { ...action };
+  let _action: Action = { ...action };
   let skipValue = skip || 0;
   let newDocument = {
     ...document,
   };
   let reuseLastOperationIndex = false;
 
-  const shouldProcessSkipOperation =
-    !ignoreSkipOperations &&
-    (skipValue > 0 ||
-      ("index" in _action &&
-        "skip" in _action &&
-        typeof _action.skip === "number" &&
-        _action.skip > 0));
+  const shouldProcessSkipOperation = !ignoreSkipOperations && skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
@@ -515,10 +500,10 @@ export function baseReducer<TDocument extends PHDocument>(
   // if reuseHash is true, checks if the action has
   // an hash and uses it instead of generating it
   const scope = _action.scope || "global";
-  const hash =
-    reuseHash && Object.prototype.hasOwnProperty.call(_action, "hash")
-      ? (_action as Operation).hash
-      : hashDocumentStateForScope(newDocument, scope);
+  let hash = hashDocumentStateForScope(newDocument, scope);
+  if (options.hash && options.hash !== "") {
+    hash = options.hash;
+  }
 
   // updates the last operation with the hash of the resulting state
   const lastOperation = newDocument.operations[scope].at(-1);

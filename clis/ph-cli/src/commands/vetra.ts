@@ -13,7 +13,11 @@ async function startVetraEnv(options: DevOptions) {
 export const vetra: CommandActionType<
   [DevOptions & { logs?: boolean }]
 > = async (options) => {
-  return startVetraEnv({ ...options, verbose: options.logs });
+  return startVetraEnv({
+    ...options,
+    verbose: options.logs,
+    disableConnect: options.disableConnect,
+  });
 };
 
 export function vetraCommand(program: Command) {
@@ -23,20 +27,11 @@ export function vetraCommand(program: Command) {
     .description(
       "Starts Vetra development environment with switchboard, reactor, and connect",
     )
-    .option("--generate", "generate code when document model is updated")
     .option(
       "--switchboard-port <port>",
       "port to use for the Vetra switchboard (default: 4001)",
     )
-    .option(
-      "--reactor-port <port>",
-      "port to use for the local reactor (default: 4002)",
-    )
     .option("--connect-port <port>", "port to use for Connect (default: 3000)")
-    .option(
-      "--disable-default-drive",
-      "disable automatic creation of the default 'powerhouse' drive in the reactor",
-    )
     .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
     .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
     .option(
@@ -50,6 +45,10 @@ export function vetraCommand(program: Command) {
     .option(
       "--remote-drive <url>",
       "URL of remote drive to connect to (skips switchboard initialization)",
+    )
+    .option(
+      "--disable-connect",
+      "Skip Connect initialization (only start switchboard and reactor)",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting

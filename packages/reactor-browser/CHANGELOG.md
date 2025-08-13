@@ -1,3 +1,47 @@
+## 4.1.0-dev.17 (2025-08-12)
+
+### 🚀 Features
+
+- refactor vetra command and remove vetra deps in connect and reactor ([#1753](https://github.com/powerhouse-inc/powerhouse/pull/1753))
+
+### 🩹 Fixes
+
+- downstream fixes in other package from signature change ([4048d4152](https://github.com/powerhouse-inc/powerhouse/commit/4048d4152))
+- **reactor-browser:** updated signature function call to new format ([4b1ce55c0](https://github.com/powerhouse-inc/powerhouse/commit/4b1ce55c0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.16 (2025-08-12)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.15 (2025-08-12)
+
+### 🚀 Features
+
+- **reactor-mcp,reactor-api,reactor-local,switchboard,ph-cli:** run mcp on express app ([d51fa590e](https://github.com/powerhouse-inc/powerhouse/commit/d51fa590e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.14 (2025-08-11)
+
+### 🚀 Features
+
+- update document engineering dep ([54dcee90d](https://github.com/powerhouse-inc/powerhouse/commit/54dcee90d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.13 (2025-08-09)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.12 (2025-08-08)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

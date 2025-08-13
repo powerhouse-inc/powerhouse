@@ -36,6 +36,7 @@ export function generateCommand(program: Command) {
     .option("--document-types <type>", "Supported document types by the editor")
     .option("-is, --import-script <type>", "Import Script Name")
     .option("-sf, --skip-format", "Skip formatting the generated code")
+    .option("-f, --force", "Overwrite operation reducers")
     .option("-w, --watch", "Watch the generated code")
     .option(
       "-d, --drive-editor <name>",

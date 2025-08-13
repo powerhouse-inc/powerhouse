@@ -2,19 +2,21 @@ import { camelCase, paramCase, pascalCase } from "change-case";
 import {
   SyntaxKind,
   VariableDeclarationKind,
+  type MethodDeclaration,
   type ObjectLiteralExpression,
   type SourceFile,
 } from "ts-morph";
 import { FileGenerator } from "../core/FileGenerator.js";
 import {
-  type Actions,
   type GenerationContext,
+  type Operation,
+  type OperationError,
 } from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
   async generate(context: GenerationContext): Promise<void> {
     // Skip if no actions to generate
-    if (context.actions.length === 0) return;
+    if (context.operations.length === 0) return;
 
     const filePath = this.getOutputPath(context);
     const sourceFile = await this.directoryManager.createSourceFile(
@@ -34,9 +36,97 @@ export class ReducerGenerator extends FileGenerator {
     );
 
     // AST logic (specific to reducers)
-    this.createReducerObject(sourceFile, typeImportName, context.actions);
+    this.createReducerObject(
+      sourceFile,
+      typeImportName,
+      context.operations,
+      context.forceUpdate,
+    );
+
+    // Detect and import error classes used in the actual reducer code (after generation)
+    this.addErrorImports(sourceFile, context);
 
     await sourceFile.save();
+  }
+
+  private static getDefaultReducerCode(methodName: string): string[] {
+    return [
+      `// TODO: Implement "${methodName}" reducer`,
+      `throw new Error('Reducer "${methodName}" not yet implemented');`,
+    ];
+  }
+
+  private addErrorImports(
+    sourceFile: SourceFile,
+    context: GenerationContext,
+  ): void {
+    // Collect all errors from all operations
+    const allErrors: OperationError[] = [];
+
+    context.operations.forEach((operation) => {
+      if (Array.isArray(operation.errors)) {
+        operation.errors
+          .filter((error) => error.name)
+          .forEach((error) => {
+            // Deduplicate errors by name
+            if (!allErrors.find((e) => e.name === error.name)) {
+              allErrors.push(error);
+            }
+          });
+      }
+    });
+
+    if (allErrors.length === 0) return;
+
+    // Analyze the actual source file content to find which errors are used
+    const sourceFileContent = sourceFile.getFullText();
+    const usedErrors = new Set<string>();
+
+    allErrors.forEach((error) => {
+      // Check if error class name is mentioned anywhere in the source file
+      // Look for patterns like "new ErrorName" or "throw ErrorName" or "ErrorName("
+      const errorPattern = new RegExp(`\\b${error.name}\\b`, "g");
+      if (errorPattern.test(sourceFileContent)) {
+        usedErrors.add(error.name!);
+      }
+    });
+
+    // Add imports for used errors (only if they're not already imported)
+    if (usedErrors.size > 0) {
+      const errorImportPath = `../../gen/${paramCase(context.module.name)}/error.js`;
+      const errorClassNames = Array.from(usedErrors);
+
+      // Check if imports already exist to avoid duplicates
+      const existingImports = sourceFile.getImportDeclarations();
+      const existingErrorImport = existingImports.find(
+        (importDecl) =>
+          importDecl.getModuleSpecifierValue() === errorImportPath,
+      );
+
+      if (existingErrorImport) {
+        // Get already imported error names
+        const existingNamedImports = existingErrorImport
+          .getNamedImports()
+          .map((namedImport) => namedImport.getName());
+
+        // Only import errors that aren't already imported
+        const newErrorsToImport = errorClassNames.filter(
+          (errorName) => !existingNamedImports.includes(errorName),
+        );
+
+        if (newErrorsToImport.length > 0) {
+          // Add new named imports to existing import declaration
+          existingErrorImport.addNamedImports(newErrorsToImport);
+        }
+      } else {
+        // Create new import declaration
+        this.importManager.addNamedImports(
+          sourceFile,
+          errorClassNames,
+          errorImportPath,
+        );
+      }
+    }
   }
 
   private getOutputPath(context: GenerationContext): string {
@@ -50,7 +140,8 @@ export class ReducerGenerator extends FileGenerator {
   private createReducerObject(
     sourceFile: SourceFile,
     typeName: string,
-    actions: Actions[],
+    operations: Operation[],
+    forceUpdate = false,
   ): void {
     let reducerVar = sourceFile.getVariableDeclaration("reducer");
 
@@ -79,30 +170,47 @@ export class ReducerGenerator extends FileGenerator {
       SyntaxKind.ObjectLiteralExpression,
     );
 
-    for (const action of actions) {
-      this.addReducerMethod(initializer, action);
+    for (const operation of operations) {
+      this.addReducerMethod(initializer, operation, forceUpdate);
     }
   }
 
   private addReducerMethod(
     objectLiteral: ObjectLiteralExpression,
-    action: Actions,
+    operation: Operation,
+    forceUpdate = false,
   ): void {
-    const actionName = camelCase(action.name ?? "");
+    const actionName = camelCase(operation.name ?? "");
     if (!actionName) return;
 
     const methodName = `${actionName}Operation`;
 
-    // Skip if method already exists
-    if (objectLiteral.getProperty(methodName)) return;
+    const reducerCode = operation.reducer?.trim();
 
-    objectLiteral.addMethod({
+    const existingReducer = objectLiteral
+      .getProperty(methodName)
+      ?.asKind(SyntaxKind.MethodDeclaration);
+
+    // if reducer already exists but forceUpdate is true, update it
+    if (existingReducer) {
+      if (forceUpdate && reducerCode) {
+        existingReducer.setBodyText("");
+        this.setReducerMethodCode(existingReducer, reducerCode);
+      }
+      return;
+    }
+
+    // if reducer doesn't exist, create it and set the code with the default code if no code is provided
+    const method = objectLiteral.addMethod({
       name: methodName,
       parameters: [{ name: "state" }, { name: "action" }, { name: "dispatch" }],
-      statements: [
-        `// TODO: Implement "${methodName}" reducer`,
-        `throw new Error('Reducer "${methodName}" not yet implemented');`,
-      ],
     });
+    this.setReducerMethodCode(method, reducerCode);
+  }
+
+  private setReducerMethodCode(reducer: MethodDeclaration, code?: string) {
+    reducer.addStatements(
+      code ? [code] : ReducerGenerator.getDefaultReducerCode(reducer.getName()),
+    );
   }
 }

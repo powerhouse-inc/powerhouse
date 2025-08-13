@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "4.1.0-dev.12",
+  "version": "4.1.0-dev.17",
   "description": "",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -60,8 +60,8 @@
     "@powerhousedao/analytics-engine-graphql": "^0.4.0",
     "@powerhousedao/analytics-engine-pg": "^0.6.0",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.26.1",
-    "@powerhousedao/vetra": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/reactor-mcp": "workspace:*",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",

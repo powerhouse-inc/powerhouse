@@ -9,6 +9,7 @@ interface Config {
     url: string;
   };
   port: number;
+  mcp: boolean;
 }
 export const config: Config = {
   database: {
@@ -23,4 +24,5 @@ export const config: Config = {
     !isNaN(Number(process.env.PH_SWITCHBOARD_PORT))
       ? Number(process.env.PH_SWITCHBOARD_PORT)
       : (switchboard?.port ?? 4001),
+  mcp: true,
 };

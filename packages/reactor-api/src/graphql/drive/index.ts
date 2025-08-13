@@ -415,6 +415,11 @@ export class DriveSubgraph extends Subgraph {
               skip: op.skip ?? 0,
               scope: strandGql.scope,
               branch: "main",
+              action: {
+                scope: strandGql.scope,
+                type: op.type,
+                input: JSON.parse(op.input) as DocumentModelInput,
+              },
             })) as Operation[],
             documentId: strandGql.documentId,
             documentType: strandGql.documentType,

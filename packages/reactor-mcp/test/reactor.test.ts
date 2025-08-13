@@ -12,7 +12,7 @@ import {
   type DocumentModelModule,
 } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createReactorMcpProvider } from "../src/mcp/reactor.js";
+import { createReactorMcpProvider } from "../src/tools/reactor.js";
 
 // Mock reactor
 const createMockReactor = (): IDocumentDriveServer => {

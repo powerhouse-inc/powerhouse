@@ -1,6 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
 import type { ModelMessage, Provider } from "ai";
+import { streamText } from "ai";
+import { logger } from "../logger.js";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -48,7 +49,7 @@ export class LLMChat {
 
       return fullResponse;
     } catch (error) {
-      console.error("Error sending message to LLM:", error);
+      logger.error("Error sending message to LLM:", error);
       throw error;
     }
   }
@@ -73,7 +74,7 @@ export class LLMChat {
         onChunk(textPart);
       }
     } catch (error) {
-      console.error("Error streaming message from LLM:", error);
+      logger.error("Error streaming message from LLM:", error);
       throw error;
     }
   }

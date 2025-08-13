@@ -17,7 +17,7 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
-  buildSignedOperation,
+  buildSignedAction,
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
@@ -96,21 +96,21 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      operation,
+      action: operation,
       signer,
       previousStateHash: "",
     });
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "SUbVbaz+OkPN+PXSDLx0iiK+JmI=",
+      "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
       "",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n4417040672000xtestSUbVbaz+OkPN+PXSDLx0iiK+JmI=",
+        "\x19Signed Operation:\n4417040672000xtestSa/gjYf8KKaEfUhOuPk9wDzLSns=",
       ),
     );
   });
@@ -137,21 +137,21 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      operation,
+      action: operation,
       signer,
       previousStateHash: hash,
     });
     expect(params).toStrictEqual([
       "1704067200",
       "0xtest",
-      "SUbVbaz+OkPN+PXSDLx0iiK+JmI=",
+      "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
       "qA97yBec1rrOyf2eVsYdWwFPOso=",
     ]);
 
     const textEncoder = new TextEncoder();
     expect(buildOperationSignatureMessage(params)).toStrictEqual(
       textEncoder.encode(
-        "\x19Signed Operation:\n7217040672000xtestSUbVbaz+OkPN+PXSDLx0iiK+JmI=qA97yBec1rrOyf2eVsYdWwFPOso=",
+        "\x19Signed Operation:\n7217040672000xtestSa/gjYf8KKaEfUhOuPk9wDzLSns=qA97yBec1rrOyf2eVsYdWwFPOso=",
       ),
     );
   });
@@ -193,7 +193,7 @@ describe("Crypto utils", () => {
       return documentWithOp;
     }) as PHReducer;
 
-    const operation = await buildSignedOperation(
+    const operation = await buildSignedAction(
       action,
       reducer,
       document,
@@ -219,7 +219,7 @@ describe("Crypto utils", () => {
         [
           "1704067200",
           publicKey,
-          "iKXthoUck0TB+qt+HANRfcLBGRw=",
+          "Sa/gjYf8KKaEfUhOuPk9wDzLSns=",
           "",
           expect.stringMatching(/0x[a-f0-9]{128}/),
         ],
@@ -253,8 +253,8 @@ describe("Crypto utils", () => {
       state: { global: { count: 0 }, local: { name: "" } },
     });
 
-    const operation = await buildSignedOperation(
-      { ...increment(), id: "123" },
+    const operation = await buildSignedAction(
+      { ...increment() /*, id: "123"*/ },
       countReducer as PHReducer,
       document,
       actionSigner(
@@ -311,8 +311,8 @@ describe("Crypto utils", () => {
     });
     document.header.id = "1";
 
-    const operation = await buildSignedOperation(
-      { ...increment(), id: "123" },
+    const operation = await buildSignedAction(
+      { ...increment() /*, id: "123"*/ },
       countReducer as PHReducer,
       document,
       actionSigner(

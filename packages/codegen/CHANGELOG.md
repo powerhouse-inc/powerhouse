@@ -1,3 +1,58 @@
+## 4.1.0-dev.17 (2025-08-12)
+
+### 🚀 Features
+
+- refactor vetra command and remove vetra deps in connect and reactor ([#1753](https://github.com/powerhouse-inc/powerhouse/pull/1753))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.16 (2025-08-12)
+
+### 🚀 Features
+
+- **codegen:** deduplicate operation errors and import them automatically with ts-morph ([e813b22b4](https://github.com/powerhouse-inc/powerhouse/commit/e813b22b4))
+
+### 🩹 Fixes
+
+- **codegen:** Unexpected BlockString ([00a31bba5](https://github.com/powerhouse-inc/powerhouse/commit/00a31bba5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 4.1.0-dev.15 (2025-08-12)
+
+### 🚀 Features
+
+- **reactor-mcp,reactor-api,reactor-local,switchboard,ph-cli:** run mcp on express app ([d51fa590e](https://github.com/powerhouse-inc/powerhouse/commit/d51fa590e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.14 (2025-08-11)
+
+### 🚀 Features
+
+- update document engineering dep ([54dcee90d](https://github.com/powerhouse-inc/powerhouse/commit/54dcee90d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.13 (2025-08-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add reducer code on codegen if it is set and allow --force option to overwrite reducers ([12751a8f5](https://github.com/powerhouse-inc/powerhouse/commit/12751a8f5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.12 (2025-08-08)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

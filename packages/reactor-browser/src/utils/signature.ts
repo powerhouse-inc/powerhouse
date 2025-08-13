@@ -1,18 +1,17 @@
 import {
   type Action,
   type ActionSigner,
-  buildSignedOperation,
   type Operation,
   type PHDocument,
   type Reducer,
   type User,
+  buildSignedAction,
 } from "document-model";
 import type { User as RenownUser } from "../renown/types.js";
 
 export async function signOperation<TDocument extends PHDocument>(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
-  documentId: string,
   document: TDocument,
   reducer?: Reducer<TDocument>,
   user?: User,
@@ -26,15 +25,15 @@ export async function signOperation<TDocument extends PHDocument>(
     return operation;
   }
 
-  const signedOperation = await buildSignedOperation(
-    operation,
+  const signedAction = await buildSignedAction(
+    operation.action,
     reducer,
     document,
     operation.action.context.signer,
     sign,
   );
 
-  return signedOperation;
+  return signedAction;
 }
 
 export function addActionContext<A extends Action = Action>(

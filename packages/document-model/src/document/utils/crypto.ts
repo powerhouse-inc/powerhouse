@@ -2,13 +2,12 @@ import { actionSigner, operationWithContext } from "#document/ph-factories.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {
-  type ActionContext,
   type Action,
+  type ActionContext,
+  type ActionSignatureContext,
   type ActionSigner,
-  type Operation,
-  type OperationSignatureContext,
-  type OperationSigningHandler,
-  type OperationVerificationHandler,
+  type ActionSigningHandler,
+  type ActionVerificationHandler,
   type PHDocument,
   type Reducer,
   type Signature,
@@ -31,18 +30,17 @@ export function getUnixTimestamp(date: Date | string): string {
 export function buildOperationSignatureParams({
   documentId,
   signer,
-  operation,
+  action,
   previousStateHash,
-}: OperationSignatureContext): [string, string, string, string] {
-  const { timestamp, scope, id, type } = operation;
+}: ActionSignatureContext): [string, string, string, string] {
+  const { /*id, timestamp,*/ scope, type } = action;
   return [
-    getUnixTimestamp(timestamp), // timestamp,
-    signer.app.key, // signer public key
+    /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
+    signer.app.key,
     hash(
-      // hash (docID, scope, operationID, operationName, operationInput)
-      [documentId, scope, id, type, stringifyJson(operation.input)].join(""),
+      [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
     ),
-    previousStateHash, // state hash that the operation was applied to
+    previousStateHash,
   ];
 }
 
@@ -72,8 +70,8 @@ export function hex2ab(hex: string) {
 }
 
 export async function buildOperationSignature(
-  context: OperationSignatureContext,
-  signMethod: OperationSigningHandler,
+  context: ActionSignatureContext,
+  signMethod: ActionSigningHandler,
 ): Promise<Signature> {
   const params = buildOperationSignatureParams(context);
   const message = buildOperationSignatureMessage(params);
@@ -81,15 +79,15 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedOperation<TDocument extends PHDocument>(
-  action: Action | Operation,
+export async function buildSignedAction<TDocument extends PHDocument>(
+  action: Action,
   reducer: Reducer<TDocument>,
   document: TDocument,
   signer: ActionSigner,
-  signHandler: OperationSigningHandler,
+  signHandler: ActionSigningHandler,
 ) {
   const result = reducer(document, action, undefined, {
-    reuseHash: true,
+    //reuseHash: true,
     reuseOperationResultingState: true,
   });
   const operation = result.operations[action.scope].at(-1);
@@ -102,7 +100,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
     {
       documentId: document.header.id,
       signer,
-      operation,
+      action,
       previousStateHash,
     },
     signHandler,
@@ -121,7 +119,7 @@ export async function buildSignedOperation<TDocument extends PHDocument>(
 export async function verifyOperationSignature(
   signature: Signature,
   signer: Omit<ActionSigner, "signatures">,
-  verifyHandler: OperationVerificationHandler,
+  verifyHandler: ActionVerificationHandler,
 ) {
   const publicKey = signer.app.key;
   const params = signature.slice(0, 4) as [string, string, string, string];

@@ -17,6 +17,7 @@ export type GenerateOptions = {
   processors?: string;
   documentModels?: string;
   skipFormat?: boolean;
+  force?: boolean;
   watch?: boolean;
   editor?: string;
   processor?: string;
@@ -101,7 +102,7 @@ export async function startGenerate(
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath) {
-    await generateFromFile(filePath, config);
+    await generateFromFile(filePath, config, { force: options.force });
   } else {
     await generateCode(config);
   }

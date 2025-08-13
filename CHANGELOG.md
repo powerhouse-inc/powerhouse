@@ -1,3 +1,69 @@
+## 4.1.0-dev.17 (2025-08-12)
+
+### 🚀 Features
+
+- refactor vetra command and remove vetra deps in connect and reactor ([#1753](https://github.com/powerhouse-inc/powerhouse/pull/1753))
+
+### 🩹 Fixes
+
+- downstream fixes in other package from signature change ([4048d4152](https://github.com/powerhouse-inc/powerhouse/commit/4048d4152))
+- **ph-cli:** added port option to connect command ([19a84f950](https://github.com/powerhouse-inc/powerhouse/commit/19a84f950))
+- **ph-cmd:** use --branch instead of --version on ph init ([29bd9b236](https://github.com/powerhouse-inc/powerhouse/commit/29bd9b236))
+- **reactor-browser:** updated signature function call to new format ([4b1ce55c0](https://github.com/powerhouse-inc/powerhouse/commit/4b1ce55c0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.16 (2025-08-12)
+
+### 🚀 Features
+
+- **codegen:** deduplicate operation errors and import them automatically with ts-morph ([e813b22b4](https://github.com/powerhouse-inc/powerhouse/commit/e813b22b4))
+
+### 🩹 Fixes
+
+- **codegen:** Unexpected BlockString ([00a31bba5](https://github.com/powerhouse-inc/powerhouse/commit/00a31bba5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 4.1.0-dev.15 (2025-08-12)
+
+### 🚀 Features
+
+- **reactor-mcp,reactor-api,reactor-local,switchboard,ph-cli:** run mcp on express app ([d51fa590e](https://github.com/powerhouse-inc/powerhouse/commit/d51fa590e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.14 (2025-08-11)
+
+### 🚀 Features
+
+- update document engineering dep ([54dcee90d](https://github.com/powerhouse-inc/powerhouse/commit/54dcee90d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.13 (2025-08-09)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add reducer code on codegen if it is set and allow --force option to overwrite reducers ([12751a8f5](https://github.com/powerhouse-inc/powerhouse/commit/12751a8f5))
+- **vetra:** run switchboard in dev mode to load local document models ([741c2ceb3](https://github.com/powerhouse-inc/powerhouse/commit/741c2ceb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.12 (2025-08-08)
 
 ### 🩹 Fixes

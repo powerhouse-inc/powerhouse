@@ -1,4 +1,3 @@
-import { type GenericDriveExplorerEditorProps } from "#editors/generic-drive-explorer/editor";
 import {
   createDocumentStory,
   type DocumentStory,
@@ -12,8 +11,7 @@ import {
   driveDocumentModelModule,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
-  type DocumentDriveState,
-  type IDocumentDriveServer,
+  type DocumentDriveState
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
@@ -57,7 +55,6 @@ export function createDriveStory(
             onAddAndSelectNewFolder: () => Promise.resolve(),
             getSyncStatusSync: () => undefined,
             showDeleteNodeModal: () => {},
-            setSelectedNode: () => {},
             getDocumentModelModule: () => undefined,
             getEditor: () => undefined,
             useDocumentEditorProps: () => ({

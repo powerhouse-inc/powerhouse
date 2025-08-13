@@ -2,6 +2,9 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
 force: true
 ---
+// TODO: remove eslint-disable rules once refactor is done
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { type StateReducer, isDocumentAction, createReducer } from "document-model";
 import { <%= 'type ' + h.changeCase.pascal(documentType) %>Document, z } from './types.js';
 

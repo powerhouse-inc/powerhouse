@@ -13,6 +13,7 @@ export type StartServerOptions = {
   dbPath?: string;
   drive?: DriveInput;
   packages?: string[];
+  remoteDrives?: string[];
   https?:
     | {
         keyPath: string;
@@ -26,6 +27,7 @@ export type StartServerOptions = {
     users: string[];
     admins: string[];
   };
+  mcp?: boolean;
 };
 
 export type SwitchboardReactor = {

@@ -207,6 +207,11 @@ describe("Synchronization Manager with memory adapters", () => {
     // Add document state operations using the document model's action creators
     const docOperations = [
       {
+        action: {
+          scope: "global",
+          type: "SET_STATE",
+          input: { state: { value: 1 } },
+        },
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
@@ -218,6 +223,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
+        action: {
+          scope: "global",
+          type: "SET_STATE",
+          input: { state: { value: 2 } },
+        },
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
@@ -299,6 +309,11 @@ describe("Synchronization Manager with memory adapters", () => {
     // Add document state operations with different timestamps
     const docOperations = [
       {
+        action: {
+          scope: "global",
+          type: "SET_STATE",
+          input: { state: { value: 1 } },
+        },
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
@@ -310,6 +325,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
+        action: {
+          scope: "global",
+          type: "SET_STATE",
+          input: { state: { value: 2 } },
+        },
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
@@ -321,6 +341,11 @@ describe("Synchronization Manager with memory adapters", () => {
         context: undefined,
       },
       {
+        action: {
+          scope: "global",
+          type: "SET_STATE",
+          input: { state: { value: 3 } },
+        },
         type: "SET_STATE",
         input: { state: { value: 3 } },
         hash: "hash3",

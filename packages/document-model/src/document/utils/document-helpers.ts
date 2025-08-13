@@ -1,9 +1,5 @@
 import stringify from "safe-stable-stringify";
-import {
-  type Action,
-  type DocumentOperations,
-  type Operation,
-} from "../types.js";
+import { type DocumentOperations, type Operation } from "../types.js";
 
 export type OperationIndex = {
   index: number;
@@ -135,6 +131,11 @@ export function addUndo(sortedOperations: Operation[]) {
       skip: 1,
       scope: latestOperation.scope,
       hash: latestOperation.hash,
+      action: {
+        type: "NOOP",
+        input: {},
+        scope: latestOperation.scope,
+      },
     });
   }
 
