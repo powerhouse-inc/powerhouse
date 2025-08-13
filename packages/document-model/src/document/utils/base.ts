@@ -1,6 +1,5 @@
 import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
-import { randomUUID } from "crypto";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -33,6 +32,7 @@ import {
   type ReducerOptions,
   type StateReducer,
 } from "../types.js";
+import { generateId } from "./crypto.js";
 import { sortOperations } from "./document-helpers.js";
 import {
   InvalidActionInputError,
@@ -103,7 +103,7 @@ export function createAction<TAction extends Action>(
   }
 
   const action: Action = {
-    id: randomUUID(),
+    id: generateId(),
     timestamp: new Date().toISOString(),
     type,
     input,

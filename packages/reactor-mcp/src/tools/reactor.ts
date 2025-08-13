@@ -387,6 +387,8 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       }
       const actions = params.actions.map((paramAction) => {
         const action = {
+          id: generateId(),
+          timestamp: new Date().toISOString(),
           ...paramAction,
           input: paramAction.input ?? {},
         };

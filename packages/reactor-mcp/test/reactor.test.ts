@@ -289,12 +289,9 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content).toStrictEqual([
-        {
-          text: 'Error: Invalid action {"type":"INVALID_ACTION","input":{},"scope":"global"}: Operation "INVALID_ACTION" is not defined in any module of the document model',
-          type: "text",
-        },
-      ]);
+      expect(result.content[0].text).toContain(
+        `Operation "INVALID_ACTION" is not defined in any module of the document model`,
+      );
     });
 
     it("should throw error on invalid action input", async () => {
@@ -317,9 +314,8 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content).toStrictEqual([
-        {
-          text: `Error: Invalid action {"type":"SET_MODEL_NAME","input":{"invalidField":"test"},"scope":"global"}: Input validation error: Invalid action input: [
+      expect(result.content[0].text)
+        .toContain(`Input validation error: Invalid action input: [
   {
     "code": "invalid_type",
     "expected": "string",
@@ -329,10 +325,7 @@ describe("ReactorMcpProvider", () => {
     ],
     "message": "Required"
   }
-]`,
-          type: "text",
-        },
-      ]);
+]`);
     });
 
     it("should throw error on action on non-existent document", async () => {

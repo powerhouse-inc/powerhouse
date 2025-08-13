@@ -3,6 +3,7 @@ import { type Meta, type StoryObj } from "@storybook/react";
 import {
   documentModelCreateExtendedState,
   documentModelReducer,
+  generateId,
 } from "document-model";
 import { v7 as uuidv7 } from "uuid";
 import { DocumentModelEditor } from "./editor.js";
@@ -231,6 +232,8 @@ type TestDefinition${id} {
           const newStateSchema = `${oldStateSchema}\n${newTypeDef}`;
 
           return {
+            id: generateId(),
+            timestamp: new Date().toISOString(),
             type: "SET_STATE_SCHEMA" as const,
             input: {
               schema: newStateSchema,
@@ -251,6 +254,8 @@ type TestLocalDefinition${id} {
           const newStateSchema = `${oldStateSchema}\n${newTypeDef}`;
 
           return {
+            id: generateId(),
+            timestamp: new Date().toISOString(),
             type: "SET_STATE_SCHEMA" as const,
             input: {
               schema: newStateSchema,
@@ -264,6 +269,8 @@ type TestLocalDefinition${id} {
             document.state.global.specifications[0].modules.length + 1;
 
           return {
+            id: generateId(),
+            timestamp: new Date().toISOString(),
             type: "ADD_MODULE" as const,
             input: {
               id: uuidv7(),
@@ -278,6 +285,8 @@ type TestLocalDefinition${id} {
           const operationIndex = module.operations.length + 1;
 
           return {
+            id: generateId(),
+            timestamp: new Date().toISOString(),
             type: "ADD_OPERATION" as const,
             input: {
               id: uuidv7(),
