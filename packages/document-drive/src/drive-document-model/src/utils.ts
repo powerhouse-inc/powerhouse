@@ -150,5 +150,5 @@ export function handleTargetNameCollisions(params: {
 
 export const isValidName = (name: string) => {
   // only allow characters that are valid in a URL
-  return /^[a-zA-Z0-9-_.\(\)]+$/.test(name);
+  return /^[a-zA-Z0-9-_.\s\(\)]+$/.test(name);
 };
