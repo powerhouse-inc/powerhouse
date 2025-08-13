@@ -126,8 +126,5 @@
     "optionalDependencies": {
         "@esbuild/linux-x64": "^0.21.4",
         "@rollup/rollup-linux-x64-musl": "4.14.3"
-    },
-    "dependencies": {
-        "usehooks-ts": "^3.1.1"
     }
 }
