@@ -200,8 +200,27 @@ export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
 }
 
 // TODO: implement better operation equality function
-export function operationsAreEqual(op1: Operation, op2: Operation): boolean {
-  return stringify(op1) === stringify(op2);
+export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
+  const a: any = op1 as any;
+  const b: any = op2 as any;
+
+  const aComparable = {
+    index: a.index,
+    skip: a.skip,
+    type: a.type ?? null,
+    scope: a.scope ?? null,
+    input: a.input ?? null,
+  };
+
+  const bComparable = {
+    index: b.index,
+    skip: b.skip,
+    type: b.type ?? null,
+    scope: b.scope ?? null,
+    input: b.input ?? null,
+  };
+
+  return stringify(aComparable) === stringify(bComparable);
 }
 
 // [T0:0 T1:0 T2:0 T3:0] + [B4:0 B5:0] = [T0:0 T1:0 T2:0 T3:0 B4:0 B5:0]
