@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import stringify from "safe-stable-stringify";
 import { type DocumentOperations, type Operation } from "../types.js";
 
@@ -124,14 +125,17 @@ export function addUndo(sortedOperations: Operation[]) {
     });
   } else {
     operationsCopy.push({
+      id: randomUUID(),
+      timestamp: new Date().toISOString(),
       type: "NOOP",
       index: latestOperation.index + 1,
-      timestamp: new Date().toISOString(),
       input: {},
       skip: 1,
       scope: latestOperation.scope,
       hash: latestOperation.hash,
       action: {
+        id: randomUUID(),
+        timestamp: new Date().toISOString(),
         type: "NOOP",
         input: {},
         scope: latestOperation.scope,

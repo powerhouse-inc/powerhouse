@@ -1,5 +1,6 @@
 import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
+import { randomUUID } from "crypto";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -102,6 +103,8 @@ export function createAction<TAction extends Action>(
   }
 
   const action: Action = {
+    id: randomUUID(),
+    timestamp: new Date().toISOString(),
     type,
     input,
     scope,
@@ -146,10 +149,9 @@ export function createReducer<TDocument extends PHDocument>(
   stateReducer: StateReducer<TDocument>,
   documentReducer = baseReducer,
 ): Reducer<TDocument> {
-  type TAction = Action;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
-    action: TAction,
+    action: Action,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
   ) => {

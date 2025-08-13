@@ -57,10 +57,10 @@ export type ActionContext = {
  * Defines the basic structure of an action.
  */
 export type Action = {
-  /** TODO: The id of the action. */
-  //id: string;
-  /** TODO: The timestamp of the action. */
-  //timestamp: string;
+  /** The id of the action. This is distinct from the operation id. */
+  id: string;
+  /** The timestamp of the action. */
+  timestamp: string;
   /** The name of the action. */
   type: string;
   /** The payload of the action. */
@@ -155,12 +155,11 @@ export type Operation = {
   error?: string;
   /** The resulting state after the operation */
   resultingState?: string;
-  /** Unique operation id */
-  id?: string;
+  /** Unique operation id. This is distinct from the action id. */
+  id: string;
+
   /**
    * The action that was applied to the document to produce this operation.
-   *
-   * TODO: this will not be optional in the future.
    */
   action: Action;
 };
