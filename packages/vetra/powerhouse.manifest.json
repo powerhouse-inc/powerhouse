@@ -30,6 +30,11 @@
             "id": "document-editor-editor",
             "name": "Document Editor",
             "documentTypes": ["powerhouse/document-editor"]
+        },
+        {
+            "id": "subgraph-module-editor",
+            "name": "Subgraph Module Editor",
+            "documentTypes": ["powerhouse/subgraph-module"]
         }
     ],
     "apps": [
