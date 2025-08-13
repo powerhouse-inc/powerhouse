@@ -129,6 +129,7 @@ export class DriveSubgraph extends Subgraph {
       skip: Int
       type: String!
       id: String!
+      actionId: String!
       input: String!
       hash: String!
       timestamp: String!
@@ -141,6 +142,7 @@ export class DriveSubgraph extends Subgraph {
       skip: Int
       type: String!
       id: String!
+      actionId: String!
       input: String!
       hash: String!
       timestamp: String!
