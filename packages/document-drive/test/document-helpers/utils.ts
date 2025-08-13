@@ -1,4 +1,4 @@
-import { Action, generateId, type Operation } from "document-model";
+import { type Action, generateId, type Operation } from "document-model";
 import { randomUUID } from "node:crypto";
 
 export const fakeAction = (

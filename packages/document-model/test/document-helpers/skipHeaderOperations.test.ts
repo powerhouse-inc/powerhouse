@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Operation } from "../../index.js";
+import { type Operation } from "../../index.js";
 import { skipHeaderOperations } from "../../src/document/utils/document-helpers.js";
 
 const fakeOperation = (

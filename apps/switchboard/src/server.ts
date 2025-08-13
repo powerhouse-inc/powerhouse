@@ -92,7 +92,6 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     defaultDriveUrl = await addDefaultDrive(reactor, options.drive, serverPort);
   }
 
-
   // start vite server if dev mode is enabled
   const vite = dev ? await startViteServer() : undefined;
 
