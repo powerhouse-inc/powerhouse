@@ -18,6 +18,10 @@
         {
             "id": "powerhouse/subgraph-module",
             "name": "Subgraph Module"
+        },
+        {
+            "id": "powerhouse/processor",
+            "name": "Processor Module"
         }
     ],
     "editors": [
