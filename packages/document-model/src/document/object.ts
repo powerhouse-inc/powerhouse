@@ -5,7 +5,6 @@ import {
   type AttachmentRef,
   type BaseDocument,
   type BaseState,
-  type Operation,
   type Reducer,
   type ReducerOptions,
 } from "./types.js";
@@ -47,10 +46,7 @@ export abstract class BaseDocumentClass<
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(
-    action: TCustomAction | Operation,
-    options?: ReducerOptions,
-  ) {
+  protected dispatch(action: TCustomAction, options?: ReducerOptions) {
     this._document = this._reducer(
       this._document,
       action,

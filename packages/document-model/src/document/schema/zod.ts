@@ -128,6 +128,8 @@ export const RedoActionInputSchema = z.number;
 
 export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
   return z.object({
+    id: z.string(),
+    timestamp: z.string().datetime(),
     input: RedoActionInputSchema(),
     type: RedoSchema,
     scope: OperationScopeSchema(),
@@ -138,6 +140,8 @@ export const SetNameActionInputSchema = z.string;
 
 export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
   return z.object({
+    id: z.string(),
+    timestamp: z.string().datetime(),
     input: SetNameActionInputSchema(),
     type: Set_NameSchema,
     scope: z.literal("global"),
@@ -161,6 +165,8 @@ export const UndoActionInputSchema = z.number;
 
 export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
   return z.object({
+    id: z.string(),
+    timestamp: z.string().datetime(),
     input: UndoActionInputSchema(),
     type: UndoSchema,
     scope: OperationScopeSchema(),

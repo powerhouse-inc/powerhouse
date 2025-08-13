@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   type Action,
   type Operation,
@@ -5,6 +6,16 @@ import {
   type StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
+
+export const fakeAction = (
+  // including some of the operation fields while we refactor
+  params: Partial<Action> & { index?: number; hash?: string; skip?: number },
+): Action =>
+  ({
+    id: randomUUID(),
+    timestamp: new Date().toISOString(),
+    ...params,
+  }) as Action;
 
 // Empty reducer that supports base actions
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

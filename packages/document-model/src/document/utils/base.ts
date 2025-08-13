@@ -32,6 +32,7 @@ import {
   type ReducerOptions,
   type StateReducer,
 } from "../types.js";
+import { generateId } from "./crypto.js";
 import { sortOperations } from "./document-helpers.js";
 import {
   InvalidActionInputError,
@@ -102,6 +103,8 @@ export function createAction<TAction extends Action>(
   }
 
   const action: Action = {
+    id: generateId(),
+    timestamp: new Date().toISOString(),
     type,
     input,
     scope,
@@ -146,10 +149,9 @@ export function createReducer<TDocument extends PHDocument>(
   stateReducer: StateReducer<TDocument>,
   documentReducer = baseReducer,
 ): Reducer<TDocument> {
-  type TAction = Action;
   const reducer: Reducer<TDocument> = (
     document: TDocument,
-    action: TAction,
+    action: Action,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
   ) => {
@@ -410,7 +412,8 @@ export function replayDocument<TDocument extends PHDocument>(
   // then replays them
   if (operationsToReplay.length) {
     result = operationsToReplay.reduce((document, operation) => {
-      const doc = reducer(document, operation, dispatch, {
+      // TODO: fix this once refactor is complete
+      const doc = reducer(document, operation as Action, dispatch, {
         skip: operation.skip,
         ignoreSkipOperations: true,
         hash: !checkHashes ? operation.hash : undefined,

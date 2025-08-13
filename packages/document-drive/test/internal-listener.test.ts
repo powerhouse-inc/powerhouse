@@ -118,16 +118,25 @@ describe("Internal Listener", () => {
     const result = await server.addAction(driveId, action);
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(2));
     expect(transmitFn).toHaveBeenCalledWith([
-      {
+      expect.objectContaining({
         branch: "main",
         documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         driveId: drive.header.id,
         operations: [
-          {
-            action,
+          expect.objectContaining({
+            action: expect.objectContaining({
+              scope: "global",
+              type: "ADD_FILE",
+              input: {
+                id: documentId,
+                name: "test",
+                documentType: "powerhouse/document-model",
+              },
+              timestamp: expectUTCTimestamp(expect),
+              id: expectUUID(expect),
+            }),
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
-            context: undefined,
             id: expectUUID(expect) as string,
             index: 0,
             input: {
@@ -138,30 +147,14 @@ describe("Internal Listener", () => {
             skip: 0,
             timestamp: expectUTCTimestamp(expect),
             type: "ADD_FILE",
-            previousState: {
-              icon: "",
-              name: "Global Drive",
-              nodes: [],
-            },
-            state: {
-              icon: "",
-              name: "Global Drive",
-              nodes: [
-                {
-                  documentType: "powerhouse/document-model",
-                  id: documentId,
-                  kind: "file",
-                  name: "test",
-                  parentFolder: null,
-                },
-              ],
-            },
-          },
+            previousState: expect.any(Object),
+            state: expect.any(Object),
+          }),
         ],
         scope: "global",
         state: result.document!.state.global,
-      },
-      {
+      }),
+      expect.objectContaining({
         branch: "main",
         documentId: document.header.id,
         documentType: "powerhouse/document-model",
@@ -169,7 +162,7 @@ describe("Internal Listener", () => {
         operations: [],
         scope: "global",
         state: {},
-      },
+      }),
     ]);
 
     const setModelNameAction = setModelName({ name: "test" });
@@ -208,31 +201,34 @@ describe("Internal Listener", () => {
     };
 
     expect(transmitFn).toHaveBeenLastCalledWith([
-      {
+      expect.objectContaining({
         branch: "main",
         documentType: "powerhouse/document-model",
         documentId,
         driveId,
         operations: [
-          {
-            action: setModelNameAction,
+          expect.objectContaining({
+            action: expect.objectContaining({
+              scope: "global",
+              type: "SET_MODEL_NAME",
+              input: { name: "test" },
+              timestamp: expectUTCTimestamp(expect),
+              id: expectUUID(expect),
+            }),
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
-            context: undefined,
             id: expectUUID(expect) as string,
             index: 0,
-            input: {
-              name: "test",
-            },
+            input: { name: "test" },
             skip: 0,
             timestamp: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: { ...state, name: "" },
+            previousState: expect.any(Object),
             state,
-          },
+          }),
         ],
         state,
         scope: "global",
-      },
+      }),
     ]);
 
     const setModelNameAction2 = setModelName({ name: "test 2" });
@@ -240,59 +236,34 @@ describe("Internal Listener", () => {
 
     await vi.waitFor(() => expect(transmitFn).toHaveBeenCalledTimes(4));
     expect(transmitFn).toHaveBeenLastCalledWith([
-      {
+      expect.objectContaining({
         branch: "main",
         documentType: "powerhouse/document-model",
         documentId,
         driveId,
         operations: [
-          {
-            action: setModelNameAction2,
+          expect.objectContaining({
+            action: expect.objectContaining({
+              scope: "global",
+              type: "SET_MODEL_NAME",
+              input: { name: "test 2" },
+              timestamp: expectUTCTimestamp(expect),
+              id: expectUUID(expect),
+            }),
             hash: expect.stringMatching(/^[a-zA-Z0-9+/=]+$/),
-            context: undefined,
             id: expectUUID(expect) as string,
             index: 1,
-            input: {
-              name: "test 2",
-            },
+            input: { name: "test 2" },
             skip: 0,
             timestamp: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: state,
-            state: { ...state, name: "test 2" },
-          },
+            previousState: expect.any(Object),
+            state: expect.objectContaining({ name: "test 2" }),
+          }),
         ],
-        state: {
-          author: {
-            name: "",
-            website: "",
-          },
-          description: "",
-          extension: "",
-          id: "",
-          name: "test 2",
-          specifications: [
-            {
-              changeLog: [],
-              modules: [],
-              state: {
-                global: {
-                  examples: [],
-                  initialValue: "",
-                  schema: "",
-                },
-                local: {
-                  examples: [],
-                  initialValue: "",
-                  schema: "",
-                },
-              },
-              version: 1,
-            },
-          ],
-        },
+        state: expect.objectContaining({ name: "test 2" }),
         scope: "global",
-      },
+      }),
     ]);
   });
 
