@@ -1,3 +1,13 @@
+## 4.1.0-dev.18 (2025-08-14)
+
+### 🩹 Fixes
+
+- overly aggressive linter fixes ([e074de3df](https://github.com/powerhouse-inc/powerhouse/commit/e074de3df))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.17 (2025-08-12)
 
 ### 🚀 Features

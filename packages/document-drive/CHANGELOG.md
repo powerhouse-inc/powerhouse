@@ -1,3 +1,17 @@
+## 4.1.0-dev.18 (2025-08-14)
+
+### 🩹 Fixes
+
+- overly aggressive linter fixes ([e074de3df](https://github.com/powerhouse-inc/powerhouse/commit/e074de3df))
+- **builder-tools:** use correct config path when regenerating external packages ([4e89c38f0](https://github.com/powerhouse-inc/powerhouse/commit/4e89c38f0))
+- **document-drive:** whoops -- allow spaces as well ([edb3a5243](https://github.com/powerhouse-inc/powerhouse/commit/edb3a5243))
+- **document-drive:** disallow document creation with invalid names ([1abeeb108](https://github.com/powerhouse-inc/powerhouse/commit/1abeeb108))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.17 (2025-08-12)
 
 ### 🚀 Features

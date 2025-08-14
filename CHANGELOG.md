@@ -1,3 +1,30 @@
+## 4.1.0-dev.18 (2025-08-14)
+
+### 🚀 Features
+
+- added subgraph module to vetra package ([#1757](https://github.com/powerhouse-inc/powerhouse/pull/1757))
+- added processor document model in vetra package ([#1758](https://github.com/powerhouse-inc/powerhouse/pull/1758))
+- **vetra:** initialize PH app and set selected node on document open ([ae5f1cf05](https://github.com/powerhouse-inc/powerhouse/commit/ae5f1cf05))
+
+### 🩹 Fixes
+
+- overly aggressive linter fixes ([e074de3df](https://github.com/powerhouse-inc/powerhouse/commit/e074de3df))
+- **builder-tools:** use correct config path when regenerating external packages ([afbe7ea04](https://github.com/powerhouse-inc/powerhouse/commit/afbe7ea04))
+- **builder-tools:** support cjs requires of react and react-dom on external packages and enable sourcemap ([d9b84a69f](https://github.com/powerhouse-inc/powerhouse/commit/d9b84a69f))
+- **builder-tools:** use correct config path when regenerating external packages ([4e89c38f0](https://github.com/powerhouse-inc/powerhouse/commit/4e89c38f0))
+- **document-drive:** disallow document creation with invalid names ([1abeeb108](https://github.com/powerhouse-inc/powerhouse/commit/1abeeb108))
+- **document-drive:** whoops -- allow spaces as well ([edb3a5243](https://github.com/powerhouse-inc/powerhouse/commit/edb3a5243))
+- **reactor-api:** forward auth token from gateway to subgraphs ([e2986955c](https://github.com/powerhouse-inc/powerhouse/commit/e2986955c))
+- **reactor-api:** add missing actionId field to GraphQL operation types ([12060376c](https://github.com/powerhouse-inc/powerhouse/commit/12060376c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.17 (2025-08-12)
 
 ### 🚀 Features
