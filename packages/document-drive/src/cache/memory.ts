@@ -1,4 +1,3 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { type PHDocument } from "document-model";
 import { type ICache } from "./types.js";
 import { trimResultingState } from "./util.js";
@@ -52,21 +51,14 @@ export class CacheStorageManager implements ICacheStorageManager {
 class InMemoryCache implements ICache {
   private cacheStorageManager: ICacheStorageManager;
   private idToDocument: ICacheStorage<PHDocument>;
-  private idToDrive: ICacheStorage<DocumentDriveDocument>;
-  private slugToDriveId: ICacheStorage<string>;
 
   constructor(private cache: ICacheStorage = new Map<string, unknown>()) {
     this.cacheStorageManager = new CacheStorageManager(cache);
     this.idToDocument = this.cacheStorageManager.createStorage<PHDocument>();
-    this.idToDrive =
-      this.cacheStorageManager.createStorage<DocumentDriveDocument>();
-    this.slugToDriveId = this.cacheStorageManager.createStorage<string>();
   }
 
   clear() {
     this.idToDocument.clear();
-    this.idToDrive.clear();
-    this.slugToDriveId.clear();
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -86,56 +78,6 @@ class InMemoryCache implements ICache {
 
   async deleteDocument(documentId: string) {
     return this.idToDocument.delete(documentId);
-  }
-
-  async setDrive(driveId: string, drive: DocumentDriveDocument) {
-    const doc = trimResultingState(drive);
-    this.idToDrive.set(driveId, doc);
-  }
-
-  async getDrive(driveId: string): Promise<DocumentDriveDocument | undefined> {
-    return this.idToDrive.get(driveId);
-  }
-
-  async deleteDrive(driveId: string) {
-    // look up the slug
-    const drive = this.idToDrive.get(driveId);
-    if (!drive) {
-      return false;
-    }
-
-    const slug = drive.header.slug.length > 0 ? drive.header.slug : driveId;
-    if (slug) {
-      this.slugToDriveId.delete(slug);
-    }
-
-    return this.idToDrive.delete(driveId);
-  }
-
-  async setDriveBySlug(slug: string, drive: DocumentDriveDocument) {
-    const driveId = drive.header.id;
-    this.slugToDriveId.set(slug, driveId);
-    this.setDrive(driveId, drive);
-  }
-
-  async getDriveBySlug(
-    slug: string,
-  ): Promise<DocumentDriveDocument | undefined> {
-    const driveId = this.slugToDriveId.get(slug);
-    if (!driveId) {
-      return undefined;
-    }
-    return this.getDrive(driveId);
-  }
-
-  async deleteDriveBySlug(slug: string) {
-    const driveId = this.slugToDriveId.get(slug);
-    if (!driveId) {
-      return false;
-    }
-
-    this.slugToDriveId.delete(slug);
-    return this.deleteDrive(driveId);
   }
 }
 

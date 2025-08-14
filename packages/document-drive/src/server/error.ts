@@ -9,6 +9,7 @@ export class DocumentModelNotFoundError extends Error {
     super(`Document model "${id}" not found`, { cause });
   }
 }
+
 export class OperationError extends Error {
   status: ErrorStatus;
   operation: Operation | undefined;
@@ -74,6 +75,12 @@ export class DocumentNotFoundError extends Error {
     super(`Document with id ${documentId} not found`);
 
     this.documentId = documentId;
+  }
+}
+
+export class DocumentSlugNotFoundError extends Error {
+  constructor(public slug: string) {
+    super(`Document with slug "${slug}" not found`);
   }
 }
 
