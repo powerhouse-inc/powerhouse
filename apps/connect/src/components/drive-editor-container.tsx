@@ -33,7 +33,7 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-    const { addDriveOperations, getSyncStatusSync } = useDocumentDriveServer();
+    const { addDriveOperation, getSyncStatusSync } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedDocument = useSelectedDocument();
     const nodeActions = useNodeActions();
@@ -46,9 +46,9 @@ export function DriveEditorContainer() {
             if (!selectedDrive?.header.id) {
                 throw new Error('No drive selected');
             }
-            await addDriveOperations(selectedDrive.header.id, [operation]);
+            await addDriveOperation(selectedDrive.header.id, operation);
         },
-        [addDriveOperations, selectedDrive?.header.id],
+        [addDriveOperation, selectedDrive?.header.id],
     );
 
     const editorProps = useEditorProps(

@@ -43,10 +43,10 @@ import {
 } from 'document-drive';
 import {
     type GetDocumentOptions,
+    type IOperationResult,
     type Listener,
 } from 'document-drive/server/types';
 import {
-    type Action,
     type Operation,
     type PHDocument,
     createPresignedHeader,
@@ -56,78 +56,57 @@ import { useCallback, useMemo } from 'react';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
 import { useUserPermissions } from './useUserPermissions.js';
 
-function deduplicateOperations<TAction extends Action = Action>(
-    existingOperations: Record<string, Operation[]>,
-    operationsToDeduplicate: Operation[],
-) {
-    // make a set of all the operation indices for each scope to avoid duplicates
-    const operationIndicesByScope = {} as Record<string, Set<number>>;
-    for (const scope of Object.keys(existingOperations)) {
-        operationIndicesByScope[scope] = new Set(
-            existingOperations[scope].map(op => op.index),
-        );
-    }
-
-    const newOperations: Operation[] = [];
-
-    for (const operation of operationsToDeduplicate) {
+function groupOperationsByScope(
+    operations: Operation[],
+): Map<string, Operation[]> {
+    const groupedOperations = new Map<string, Operation[]>();
+    for (const operation of operations) {
         const scope = operation.scope;
-        const index = operation.index;
-        if (operationIndicesByScope[scope].has(index)) {
-            const duplicatedExistingOperation = existingOperations[scope].find(
-                op => op.index === index,
-            );
-            const duplicatedNewOperation = newOperations.find(
-                op => op.index === index,
-            );
-            console.warn('skipping duplicate operation');
-            if (duplicatedExistingOperation) {
-                console.warn(
-                    'duplicate existing operation',
-                    duplicatedExistingOperation,
-                );
-            }
-            if (duplicatedNewOperation) {
-                console.warn('duplicate new operation', duplicatedNewOperation);
-            }
-            continue;
-        }
-        newOperations.push(operation);
-        operationIndicesByScope[scope].add(index);
+        const scopeOperations =
+            groupedOperations.get(scope) ?? new Array<Operation>();
+        scopeOperations.push(operation);
+        groupedOperations.set(scope, scopeOperations);
     }
+    return groupedOperations;
+}
 
-    const uniqueOperationHashes = new Set<string>();
-    const operationsDedupedByHash: Operation[] = [];
+function deduplicateOperationsByScope(
+    operationsByScope: Map<string, Operation[]>,
+): Map<string, Operation[]> {
+    const deduplicatedOperationsByScope = new Map<string, Operation[]>();
+    for (const [scope, operations] of operationsByScope) {
+        const deduplicatedOperations =
+            deduplicatedOperationsByScope.get(scope) ?? new Array<Operation>();
 
-    for (const [scope, operations] of Object.entries(existingOperations)) {
         for (const operation of operations) {
-            const hash = operation.hash;
-            if (uniqueOperationHashes.has(hash)) {
-                console.warn(
-                    'skipping existing operation with duplicate hash in scope',
-                    scope,
-                    operation,
-                );
+            const duplicateOperation = deduplicatedOperations.find(
+                op => op.index === operation.index,
+            );
+            if (duplicateOperation) {
+                if (
+                    duplicateOperation.action.type === operation.action.type &&
+                    JSON.stringify(duplicateOperation.action.input) ===
+                        JSON.stringify(operation.action.input)
+                ) {
+                    console.warn(
+                        `skipping duplicate operations with index '${operation.index}'`,
+                        duplicateOperation,
+                        operation,
+                    );
+                } else {
+                    console.warn(
+                        `skipping duplicate operations with index '${operation.index}' but different actions`,
+                        duplicateOperation,
+                        operation,
+                    );
+                }
                 continue;
             }
-            uniqueOperationHashes.add(hash);
+            deduplicatedOperations.push(operation);
         }
+        deduplicatedOperationsByScope.set(scope, deduplicatedOperations);
     }
-
-    for (const operation of newOperations) {
-        const hash = operation.hash;
-        if (uniqueOperationHashes.has(hash)) {
-            console.warn(
-                'skipping new operation with duplicate hash in scope',
-                operation.scope,
-                operation,
-            );
-            continue;
-        }
-        uniqueOperationHashes.add(hash);
-        operationsDedupedByHash.push(operation);
-    }
-    return operationsDedupedByHash;
+    return deduplicatedOperationsByScope;
 }
 
 export function useDocumentDriveServer() {
@@ -162,7 +141,7 @@ export function useDocumentDriveServer() {
     );
 
     const addDriveOperation = useCallback(
-        async (driveId: string, action: DocumentDriveAction) => {
+        async (driveId: string, operationToAdd: Operation) => {
             if (!reactor) {
                 return;
             }
@@ -172,20 +151,23 @@ export function useDocumentDriveServer() {
                 return;
             }
 
-            const driveCopy = { ...oldDrive };
+            const actionWithContext = addActionContext(
+                operationToAdd.action,
+                connectDid,
+                user,
+            );
+            const operation: Operation = {
+                ...operationToAdd,
+                action: {
+                    ...operationToAdd.action,
+                    context: {
+                        ...operationToAdd.action.context,
+                        ...actionWithContext.context,
+                    },
+                },
+            };
 
-            const newDrive = documentDriveReducer(
-                oldDrive,
-                addActionContext(action, connectDid, user),
-            );
-            const scope = action.scope;
-            const operations = newDrive.operations[scope];
-            const operation = operations.findLast(
-                op => op.type === action.type,
-            );
-            if (!operation) {
-                throw new Error('There was an error applying the operation');
-            }
+            const driveCopy = { ...oldDrive };
 
             // sign operation
             const signedOperation = await signOperation(
@@ -216,29 +198,42 @@ export function useDocumentDriveServer() {
         [reactor, drives, sign, user, connectDid],
     );
 
-    // TODO: why does addDriveOperation do signing but adding multiple operations does not?
-    const addDriveOperations = useCallback(
-        async (driveId: string, operationsToAdd: Operation[]) => {
+    const addDriveAction = useCallback(
+        async (driveId: string, action: DocumentDriveAction) => {
             if (!reactor) {
                 return;
             }
-            const drive = await reactor.getDrive(driveId);
 
-            const dedupedOperations = deduplicateOperations(
-                drive.operations,
-                operationsToAdd,
-            );
-
-            const result = await reactor.queueOperations(
-                driveId,
-                dedupedOperations,
-            );
-            if (result.status !== 'SUCCESS') {
-                logger.error(result.error);
+            const oldDrive = drives?.find(drive => drive.header.id === driveId);
+            if (!oldDrive) {
+                return;
             }
-            return result.document;
+
+            const driveCopy = { ...oldDrive };
+
+            const newDrive = documentDriveReducer(oldDrive, action);
+            const scope = action.scope;
+            const operations = newDrive.operations[scope];
+            const operation = operations.findLast(
+                op => op.type === action.type,
+            );
+            if (!operation) {
+                throw new Error('There was an error applying the action');
+            }
+
+            // sign operation
+            const signedOperation = await signOperation(
+                operation,
+                sign,
+                driveId,
+                driveCopy,
+                documentDriveReducer,
+                user,
+            );
+
+            return addDriveOperation(driveId, signedOperation);
         },
-        [reactor],
+        [reactor, drives, sign, user, connectDid, addDriveOperation],
     );
 
     const addDocumentOperations = useCallback(
@@ -246,19 +241,22 @@ export function useDocumentDriveServer() {
             if (!reactor) {
                 return;
             }
-            const document = await reactor.getDocument(documentId);
-            const newOperations = deduplicateOperations(
-                document.operations,
-                operationsToAdd,
-            );
-            const result = await reactor.queueOperations(
-                documentId,
-                newOperations,
-            );
-            if (result.status !== 'SUCCESS') {
-                logger.error(result.error);
+
+            const operationsPerScope = groupOperationsByScope(operationsToAdd);
+            const deduplicatedOperationsPerScope =
+                deduplicateOperationsByScope(operationsPerScope);
+
+            let result: IOperationResult | undefined;
+            for (const operations of deduplicatedOperationsPerScope.values()) {
+                result = await reactor.queueOperations(documentId, operations);
+                if (result.status !== 'SUCCESS') {
+                    break;
+                }
             }
-            return result.document;
+            if (result?.status !== 'SUCCESS') {
+                logger.error(result?.error);
+            }
+            return result?.document;
         },
         [reactor],
     );
@@ -311,7 +309,7 @@ export function useDocumentDriveServer() {
                 parentFolder: parentFolder ?? null,
             });
 
-            const newDrive = await addDriveOperation(driveId, action);
+            const newDrive = await addDriveAction(driveId, action);
 
             const node = newDrive?.state.global.nodes.find(
                 node => node.id === documentId,
@@ -408,7 +406,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to update files');
             }
-            const drive = await addDriveOperation(
+            const drive = await addDriveAction(
                 driveId,
                 baseUpdateFile({
                     id: nodeId,
@@ -435,7 +433,7 @@ export function useDocumentDriveServer() {
                 throw new Error('User is not allowed to create folders');
             }
             const folderId = generateId();
-            const drive = await addDriveOperation(
+            const drive = await addDriveAction(
                 driveId,
                 baseAddFolder({
                     id: folderId,
@@ -460,7 +458,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to delete documents');
             }
-            await addDriveOperation(
+            await addDriveAction(
                 driveId,
                 baseDeleteNode({
                     id: nodeId,
@@ -479,7 +477,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to rename documents');
             }
-            const drive = await addDriveOperation(
+            const drive = await addDriveAction(
                 driveId,
                 updateNode({
                     id: nodeId,
@@ -505,7 +503,7 @@ export function useDocumentDriveServer() {
             }
             if (!selectedDrive?.header.id) return;
 
-            await addDriveOperation(
+            await addDriveAction(
                 selectedDrive.header.id,
                 baseMoveNode({
                     srcFolder: src.id,
@@ -616,7 +614,7 @@ export function useDocumentDriveServer() {
             if (!isAllowedToCreateDocuments) {
                 throw new Error('User is not allowed to rename drives');
             }
-            const renamedDrive = await addDriveOperation(
+            const renamedDrive = await addDriveAction(
                 driveId,
                 setDriveName({ name }),
             );
@@ -632,7 +630,7 @@ export function useDocumentDriveServer() {
                     'User is not allowed to change drive availability',
                 );
             }
-            const updatedDrive = await addDriveOperation(
+            const updatedDrive = await addDriveAction(
                 driveId,
                 setAvailableOffline({ availableOffline }),
             );
@@ -648,7 +646,7 @@ export function useDocumentDriveServer() {
                     'User is not allowed to change drive availability',
                 );
             }
-            const updatedDrive = await addDriveOperation(
+            const updatedDrive = await addDriveAction(
                 driveId,
                 setSharingType({ type: sharingType }),
             );
@@ -712,7 +710,7 @@ export function useDocumentDriveServer() {
 
     const removeTrigger = useCallback(
         async (driveId: string, triggerId: string) => {
-            const drive = await addDriveOperation(
+            const drive = await addDriveAction(
                 driveId,
                 baseRemoveTrigger({ triggerId }),
             );
@@ -793,7 +791,7 @@ export function useDocumentDriveServer() {
 
     const addTrigger = useCallback(
         async (driveId: string, trigger: Trigger) => {
-            const drive = await addDriveOperation(
+            const drive = await addDriveAction(
                 driveId,
                 baseAddTrigger({ trigger }),
             );
@@ -816,7 +814,6 @@ export function useDocumentDriveServer() {
             addDocument,
             addDocumentOperations,
             addDriveOperation,
-            addDriveOperations,
             addFile,
             addFolder,
             openFile,
@@ -842,7 +839,6 @@ export function useDocumentDriveServer() {
             addDocument,
             addDocumentOperations,
             addDriveOperation,
-            addDriveOperations,
             addFile,
             addFolder,
             openFile,
