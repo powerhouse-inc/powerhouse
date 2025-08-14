@@ -83,13 +83,9 @@ export type ReducerOptions = {
   skip?: number;
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
-  /** a hash to use */
-  // TODO: REMOVE -- set on replayOptions.hash
-  hash?: string;
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
   /** if true checks the hashes of the operations */
-  // TODO: REMOVE -- just use replayOptions.hash
   checkHashes?: boolean;
   /** Options for performing a replay. */
   replayOptions?: {

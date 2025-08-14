@@ -415,7 +415,7 @@ export function replayDocument<TDocument extends PHDocument>(
       const doc = reducer(document, operation.action, dispatch, {
         skip: operation.skip,
         ignoreSkipOperations: true,
-        hash: !checkHashes ? operation.hash : undefined,
+        checkHashes,
         replayOptions: {
           operation,
         },

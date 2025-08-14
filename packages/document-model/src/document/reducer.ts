@@ -517,8 +517,11 @@ export function baseReducer<TDocument extends PHDocument>(
   // an hash and uses it instead of generating it
   const scope = _action.scope || "global";
   let hash = hashDocumentStateForScope(newDocument, scope);
-  if (options.hash && options.hash !== "") {
-    hash = options.hash;
+  if (
+    options.replayOptions?.operation.hash &&
+    options.replayOptions.operation.hash !== ""
+  ) {
+    hash = options.replayOptions.operation.hash;
   }
 
   // updates the last operation with the hash of the resulting state
