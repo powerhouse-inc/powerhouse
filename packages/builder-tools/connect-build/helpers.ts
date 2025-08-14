@@ -15,10 +15,26 @@ export async function bundleExternalPackages(
     bundle: true,
     treeShaking: true,
     minify: true,
+    sourcemap: true,
     metafile: true,
     format: "esm",
-    logLevel: "error",
-    external: ["react", "react-dom"],
+    logLevel: "warning",
+    external: ["react", "react-dom", "react/*", "react-dom/*"],
+    banner: {
+      // https://stackoverflow.com/a/77753164 - handle cjs requires of external dependencies
+      js: `import * as requireReact from 'react';
+           import * as requireReactDom from 'react-dom';
+           import * as requireReactDomClient from 'react-dom/client';
+           import * as requireReactJsxRuntime from 'react/jsx-runtime';
+
+           function require(m) {
+             if (m === 'react') return requireReact;
+             if (m === 'react-dom') return requireReactDom;
+             if (m === 'react-dom/client') return requireReactDomClient;
+             if (m === 'react/jsx-runtime') return requireReactJsxRuntime;
+             throw new Error(\`Module \${m} not found\`);
+           }`,
+    },
     define: {
       "process.env.NODE_ENV": '"production"',
     },

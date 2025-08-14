@@ -2,7 +2,6 @@ import { actionSigner } from "#document/ph-factories.js";
 import {
   type Action,
   type ActionSigner,
-  type Operation,
   type PHReducer,
   type ReducerOptions,
   type SignalDispatch,
@@ -96,7 +95,8 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      action: operation,
+      // TODO: fix this once refactor is complete
+      action: operation as Action,
       signer,
       previousStateHash: "",
     });
@@ -137,7 +137,8 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      action: operation,
+      // TODO: fix this once refactor is complete
+      action: operation as Action,
       signer,
       previousStateHash: hash,
     });
@@ -181,7 +182,7 @@ describe("Crypto utils", () => {
     const action = increment();
     const reducer = ((
       document: CountDocument,
-      action: Action | Operation,
+      action: Action,
       dispatch?: SignalDispatch,
       options?: ReducerOptions,
     ) => {

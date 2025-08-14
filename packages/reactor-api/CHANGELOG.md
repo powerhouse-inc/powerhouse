@@ -1,3 +1,15 @@
+## 4.1.0-dev.18 (2025-08-14)
+
+### 🩹 Fixes
+
+- **reactor-api:** add missing actionId field to GraphQL operation types ([12060376c](https://github.com/powerhouse-inc/powerhouse/commit/12060376c))
+- **reactor-api:** forward auth token from gateway to subgraphs ([e2986955c](https://github.com/powerhouse-inc/powerhouse/commit/e2986955c))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.17 (2025-08-12)
 
 ### 🚀 Features

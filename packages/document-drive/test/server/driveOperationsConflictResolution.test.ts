@@ -68,6 +68,8 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   [
     "PrismaStorage",
     async () => {
+      process.env.DATABASE_URL =
+        "postgres://postgres:postgres@localhost:5444/postgres?sslmode=disable&connect_timeout=30";
       const prisma = new PrismaClient();
       await prisma.$executeRawUnsafe('DELETE FROM "Attachment";');
       await prisma.$executeRawUnsafe('DELETE FROM "Operation";');

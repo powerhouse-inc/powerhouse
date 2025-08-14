@@ -14,6 +14,7 @@ import {
   type CountDocument,
   countReducer,
   error,
+  fakeAction,
   increment,
   wrappedEmptyReducer,
 } from "../helpers.js";
@@ -25,11 +26,14 @@ describe("Base reducer", () => {
 
   it("should update revision", async () => {
     const document = baseCreateDocument();
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
     expect(newDocument.header.revision.global).toBe(1);
   });
 
@@ -40,11 +44,14 @@ describe("Base reducer", () => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
     });
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
     expect(
       newDocument.header.lastModifiedAtUtcIso >
         document.header.lastModifiedAtUtcIso,
@@ -55,11 +62,14 @@ describe("Base reducer", () => {
   it("should update global operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
     const document = baseCreateDocument();
-    const newDocument = wrappedEmptyReducer(document, {
-      type: "TEST",
-      input: {},
-      scope: "global",
-    });
+    const newDocument = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     expect(newDocument.operations.global).toMatchObject([
       {
@@ -87,6 +97,8 @@ describe("Base reducer", () => {
   it("should create SET_NAME action", () => {
     const setNameAction = setName("Document");
     expect(setNameAction).toStrictEqual({
+      id: setNameAction.id,
+      timestamp: setNameAction.timestamp,
       type: SET_NAME,
       input: "Document",
       scope: "global",
@@ -106,11 +118,14 @@ describe("Base reducer", () => {
   it("should throw error on invalid base action", async () => {
     const document = baseCreateDocument();
     expect(() =>
-      wrappedEmptyReducer(document, {
-        type: "SET_NAME",
-        input: 0 as unknown as string,
-        scope: "global",
-      }),
+      wrappedEmptyReducer(
+        document,
+        fakeAction({
+          type: "SET_NAME",
+          input: 0 as unknown as string,
+          scope: "global",
+        }),
+      ),
     ).toThrow();
   });
 
@@ -133,11 +148,11 @@ describe("Base reducer", () => {
       return _state;
     });
 
-    const triggerAction: Action = {
+    const triggerAction: Action = fakeAction({
       type: "CREATE_DOCUMENT",
       input: "",
       scope: "global",
-    };
+    });
 
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
@@ -150,25 +165,34 @@ describe("Base reducer", () => {
 
   it("should throw an error when there is a missing index operation", () => {
     let document = baseCreateDocument();
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_0",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_1",
-      input: {},
-      scope: "global",
-    });
-
-    expect(() => {
-      wrappedEmptyReducer(document, {
-        type: "TEST_2",
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_0",
         input: {},
         scope: "global",
-        index: 3,
-      });
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_1",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    expect(() => {
+      wrappedEmptyReducer(
+        document,
+        fakeAction({
+          type: "TEST_2",
+          input: {},
+          scope: "global",
+          index: 3,
+        }),
+      );
     }).toThrow(
       "Missing operations: expected 2 with skip 0 or equivalent, got index 3 with skip 0",
     );
@@ -176,27 +200,33 @@ describe("Base reducer", () => {
 
   it("should throw an error when there is a missing index operation + skip", () => {
     let document = baseCreateDocument();
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_0",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_0",
+        input: {},
+        scope: "global",
+      }),
+    );
 
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_1",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_1",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     expect(() => {
       wrappedEmptyReducer(
         document,
-        {
+        fakeAction({
           type: "TEST_2",
           input: {},
           scope: "global",
           index: 4,
-        },
+        }),
         undefined,
         { skip: 1 },
       );
@@ -207,26 +237,32 @@ describe("Base reducer", () => {
 
   it("should not throw an error when there is a valid index operation + skip", () => {
     let document = baseCreateDocument();
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_0",
-      input: {},
-      scope: "global",
-    });
-
-    document = wrappedEmptyReducer(document, {
-      type: "TEST_1",
-      input: {},
-      scope: "global",
-    });
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
+        type: "TEST_0",
+        input: {},
+        scope: "global",
+      }),
+    );
 
     document = wrappedEmptyReducer(
       document,
-      {
+      fakeAction({
+        type: "TEST_1",
+        input: {},
+        scope: "global",
+      }),
+    );
+
+    document = wrappedEmptyReducer(
+      document,
+      fakeAction({
         type: "TEST_2",
         input: {},
         scope: "global",
         index: 3,
-      },
+      }),
       undefined,
       { skip: 1 },
     );

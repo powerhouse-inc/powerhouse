@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mergeOperations } from "../../src/utils/misc.js";
+import { fakeAction } from "../document-helpers/utils.js";
 
 describe("mergeOperations", () => {
   it("should merge operations correcly", async () => {
@@ -7,11 +8,11 @@ describe("mergeOperations", () => {
       {
         global: [
           {
-            action: {
+            action: fakeAction({
               scope: "global",
               type: "SET_MODEL_NAME",
               input: { name: "1" },
-            },
+            }),
             type: "SET_MODEL_NAME",
             input: { name: "1" },
             scope: "global",
@@ -26,11 +27,11 @@ describe("mergeOperations", () => {
       },
       [
         {
-          action: {
+          action: fakeAction({
             scope: "global",
             type: "SET_MODEL_NAME",
             input: { name: "1" },
-          },
+          }),
           type: "SET_MODEL_NAME",
           input: { name: "1" },
           scope: "global",
@@ -41,11 +42,11 @@ describe("mergeOperations", () => {
           error: undefined,
         },
         {
-          action: {
+          action: fakeAction({
             scope: "global",
             type: "SET_MODEL_NAME",
             input: { name: "2" },
-          },
+          }),
           type: "SET_MODEL_NAME",
           input: { name: "2" },
           scope: "global",
@@ -91,11 +92,11 @@ describe("mergeOperations", () => {
           {
             global: [
               {
-                action: {
+                action: fakeAction({
                   scope: "global",
                   type: "SET_MODEL_NAME",
                   input: { name: "1" },
-                },
+                }),
                 type: "SET_MODEL_NAME",
                 input: { name: "1" },
                 scope: "global",
@@ -106,11 +107,11 @@ describe("mergeOperations", () => {
                 error: undefined,
               },
               {
-                action: {
+                action: fakeAction({
                   scope: "global",
                   type: "SET_MODEL_NAME",
                   input: { name: "1" },
-                },
+                }),
                 type: "SET_MODEL_NAME",
                 input: { name: "1" },
                 scope: "global",
@@ -125,11 +126,11 @@ describe("mergeOperations", () => {
           },
           [
             {
-              action: {
+              action: fakeAction({
                 scope: "global",
                 type: "SET_MODEL_NAME",
                 input: { name: "2" },
-              },
+              }),
               type: "SET_MODEL_NAME",
               input: { name: "2" },
               scope: "global",

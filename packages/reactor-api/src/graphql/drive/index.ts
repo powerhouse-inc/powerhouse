@@ -129,6 +129,7 @@ export class DriveSubgraph extends Subgraph {
       skip: Int
       type: String!
       id: String!
+      actionId: String!
       input: String!
       hash: String!
       timestamp: String!
@@ -141,6 +142,7 @@ export class DriveSubgraph extends Subgraph {
       skip: Int
       type: String!
       id: String!
+      actionId: String!
       input: String!
       hash: String!
       timestamp: String!
@@ -416,6 +418,8 @@ export class DriveSubgraph extends Subgraph {
               scope: strandGql.scope,
               branch: "main",
               action: {
+                id: op.actionId,
+                timestamp: op.timestamp,
                 scope: strandGql.scope,
                 type: op.type,
                 input: JSON.parse(op.input) as DocumentModelInput,
@@ -514,6 +518,7 @@ export class DriveSubgraph extends Subgraph {
             type: op.type,
             context: op.context,
             id: op.id,
+            actionId: op.actionId,
           })),
         }));
       },

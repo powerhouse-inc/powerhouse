@@ -2,6 +2,7 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import { DriveContextProvider, useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
+import { useInitializePHApp, useSetSelectedNode } from '@powerhousedao/state';
 import {
   type DocumentDriveDocument,
   type FileNode
@@ -27,6 +28,8 @@ export function BaseEditor(props: IProps) {
 
   const docModelsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentModel);
   const docEditorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentEditor);
+  const docSubgraphsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentSubgraph);
+  const docProcessorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentProcessor);
 
   const onCreateDocument = useCallback(
     (documentType: string) => {
@@ -52,14 +55,14 @@ export function BaseEditor(props: IProps) {
         documentModels={docModelsNodes}
         editors={docEditorsNodes}
         apps={[]}
-        subgraphs={[]}
-        processors={[]}
+        subgraphs={docSubgraphsNodes}
+        processors={docProcessorsNodes}
         codegenProcessors={[]}
         onAddDocumentModel={() => onCreateDocument(DOCUMENT_TYPES.documentModel)}
         onAddEditor={() => onCreateDocument(DOCUMENT_TYPES.documentEditor)}
         onAddApp={() => console.log('add app')}
-        onAddSubgraph={() => console.log('add subgraph')}
-        onAddProcessor={() => console.log('add processor')}
+        onAddSubgraph={() => onCreateDocument(DOCUMENT_TYPES.documentSubgraph)}
+        onAddProcessor={() => onCreateDocument(DOCUMENT_TYPES.documentProcessor)}
         onAddCodegenProcessor={() => console.log('add codegen processor')}
         context={context}
         packageDocumentId={packageDocumentId}
@@ -72,6 +75,8 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
+  useInitializePHApp();
+
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>

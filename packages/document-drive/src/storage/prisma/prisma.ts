@@ -57,6 +57,8 @@ function operationFromStorage(
   },
 ): Operation {
   const action: Action = {
+    id: op.actionId,
+    timestamp: new Date(op.timestamp).toISOString(),
     type: op.type,
     input: JSON.parse(op.input),
     scope: op.scope,
@@ -422,6 +424,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
               "branch",
               "index",
               "skip",
+              "actionId",
               "hash",
               "timestamp",
               "input",
@@ -732,6 +735,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           documentId: id,
           hash: op.hash,
           index: op.index,
+          actionId: op.action.id,
           input: JSON.stringify(op.input),
           timestamp: op.timestamp,
           type: op.type,

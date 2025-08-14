@@ -144,6 +144,8 @@ export type Query = {
 export type Redo = "REDO";
 
 export type RedoAction = {
+  id: Scalars["String"]["output"];
+  timestamp: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
   type: Redo;
   scope: string;
@@ -152,6 +154,8 @@ export type RedoAction = {
 export type Set_Name = "SET_NAME";
 
 export type SetNameAction = {
+  id: Scalars["String"]["output"];
+  timestamp: Scalars["DateTime"]["output"];
   input: Scalars["String"]["input"];
   type: Set_Name;
   scope: "global";
@@ -169,6 +173,8 @@ export type SetNameOperation = IOperation & {
 export type Undo = "UNDO";
 
 export type UndoAction = {
+  id: Scalars["String"]["output"];
+  timestamp: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
   type: Undo;
   scope: string;
@@ -177,6 +183,8 @@ export type UndoAction = {
 export type NOOP = "NOOP";
 
 export type NOOPAction = {
+  id: Scalars["String"]["output"];
+  timestamp: Scalars["DateTime"]["output"];
   input: Scalars["Unknown"]["input"];
   type: NOOP;
   scope: string;

@@ -1,3 +1,15 @@
+## 4.1.0-dev.18 (2025-08-14)
+
+### 🩹 Fixes
+
+- **builder-tools:** support cjs requires of react and react-dom on external packages and enable sourcemap ([d9b84a69f](https://github.com/powerhouse-inc/powerhouse/commit/d9b84a69f))
+- **builder-tools:** use correct config path when regenerating external packages ([afbe7ea04](https://github.com/powerhouse-inc/powerhouse/commit/afbe7ea04))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.17 (2025-08-12)
 
 ### 🚀 Features

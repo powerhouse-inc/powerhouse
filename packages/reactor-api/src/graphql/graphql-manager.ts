@@ -5,6 +5,8 @@ import {
 import {
   ApolloGateway,
   LocalCompose,
+  RemoteGraphQLDataSource,
+  type GraphQLDataSourceProcessOptions,
   type ServiceDefinition,
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
@@ -32,6 +34,18 @@ export const DefaultCoreSubgraphs = [
   SystemSubgraph,
   AnalyticsSubgraph,
 ] as const;
+
+class AuthenticatedDataSource extends RemoteGraphQLDataSource {
+  willSendRequest(options: GraphQLDataSourceProcessOptions) {
+    const { authorization } = options.context.headers as {
+      authorization: string;
+    };
+    // console.log("context", options.context.headers.authorization);
+    if (authorization && options?.request.http) {
+      options.request.http.headers.set("authorization", authorization);
+    }
+  }
+}
 
 export class GraphQLManager {
   private coreRouter: IRouter = Router();
@@ -263,6 +277,9 @@ export class GraphQLManager {
         supergraphSdl: new LocalCompose({
           localServiceList: serviceList,
         }),
+        buildService: (serviceConfig) => {
+          return new AuthenticatedDataSource(serviceConfig);
+        },
       });
 
       const server = new ApolloServer({

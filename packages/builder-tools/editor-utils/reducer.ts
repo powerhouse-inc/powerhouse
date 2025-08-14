@@ -20,7 +20,8 @@ export function useDocumentReducer<TDocument extends PHDocument>(
   ) => {
     setState((_state) => {
       try {
-        const newState = reducer(_state, action);
+        // todo: force for now, while we refactor
+        const newState = reducer(_state, action as Action);
 
         const operation = newState.operations[action.scope].slice(-1)[0];
 

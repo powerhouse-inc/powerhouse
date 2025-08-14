@@ -13,6 +13,7 @@ import {
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
+  isValidName,
 } from "../utils.js";
 
 export const reducer: DocumentDriveNodeOperations = {
@@ -23,6 +24,12 @@ export const reducer: DocumentDriveNodeOperations = {
 
     if (!isValidDocumentId(action.input.id)) {
       throw new DocumentIdValidationError(action.input.id);
+    }
+
+    if (!isValidName(action.input.name)) {
+      throw new Error(
+        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+      );
     }
 
     const name = handleTargetNameCollisions({
@@ -51,6 +58,12 @@ export const reducer: DocumentDriveNodeOperations = {
   addFolderOperation(state, action) {
     if (state.nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);
+    }
+
+    if (!isValidName(action.input.name)) {
+      throw new Error(
+        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+      );
     }
 
     const name = handleTargetNameCollisions({
@@ -90,6 +103,12 @@ export const reducer: DocumentDriveNodeOperations = {
       });
   },
   updateFileOperation(state, action) {
+    if (action.input.name && !isValidName(action.input.name)) {
+      throw new Error(
+        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+      );
+    }
+
     state.nodes = state.nodes.map((node) =>
       node.id === action.input.id
         ? {
@@ -108,6 +127,12 @@ export const reducer: DocumentDriveNodeOperations = {
     );
   },
   updateNodeOperation(state, action) {
+    if (action.input.name && !isValidName(action.input.name)) {
+      throw new Error(
+        `Invalid name: '${action.input.name}'. Names must be valid URL characters.`,
+      );
+    }
+
     state.nodes = state.nodes.map((node) =>
       node.id === action.input.id
         ? {
