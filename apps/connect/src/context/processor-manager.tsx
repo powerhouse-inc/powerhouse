@@ -92,8 +92,6 @@ async function registerDriveAnalytics(
     manager: ProcessorManager,
     analyticsStore: IAnalyticsStore,
 ) {
-    console.log('registerDriveAnalytics');
-    console.log('manager', manager);
     const { processorFactory } = await import(
         '@powerhousedao/common/drive-analytics'
     );

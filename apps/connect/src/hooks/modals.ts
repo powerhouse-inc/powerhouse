@@ -23,7 +23,6 @@ export function useShowAddDriveModal() {
     const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const driveEditorModules = useDriveEditorModules();
     const onAddLocalDrive = async (data: AddLocalDriveInput) => {
-        console.log('data', data);
         try {
             const app = driveEditorModules?.find(a => a.id === data.appId);
             const newDrive = await addDrive(
