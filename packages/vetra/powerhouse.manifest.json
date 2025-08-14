@@ -22,6 +22,10 @@
         {
             "id": "powerhouse/processor",
             "name": "Processor Module"
+        },
+        {
+            "id": "powerhouse/app",
+            "name": "App Module"
         }
     ],
     "editors": [
