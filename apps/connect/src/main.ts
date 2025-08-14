@@ -17,14 +17,13 @@ import path, { basename } from 'path';
 import { addDeeplink } from './app/deeplink.js';
 import initDocumentDrive from './app/document-drive.js';
 import store from './app/store.js';
-import { ConnectCrypto } from './services/crypto/index.js';
 import {
     ElectronKeyStorage,
     type KeyStorageElectronStore,
 } from './services/crypto/electron.js';
+import { ConnectCrypto } from './services/crypto/index.js';
 import { initRenownElectron } from './services/renown/electron.js';
 import { type Theme, isTheme } from './store/index.js';
-import { baseDocumentModels } from './store/document-model.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -76,11 +75,7 @@ async function initApp() {
         });
 
         // initializes document drive server
-        await initDocumentDrive(
-            baseDocumentModels,
-            app.getPath('userData'),
-            ipcMain,
-        );
+        await initDocumentDrive([], app.getPath('userData'), ipcMain);
 
         // creates window
         const browserWindow = await createWindow({
@@ -145,6 +140,9 @@ async function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
         const content = fs
             .readFileSync(path, { encoding: 'binary' })
+            // TODO: this does not make sense.
+            // We know that readFileSync returns a string when `encoding` is `binary`
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
             .toString();
         const file = {
             name: basename(path),

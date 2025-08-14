@@ -30,7 +30,7 @@ export type FileItemProps = TNodeActions & {
     syncId: string,
     sharingType: SharingType,
   ) => SyncStatus | undefined;
-  setSelectedNode: (id: string | undefined) => void;
+  setSelectedNode: (node: Node | string | undefined) => void;
   showDeleteNodeModal: (node: Node) => void;
 };
 
@@ -78,10 +78,6 @@ export function FileItem(props: FileItemProps) {
 
   function onCancel() {
     setMode(READ);
-  }
-
-  function onClick() {
-    setSelectedNode(fileNode.id);
   }
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {
@@ -169,7 +165,7 @@ export function FileItem(props: FileItemProps) {
   );
 
   return (
-    <div className="relative w-64" onClick={onClick}>
+    <div className="relative w-64" onClick={() => setSelectedNode(fileNode)}>
       <div {...dragProps} className={containerStyles}>
         <div className="flex items-center">
           <div className="mr-1.5">{iconNode}</div>

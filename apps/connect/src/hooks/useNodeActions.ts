@@ -1,9 +1,9 @@
 import { type TNodeActions } from '@powerhousedao/design-system';
 import {
+    setSelectedNode,
     useSelectedDrive,
     useSelectedFolder,
     useSelectedParentFolder,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { type Node } from 'document-drive';
 import { useCallback, useMemo } from 'react';
@@ -66,7 +66,6 @@ export function useNodeActions(): TNodeActions {
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedParentFolder = useSelectedParentFolder();
-    const setSelectedNode = useSetSelectedNode();
     const { addFolder, addFile, renameNode, copyNode, moveNode } =
         useDocumentDriveServer();
 
@@ -135,7 +134,7 @@ export function useNodeActions(): TNodeActions {
             );
 
             if (newFolder) {
-                setSelectedNode(newFolder.id);
+                setSelectedNode(newFolder);
             }
         },
         [onAddFolder, selectedFolder, selectedParentFolder, setSelectedNode],

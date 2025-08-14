@@ -2,18 +2,14 @@ import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
 import { useUser } from '#store';
 import { useReactor } from '@powerhousedao/state';
 import { logger } from 'document-drive';
-import { atom, useAtom } from 'jotai';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConnectCrypto } from './useConnectCrypto.js';
 import { useRenown } from './useRenown.js';
 
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
 
-const loginStatusAtom = atom<LoginStatus>('initial');
-loginStatusAtom.debugLabel = 'loginStatusAtomInConnect';
-
 export const useLogin = () => {
-    const [status, setStatus] = useAtom(loginStatusAtom);
+    const [status, setStatus] = useState<LoginStatus>('initial');
     const user = useUser();
     const renown = useRenown();
     const { did, getBearerToken } = useConnectCrypto();

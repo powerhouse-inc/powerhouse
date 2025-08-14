@@ -10,7 +10,7 @@ export function makeDriveUrlComponent(
 }
 
 /** Makes a URL component for a node. */
-export function makeNodeUrlComponent(node: Node | undefined) {
+export function makeNodeSlug(node: Node | undefined) {
   if (!node) return "";
   const nodeName = node.name;
   if (!nodeName) return slug(node.id);
@@ -21,40 +21,47 @@ export function makeNodeUrlComponent(node: Node | undefined) {
  *
  * The path is expected to be in the format `/d/<drive-slug>/<node-slug>`.
  */
-function extractNodeSlug(path: string) {
+export function extractNodeSlugFromPath(path: string) {
   const match = /^\/d\/[^/]+\/([^/]+)$/.exec(path);
-  return match ? match[1] : undefined;
+  return match?.[1] ?? "";
 }
 
 /** Finds a UUID in a string, used for extracting node ids from node slugs in the URL. */
-function findUuid(input: string | undefined | undefined) {
+export function findUuid(input: string | undefined) {
   if (!input) return undefined;
   const uuidRegex =
     /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/;
   const match = uuidRegex.exec(input);
-  return match ? match[0] : undefined;
+  return match?.[0];
 }
 
-/** Extracts the node name, slug, or id from a path. */
-export function extractNodeNameOrSlugOrIdFromPath(path: string) {
-  const nodeSlug = extractNodeSlug(path);
+export function extractNodeIdFromSlug(nodeSlug: string | undefined) {
   const nodeId = findUuid(nodeSlug);
-  if (nodeId) return nodeId;
-  return nodeSlug;
+  return nodeId;
+}
+
+export function extractNodeIdFromPath(path: string) {
+  const nodeSlug = extractNodeSlugFromPath(path);
+  const nodeId = extractNodeIdFromSlug(nodeSlug);
+  return nodeId;
 }
 
 /** Extracts the drive slug from a path.
  * Used for extracting drive ids from drive slugs in the URL.
  * Expects the path to be in the format `/d/<drive-slug>`.
  */
-export function extractDriveFromPath(path: string): string | null {
+export function extractDriveSlugFromPath(path: string) {
   const match = /^\/d\/([^/]+)/.exec(path);
-  return match ? match[1] : null;
+  return match?.[1] ?? "";
 }
 
-/** Legacy function that makes a slug from a node name.
- * Used for compatibility with the old URL structure in Connect.
- */
-export function makeNodeSlugFromNodeName(name: string) {
-  return name.replaceAll(/\s/g, "-");
+export function extractDriveIdFromSlug(driveSlug: string | undefined) {
+  const driveId = findUuid(driveSlug);
+  return driveId;
+}
+
+export function extractDriveIdFromPath(path: string) {
+  const driveSlug = extractDriveSlugFromPath(path);
+  const driveId = extractDriveIdFromSlug(driveSlug);
+  return driveId;
 }

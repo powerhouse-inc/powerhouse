@@ -1,5 +1,5 @@
 import { useModal } from '#components';
-import { themeAtom, useGetDocumentModelModule, useUser } from '#store';
+import { useTheme, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -9,9 +9,9 @@ import {
     validateDocument,
 } from '#utils';
 import {
+    setSelectedNode,
+    useDocumentModelModuleById,
     useParentFolder,
-    useSelectedDrive,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
@@ -23,7 +23,6 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
@@ -51,11 +50,7 @@ export function useEditorDispatch<T extends PHDocument = PHDocument>(
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
     const documentType = document?.header.documentType;
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const documentModelModule = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
-    );
+    const documentModelModule = useDocumentModelModuleById(documentType);
 
     const dispatch = useCallback(
         (action: Action, onErrorCallback?: ActionErrorCallback) => {
@@ -111,14 +106,14 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
 ) {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const theme = useAtomValue(themeAtom);
+    const theme = useTheme();
     const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
-    const selectedDrive = useSelectedDrive();
     const parentFolder = useParentFolder(document?.header.id);
-    const setSelectedNode = useSetSelectedNode();
+    const documentModelModule = useDocumentModelModuleById(
+        document?.header.documentType,
+    );
     const context = useMemo(() => ({ theme, user }), [theme, user]);
-    const getDocumentModelModule = useGetDocumentModelModule();
 
     const canUndo =
         !!document &&
@@ -139,10 +134,6 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     const handleRedo = useCallback(() => {
         dispatch(redo());
     }, [dispatch]);
-
-    const onClose = useCallback(() => {
-        setSelectedNode(parentFolder?.id);
-    }, [parentFolder, setSelectedNode]);
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -168,14 +159,14 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
                     },
                     onContinue(closeModal) {
                         closeModal();
-                        return exportFile(document, getDocumentModelModule);
+                        return exportFile(document, documentModelModule);
                     },
                 });
             } else {
-                return exportFile(document, getDocumentModelModule);
+                return exportFile(document, documentModelModule);
             }
         },
-        [getDocumentModelModule, showModal, t],
+        [documentModelModule, showModal, t],
     );
 
     const onExport = useCallback(() => {
@@ -198,7 +189,7 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
         canRedo,
         undo: handleUndo,
         redo: handleRedo,
-        onClose,
+        onClose: () => setSelectedNode(parentFolder),
         onExport,
         onShowRevisionHistory: showRevisionHistory,
         isAllowedToCreateDocuments:

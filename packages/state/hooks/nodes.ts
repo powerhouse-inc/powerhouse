@@ -1,38 +1,50 @@
 import { type FileNode, type FolderNode, type Node } from "document-drive";
-import { useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import {
-  loadableNodesAtom,
-  loadableSelectedFolderAtom,
-  unwrappedNodesAtom,
-  unwrappedSelectedFolderAtom,
-} from "../internal/atoms.js";
-import { dispatchSetNodeEvent } from "../internal/events.js";
-import { type Loadable, type NodeKind } from "../internal/types.js";
+  dispatchSetSelectedNodeIdEvent,
+  subscribeToSelectedNodeId,
+} from "../internal/events.js";
+import { type NodeKind } from "../internal/types.js";
 import { makeFolderNodeFromDrive } from "../utils/drives.js";
 import {
   isFileNodeKind,
   isFolderNodeKind,
   sortNodesByName,
 } from "../utils/nodes.js";
+import { makeNodeSlug } from "../utils/url.js";
 import { useSelectedDocument } from "./documents.js";
 import { useDrives, useSelectedDrive } from "./drives.js";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
-  return useAtomValue(unwrappedNodesAtom);
+  const selectedDrive = useSelectedDrive();
+  return selectedDrive?.state.global.nodes;
 }
 
-/** Returns a loadable of the nodes for a drive. */
-export function useLoadableNodes(): Loadable<Node[] | undefined> {
-  return useAtomValue(loadableNodesAtom);
+export function useSelectedNodeId() {
+  const selectedNodeId = useSyncExternalStore(
+    subscribeToSelectedNodeId,
+    () => window.phSelectedNodeId,
+  );
+  return selectedNodeId;
 }
 
-/** Returns a function that sets the selected node (document or folder) with a node id. */
-export function useSetSelectedNode() {
-  return useCallback((nodeId: string | undefined) => {
-    dispatchSetNodeEvent(nodeId);
-  }, []);
+export function useFileNodes() {
+  const nodes = useNodes();
+  return nodes?.filter((n) => isFileNodeKind(n));
+}
+
+export function useFolderNodes() {
+  const nodes = useNodes();
+  return nodes?.filter((n) => isFolderNodeKind(n));
+}
+
+export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
+  const nodeSlug =
+    typeof nodeOrNodeSlug === "string"
+      ? nodeOrNodeSlug
+      : makeNodeSlug(nodeOrNodeSlug);
+  dispatchSetSelectedNodeIdEvent(nodeSlug);
 }
 
 /** Returns a node in the selected drive by id. */
@@ -89,12 +101,10 @@ export function useNodePath(id: string | null | undefined): Node[] {
 
 /** Returns the selected folder. */
 export function useSelectedFolder(): FolderNode | undefined {
-  return useAtomValue(unwrappedSelectedFolderAtom);
-}
-
-/** Returns a loadable of the selected folder. */
-export function useLoadableSelectedFolder() {
-  return useAtomValue(loadableSelectedFolderAtom);
+  const selectedNodeId = useSelectedNodeId();
+  const folderNodes = useFolderNodes();
+  const selectedFolder = folderNodes?.find((n) => n.id === selectedNodeId);
+  return selectedFolder;
 }
 
 /** Returns the path to the selected node. */
@@ -159,17 +169,17 @@ export function useFileChildNodesForId(
 
 /** Returns the name of a node. */
 export function useNodeName(id: string | null | undefined) {
-  const unwrappedNodes = useNodes();
-  if (!unwrappedNodes) return undefined;
-  const node = unwrappedNodes.find((n) => n.id === id);
+  const nodes = useNodes();
+  if (!nodes) return undefined;
+  const node = nodes.find((n) => n.id === id);
   return node?.name;
 }
 
 /** Returns the kind of a node. */
 export function useNodeKind(id: string | null | undefined) {
-  const unwrappedNodes = useNodes();
-  if (!unwrappedNodes) return undefined;
-  const node = unwrappedNodes.find((n) => n.id === id);
+  const nodes = useNodes();
+  if (!nodes) return undefined;
+  const node = nodes.find((n) => n.id === id);
   if (!node) return undefined;
   return node.kind.toUpperCase() as NodeKind;
 }

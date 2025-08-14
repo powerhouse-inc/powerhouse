@@ -1,7 +1,4 @@
 import { useLoadInitialData, useRenown } from '#hooks';
-import { Provider } from 'jotai';
-import { DevTools } from 'jotai-devtools';
-import 'jotai-devtools/styles.css';
 import { lazy, StrictMode, Suspense } from 'react';
 import { useLoadData } from '../hooks/useLoadData.js';
 import '../i18n';
@@ -25,17 +22,14 @@ function Load() {
 
 export const AppLoader = (
     <StrictMode>
-        <Provider>
-            {import.meta.env.DEV && <DevTools />}
-            <Suspense fallback={<AppSkeleton />} name="AppLoader">
-                <Load />
-                <App />
-            </Suspense>
-            <Suspense name="CookieBanner">
-                <ModalManager>
-                    <CookieBanner />
-                </ModalManager>
-            </Suspense>
-        </Provider>
+        <Suspense fallback={<AppSkeleton />} name="AppLoader">
+            <Load />
+            <App />
+        </Suspense>
+        <Suspense name="CookieBanner">
+            <ModalManager>
+                <CookieBanner />
+            </ModalManager>
+        </Suspense>
     </StrictMode>
 );

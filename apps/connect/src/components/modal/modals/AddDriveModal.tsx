@@ -1,10 +1,11 @@
 import { useConnectCrypto } from '#hooks';
-import { useApps, useUser } from '#store';
+import { useUser } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
+import { useDriveEditorModules } from '@powerhousedao/state';
 import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
@@ -16,7 +17,7 @@ type Props = {
 export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
     const user = useUser();
-    const apps = useApps();
+    const driveEditorModules = useDriveEditorModules();
     const { getBearerToken } = useConnectCrypto();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
@@ -55,7 +56,13 @@ export function AddDriveModal(props: Props) {
             onOpenChange={status => {
                 if (!status) return onClose();
             }}
-            appOptions={apps}
+            appOptions={
+                driveEditorModules?.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    driveEditor: pkg.id,
+                })) || []
+            }
         />
     );
 }

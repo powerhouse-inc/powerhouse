@@ -90,6 +90,8 @@ export type {
   StateReducer,
   User,
   ValidationError,
+  ImportScriptModule,
+  SubgraphModule,
 } from "#document/types.js";
 export {
   baseCreateDocument,

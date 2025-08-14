@@ -1,15 +1,11 @@
 import { NodeInput } from "#connect";
 import { Icon } from "#powerhouse";
 import { Fragment, useCallback, useState } from "react";
-
-export type BreadcrumbNode = {
-  id: string;
-  name: string;
-};
+import { type Node } from "document-drive";
 
 export type BreadcrumbsProps<T extends boolean = boolean> = {
-  breadcrumbs: BreadcrumbNode[];
-  onBreadcrumbSelected: (node: BreadcrumbNode) => void;
+  breadcrumbs: Node[];
+  onBreadcrumbSelected: (node: Node) => void;
   createEnabled?: T;
   onCreate: T extends true
     ? (name: string, parentFolder: string | undefined) => void
@@ -70,8 +66,8 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
 }
 
 export type BreadcrumbProps = {
-  node: BreadcrumbNode;
-  onClick: (node: BreadcrumbNode) => void;
+  node: Node;
+  onClick: (node: Node) => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {

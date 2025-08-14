@@ -1,5 +1,13 @@
-import { type DocumentDriveDocument, type FolderNode } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  type FolderNode,
+  type Node,
+} from "document-drive";
 import { type PHDocument } from "document-model";
+import {
+  dispatchSetDocumentsEvent,
+  dispatchSetDrivesEvent,
+} from "../internal/events.js";
 import { type Reactor, type SharingType } from "../internal/types.js";
 
 /** Returns the sharing type for a drive. */
@@ -83,6 +91,20 @@ export async function getDrives(
   const driveIds = await reactor.getDrives();
   const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
   return drives;
+}
+
+export async function getDocuments(
+  reactor: Reactor | undefined,
+): Promise<PHDocument[]> {
+  if (!reactor) return [];
+  const driveIds = await reactor.getDrives();
+  const documentIds = await Promise.all(
+    driveIds.map((id) => reactor.getDocuments(id)),
+  );
+  const documents = await Promise.all(
+    documentIds.flat().map((id) => reactor.getDocument(id)),
+  );
+  return documents;
 }
 
 export async function getDriveById(

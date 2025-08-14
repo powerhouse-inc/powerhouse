@@ -17,7 +17,7 @@ type Props = TNodeActions & {
     syncId: string,
     sharingType: SharingType,
   ) => SyncStatus | undefined;
-  setSelectedNode: (id: string | undefined) => void;
+  setSelectedNode: (id: Node | string | undefined) => void;
   showDeleteNodeModal: (node: Node) => void;
 };
 

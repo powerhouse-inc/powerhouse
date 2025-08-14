@@ -20,7 +20,7 @@ type IFolderViewProps = BaseProps &
     node: FolderNode | undefined;
     sharingType: SharingType;
     isAllowedToCreateDocuments: boolean;
-    setSelectedNode: (id: string | undefined) => void;
+    setSelectedNode: (id: Node | string | undefined) => void;
     showDeleteNodeModal: (node: Node) => void;
     getSyncStatusSync: (
       syncId: string,

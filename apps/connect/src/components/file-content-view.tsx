@@ -6,8 +6,8 @@ import {
 } from '#hooks';
 import { FileItem } from '@powerhousedao/design-system';
 import {
+    setSelectedNode,
     useSelectedDriveSharingType,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileNode } from 'document-drive';
@@ -33,7 +33,6 @@ export function FileContentView({
     const { t } = useTranslation();
     const windowSize = useWindowSize();
     const sharingType = useSelectedDriveSharingType();
-    const setSelectedNode = useSetSelectedNode();
     const {
         onRenameNode,
         onDuplicateNode,

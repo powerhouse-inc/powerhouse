@@ -105,8 +105,8 @@ export class PublicKeySigner implements ISigner {
       isValid = await subtleCrypto.verify(
         "Ed25519",
         this.publicCryptoKey,
-        signature,
-        data,
+        signature as BufferSource,
+        data as BufferSource,
       );
     } catch (error) {
       throw new Error("invalid signature");

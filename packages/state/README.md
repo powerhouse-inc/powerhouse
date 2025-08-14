@@ -8,15 +8,6 @@ This library provides hooks intended to be used by editors (including drive edit
 
 All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents.
 
-### Initialization
-
-Since the data in our components needs to be synchronized with the state of the parent application, you need to initialize your data on first load.
-
-We have provided a hook for you to use to do this:
-
-`useInitializePHApp`
-
-Your editor components should call this hook at the top of their definition.
 
 ### Selected drives, folders and documents
 In the application, there are certain items that can be set as "selected". 
@@ -27,75 +18,20 @@ In the application, there are certain items that can be set as "selected".
 
 We provide hooks for getting the selected item for each:
 
-`useSelectedDrive` / `useLoadableSelectedDrive`
-`useSelectedFolder` / `useLoadableSelectedFolder`
-`useSelectedDocument` / `useLoadableSelectedDocument`
+`useSelectedDrive`
+`useSelectedFolder`
+`useSelectedDocument`
 
 Folders and documents are part of a given drive, so they will both be undefined if the selected drive is undefined.
 
 _Either_ a folder or a document can be selected but not both, so if one is defined then the other will be undefined.
 
-To set the selected drive, we provide a `useSetSelectedDrive` hook which returns a setter function takes a drive id.
+To set the selected drive, we provide a function `setSelectedDrive` which takes either a `DocumentDriveDocument` or a `DocumentDriveDocument['header']['slug']`.
 
-To set the selected document/folder, we provide one hook `useSetSelectedNode` which returns a setter function which can be used for _both_ documents and folders. This function takes a `nodeId` which can be either the id of a document or the id of a folder.
-
-### Jotai atoms
-Under the hood, we use Jotai atoms in the application, but _you do not need to know anything about Jotai to use them_. The hooks all return the data as represented by their return types.
-
-You can take a look at https://jotai.org/ for interest sake.
-
-### Loadable data
-For your convenience, each hook that returns data like `use{Something}` has a corresponding `useLoadable{Something}` which returns the same data wrapped with a `Loadable` object.
-
-The `Loadable` type looks like this:
-
-```ts
-type Loadable<Value> = {
-    state: 'loading';
-} | {
-    state: 'hasError';
-    error: unknown;
-} | {
-    state: 'hasData';
-    data: Awaited<Value>;
-};
-```
-
-This allows you to access asynchronous data in your components without needing to await data, and lets you know if data is still pending, in an error state or is available. Note that the `error` key is only defined when `state` is 'hasError', and the `data` key is only available when `state` is 'hasData'.
-
-In practice this looks like:
-
-```jsx
-function MyEditor() {
-  const loadableSomething = useLoadableSomething();
-
-  if (loadableSomething.state === 'loading') {
-    return <div>...loading</div>;
-  }
-
-  if (loadableSomething.state === 'hasError') {
-    // we know that `loadableSomething.error` is defined
-    return <ErrorComponent error={loadableSomething.error} />
-  }
-
-  // we have checked the other state possibilities, so now we know that `loadableSomething.data` is defined
-  return <MyComponent something={loadableSomething.data} />
-}
-```
+To set the selected document/folder, we provide a function `setSelectedNode` which returns a setter function which can be used for _both_ documents and folders. This function takes either a `Node` or a slug which can be the url slug or the node's id.
 
 ## Hooks
 
-### Initialization
-
-Call the initialization hook at the top level of all of your editor components like so:
-
-```ts
-import { useInitializePHApp } from '@powerhousedao/state'
-
-function MyEditor() {
-  useInitializePHApp();
-}
-```
 
 ### Reactor
 ```ts
@@ -103,7 +39,6 @@ function useReactor(): Reactor | undefined
 ```
 
 Returns the reactor instance. 
-*NOTE:* The reactor instance does not have a loadable counterpart.
 
 ##### Usage
 ```jsx
@@ -116,114 +51,53 @@ function MyEditorComponent() {
 
 ### Drives
 
-#### useDrives/useLoadableDrives
+#### useDrives
 ```ts
 function useDrives(): DocumentDriveDocument[] | undefined
 ```
 Returns the drives for a reactor.
 
-```ts
-function useLoadableDrives(): Loadable<DocumentDriveDocument[] | undefined>
-```
-Returns a loadable of the drives for a reactor.
-
 ##### Usage
 
 ```jsx
-import { useDrives, useLoadableDrives } from '@powerhousedao/state';
+import { useDrives } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const drives = useDrives();
-  // returns loading/error/data
-  const loadableDrives = useLoadableDrives();
 }
 ```
 
-#### useDriveById/useLoadableDriveById
+#### useDriveById
 ```ts
 function useDriveById(id: string | null | undefined): DocumentDriveDocument | undefined
 ```
 
 Returns a drive by id.
 
-```ts
-function useLoadableDriveById(id: string | null | undefined): Loadable<DocumentDriveDocument | undefined>
-```
-Returns a loadable of a drive by id.
-
 ##### Usage
 
 ```jsx
-import { useDriveById, useLoadableDriveById } from '@powerhousedao/state';
+import { useDriveById } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const driveById = useDriveById();
-  // returns loading/error/data
-  const loadableDriveById = useLoadableDriveById();
 }
 ```
 
-#### useSelectedDrive/useLoadableSelectedDrive/useSelectedDriveId
+#### useSelectedDrive
 ```ts
 function useSelectedDrive(): DocumentDriveDocument | undefined
 ```
 
-Returns the selected drive
-
-```ts
-function useLoadableSelectedDrive(): Loadable<DocumentDriveDocument | undefined>
-
-```
-Returns a loadable of the selected drive
-
-```ts
-function useSelectedDriveId(): string | undefined
-```
-
-Uses the `useSelectedDrive` hook and returns the selected drive id. Equivalent to using the `useSelectedDrive` hook to get the selected drive and then accessing `drive.header.id`
+Returns the selected drive. You can se the selected drive with `setSelectedDrive`.
 
 ##### Usage
 
 ```jsx
-import { useSelectedDrive, useLoadableSelectedDrive } from '@powerhousedao/state';
+import { useSelectedDrive } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const selectedDrive = useSelectedDrive();
-  const selectedDriveId = useSelectedDriveId();
-  // returns loading/error/data
-  const loadableSelectedDrive = useLoadableSelectedDrive();
-}
-```
-
-#### useSetSelectedDrive
-```ts
-function useSetSelectedDrive(): (driveId: string | undefined) => void
-```
-Returns a function that sets the selected drive with a drive id. Call this setter with `undefined` to deselect.
-
-##### Usage
-
-```jsx
-import { useSetSelectedDrive } from '@powerhousedao/state';
-
-function MyEditorComponent() {
-  // returns a setter function with signature:
-  // (driveId: string | undefined) => void
-  const setSelectedDrive = useSetSelectedDrive();
-  const drives = useDrives();
-
-  return (
-    <div>
-      {drives?.map((drive) => (
-        <button onClick={() => setSelectedDrive(drive.header.id)}>
-          {drive.header.name}
-        </button>
-      ))}
-    </div>
-  );
 }
 ```
 
@@ -286,76 +160,58 @@ function MyEditorComponent() {
 
 ### Documents
 
-#### useDocuments/useLoadableDocuments
+#### useAllDocuments/useSelectedDriveDocuments
 ```ts
-function useDocuments(): PHDocument[] | undefined
+function useAllDocuments(): PHDocument[] | undefined
 ```
-Returns the documents for the selected drive.
+Returns all of the documents in the reactor.
 
 ```ts
-function useLoadableDocuments(): Loadable<PHDocument[] | Promise<PHDocument[]> | undefined>
+function useSelectedDriveDocuments(): PHDocument[] | undefined
 ```
-Returns a loadable of the documents for the selected drive.
+Returns the documents in the reactor for the selected drive.
 
 ##### Usage
 
 ```jsx
-import { useDocuments, useLoadableDocuments } from '@powerhousedao/state';
+import { useAllDocuments, useSelectedDriveDocuments } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
-  const documents = useDocuments();
-  // returns loading/error/data
-  const loadableDocuments = useLoadableDocuments();
+  const allDocuments = useAllDocuments();
+  const selectedDriveDocuments = useSelectedDriveDocuments();
 }
 ```
 
-#### useSelectedDocument/useLoadableSelectedDocument
+#### useSelectedDocument
 ```ts
 function useSelectedDocument(): PHDocument | undefined
 ```
-Returns the selected document.
-
-```ts
-function useLoadableSelectedDocument(): Loadable<Promise<PHDocument | undefined>>
-```
-Returns a loadable of the selected document.
+Returns the selected document. You can set the selected document with `setSelectedNode`.
 
 ##### Usage
 
 ```jsx
-import { useSelectedDocument, useLoadableSelectedDocument } from '@powerhousedao/state';
+import { useSelectedDocument } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const selectedDocument = useSelectedDocument();
-  // returns loading/error/data
-  const loadableSelectedDocument = useLoadableSelectedDocument();
 }
 ```
 
-#### useDocumentById/useLoadableDocumentById
+#### useDocumentById
 ```ts
 function useDocumentById(id: string | null | undefined): PHDocument | undefined
 ```
 Returns a document by id.
 
-```ts
-function useLoadableDocumentById(id: string | null | undefined): Loadable<PHDocument | undefined>
-```
-Returns a loadable of a document by id.
-
 ##### Usage
 
 ```jsx
-import { useDocumentById, useLoadableDocumentById } from '@powerhousedao/state';
+import { useDocumentById } from '@powerhousedao/state';
 
 function MyEditorComponent() {
   const myDocumentId = 'some-document-id';
-  // undefined until loaded
   const documentById = useDocumentById(myDocumentId);
-  // returns loading/error/data
-  const loadableDocumentById = useLoadableDocumentById(myDocumentId);
 }
 ```
 
@@ -387,7 +243,7 @@ type FolderNode = {
 type Node = FileNode | FolderNode;
 ```
 
-#### useNodes/useLoadableNodes
+#### useNodes
 Ideally you should not need to handle the list of nodes directly, since we already provide documents and folders. But these hooks are provided just in case.
 
 ```ts
@@ -395,48 +251,13 @@ function useNodes(): Node[] | undefined
 ```
 Returns the nodes for a drive.
 
-```ts
-function useLoadableNodes(): Loadable<Node[] | undefined>
-```
-Returns a loadable of the nodes for a drive.
-
 ##### Usage
 
 ```jsx
-import { useNodes, useLoadableNodes } from '@powerhousedao/state';
+import { useNodes} from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const nodes = useNodes();
-  // returns loading/error/data
-  const loadableNodes = useLoadableNodes();
-}
-```
-
-#### useSetSelectedNode
-Use the setter function returned by this hook to set the selected drive or selected folder. Call the setter with `undefined` to deselect.
-
-```ts
-function useSetSelectedNode(): (nodeId: string | undefined) => void
-```
-Returns a function that sets the selected node (document or folder) with a node id.
-
-##### Usage
-
-```jsx
-import { useSetSelectedNode } from '@powerhousedao/state';
-
-function MyEditorComponent() {
-  const myFolderId = 'some-folder-id';
-  const myDocumentId = 'some-document-id';
-  const setSelectedNode = useSetSelectedNode();
-
-  return (
-    <div>
-      <button onClick={() => setSelectedNode(myFolderId)}>Set selected folder</button>
-      <button onClick={() => setSelectedNode(myDocumentId)}>Set selected document</button>
-    </div>
-  )
 }
 ```
 
@@ -459,27 +280,19 @@ function MyEditorComponent() {
 }
 ```
 
-#### useSelectedFolder/useLoadableSelectedFolder
+#### useSelectedFolder
 ```ts
 function useSelectedFolder(): FolderNode | undefined
 ```
-Returns the selected folder.
-
-```ts
-function useLoadableSelectedFolder(): Loadable<Promise<FolderNode | undefined>>
-```
-Returns a loadable of the selected folder.
+Returns the selected folder. You can set the selected folder with `setSelectedNode`
 
 ##### Usage
 
 ```jsx
-import { useSelectedFolder, useLoadableSelectedFolder } from '@powerhousedao/state';
+import { useSelectedFolder } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  // undefined until loaded
   const selectedFolder = useSelectedFolder();
-  // returns loading/error/data
-  const loadableSelectedFolder = useLoadableSelectedFolder();
 }
 ```
 
@@ -600,5 +413,166 @@ function MyEditorComponent() {
   if (nodeKind === 'folder') {
     return <Folder name={nodeName} />;
   }
+}
+```
+
+### Vetra packages and modules
+
+Vetra packages hold code which can plug into your Connect application. This includes common default modules like the document model document model editor and document drive document model, as well as the modules from your local project and the various packages you have installed.
+
+These modules can be for:
+
+- document models
+- editors
+- subgraphs
+- import scripts
+- processors
+
+Each Vetra package contains a `modules` field which optionally contains lists of these modules.
+
+#### useVetraPackages
+
+```ts
+function useVetraPackages(): VetraPackage[] | undefined
+```
+
+Returns all of the Vetra packages in your Connect app.
+
+##### Usage
+
+```jsx
+import { useVetraPackages } from '@powerhousedao/state'
+
+function MyEditorComponent() {
+  const vetraPackages = useVetraPackages()
+}
+```
+
+#### useDocumentModelModules
+
+```ts
+function useDocumentModelModules(): DocumentModelModule[] | undefined
+```
+
+Returns the document model modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useDocumentModelModules } from '@powerhousedao/state'
+
+function MyEditorComponent() {
+  const documentModelModules = useDocumentModelModules()
+}
+```
+
+#### useDocumentModelModuleById
+
+```ts
+function useDocumentModelModuleById(): DocumentModelModule[] | undefined
+```
+
+Returns the document model for a given id (document type).
+*NOTE* What we call here an id is really the value in the "document type" field in the document model editor
+*NOTE* Connect assumes that these document types (ids) are unique. It is your responsibility to enforce this.
+
+##### Usage
+
+```jsx
+import { useDocumentModelModuleById } from '@powerhousedao/state'
+
+function MyEditorComponent() {
+  const documentType = 'my-org/my-document';
+  const documentModelModuleById = useDocumentModelModuleById(documentType)
+}
+```
+
+#### useEditorModules
+
+```ts
+function useEditorModules(): EditorModule[] | undefined
+```
+
+Returns the editor modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useEditorModules } from '@powerhousedao/state'
+
+function MyEditorComponent() {
+  const editorModules = useEditorModules()
+}
+```
+
+#### useDriveEditorModules
+
+```ts
+function useDriveEditorModules(): DriveEditorModule[] | undefined
+```
+
+Returns the drive editor modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useDriveEditorModules } from '@powerhousedao/state'
+
+function MyDriveEditorComponent() {
+  const driveEditorModules = useDriveEditorModules()
+}
+```
+
+#### useProcessorModules
+
+```ts
+function useProcessorModules(): ProcessorModule[] | undefined
+```
+
+Returns the processor modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useProcessorModules } from '@powerhousedao/state'
+
+function MyProcessorComponent() {
+  const processorModules = useProcessorModules()
+}
+```
+
+#### useSubgraphModules
+
+```ts
+function useSubgraphModules(): SubgraphModule[] | undefined
+```
+
+Returns the subgraph modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useSubgraphModules } from '@powerhousedao/state'
+
+function MySubgraphComponent() {
+  const subgraphModules = useSubgraphModules()
+}
+```
+
+#### useImportScriptModules
+
+```ts
+function useImportScriptModules(): ImportScriptModule[] | undefined
+```
+
+Returns the import script modules from your Vetra packages.
+
+##### Usage
+
+```jsx
+import { useImportScriptModules } from '@powerhousedao/state'
+
+function MyImportScriptComponent() {
+  const importScriptModules = useImportScriptModules()
 }
 ```

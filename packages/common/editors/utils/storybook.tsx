@@ -11,10 +11,9 @@ import {
   driveDocumentModelModule,
   type DocumentDriveDocument,
   type DocumentDriveLocalState,
-  type DocumentDriveState
+  type DocumentDriveState,
 } from "document-drive";
 import {
-  documentModelDocumentModelModule,
   type DocumentModelModule,
   type ExtendedState,
   type PartialState,
@@ -55,8 +54,6 @@ export function createDriveStory(
             onAddAndSelectNewFolder: () => Promise.resolve(),
             getSyncStatusSync: () => undefined,
             showDeleteNodeModal: () => {},
-            getDocumentModelModule: () => undefined,
-            getEditor: () => undefined,
             useDocumentEditorProps: () => ({
               dispatch: () => {},
               document: context.args.document,
@@ -64,9 +61,6 @@ export function createDriveStory(
             }),
             showSearchBar: false,
             isAllowedToCreateDocuments: true,
-            documentModels: [
-              documentModelDocumentModelModule as DocumentModelModule,
-            ],
             addFile() {
               throw new Error("addFile not implemented");
             },

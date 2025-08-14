@@ -1,28 +1,18 @@
-import {
-    useConnectConfig,
-    useDocumentDriveServer,
-    useShowAddDriveModal,
-} from '#hooks';
-import { useGetAppNameForEditorId } from '#store';
+import connectConfig from '#connect-config';
+import { useDocumentDriveServer, useShowAddDriveModal } from '#hooks';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    useDocuments,
+    setSelectedDrive,
     useDrives,
-    useLoadableSelectedDocument,
-    useLoadableSelectedDrive,
-    useLoadableSelectedFolder,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
-    useSetSelectedDrive,
 } from '@powerhousedao/state';
-import { type DocumentDriveDocument } from 'document-drive';
-import { useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
@@ -54,9 +44,11 @@ export default function Content() {
 
     return (
         <ContentContainer>
-            <DocumentEditorContainer />
-            <DriveEditorContainer />
-            <HomeScreenContainer />
+            {selectedDocument && <DocumentEditorContainer />}
+            {(!!selectedDrive || !!selectedFolder) && !selectedDocument && (
+                <DriveEditorContainer />
+            )}
+            {!selectedDocument && !selectedDrive && <HomeScreenContainer />}
         </ContentContainer>
     );
 }
@@ -70,70 +62,25 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 }
 
 function HomeScreenContainer() {
-    const { pathname } = useLocation();
     const drives = useDrives();
-    const loadableSelectedDrive = useLoadableSelectedDrive();
-    const loadableSelectedFolder = useLoadableSelectedFolder();
-    const loadableSelectedDocument = useLoadableSelectedDocument();
     const showAddDriveModal = useShowAddDriveModal();
-    const setSelectedDrive = useSetSelectedDrive();
-    const getAppDescriptionForEditorId = useGetAppNameForEditorId();
-    const [config] = useConnectConfig();
-    const handleDriveClick = useCallback(
-        (drive: DocumentDriveDocument) => {
-            setSelectedDrive(drive.header.id);
-        },
-        [setSelectedDrive],
-    );
-
-    const onAddDriveClick = useCallback(() => {
-        showAddDriveModal();
-    }, [showAddDriveModal]);
-
-    const isLoading =
-        loadableSelectedDrive.state === 'loading' ||
-        loadableSelectedFolder.state === 'loading' ||
-        loadableSelectedDocument.state === 'loading';
-
-    const isError =
-        loadableSelectedDrive.state === 'hasError' ||
-        loadableSelectedFolder.state === 'hasError' ||
-        loadableSelectedDocument.state === 'hasError';
-
-    const hasSelectedDriveOrFolderOrDocument =
-        !isLoading &&
-        !isError &&
-        (!!loadableSelectedDrive.data ||
-            !!loadableSelectedFolder.data ||
-            !!loadableSelectedDocument.data);
-
-    if (pathname !== '/') {
-        return null;
-    }
-
-    if (hasSelectedDriveOrFolderOrDocument) {
-        return null;
-    }
+    const config = connectConfig;
 
     return (
         <HomeScreen>
             {drives?.map(drive => {
-                const editorId = drive.header.meta?.preferredEditor;
-                const appName = editorId
-                    ? getAppDescriptionForEditorId(editorId)
-                    : undefined;
                 return (
                     <HomeScreenItem
                         key={drive.header.id}
                         title={drive.state.global.name}
-                        description={appName || 'Drive Explorer App'}
+                        description={'Drive Explorer App'}
                         icon={<DriveIcon drive={drive} />}
-                        onClick={() => handleDriveClick(drive)}
+                        onClick={() => setSelectedDrive(drive)}
                     />
                 );
             })}
             {config.drives.addDriveEnabled && (
-                <HomeScreenAddDriveItem onClick={onAddDriveClick} />
+                <HomeScreenAddDriveItem onClick={showAddDriveModal} />
             )}
         </HomeScreen>
     );

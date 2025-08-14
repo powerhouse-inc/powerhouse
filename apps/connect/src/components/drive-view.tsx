@@ -1,17 +1,11 @@
-import {
-    useConnectConfig,
-    useDocumentDriveServer,
-    useNodeActions,
-    useUserPermissions,
-} from '#hooks';
-import { useFilteredDocumentModels } from '#store';
+import connectConfig from '#connect-config';
+import { useDocumentDriveServer, useUserPermissions } from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import {
+    setSelectedNode,
+    useDocumentModelModules,
     useSelectedDrive,
-    useSelectedFolder,
     useSelectedNodePath,
-    useSelectedParentFolder,
-    useSetSelectedNode,
 } from '@powerhousedao/state';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
@@ -28,26 +22,12 @@ const getDocumentModelName = (name: string) => {
 };
 
 export function DriveView() {
-    const [connectConfig] = useConnectConfig();
     const { showModal } = useModal();
     const { addFolder } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
-    const selectedFolder = useSelectedFolder();
-    const parentFolder = useSelectedParentFolder();
     const selectedNodePath = useSelectedNodePath();
-    const setSelectedNode = useSetSelectedNode();
-
+    const documentModelModules = useDocumentModelModules();
     const { isAllowedToCreateDocuments } = useUserPermissions() ?? {};
-    const documentModels = useFilteredDocumentModels();
-    const {
-        onAddFile,
-        onAddFolder,
-        onRenameNode,
-        onCopyNode,
-        onMoveNode,
-        onDuplicateNode,
-        onAddAndSelectNewFolder,
-    } = useNodeActions();
     const createFolder = useCallback(
         (name: string, parentFolder: string | undefined) => {
             if (!selectedDrive) {
@@ -97,7 +77,7 @@ export function DriveView() {
                             New document
                         </h3>
                         <div className="flex w-full flex-wrap gap-4">
-                            {documentModels?.map(doc => (
+                            {documentModelModules?.map(doc => (
                                 <Button
                                     key={doc.documentModel.id}
                                     title={doc.documentModel.name}

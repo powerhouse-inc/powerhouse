@@ -1,20 +1,20 @@
  
  
 import {
-    useDriveContext,
-    type User,
-    type DriveEditorContext,
-  } from "@powerhousedao/reactor-browser";
-  import {
-    type DocumentModelModule,
-    type EditorContext,
-    type PHDocument,
-    type EditorModule,
-  } from "document-model";
-  import {
-    DefaultEditorLoader,
-  } from "@powerhousedao/design-system";
-  import { Suspense } from "react";
+  DefaultEditorLoader,
+} from "@powerhousedao/design-system";
+import {
+  useDriveContext,
+  type DriveEditorContext,
+  type User,
+} from "@powerhousedao/reactor-browser";
+import { type VetraDocumentModelModule, type VetraEditorModule } from "@powerhousedao/state";
+import {
+  type EditorContext,
+  type EditorModule,
+  type PHDocument
+} from "document-model";
+import { Suspense } from "react";
   
   export interface EditorContainerProps {
     driveId: string;
@@ -22,8 +22,8 @@ import {
     documentType: string;
     context: Omit<DriveEditorContext, "getDocumentRevision"> &
       Pick<EditorContext, "getDocumentRevision">;
-    documentModelModule: DocumentModelModule<PHDocument>;
-    editorModule: EditorModule;
+    documentModelModule: VetraDocumentModelModule;
+    editorModule: VetraEditorModule;
   }
   
   export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
@@ -48,8 +48,7 @@ import {
   
     if (!document) return loadingContent;
   
-    const moduleWithComponent = editorModule as EditorModule<PHDocument>;
-    const EditorComponent = moduleWithComponent.Component;
+    const EditorComponent = editorModule.Component;
   
     return (
       <Suspense fallback={loadingContent}>

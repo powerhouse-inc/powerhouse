@@ -1,10 +1,10 @@
 import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
+import { useDocumentModelModuleById, useEditorModuleById } from '@powerhousedao/state';
 import { type FileNode } from "document-drive";
 import type React from 'react';
 import { DriveHeader } from './components/DriveHeader.js';
 import { ModuleSpecificationsSection } from './components/ModuleSpecificationsSection.js';
 import { PackageInformationSection } from './components/PackageInformationSection.js';
-import { DOCUMENT_TYPES } from './document-types.js';
 
 interface DriveExplorerProps {
   context: DriveEditorContext;
@@ -47,13 +47,8 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   driveId,
   onOpenDocument,
 }) => {
-  const documentModuleModule = packageDocumentId ?
-    context.getDocumentModelModule(DOCUMENT_TYPES.documentPackage)
-    : null;
-
-  const editorModule = packageDocumentId
-    ? context.getEditor(DOCUMENT_TYPES.documentPackage)
-    : null;
+  const documentModuleModule = useDocumentModelModuleById(packageDocumentId);
+  const editorModule = useEditorModuleById(packageDocumentId);
   
   return (
     <div className="min-h-screen bg-white">

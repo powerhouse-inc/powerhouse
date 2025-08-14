@@ -4,11 +4,10 @@ import { ModalManager } from '#components';
 import { isElectron, isMac, useLogin } from '#hooks';
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
-import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
+import { Outlet, useSearchParams } from 'react-router-dom';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
-    const navigate = useNavigate();
     const { login } = useLogin();
 
     useEffect(() => {
@@ -29,11 +28,11 @@ export default function Root() {
 
     useEffect(() => {
         const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
-            navigate(`/${url}`);
+            window.history.pushState({}, '', `/${url}`);
         });
 
         return unsubscribe;
-    }, [navigate]);
+    }, []);
 
     return (
         <ModalManager>

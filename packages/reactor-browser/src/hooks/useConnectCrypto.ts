@@ -1,5 +1,4 @@
-import { atom, useAtom } from "jotai";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DID, IConnectCrypto } from "../crypto/index.js";
 
 let _connectCrypto: Promise<IConnectCrypto> | undefined;
@@ -48,14 +47,11 @@ export function useConnectCrypto(): IConnectCrypto {
     [],
   );
 }
-
-const didAtom = atom<DID | undefined>(undefined);
-didAtom.debugLabel = "didAtomInReactorBrowser";
 export function useConnectDid(): DID | undefined {
-  const [did, setDid] = useAtom(didAtom);
+  const [did, setDid] = useState<DID | undefined>(undefined);
 
   useEffect(() => {
-    if (did) {
+    if (did !== undefined) {
       return;
     }
     getConnectCrypto()

@@ -1,5 +1,4 @@
 import {
-  type DocumentDriveAction,
   type DocumentDriveDocument,
   addFolder,
   copyNode,
@@ -17,6 +16,9 @@ import {
 import { useMemo } from "react";
 import { type IDriveContext } from "../types/drive-editor.js";
 
+// TODO: this does not make sense.
+// Why are we calling `.toString()` in the result of a function we have explicitly says already returns a string?
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
 const generateId = () => _generateId().toString();
 
 /**

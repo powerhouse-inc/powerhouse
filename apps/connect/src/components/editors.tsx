@@ -4,12 +4,7 @@ import {
     useUndoRedoShortcuts,
     useUserPermissions,
 } from '#hooks';
-import {
-    themeAtom,
-    useGetDocumentModelModule,
-    useGetEditor,
-    useUser,
-} from '#store';
+import { useTheme, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatchCallback,
@@ -23,6 +18,11 @@ import {
     RevisionHistory,
     type TimelineItem,
 } from '@powerhousedao/design-system';
+import {
+    useDocumentModelModuleById,
+    useEditorModuleById,
+    useFallbackEditorModule,
+} from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -33,7 +33,6 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useAtomValue } from 'jotai';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
@@ -76,25 +75,20 @@ export const DocumentEditor: React.FC<Props> = props => {
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const theme = useAtomValue(themeAtom);
     const user = useUser() || undefined;
+    const theme = useTheme();
     const connectDid = useConnectDid();
     const { sign } = useConnectCrypto();
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
     const documentType = document.header.documentType;
-    const documentModel = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
+    const documentModelModule = useDocumentModelModuleById(documentType);
+    const preferredEditorModule = useEditorModuleById(
+        document.header.meta?.preferredEditor,
     );
-
-    const editor = useMemo(
-        () => (documentType ? getEditor(documentType) : undefined),
-        [documentType, getEditor],
-    );
+    const fallbackEditorModule = useFallbackEditorModule(documentType);
+    const editorModule = preferredEditorModule ?? fallbackEditorModule;
 
     const [, _dispatch, error] = useDocumentDispatch(
-        documentModel?.reducer,
+        documentModelModule?.reducer,
         document,
     );
     const context: EditorContext = useMemo(
@@ -123,7 +117,7 @@ export const DocumentEditor: React.FC<Props> = props => {
                     sign,
                     documentId,
                     prevState,
-                    documentModel?.reducer,
+                    documentModelModule?.reducer,
                     user,
                 )
                     .then(op => {
@@ -144,7 +138,7 @@ export const DocumentEditor: React.FC<Props> = props => {
         [
             _dispatch,
             connectDid,
-            documentModel?.reducer,
+            documentModelModule?.reducer,
             onAddOperation,
             documentId,
             sign,
@@ -170,10 +164,12 @@ export const DocumentEditor: React.FC<Props> = props => {
     }, [dispatch]);
 
     const isLoadingEditor =
-        editor === undefined ||
-        (editor &&
-            !editor.documentTypes.includes(document.header.documentType) &&
-            !editor.documentTypes.includes('*'));
+        editorModule === undefined ||
+        (editorModule &&
+            !editorModule.documentTypes.includes(
+                document.header.documentType,
+            ) &&
+            !editorModule.documentTypes.includes('*'));
 
     const canUndo =
         document.header.revision.global > 0 ||
@@ -226,7 +222,7 @@ export const DocumentEditor: React.FC<Props> = props => {
         return <EditorLoader message="Loading editor" />;
     }
 
-    if (!documentModel) {
+    if (!documentModelModule) {
         return (
             <EditorError
                 message={
@@ -256,7 +252,7 @@ export const DocumentEditor: React.FC<Props> = props => {
         );
     }
 
-    if (!editor) {
+    if (!editorModule) {
         return (
             <EditorError
                 message={
@@ -286,13 +282,13 @@ export const DocumentEditor: React.FC<Props> = props => {
         );
     }
 
-    const EditorComponent = editor.Component;
+    const EditorComponent = editorModule.Component;
     const {
         disableExternalControls,
         documentToolbarEnabled,
         showSwitchboardLink,
         timelineEnabled,
-    } = editor.config;
+    } = editorModule.config;
 
     const handleSwitchboardLinkClick =
         showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
