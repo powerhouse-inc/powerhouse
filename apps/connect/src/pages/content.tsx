@@ -75,7 +75,7 @@ function HomeScreenContainer() {
                         title={drive.state.global.name}
                         description={'Drive Explorer App'}
                         icon={<DriveIcon drive={drive} />}
-                        onClick={() => setSelectedDrive(drive.header.slug)}
+                        onClick={() => setSelectedDrive(drive)}
                     />
                 );
             })}

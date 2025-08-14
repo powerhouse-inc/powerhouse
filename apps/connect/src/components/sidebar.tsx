@@ -82,7 +82,7 @@ export default function Sidebar() {
                     <SidebarItem
                         key={index}
                         title={drive.header.name}
-                        onClick={() => setSelectedDrive(drive.header.slug)}
+                        onClick={() => setSelectedDrive(drive)}
                         active={selectedDrive?.header.id === drive.header.id}
                         icon={<DriveIcon drive={drive} />}
                     />

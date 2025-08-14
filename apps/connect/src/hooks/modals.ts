@@ -51,7 +51,7 @@ export function useShowAddDriveModal() {
                 return;
             }
 
-            setSelectedDrive(newDrive.header.slug);
+            setSelectedDrive(newDrive);
         } catch (e) {
             console.error(e);
         }
@@ -92,7 +92,7 @@ export function useShowAddDriveModal() {
                 return;
             }
 
-            setSelectedDrive(newDrive.header.slug);
+            setSelectedDrive(newDrive);
         } catch (e) {
             console.error(e);
         }
@@ -148,7 +148,7 @@ export function useShowDriveSettingsModal() {
                     closeModal();
                     await deleteDrive(drive.header.id);
 
-                    setSelectedDrive(drives?.[0]?.header.slug);
+                    setSelectedDrive(drives?.[0]);
 
                     toast(t('notifications.deleteDriveSuccess'), {
                         type: 'connect-deleted',
@@ -156,7 +156,7 @@ export function useShowDriveSettingsModal() {
                 },
             });
         },
-        [deleteDrive, drives, setSelectedDrive, showModal, t],
+        [deleteDrive, drives, showModal, t],
     );
     const showDriveSettingsModal = useCallback(
         (drive: DocumentDriveDocument) => {
