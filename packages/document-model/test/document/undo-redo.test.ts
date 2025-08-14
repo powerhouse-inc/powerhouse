@@ -1,4 +1,4 @@
-import { Action, Operation } from "#document/types.js";
+import { type Action, type Operation } from "#document/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { noop, redo, undo } from "../../src/document/actions/creators.js";
 import { processUndoRedo } from "../../src/document/reducer.js";

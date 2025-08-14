@@ -15,14 +15,17 @@ function debounceOperations(
       clearTimeout(timer);
     }
     const index = operations.findIndex(
-      (op) => op.action.scope === operation.action.scope && op.index === operation.index,
+      (op) =>
+        op.action.scope === operation.action.scope &&
+        op.index === operation.index,
     );
     if (index > -1) {
       const oldOperation = operations[index];
       if (
         !(
           oldOperation.action.type === operation.action.type &&
-          JSON.stringify(operation.action.input) === JSON.stringify(oldOperation.action.input)
+          JSON.stringify(operation.action.input) ===
+            JSON.stringify(oldOperation.action.input)
         )
       ) {
         console.warn(

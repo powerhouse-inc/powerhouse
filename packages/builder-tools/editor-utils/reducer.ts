@@ -21,10 +21,11 @@ export function useDocumentReducer<TDocument extends PHDocument>(
     setState((_state) => {
       try {
         // todo: force for now, while we refactor
-        const actionToProcess = 'action' in action ? action.action : action;
+        const actionToProcess = "action" in action ? action.action : action;
         const newState = reducer(_state, actionToProcess as Action);
 
-        const operation = newState.operations[actionToProcess.scope].slice(-1)[0];
+        const operation =
+          newState.operations[actionToProcess.scope].slice(-1)[0];
 
         if (operation.error) {
           const error = new Error(operation.error);
