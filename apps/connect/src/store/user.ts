@@ -1,5 +1,5 @@
-import { useRenown } from '#hooks';
 import type { User } from '#services';
+import { useRenown } from '@powerhousedao/state';
 import {
     setUser as setSentryUser,
     type User as SentryUser,

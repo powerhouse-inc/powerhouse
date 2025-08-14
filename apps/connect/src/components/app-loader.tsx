@@ -1,4 +1,4 @@
-import { useLoadInitialData, useRenown } from '#hooks';
+import { useLoadInitialData } from '#hooks';
 import { lazy, StrictMode, Suspense } from 'react';
 import { useLoadData } from '../hooks/useLoadData.js';
 import '../i18n';
@@ -16,7 +16,6 @@ const ModalManager = lazy(() =>
 function Load() {
     useLoadInitialData();
     useLoadData();
-    useRenown();
     return null;
 }
 

@@ -1845,6 +1845,9 @@ importers:
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.5.0
         version: 0.5.0
+      '@renown/sdk':
+        specifier: workspace:*
+        version: link:../renown
       '@types/react':
         specifier: ^19.1.8
         version: 19.1.10

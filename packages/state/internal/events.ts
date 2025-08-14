@@ -1,3 +1,4 @@
+import { type Unsubscribe, type User } from "@renown/sdk";
 import { type DocumentDriveDocument } from "document-drive";
 import { type ProcessorManager } from "document-drive/processors/processor-manager";
 import { type DocumentModelModule, type PHDocument } from "document-model";
@@ -9,10 +10,29 @@ import {
 } from "../utils/url.js";
 import { type Reactor } from "./types.js";
 
+export interface IRenown {
+  user: () => Promise<User | undefined>;
+  login: (did: string) => Promise<User | undefined>;
+  logout: () => Promise<void>;
+  on: {
+    user: (cb: (user: User) => void) => Unsubscribe;
+  };
+}
+
 export type SetReactorEvent = CustomEvent<{
   reactor: Reactor | undefined;
 }>;
 export type ReactorUpdatedEvent = CustomEvent;
+
+export type SetRenownEvent = CustomEvent<{
+  renown: IRenown | undefined;
+}>;
+export type RenownUpdatedEvent = CustomEvent;
+
+export type SetUserEvent = CustomEvent<{
+  user: User | undefined;
+}>;
+export type UserUpdatedEvent = CustomEvent;
 
 export type SetProcessorManagerEvent = CustomEvent<{
   processorManager: ProcessorManager | undefined;
@@ -45,6 +65,8 @@ export type VetraPackagesUpdatedEvent = CustomEvent;
 
 export function addPHEventHandlers() {
   addReactorEventHandler();
+  addRenownEventHandler();
+  addUserEventHandler();
   addProcessorManagerEventHandler();
   addDrivesEventHandler();
   addDocumentsEventHandler();
@@ -78,6 +100,60 @@ export function subscribeToReactor(onStoreChange: () => void) {
 
 export function addReactorEventHandler() {
   window.addEventListener("ph:setReactor", handleSetReactorEvent);
+}
+
+export function dispatchSetRenownEvent(renown: IRenown | undefined) {
+  const event = new CustomEvent("ph:setRenown", {
+    detail: { renown },
+  });
+  window.dispatchEvent(event);
+}
+export function dispatchRenownUpdatedEvent() {
+  const event = new CustomEvent("ph:renownUpdated");
+  window.dispatchEvent(event);
+}
+export function handleSetRenownEvent(event: SetRenownEvent) {
+  const renown = event.detail.renown;
+  window.renown = renown;
+  dispatchRenownUpdatedEvent();
+}
+
+export function subscribeToRenown(onStoreChange: () => void) {
+  window.addEventListener("ph:renownUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:renownUpdated", onStoreChange);
+  };
+}
+
+export function addRenownEventHandler() {
+  window.addEventListener("ph:setRenown", handleSetRenownEvent);
+}
+
+export function dispatchSetUserEvent(user: User | undefined) {
+  const event = new CustomEvent("ph:setUser", {
+    detail: { user },
+  });
+  window.dispatchEvent(event);
+}
+export function dispatchUserUpdatedEvent() {
+  const event = new CustomEvent("ph:userUpdated");
+  window.dispatchEvent(event);
+}
+export function handleSetUserEvent(event: SetUserEvent) {
+  const user = event.detail.user;
+  window.user = user;
+  dispatchUserUpdatedEvent();
+}
+
+export function subscribeToUser(onStoreChange: () => void) {
+  window.addEventListener("ph:userUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:userUpdated", onStoreChange);
+  };
+}
+
+export function addUserEventHandler() {
+  window.addEventListener("ph:setUser", handleSetUserEvent);
 }
 
 export function dispatchSetProcessorManagerEvent(

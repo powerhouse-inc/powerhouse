@@ -29,6 +29,7 @@
     "@types/slug": "^5.0.9",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^6.3.5"

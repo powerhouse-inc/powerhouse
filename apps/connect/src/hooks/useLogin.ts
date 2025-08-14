@@ -1,10 +1,9 @@
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from '#services';
 import { useUser } from '#store';
-import { useReactor } from '@powerhousedao/state';
+import { useReactor, useRenown } from '@powerhousedao/state';
 import { logger } from 'document-drive';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConnectCrypto } from './useConnectCrypto.js';
-import { useRenown } from './useRenown.js';
 
 type LoginStatus = 'initial' | 'checking' | 'not-authorized' | 'authorized';
 

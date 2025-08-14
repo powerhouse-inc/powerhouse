@@ -14,10 +14,12 @@ import {
     dispatchSetDrivesEvent,
     dispatchSetProcessorManagerEvent,
     dispatchSetReactorEvent,
+    dispatchSetRenownEvent,
     dispatchSetSelectedDriveIdEvent,
     dispatchSetSelectedNodeIdEvent,
     dispatchSetVetraPackagesEvent,
 } from '@powerhousedao/state/internal/events';
+import { type User } from '@renown/sdk';
 import { logger, type IDocumentDriveServer } from 'document-drive';
 import { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { generateId } from 'document-model';
@@ -45,12 +47,10 @@ export async function handleCreateFirstLocalDrive(
 
     const drives = await getDrives(reactor);
     const hasDrives = drives.length > 0;
-    console.log('hasDrives', hasDrives, drives);
     if (hasDrives) return;
 
     const driveId = generateId();
     const driveSlug = `my-local-drive-${driveId}`;
-    console.log({ driveId, driveSlug, drives });
     const document = await reactor.addDrive({
         id: driveId,
         slug: driveSlug,
@@ -89,10 +89,56 @@ async function loadVetraPackages() {
     return [commonPackage, ...externalPackages];
 }
 
+async function getDid() {
+    const crypto = await getConnectCrypto();
+    return crypto.did();
+}
+
+async function initRenown(
+    getDid: () => Promise<string>,
+): Promise<IRenown | undefined> {
+    try {
+        const did = await getDid();
+        if (!did) {
+            return;
+        }
+        const { initRenownBrowser } = await import(
+            '../services/renown/index.js'
+        );
+        const renownBrowser = initRenownBrowser(did);
+        const renown: IRenown = {
+            user: function (): Promise<User | undefined> {
+                return Promise.resolve(renownBrowser.user);
+            },
+            login: function (did: string): Promise<User | undefined> {
+                return renownBrowser.login(did);
+            },
+            logout() {
+                return Promise.resolve(renownBrowser.logout());
+            },
+            on: {
+                user(cb) {
+                    return renownBrowser.on('user', cb);
+                },
+            },
+        };
+        return renown;
+    } catch (err) {
+        console.error(
+            'Error initializing renown:',
+            err instanceof Error ? err.message : 'Unknown error',
+        );
+        return undefined;
+    }
+}
+
 export async function createReactor() {
     if (window.reactor) return;
     // add window event handlers for updates
     addPHEventHandlers();
+
+    // initialize renown
+    const renown = await initRenown(getDid);
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);
@@ -111,25 +157,25 @@ export async function createReactor() {
         storage,
     );
 
-    // assume that renown already exists on the window object
-    // TODO: use event based solution for this too
-    const renown = window.renown;
-
     // initialize the reactor
     await initReactor(reactor, renown);
 
     // create the processor manager
     const processorManager = new ProcessorManager(reactor.listeners, reactor);
 
-    // get the drives, documents, and path
+    // get the drives from the reactor
     const drives = await getDrives(reactor);
+    // get the documents from the reactor
     const documents = await getDocuments(reactor);
+
+    // set the selected drive and node from the path
     const path = window.location.pathname;
     const driveSlug = extractDriveSlugFromPath(path);
     const nodeSlug = extractNodeSlugFromPath(path);
 
     // dispatch the events to set the values in the window object
     dispatchSetReactorEvent(reactor);
+    dispatchSetRenownEvent(renown);
     dispatchSetProcessorManagerEvent(processorManager);
     dispatchSetDrivesEvent(drives);
     dispatchSetDocumentsEvent(documents);

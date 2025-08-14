@@ -17,6 +17,9 @@
     },
     {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/renown"
     }
   ]
 }
