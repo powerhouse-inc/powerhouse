@@ -1,3 +1,4 @@
+import { Action, Operation } from "#document/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { noop, redo, undo } from "../../src/document/actions/creators.js";
 import { processUndoRedo } from "../../src/document/reducer.js";
@@ -68,7 +69,9 @@ describe("UNDO/REDO", () => {
 
       expect(result.skip).toBe(1);
       expect(result.document.operations.global.length).toBe(5);
-      expect(result.document.operations.global[4].type).toBe("INCREMENT");
+      expect(result.document.operations.global[4].action.type).toBe(
+        "INCREMENT",
+      );
     });
 
     it("should NOT remove latest operation if is a NOOP with skip = 0", () => {
@@ -83,7 +86,7 @@ describe("UNDO/REDO", () => {
 
       expect(result.skip).toBe(1);
       expect(result.document.operations.global.length).toBe(6);
-      expect(result.document.operations.global[5].type).toBe("NOOP");
+      expect(result.document.operations.global[5].action.type).toBe("NOOP");
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
@@ -185,7 +188,7 @@ describe("UNDO/REDO", () => {
       expect(document.state.global.count).toBe(4);
 
       expect(document.clipboard.length).toBe(1);
-      expect(document.clipboard[0].type).toBe("INCREMENT");
+      expect(document.clipboard[0].action.type).toBe("INCREMENT");
       expect(document.clipboard[0].index).toBe(4);
 
       expect(document.operations.global.length).toBe(5);
@@ -215,11 +218,11 @@ describe("UNDO/REDO", () => {
       expect(document.state.global.count).toBe(2);
 
       expect(document.clipboard.length).toBe(3);
-      expect(document.clipboard[0].type).toBe("INCREMENT");
+      expect(document.clipboard[0].action.type).toBe("INCREMENT");
       expect(document.clipboard[0].index).toBe(4);
-      expect(document.clipboard[1].type).toBe("INCREMENT");
+      expect(document.clipboard[1].action.type).toBe("INCREMENT");
       expect(document.clipboard[1].index).toBe(3);
-      expect(document.clipboard[2].type).toBe("INCREMENT");
+      expect(document.clipboard[2].action.type).toBe("INCREMENT");
       expect(document.clipboard[2].index).toBe(2);
 
       expect(document.operations.global.length).toBe(3);
@@ -254,11 +257,11 @@ describe("UNDO/REDO", () => {
       expect(document.state.global.count).toBe(1);
 
       expect(document.clipboard.length).toBe(3);
-      expect(document.clipboard[0].type).toBe("INCREMENT");
+      expect(document.clipboard[0].action.type).toBe("INCREMENT");
       expect(document.clipboard[0].index).toBe(7);
-      expect(document.clipboard[1].type).toBe("INCREMENT");
+      expect(document.clipboard[1].action.type).toBe("INCREMENT");
       expect(document.clipboard[1].index).toBe(6);
-      expect(document.clipboard[2].type).toBe("INCREMENT");
+      expect(document.clipboard[2].action.type).toBe("INCREMENT");
       expect(document.clipboard[2].index).toBe(1);
 
       expect(document.operations.global.length).toBe(2);
@@ -289,9 +292,9 @@ describe("UNDO/REDO", () => {
       expect(document.state.global.count).toBe(2);
 
       expect(document.clipboard.length).toBe(2);
-      expect(document.clipboard[0].type).toBe("INCREMENT");
+      expect(document.clipboard[0].action.type).toBe("INCREMENT");
       expect(document.clipboard[0].index).toBe(8);
-      expect(document.clipboard[1].type).toBe("INCREMENT");
+      expect(document.clipboard[1].action.type).toBe("INCREMENT");
       expect(document.clipboard[1].index).toBe(2);
 
       expect(document.operations.global.length).toBe(3);
@@ -414,24 +417,34 @@ describe("UNDO/REDO", () => {
     });
 
     it("should replace previous noop operation and update skip number when a new noop is dispatched after another one", () => {
-      const baseOperation = {
+      const baseAction: Action = {
         id: "noop-2",
+        timestamp: new Date().toISOString(),
         input: {},
         type: "NOOP",
-        skip: 0,
-        index: 5,
         scope: "global",
-        hash: "Ki38EB6gkUcnU3ceRsc88njPo3U=",
-        timestamp: new Date().toISOString(),
       };
 
-      const op1 = { ...baseOperation, skip: 1 } as CountAction;
-      const op2 = { ...baseOperation, skip: 2 } as CountAction;
-      const op3 = { ...baseOperation, skip: 3 } as CountAction;
+      const baseOperation: Operation = {
+        id: "noop-2",
+        skip: 0,
+        index: 5,
+        hash: "Ki38EB6gkUcnU3ceRsc88njPo3U=",
+        timestamp: new Date().toISOString(),
+        action: baseAction,
+      };
 
-      document = countReducer(document, op1, undefined, { skip: 1 });
-      document = countReducer(document, op2, undefined, { skip: 2 });
-      document = countReducer(document, op3, undefined, { skip: 3 });
+      const action1 = { ...baseAction } as CountAction;
+      const action2 = { ...baseAction } as CountAction;
+      const action3 = { ...baseAction } as CountAction;
+
+      const op1 = { ...baseOperation, skip: 1 };
+      const op2 = { ...baseOperation, skip: 2 };
+      const op3 = { ...baseOperation, skip: 3 };
+
+      document = countReducer(document, action1, undefined, { skip: 1 });
+      document = countReducer(document, action2, undefined, { skip: 2 });
+      document = countReducer(document, action3, undefined, { skip: 3 });
 
       expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(2);

@@ -12,9 +12,6 @@ const fakeOperation = (
   return {
     index,
     skip,
-    type,
-    input: {},
-    scope: "global",
     timestamp,
     hash: "123",
     action: {

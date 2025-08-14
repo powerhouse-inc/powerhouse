@@ -412,11 +412,13 @@ export function replayDocument<TDocument extends PHDocument>(
   // then replays them
   if (operationsToReplay.length) {
     result = operationsToReplay.reduce((document, operation) => {
-      // TODO: fix this once refactor is complete
-      const doc = reducer(document, operation as Action, dispatch, {
+      const doc = reducer(document, operation.action, dispatch, {
         skip: operation.skip,
         ignoreSkipOperations: true,
         hash: !checkHashes ? operation.hash : undefined,
+        replayOptions: {
+          operation,
+        },
       });
 
       return doc;
@@ -428,7 +430,10 @@ export function replayDocument<TDocument extends PHDocument>(
     for (const scopeOperations of Object.values(initialOperations)) {
       const lastOperation = scopeOperations.at(-1);
       if (lastOperation) {
-        result = updateHeaderRevision(result, lastOperation.scope) as TDocument;
+        result = updateHeaderRevision(
+          result,
+          lastOperation.action.scope,
+        ) as TDocument;
       }
     }
   }
@@ -440,7 +445,7 @@ export function replayDocument<TDocument extends PHDocument>(
       for (let i = operationsToReplay.length - 1; i >= 0; i--) {
         const operation = operationsToReplay[i];
 
-        if (operation.scope !== scope) {
+        if (operation.action.scope !== scope) {
           continue;
         }
         if (operation.hash !== hashDocumentStateForScope(result, scope)) {

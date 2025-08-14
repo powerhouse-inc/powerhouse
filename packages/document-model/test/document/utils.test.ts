@@ -89,35 +89,26 @@ describe("Base utils", () => {
     const errors = validateOperations({
       global: [
         {
-          scope: "global",
           hash: "",
           index: 0,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: a1,
         },
         {
-          scope: "global",
           hash: "",
           index: 0,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: a2,
         },
       ],
       local: [
         {
-          scope: "local",
           hash: "",
           index: 0,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: a3,
         },
       ],
@@ -133,13 +124,10 @@ describe("Base utils", () => {
     const errors = validateOperations({
       global: [
         {
-          scope: "global",
           hash: "",
           index: 0,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -147,13 +135,10 @@ describe("Base utils", () => {
           }),
         },
         {
-          scope: "global",
           hash: "",
           index: 1,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -161,13 +146,10 @@ describe("Base utils", () => {
           }),
         },
         {
-          scope: "global",
           hash: "",
           index: 3,
           skip: 1,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -177,13 +159,10 @@ describe("Base utils", () => {
       ],
       local: [
         {
-          scope: "local",
           hash: "",
           index: 0,
           skip: 0,
           timestamp: "",
-          type: "TEST_ACTION",
-          input: { id: "test" },
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
