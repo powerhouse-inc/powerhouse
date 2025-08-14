@@ -1,13 +1,29 @@
 import {
+  type Action,
   type ActionContext,
   type ActionSigner,
   type AppActionSigner,
+  type Operation,
   type Signature,
   type UserActionSigner,
-  type Action,
-  type Operation,
 } from "./types.js";
 import { generateId } from "./utils/crypto.js";
+
+/**
+ * This function should be used instead of { ...action } to ensure
+ * that extra properties are not included in the action.
+ */
+export const actionFromAction = (action: Action): Action => {
+  return {
+    id: action.id,
+    timestamp: action.timestamp,
+    type: action.type,
+    input: action.input,
+    scope: action.scope,
+    context: action.context,
+    attachments: action.attachments,
+  };
+};
 
 export const operationFromAction = (
   action: Action,
@@ -35,7 +51,6 @@ export const operationFromOperation = (
     ...operation,
     hash: "",
     error: undefined,
-
     skip,
   };
 };

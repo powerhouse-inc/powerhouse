@@ -9,7 +9,7 @@ describe("Event", () => {
     vi.useFakeTimers().setSystemTime(new Date("2020-01-01"));
   });
 
-  it("should not re-assing index to an event", () => {
+  it("should not re-assingn index to an event", () => {
     let document = baseCreateDocument();
 
     document = wrappedEmptyReducer(
@@ -30,31 +30,37 @@ describe("Event", () => {
       }),
     );
 
-    document = wrappedEmptyReducer(
-      document,
-      fakeAction({
-        type: "TEST_4",
-        input: {},
-        index: 3,
-        hash: "test-4-hash",
-        scope: "global",
-      }),
-      undefined,
-      { skip: 1 },
-    );
+    const action = fakeAction({
+      type: "TEST_4",
+      input: {},
+      scope: "global",
+    });
+
+    document = wrappedEmptyReducer(document, action, undefined, {
+      skip: 1,
+      replayOptions: {
+        operation: {
+          index: 3,
+          hash: "test-4-hash",
+          timestamp: new Date().toISOString(),
+          skip: 1,
+          action,
+        },
+      },
+    });
 
     expect(document.header.revision.global).toBe(4);
     expect(document.operations.global).toMatchObject([
       {
-        type: "TEST",
+        action: { type: "TEST" },
         index: 0,
       },
       {
-        type: "TEST_2",
+        action: { type: "TEST_2" },
         index: 1,
       },
       {
-        type: "TEST_4",
+        action: { type: "TEST_4" },
         index: 3,
         skip: 1,
       },
@@ -143,18 +149,24 @@ describe("Event", () => {
       }),
     );
 
-    document = wrappedEmptyReducer(
-      document,
-      fakeAction({
-        type: "TEST_4",
-        input: {},
-        index: 3,
-        hash: "test-4-hash",
-        scope: "global",
-      }),
-      undefined,
-      { skip: 1 },
-    );
+    const action = fakeAction({
+      type: "TEST_4",
+      input: {},
+      scope: "global",
+    });
+
+    document = wrappedEmptyReducer(document, action, undefined, {
+      skip: 1,
+      replayOptions: {
+        operation: {
+          index: 3,
+          hash: "test-4-hash",
+          timestamp: new Date().toISOString(),
+          skip: 1,
+          action,
+        },
+      },
+    });
 
     document = wrappedEmptyReducer(
       document,
@@ -168,20 +180,20 @@ describe("Event", () => {
     expect(document.header.revision.global).toBe(5);
     expect(document.operations.global).toMatchObject([
       {
-        type: "TEST",
+        action: { type: "TEST" },
         index: 0,
       },
       {
-        type: "TEST_2",
+        action: { type: "TEST_2" },
         index: 1,
       },
       {
-        type: "TEST_4",
+        action: { type: "TEST_4" },
         index: 3,
         skip: 1,
       },
       {
-        type: "TEST_5",
+        action: { type: "TEST_5" },
         index: 4,
       },
     ]);
@@ -208,31 +220,37 @@ describe("Event", () => {
       }),
     );
 
-    document = wrappedEmptyReducer(
-      document,
-      fakeAction({
-        type: "TEST_4",
-        input: {},
-        index: 3,
-        hash: "test-4-hash",
-        scope: "global",
-      }),
-      undefined,
-      { skip: 1 },
-    );
+    const action = fakeAction({
+      type: "TEST_4",
+      input: {},
+      scope: "global",
+    });
+
+    document = wrappedEmptyReducer(document, action, undefined, {
+      skip: 1,
+      replayOptions: {
+        operation: {
+          index: 3,
+          hash: "test-4-hash",
+          timestamp: new Date().toISOString(),
+          skip: 1,
+          action,
+        },
+      },
+    });
 
     expect(document.header.revision.global).toBe(4);
     expect(document.operations.global).toMatchObject([
       {
-        type: "TEST",
+        action: { type: "TEST" },
         index: 0,
       },
       {
-        type: "TEST_2",
+        action: { type: "TEST_2" },
         index: 1,
       },
       {
-        type: "TEST_4",
+        action: { type: "TEST_4" },
         index: 3,
         skip: 1,
       },

@@ -191,10 +191,10 @@ export default class SynchronizationManager implements ISynchronizationManager {
       const firstOp = limitedOperations[0];
       const lastOp = limitedOperations[limitedOperations.length - 1];
       this.logger.verbose(
-        `[SYNC DEBUG] First operation: index=${firstOp.index}, type=${firstOp.type}`,
+        `[SYNC DEBUG] First operation: index=${firstOp.index}, type=${firstOp.action.type}`,
       );
       this.logger.verbose(
-        `[SYNC DEBUG] Last operation: index=${lastOp.index}, type=${lastOp.type}`,
+        `[SYNC DEBUG] Last operation: index=${lastOp.index}, type=${lastOp.action.type}`,
       );
     }
 
@@ -203,8 +203,8 @@ export default class SynchronizationManager implements ISynchronizationManager {
       hash: operation.hash,
       index: operation.index,
       timestamp: operation.timestamp,
-      type: operation.type,
-      input: operation.input as object,
+      type: operation.action.type,
+      input: operation.action.input as object,
       skip: operation.skip,
       context: operation.action.context,
       id: operation.id,

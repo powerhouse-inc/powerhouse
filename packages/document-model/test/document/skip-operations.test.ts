@@ -10,8 +10,8 @@ import {
   baseCountReducer,
   type CountDocument,
   countReducer,
-  createFakeOperation,
   error,
+  fakeOperation,
   increment,
   mapOperations,
   wrappedEmptyReducer,
@@ -66,9 +66,9 @@ describe("skip operations", () => {
   describe("mapSkippedOperations", () => {
     it('should tag as "ignored" operation 2 when operation 3 -> (skip=1)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3, 1),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3, 1),
       ];
 
       const ignoredIndexes = [2];
@@ -87,11 +87,11 @@ describe("skip operations", () => {
 
     it('should tag as "ignored" operation 2, 3 and 4 when operation 5 -> (skip=3)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-        createFakeOperation(4),
-        createFakeOperation(5, 3),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3),
+        fakeOperation(4),
+        fakeOperation(5, 3),
       ];
 
       const ignoredIndexes = [2, 3, 4];
@@ -110,12 +110,12 @@ describe("skip operations", () => {
 
     it('should tag as "ignored" operation 2 and 5 when opration 3 -> (skip=1) and operation 6 -> (skip=1)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3, 1),
-        createFakeOperation(4),
-        createFakeOperation(5),
-        createFakeOperation(6, 1),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3, 1),
+        fakeOperation(4),
+        fakeOperation(5),
+        fakeOperation(6, 1),
       ];
 
       const ignoredIndexes = [2, 5];
@@ -134,13 +134,13 @@ describe("skip operations", () => {
 
     it('should tag as "ignored" operation 1, 2, 3, 4, 5 and 6 when opration 7 -> (skip=6)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-        createFakeOperation(4),
-        createFakeOperation(5),
-        createFakeOperation(6),
-        createFakeOperation(7, 6),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3),
+        fakeOperation(4),
+        fakeOperation(5),
+        fakeOperation(6),
+        fakeOperation(7, 6),
       ];
 
       const ignoredIndexes = [1, 2, 3, 4, 5, 6];
@@ -159,11 +159,11 @@ describe("skip operations", () => {
 
     it('should tag as "ignored" operation 2, 3, and 4 when operation 5 -> (skip=2) and operation 3 -> (skip=1)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3, 1),
-        createFakeOperation(4),
-        createFakeOperation(5, 2),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3, 1),
+        fakeOperation(4),
+        fakeOperation(5, 2),
       ];
 
       const ignoredIndexes = [2, 3, 4];
@@ -182,14 +182,14 @@ describe("skip operations", () => {
 
     it('should tag as "ignored" operations 3, 4, 5, 6, and 7 when operation 6 -> (skip=1) and operation 8 -> (skip=5)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-        createFakeOperation(4),
-        createFakeOperation(5),
-        createFakeOperation(6, 1),
-        createFakeOperation(7),
-        createFakeOperation(8, 5),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3),
+        fakeOperation(4),
+        fakeOperation(5),
+        fakeOperation(6, 1),
+        fakeOperation(7),
+        fakeOperation(8, 5),
       ];
 
       const ignoredIndexes = [3, 4, 5, 6, 7];
@@ -208,11 +208,11 @@ describe("skip operations", () => {
 
     it('should tag all the previous operations as "ignored" when operation 5 -> (skip=4)', () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-        createFakeOperation(4),
-        createFakeOperation(5, 4),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3),
+        fakeOperation(4),
+        fakeOperation(5, 4),
       ];
 
       const ignoredIndexes = [1, 2, 3, 4];
@@ -230,11 +230,7 @@ describe("skip operations", () => {
     });
 
     it("should not skip operations if there's not skipped operations and skippedHeadOperations is not provided", () => {
-      const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-      ];
+      const operations = [fakeOperation(1), fakeOperation(2), fakeOperation(3)];
 
       const mappedOps = mapSkippedOperations(operations);
       expect(mappedOps.length).toBe(3);
@@ -244,11 +240,7 @@ describe("skip operations", () => {
     });
 
     it("should skip the latest operation when skippedHeadOperations = 1", () => {
-      const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-      ];
+      const operations = [fakeOperation(1), fakeOperation(2), fakeOperation(3)];
 
       const ignoredIndexes = [3];
 
@@ -266,11 +258,11 @@ describe("skip operations", () => {
 
     it("should skip the latest 2 operations when skippedHeadOperations = 2", () => {
       const operations = [
-        createFakeOperation(1),
-        createFakeOperation(2),
-        createFakeOperation(3),
-        createFakeOperation(4),
-        createFakeOperation(5),
+        fakeOperation(1),
+        fakeOperation(2),
+        fakeOperation(3),
+        fakeOperation(4),
+        fakeOperation(5),
       ];
 
       const ignoredIndexes = [4, 5];
@@ -289,9 +281,9 @@ describe("skip operations", () => {
 
     it("should be able to detect cleared operations", () => {
       const operations = [
-        createFakeOperation(0),
-        createFakeOperation(1),
-        createFakeOperation(3, 1),
+        fakeOperation(0),
+        fakeOperation(1),
+        fakeOperation(3, 1),
       ];
 
       const mappedOps = mapSkippedOperations(operations);

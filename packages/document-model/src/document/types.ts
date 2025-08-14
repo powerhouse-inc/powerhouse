@@ -78,20 +78,28 @@ export type ActionWithAttachment = Action & {
 };
 
 export type ReducerOptions = {
-  /** The number of operations to skip before this new action is applied */
+  /** The number of operations to skip before this new action is applied. This overrides the skip count in the operation. */
   skip?: number;
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
-  /** a hash to use */
-  hash?: string;
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
   /** if true checks the hashes of the operations */
   checkHashes?: boolean;
+  /** Options for performing a replay. */
+  replayOptions?: {
+    /** The previously created operation to verify against. */
+    operation: Operation;
+  };
   /** Optional parser for the operation resulting state, uses JSON.parse by default */
   operationResultingStateParser?: <TState>(
     state: string | null | undefined,
   ) => TState;
+  /**
+   * When true (default), the reducer will prune operations (garbage collect) when processing a skip.
+   * When false, it will recompute state for the skip but preserve the existing operations history.
+   */
+  pruneOnSkip?: boolean;
 };
 
 /**
@@ -132,11 +140,11 @@ export type Operation = {
   // Temporary action fields.
   /////////////////////////////////////////////////////////////////////////////
   /** The name of the action. */
-  type: string;
+  //type: string;
   /** The payload of the action. */
-  input: unknown;
+  //input: unknown;
   /** The scope of the action */
-  scope: string;
+  //scope: string;
   /** The attachments included in the action. */
   //attachments?: AttachmentInput[] | undefined;
   /** The context of the action. */

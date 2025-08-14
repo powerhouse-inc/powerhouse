@@ -47,7 +47,9 @@ export function responseForDocument(
     operations: document.operations.global.map((op: Operation) => ({
       ...op,
       inputText:
-        typeof op.input === "string" ? op.input : JSON.stringify(op.input),
+        typeof op.action.input === "string"
+          ? op.action.input
+          : JSON.stringify(op.action.input),
     })),
     initialState: document.initialState.state.global,
     __typename: typeName,

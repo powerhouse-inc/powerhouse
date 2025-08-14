@@ -8,7 +8,7 @@ import { driveDocumentModelModule as DocumentDrive } from "../src/drive-document
 import { SynchronizationUnitNotFoundError } from "../src/server/error.js";
 import SynchronizationManager from "../src/server/sync-manager.js";
 import { MemoryStorage } from "../src/storage/memory.js";
-import { fakeAction } from "./document-helpers/utils.js";
+import { fakeAction } from "./utils.js";
 
 const documentModels = [DocumentModel, DocumentDrive] as DocumentModelModule[];
 

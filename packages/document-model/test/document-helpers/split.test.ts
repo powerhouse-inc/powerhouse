@@ -104,7 +104,7 @@ describe("split", () => {
       commonOperationsShuffled = testInput.commonOperations.map((op) =>
         buildOperation(
           {
-            type: op.type,
+            type: op.action.type,
             index: op.index,
             skip: op.skip,
             timestamp: op.timestamp,

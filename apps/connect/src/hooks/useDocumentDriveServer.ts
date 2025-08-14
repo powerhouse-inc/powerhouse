@@ -61,7 +61,7 @@ function groupOperationsByScope(
 ): Map<string, Operation[]> {
     const groupedOperations = new Map<string, Operation[]>();
     for (const operation of operations) {
-        const scope = operation.scope;
+        const scope = operation.action.scope;
         const scopeOperations =
             groupedOperations.get(scope) ?? new Array<Operation>();
         scopeOperations.push(operation);
@@ -215,7 +215,7 @@ export function useDocumentDriveServer() {
             const scope = action.scope;
             const operations = newDrive.operations[scope];
             const operation = operations.findLast(
-                op => op.type === action.type,
+                op => op.action.type === action.type,
             );
             if (!operation) {
                 throw new Error('There was an error applying the action');

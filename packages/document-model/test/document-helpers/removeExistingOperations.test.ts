@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { type Operation } from "../../src/document/types.js";
 import { removeExistingOperations } from "../../src/document/utils/document-helpers.js";
+import { fakeAction } from "../helpers.js";
 import { buildOperations } from "./utils.js";
 
 describe("removeExistingOperations", () => {
@@ -93,65 +94,77 @@ describe("removeExistingOperations", () => {
   });
 
   it("should not consider operations skipped", () => {
-    const existingOperations = [
+    const existingOperations: Operation[] = [
       {
-        type: "NOOP",
-        input: {},
-        scope: "global",
+        action: fakeAction({
+          type: "NOOP",
+          input: {},
+          scope: "global",
+        }),
         index: 0,
         timestamp: "2024-04-22T18:33:20.624Z",
         hash: "pLimr2HqW//d6upWCv4tGfI0W4c=",
         skip: 0,
       },
       {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
+        action: fakeAction({
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+        }),
         index: 1,
         timestamp: "2024-04-22T18:33:20.631Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 1,
       },
       {
-        type: "ADD_FOLDER",
-        input: { id: "2", name: "test2" },
-        scope: "global",
+        action: fakeAction({
+          type: "ADD_FOLDER",
+          input: { id: "2", name: "test2" },
+          scope: "global",
+        }),
         index: 2,
         timestamp: "2024-04-22T18:33:20.631Z",
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation[];
+    ];
 
-    const operationsHistory = [
+    const operationsHistory: Operation[] = [
       {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
+        action: fakeAction({
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+        }),
         index: 0,
         timestamp: "2024-04-22T18:33:20.628Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 0,
       },
       {
-        type: "ADD_FOLDER",
-        input: { id: "1", name: "test1" },
-        scope: "global",
+        action: fakeAction({
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+        }),
         index: 1,
         timestamp: "2024-04-22T18:33:20.630Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 1,
       },
       {
-        type: "ADD_FOLDER",
-        input: { id: "2", name: "test2" },
-        scope: "global",
+        action: fakeAction({
+          type: "ADD_FOLDER",
+          input: { id: "2", name: "test2" },
+          scope: "global",
+        }),
         index: 2,
         timestamp: "2024-04-22T18:33:20.630Z",
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
         skip: 0,
       },
-    ] as Operation[];
+    ];
 
     const result = removeExistingOperations(
       existingOperations,

@@ -123,8 +123,17 @@ export class EventQueueManager implements IQueueManager {
       );
     }
 
-    const scope = jobActions?.at(0)?.scope ?? "global";
-    if (jobActions?.find((j) => j.scope !== scope)) {
+    const firstItem = jobActions?.at(0);
+    const scope = firstItem
+      ? "action" in firstItem
+        ? firstItem.action.scope
+        : firstItem.scope
+      : "global";
+    if (
+      jobActions?.find(
+        (j) => ("action" in j ? j.action.scope : j.scope) !== scope,
+      )
+    ) {
       throw new Error("Job has actions with different scopes");
     }
     const queue = this.getQueue(job.documentId, scope);

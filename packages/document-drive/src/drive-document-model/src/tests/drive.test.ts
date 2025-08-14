@@ -28,8 +28,12 @@ describe("Drive Operations", () => {
     const updatedDocument = reducer(document, creators.setDriveName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe("SET_DRIVE_NAME");
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_DRIVE_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 
@@ -38,8 +42,12 @@ describe("Drive Operations", () => {
     const updatedDocument = reducer(document, creators.setSharingType(input));
 
     expect(updatedDocument.operations.local).toHaveLength(1);
-    expect(updatedDocument.operations.local[0].type).toBe("SET_SHARING_TYPE");
-    expect(updatedDocument.operations.local[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.local[0].action.type).toBe(
+      "SET_SHARING_TYPE",
+    );
+    expect(updatedDocument.operations.local[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.local[0].index).toEqual(0);
   });
 
@@ -51,10 +59,12 @@ describe("Drive Operations", () => {
     );
 
     expect(updatedDocument.operations.local).toHaveLength(1);
-    expect(updatedDocument.operations.local[0].type).toBe(
+    expect(updatedDocument.operations.local[0].action.type).toBe(
       "SET_AVAILABLE_OFFLINE",
     );
-    expect(updatedDocument.operations.local[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.local[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.local[0].index).toEqual(0);
   });
 });

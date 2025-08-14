@@ -77,9 +77,6 @@ function operationFromStorage(
     hash: op.hash,
     index: op.index,
     timestamp: new Date(op.timestamp).toISOString(),
-    input: JSON.parse(op.input),
-    type: op.type,
-    scope: op.scope,
     resultingState: op.resultingState
       ? op.resultingState.toString()
       : undefined,
@@ -736,10 +733,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           hash: op.hash,
           index: op.index,
           actionId: op.action.id,
-          input: JSON.stringify(op.input),
+          input: JSON.stringify(op.action.input),
           timestamp: op.timestamp,
-          type: op.type,
-          scope: op.scope,
+          type: op.action.type,
+          scope: op.action.scope,
           branch: "main",
           opId: op.id,
           skip: op.skip,
@@ -770,7 +767,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
                 unique_operation: {
                   documentId: id,
                   index: op.index,
-                  scope: op.scope,
+                  scope: op.action.scope,
                   branch: "main",
                 },
               },
@@ -792,7 +789,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           where: {
             AND: operations.map((op) => ({
               documentId: id,
-              scope: op.scope,
+              scope: op.action.scope,
               branch: "main",
               index: op.index,
             })),
@@ -802,7 +799,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         const conflictOp = operations.find(
           (op) =>
             existingOperation?.index === op.index &&
-            existingOperation.scope === op.scope,
+            existingOperation.scope === op.action.scope,
         );
 
         if (!existingOperation || !conflictOp) {

@@ -110,7 +110,7 @@ export const mutableCountReducer: StateReducer<CountDocument> = (
 export const countReducer = createReducer<CountDocument>(baseCountReducer);
 
 export const mapOperations = (operations: Operation[]) => {
-  return operations.map(({ input, type, index, scope, skip }) => ({
+  return operations.map(({ action: { input, type, scope }, index, skip }) => ({
     input,
     type,
     index,
@@ -119,13 +119,15 @@ export const mapOperations = (operations: Operation[]) => {
   }));
 };
 
-export const createFakeOperation = (index = 0, skip = 0, scope = "global") =>
+export const fakeOperation = (index = 0, skip = 0, scope = "global") =>
   ({
-    type: "FAKE_OP",
-    input: `TEST_${index}`,
-    scope,
     skip,
     index,
     timestamp: new Date().toISOString(),
     hash: `${index}`,
+    action: fakeAction({
+      type: "FAKE_OP",
+      input: `TEST_${index}`,
+      scope,
+    }),
   }) as Operation;

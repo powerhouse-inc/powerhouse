@@ -95,8 +95,7 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      // TODO: fix this once refactor is complete
-      action: operation as Action,
+      action: operation.action,
       signer,
       previousStateHash: "",
     });
@@ -137,8 +136,7 @@ describe("Crypto utils", () => {
     };
     const params = buildOperationSignatureParams({
       documentId: "1",
-      // TODO: fix this once refactor is complete
-      action: operation as Action,
+      action: operation.action,
       signer,
       previousStateHash: hash,
     });

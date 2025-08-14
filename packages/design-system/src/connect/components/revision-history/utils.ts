@@ -23,8 +23,8 @@ export function makeRows(operations: Operation[]) {
       operationIndex: operation.index,
       eventId: operation.id ?? "EVENT_ID_NOT_FOUND",
       stateHash: operation.hash,
-      operationType: operation.type,
-      operationInput: operation.input ?? {},
+      operationType: operation.action.type,
+      operationInput: operation.action.input ?? {},
       address: operation.action?.context?.signer?.user.address as
         | `0x${string}`
         | undefined,

@@ -412,8 +412,8 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       const operationErrors = result.operations
         .filter((operation) => operation.error !== undefined)
         .map((operation) => ({
-          type: operation.type,
-          input: operation.input,
+          type: operation.action.type,
+          input: operation.action.input,
           error: operation.error,
         }));
       if (operationErrors.length > 0) {
