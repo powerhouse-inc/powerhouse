@@ -1312,7 +1312,11 @@ export class BaseDocumentDriveServer
           );
         }
       },
-      { skip: operation.skip, reuseOperationResultingState: true },
+      {
+        skip: operation.skip,
+        reuseOperationResultingState: true,
+        replayOptions: { operation },
+      },
     );
 
     const appliedOperations = newDocument.operations[
