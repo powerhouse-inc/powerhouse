@@ -1,3 +1,7 @@
+## 4.1.0-dev.19 (2025-08-14)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

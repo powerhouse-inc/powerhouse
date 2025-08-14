@@ -1,3 +1,15 @@
+## 4.1.0-dev.19 (2025-08-14)
+
+### 🩹 Fixes
+
+- **academy:** subgraph example ([ae3e24458](https://github.com/powerhouse-inc/powerhouse/commit/ae3e24458))
+- **connect:** deduplicate operations fix ([d226b4d7c](https://github.com/powerhouse-inc/powerhouse/commit/d226b4d7c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 ### 🚀 Features

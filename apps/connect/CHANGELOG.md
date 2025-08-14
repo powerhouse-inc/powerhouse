@@ -1,3 +1,13 @@
+## 4.1.0-dev.19 (2025-08-14)
+
+### 🩹 Fixes
+
+- **connect:** deduplicate operations fix ([d226b4d7c](https://github.com/powerhouse-inc/powerhouse/commit/d226b4d7c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

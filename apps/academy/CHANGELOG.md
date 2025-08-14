@@ -1,3 +1,13 @@
+## 4.1.0-dev.19 (2025-08-14)
+
+### 🩹 Fixes
+
+- **academy:** subgraph example ([ae3e24458](https://github.com/powerhouse-inc/powerhouse/commit/ae3e24458))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
