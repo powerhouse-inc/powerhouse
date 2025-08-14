@@ -25,7 +25,7 @@ import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
-    const { timestamp, ...operation } = op;
+    const { id, timestamp, ...operation } = op;
     return operation;
   });
 
@@ -424,10 +424,10 @@ describe("processOperations", () => {
       {
         hash: operation.hash,
         index: operation.index,
-        action: expect.objectContaining({
+        action: {
           input: operation.action.input,
           scope: operation.action.scope,
-        }),
+        },
         skip: operation.skip,
       },
     ]);

@@ -184,16 +184,20 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       expect(drive.operations.global.length).toBe(2);
       expect(drive.operations.global).toMatchObject([
         {
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            scope: "global",
+          },
           index: 1,
           skip: 1,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "2", name: "test2" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "2", name: "test2" },
+            scope: "global",
+          },
           index: 2,
           skip: 0,
         },
@@ -302,44 +306,56 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       ]);
       expect(drive.operations.global.slice(-6)).toMatchObject([
         {
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            scope: "global",
+          },
           index: 7,
           skip: 7,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "2", name: "test2" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "2", name: "test2" },
+            scope: "global",
+          },
           index: 8,
           skip: 0,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "3", name: "test3" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "3", name: "test3" },
+            scope: "global",
+          },
           index: 9,
           skip: 0,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "4", name: "test4" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "4", name: "test4" },
+            scope: "global",
+          },
           index: 10,
           skip: 0,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "5", name: "test5" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "5", name: "test5" },
+            scope: "global",
+          },
           index: 11,
           skip: 0,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "6", name: "test6" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "6", name: "test6" },
+            scope: "global",
+          },
           index: 12,
           skip: 0,
         },
@@ -373,10 +389,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
       expect(client1.getDocument().operations.global.length).toBe(2);
       expect(client1.getDocument().operations.global[1]).toMatchObject({
-        type: "ADD_FOLDER",
+        action: {
+          type: "ADD_FOLDER",
+          input: { id: "1", name: "test1" },
+          scope: "global",
+        },
         index: 1,
         skip: 0,
-        input: { id: "1", name: "test1" },
         error: "Node with id 1 already exists!",
       });
 
@@ -389,15 +408,20 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       expect(drive.operations.global.length).toBe(2);
       expect(drive.operations.global).toMatchObject([
         {
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            scope: "global",
+          },
           index: 0,
           skip: 0,
         },
         {
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            scope: "global",
+          },
           index: 1,
           skip: 0,
           error: "Node with id 1 already exists!",
@@ -438,10 +462,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         expect(pushOperationResult.status).toBe("SUCCESS");
         expect(client1.getDocument().operations.global.length).toBe(1);
         expect(client1.getDocument().operations.global[0]).toMatchObject({
-          type: "ADD_FOLDER",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test1" },
+            scope: "global",
+          },
           index: 0,
           skip: 0,
-          input: { id: "1", name: "test1" },
           error: undefined,
         });
 
@@ -456,10 +483,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
         expect(client2.getDocument().operations.global.length).toBe(1);
         expect(client2.getDocument().operations.global[0]).toMatchObject({
-          type: "ADD_FOLDER",
+          action: {
+            type: "ADD_FOLDER",
+            input: { id: "1", name: "test2" },
+            scope: "global",
+          },
           index: 0,
           skip: 0,
-          input: { id: "1", name: "test2" },
           error: undefined,
         });
 
@@ -473,16 +503,21 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         expect(drive.operations.global.length).toBe(2);
         expect(drive.operations.global).toMatchObject([
           {
-            type: "ADD_FOLDER",
-            input: { id: "1", name: "test1" },
+            action: {
+              type: "ADD_FOLDER",
+              input: { id: "1", name: "test1" },
+              scope: "global",
+            },
             error: undefined,
             index: 1,
             skip: 1,
           },
           {
-            type: "ADD_FOLDER",
-            input: { id: "1", name: "test2" },
-            scope: "global",
+            action: {
+              type: "ADD_FOLDER",
+              input: { id: "1", name: "test2" },
+              scope: "global",
+            },
             index: 2,
             skip: 0,
             error: "Node with id 1 already exists!",
