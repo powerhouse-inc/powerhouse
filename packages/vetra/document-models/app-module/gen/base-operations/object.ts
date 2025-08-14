@@ -1,0 +1,23 @@
+import { BaseDocumentClass } from "document-model";
+import {
+  type SetAppNameInput,
+  type SetAppStatusInput,
+  type AppModuleState,
+  type AppModuleLocalState,
+} from "../types.js";
+import { setAppName, setAppStatus } from "./creators.js";
+import { type AppModuleAction } from "../actions.js";
+
+export default class AppModule_BaseOperations extends BaseDocumentClass<
+  AppModuleState,
+  AppModuleLocalState,
+  AppModuleAction
+> {
+  public setAppName(input: SetAppNameInput) {
+    return this.dispatch(setAppName(input));
+  }
+
+  public setAppStatus(input: SetAppStatusInput) {
+    return this.dispatch(setAppStatus(input));
+  }
+}

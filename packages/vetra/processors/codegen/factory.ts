@@ -21,6 +21,7 @@ import { CodegenProcessor } from "./index.js";
               "powerhouse/document-editor",
               "powerhouse/subgraph",
               "powerhouse/processor",
+              "powerhouse/app",
             ],
             scope: ["global"],
           },

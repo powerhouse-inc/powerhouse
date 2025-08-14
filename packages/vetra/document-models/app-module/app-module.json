@@ -1,0 +1,59 @@
+{
+    "id": "powerhouse/app",
+    "name": "App Module",
+    "extension": ".phdm",
+    "description": "",
+    "author": {
+        "name": "Powerhouse",
+        "website": "https://powerhouse.inc"
+    },
+    "specifications": [
+        {
+            "version": 1,
+            "changeLog": [],
+            "state": {
+                "global": {
+                    "schema": "type AppModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+                    "initialValue": "{\n  \"name\": \"\",\n  \"status\": \"DRAFT\"\n}",
+                    "examples": []
+                },
+                "local": {
+                    "schema": "",
+                    "initialValue": "",
+                    "examples": []
+                }
+            },
+            "modules": [
+                {
+                    "id": "ff260195-e3b3-4263-b9ef-41053f156921",
+                    "name": "base_operations",
+                    "description": "",
+                    "operations": [
+                        {
+                            "id": "3780b02e-f859-4497-a360-110f56f6fba9",
+                            "name": "SET_APP_NAME",
+                            "description": "",
+                            "schema": "input SetAppNameInput {\n  name: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "cd1cbfe6-238c-48ae-8eba-50ebb838d231",
+                            "name": "SET_APP_STATUS",
+                            "description": "",
+                            "schema": "input SetAppStatusInput {\n  status: StatusType!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
