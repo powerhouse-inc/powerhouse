@@ -5,6 +5,7 @@ import {
   type Action,
   documentModelDocumentModelModule,
   type DocumentModelModule,
+  generateId,
   type Operation,
   type PHDocument,
   type PHReducer,
@@ -210,3 +211,13 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
     return result;
   }
 }
+
+export const fakeAction = (
+  // including some of the operation fields while we refactor
+  params: Partial<Action> & { index?: number; hash?: string; skip?: number },
+): Action =>
+  ({
+    id: generateId(),
+    timestamp: new Date().toISOString(),
+    ...params,
+  }) as Action;

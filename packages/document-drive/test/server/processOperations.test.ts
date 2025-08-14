@@ -17,7 +17,6 @@ import { addFile } from "#drive-document-model/gen/creators";
 import { BaseDocumentDriveServer } from "#server/base-server";
 import { createPresignedHeader } from "document-model";
 import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
@@ -206,15 +205,17 @@ describe("processOperations", () => {
   });
 
   it.skip("should update an undo operation", async () => {
-    const document = await buildFile([
+    const actions = [
       setModelName({ name: "test" }),
       setModelId({ id: "test" }),
       setModelExtension({ extension: "test" }),
       undo(),
-    ]);
+    ];
+    const document = await buildFile(actions);
 
+    const undoAction = undo();
     const operations = buildOperations(documentModelReducer, document, [
-      undo(),
+      undoAction,
     ]);
 
     const result = await server._processOperations(
@@ -232,10 +233,10 @@ describe("processOperations", () => {
     expect(result.operationsApplied.length).toBe(0);
     expect(garbageCollect(result.document.operations.global)).toMatchObject(
       garbageCollect([
-        { type: "SET_MODEL_NAME", index: 0, skip: 0 },
-        { type: "NOOP", index: 1, skip: 0 },
-        { type: "NOOP", index: 2, skip: 0 },
-        { type: "NOOP", index: 3, skip: 2 },
+        { action: { type: "SET_MODEL_NAME" }, index: 0, skip: 0 },
+        { action: { type: "NOOP" }, index: 1, skip: 0 },
+        { action: { type: "NOOP" }, index: 2, skip: 0 },
+        { action: { type: "NOOP" }, index: 3, skip: 2 },
       ] as Operation[]),
     );
   });
@@ -423,8 +424,10 @@ describe("processOperations", () => {
       {
         hash: operation.hash,
         index: operation.index,
-        input: operation.input,
-        scope: operation.scope,
+        action: expect.objectContaining({
+          input: operation.action.input,
+          scope: operation.action.scope,
+        }),
         skip: operation.skip,
       },
     ]);
@@ -441,8 +444,10 @@ describe("processOperations", () => {
       {
         hash: operation.hash,
         index: operation.index,
-        input: operation.input,
-        scope: operation.scope,
+        action: expect.objectContaining({
+          input: operation.action.input,
+          scope: operation.action.scope,
+        }),
         skip: operation.skip,
       },
     ]);
