@@ -16,6 +16,7 @@ const ModalManager = lazy(() =>
 function Load() {
     useLoadInitialData();
     useLoadData();
+    useRenown();
     return null;
 }
 
