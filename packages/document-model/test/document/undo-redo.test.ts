@@ -442,17 +442,37 @@ describe("UNDO/REDO", () => {
       const op2 = { ...baseOperation, skip: 2 };
       const op3 = { ...baseOperation, skip: 3 };
 
-      document = countReducer(document, action1, undefined, { skip: 1 });
-      document = countReducer(document, action2, undefined, { skip: 2 });
-      document = countReducer(document, action3, undefined, { skip: 3 });
+      document = countReducer(document, action1, undefined, {
+        pruneOnSkip: true,
+        skip: 1,
+        replayOptions: {
+          operation: op1,
+        },
+      });
+      document = countReducer(document, action2, undefined, {
+        pruneOnSkip: true,
+        skip: 2,
+        replayOptions: {
+          operation: op2,
+        },
+      });
+      document = countReducer(document, action3, undefined, {
+        pruneOnSkip: true,
+        skip: 3,
+        replayOptions: {
+          operation: op3,
+        },
+      });
 
       expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(2);
       expect(document.operations.global.length).toBe(3);
       expect(document.operations.global[2]).toMatchObject({
-        type: "NOOP",
         index: 5,
         skip: 3,
+      });
+      expect(document.operations.global[2].action).toMatchObject({
+        type: "NOOP",
       });
     });
 
