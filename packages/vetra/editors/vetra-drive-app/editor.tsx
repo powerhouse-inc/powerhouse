@@ -33,6 +33,7 @@ export function BaseEditor(props: IProps) {
   const docEditorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentEditor);
   const docSubgraphsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentSubgraph);
   const docProcessorsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentProcessor);
+  const docAppsNodes = fileNodes.filter((node) => node.documentType === DOCUMENT_TYPES.documentApp);
 
   const onCreateDocument = useCallback(
     (documentType: string) => {
@@ -65,13 +66,13 @@ export function BaseEditor(props: IProps) {
       <DriveExplorer
         documentModels={docModelsNodes}
         editors={docEditorsNodes}
-        apps={[]}
+        apps={docAppsNodes}
         subgraphs={docSubgraphsNodes}
         processors={docProcessorsNodes}
         codegenProcessors={[]}
         onAddDocumentModel={() => onCreateDocument(DOCUMENT_TYPES.documentModel)}
         onAddEditor={() => onCreateDocument(DOCUMENT_TYPES.documentEditor)}
-        onAddApp={() => console.log('add app')}
+        onAddApp={() => onCreateDocument(DOCUMENT_TYPES.documentApp)}
         onAddSubgraph={() => onCreateDocument(DOCUMENT_TYPES.documentSubgraph)}
         onAddProcessor={() => onCreateDocument(DOCUMENT_TYPES.documentProcessor)}
         onAddCodegenProcessor={() => console.log('add codegen processor')}

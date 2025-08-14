@@ -2,6 +2,7 @@ import { type FileNode } from 'document-drive';
 import type React from 'react';
 import { DOCUMENT_TYPES } from '../document-types.js';
 import { AddNewIcon } from '../icons/AddNewIcon.js';
+import { AppIcon } from '../icons/AppIcon.js';
 import { DocModelIcon } from '../icons/DocModelIcon.js';
 import { EditorIcon } from '../icons/EditorIcon.js';
 import { ProcessorIcon } from '../icons/ProcessorIcon.js';
@@ -22,6 +23,8 @@ const getIconForDocumentType = (documentType: string) => {
       return SubgraphIcon;
     case DOCUMENT_TYPES.documentProcessor:
       return ProcessorIcon;
+    case DOCUMENT_TYPES.documentApp:
+      return AppIcon;
     case 'new':
       return AddNewIcon;
     default:
