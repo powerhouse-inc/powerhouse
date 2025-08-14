@@ -30,11 +30,17 @@ export interface EditorContainerProps {
   documentType: string;
   onClose: () => void;
   title: string;
-  context: Omit<DriveEditorContext, "getDocumentRevision"> & Pick<EditorContext, "getDocumentRevision">;
+  context: Omit<DriveEditorContext, "getDocumentRevision"> &
+    Pick<EditorContext, "getDocumentRevision">;
   documentModelModule: DocumentModelModule<PHDocument>;
   editorModule: EditorModule;
 }
 
+/**
+ * Document editor container that wraps individual document editors.
+ * Handles document loading, toolbar, revision history, and dynamic editor loading.
+ * Customize toolbar actions and editor context here.
+ */
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const {
     title,
@@ -47,12 +53,15 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     documentModelModule,
   } = props;
 
-  const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
+  // UI state for revision history and timeline
+  const [selectedTimelineItem, setSelectedTimelineItem] =
+    useState<TimelineItem | null>(null);
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const { useDocumentEditorProps } = useDriveContext();
 
   const user = context.user as User | undefined;
 
+  // Document data and editor state
   const { dispatch, error, document } = useDocumentEditorProps({
     documentId,
     documentType,
@@ -61,12 +70,14 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     user,
   });
 
+  // Timeline data for revision history
   const timelineItems = useTimelineItems(
     documentId,
     document?.header.createdAtUtcIso,
     driveId,
   );
 
+  // Document export functionality - customize export behavior here
   const onExport = useCallback(async () => {
     if (document) {
       const ext = documentModelModule.documentModel.extension;
@@ -74,6 +85,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
     }
   }, [document?.header.revision.global, document?.header.revision.local]);
 
+  // Loading state component
   const loadingContent = (
     <div className="flex-1 flex justify-center items-center h-full">
       <DefaultEditorLoader />
@@ -82,9 +94,11 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   if (!document) return loadingContent;
 
+  // Dynamically load the appropriate editor component for this document type
   const EditorComponent = editorModule.Component as FC<EditorProps<PHDocument>>;
 
   return showRevisionHistory ? (
+    // Revision history view
     <RevisionHistory
       documentId={documentId}
       documentTitle={title}
@@ -94,17 +108,20 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
       onClose={() => setShowRevisionHistory(false)}
     />
   ) : (
+    // Main editor view
     <Suspense fallback={loadingContent}>
+      {/* Document toolbar - customize available actions here */}
       <DocumentToolbar
         onClose={onClose}
         onExport={onExport}
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
-        onSwitchboardLinkClick={() => {}}
+        onSwitchboardLinkClick={() => {}} // Customize switchboard integration
         title={title}
         timelineButtonVisible={editorModule.config.timelineEnabled}
         timelineItems={timelineItems.data}
         onTimelineItemClick={setSelectedTimelineItem}
       />
+      {/* Dynamic editor component based on document type */}
       <EditorComponent
         context={{
           ...context,

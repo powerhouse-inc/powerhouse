@@ -2,20 +2,32 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/FolderTree.tsx"
 unless_exists: true
 ---
-import { useState } from 'react';
-import type { UiFolderNode } from "@powerhousedao/design-system";
+import { useState } from "react";
+import type { FolderNode } from "document-drive";
 
 interface FolderTreeProps {
-  folders: UiFolderNode[];
+  folders: FolderNode[];
   selectedNodeId?: string;
-  onSelectNode: (node: UiFolderNode) => void;
+  onSelectNode: (nodeId: string | undefined) => void;
 }
 
-export function FolderTree({ folders, selectedNodeId, onSelectNode }: FolderTreeProps) {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+/**
+ * Hierarchical folder tree navigation component.
+ * Displays folders in a tree structure with expand/collapse functionality.
+ */
+export function FolderTree({
+  folders,
+  selectedNodeId,
+  onSelectNode,
+}: FolderTreeProps) {
+  // Track which folders are expanded
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
 
+  // Toggle folder expansion state
   const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => {
+    setExpandedFolders((prev) => {
       const next = new Set(prev);
       if (next.has(folderId)) {
         next.delete(folderId);
@@ -26,20 +38,22 @@ export function FolderTree({ folders, selectedNodeId, onSelectNode }: FolderTree
     });
   };
 
-  const renderFolder = (folder: UiFolderNode, level: number = 0) => {
-    const hasChildren = folders.some(f => f.parentFolder === folder.id);
+  // Recursive function to render folder tree structure
+  const renderFolder = (folder: FolderNode, level: number = 0) => {
+    const hasChildren = folders.some((f) => f.parentFolder === folder.id);
     const isExpanded = expandedFolders.has(folder.id);
     const isSelected = selectedNodeId === folder.id;
 
     return (
       <div key={folder.id}>
         <div
-          className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded ${
-            isSelected ? 'bg-gray-100' : ''
+          className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${
+            isSelected ? "bg-blue-100 text-blue-800" : ""
           }`}
-          style={{ paddingLeft: `${level * 16 + 8}px` }}
-          onClick={() => onSelectNode(folder)}
+          style={{ paddingLeft: `${level * 16 + 8}px` }} // Customize indentation here
+          onClick={() => onSelectNode(folder.id)}
         >
+          {/* Expand/collapse button for folders with children */}
           {hasChildren && (
             <button
               className="w-4 h-4 mr-1 flex items-center justify-center"
@@ -48,16 +62,19 @@ export function FolderTree({ folders, selectedNodeId, onSelectNode }: FolderTree
                 toggleFolder(folder.id);
               }}
             >
-              {isExpanded ? '▼' : '▶'}
+              {isExpanded ? "▼" : "▶"} {/* Customize expand icons here */}
             </button>
           )}
-          <span className="text-sm">{folder.name}</span>
+          {!hasChildren && <div className="w-5 mr-1" />}
+          {/* Customize folder icon and styling here */}
+          <span>📁 {folder.name}</span>
         </div>
+        {/* Recursively render child folders when expanded */}
         {isExpanded && hasChildren && (
           <div>
             {folders
-              .filter(f => f.parentFolder === folder.id)
-              .map(child => renderFolder(child, level + 1))}
+              .filter((f) => f.parentFolder === folder.id)
+              .map((child) => renderFolder(child, level + 1))}
           </div>
         )}
       </div>
@@ -67,19 +84,20 @@ export function FolderTree({ folders, selectedNodeId, onSelectNode }: FolderTree
   return (
     <div className="space-y-1">
       {/* Root Directory Option */}
+      {/* Customize root folder appearance here */}
       <div
-        className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded ${
-          !selectedNodeId ? 'bg-gray-100' : ''
+        className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${
+          !selectedNodeId ? "bg-blue-100 text-blue-800" : ""
         }`}
-        onClick={() => onSelectNode({ id: '', name: 'Root', kind: 'FOLDER' } as UiFolderNode)}
+        onClick={() => onSelectNode(undefined)}
       >
-        <span className="text-sm font-medium">Root</span>
+        <span>🏠 Root</span>
       </div>
 
-      {/* Folder Tree */}
+      {/* Render top-level folders (no parent) */}
       {folders
-        .filter(folder => !folder.parentFolder)
-        .map(folder => renderFolder(folder))}
+        .filter((folder) => !folder.parentFolder)
+        .map((folder) => renderFolder(folder))}
     </div>
   );
-} 
+}
