@@ -1,15 +1,26 @@
+import {
+  documentModelDocumentModelModule,
+  DocumentModelModule,
+} from "document-model";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import {
   createDocument as createDocumentModelDocument,
   DocumentModelState,
-  generateId,
 } from "../../document-model/index.js";
 import { LRUCacheStorage } from "../src/cache/lru.js";
 import InMemoryCache from "../src/cache/memory.js";
 import { ICache } from "../src/cache/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { ReactorBuilder } from "../src/server/builder.js";
+import { IDocumentDriveServer } from "../src/server/types.js";
+import { MemoryStorage } from "../src/storage/memory.js";
+import {
+  IDocumentStorage,
+  IDriveOperationStorage,
+} from "../src/storage/types.js";
 
 const initRedis = async () => {
   const redisClient = createClient({
@@ -52,9 +63,35 @@ const cacheImplementations: [string, () => Promise<ICache>][] = [
 
 describe.each(cacheImplementations)("%s", (_, buildCache) => {
   let cache: ICache;
+  let storage: IDriveOperationStorage & IDocumentStorage;
+  let reactor: IDocumentDriveServer;
+  let storageGetSpy: any;
+  let storageDeleteSpy: any;
+  let cacheGetSpy: any;
+  let cacheSetSpy: any;
+  let cacheDeleteSpy: any;
 
   beforeEach(async () => {
     cache = await buildCache();
+    storage = new MemoryStorage();
+
+    // Set up spies on storage methods
+    storageGetSpy = vi.spyOn(storage, "get");
+    storageDeleteSpy = vi.spyOn(storage, "delete");
+
+    // Set up spies on cache methods
+    cacheGetSpy = vi.spyOn(cache, "getDocument");
+    cacheSetSpy = vi.spyOn(cache, "setDocument");
+    cacheDeleteSpy = vi.spyOn(cache, "deleteDocument");
+
+    reactor = new ReactorBuilder([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ] as DocumentModelModule[])
+      .withCache(cache)
+      .withStorage(storage)
+      .build();
+    await reactor.initialize();
   });
 
   // Document tests
@@ -105,181 +142,154 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     });
   });
 
-  // Drive tests
-  describe("drive operations", () => {
-    it("should set and get a drive", async ({ expect }) => {
-      const driveId = "test-drive-id";
+  // Drive tests (testing cache behavior through reactor)
+  describe("drive operations via reactor", () => {
+    it("should cache drive after first getDrive and serve from cache thereafter", async ({
+      expect,
+    }) => {
       const drive = createDriveDocument();
+      const driveId = drive.header.id;
 
-      await cache.setDrive(driveId, drive);
-      const retrievedDrive = await cache.getDrive(driveId);
+      // Add drive - this should cache it during initialization
+      const addedDrive = await reactor.addDrive({
+        id: driveId,
+        global: drive.state.global,
+      });
 
+      expect(storageGetSpy).toHaveBeenCalledWith(driveId);
+      expect(cacheGetSpy).toHaveBeenCalledWith(driveId);
+      expect(cacheSetSpy).toHaveBeenCalledWith(driveId, addedDrive);
+      expect(cacheGetSpy).toHaveResolvedWith(undefined);
+
+      // Clear spy call counts from addDrive operation
+      storageGetSpy.mockClear();
+      cacheGetSpy.mockClear();
+      cacheSetSpy.mockClear();
+
+      // Subsequent get - should hit cache and avoid storage
+      const cacheDrive = await reactor.getDrive(driveId);
+      expect(addedDrive).toStrictEqual(cacheDrive);
+      expect(cacheGetSpy).toHaveBeenCalledWith(driveId);
+      expect(storageGetSpy).not.toHaveBeenCalled(); // Should not hit storage since it's cached
+    });
+
+    it("should fetch from storage when cache is cleared", async ({
+      expect,
+    }) => {
+      const drive = createDriveDocument();
+      const driveId = drive.header.id;
+
+      // Add drive - this caches it
+      await reactor.addDrive({ id: driveId, global: drive.state.global });
+
+      // Clear the cache to simulate cache miss
+      await cache.deleteDocument(driveId);
+
+      // Clear spy call counts
+      storageGetSpy.mockClear();
+      cacheGetSpy.mockClear();
+      cacheSetSpy.mockClear();
+
+      // Get drive - should miss cache, hit storage, then cache result
+      const retrievedDrive = await reactor.getDrive(driveId);
       expect(retrievedDrive).toBeDefined();
-      expect(retrievedDrive?.header.documentType).toBe(
-        drive.header.documentType,
-      );
+      expect(cacheGetSpy).toHaveBeenCalledWith(driveId); // Cache checked first
+      expect(storageGetSpy).toHaveBeenCalledWith(driveId); // Then storage hit
+      expect(cacheSetSpy).toHaveBeenCalledWith(driveId, retrievedDrive); // Then cached
     });
 
-    it("should return undefined when getting a non-existent drive", async ({
-      expect,
-    }) => {
-      const driveId = "non-existent-drive";
-
-      const retrievedDrive = await cache.getDrive(driveId);
-
-      expect(retrievedDrive).toBeUndefined();
-    });
-
-    it("should delete a drive", async ({ expect }) => {
+    it("should delete from both cache and storage", async ({ expect }) => {
       const drive = createDriveDocument();
       const driveId = drive.header.id;
 
-      // Set slug for slug deletion logic
-      drive.header.slug = "test-slug";
+      // Add drive
+      await reactor.addDrive({ id: driveId, global: drive.state.global });
 
-      await cache.setDrive(driveId, drive);
-      const deletionResult = await cache.deleteDrive(driveId);
-      const retrievedDrive = await cache.getDrive(driveId);
+      // Get drive to cache it
+      await reactor.getDrive(driveId);
 
-      expect(deletionResult).toBe(true);
-      expect(retrievedDrive).toBeUndefined();
-    });
+      // Clear spy call counts
+      cacheDeleteSpy.mockClear();
+      storageDeleteSpy.mockClear();
 
-    it("should return false when deleting a non-existent drive", async ({
-      expect,
-    }) => {
-      const driveId = generateId();
+      // Delete drive
+      await reactor.deleteDrive(driveId);
 
-      const deletionResult = await cache.deleteDrive(driveId);
-
-      expect(deletionResult).toBe(false);
+      // Verify both cache and storage delete were called
+      expect(cacheDeleteSpy).toHaveBeenCalledWith(driveId);
+      expect(storageDeleteSpy).toHaveBeenCalledWith(driveId);
     });
   });
 
-  // Drive by slug tests
-  describe("drive by slug operations", () => {
-    it("should set and get a drive by slug", async ({ expect }) => {
-      const slug = "test-slug";
-      const drive = createDriveDocument();
-      const driveId = drive.header.id;
-
-      drive.header.id = driveId;
-      drive.header.slug = slug;
-
-      await cache.setDriveBySlug(slug, drive);
-      const retrievedDrive = await cache.getDriveBySlug(slug);
-
-      expect(retrievedDrive).toBeDefined();
-      expect(retrievedDrive?.header.id).toBe(driveId);
-      expect(retrievedDrive?.header.slug).toBe(slug);
-    });
-
-    it("should return undefined when getting a non-existent drive by slug", async ({
+  // Document caching tests (testing cache behavior through reactor)
+  describe("document caching behavior", () => {
+    it("should cache regular documents after first fetch", async ({
       expect,
     }) => {
-      const slug = "non-existent-slug";
-
-      const retrievedDrive = await cache.getDriveBySlug(slug);
-
-      expect(retrievedDrive).toBeUndefined();
-    });
-
-    it("should delete a drive by slug", async ({ expect }) => {
-      const slug = "slug-to-delete";
-      const drive = createDriveDocument();
-      drive.header.slug = slug;
-
-      await cache.setDriveBySlug(slug, drive);
-      const deletionResult = await cache.deleteDriveBySlug(slug);
-      const retrievedDrive = await cache.getDriveBySlug(slug);
-
-      expect(deletionResult).toBe(true);
-      expect(retrievedDrive).toBeUndefined();
-    });
-
-    it("should return false when deleting a non-existent drive by slug", async ({
-      expect,
-    }) => {
-      const slug = "non-existent-slug";
-
-      const deletionResult = await cache.deleteDriveBySlug(slug);
-
-      expect(deletionResult).toBe(false);
-    });
-  });
-
-  // Cross-referencing tests
-  describe("cross-referencing", () => {
-    it("should retrieve the same drive via ID after setting by slug", async ({
-      expect,
-    }) => {
-      const slug = "test-slug";
-      const drive = createDriveDocument();
-      const driveId = drive.header.id;
-
-      // Set slug for consistency
-      drive.header.slug = slug;
-
-      await cache.setDriveBySlug(slug, drive);
-
-      const retrievedDriveBySlug = await cache.getDriveBySlug(slug);
-      const retrievedDriveById = await cache.getDrive(driveId);
-
-      expect(retrievedDriveBySlug).toBeDefined();
-      expect(retrievedDriveById).toBeDefined();
-      expect(retrievedDriveById?.header.id).toBe(driveId);
-      expect(retrievedDriveById?.header.slug).toBe(slug);
-      expect(retrievedDriveBySlug?.header.id).toBe(
-        retrievedDriveById?.header.id,
-      );
-    });
-
-    it("should make drive inaccessible by slug after deleting by ID", async ({
-      expect,
-    }) => {
-      const slug = "test-slug";
-      const drive = createDriveDocument();
-      const driveId = drive.header.id;
-
-      // Set slug for slug deletion logic
-      drive.header.slug = slug;
-
-      await cache.setDriveBySlug(slug, drive);
-      await cache.deleteDrive(driveId);
-
-      const retrievedDriveBySlug = await cache.getDriveBySlug(slug);
-
-      expect(retrievedDriveBySlug).toBeUndefined();
-    });
-  });
-
-  describe("collisions", () => {
-    it("(OBSOLETE) should allow document and drives with the same id without colliding", async ({
-      expect,
-    }) => {
-      const documentId = generateId();
-      const driveId = documentId;
-
       const document = createDocumentModelDocument();
-      document.header.id = documentId;
+      const documentId = document.header.id;
 
-      const drive = createDriveDocument();
-      drive.header.id = driveId;
+      // Add document to storage
+      await storage.create(document);
 
-      await cache.setDocument(documentId, document);
-      await cache.setDrive(driveId, drive);
+      // Clear spy call counts
+      storageGetSpy.mockClear();
+      cacheGetSpy.mockClear();
+      cacheSetSpy.mockClear();
 
-      const retrievedDocument = await cache.getDocument(documentId);
-      const retrievedDrive = await cache.getDrive(driveId);
+      // First get - should hit storage and cache the result
+      const firstRetrieve = await reactor.getDocument(documentId);
+      expect(firstRetrieve).toBeDefined();
+      expect(storageGetSpy).toHaveBeenCalledWith(documentId);
+      expect(cacheSetSpy).toHaveBeenCalledWith(documentId, firstRetrieve);
 
-      expect(retrievedDocument).toBeDefined();
-      expect(retrievedDrive).toBeDefined();
-      expect(retrievedDocument?.header.documentType).toBe(
-        document.header.documentType,
-      );
-      expect(retrievedDrive?.header.documentType).toBe(
-        drive.header.documentType,
-      );
+      // Clear spy call counts
+      storageGetSpy.mockClear();
+      cacheGetSpy.mockClear();
+      cacheSetSpy.mockClear();
+
+      // Second get - should hit cache and avoid storage
+      const secondRetrieve = await reactor.getDocument(documentId);
+      expect(secondRetrieve).toStrictEqual(firstRetrieve);
+      expect(cacheGetSpy).toHaveBeenCalledWith(documentId);
+      expect(storageGetSpy).not.toHaveBeenCalled();
+    });
+
+    it("should handle cache miss gracefully", async ({ expect }) => {
+      const document = createDocumentModelDocument();
+      const documentId = document.header.id;
+
+      // Add document to storage
+      await storage.create(document);
+
+      // Clear cache after storage creation
+      await cache.deleteDocument(documentId);
+
+      // Clear spy call counts
+      storageGetSpy.mockClear();
+      cacheGetSpy.mockClear();
+      cacheSetSpy.mockClear();
+
+      // Get document - should miss cache, hit storage, then cache result
+      const retrievedDoc = await reactor.getDocument(documentId);
+      expect(retrievedDoc).toBeDefined();
+      expect(cacheGetSpy).toHaveBeenCalledWith(documentId);
+      expect(storageGetSpy).toHaveBeenCalledWith(documentId);
+      expect(cacheSetSpy).toHaveBeenCalledWith(documentId, retrievedDoc);
+      expect(cacheGetSpy).toHaveResolvedWith(undefined);
+    });
+
+    it("should return the same document instance on subsequent gets", async ({
+      expect,
+    }) => {
+      const document = createDocumentModelDocument();
+      const documentId = document.header.id;
+
+      await reactor.addDocument(document);
+
+      const firstRetrieve = await reactor.getDocument(documentId);
+      const secondRetrieve = await reactor.getDocument(documentId);
+      expect(firstRetrieve).toBe(secondRetrieve);
     });
   });
 });
@@ -392,30 +402,30 @@ describe("LRU Cache Specific Tests", () => {
     expect(doc2).toBeDefined(); // Should not be evicted as cache size wasn't exceeded
   });
 
-  it("should maintain size limit with multiple document types", async ({
+  it("should maintain size limit with different sized documents", async ({
     expect,
   }) => {
-    const doc = createTestDocument();
-    const drive = createTestDrive();
-    const totalSize = sizeof(doc) + sizeof(drive);
+    const smallDoc = createTestDocument();
+    const largeDoc = createTestDrive(); // Drive documents are typically larger
+    const totalSize = sizeof(smallDoc) + sizeof(largeDoc);
 
-    // Create cache that can hold one document and one drive
+    // Create cache that can hold two documents of different sizes
     const cache = new InMemoryCache(
       new LRUCacheStorage({ maxSize: totalSize }),
     );
 
-    await cache.setDocument(`doc-1`, doc);
-    await cache.setDrive(`drive-1`, drive);
+    await cache.setDocument(`small-doc`, smallDoc);
+    await cache.setDocument(`large-doc`, largeDoc);
 
-    // Adding another document should evict the first document
-    await cache.setDocument(`doc-2`, doc);
+    // Adding another document should evict the first (least recently used)
+    await cache.setDocument(`doc-3`, smallDoc);
 
-    const doc1 = await cache.getDocument("doc-1");
-    const doc2 = await cache.getDocument("doc-2");
-    const drive1 = await cache.getDrive("drive-1");
+    const smallDocRetrieved = await cache.getDocument("small-doc");
+    const largeDocRetrieved = await cache.getDocument("large-doc");
+    const doc3Retrieved = await cache.getDocument("doc-3");
 
-    expect(doc1).toBeUndefined(); // Should be evicted
-    expect(doc2).toBeDefined(); // Should be present
-    expect(drive1).toBeDefined(); // Should be present as it's in a different storage
+    expect(smallDocRetrieved).toBeUndefined(); // Should be evicted (least recently used)
+    expect(largeDocRetrieved).toBeDefined(); // Should be present
+    expect(doc3Retrieved).toBeDefined(); // Should be present
   });
 });

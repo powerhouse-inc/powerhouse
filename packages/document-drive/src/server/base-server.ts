@@ -64,6 +64,7 @@ import { type Unsubscribe } from "nanoevents";
 import { type ICache } from "../cache/types.js";
 import {
   ConflictOperationError,
+  DocumentSlugNotFoundError,
   OperationError,
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
@@ -651,10 +652,6 @@ export class BaseDocumentDriveServer
 
     await this.documentStorage.create(document);
 
-    if (input.slug && input.slug.length > 0) {
-      await this.cache.deleteDriveBySlug(input.slug);
-    }
-
     await this._initializeDrive(document.header.id);
 
     this.eventEmitter.emit("driveAdded", document);
@@ -717,7 +714,7 @@ export class BaseDocumentDriveServer
     const result = await Promise.allSettled([
       this.stopSyncRemoteDrive(driveId),
       this.listenerManager.removeDrive(driveId),
-      this.cache.deleteDrive(driveId),
+      this.cache.deleteDocument(driveId),
       this.documentStorage.delete(driveId),
     ]);
 
@@ -757,7 +754,7 @@ export class BaseDocumentDriveServer
   async getDrive(driveId: string, options?: GetDocumentOptions) {
     let document: DocumentDriveDocument | undefined;
     try {
-      const cachedDocument = await this.cache.getDrive(driveId); // TODO support GetDocumentOptions
+      const cachedDocument = await this.cache.getDocument(driveId); // TODO support GetDocumentOptions
       if (cachedDocument && isDocumentDrive(cachedDocument)) {
         document = cachedDocument;
         if (isAtRevision(document, options?.revisions)) {
@@ -774,44 +771,22 @@ export class BaseDocumentDriveServer
     } else {
       if (!options?.revisions) {
         this.cache.setDocument(driveId, result).catch(this.logger.error);
-        this.cache.setDrive(driveId, result).catch(this.logger.error);
       }
       return result;
     }
   }
 
   async getDriveBySlug(slug: string, options?: GetDocumentOptions) {
-    try {
-      const drive = await this.cache.getDriveBySlug(slug);
-      if (drive) {
-        return drive;
-      }
-    } catch (e) {
-      this.logger.error("Error getting drive from cache", e);
-    }
-
-    const driveStorage = await this.documentStorage.getBySlug(slug);
-    const document = this._buildDocument(driveStorage, options);
-    if (!isDocumentDrive(document)) {
-      throw new Error(`Document with slug ${slug} is not a Document Drive`);
-    } else {
-      this.cache.setDriveBySlug(slug, document).catch(this.logger.error);
-      return document;
-    }
+    const driveId = await this.getDriveIdBySlug(slug);
+    return this.getDrive(driveId, options);
   }
 
   async getDriveIdBySlug(slug: string): Promise<string> {
-    try {
-      const drive = await this.cache.getDriveBySlug(slug);
-      if (drive) {
-        return drive.header.id;
-      }
-    } catch (e) {
-      this.logger.error("Error getting drive from cache", e);
+    const [driveId] = await this.documentStorage.resolveIds([slug]);
+    if (!driveId) {
+      throw new DocumentSlugNotFoundError(slug);
     }
-
-    const driveStorage = await this.documentStorage.getBySlug(slug);
-    return driveStorage.header.id;
+    return driveId;
   }
 
   /**
@@ -2223,7 +2198,6 @@ export class BaseDocumentDriveServer
       }
 
       this.cache.setDocument(driveId, document).catch(this.logger.error);
-      this.cache.setDrive(driveId, document).catch(this.logger.error);
 
       // update listener cache
       const lastOperation = operationsApplied
