@@ -140,6 +140,9 @@ async function handleFile(path: string, window?: Electron.BrowserWindow) {
     try {
         const content = fs
             .readFileSync(path, { encoding: 'binary' })
+            // TODO: this does not make sense.
+            // We know that readFileSync returns a string when `encoding` is `binary`
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
             .toString();
         const file = {
             name: basename(path),

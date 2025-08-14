@@ -2,13 +2,12 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import { DriveContextProvider, useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
-import { useInitializePHApp, useSetSelectedNode } from '@powerhousedao/state';
+import { setSelectedNode, useDocumentModelModules } from "@powerhousedao/state";
 import {
   type DocumentDriveDocument,
   type FileNode
 } from "document-drive";
 import { useCallback } from "react";
-import { setSelectedNode, useDocumentModelModules } from "../../../state/index.js";
 import { DriveExplorer } from "./DriveExplorer.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
 
@@ -75,8 +74,6 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
-  useInitializePHApp();
-
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
