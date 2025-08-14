@@ -1,5 +1,5 @@
 import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
-import { type DocumentModelModule, type EditorModule, type PHDocument } from 'document-model';
+import { type VetraDocumentModelModule, type VetraEditorModule } from '@powerhousedao/state';
 import type React from 'react';
 import { DOCUMENT_TYPES } from '../document-types.js';
 import { EditorContainer } from "./EditorContainer.js";
@@ -10,8 +10,8 @@ interface PackageInformationSectionProps {
   context: DriveEditorContext;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
-  documentModelModule?: DocumentModelModule<PHDocument> | null;
-  editorModule?: EditorModule | null;
+  documentModelModule?: VetraDocumentModelModule;
+  editorModule?: VetraEditorModule;
   driveId: string;
 }
 

@@ -55,6 +55,7 @@ export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];
   Component: (props: any) => any;
   config: {
+    id: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;

@@ -1,6 +1,5 @@
 import { logger } from 'document-drive';
 import { useEffect, useState } from 'react';
-import { useIsMounted } from 'usehooks-ts';
 import { type IRenown, type User } from '../services/renown/index.js';
 import { useConnectCrypto } from './useConnectCrypto.js';
 

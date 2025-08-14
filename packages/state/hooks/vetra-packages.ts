@@ -1,4 +1,3 @@
-import { type DocumentModelModule } from "document-model";
 import { useSyncExternalStore } from "react";
 import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
 
@@ -8,7 +7,7 @@ import {
 } from "../internal/events.js";
 import { type VetraPackage } from "../types.js";
 
-export function useVetraPackages() {
+export function useVetraPackages(): VetraPackage[] | undefined {
   return useSyncExternalStore(
     subscribeToVetraPackages,
     () => window.vetraPackages,
@@ -19,7 +18,7 @@ export function setVetraPackages(packages: VetraPackage[]) {
   dispatchSetVetraPackagesEvent(packages);
 }
 
-export function useDocumentModelModules(): DocumentModelModule[] | undefined {
+export function useDocumentModelModules() {
   const vetraPackages = useVetraPackages();
   return vetraPackages
     ?.flatMap((pkg) => pkg.modules.documentModelModules)

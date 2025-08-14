@@ -42,6 +42,9 @@
     },
     {
       "path": "../document-drive"
+    },
+    {
+      "path": "../state"
     }
   ]
 }

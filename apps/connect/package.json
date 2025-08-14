@@ -70,7 +70,6 @@
         "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",
         "@powerhousedao/reactor-browser": "workspace:*",
         "@powerhousedao/state": "workspace:*",
-        "@powerhousedao/vetra": "workspace:*",
         "@renown/sdk": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
         "@sentry/browser": "^9.1.0",
@@ -118,7 +117,7 @@
         "vite": "^6.3.3",
         "vite-envs": "^4.6.0",
         "vite-plugin-html": "^3.2.2",
-        "vite-plugin-node-polyfills": "^0.23.0",
+        "vite-plugin-node-polyfills": "^0.24.0",
         "vite-plugin-svgr": "^4.3.0",
         "vite-tsconfig-paths": "^5.1.4",
         "xvfb-maybe": "^0.2.1"

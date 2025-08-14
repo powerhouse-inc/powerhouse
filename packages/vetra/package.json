@@ -65,6 +65,7 @@
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/state": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "colorette": "^2.0.20",
     "document-model": "workspace:*",

@@ -208,8 +208,8 @@ export class ConnectCrypto implements IConnectCrypto {
         isValid = await subtleCrypto.verify(
           "Ed25519",
           this.#keyPair.publicKey,
-          signature,
-          data,
+          signature as BufferSource,
+          data as BufferSource,
         );
       } catch (error) {
         throw new Error("invalid signature");
