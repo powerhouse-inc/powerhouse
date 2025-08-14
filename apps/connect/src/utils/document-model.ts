@@ -187,7 +187,7 @@ export async function uploadDocumentOperations(
             if (!operation) {
                 break;
             }
-            const { scope } = operation;
+            const { scope } = operation.action;
 
             /*
             TODO: check why the waitForUpdate promise does not resolve after the first iteration

@@ -64,7 +64,7 @@ export class DocumentAnalyticsProcessor implements IProcessor {
                 `ph/doc/drive/${driveId}/${branch}/${scope}/${revision}`,
               ),
               operation: AnalyticsPath.fromString(
-                `ph/doc/operation/${operation.type}/${operation.index}`,
+                `ph/doc/operation/${operation.action.type}/${operation.index}`,
               ),
               target: AnalyticsPath.fromString(
                 `ph/doc/target/${driveId}/${target}/${documentId}`,

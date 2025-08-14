@@ -32,10 +32,10 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.setProcessorName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe(
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PROCESSOR_NAME",
     );
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setProcessorType operation", () => {
@@ -46,10 +46,10 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.setProcessorType(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe(
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PROCESSOR_TYPE",
     );
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle addDocumentType operation", () => {
@@ -60,8 +60,8 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.addDocumentType(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe("ADD_DOCUMENT_TYPE");
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_DOCUMENT_TYPE");
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle removeDocumentType operation", () => {
@@ -75,10 +75,10 @@ describe("BaseOperations Operations", () => {
     );
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe(
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "REMOVE_DOCUMENT_TYPE",
     );
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });
