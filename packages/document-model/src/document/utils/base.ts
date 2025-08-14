@@ -413,7 +413,6 @@ export function replayDocument<TDocument extends PHDocument>(
   if (operationsToReplay.length) {
     result = operationsToReplay.reduce((document, operation) => {
       const doc = reducer(document, operation.action, dispatch, {
-        skip: operation.skip,
         ignoreSkipOperations: true,
         checkHashes,
         replayOptions: {

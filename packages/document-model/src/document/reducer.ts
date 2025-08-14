@@ -379,7 +379,7 @@ export function baseReducer<TDocument extends PHDocument>(
 
   let _action: Action = actionFromAction(action);
 
-  let skipValue = skip || 0;
+  let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
     ...document,
   };

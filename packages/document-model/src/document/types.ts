@@ -78,8 +78,7 @@ export type ActionWithAttachment = Action & {
 };
 
 export type ReducerOptions = {
-  /** The number of operations to skip before this new action is applied */
-  // TODO: REMOVE -- this is on replayOptions.operation.skip
+  /** The number of operations to skip before this new action is applied. This overrides the skip count in the operation. */
   skip?: number;
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
