@@ -268,19 +268,41 @@ A subgraph is a GraphQL schema that exposes your processed data to clients. It:
 
 ### Configure the Subgraph
 
-Open `./subgraphs/todo/index.ts` and configure the resolvers:
+Open `./subgraphs/todo/schema.ts`and configure the schema:
 
 ```ts
-import { Subgraph } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
+import type { DocumentNode } from "graphql";
+
+export const schema: DocumentNode = gql`
+
+# Define the structure of a todo item as returned by GraphQL
+type ToDoListEntry {
+  task: String!     # The task description (! means required/non-null)
+  status: Boolean!  # The completion status (true = done, false = pending)
+}
+
+# Define available queries
+type Query {
+  todos(driveId: ID!): [ToDoListEntry]  # Get array of todos for a specific drive
+}
+`;
+
+```
+
+Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
+
+```ts
+// subgraphs/search-todos/resolvers.ts
+import { type Subgraph } from "@powerhousedao/reactor-api";
+import { type ToDoListDocument } from "document-models/to-do-list/index.js";
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
-export class TodoSubgraph extends Subgraph {
-  // Human-readable name for this subgraph
-  name = "Todos";
+export const getResolvers = (subgraph: Subgraph) => {
+  const reactor = subgraph.reactor;
+  const relationalDb = subgraph.relationalDb;
 
-  // GraphQL resolvers - functions that fetch data for each field
-  resolvers = {
+  return {
     Query: {
       todos: {
         // Resolver function for the "todos" query
@@ -288,7 +310,7 @@ export class TodoSubgraph extends Subgraph {
         resolve: async (_: any, args: {driveId: string}) => {
           // Query the database using the processor's static query method
           // This gives us access to the namespaced database for the specific drive
-          const todos = await TodoIndexerProcessor.query(args.driveId, this.relationalDb)
+          const todos = await TodoIndexerProcessor.query(args.driveId, relationalDb)
             .selectFrom("todo")        // Select from the "todo" table
             .selectAll()              // Get all columns
             .execute();               // Execute the query
@@ -302,28 +324,9 @@ export class TodoSubgraph extends Subgraph {
       },
     },
   };
-
-  // GraphQL schema definition using GraphQL Schema Definition Language (SDL)
-  typeDefs = gql`
-
-  # Define the structure of a todo item as returned by GraphQL
-  type ToDoListEntry {
-    task: String!     # The task description (! means required/non-null)
-    status: Boolean!  # The completion status (true = done, false = pending)
-  }
-
-  # Define available queries
-  type Query {
-    todos(driveId: ID!): [ToDoListEntry]  # Get array of todos for a specific drive
-  }
-  `;
-
-  // Cleanup method called when the subgraph disconnects
-  async onDisconnect() {
-    // Add any cleanup logic here if needed
-  }
-}
+};
 ```
+
 
 ## Now query the data via the supergraph.
 
