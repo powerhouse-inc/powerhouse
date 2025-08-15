@@ -1,6 +1,7 @@
-import { generateEditor } from "@powerhousedao/codegen";
+import { generateEditor, generateManifest } from "@powerhousedao/codegen";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { type DocumentModelDocument } from "document-model";
+import { kebabCase } from "change-case";
 import { type DocumentEditorState } from "../../../document-models/document-editor/index.js";
 import { logger } from "../logger.js";
 import { type DocumentHandler, type Config } from "./types.js";
@@ -22,12 +23,36 @@ export class DocumentEditorHandler implements DocumentHandler {
           (dt) => dt.documentType,
         );
 
+        // Generate editor ID using kebabCase
+        const editorId: string = kebabCase(state.name);
+
         // Generate the editor using the codegen function
-        await generateEditor(state.name, documentTypes, this.config.PH_CONFIG);
+        await generateEditor(state.name, documentTypes, this.config.PH_CONFIG, editorId);
 
         logger.info(
           `✅ Editor generation completed successfully for: ${state.name}`,
         );
+
+        // Update the manifest with the new editor
+        try {
+          logger.info(`🔄 Updating manifest with editor: ${state.name} (ID: ${editorId})`);
+          
+          generateManifest({
+            editors: [{
+              id: editorId,
+              name: state.name,
+              documentTypes: documentTypes
+            }]
+          }, this.config.CURRENT_WORKING_DIR);
+
+          logger.info(`✅ Manifest updated successfully for editor: ${state.name}`);
+        } catch (manifestError) {
+          logger.error(
+            `⚠️ Failed to update manifest for editor ${state.name}:`,
+            manifestError,
+          );
+          // Don't throw here - editor generation was successful
+        }
       } catch (error) {
         logger.error(
           `❌ Error during editor generation for ${state.name}:`,

@@ -12,7 +12,7 @@ export const module: <% if(!documentTypes.length){ %>EditorModule<% } else { %><
     Component: Editor,
     documentTypes: [<% if(!documentTypes.length){ %>'*'<% } else { %><% documentTypes.forEach(type => { _%>"<%= type %>", %><% }); _%> <% } %>],
     config: {
-        id: 'editor-id',
+        id: '<%= editorId || 'editor-id' %>',
         disableExternalControls: true,
         documentToolbarEnabled: true,
         showSwitchboardLink: true,

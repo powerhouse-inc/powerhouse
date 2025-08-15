@@ -4,6 +4,7 @@ export type Args = {
   documentModelsDir: string;
   documentTypes: string;
   documentTypesMap: string;
+  editorId?: string;
 };
 
 export default {
@@ -16,6 +17,7 @@ export default {
         .split(",")
         .filter((type) => type !== ""),
       documentTypesMap: JSON.parse(args.documentTypesMap) as JSON,
+      editorId: args.editorId,
     };
   },
 };
