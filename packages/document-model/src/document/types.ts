@@ -136,21 +136,6 @@ export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
  * @typeParam A - The type of the action.
  */
 export type Operation = {
-  /////////////////////////////////////////////////////////////////////////////
-  // Temporary action fields.
-  /////////////////////////////////////////////////////////////////////////////
-  /** The name of the action. */
-  //type: string;
-  /** The payload of the action. */
-  //input: unknown;
-  /** The scope of the action */
-  //scope: string;
-  /** The attachments included in the action. */
-  //attachments?: AttachmentInput[] | undefined;
-  /** The context of the action. */
-  //context?: ActionContext;
-  /////////////////////////////////////////////////////////////////////////////
-
   /** Position of the operation in the history */
   index: number;
   /** Timestamp of when the operation was added */
