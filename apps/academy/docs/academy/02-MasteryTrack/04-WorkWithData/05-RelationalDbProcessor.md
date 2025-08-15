@@ -181,10 +181,10 @@ Strands represent a batch of operations that happened to documents. Each strand 
 import { type IRelationalDb } from "document-drive/processors/types";
 import { RelationalDbProcessor } from "document-drive/processors/relational";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import type { ToDoListDocument } from "../../document-models/to-do-list/index.js";
+import type { ToDoListDocument } from "../document-models/to-do-list/index.js";
 
-import { up } from "./migrations.js";
-import { type DB } from "./schema.js";
+import { up } from "./todo-indexer/migrations.js";
+import { type DB } from "./todo-indexer/schema.js";
 
 // Define the document type this processor handles
 type DocumentType = ToDoListDocument;
@@ -268,7 +268,7 @@ A subgraph is a GraphQL schema that exposes your processed data to clients. It:
 
 ### Configure the Subgraph
 
-Open `./subgraphs/todo/schema.ts`and configure the schema:
+Open `./subgraphs/todo/schema.ts` and configure the schema:
 
 ```ts
 import { gql } from "graphql-tag";
@@ -347,7 +347,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
   ph reactor
   ```
 
-- Open the GraphQL editor in your browser:
+- This will return an endpoint, but you'll need to change the url of the endpoint to the following URL:
 
   ```
   http://localhost:4001/graphql
