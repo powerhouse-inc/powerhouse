@@ -1,37 +1,44 @@
 import connectConfig from '#connect-config';
-import { type IRenown } from '#services';
+import { BrowserKeyStorage } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import {
     addPHEventHandlers,
-    extractDriveSlugFromPath,
-    extractNodeSlugFromPath,
-    getDocuments,
-    getDrives,
-    refreshReactorData,
-} from '@powerhousedao/state';
-import {
+    dispatchSetConnectCryptoEvent,
+    dispatchSetDidEvent,
     dispatchSetDocumentsEvent,
     dispatchSetDrivesEvent,
+    dispatchSetLoginStatusEvent,
     dispatchSetProcessorManagerEvent,
     dispatchSetReactorEvent,
     dispatchSetRenownEvent,
     dispatchSetSelectedDriveIdEvent,
     dispatchSetSelectedNodeIdEvent,
+    dispatchSetUserEvent,
+    dispatchSetUserPermissionsEvent,
     dispatchSetVetraPackagesEvent,
-} from '@powerhousedao/state/internal/events';
-import { type User } from '@renown/sdk';
-import { logger, type IDocumentDriveServer } from 'document-drive';
+    extractDriveSlugFromPath,
+    extractNodeSlugFromPath,
+    getDocuments,
+    getDrives,
+    refreshReactorData,
+} from '@powerhousedao/reactor-browser';
+import {
+    ConnectCrypto,
+    type IConnectCrypto,
+} from '@powerhousedao/reactor-browser/crypto/index';
+import { initRenown, type IRenown } from '@renown/sdk';
+import { logger, type IDocumentDriveServer as Reactor } from 'document-drive';
 import { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { generateId } from 'document-model';
-import { getConnectCrypto } from '../hooks/useConnectCrypto.js';
 import { loadCommonPackage } from './document-model.js';
 import { loadExternalPackages } from './external-packages.js';
 
 async function initReactor(
-    reactor: IDocumentDriveServer,
+    reactor: Reactor,
     renown: IRenown | undefined,
+    connectCrypto: IConnectCrypto | undefined,
 ) {
-    await initJwtHandler(reactor, renown);
+    await initJwtHandler(reactor, renown, connectCrypto);
     const errors = await reactor.initialize();
     const error = errors?.at(0);
     if (error) {
@@ -40,7 +47,7 @@ async function initReactor(
 }
 
 export async function handleCreateFirstLocalDrive(
-    reactor: IDocumentDriveServer | undefined,
+    reactor: Reactor | undefined,
 ) {
     const localDrivesEnabled = connectConfig.drives.sections.LOCAL.enabled;
     if (!localDrivesEnabled || reactor === undefined) return;
@@ -65,22 +72,25 @@ export async function handleCreateFirstLocalDrive(
             triggers: [],
         },
     });
-    console.log('document', document);
     return document;
 }
 
 async function initJwtHandler(
-    server: IDocumentDriveServer,
+    reactor: Reactor,
     renown: IRenown | undefined,
+    connectCrypto: IConnectCrypto | undefined,
 ) {
-    const user = await renown?.user();
-    const crypto = await getConnectCrypto();
-
-    if (user?.address) {
-        server.setGenerateJwtHandler(async driveUrl => {
-            return crypto.getBearerToken(driveUrl, user.address);
-        });
+    let user = renown?.user;
+    if (user instanceof Function) {
+        user = await user();
     }
+    if (!connectCrypto || !user) {
+        return;
+    }
+
+    reactor.setGenerateJwtHandler(async driveUrl => {
+        return connectCrypto.getBearerToken?.(driveUrl, user.address) ?? '';
+    });
 }
 
 async function loadVetraPackages() {
@@ -89,56 +99,38 @@ async function loadVetraPackages() {
     return [commonPackage, ...externalPackages];
 }
 
-async function getDid() {
-    const crypto = await getConnectCrypto();
-    return crypto.did();
-}
-
-async function initRenown(
-    getDid: () => Promise<string>,
-): Promise<IRenown | undefined> {
-    try {
-        const did = await getDid();
-        if (!did) {
-            return;
-        }
-        const { initRenownBrowser } = await import(
-            '../services/renown/index.js'
-        );
-        const renownBrowser = initRenownBrowser(did);
-        const renown: IRenown = {
-            user: function (): Promise<User | undefined> {
-                return Promise.resolve(renownBrowser.user);
-            },
-            login: function (did: string): Promise<User | undefined> {
-                return renownBrowser.login(did);
-            },
-            logout() {
-                return Promise.resolve(renownBrowser.logout());
-            },
-            on: {
-                user(cb) {
-                    return renownBrowser.on('user', cb);
-                },
-            },
-        };
-        return renown;
-    } catch (err) {
-        console.error(
-            'Error initializing renown:',
-            err instanceof Error ? err.message : 'Unknown error',
-        );
-        return undefined;
-    }
+async function initConnectCrypto() {
+    const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+    await connectCrypto.did();
+    return connectCrypto;
 }
 
 export async function createReactor() {
     if (window.reactor) return;
+
     // add window event handlers for updates
     addPHEventHandlers();
 
+    // initialize connect crypto
+    const connectCrypto = await initConnectCrypto();
+
+    // initialize did
+    const did = await connectCrypto.did();
+
     // initialize renown
-    const renown = await initRenown(getDid);
+    const renown = initRenown(did, connectConfig.routerBasename);
+
+    // initialize user
+    const user = renown.user;
+
+    // initialize login status
+    const loginStatus = user ? 'authorized' : 'initial';
+
+    // initialize user permissions
+    const userPermissions = {
+        isAllowedToCreateDocuments: true,
+        isAllowedToEditDocuments: true,
+    };
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);
@@ -156,15 +148,15 @@ export async function createReactor() {
         documentModelModules,
         storage,
     );
-
     // initialize the reactor
-    await initReactor(reactor, renown);
+    await initReactor(reactor, renown, connectCrypto);
 
     // create the processor manager
     const processorManager = new ProcessorManager(reactor.listeners, reactor);
 
     // get the drives from the reactor
     const drives = await getDrives(reactor);
+
     // get the documents from the reactor
     const documents = await getDocuments(reactor);
 
@@ -175,7 +167,12 @@ export async function createReactor() {
 
     // dispatch the events to set the values in the window object
     dispatchSetReactorEvent(reactor);
+    dispatchSetConnectCryptoEvent(connectCrypto);
+    dispatchSetDidEvent(did);
     dispatchSetRenownEvent(renown);
+    dispatchSetLoginStatusEvent(loginStatus);
+    dispatchSetUserEvent(user);
+    dispatchSetUserPermissionsEvent(userPermissions);
     dispatchSetProcessorManagerEvent(processorManager);
     dispatchSetDrivesEvent(drives);
     dispatchSetDocumentsEvent(documents);

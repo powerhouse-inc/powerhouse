@@ -5,9 +5,8 @@ import {
   type FOLDER,
   type nodeOptions,
   type normalNodeOptions,
-  type SharingType,
 } from "#connect";
-import { type Node } from "document-drive";
+import { type Node, type SharingType } from "document-drive";
 import { type ReactNode } from "react";
 
 export type OptionMetadata = {

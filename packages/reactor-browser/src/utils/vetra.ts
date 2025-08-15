@@ -1,8 +1,8 @@
 import {
-  generateId,
   type DocumentModelLib,
   type DocumentModelModule,
   type EditorModule,
+  generateId,
 } from "document-model";
 import {
   type VetraDocumentModelModule,
@@ -11,7 +11,7 @@ import {
   type VetraModules,
   type VetraPackage,
   type VetraPackageManifest,
-} from "../types.js";
+} from "../types/vetra.js";
 
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,

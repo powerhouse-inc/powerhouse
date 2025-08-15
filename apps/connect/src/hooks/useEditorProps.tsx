@@ -1,5 +1,4 @@
 import { useModal } from '#components';
-import { useTheme, useUser } from '#store';
 import {
     addActionContext,
     type DocumentDispatch,
@@ -10,9 +9,13 @@ import {
 } from '#utils';
 import {
     setSelectedNode,
+    useConnectCrypto,
+    useDid,
     useDocumentModelModuleById,
     useParentFolder,
-} from '@powerhousedao/state';
+    useUser,
+    useUserPermissions,
+} from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import {
     type Action,
@@ -23,10 +26,8 @@ import {
     redo,
     undo,
 } from 'document-model';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConnectCrypto, useConnectDid } from './useConnectCrypto.js';
-import { useUserPermissions } from './useUserPermissions.js';
 
 export interface EditorProps {
     context: EditorContext;
@@ -47,54 +48,44 @@ export function useEditorDispatch<T extends PHDocument = PHDocument>(
     onAddOperation: (operation: Operation) => Promise<void>,
 ) {
     const user = useUser() || undefined;
-    const connectDid = useConnectDid();
-    const { sign } = useConnectCrypto();
+    const did = useDid();
+    const connectCrypto = useConnectCrypto();
     const documentType = document?.header.documentType;
     const documentModelModule = useDocumentModelModuleById(documentType);
 
-    const dispatch = useCallback(
-        (action: Action, onErrorCallback?: ActionErrorCallback) => {
-            const callback: DocumentDispatchCallback<PHDocument> = (
+    const dispatch = (
+        action: Action,
+        onErrorCallback?: ActionErrorCallback,
+    ) => {
+        const callback: DocumentDispatchCallback<PHDocument> = (
+            operation,
+            state,
+        ) => {
+            if (!document?.header.id || !connectCrypto) return;
+
+            const { prevState } = state;
+
+            signOperation(
                 operation,
-                state,
-            ) => {
-                if (!document?.header.id) return;
+                connectCrypto.sign,
+                document.header.id,
+                prevState,
+                documentModelModule?.reducer,
+                user,
+            )
+                .then(op => {
+                    window.documentEditorDebugTools?.pushOperation(operation);
+                    return onAddOperation(op);
+                })
+                .catch(logger.error);
+        };
 
-                const { prevState } = state;
-
-                signOperation(
-                    operation,
-                    sign,
-                    document.header.id,
-                    prevState,
-                    documentModelModule?.reducer,
-                    user,
-                )
-                    .then(op => {
-                        window.documentEditorDebugTools?.pushOperation(
-                            operation,
-                        );
-                        return onAddOperation(op);
-                    })
-                    .catch(logger.error);
-            };
-
-            documentDispatch(
-                addActionContext(action, connectDid, user),
-                callback,
-                onErrorCallback,
-            );
-        },
-        [
-            documentDispatch,
-            connectDid,
-            documentModelModule?.reducer,
-            onAddOperation,
-            document?.header.id,
-            sign,
-            user,
-        ],
-    );
+        documentDispatch(
+            addActionContext(action, did, user),
+            callback,
+            onErrorCallback,
+        );
+    };
 
     return dispatch;
 }
@@ -106,14 +97,11 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
 ) {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const theme = useTheme();
-    const user = useUser() || undefined;
     const userPermissions = useUserPermissions();
     const parentFolder = useParentFolder(document?.header.id);
     const documentModelModule = useDocumentModelModuleById(
         document?.header.documentType,
     );
-    const context = useMemo(() => ({ theme, user }), [theme, user]);
 
     const canUndo =
         !!document &&
@@ -184,7 +172,6 @@ export function useEditorProps<T extends PHDocument = PHDocument>(
     return {
         dispatch,
         revisionHistoryVisible,
-        context,
         canUndo,
         canRedo,
         undo: handleUndo,

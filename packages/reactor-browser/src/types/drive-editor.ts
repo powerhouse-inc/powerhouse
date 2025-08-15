@@ -1,21 +1,6 @@
-import {
-  type FileNode,
-  type FolderNode,
-  type Node,
-  type SyncStatus,
-} from "document-drive";
-import {
-  type Action,
-  type ActionErrorCallback,
-  type DocumentModelModule,
-  type EditorContext,
-  type EditorModule,
-  type EditorProps,
-  type PHDocument,
-} from "document-model";
+import { type FolderNode, type Node } from "document-drive";
+import { type DocumentModelModule, type PHDocument } from "document-model";
 import { type FC } from "react";
-
-import { type User } from "../renown/types.js";
 
 /**
  * Interface representing the context values provided by the host application
@@ -24,8 +9,6 @@ import { type User } from "../renown/types.js";
 export type IDriveContext = {
   /** Controls the visibility of the search bar in the drive interface */
   showSearchBar: boolean;
-  /** Indicates whether the current user has permissions to create new documents */
-  isAllowedToCreateDocuments: boolean;
   /**
    * The name of the analytics database to use for the drive editor
    */
@@ -74,97 +57,23 @@ export type IDriveContext = {
    * @returns Promise resolving to the newly created Node
    */
   onDuplicateNode: (src: Node) => Promise<void>;
-  /**
-   * Callback to add a new folder and select it
-   * @param name - The name of the folder
-   * @returns Promise resolving to the newly created FolderNode
-   */
-  onAddAndSelectNewFolder: (name: string) => Promise<void>;
-  /**
-   * Callback to get the sync status of a sync
-   * @param syncId - The id of the sync
-   * @param sharingType - The sharing type of the sync
-   * @returns The sync status of the sync, or undefined if not found
-   */
-  getSyncStatusSync: (
-    syncId: string,
-    sharingType: "LOCAL" | "CLOUD" | "PUBLIC",
-  ) => SyncStatus | undefined;
-  /**
-   * Adds a new file to the drive
-   * @param file - File to be added (can be a string path or File object)
-   * @param drive - The drive to add the file to
-   * @param name - Optional name for the file
-   * @param parentFolder - Optional parent folder of the file
-   * @returns Promise resolving to the newly created Node
-   */
-  addFile: (
-    file: string | File,
-    drive: string,
-    name?: string,
-    parentFolder?: string,
-  ) => Promise<void>;
-  /**
-   * Adds a new document to the drive
-   * @param driveId - ID of the drive to add the document to
-   * @param name - Name of the document
-   * @param documentType - Type of document to create
-   * @param parentFolder - Optional parent folder of the document
-   * @param document - Optional document content
-   * @param id - Optional id for the document
-   * @returns Promise resolving to the newly created
-   */
-  addDocument: (
-    driveId: string,
-    name: string,
-    documentType: string,
-    parentFolder?: string,
-    document?: PHDocument,
-    id?: string,
-    preferredEditor?: string,
-  ) => Promise<FileNode | undefined>;
-  /**
-   * Shows a modal for creating a new document
-   * @param documentModel - Document model of the document to be created
-   * @returns Promise resolving to an object containing the document name
-   */
   showCreateDocumentModal: (documentModel: DocumentModelModule) => void;
   /**
    * Shows a modal for deleting a node
    * @param node - The node to be deleted
    */
   showDeleteNodeModal: (node: Node) => void;
-  useDocumentEditorProps: (props: {
-    driveId: string | undefined;
-    documentId: string | undefined;
-    documentType: string | undefined;
-    documentModelModule: DocumentModelModule<PHDocument> | undefined;
-    user?: User;
-  }) => {
-    dispatch: (action: Action, onErrorCallback?: ActionErrorCallback) => void;
-    document: PHDocument | undefined;
-    error: unknown;
-  };
 };
 
-export type DriveEditorContext = Omit<EditorContext, "getDocumentRevision"> &
-  IDriveContext;
+export type DriveEditorProps = {
+  document: PHDocument;
+  context: IDriveContext;
+};
 
-export interface DriveEditorProps<TDocument extends PHDocument>
-  extends Omit<EditorProps<TDocument>, "context"> {
-  context: DriveEditorContext;
-}
-
-export type DriveEditorModule<
-  TDocument extends PHDocument = PHDocument,
-  TCustomProps = unknown,
-  TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  Component: FC<
-    DriveEditorProps<TDocument> & TCustomProps & Record<string, unknown>
-  >;
+export type DriveEditorModule = {
+  Component: FC<DriveEditorProps>;
   documentTypes: string[];
-  config: TEditorConfig & {
+  config: {
     id: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;

@@ -3,8 +3,8 @@ import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedNodeIdEvent,
   subscribeToSelectedNodeId,
-} from "../internal/events.js";
-import { type NodeKind } from "../internal/types.js";
+} from "../events/events.js";
+import { type NodeKind } from "../types/reactor.js";
 import { makeFolderNodeFromDrive } from "../utils/drives.js";
 import {
   isFileNodeKind,

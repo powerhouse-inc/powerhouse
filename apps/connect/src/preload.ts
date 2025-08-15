@@ -1,18 +1,16 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+import { type IConnectCrypto } from '@powerhousedao/reactor-browser/crypto/index';
+import { type IRenown } from '@renown/sdk';
 import { type Issuer } from 'did-jwt-vc';
 import type {
-    DocumentDriveAction,
     DocumentDriveDocument,
     DriveInput,
     RemoteDriveOptions,
 } from 'document-drive';
-import { type Action, type Operation, type PHDocument } from 'document-model';
-import { type IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import { type Operation, type PHDocument, type User } from 'document-model';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { platformInfo } from './app/detect-platform.js';
-import type { IConnectCrypto } from './services/crypto/index.js';
-import type { IRenown, User } from './services/renown/types.js';
-import type { Theme } from './store/index.js';
 
 const connectCrypto: IConnectCrypto = {
     regenerateDid: (): Promise<void> =>
@@ -28,10 +26,11 @@ const connectCrypto: IConnectCrypto = {
 };
 
 const renown: IRenown = {
-    user: () => ipcRenderer.invoke('renown:user') as Promise<User | undefined>,
+    user: () => ipcRenderer.invoke('renown:user'),
     login: (did: string) => ipcRenderer.invoke('renown:login', did),
     logout: () => ipcRenderer.invoke('renown:logout'),
     on: {
+        // @ts-expect-error why does this event not exist on the interface?
         user: (listener: (user: User) => void) => {
             function wrappedListener(e: unknown, user: User) {
                 listener(user);
@@ -199,7 +198,7 @@ const electronApi = {
             ipcRenderer.off('handleURL', listener);
         };
     },
-    setTheme: (theme: Theme) => ipcRenderer.send('theme', theme),
+    setTheme: (theme: 'light' | 'dark') => ipcRenderer.send('theme', theme),
     getSyncStatus: (drive: string) =>
         ipcRenderer.invoke('documentDrive:getSyncStatus', drive),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import connectConfig from '#connect-config';
-import { useDocumentDriveServer } from '#hooks';
 import { serviceWorkerManager } from '#utils';
 import {
     Button,
@@ -9,7 +8,12 @@ import {
     Icon,
     Modal,
 } from '@powerhousedao/design-system';
-import { useDrives } from '@powerhousedao/state';
+import {
+    addTrigger,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    useDrives,
+} from '@powerhousedao/reactor-browser';
 import { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 export interface DebugSettingsModalProps {
@@ -43,8 +47,6 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = props => {
         value: autoRegisterPullResponder ? 'true' : 'false',
     });
     const drives = useDrives();
-    const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
-        useDocumentDriveServer();
 
     useEffect(() => {
         serviceWorkerManager.setDebug(serviceWorkerDebugMode.value);

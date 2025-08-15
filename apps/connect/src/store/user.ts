@@ -1,17 +1,12 @@
-import type { User } from '#services';
-import { useRenown } from '@powerhousedao/state';
+import { useUser } from '@powerhousedao/reactor-browser';
 import {
     setUser as setSentryUser,
     type User as SentryUser,
 } from '@sentry/react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-let userInit = false;
-
-export const useUser = () => {
-    const [user, setUser] = useState<User | null | undefined>(undefined);
-    const renown = useRenown();
-
+export function useSetSentryUser() {
+    const user = useUser();
     useEffect(() => {
         let sentryUser: SentryUser | null = null;
         if (user) {
@@ -21,28 +16,4 @@ export const useUser = () => {
         }
         setSentryUser(sentryUser);
     }, [user]);
-
-    useEffect(() => {
-        if (userInit) return;
-        userInit = true;
-        renown
-            ?.user()
-            .then(user => {
-                setUser(user || null);
-            })
-            .catch(() => {
-                setUser(null);
-            });
-
-        const unsub = renown?.on.user(user => {
-            setUser(user || null);
-        });
-
-        return () => {
-            unsub?.();
-            userInit = false;
-        };
-    }, [renown, userInit]);
-
-    return user;
-};
+}

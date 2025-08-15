@@ -8,7 +8,6 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
-  type SharingType,
   type SyncStatus,
   SyncStatusIcon,
   type TNodeActions,
@@ -17,7 +16,7 @@ import {
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { type FolderNode, type Node } from "document-drive";
+import { type FolderNode, type Node, type SharingType } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 

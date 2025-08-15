@@ -1,6 +1,6 @@
-import { type ProcessorManager } from "document-drive/processors/processor-manager";
+import { type ProcessorManager } from "document-drive";
 import { useSyncExternalStore } from "react";
-import { subscribeToProcessorManager } from "../internal/events.js";
+import { subscribeToProcessorManager } from "../events/index.js";
 
 export function useProcessorManager(): ProcessorManager | undefined {
   const processorManager = useSyncExternalStore(

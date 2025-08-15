@@ -1,5 +1,4 @@
-import { type DriveEditorContext } from '@powerhousedao/reactor-browser';
-import { useDocumentModelModuleById, useEditorModuleById } from '@powerhousedao/state';
+import { type IDriveContext, useDocumentModelModuleById, useEditorModuleById } from '@powerhousedao/reactor-browser';
 import { type FileNode } from "document-drive";
 import type React from 'react';
 import { DriveHeader } from './components/DriveHeader.js';
@@ -7,7 +6,7 @@ import { ModuleSpecificationsSection } from './components/ModuleSpecificationsSe
 import { PackageInformationSection } from './components/PackageInformationSection.js';
 
 interface DriveExplorerProps {
-  context: DriveEditorContext;
+  context: IDriveContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];

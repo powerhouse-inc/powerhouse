@@ -1,7 +1,7 @@
 import {
     convertLegacyLibToVetraPackage,
     setVetraPackages,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { type DocumentModelLib } from 'document-model';
 import { useEffect, useRef } from 'react';

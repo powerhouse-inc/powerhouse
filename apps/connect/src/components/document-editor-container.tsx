@@ -1,5 +1,3 @@
-import { useDocumentDriveServer } from '#hooks';
-import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import {
     setSelectedNode,
     useDocumentModelModuleById,
@@ -8,7 +6,9 @@ import {
     useParentFolder,
     useSelectedDocument,
     useSelectedDrive,
-} from '@powerhousedao/state';
+    addDocumentOperations,
+} from '@powerhousedao/reactor-browser';
+import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import { type Operation, type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,6 @@ import { DocumentEditor } from './editors.js';
 export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const { addDocumentOperations } = useDocumentDriveServer();
     const unwrappedSelectedDrive = useSelectedDrive();
     const selectedDocument = useSelectedDocument();
     const parentFolder = useParentFolder(selectedDocument?.header.id);
@@ -28,18 +27,6 @@ export function DocumentEditorContainer() {
     const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
     const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
     const documentModelModule = useDocumentModelModuleById(documentType);
-
-    const onAddOperation = useCallback(
-        async (operation: Operation) => {
-            if (!selectedDocument?.header.id) {
-                return;
-            }
-            await addDocumentOperations(selectedDocument.header.id, [
-                operation,
-            ]);
-        },
-        [addDocumentOperations, selectedDocument],
-    );
 
     const exportDocument = useCallback(
         (document: PHDocument) => {
@@ -121,7 +108,6 @@ export function DocumentEditorContainer() {
                 document={selectedDocument}
                 onClose={() => setSelectedNode(parentFolder)}
                 onExport={onExport}
-                onAddOperation={onAddOperation}
                 onOpenSwitchboardLink={onOpenSwitchboardLink}
             />
         </div>

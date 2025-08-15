@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
+import { ConnectCrypto } from '@powerhousedao/reactor-browser/crypto/index';
 import * as Sentry from '@sentry/browser';
 import { type PHDocument } from 'document-model';
 import {
@@ -21,9 +22,7 @@ import {
     ElectronKeyStorage,
     type KeyStorageElectronStore,
 } from './services/crypto/electron.js';
-import { ConnectCrypto } from './services/crypto/index.js';
 import { initRenownElectron } from './services/renown/electron.js';
-import { type Theme, isTheme } from './store/index.js';
 const isMac = process.platform === 'darwin';
 
 async function initApp() {
@@ -195,7 +194,7 @@ ipcMain.handle('showTabMenu', (event, tab) => {
     });
 });
 
-function getThemeColors(theme: Theme) {
+function getThemeColors(theme: 'light' | 'dark') {
     // TODO read from tailwind config
     const color = theme === 'dark' ? '#fefefe' : '#141718';
     const backgroundColor = theme === 'dark' ? '#141718' : '#FFFFFF';
@@ -204,9 +203,6 @@ function getThemeColors(theme: Theme) {
 }
 
 ipcMain.on('theme', (_, theme) => {
-    if (!isTheme(theme)) {
-        throw new Error(`Invalid theme: ${theme}`);
-    }
     store.set('theme', theme);
     const { color, backgroundColor, titlebarColor } = getThemeColors(theme);
 

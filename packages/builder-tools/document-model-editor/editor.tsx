@@ -35,15 +35,17 @@ import {
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
-export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
-  const { document, documentNodeName, dispatch } = props;
+export function DocumentModelEditor(props: EditorProps) {
+  const { document, dispatch } = props;
+  const unsafeCastOfDocument = document as DocumentModelDocument;
+  const documentNodeName = unsafeCastOfDocument.header.name;
   const {
     name: modelName,
     id: documentType,
     extension,
     description,
     author: { name: authorName, website: authorWebsite },
-  } = useMemo(() => document.state.global, [document.state.global]);
+  } = unsafeCastOfDocument.state.global;
   const {
     state: {
       global: {
@@ -53,14 +55,8 @@ export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
       local: { schema: localStateSchema, initialValue: localStateInitialValue },
     },
     modules,
-  } = useMemo(
-    () => document.state.global.specifications[0],
-    [document.state.global.specifications[0]],
-  );
-  const operations = useMemo(
-    () => modules.flatMap((module) => module.operations),
-    [modules],
-  );
+  } = unsafeCastOfDocument.state.global.specifications[0];
+  const operations = modules.flatMap((module) => module.operations);
   const shouldSetInitialName = useRef(
     !modelName && !!documentNodeName && operations.length === 0,
   );

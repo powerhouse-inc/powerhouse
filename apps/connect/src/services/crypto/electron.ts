@@ -1,6 +1,9 @@
+import {
+    type JsonWebKeyPairStorage,
+    type JwkKeyPair,
+} from '@powerhousedao/reactor-browser/crypto/index';
 import { safeStorage } from 'electron';
 import type ElectronStore from 'electron-store';
-import type { JsonWebKeyPairStorage, JwkKeyPair } from './index.js';
 
 const ELECTRON_KEY_STORAGE_STORE_KEY = 'electron-key-storage';
 

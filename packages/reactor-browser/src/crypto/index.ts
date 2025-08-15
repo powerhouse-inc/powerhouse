@@ -1,8 +1,22 @@
-import { encodeDIDfromBytes } from "did-key-creator";
+/* eslint-disable no-unused-private-class-members */
+import { createAuthBearerToken } from "@renown/sdk";
+import { bytesToBase64url } from "did-jwt";
+import type { Issuer } from "did-jwt-vc";
+import {
+  compressedKeyInHexfromRaw,
+  encodeDIDfromHexString,
+  rawKeyInHexfromUncompressed,
+} from "did-key-creator";
 import { childLogger } from "document-drive";
+import { fromString } from "uint8arrays";
+import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID } from "../renown/constants.js";
 
 const logger = childLogger(["reactor-browser", "crypto"]);
-
+function ab2hex(ab: ArrayBuffer) {
+  return Array.prototype.map
+    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
+    .join("");
+}
 export type JwkKeyPair = {
   publicKey: JsonWebKey;
   privateKey: JsonWebKey;
@@ -14,12 +28,18 @@ export interface JsonWebKeyPairStorage {
 }
 
 export interface IConnectCrypto {
-  publicKey(): Promise<JsonWebKey>;
   did: () => Promise<DID>;
   regenerateDid(): Promise<void>;
 
   sign: (data: Uint8Array) => Promise<Uint8Array>;
-  verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
+  publicKey?: () => Promise<JsonWebKey>;
+  getIssuer?: () => Promise<Issuer>;
+  getBearerToken?: (
+    driveUrl: string,
+    address: string | undefined,
+    refresh?: boolean,
+  ) => Promise<string>;
+  verify?: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 }
 
 export type DID = `did:key:${string}`;
@@ -30,18 +50,18 @@ export class ConnectCrypto implements IConnectCrypto {
   #keyPairStorage: JsonWebKeyPairStorage;
 
   #did: Promise<DID>;
+  #bearerToken: string | undefined;
 
   static algorithm: EcKeyAlgorithm = {
-    name: "Ed25519",
-    namedCurve: "Ed25519",
+    name: "ECDSA",
+    namedCurve: "P-256",
   };
 
-  async publicKey(): Promise<JsonWebKey> {
-    if (!this.#keyPair) {
-      throw new Error("No key pair available");
-    }
-    return Promise.resolve(this.#keyPair.publicKey as JsonWebKey);
-  }
+  static signAlgorithm = {
+    name: "ECDSA",
+    namedCurve: "P-256",
+    hash: "SHA-256",
+  };
 
   constructor(keyPairStorage: JsonWebKeyPairStorage) {
     this.#keyPairStorage = keyPairStorage;
@@ -74,25 +94,34 @@ export class ConnectCrypto implements IConnectCrypto {
   async #initialize() {
     const loadedKeyPair = await this.#keyPairStorage.loadKeyPair();
     if (loadedKeyPair) {
-      // check algorithm matches
-      if (loadedKeyPair.publicKey.crv?.toLowerCase() === "ed25519") {
-        this.#keyPair = await this.#importKeyPair(loadedKeyPair);
-        logger.info("Found key pair");
-      } else {
-        logger.warn("Key pair algorithm mismatch, discarding key pair");
-      }
-    }
-
-    if (!this.#keyPair) {
-      this.#keyPair = await this.#generateKeyPair();
-
-      logger.info("Created key pair");
+      this.#keyPair = await this.#importKeyPair(loadedKeyPair);
+      logger.debug("Found key pair");
+    } else {
+      this.#keyPair = await this.#generateECDSAKeyPair();
+      logger.debug("Created key pair");
       await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
     }
-
-    const did = await this.#generateDid();
-    logger.info("App DID:", did);
+    const did = await this.#parseDid();
+    logger.debug("Connect DID:", did);
     return did;
+  }
+
+  async getBearerToken(
+    driveUrl: string,
+    address: string | undefined,
+    refresh = false,
+  ) {
+    const issuer = await this.getIssuer();
+    if (refresh || !this.#bearerToken) {
+      this.#bearerToken = await createAuthBearerToken(
+        Number(RENOWN_CHAIN_ID),
+        RENOWN_NETWORK_ID,
+        address || (await this.#did),
+        issuer,
+      );
+    }
+
+    return this.#bearerToken;
   }
 
   did() {
@@ -100,26 +129,11 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   async regenerateDid() {
-    this.#keyPair = await this.#generateKeyPair();
+    this.#keyPair = await this.#generateECDSAKeyPair();
     await this.#keyPairStorage.saveKeyPair(await this.#exportKeyPair());
   }
 
-  /**
-   * Generates the DID from the public key.
-   *
-   * This function was updated to handle Ed25519 keys. The previous
-   * implementation used the multicodec for P-256 keys (`p256-pub`) and
-   * performed key compression, since these keys are not compressed.
-   *
-   * Ed25519 keys use a different multicodec and are already in a compressed
-   * form by design.
-   *
-   * The change involved:
-   *
-   * 1. Using the correct multicodec for Ed25519: `ed25519-pub`.
-   * 2. Using the raw public key bytes directly without compression.
-   */
-  async #generateDid(): Promise<DID> {
+  async #parseDid(): Promise<DID> {
     if (!this.#keyPair) {
       throw new Error("No key pair available");
     }
@@ -130,11 +144,14 @@ export class ConnectCrypto implements IConnectCrypto {
       this.#keyPair.publicKey,
     );
 
-    const did = encodeDIDfromBytes("ed25519-pub", new Uint8Array(publicKeyRaw));
+    const multicodecName = "p256-pub";
+    const rawKey = rawKeyInHexfromUncompressed(ab2hex(publicKeyRaw));
+    const compressedKey = compressedKeyInHexfromRaw(rawKey);
+    const did = encodeDIDfromHexString(multicodecName, compressedKey);
     return did as DID;
   }
 
-  async #generateKeyPair() {
+  async #generateECDSAKeyPair() {
     const subtleCrypto = await this.#subtleCrypto;
     const keyPair = await subtleCrypto.generateKey(
       ConnectCrypto.algorithm,
@@ -176,21 +193,33 @@ export class ConnectCrypto implements IConnectCrypto {
     };
   }
 
-  // eslint-disable-next-line no-unused-private-class-members
   #sign = async (
     ...args: Parameters<SubtleCrypto["sign"]>
   ): Promise<ArrayBuffer> => {
     return (await this.#subtleCrypto).sign(...args);
   };
 
-  async sign(data: Uint8Array): Promise<Uint8Array> {
+  #verify = async (
+    ...args: Parameters<SubtleCrypto["verify"]>
+  ): Promise<boolean> => {
+    return (await this.#subtleCrypto).verify(...args);
+  };
+
+  #stringToBytes(s: string): Uint8Array {
+    return fromString(s, "utf-8");
+  }
+
+  async sign(data: Uint8Array | string): Promise<Uint8Array> {
     if (this.#keyPair?.privateKey) {
+      const dataBytes: Uint8Array =
+        typeof data === "string" ? this.#stringToBytes(data) : data;
+
       const subtleCrypto = await this.#subtleCrypto;
 
       const arrayBuffer = await subtleCrypto.sign(
-        ConnectCrypto.algorithm,
+        ConnectCrypto.signAlgorithm,
         this.#keyPair.privateKey,
-        data.buffer as ArrayBuffer,
+        dataBytes.buffer as ArrayBuffer,
       );
 
       return new Uint8Array(arrayBuffer);
@@ -199,27 +228,20 @@ export class ConnectCrypto implements IConnectCrypto {
     }
   }
 
-  async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    if (this.#keyPair?.publicKey) {
-      const subtleCrypto = await this.#subtleCrypto;
-
-      let isValid;
-      try {
-        isValid = await subtleCrypto.verify(
-          "Ed25519",
-          this.#keyPair.publicKey,
-          signature as BufferSource,
-          data as BufferSource,
-        );
-      } catch (error) {
-        throw new Error("invalid signature");
-      }
-
-      if (!isValid) {
-        throw new Error("invalid signature");
-      }
-    } else {
-      throw new Error("No public key available");
+  async getIssuer(): Promise<Issuer> {
+    if (!this.#keyPair?.privateKey) {
+      throw new Error("No private key available");
     }
+
+    return {
+      did: await this.#did,
+      signer: async (data: string | Uint8Array) => {
+        const signature = await this.sign(
+          typeof data === "string" ? new TextEncoder().encode(data) : data,
+        );
+        return bytesToBase64url(signature);
+      },
+      alg: "ES256",
+    };
   }
 }

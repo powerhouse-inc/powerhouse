@@ -1,11 +1,13 @@
-import { useConnectCrypto } from '#hooks';
-import { useUser } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
-import { useDriveEditorModules } from '@powerhousedao/state';
+import {
+    useConnectCrypto,
+    useDriveEditorModules,
+    useUser,
+} from '@powerhousedao/reactor-browser';
 import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
@@ -18,7 +20,7 @@ export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
     const user = useUser();
     const driveEditorModules = useDriveEditorModules();
-    const { getBearerToken } = useConnectCrypto();
+    const connectCrypto = useConnectCrypto();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
         await onAddLocalDrive(data);
@@ -37,13 +39,16 @@ export function AddDriveModal(props: Props) {
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
                 try {
-                    const authToken = await getBearerToken(url, user?.address);
+                    const authToken = await connectCrypto?.getBearerToken?.(
+                        url,
+                        user?.address,
+                    );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
                     });
                 } catch (error) {
                     console.error(error);
-                    const authToken = await getBearerToken(
+                    const authToken = await connectCrypto?.getBearerToken?.(
                         url,
                         user?.address,
                         true,

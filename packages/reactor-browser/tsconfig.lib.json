@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "composite": true,
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
     "outDir": "./dist",
     "jsx": "react-jsx",
     "resolveJsonModule": true,
@@ -18,9 +18,12 @@
     },
     {
       "path": "../config"
+    },
+    {
+      "path": "../renown"
     }
   ],
-  "include": ["src", "package.json"],
+  "include": ["**/*", "package.json"],
   "exclude": [
     "node_modules",
     "dist",

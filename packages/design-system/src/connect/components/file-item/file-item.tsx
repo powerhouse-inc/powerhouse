@@ -9,13 +9,17 @@ import {
   nodeOptionsMap,
   READ,
   RENAME,
-  type SharingType,
   type TNodeActions,
   useDrag,
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { type FileNode, type Node, type SyncStatus } from "document-drive";
+import {
+  type FileNode,
+  type Node,
+  type SharingType,
+  type SyncStatus,
+} from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon/index.js";

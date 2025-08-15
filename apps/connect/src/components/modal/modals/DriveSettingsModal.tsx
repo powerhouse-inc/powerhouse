@@ -1,12 +1,9 @@
-import {
-    DriveSettingsModal as ConnectDriveSettingsModal,
-    type SharingType,
-} from '@powerhousedao/design-system';
+import { DriveSettingsModal as ConnectDriveSettingsModal } from '@powerhousedao/design-system';
 import {
     useDriveAvailableOffline,
     useDriveSharingType,
-} from '@powerhousedao/state';
-import { type DocumentDriveDocument } from 'document-drive';
+} from '@powerhousedao/reactor-browser';
+import { type DocumentDriveDocument, type SharingType } from 'document-drive';
 
 type Props = {
     drive: DocumentDriveDocument;

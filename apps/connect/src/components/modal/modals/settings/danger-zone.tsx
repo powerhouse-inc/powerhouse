@@ -1,10 +1,11 @@
-import { useDocumentDriveServer } from '#hooks';
 import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
 import {
+    clearStorage,
+    deleteDrive,
     setSelectedDrive,
     setSelectedNode,
     useDrives,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../../modal.js';
@@ -13,7 +14,6 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
     onRefresh,
 }) => {
     const { t } = useTranslation();
-    const { clearStorage, deleteDrive } = useDocumentDriveServer();
     const drives = useDrives();
     const { showModal } = useModal();
 

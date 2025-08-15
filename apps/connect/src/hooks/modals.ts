@@ -3,24 +3,32 @@ import {
     toast,
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
-    type SharingType,
 } from '@powerhousedao/design-system';
 import {
+    addDrive,
+    addRemoteDrive,
+    deleteDrive,
+    renameDrive,
+    setDriveAvailableOffline,
+    setDriveSharingType,
     setSelectedDrive,
     setSelectedNode,
     useDriveEditorModules,
     useDrives,
     useSelectedDrive,
     useSelectedParentFolder,
-} from '@powerhousedao/state';
-import { type DocumentDriveDocument, type Node } from 'document-drive';
+    deleteNode,
+} from '@powerhousedao/reactor-browser';
+import {
+    type DocumentDriveDocument,
+    type Node,
+    type SharingType,
+} from 'document-drive';
 import { t } from 'i18next';
 import { useCallback } from 'react';
-import { useDocumentDriveServer } from './useDocumentDriveServer';
 
 export function useShowAddDriveModal() {
     const { showModal } = useModal();
-    const { addDrive, addRemoteDrive } = useDocumentDriveServer();
     const driveEditorModules = useDriveEditorModules();
     const onAddLocalDrive = async (data: AddLocalDriveInput) => {
         try {
@@ -110,12 +118,6 @@ export function useShowAddDriveModal() {
 
 export function useShowDriveSettingsModal() {
     const { showModal } = useModal();
-    const {
-        renameDrive,
-        setDriveAvailableOffline,
-        setDriveSharingType,
-        deleteDrive,
-    } = useDocumentDriveServer();
     const drives = useDrives();
     const onRenameDrive = useCallback(
         async (drive: DocumentDriveDocument, newName: string) => {
@@ -182,7 +184,6 @@ export function useShowDriveSettingsModal() {
 
 export function useShowDeleteNodeModal() {
     const { showModal } = useModal();
-    const { deleteNode } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedParentFolder = useSelectedParentFolder();
     const showDeleteNodeModal = useCallback(

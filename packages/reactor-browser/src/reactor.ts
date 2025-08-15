@@ -8,6 +8,12 @@ import {
 } from "document-drive";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { type DocumentModelModule } from "document-model";
+import {
+  dispatchSetDocumentsEvent,
+  dispatchSetDrivesEvent,
+} from "./events/events.js";
+import { type Reactor } from "./types/reactor.js";
+import { getDocuments, getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
   defaultDrivesUrl?: string[];
@@ -77,4 +83,12 @@ export function createBrowserDocumentDriveServer(
   }
 
   return builder.build();
+}
+
+export async function refreshReactorData(reactor: Reactor | undefined) {
+  if (!reactor) return;
+  const drives = await getDrives(reactor);
+  const documents = await getDocuments(reactor);
+  dispatchSetDrivesEvent(drives);
+  dispatchSetDocumentsEvent(documents);
 }

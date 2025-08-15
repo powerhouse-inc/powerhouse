@@ -1,11 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
-
 import {
   dispatchSetVetraPackagesEvent,
   subscribeToVetraPackages,
-} from "../internal/events.js";
-import { type VetraPackage } from "../types.js";
+} from "../events/events.js";
+import { type VetraPackage } from "../types/vetra.js";
 
 export function useVetraPackages(): VetraPackage[] | undefined {
   return useSyncExternalStore(

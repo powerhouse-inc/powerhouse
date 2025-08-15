@@ -1,12 +1,13 @@
 import connectConfig from '#connect-config';
-import { useDocumentDriveServer, useUserPermissions } from '#hooks';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import {
+    addFolder,
     setSelectedNode,
     useDocumentModelModules,
     useSelectedDrive,
     useSelectedNodePath,
-} from '@powerhousedao/state';
+    useUserPermissions,
+} from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import Button from './button.js';
@@ -23,7 +24,6 @@ const getDocumentModelName = (name: string) => {
 
 export function DriveView() {
     const { showModal } = useModal();
-    const { addFolder } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedNodePath = useSelectedNodePath();
     const documentModelModules = useDocumentModelModules();

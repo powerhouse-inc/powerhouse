@@ -1,9 +1,8 @@
 import {
     type AddRemoteDriveInput,
     AddRemoteDriveModal as ConnectAddRemoteDriveModal,
-    type SharingType,
 } from '@powerhousedao/design-system';
-import { requestPublicDrive } from 'document-drive';
+import { requestPublicDrive, type SharingType } from 'document-drive';
 
 type Props = {
     open: boolean;

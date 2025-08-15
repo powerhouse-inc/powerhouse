@@ -1,5 +1,5 @@
 import connectConfig from '#connect-config';
-import { convertLegacyLibToVetraPackage } from '@powerhousedao/state';
+import { convertLegacyLibToVetraPackage } from '@powerhousedao/reactor-browser';
 import { type DocumentModelLib } from 'document-model';
 
 const externalPackagesUrl =

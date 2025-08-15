@@ -5,7 +5,7 @@ import {
     makeVetraPackageManifest,
     useDrives,
     useVetraPackages,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';

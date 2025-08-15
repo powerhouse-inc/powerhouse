@@ -1,4 +1,9 @@
 import connectConfig from '#connect-config';
+import {
+    useProcessorManager,
+    useProcessors,
+    type Processors,
+} from '@powerhousedao/reactor-browser';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
@@ -11,11 +16,6 @@ import {
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
-import {
-    useProcessorManager,
-    useProcessors,
-    type Processors,
-} from '@powerhousedao/state';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';

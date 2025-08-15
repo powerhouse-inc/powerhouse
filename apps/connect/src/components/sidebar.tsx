@@ -1,5 +1,5 @@
 import connectConfig from '#connect-config';
-import { useLogin, useShowAddDriveModal } from '#hooks';
+import { useShowAddDriveModal } from '#hooks';
 import {
     ConnectSidebar,
     Icon,
@@ -7,12 +7,14 @@ import {
     SidebarItem,
 } from '@powerhousedao/design-system';
 import {
+    logout,
+    openRenown,
     setSelectedDrive,
     useDrives,
     useSelectedDrive,
-} from '@powerhousedao/state';
-import { type DocumentDriveDocument, logger } from 'document-drive';
-import { useCallback } from 'react';
+    useUser,
+} from '@powerhousedao/reactor-browser';
+import { logger } from 'document-drive';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { DriveIcon } from './drive-icon.js';
@@ -21,7 +23,7 @@ import { useModal } from './modal/index.js';
 export default function Sidebar() {
     const { showModal } = useModal();
     const navigate = useNavigate();
-    const { user, openRenown, logout } = useLogin();
+    const user = useUser();
     const drives = useDrives();
     const selectedDrive = useSelectedDrive();
     const showAddDriveModal = useShowAddDriveModal();
@@ -31,9 +33,9 @@ export default function Sidebar() {
         showModal('settingsModal', { onRefresh: () => navigate(0) });
     };
 
-    const onAddDriveClick = useCallback(() => {
+    const onAddDriveClick = () => {
         showAddDriveModal();
-    }, [showAddDriveModal]);
+    };
 
     const headerContent = (
         <div className="flex h-full items-center">

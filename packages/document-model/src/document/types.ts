@@ -366,9 +366,7 @@ export type GetDocumentOptions = ReducerOptions & {
 };
 
 export type EditorContext = {
-  theme: "light" | "dark";
   debug?: boolean;
-  user?: User;
   readMode?: boolean;
   selectedTimelineRevision?: string | number | null;
   getDocumentRevision?: (
@@ -383,12 +381,10 @@ export type EditorDispatch = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export type EditorProps<TDocument extends PHDocument> = {
-  document: TDocument;
+export type EditorProps = {
+  document: PHDocument;
   dispatch: EditorDispatch;
   context: EditorContext;
-  error?: unknown;
-  documentNodeName?: string;
 };
 
 export type SubgraphModule = {
@@ -405,16 +401,10 @@ export type ImportScriptModule = {
   endpoint: string;
 };
 
-export type EditorModule<
-  TDocument extends PHDocument = PHDocument,
-  TCustomProps = unknown,
-  TEditorConfig extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  Component: FC<
-    EditorProps<TDocument> & TCustomProps & Record<string, unknown>
-  >;
+export type EditorModule = {
+  Component: FC<EditorProps>;
   documentTypes: string[];
-  config: TEditorConfig & {
+  config: {
     id: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
@@ -465,7 +455,7 @@ export type Manifest = {
 export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
   manifest: Manifest;
   documentModels: DocumentModelModule<TDocument>[];
-  editors: EditorModule<TDocument>[];
+  editors: EditorModule[];
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
 };

@@ -1,7 +1,7 @@
 import {
     DEFAULT_DRIVE_EDITOR_ID,
     type VetraEditorModule,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 
 export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
     const { GenericDriveExplorer: genericDriveExplorerEditorModule } =

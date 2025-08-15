@@ -1,8 +1,7 @@
 import AtlasIcon from '#assets/icons/Atlas-Logomark.svg?react';
 import RefreshIcon from '#assets/icons/refresh.svg?react';
-import { useDocumentDriveServer } from '#hooks';
 import { Button } from '@powerhousedao/design-system';
-import { useReactor } from '@powerhousedao/state';
+import { addRemoteDrive, useReactor } from '@powerhousedao/reactor-browser';
 import { gql, request } from 'graphql-request';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -40,7 +39,6 @@ export function AtlasImport() {
     const { documentId } = useParams();
     const reactorUrl = useReactorUrl();
     const navigate = useNavigate();
-    const { addRemoteDrive } = useDocumentDriveServer();
     const [driveId, setDriveId] = useState<string | undefined>(undefined);
     const [error, setError] = useState<unknown>(undefined);
     const [loading, setLoading] = useState(true);

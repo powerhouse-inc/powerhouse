@@ -1,7 +1,3 @@
-/* eslint-disable react/jsx-props-no-spreading */
-
-/* eslint-disable @typescript-eslint/no-unnecessary-type-parameters */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
   type BaseDocumentDriveServer,
   type IDocumentDriveServer,
@@ -16,6 +12,7 @@ import {
   type RemoteDriveOptions,
 } from "document-drive";
 import { type PHDocument } from "document-model";
+import fastIsDeepEqual from "fast-deep-equal";
 import {
   createContext,
   type FC,
@@ -25,8 +22,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useUserPermissions } from "../hooks/useUserPermissions.js";
-import { drivesToHash } from "../utils/index.js";
+import { useUserPermissions } from "../hooks/user.js";
 
 const logger = {
   error: console.error,
@@ -101,7 +97,6 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     this.server = documentDrive;
   }
 
-  /* eslint-disable @typescript-eslint/no-non-null-assertion */
   @checkServer
   migrateReadDrive(id: string, options: RemoteDriveOptions) {
     return this.server!.migrateReadDrive(id, options);
@@ -166,8 +161,6 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
   ): Promise<ReadDrivesListenerUnsubscribe> {
     return this.server!.onReadDrivesUpdate(listener);
   }
-
-  /* eslint-enable @typescript-eslint/no-non-null-assertion */
 }
 
 const ReadModeInstance = new ReadModeContextImpl();
@@ -252,7 +245,7 @@ export const ReadModeContextProvider: FC<ReadModeContextProviderProps> = (
     const unsubscribe = ReadModeInstance.onReadDrivesUpdate((newDrives) => {
       setReadDrives((readDrives) =>
         readDrives.length !== newDrives.length ||
-        drivesToHash(readDrives) !== drivesToHash(newDrives)
+        !fastIsDeepEqual(readDrives, newDrives)
           ? newDrives
           : readDrives,
       );

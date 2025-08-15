@@ -1,5 +1,5 @@
 import { useSubscribeToVetraPackages } from '#services';
-import { createReactor } from '#store';
+import { createReactor, useSetSentryUser } from '#store';
 import { logger } from 'document-drive';
 import { useEffect } from 'react';
 
@@ -8,4 +8,5 @@ export function useLoadData() {
         createReactor().catch(logger.error);
     }, []);
     useSubscribeToVetraPackages();
+    useSetSentryUser();
 }

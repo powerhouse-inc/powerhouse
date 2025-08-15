@@ -7,11 +7,11 @@ import {
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { useCallback } from "react";
 
-export type IProps = EditorProps<ProcessorModuleDocument>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
   const { document, dispatch } = props;
-
+ const unsafeCastOfDocument = document as ProcessorModuleDocument
   const onConfirm = useCallback(
     (name: string, type: string, documentTypes: DocumentTypeItem[]) => {
       // Dispatch all actions at once
@@ -29,9 +29,9 @@ export default function Editor(props: IProps) {
   return (
     <div>
       <ProcessorEditorForm
-        processorName={document.state.global.name ?? ""}
-        processorType={document.state.global.type ?? ""}
-        documentTypes={document.state.global.documentTypes ?? []}
+        processorName={unsafeCastOfDocument.state.global.name ?? ""}
+        processorType={unsafeCastOfDocument.state.global.type ?? ""}
+        documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
         onConfirm={onConfirm}
       />
     </div>

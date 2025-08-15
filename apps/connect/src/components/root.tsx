@@ -1,15 +1,14 @@
 import IconConnect from '#assets/icons/connect.svg?react';
 import IconLogo from '#assets/icons/logo.svg?react';
 import { ModalManager } from '#components';
-import { isElectron, isMac, useLogin } from '#hooks';
+import { isElectron, isMac } from '#hooks';
+import { login } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useSearchParams } from 'react-router-dom';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
-    const { login } = useLogin();
-
     useEffect(() => {
         window.electronAPI?.ready();
     }, []);

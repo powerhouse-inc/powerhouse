@@ -7,11 +7,11 @@ import {
   type Action,
   type Author,
   type DocumentModelState,
+  type DocumentSpecification,
   type ImportScriptModule,
   type Reducer,
   type SubgraphModule,
 } from "document-model";
-import { type DocumentSpecification } from "document-model/document-model/gen/schema/types";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;

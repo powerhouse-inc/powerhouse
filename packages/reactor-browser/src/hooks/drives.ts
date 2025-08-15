@@ -1,11 +1,14 @@
-import { type DocumentDriveDocument, type Trigger } from "document-drive";
+import {
+  type DocumentDriveDocument,
+  type SharingType,
+  type Trigger,
+} from "document-drive";
 import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedDriveIdEvent,
   subscribeToDrives,
   subscribeToSelectedDriveId,
-} from "../internal/events.js";
-import { type SharingType } from "../internal/types.js";
+} from "../events/index.js";
 import {
   getDriveAvailableOffline,
   getDriveSharingType,

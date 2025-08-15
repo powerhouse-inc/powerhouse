@@ -1,11 +1,11 @@
-import { useDocumentDriveServer } from '#hooks';
 import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
 import {
     setSelectedNode,
     useSelectedDrive,
     useSelectedFolder,
     useSelectedParentFolder,
-} from '@powerhousedao/state';
+    addDocument,
+} from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
@@ -21,7 +21,6 @@ export const CreateDocumentModal: React.FC<
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const parentFolder = useSelectedParentFolder();
-    const { addDocument } = useDocumentDriveServer();
 
     const onCreateDocument = async (documentName: string) => {
         onClose();

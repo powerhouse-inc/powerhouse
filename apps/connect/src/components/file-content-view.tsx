@@ -1,14 +1,10 @@
-import {
-    useDocumentDriveServer,
-    useNodeActions,
-    useShowDeleteNodeModal,
-    useWindowSize,
-} from '#hooks';
+import { useNodeActions, useShowDeleteNodeModal, useWindowSize } from '#hooks';
 import { FileItem } from '@powerhousedao/design-system';
 import {
+    getSyncStatusSync,
     setSelectedNode,
     useSelectedDriveSharingType,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FileNode } from 'document-drive';
 import React, { useRef } from 'react';
@@ -42,7 +38,6 @@ export function FileContentView({
         onAddFolder,
         onAddAndSelectNewFolder,
     } = useNodeActions();
-    const { getSyncStatusSync } = useDocumentDriveServer();
     const availableWidth = windowSize.innerWidth - USED_SPACE;
     const showDeleteNodeModal = useShowDeleteNodeModal();
 

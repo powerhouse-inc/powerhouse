@@ -1,7 +1,7 @@
 import { type FileNode, type FolderNode, type Node } from "document-drive";
 
 /** Sorts nodes by name. */
-export function sortNodesByName<TNode extends Node>(nodes: TNode[]): TNode[] {
+export function sortNodesByName<T extends Node>(nodes: T[]) {
   return nodes.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 

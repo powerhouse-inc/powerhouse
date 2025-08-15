@@ -2,7 +2,7 @@ import {
     type VetraDocumentModelModule,
     type VetraPackage,
     COMMON_PACKAGE_ID,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import {
     loadDocumentModelEditor,
     loadGenericDriveExplorerEditorModule,

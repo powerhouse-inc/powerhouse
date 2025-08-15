@@ -1,38 +1,51 @@
-import { type Unsubscribe, type User } from "@renown/sdk";
+import { type IRenown, type User } from "@renown/sdk";
 import { type DocumentDriveDocument } from "document-drive";
 import { type ProcessorManager } from "document-drive/processors/processor-manager";
 import { type DocumentModelModule, type PHDocument } from "document-model";
-import { type VetraPackage } from "../types.js";
+import { type DID, type IConnectCrypto } from "../crypto/index.js";
+import { type LoginStatus, type UserPermissions } from "../types/global.js";
+import { type Reactor } from "../types/reactor.js";
+import { type VetraPackage } from "../types/vetra.js";
 import {
   extractDriveIdFromSlug,
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
 } from "../utils/url.js";
-import { type Reactor } from "./types.js";
-
-export interface IRenown {
-  user: () => Promise<User | undefined>;
-  login: (did: string) => Promise<User | undefined>;
-  logout: () => Promise<void>;
-  on: {
-    user: (cb: (user: User) => void) => Unsubscribe;
-  };
-}
 
 export type SetReactorEvent = CustomEvent<{
   reactor: Reactor | undefined;
 }>;
 export type ReactorUpdatedEvent = CustomEvent;
 
+export type SetConnectCryptoEvent = CustomEvent<{
+  connectCrypto: IConnectCrypto | undefined;
+}>;
+export type ConnectCryptoUpdatedEvent = CustomEvent;
+
+export type SetDidEvent = CustomEvent<{
+  did: DID | undefined;
+}>;
+export type DidUpdatedEvent = CustomEvent;
+
 export type SetRenownEvent = CustomEvent<{
   renown: IRenown | undefined;
 }>;
 export type RenownUpdatedEvent = CustomEvent;
 
+export type SetLoginStatusEvent = CustomEvent<{
+  loginStatus: LoginStatus | undefined;
+}>;
+export type LoginStatusUpdatedEvent = CustomEvent;
+
 export type SetUserEvent = CustomEvent<{
   user: User | undefined;
 }>;
 export type UserUpdatedEvent = CustomEvent;
+
+export type SetUserPermissionsEvent = CustomEvent<{
+  userPermissions: UserPermissions | undefined;
+}>;
+export type UserPermissionsUpdatedEvent = CustomEvent;
 
 export type SetProcessorManagerEvent = CustomEvent<{
   processorManager: ProcessorManager | undefined;
@@ -65,8 +78,12 @@ export type VetraPackagesUpdatedEvent = CustomEvent;
 
 export function addPHEventHandlers() {
   addReactorEventHandler();
+  addConnectCryptoEventHandler();
+  addDidEventHandler();
   addRenownEventHandler();
+  addLoginStatusEventHandler();
   addUserEventHandler();
+  addUserPermissionsEventHandler();
   addProcessorManagerEventHandler();
   addDrivesEventHandler();
   addDocumentsEventHandler();
@@ -102,6 +119,63 @@ export function addReactorEventHandler() {
   window.addEventListener("ph:setReactor", handleSetReactorEvent);
 }
 
+export function dispatchSetConnectCryptoEvent(
+  connectCrypto: IConnectCrypto | undefined,
+) {
+  const event = new CustomEvent("ph:setConnectCrypto", {
+    detail: { connectCrypto },
+  });
+  window.dispatchEvent(event);
+}
+export function dispatchConnectCryptoUpdatedEvent() {
+  const event = new CustomEvent("ph:connectCryptoUpdated");
+  window.dispatchEvent(event);
+}
+export function handleSetConnectCryptoEvent(event: SetConnectCryptoEvent) {
+  const connectCrypto = event.detail.connectCrypto;
+  window.connectCrypto = connectCrypto;
+  dispatchConnectCryptoUpdatedEvent();
+}
+
+export function subscribeToConnectCrypto(onStoreChange: () => void) {
+  window.addEventListener("ph:connectCryptoUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:connectCryptoUpdated", onStoreChange);
+  };
+}
+
+export function addConnectCryptoEventHandler() {
+  window.addEventListener("ph:setConnectCrypto", handleSetConnectCryptoEvent);
+}
+
+export function dispatchSetDidEvent(did: DID | undefined) {
+  const event = new CustomEvent("ph:setDid", {
+    detail: { did },
+  });
+  window.dispatchEvent(event);
+}
+
+export function dispatchDidUpdatedEvent() {
+  const event = new CustomEvent("ph:didUpdated");
+  window.dispatchEvent(event);
+}
+export function handleSetDidEvent(event: SetDidEvent) {
+  const did = event.detail.did;
+  window.did = did;
+  dispatchDidUpdatedEvent();
+}
+
+export function subscribeToDid(onStoreChange: () => void) {
+  window.addEventListener("ph:didUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:didUpdated", onStoreChange);
+  };
+}
+
+export function addDidEventHandler() {
+  window.addEventListener("ph:setDid", handleSetDidEvent);
+}
+
 export function dispatchSetRenownEvent(renown: IRenown | undefined) {
   const event = new CustomEvent("ph:setRenown", {
     detail: { renown },
@@ -115,6 +189,7 @@ export function dispatchRenownUpdatedEvent() {
 export function handleSetRenownEvent(event: SetRenownEvent) {
   const renown = event.detail.renown;
   window.renown = renown;
+  renown?.on("user", (user) => dispatchSetUserEvent(user));
   dispatchRenownUpdatedEvent();
 }
 
@@ -127,6 +202,37 @@ export function subscribeToRenown(onStoreChange: () => void) {
 
 export function addRenownEventHandler() {
   window.addEventListener("ph:setRenown", handleSetRenownEvent);
+}
+
+export function dispatchSetLoginStatusEvent(
+  loginStatus: LoginStatus | undefined,
+) {
+  const event = new CustomEvent("ph:setLoginStatus", {
+    detail: { loginStatus },
+  });
+  window.dispatchEvent(event);
+}
+
+export function dispatchLoginStatusUpdatedEvent() {
+  const event = new CustomEvent("ph:loginStatusUpdated");
+  window.dispatchEvent(event);
+}
+
+export function handleSetLoginStatusEvent(event: SetLoginStatusEvent) {
+  const loginStatus = event.detail.loginStatus;
+  window.loginStatus = loginStatus;
+  dispatchLoginStatusUpdatedEvent();
+}
+
+export function subscribeToLoginStatus(onStoreChange: () => void) {
+  window.addEventListener("ph:loginStatusUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:loginStatusUpdated", onStoreChange);
+  };
+}
+
+export function addLoginStatusEventHandler() {
+  window.addEventListener("ph:setLoginStatus", handleSetLoginStatusEvent);
 }
 
 export function dispatchSetUserEvent(user: User | undefined) {
@@ -154,6 +260,40 @@ export function subscribeToUser(onStoreChange: () => void) {
 
 export function addUserEventHandler() {
   window.addEventListener("ph:setUser", handleSetUserEvent);
+}
+
+export function dispatchSetUserPermissionsEvent(
+  userPermissions: UserPermissions | undefined,
+) {
+  const event = new CustomEvent("ph:setUserPermissions", {
+    detail: { userPermissions },
+  });
+  window.dispatchEvent(event);
+}
+
+export function dispatchUserPermissionsUpdatedEvent() {
+  const event = new CustomEvent("ph:userPermissionsUpdated");
+  window.dispatchEvent(event);
+}
+
+export function handleSetUserPermissionsEvent(event: SetUserPermissionsEvent) {
+  const userPermissions = event.detail.userPermissions;
+  window.userPermissions = userPermissions;
+  dispatchUserPermissionsUpdatedEvent();
+}
+
+export function subscribeToUserPermissions(onStoreChange: () => void) {
+  window.addEventListener("ph:userPermissionsUpdated", onStoreChange);
+  return () => {
+    window.removeEventListener("ph:userPermissionsUpdated", onStoreChange);
+  };
+}
+
+export function addUserPermissionsEventHandler() {
+  window.addEventListener(
+    "ph:setUserPermissions",
+    handleSetUserPermissionsEvent,
+  );
 }
 
 export function dispatchSetProcessorManagerEvent(

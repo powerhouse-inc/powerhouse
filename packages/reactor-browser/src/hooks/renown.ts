@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { subscribeToRenown } from "../internal/events.js";
+import { subscribeToRenown } from "../events/index.js";
 
 export function useRenown() {
   const renown = useSyncExternalStore(subscribeToRenown, () => window.renown);

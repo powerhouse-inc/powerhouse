@@ -1,23 +1,23 @@
 import connectConfig from '#connect-config';
-import { useDocumentDriveServer, useShowAddDriveModal } from '#hooks';
+import { useShowAddDriveModal } from '#hooks';
 import {
     HomeScreen,
     HomeScreenAddDriveItem,
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
+    addFile,
     setSelectedDrive,
     useDrives,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { useEffect } from 'react';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
-    const { addFile } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();

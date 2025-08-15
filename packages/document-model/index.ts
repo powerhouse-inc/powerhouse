@@ -27,6 +27,7 @@ export type {
   Module,
   Scalars,
   ScopeState,
+  DocumentSpecification,
 } from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,

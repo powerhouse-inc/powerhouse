@@ -1,14 +1,10 @@
 import {
   type DocumentDriveDocument,
   type FolderNode,
-  type Node,
+  type SharingType,
 } from "document-drive";
 import { type PHDocument } from "document-model";
-import {
-  dispatchSetDocumentsEvent,
-  dispatchSetDrivesEvent,
-} from "../internal/events.js";
-import { type Reactor, type SharingType } from "../internal/types.js";
+import { type Reactor } from "../types/reactor.js";
 
 /** Returns the sharing type for a drive. */
 export function getDriveSharingType(

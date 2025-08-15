@@ -1,22 +1,22 @@
 import connectConfig from '#connect-config';
-import {
-    useDocumentDriveServer,
-    useDocumentEditor as useDocumentEditorProps,
-    useEditorProps,
-    useNodeActions,
-    useShowDeleteNodeModal,
-} from '#hooks';
+import { useEditorProps, useNodeActions, useShowDeleteNodeModal } from '#hooks';
 import { useDocumentDispatch } from '#utils';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { type IDriveContext } from '@powerhousedao/reactor-browser';
 import {
+    addDocument,
+    addDriveAction,
+    addFile,
+    getSyncStatusSync,
     useDefaultDriveEditorModule,
     useDriveEditorModuleById,
     useSelectedDrive,
-} from '@powerhousedao/state';
-import { driveDocumentModelModule } from 'document-drive';
+} from '@powerhousedao/reactor-browser';
+import {
+    type DocumentDriveAction,
+    driveDocumentModelModule,
+} from 'document-drive';
 import { type DocumentModelModule, type Operation } from 'document-model';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
 
@@ -31,31 +31,8 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-    const { addDriveOperations, getSyncStatusSync } = useDocumentDriveServer();
     const selectedDrive = useSelectedDrive();
     const nodeActions = useNodeActions();
-    const [, _dispatch, error] = useDocumentDispatch(
-        driveDocumentModelModule.reducer,
-        selectedDrive,
-    );
-    const onAddOperation = useCallback(
-        async (operation: Operation) => {
-            if (!selectedDrive?.header.id) {
-                throw new Error('No drive selected');
-            }
-            await addDriveOperations(selectedDrive.header.id, [operation]);
-        },
-        [addDriveOperations, selectedDrive?.header.id],
-    );
-
-    const editorProps = useEditorProps(
-        selectedDrive,
-        _dispatch,
-        onAddOperation,
-    );
-
-    const { isAllowedToCreateDocuments } = editorProps;
-
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(
         (documentModel: DocumentModelModule) => {
@@ -66,33 +43,8 @@ export function DriveEditorContainer() {
         [showModal],
     );
     const showDeleteNodeModal = useShowDeleteNodeModal();
-    const { addFile, addDocument } = useDocumentDriveServer();
     const analyticsDatabaseName = connectConfig.analytics.databaseName;
     const showSearchBar = false;
-
-    const driveContext: IDriveContext = useMemo(
-        () => ({
-            ...nodeActions,
-            showSearchBar,
-            isAllowedToCreateDocuments,
-            analyticsDatabaseName,
-            getSyncStatusSync,
-            addFile,
-            showCreateDocumentModal,
-            showDeleteNodeModal,
-            useDocumentEditorProps,
-            addDocument,
-        }),
-        [
-            nodeActions,
-            isAllowedToCreateDocuments,
-            addFile,
-            addDocument,
-            getSyncStatusSync,
-            showDeleteNodeModal,
-            showCreateDocumentModal,
-        ],
-    );
 
     const driveEditor = useDriveEditorModuleById(
         selectedDrive?.header.meta?.preferredEditor,
@@ -112,14 +64,14 @@ export function DriveEditorContainer() {
             key={selectedDrive.header.id}
         >
             <DriveEditorComponent
-                {...editorProps}
                 context={{
-                    ...editorProps.context,
-                    ...driveContext,
+                    ...nodeActions,
+                    showSearchBar,
+                    analyticsDatabaseName,
+                    showCreateDocumentModal,
+                    showDeleteNodeModal,
                 }}
-                onSwitchboardLinkClick={undefined} // TODO
                 document={selectedDrive}
-                error={error}
             />
         </ErrorBoundary>
     );

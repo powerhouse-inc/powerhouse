@@ -3,9 +3,9 @@ import {
   AddRemoteDriveForm,
   type AddRemoteDriveInput,
   Divider,
-  type SharingType,
 } from "#connect";
 import { type DivProps, Icon, Modal } from "#powerhouse";
+import { type SharingType } from "document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 

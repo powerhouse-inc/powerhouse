@@ -1,8 +1,4 @@
-import {
-    useDocumentDriveServer,
-    useNodeActions,
-    useShowDeleteNodeModal,
-} from '#hooks';
+import { useNodeActions, useShowDeleteNodeModal } from '#hooks';
 import { FolderItem, useDrop } from '@powerhousedao/design-system';
 import {
     setSelectedNode,
@@ -10,7 +6,8 @@ import {
     useFolderChildNodes,
     useSelectedDriveSharingType,
     useSelectedFolder,
-} from '@powerhousedao/state';
+    getSyncStatusSync,
+} from '@powerhousedao/reactor-browser';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { ContentSection } from './content/index.js';
@@ -29,7 +26,6 @@ export function FolderView(props: { isAllowedToCreateDocuments?: boolean }) {
         onAddFolder,
         onAddAndSelectNewFolder,
     } = useNodeActions();
-    const { getSyncStatusSync } = useDocumentDriveServer();
     const showDeleteNodeModal = useShowDeleteNodeModal();
     const { isDropTarget, dropProps } = useDrop({
         node: selectedFolder,

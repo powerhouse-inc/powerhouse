@@ -1,33 +1,33 @@
 import type { EditorProps } from "document-model";
+import { useCallback } from "react";
 import {
-  type DocumentEditorDocument,
   type AddDocumentTypeInput,
+  type DocumentEditorDocument,
   type RemoveDocumentTypeInput,
   actions,
 } from "../../document-models/document-editor/index.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
-import { useCallback } from "react";
 
-export type IProps = EditorProps<DocumentEditorDocument>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
   const { document, dispatch } = props;
-
-  console.log(">>>>> document:", document.state.global);
+ const unsafeCastOfDocument = document as DocumentEditorDocument
+  console.log(">>>>> document:", unsafeCastOfDocument.state.global);
 
   const onEditorNameChange = useCallback((name: string) => {
-    if (!document.state.global.name && !name) return;
-    if (name === document.state.global.name) return;
+    if (!unsafeCastOfDocument.state.global.name && !name) return;
+    if (name === unsafeCastOfDocument.state.global.name) return;
 
     dispatch(actions.setEditorName({ name }));
-  }, [document.state.global.name, dispatch]);
+  }, [unsafeCastOfDocument.state.global.name, dispatch]);
 
   const onEditorIdChange = useCallback((id: string) => {
-    if (!document.state.global.id && !id) return;
-    if (id === document.state.global.id) return;
+    if (!unsafeCastOfDocument.state.global.id && !id) return;
+    if (id === unsafeCastOfDocument.state.global.id) return;
 
     dispatch(actions.setEditorId({ id }));
-  }, [document.state.global.id, dispatch]);
+  }, [unsafeCastOfDocument.state.global.id, dispatch]);
 
   const onAddDocumentType = useCallback((input: AddDocumentTypeInput) => {
     dispatch(actions.addDocumentType(input));
@@ -40,9 +40,9 @@ export default function Editor(props: IProps) {
   return (
     <div>
       <DocumentEditorForm
-        editorName={document.state.global.name ?? ""}
-        editorId={document.state.global.id ?? ""}
-        documentTypes={document.state.global.documentTypes}
+        editorName={unsafeCastOfDocument.state.global.name ?? ""}
+        editorId={unsafeCastOfDocument.state.global.id ?? ""}
+        documentTypes={unsafeCastOfDocument.state.global.documentTypes}
         onEditorNameChange={onEditorNameChange}
         onEditorIdChange={onEditorIdChange}
         onAddDocumentType={onAddDocumentType}

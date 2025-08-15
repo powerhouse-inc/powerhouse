@@ -1,9 +1,9 @@
-import { CLOUD, PUBLIC, type SharingType } from "#connect";
 import { Icon } from "#powerhouse";
 import { cn } from "#ui";
 import { capitalCase } from "change-case";
-import { type DocumentDriveDocument } from "document-drive";
+import { type DocumentDriveDocument, type SharingType } from "document-drive";
 import { useState } from "react";
+import { CLOUD, PUBLIC } from "../../../constants/drives.js";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {

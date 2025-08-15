@@ -1,11 +1,10 @@
 import {
   FileItem,
-  type SharingType,
   type TNodeActions,
   useWindowSize,
 } from "@powerhousedao/design-system";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { FileNode, Node, SyncStatus } from "document-drive";
+import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 

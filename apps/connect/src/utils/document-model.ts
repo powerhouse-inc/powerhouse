@@ -1,4 +1,3 @@
-import { type Unsubscribe } from '#services';
 import { childLogger, type IDocumentDriveServer } from 'document-drive';
 import type {
     Action,
@@ -113,7 +112,7 @@ async function waitForUpdate(
     lastIndex: number,
     reactor: IDocumentDriveServer,
 ) {
-    let unsubscribe: Unsubscribe | undefined;
+    let unsubscribe: (() => void) | undefined;
     const promise = new Promise<void>(resolve => {
         unsubscribe = reactor.on('strandUpdate', update => {
             logger.verbose(`reactor.on(strandUpdate)`, update);
