@@ -1,3 +1,13 @@
+## 4.1.0-dev.22 (2025-08-15)
+
+### 🩹 Fixes
+
+- **vetra:** use app id in editor app ([#1767](https://github.com/powerhouse-inc/powerhouse/pull/1767))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.21 (2025-08-15)
 
 ### 🚀 Features

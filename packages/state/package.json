@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/state",
-  "version": "4.1.0-dev.21",
+  "version": "4.1.0-dev.22",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
