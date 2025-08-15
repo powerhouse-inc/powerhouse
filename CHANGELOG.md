@@ -1,3 +1,23 @@
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **academy:** hooks documentation ([a517eadce](https://github.com/powerhouse-inc/powerhouse/commit/a517eadce))
+- **document-drive:** the DocumentAlreadyExistsErrors now tell you if it was the slug or id that is not unique ([2f1600b2d](https://github.com/powerhouse-inc/powerhouse/commit/2f1600b2d))
+- **vetra:** update vetra document models with new status field ([#1765](https://github.com/powerhouse-inc/powerhouse/pull/1765))
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+- **academy:** subgraphs documentation update ([4f3a024ab](https://github.com/powerhouse-inc/powerhouse/commit/4f3a024ab))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Callme-T
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.20 (2025-08-15)
 
 ### 🚀 Features

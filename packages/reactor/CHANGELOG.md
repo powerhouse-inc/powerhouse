@@ -1,3 +1,18 @@
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.20 (2025-08-15)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
