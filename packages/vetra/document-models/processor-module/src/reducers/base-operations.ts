@@ -14,5 +14,8 @@ export const reducer: ProcessorModuleBaseOperationsOperations = {
         state.documentTypes = state.documentTypes.filter(
             (documentType) => documentType.id !== action.input.id,
         );
+    },
+    setProcessorStatusOperation(state, action, dispatch) {
+        state.status = action.input.status;
     }
 };

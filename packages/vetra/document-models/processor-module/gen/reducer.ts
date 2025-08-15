@@ -56,6 +56,15 @@ const stateReducer: StateReducer<ProcessorModuleDocument> = (
       );
       break;
 
+    case "SET_PROCESSOR_STATUS":
+      z.SetProcessorStatusInputSchema().parse(action.input);
+      BaseOperationsReducer.setProcessorStatusOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+      break;
+
     default:
       return state;
   }

@@ -4,8 +4,9 @@ import type {
   DocumentEditorState,
   DocumentTypeItem,
   RemoveDocumentTypeInput,
-  SetEditorIdInput,
   SetEditorNameInput,
+  SetEditorStatusInput,
+  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{
@@ -20,6 +21,8 @@ export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
 export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
+
+export const StatusTypeSchema = z.enum(["CONFIRMED", "DRAFT"]);
 
 export function AddDocumentTypeInputSchema(): z.ZodObject<
   Properties<AddDocumentTypeInput>
@@ -36,8 +39,8 @@ export function DocumentEditorStateSchema(): z.ZodObject<
   return z.object({
     __typename: z.literal("DocumentEditorState").optional(),
     documentTypes: z.array(DocumentTypeItemSchema()),
-    id: z.string().nullable(),
-    name: z.string().nullable(),
+    name: z.string(),
+    status: StatusTypeSchema,
   });
 }
 
@@ -59,18 +62,18 @@ export function RemoveDocumentTypeInputSchema(): z.ZodObject<
   });
 }
 
-export function SetEditorIdInputSchema(): z.ZodObject<
-  Properties<SetEditorIdInput>
-> {
-  return z.object({
-    id: z.string(),
-  });
-}
-
 export function SetEditorNameInputSchema(): z.ZodObject<
   Properties<SetEditorNameInput>
 > {
   return z.object({
     name: z.string(),
+  });
+}
+
+export function SetEditorStatusInputSchema(): z.ZodObject<
+  Properties<SetEditorStatusInput>
+> {
+  return z.object({
+    status: StatusTypeSchema,
   });
 }

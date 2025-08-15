@@ -19,6 +19,7 @@ export const initialGlobalState: ProcessorModuleState = {
   name: "",
   type: "",
   documentTypes: [],
+  status: "DRAFT",
 };
 export const initialLocalState: ProcessorModuleLocalState = {};
 

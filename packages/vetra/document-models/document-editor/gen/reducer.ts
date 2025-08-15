@@ -1,3 +1,6 @@
+// TODO: remove eslint-disable rules once refactor is done
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   type StateReducer,
   isDocumentAction,
@@ -26,15 +29,6 @@ const stateReducer: StateReducer<DocumentEditorDocument> = (
       );
       break;
 
-    case "SET_EDITOR_ID":
-      z.SetEditorIdInputSchema().parse(action.input);
-      BaseOperationsReducer.setEditorIdOperation(
-        (state as any)[action.scope],
-        action as any,
-        dispatch,
-      );
-      break;
-
     case "ADD_DOCUMENT_TYPE":
       z.AddDocumentTypeInputSchema().parse(action.input);
       BaseOperationsReducer.addDocumentTypeOperation(
@@ -47,6 +41,15 @@ const stateReducer: StateReducer<DocumentEditorDocument> = (
     case "REMOVE_DOCUMENT_TYPE":
       z.RemoveDocumentTypeInputSchema().parse(action.input);
       BaseOperationsReducer.removeDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+      break;
+
+    case "SET_EDITOR_STATUS":
+      z.SetEditorStatusInputSchema().parse(action.input);
+      BaseOperationsReducer.setEditorStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

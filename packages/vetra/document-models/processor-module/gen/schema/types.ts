@@ -69,6 +69,7 @@ export type DocumentTypeItem = {
 export type ProcessorModuleState = {
   documentTypes: Array<DocumentTypeItem>;
   name: Scalars["String"]["output"];
+  status: StatusType | `${StatusType}`;
   type: Scalars["String"]["output"];
 };
 
@@ -80,6 +81,12 @@ export type SetProcessorNameInput = {
   name: Scalars["String"]["input"];
 };
 
+export type SetProcessorStatusInput = {
+  status: StatusType | `${StatusType}`;
+};
+
 export type SetProcessorTypeInput = {
   type: Scalars["String"]["input"];
 };
+
+export type StatusType = "CONFIRMED" | "DRAFT";

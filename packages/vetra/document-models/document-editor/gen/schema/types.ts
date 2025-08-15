@@ -53,6 +53,7 @@ export type Scalars = {
   OLabel: { input: string; output: string };
   PHID: { input: string; output: string };
   URL: { input: string; output: string };
+  Upload: { input: File; output: File };
 };
 
 export type AddDocumentTypeInput = {
@@ -62,8 +63,8 @@ export type AddDocumentTypeInput = {
 
 export type DocumentEditorState = {
   documentTypes: Array<DocumentTypeItem>;
-  id: Maybe<Scalars["OID"]["output"]>;
-  name: Maybe<Scalars["String"]["output"]>;
+  name: Scalars["String"]["output"];
+  status: StatusType | `${StatusType}`;
 };
 
 export type DocumentTypeItem = {
@@ -75,10 +76,12 @@ export type RemoveDocumentTypeInput = {
   id: Scalars["OID"]["input"];
 };
 
-export type SetEditorIdInput = {
-  id: Scalars["OID"]["input"];
-};
-
 export type SetEditorNameInput = {
   name: Scalars["String"]["input"];
 };
+
+export type SetEditorStatusInput = {
+  status: StatusType | `${StatusType}`;
+};
+
+export type StatusType = "CONFIRMED" | "DRAFT";

@@ -3,22 +3,30 @@ import type {
   DocumentTypeItem,
   AddDocumentTypeInput,
 } from "../../../document-models/processor-module/index.js";
+import { useDebounce } from "../../hooks/index.js";
+import { StatusPill } from "../../components/index.js";
 
 export interface ProcessorEditorFormProps {
   processorName?: string;
   processorType?: string;
   documentTypes?: DocumentTypeItem[];
-  onConfirm?: (
-    name: string,
-    type: string,
-    documentTypes: DocumentTypeItem[],
-  ) => void;
+  status?: string;
+  onNameChange?: (name: string) => void;
+  onTypeChange?: (type: string) => void;
+  onAddDocumentType?: (id: string, documentType: string) => void;
+  onRemoveDocumentType?: (id: string) => void;
+  onConfirm?: () => void;
 }
 
 export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   processorName: initialProcessorName = "",
   processorType: initialProcessorType = "",
   documentTypes: initialDocumentTypes = [],
+  status = "DRAFT",
+  onNameChange,
+  onTypeChange,
+  onAddDocumentType,
+  onRemoveDocumentType,
   onConfirm,
 }) => {
   const [processorName, setProcessorName] = useState(initialProcessorName);
@@ -26,12 +34,11 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const [documentTypes, setDocumentTypes] =
     useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [documentTypeInput, setDocumentTypeInput] = useState("");
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
-  // Check if the form should be in read-only mode
-  const isReadOnly =
-    initialProcessorName !== "" &&
-    initialProcessorType !== "" &&
-    initialDocumentTypes.length > 0;
+  // Use the debounce hook for name and type changes
+  useDebounce(processorName, onNameChange, 300);
+  useDebounce(processorType, onTypeChange, 300);
 
   // Update local state when initial values change
   useEffect(() => {
@@ -46,28 +53,39 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
     setDocumentTypes(initialDocumentTypes);
   }, [initialDocumentTypes]);
 
+  // Reset confirmation state if status changes back to DRAFT
+  useEffect(() => {
+    if (status === "DRAFT") {
+      setIsConfirmed(false);
+    }
+  }, [status]);
+
+  // Check if form should be read-only
+  const isReadOnly = isConfirmed || status === "CONFIRMED";
+
   const handleConfirm = () => {
     if (processorName.trim() && processorType && documentTypes.length > 0) {
-      onConfirm?.(processorName.trim(), processorType, documentTypes);
+      setIsConfirmed(true); // Immediate UI update
+      onConfirm?.();
     }
   };
 
   const handleAddDocumentType = () => {
     if (documentTypeInput.trim()) {
-      const newTypeInput: AddDocumentTypeInput = {
-        id: Date.now().toString(),
-        documentType: documentTypeInput.trim(),
-      };
+      const id = Date.now().toString();
+      const documentType = documentTypeInput.trim();
+      
       if (
         !documentTypes.some(
-          (dt) => dt.documentType === newTypeInput.documentType,
+          (dt) => dt.documentType === documentType,
         )
       ) {
         const newType: DocumentTypeItem = {
-          id: newTypeInput.id,
-          documentType: newTypeInput.documentType,
+          id,
+          documentType,
         };
         setDocumentTypes([...documentTypes, newType]);
+        onAddDocumentType?.(id, documentType);
       }
       setDocumentTypeInput("");
     }
@@ -75,6 +93,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
   const handleRemoveDocumentType = (id: string) => {
     setDocumentTypes(documentTypes.filter((dt) => dt.id !== id));
+    onRemoveDocumentType?.(id);
   };
 
   const canConfirm =
@@ -82,9 +101,15 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
   return (
     <div className="space-y-6 bg-white p-6">
-      <h2 className="text-lg font-medium text-gray-900">
-        Processor Configuration
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium text-gray-900">
+          Processor Configuration
+        </h2>
+        <StatusPill 
+          status={status === "CONFIRMED" ? 'confirmed' : 'draft'} 
+          label={status === "CONFIRMED" ? 'Confirmed' : 'Draft'} 
+        />
+      </div>
 
       {/* Processor Name Field */}
       <div>

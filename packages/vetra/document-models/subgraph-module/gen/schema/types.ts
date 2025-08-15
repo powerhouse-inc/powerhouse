@@ -60,6 +60,13 @@ export type SetSubgraphNameInput = {
   name: Scalars["String"]["input"];
 };
 
+export type SetSubgraphStatusInput = {
+  status: StatusType | `${StatusType}`;
+};
+
+export type StatusType = "CONFIRMED" | "DRAFT";
+
 export type SubgraphModuleState = {
   name: Scalars["String"]["output"];
+  status: StatusType | `${StatusType}`;
 };

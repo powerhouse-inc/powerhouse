@@ -4,6 +4,7 @@ import type {
   SetProcessorTypeInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
+  SetProcessorStatusInput,
 } from "../types.js";
 
 export type SetProcessorNameAction = Action & {
@@ -22,9 +23,14 @@ export type RemoveDocumentTypeAction = Action & {
   type: "REMOVE_DOCUMENT_TYPE";
   input: RemoveDocumentTypeInput;
 };
+export type SetProcessorStatusAction = Action & {
+  type: "SET_PROCESSOR_STATUS";
+  input: SetProcessorStatusInput;
+};
 
 export type ProcessorModuleBaseOperationsAction =
   | SetProcessorNameAction
   | SetProcessorTypeAction
   | AddDocumentTypeAction
-  | RemoveDocumentTypeAction;
+  | RemoveDocumentTypeAction
+  | SetProcessorStatusAction;

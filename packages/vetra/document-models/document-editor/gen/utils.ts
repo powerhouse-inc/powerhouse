@@ -16,9 +16,9 @@ import {
 import { reducer } from "./reducer.js";
 
 export const initialGlobalState: DocumentEditorState = {
-  name: null,
-  id: null,
+  name: "",
   documentTypes: [],
+  status: "DRAFT",
 };
 export const initialLocalState: DocumentEditorLocalState = {};
 

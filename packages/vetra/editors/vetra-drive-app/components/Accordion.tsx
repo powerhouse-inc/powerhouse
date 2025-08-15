@@ -45,12 +45,20 @@ export const Accordion: React.FC<AccordionProps> = ({
 
   return (
     <div className={className}>
-      <button
+      <div
         onClick={onToggle}
-        className="w-full text-left focus:outline-none"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        className="w-full text-left focus:outline-none cursor-pointer"
       >
         {header}
-      </button>
+      </div>
       <div
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
