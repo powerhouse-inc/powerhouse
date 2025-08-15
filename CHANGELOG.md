@@ -1,3 +1,26 @@
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🚀 Features
+
+- added app document to vetra package ([#1762](https://github.com/powerhouse-inc/powerhouse/pull/1762))
+
+### 🩹 Fixes
+
+- fixing all the other projects so that they build with action / operation refactor ([c185b3552](https://github.com/powerhouse-inc/powerhouse/commit/c185b3552))
+- linter ([158db2a21](https://github.com/powerhouse-inc/powerhouse/commit/158db2a21))
+- **codegen:** codegen update for operations change ([689df960c](https://github.com/powerhouse-inc/powerhouse/commit/689df960c))
+- **document-drive:** deleting loads of duplicate tests, fixing some document drive compatibility issues ([d7212e639](https://github.com/powerhouse-inc/powerhouse/commit/d7212e639))
+- **document-drive:** fix major issue where operation needed submitted to reducer options ([30453f708](https://github.com/powerhouse-inc/powerhouse/commit/30453f708))
+- **document-drive:** fix remaining document-drive tests ([8265f133c](https://github.com/powerhouse-inc/powerhouse/commit/8265f133c))
+- **document-model:** unit tests need to use the same objects ([e9e176ab9](https://github.com/powerhouse-inc/powerhouse/commit/e9e176ab9))
+- **document-model:** remaining tests follow the same format ([81ea445bf](https://github.com/powerhouse-inc/powerhouse/commit/81ea445bf))
+- **vetra:** fixing compile issues due to operation action split ([73ff839ba](https://github.com/powerhouse-inc/powerhouse/commit/73ff839ba))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.19 (2025-08-14)
 
 ### 🩹 Fixes

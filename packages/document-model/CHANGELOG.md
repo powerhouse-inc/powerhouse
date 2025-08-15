@@ -1,3 +1,15 @@
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🩹 Fixes
+
+- linter ([158db2a21](https://github.com/powerhouse-inc/powerhouse/commit/158db2a21))
+- **document-model:** remaining tests follow the same format ([81ea445bf](https://github.com/powerhouse-inc/powerhouse/commit/81ea445bf))
+- **document-model:** unit tests need to use the same objects ([e9e176ab9](https://github.com/powerhouse-inc/powerhouse/commit/e9e176ab9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.19 (2025-08-14)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

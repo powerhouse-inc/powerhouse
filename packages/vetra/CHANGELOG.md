@@ -1,3 +1,19 @@
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🚀 Features
+
+- added app document to vetra package ([#1762](https://github.com/powerhouse-inc/powerhouse/pull/1762))
+
+### 🩹 Fixes
+
+- **vetra:** fixing compile issues due to operation action split ([73ff839ba](https://github.com/powerhouse-inc/powerhouse/commit/73ff839ba))
+- fixing all the other projects so that they build with action / operation refactor ([c185b3552](https://github.com/powerhouse-inc/powerhouse/commit/c185b3552))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.19 (2025-08-14)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

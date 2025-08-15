@@ -1,3 +1,18 @@
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🚀 Features
+
+- added app document to vetra package ([#1762](https://github.com/powerhouse-inc/powerhouse/pull/1762))
+
+### 🩹 Fixes
+
+- **codegen:** codegen update for operations change ([689df960c](https://github.com/powerhouse-inc/powerhouse/commit/689df960c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.19 (2025-08-14)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

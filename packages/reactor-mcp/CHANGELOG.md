@@ -1,3 +1,13 @@
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🩹 Fixes
+
+- fixing all the other projects so that they build with action / operation refactor ([c185b3552](https://github.com/powerhouse-inc/powerhouse/commit/c185b3552))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.19 (2025-08-14)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
