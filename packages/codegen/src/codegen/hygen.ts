@@ -306,10 +306,21 @@ export async function generateDriveEditor(
   name: string,
   dir: string,
   { skipFormat = false } = {},
+  appId?: string,
 ) {
   // Generate the drive editor files
-  await run(
-    ["powerhouse", "generate-drive-editor", "--name", name, "--root-dir", dir],
-    { skipFormat },
-  );
+  const args = [
+    "powerhouse",
+    "generate-drive-editor",
+    "--name",
+    name,
+    "--root-dir",
+    dir,
+  ];
+
+  if (appId) {
+    args.push("--app-id", appId);
+  }
+
+  await run(args, { skipFormat });
 }

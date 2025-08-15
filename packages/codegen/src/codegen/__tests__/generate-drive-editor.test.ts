@@ -44,7 +44,7 @@ describe("generateDriveEditor", () => {
 
   it("should generate a drive editor with the correct files and content", async () => {
     const name = "AtlasDriveExplorer";
-    await generateDriveEditor(name, config);
+    await generateDriveEditor(name, config, "AtlasDriveExplorer");
 
     const editorDir = path.join(testDir, "atlas-drive-explorer");
     expect(fs.existsSync(editorDir)).toBe(true);
@@ -80,6 +80,17 @@ describe("generateDriveEditor", () => {
       .readFileSync(mainIndexPath, "utf-8")
       .replace(/\s+$/, "");
     expect(mainIndexContent).toBe(EXPECTED_MAIN_INDEX_CONTENT);
+  });
+
+  it("should generate a drive editor with default id when no appId is provided", async () => {
+    const name = "TestApp";
+    await generateDriveEditor(name, config); // No appId provided
+
+    const editorDir = path.join(testDir, "test-app");
+    const indexPath = path.join(editorDir, "index.ts");
+    const indexContent = fs.readFileSync(indexPath, "utf-8");
+    
+    expect(indexContent).toContain('id: "drive-editor-id"');
   });
 
   it("should append new exports to existing index.ts file", async () => {

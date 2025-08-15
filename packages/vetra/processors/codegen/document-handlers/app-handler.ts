@@ -22,7 +22,7 @@ export class AppHandler implements DocumentHandler {
         const appId: string = kebabCase(state.name);
 
         // Generate the drive editor using the codegen function
-        await generateDriveEditor(state.name, this.config.PH_CONFIG);
+        await generateDriveEditor(state.name, this.config.PH_CONFIG, appId);
 
         logger.info(
           `✅ Drive editor generation completed successfully for app: ${state.name}`,
