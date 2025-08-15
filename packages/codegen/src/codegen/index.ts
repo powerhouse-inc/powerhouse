@@ -217,6 +217,7 @@ export async function generateEditor(
   name: string,
   documentTypes: string[],
   config: PowerhouseConfig,
+  editorId?: string,
 ) {
   const pathOrigin = "../../";
 
@@ -239,6 +240,7 @@ export async function generateEditor(
     config.editorsDir,
     config.documentModelsDir,
     { skipFormat },
+    editorId,
   );
 }
 
@@ -353,6 +355,29 @@ export function generateManifest(
     }
   }
 
+  // Helper function to merge arrays by ID
+  const mergeArrayById = <T extends { id: string }>(
+    existingArray: T[],
+    newArray?: T[],
+  ): T[] => {
+    if (!newArray) return existingArray;
+
+    const result = [...existingArray];
+
+    newArray.forEach((newItem) => {
+      const existingIndex = result.findIndex((item) => item.id === newItem.id);
+      if (existingIndex !== -1) {
+        // Replace existing item
+        result[existingIndex] = newItem;
+      } else {
+        // Add new item
+        result.push(newItem);
+      }
+    });
+
+    return result;
+  };
+
   // Merge partial data with existing manifest
   const updatedManifest: PowerhouseManifest = {
     ...existingManifest,
@@ -361,12 +386,20 @@ export function generateManifest(
       ...existingManifest.publisher,
       ...(manifestData.publisher || {}),
     },
-    documentModels:
-      manifestData.documentModels || existingManifest.documentModels,
-    editors: manifestData.editors || existingManifest.editors,
-    apps: manifestData.apps || existingManifest.apps,
-    subgraphs: manifestData.subgraphs || existingManifest.subgraphs,
-    importScripts: manifestData.importScripts || existingManifest.importScripts,
+    documentModels: mergeArrayById(
+      existingManifest.documentModels,
+      manifestData.documentModels,
+    ),
+    editors: mergeArrayById(existingManifest.editors, manifestData.editors),
+    apps: mergeArrayById(existingManifest.apps, manifestData.apps),
+    subgraphs: mergeArrayById(
+      existingManifest.subgraphs,
+      manifestData.subgraphs,
+    ),
+    importScripts: mergeArrayById(
+      existingManifest.importScripts,
+      manifestData.importScripts,
+    ),
   };
 
   // Write updated manifest to file
