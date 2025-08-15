@@ -305,10 +305,16 @@ export type DocumentTypesMap = Record<
 export async function generateDriveEditor(
   name: string,
   config: PowerhouseConfig,
+  appId?: string,
 ) {
-  return _generateDriveEditor(name, config.editorsDir, {
-    skipFormat: config.skipFormat,
-  });
+  return _generateDriveEditor(
+    name,
+    config.editorsDir,
+    {
+      skipFormat: config.skipFormat,
+    },
+    appId,
+  );
 }
 
 export async function generateImportScript(

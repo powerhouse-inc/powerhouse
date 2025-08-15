@@ -10,7 +10,7 @@ export const module: DriveEditorModule<DocumentDriveDocument> = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
-    id: "<%= name %>",
+    id: "<%= appId || 'drive-editor-id' %>",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,
