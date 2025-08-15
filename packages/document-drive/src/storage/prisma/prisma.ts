@@ -22,6 +22,7 @@ import { type DocumentDriveDocument } from "../../drive-document-model/gen/types
 import {
   ConflictOperationError,
   DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
@@ -338,7 +339,11 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       });
     } catch (e) {
       if ((e as { code?: string }).code === "P2002") {
-        throw new DocumentAlreadyExistsError(documentId);
+        const reason = (e as { message?: string }).message?.includes("slug")
+          ? DocumentAlreadyExistsReason.SLUG
+          : DocumentAlreadyExistsReason.ID;
+
+        throw new DocumentAlreadyExistsError(documentId, reason);
       }
 
       throw e;

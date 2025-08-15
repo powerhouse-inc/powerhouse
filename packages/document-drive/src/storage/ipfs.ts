@@ -7,6 +7,7 @@ import {
 } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
@@ -123,7 +124,10 @@ export class IPFSStorage
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {
-      throw new DocumentAlreadyExistsError(documentId);
+      throw new DocumentAlreadyExistsError(
+        documentId,
+        DocumentAlreadyExistsReason.SLUG,
+      );
     }
 
     document.header.slug = slug;
@@ -470,8 +474,7 @@ export class IPFSStorage
           if (!document) {
             return undefined;
           }
-          const operation =
-            document.operations[unit.scope].at(-1);
+          const operation = document.operations[unit.scope].at(-1);
           if (operation) {
             return {
               documentId: unit.documentId,

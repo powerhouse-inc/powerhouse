@@ -1,9 +1,7 @@
-import {
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-} from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
@@ -249,7 +247,10 @@ export class BrowserStorage
     // check if the slug is already taken
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {
-      throw new DocumentAlreadyExistsError(documentId);
+      throw new DocumentAlreadyExistsError(
+        documentId,
+        DocumentAlreadyExistsReason.SLUG,
+      );
     }
 
     document.header.slug = slug;

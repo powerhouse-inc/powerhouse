@@ -57,11 +57,19 @@ export class DocumentSlugValidationError extends Error {
   }
 }
 
+export enum DocumentAlreadyExistsReason {
+  ID = "id",
+  SLUG = "slug",
+}
+
 export class DocumentAlreadyExistsError extends Error {
   documentId: string;
 
-  constructor(documentId: string) {
-    super(`Document with id ${documentId} uses id or slug that already exists`);
+  constructor(
+    documentId: string,
+    reason: DocumentAlreadyExistsReason = DocumentAlreadyExistsReason.ID,
+  ) {
+    super(`Document (${documentId}) uses ${reason} that already exists`);
 
     this.documentId = documentId;
   }

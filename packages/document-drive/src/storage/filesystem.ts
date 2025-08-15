@@ -1,9 +1,7 @@
-import {
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-} from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
@@ -219,7 +217,10 @@ export class FilesystemStorage
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {
-      throw new DocumentAlreadyExistsError(documentId);
+      throw new DocumentAlreadyExistsError(
+        documentId,
+        DocumentAlreadyExistsReason.SLUG,
+      );
     }
 
     document.header.slug = slug;
