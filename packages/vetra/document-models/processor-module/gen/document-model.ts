@@ -16,9 +16,9 @@ export const documentModel: DocumentModelState = {
       state: {
         global: {
           schema:
-            "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}",
+            "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"type\\": \\"\\",\\n  \\"documentTypes\\": []\\n}"',
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"type\\": \\"\\",\\n  \\"documentTypes\\": [],\\n  \\"status\\": \\"DRAFT\\"\\n}"',
           examples: [],
         },
         local: {
@@ -72,6 +72,18 @@ export const documentModel: DocumentModelState = {
               name: "REMOVE_DOCUMENT_TYPE",
               description: "",
               schema: "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "7b6706eb-5e25-4d64-829a-e3a251380fd1",
+              name: "SET_PROCESSOR_STATUS",
+              description: "",
+              schema:
+                "input SetProcessorStatusInput {\n  status: StatusType!\n}",
               template: "",
               reducer: "",
               errors: [],

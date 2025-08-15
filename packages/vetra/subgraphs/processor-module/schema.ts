@@ -9,11 +9,17 @@ export const schema: DocumentNode = gql`
     name: String!
     type: String!
     documentTypes: [DocumentTypeItem!]!
+    status: StatusType!
   }
 
   type DocumentTypeItem {
     id: OID!
     documentType: String!
+  }
+
+  enum StatusType {
+    DRAFT
+    CONFIRMED
   }
 
   """
@@ -54,6 +60,11 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: ProcessorModule_RemoveDocumentTypeInput
     ): Int
+    ProcessorModule_setProcessorStatus(
+      driveId: String
+      docId: PHID
+      input: ProcessorModule_SetProcessorStatusInput
+    ): Int
   }
 
   """
@@ -71,5 +82,8 @@ export const schema: DocumentNode = gql`
   }
   input ProcessorModule_RemoveDocumentTypeInput {
     id: OID!
+  }
+  input ProcessorModule_SetProcessorStatusInput {
+    status: StatusType!
   }
 `;

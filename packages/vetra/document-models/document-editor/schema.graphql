@@ -14,15 +14,21 @@ scalar Amount_Fiat
 scalar Amount_Currency
 scalar Amount_Crypto
 scalar Amount
+scalar Upload
 type DocumentEditorState {
-  name: String
-  id: OID
+  name: String!
   documentTypes: [DocumentTypeItem!]!
+  status: StatusType!
 }
 
 type DocumentTypeItem {
   id: OID!
   documentType: String!
+}
+
+enum StatusType {
+  DRAFT
+  CONFIRMED
 }
 
 
@@ -33,10 +39,6 @@ input SetEditorNameInput {
   name: String!
 }
 
-input SetEditorIdInput {
-  id: OID!
-}
-
 input AddDocumentTypeInput {
   id: OID!
   documentType: String!
@@ -44,4 +46,8 @@ input AddDocumentTypeInput {
 
 input RemoveDocumentTypeInput {
   id: OID!
+}
+
+input SetEditorStatusInput {
+  status: StatusType!
 }

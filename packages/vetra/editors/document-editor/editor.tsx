@@ -13,21 +13,10 @@ export type IProps = EditorProps<DocumentEditorDocument>;
 export default function Editor(props: IProps) {
   const { document, dispatch } = props;
 
-  console.log(">>>>> document:", document.state.global);
-
   const onEditorNameChange = useCallback((name: string) => {
-    if (!document.state.global.name && !name) return;
     if (name === document.state.global.name) return;
-
     dispatch(actions.setEditorName({ name }));
   }, [document.state.global.name, dispatch]);
-
-  const onEditorIdChange = useCallback((id: string) => {
-    if (!document.state.global.id && !id) return;
-    if (id === document.state.global.id) return;
-
-    dispatch(actions.setEditorId({ id }));
-  }, [document.state.global.id, dispatch]);
 
   const onAddDocumentType = useCallback((input: AddDocumentTypeInput) => {
     dispatch(actions.addDocumentType(input));
@@ -37,16 +26,20 @@ export default function Editor(props: IProps) {
     dispatch(actions.removeDocumentType(input));
   }, [dispatch]);
 
+  const onConfirm = useCallback(() => {
+    dispatch(actions.setEditorStatus({ status: "CONFIRMED" }));
+  }, [dispatch]);
+
   return (
     <div>
       <DocumentEditorForm
         editorName={document.state.global.name ?? ""}
-        editorId={document.state.global.id ?? ""}
         documentTypes={document.state.global.documentTypes}
+        status={document.state.global.status}
         onEditorNameChange={onEditorNameChange}
-        onEditorIdChange={onEditorIdChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}
+        onConfirm={onConfirm}
       />
     </div>
   );

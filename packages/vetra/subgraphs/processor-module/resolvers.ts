@@ -1,13 +1,14 @@
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
+import { setName } from "document-model";
 import {
   actions,
-  type SetProcessorNameInput,
-  type SetProcessorTypeInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetProcessorNameInput,
+  type SetProcessorStatusInput,
+  type SetProcessorTypeInput,
 } from "../../document-models/processor-module/index.js";
-import { setName } from "document-model";
 
 export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
   const reactor = subgraph.reactor;
@@ -180,6 +181,30 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
         if (result.status !== "SUCCESS") {
           throw new Error(
             result.error?.message ?? "Failed to removeDocumentType",
+          );
+        }
+
+        return true;
+      },
+
+      ProcessorModule_setProcessorStatus: async (
+        _: unknown,
+        args: { docId: string; input: SetProcessorStatusInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.setProcessorStatus(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setProcessorStatus",
           );
         }
 

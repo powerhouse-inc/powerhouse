@@ -13,7 +13,8 @@ export class SubgraphHandler implements DocumentHandler {
   async handle(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
     const state = strand.state as SubgraphModuleState;
     
-    if (state.name) {
+    // Check if we have a valid subgraph name and it's confirmed
+    if (state.name && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
         await generateSubgraph(state.name, null, this.config.PH_CONFIG);
@@ -27,9 +28,15 @@ export class SubgraphHandler implements DocumentHandler {
         );
       }
     } else {
-      logger.warn(
-        `⚠️ Skipping subgraph generation - missing name in subgraph state`,
-      );
+      if (!state.name) {
+        logger.debug(
+          `⚠️ Skipping subgraph generation - missing name for subgraph`,
+        );
+      } else if (state.status !== "CONFIRMED") {
+        logger.debug(
+          `ℹ️ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
+        );
+      }
     }
   }
 }

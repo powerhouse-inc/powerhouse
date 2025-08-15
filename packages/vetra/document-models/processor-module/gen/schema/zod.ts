@@ -5,7 +5,9 @@ import type {
   ProcessorModuleState,
   RemoveDocumentTypeInput,
   SetProcessorNameInput,
+  SetProcessorStatusInput,
   SetProcessorTypeInput,
+  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{
@@ -20,6 +22,8 @@ export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
 export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
+
+export const StatusTypeSchema = z.enum(["CONFIRMED", "DRAFT"]);
 
 export function AddDocumentTypeInputSchema(): z.ZodObject<
   Properties<AddDocumentTypeInput>
@@ -47,6 +51,7 @@ export function ProcessorModuleStateSchema(): z.ZodObject<
     __typename: z.literal("ProcessorModuleState").optional(),
     documentTypes: z.array(DocumentTypeItemSchema()),
     name: z.string(),
+    status: StatusTypeSchema,
     type: z.string(),
   });
 }
@@ -64,6 +69,14 @@ export function SetProcessorNameInputSchema(): z.ZodObject<
 > {
   return z.object({
     name: z.string(),
+  });
+}
+
+export function SetProcessorStatusInputSchema(): z.ZodObject<
+  Properties<SetProcessorStatusInput>
+> {
+  return z.object({
+    status: StatusTypeSchema,
   });
 }
 

@@ -34,11 +34,11 @@ export class AppHandler implements DocumentHandler {
       }
     } else {
       if (!state.name) {
-        logger.warn(
+        logger.debug(
           `⚠️ Skipping drive editor generation - missing name for app`,
         );
       } else if (state.status !== "CONFIRMED") {
-        logger.info(
+        logger.debug(
           `ℹ️ Skipping drive editor generation - app "${state.name}" is not confirmed (status: ${state.status})`,
         );
       }

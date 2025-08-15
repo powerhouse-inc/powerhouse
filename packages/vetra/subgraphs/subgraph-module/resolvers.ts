@@ -4,6 +4,7 @@ import { setName } from "document-model";
 import {
   actions,
   type SetSubgraphNameInput,
+  type SetSubgraphStatusInput,
 } from "../../document-models/subgraph-module/index.js";
 
 export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
@@ -106,6 +107,30 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
 
         if (result.status !== "SUCCESS") {
           throw new Error(result.error?.message ?? "Failed to setSubgraphName");
+        }
+
+        return true;
+      },
+
+      SubgraphModule_setSubgraphStatus: async (
+        _: unknown,
+        args: { docId: string; input: SetSubgraphStatusInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.setSubgraphStatus(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setSubgraphStatus",
+          );
         }
 
         return true;

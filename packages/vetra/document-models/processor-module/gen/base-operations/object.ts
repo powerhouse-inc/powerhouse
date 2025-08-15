@@ -4,6 +4,7 @@ import {
   type SetProcessorTypeInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetProcessorStatusInput,
   type ProcessorModuleState,
   type ProcessorModuleLocalState,
 } from "../types.js";
@@ -12,6 +13,7 @@ import {
   setProcessorType,
   addDocumentType,
   removeDocumentType,
+  setProcessorStatus,
 } from "./creators.js";
 import { type ProcessorModuleAction } from "../actions.js";
 
@@ -34,5 +36,9 @@ export default class ProcessorModule_BaseOperations extends BaseDocumentClass<
 
   public removeDocumentType(input: RemoveDocumentTypeInput) {
     return this.dispatch(removeDocumentType(input));
+  }
+
+  public setProcessorStatus(input: SetProcessorStatusInput) {
+    return this.dispatch(setProcessorStatus(input));
   }
 }

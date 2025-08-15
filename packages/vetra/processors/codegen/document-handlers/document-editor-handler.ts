@@ -13,8 +13,8 @@ export class DocumentEditorHandler implements DocumentHandler {
   async handle(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
     const state = strand.state as DocumentEditorState;
 
-    // Check if we have a valid editor name and document types
-    if (state.name && state.documentTypes.length > 0) {
+    // Check if we have a valid editor name, document types, and it's confirmed
+    if (state.name && state.documentTypes.length > 0 && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting editor generation for: ${state.name}`);
       try {
         // Extract document types from the state
@@ -38,9 +38,19 @@ export class DocumentEditorHandler implements DocumentHandler {
         }
       }
     } else {
-      logger.warn(
-        `⚠️ Skipping editor generation - missing name or document types for editor`,
-      );
+      if (!state.name) {
+        logger.debug(
+          `⚠️ Skipping editor generation - missing name for editor`,
+        );
+      } else if (state.documentTypes.length === 0) {
+        logger.debug(
+          `⚠️ Skipping editor generation - missing document types for editor "${state.name}"`,
+        );
+      } else if (state.status !== "CONFIRMED") {
+        logger.debug(
+          `ℹ️ Skipping editor generation - editor "${state.name}" is not confirmed (status: ${state.status})`,
+        );
+      }
     }
   }
 }

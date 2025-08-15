@@ -3,19 +3,18 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
-import utils from "../../gen/utils.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import * as creators from "../../gen/base-operations/creators.js";
+import { reducer } from "../../gen/reducer.js";
 import {
   z,
-  type SetEditorNameInput,
-  type SetEditorIdInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetEditorNameInput
 } from "../../gen/schema/index.js";
-import { reducer } from "../../gen/reducer.js";
-import * as creators from "../../gen/base-operations/creators.js";
 import type { DocumentEditorDocument } from "../../gen/types.js";
+import utils from "../../gen/utils.js";
 
 describe("BaseOperations Operations", () => {
   let document: DocumentEditorDocument;
@@ -33,16 +32,6 @@ describe("BaseOperations Operations", () => {
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe("SET_EDITOR_NAME");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-  });
-  it("should handle setEditorId operation", () => {
-    const input: SetEditorIdInput = generateMock(z.SetEditorIdInputSchema());
-
-    const updatedDocument = reducer(document, creators.setEditorId(input));
-
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("SET_EDITOR_ID");
     expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
