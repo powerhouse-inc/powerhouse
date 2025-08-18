@@ -1,7 +1,9 @@
 import { randomUUID } from "crypto";
 import {
   type Action,
+  type BaseState,
   type Operation,
+  type PartialState,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
@@ -24,6 +26,33 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 };
 
 export const wrappedEmptyReducer = createReducer(emptyReducer);
+
+/**
+ * Creates a default base state with the required auth and document properties
+ * @param global - The global state (defaults to empty object)
+ * @param local - The local state (defaults to empty object)
+ */
+export function createBaseState<TGlobal, TLocal>(
+  global: TGlobal,
+  local: TLocal,
+): BaseState<TGlobal, TLocal> {
+  return {
+    auth: {},
+    document: { version: "1.0.0" },
+    global,
+    local,
+  };
+}
+
+/**
+ * Creates a default count base state for testing
+ */
+export function createCountState(
+  count = 0,
+  name = "",
+): BaseState<CountState, CountLocalState> {
+  return createBaseState({ count }, { name });
+}
 
 // Counter reducer that supports increment/decrement actions
 export type IncrementAction = Action & { type: "INCREMENT"; input: {} };

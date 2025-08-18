@@ -4,6 +4,7 @@ import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import {
   type CountDocument,
   countReducer,
+  createCountState,
   fakeAction,
   setLocalName,
   wrappedEmptyReducer,
@@ -104,7 +105,7 @@ describe("Local reducer", () => {
   });
   it("should update local name", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createCountState(),
     });
     const newDocument = countReducer(document, setLocalName("test"));
     expect(newDocument.header.revision.local).toStrictEqual(1);
@@ -129,7 +130,7 @@ describe("Local reducer", () => {
 
   it("should undo local operation", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createCountState(),
     });
     let newDocument = countReducer(document, setLocalName("test"));
 
@@ -142,14 +143,8 @@ describe("Local reducer", () => {
       document: 0,
       local: 2,
     });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "" },
-    });
-    expect(document.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "" },
-    });
+    expect(newDocument.state).toStrictEqual(createCountState());
+    expect(document.state).toStrictEqual(createCountState());
 
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -176,7 +171,7 @@ describe("Local reducer", () => {
 
   it("should redo local operation", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createCountState(),
     });
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
@@ -185,10 +180,7 @@ describe("Local reducer", () => {
       document: 0,
       local: 3,
     });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "test" },
-    });
+    expect(newDocument.state).toStrictEqual(createCountState(0, "test"));
     expect(newDocument.clipboard.length).toBe(0);
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -213,7 +205,7 @@ describe("Local reducer", () => {
 
   it.skip("should prune local operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createCountState(),
     });
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, setLocalName("test 2"));

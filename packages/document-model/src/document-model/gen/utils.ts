@@ -30,7 +30,8 @@ export { fileExtension } from "./constants.js";
 
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
-    document: { ...documentModelState, ...state?.document },
+    auth: {},
+    document: { version: "1.0.0" },
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };

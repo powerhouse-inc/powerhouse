@@ -11,6 +11,8 @@ import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
   type CountDocument,
   countReducer,
+  createBaseState,
+  createCountState,
   increment,
   mapOperations,
 } from "../helpers.js";
@@ -18,10 +20,7 @@ import {
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: {
-        global: { count: 0 },
-        local: { name: "" },
-      },
+      state: createCountState(),
     });
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -38,7 +37,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            state: { global: { count: 3 }, local: {} },
+            state: createBaseState({ count: 3 }, {}),
           },
           4,
         ),
@@ -56,7 +55,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune last 3 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createBaseState({ count: 0 }, { name: "" }),
     });
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -75,7 +74,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            state: { global: { count: 4 }, local: {} },
+            state: createBaseState({ count: 4 }, {}),
           },
           3,
         ),
@@ -92,7 +91,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune 2 operations", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createBaseState({ count: 0 }, { name: "" }),
     });
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -111,7 +110,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            state: { global: { count: 3 }, local: {} },
+            state: createBaseState({ count: 3 }, {}),
           },
           2,
         ),
@@ -129,7 +128,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should undo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createBaseState({ count: 0 }, { name: "" }),
     });
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -152,7 +151,7 @@ describe("PRUNE operation", () => {
       ...loadState(
         {
           name: "Document",
-          state: { global: { count: 4 }, local: {} },
+          state: createBaseState({ count: 4 }, {}),
         },
         4,
       ),
@@ -168,7 +167,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should redo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createBaseState({ count: 0 }, { name: "" }),
     });
 
     let newDocument = countReducer(document, increment());
@@ -191,7 +190,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            state: { global: { count: 4 }, local: { name: "" } },
+            state: createBaseState({ count: 4 }, { name: "" }),
           },
           4,
         ),

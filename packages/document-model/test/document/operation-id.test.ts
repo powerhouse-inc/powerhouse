@@ -10,6 +10,7 @@ import {
   baseCountReducer,
   type CountDocument,
   countReducer,
+  createBaseState,
   increment,
 } from "../helpers.js";
 
@@ -19,7 +20,7 @@ describe("Document Operation ID", () => {
 
   beforeEach(() => {
     initialState = baseCreateExtendedState<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
+      state: createBaseState({ count: 0 }, { name: "" }),
     });
 
     document = baseCreateDocument(initialState);

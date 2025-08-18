@@ -220,18 +220,17 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type BaseState<TDocumentState, TLocalState> =
-  PHBaseState<TDocumentState> & {
-    /**
-     * Use {@link PHBaseState} `document` instead.
-     */
-    global: TDocumentState;
+export type BaseState<TGlobalState, TLocalState> = PHBaseState & {
+  /**
+   * Use {@link PHBaseState} `document` instead.
+   */
+  global: TGlobalState;
 
-    /**
-     * Not a requirement for BaseState, but could be in extended states.
-     */
-    local: TLocalState;
-  };
+  /**
+   * Not a requirement for BaseState, but could be in extended states.
+   */
+  local: TLocalState;
+};
 
 export type PartialState<TState> = TState | Partial<TState>;
 
