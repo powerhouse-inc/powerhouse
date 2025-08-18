@@ -182,7 +182,7 @@ describe("DriveSubgraph", () => {
       ...mockDocumentData.header,
       // default
       state: mockDocumentData.state.global,
-      initialState: mockDocumentData.initialState.state.global,
+      initialState: mockDocumentData.initialState.global,
       stateJSON: mockDocumentData.state.global,
       operations: mockDocumentData.operations.global,
       __typename: "",

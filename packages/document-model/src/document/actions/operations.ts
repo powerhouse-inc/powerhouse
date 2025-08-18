@@ -172,7 +172,7 @@ export function pruneOperation<TDocument extends PHDocument>(
       ? actionsToKeepEnd[0].timestampUtcMs
       : new Date().toISOString();
 
-  const action = loadState({ name, state: newState }, actionsToPrune.length);
+  const action = loadState({ name, ...newState }, actionsToPrune.length);
 
   // replaces pruned operations with LOAD_STATE
   return replayOperations(

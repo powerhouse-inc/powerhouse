@@ -2,8 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/object.ts"
 force: true
 ---
-import { BaseDocumentClass, type ExtendedState, type PartialState, applyMixins, type SignalDispatch } from 'document-model';
-import { <%= 'type ' + h.changeCase.pascal(documentType) %>State, <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState } from './types.js';
+import { BaseDocumentClass, type ExtendedStateFromDocument, type PartialState, applyMixins, type SignalDispatch } from 'document-model';
+import { <%= 'type ' + h.changeCase.pascal(documentType) %>State, <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState, <%= 'type ' + h.changeCase.pascal(documentType) %>Document } from './types.js';
 import { <%= 'type ' + h.changeCase.pascal(documentType) %>Action } from './actions.js';
 import { reducer } from './reducer.js';
 import utils from './utils.js';
@@ -23,7 +23,7 @@ interface <%= h.changeCase.pascal(documentType) %> extends
 class <%= h.changeCase.pascal(documentType) %> extends BaseDocumentClass<<%= h.changeCase.pascal(documentType) %>State, <%= h.changeCase.pascal(documentType) %>LocalState, <%= h.changeCase.pascal(documentType) %>Action> {
     static fileExtension = '<%= extension %>';
 
-    constructor(initialState?: Partial<ExtendedState<PartialState<<%= h.changeCase.pascal(documentType) %>State>, PartialState<<%= h.changeCase.pascal(documentType) %>LocalState>>>, dispatch?: SignalDispatch) {
+    constructor(initialState?: Partial<ExtendedStateFromDocument<<%= h.changeCase.pascal(documentType) %>Document>>, dispatch?: SignalDispatch) {
         super(reducer, utils.createDocument(initialState), dispatch);
     }
 

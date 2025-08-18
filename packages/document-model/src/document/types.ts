@@ -220,18 +220,17 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type BaseState<TDocumentState, TLocalState> =
-  PHBaseState<TDocumentState> & {
-    /**
-     * Use {@link PHBaseState} `document` instead.
-     */
-    global: TDocumentState;
+export type BaseState<TGlobalState, TLocalState> = PHBaseState & {
+  /**
+   * Use {@link PHBaseState} `document` instead.
+   */
+  global: TGlobalState;
 
-    /**
-     * Not a requirement for BaseState, but could be in extended states.
-     */
-    local: TLocalState;
-  };
+  /**
+   * Not a requirement for BaseState, but could be in extended states.
+   */
+  local: TLocalState;
+};
 
 export type PartialState<TState> = TState | Partial<TState>;
 
@@ -246,7 +245,7 @@ export type CreateState<TDocument extends PHDocument> = (
 
 export type CreateExtendedState<TDocument extends BaseDocument<any, any>> = (
   extendedState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
@@ -275,21 +274,13 @@ export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
 
 export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
   initialState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
   >,
   createState?: CreateState<TDocument>,
 ) => TDocument;
-
-export type ExtendedState<TDocumentState, TLocalState> = {
-  /** The document model specific state. */
-  state: BaseState<TDocumentState, TLocalState>;
-
-  /** The index of document attachments. */
-  attachments?: FileRegistry;
-};
 
 export type DocumentOperations = Record<string, Operation[]>;
 
@@ -330,14 +321,22 @@ export type BaseDocument<TDocumentState, TLocalState> = {
 
   /** The history of the document. */
   history: PHDocumentHistory;
-} & ExtendedState<TDocumentState, TLocalState> & {
-    /** The operations history of the document. */
-    operations: DocumentOperations;
-    /** The initial state of the document, enabling replaying operations. */
-    initialState: ExtendedState<TDocumentState, TLocalState>;
-    /** A list of undone operations */
-    clipboard: Operation[];
-  };
+
+  /** The document model specific state. */
+  state: BaseState<TDocumentState, TLocalState>;
+
+  /** The initial state of the document, enabling replaying operations. */
+  initialState: BaseState<TDocumentState, TLocalState>;
+
+  /** The operations history of the document. */
+  operations: DocumentOperations;
+
+  /** A list of undone operations */
+  clipboard: Operation[];
+
+  /** The index of document attachments. */
+  attachments?: FileRegistry;
+};
 
 export type PHDocument<
   TGlobalState = unknown,
@@ -526,11 +525,10 @@ export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
   LocalStateFromDocument<TDocument>
 >;
 
-export type ExtendedStateFromDocument<TDocument extends PHDocument> =
-  ExtendedState<
-    PartialState<DocumentStateFromDocument<TDocument>>,
-    PartialState<LocalStateFromDocument<TDocument>>
-  >;
+export type ExtendedStateFromDocument<TDocument extends PHDocument> = BaseState<
+  PartialState<DocumentStateFromDocument<TDocument>>,
+  PartialState<LocalStateFromDocument<TDocument>>
+>;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

@@ -26,7 +26,12 @@ import {
   type SigningParameters,
   verify,
 } from "../../src/document/utils/header.js";
-import { type CountDocument, countReducer, increment } from "../helpers.js";
+import {
+  type CountDocument,
+  countReducer,
+  createCountState,
+  increment,
+} from "../helpers.js";
 
 /**
  * A signer that uses a key pair to sign and verify data.
@@ -77,9 +82,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with empty previousState", () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
 
     const action = increment();
     const documentWithOp = countReducer(document, action);
@@ -115,9 +118,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    let document = baseCreateDocument<CountDocument>(createCountState());
 
     document = countReducer(document, increment());
     const hash = hashDocumentStateForScope(document, "global");
@@ -172,9 +173,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     document.header.id = "1";
 
     const action = increment();
@@ -248,9 +247,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
 
     const operation = await buildSignedAction(
       { ...increment() /*, id: "123"*/ },
@@ -305,9 +302,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     document.header.id = "1";
 
     const operation = await buildSignedAction(

@@ -11,20 +11,11 @@ import {
   type CountState,
   baseCountReducer,
   countReducer,
+  createCountState,
   increment,
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
-  const initialState = {
-    state: {
-      global: {
-        count: 0,
-      },
-      local: {
-        name: "",
-      },
-    },
-    attachments: {},
-  };
+  const initialState = createCountState();
   const initialDocument: BaseDocument<CountState, CountLocalState> = {
     header: {
       id: "",
@@ -42,14 +33,7 @@ describe("DocumentModel Class", () => {
       meta: {},
     },
     history: {},
-    state: {
-      global: {
-        count: 0,
-      },
-      local: {
-        name: "",
-      },
-    },
+    state: createCountState(),
     attachments: {},
     initialState,
     operations: { global: [], local: [] },

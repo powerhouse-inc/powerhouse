@@ -1,4 +1,9 @@
 import {
+  type PHAuthState,
+  type PHBaseState,
+  type PHDocumentState,
+} from "./ph-types.js";
+import {
   type Action,
   type ActionContext,
   type ActionSigner,
@@ -82,4 +87,24 @@ export const actionSigner = (
   user,
   app,
   signatures,
+});
+
+/**
+ * Creates a default PHAuthState
+ */
+export const authState = (): PHAuthState => ({});
+
+/**
+ * Creates a default PHDocumentState
+ */
+export const documentState = (): PHDocumentState => ({
+  version: "1.0.0",
+});
+
+/**
+ * Creates a default PHBaseState with auth and document properties
+ */
+export const baseState = (): PHBaseState => ({
+  auth: authState(),
+  document: documentState(),
 });

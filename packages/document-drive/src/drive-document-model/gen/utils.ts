@@ -10,6 +10,7 @@ import {
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
+  baseState,
   generateId,
 } from "document-model";
 import { reducer } from "./reducer.js";
@@ -37,6 +38,7 @@ const utils: DocumentDriveUtils = {
   fileExtension: "phdd",
   createState(state) {
     return {
+      ...baseState(),
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

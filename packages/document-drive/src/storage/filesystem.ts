@@ -544,7 +544,7 @@ export class FilesystemStorage
       units.map(async (unit) => {
         try {
           const document = await this.get<PHDocument>(unit.documentId);
-          if (!document || !document.operations[unit.scope]) {
+          if (!document?.operations[unit.scope]) {
             return undefined;
           }
 

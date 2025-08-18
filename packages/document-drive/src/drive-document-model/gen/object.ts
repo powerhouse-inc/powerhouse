@@ -1,6 +1,6 @@
 import {
   BaseDocumentClass,
-  type ExtendedState,
+  type BaseState,
   type PartialState,
   applyMixins,
   type SignalDispatch,
@@ -31,7 +31,7 @@ class DocumentDrive extends BaseDocumentClass<
 
   constructor(
     initialState?: Partial<
-      ExtendedState<
+      BaseState<
         PartialState<DocumentDriveState>,
         PartialState<DocumentDriveLocalState>
       >

@@ -1,3 +1,4 @@
+import { baseState } from "#document/ph-factories.js";
 import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
@@ -15,12 +16,12 @@ import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
   type Action,
+  type BaseState,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
-  type ExtendedState,
   type ExtendedStateFromDocument,
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
@@ -162,21 +163,21 @@ export function createReducer<TDocument extends PHDocument>(
 
 export function baseCreateExtendedState<TDocument extends PHDocument>(
   initialState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
-  return {
-    state:
-      createState?.(initialState?.state) ??
-      ((initialState?.state ?? {
-        global: {},
-        local: {},
-      }) as BaseStateFromDocument<TDocument>),
-  };
+  return (
+    createState?.(initialState) ??
+    ((initialState ?? {
+      ...baseState(),
+      global: {},
+      local: {},
+    }) as BaseStateFromDocument<TDocument>)
+  );
 }
 
 /**
@@ -194,7 +195,7 @@ export function baseCreateDocument<TDocument extends PHDocument>(
 
   const header = createUnsignedHeader();
   return {
-    ...state,
+    state,
     header,
     initialState: state,
     operations: { global: [], local: [] },
@@ -380,11 +381,8 @@ export function replayDocument<TDocument extends PHDocument>(
         );
         documentState = {
           ...documentState,
-          state: {
-            ...documentState.state,
-            // TODO how to deal with attachments?
-            [scope]: scopeState,
-          },
+          // TODO how to deal with attachments?
+          [scope]: scopeState,
         };
         initialOperations[scope as keyof typeof initialOperations].push(
           ...scopeOperations.slice(0, index + 1),
