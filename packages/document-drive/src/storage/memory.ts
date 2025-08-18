@@ -1,6 +1,7 @@
 import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
@@ -105,7 +106,10 @@ export class MemoryStorage
 
     // check if the document already exists by slug
     if (slug && this.slugToDocumentId[slug]) {
-      throw new DocumentAlreadyExistsError(documentId);
+      throw new DocumentAlreadyExistsError(
+        documentId,
+        DocumentAlreadyExistsReason.SLUG,
+      );
     }
 
     // store the document and update the slug
@@ -116,7 +120,10 @@ export class MemoryStorage
     if (slug) {
       // check if the slug is already taken
       if (this.slugToDocumentId[slug]) {
-        throw new DocumentAlreadyExistsError(documentId);
+        throw new DocumentAlreadyExistsError(
+          documentId,
+          DocumentAlreadyExistsReason.SLUG,
+        );
       }
 
       this.slugToDocumentId[slug] = documentId;

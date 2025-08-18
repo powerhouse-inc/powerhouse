@@ -1,9 +1,9 @@
 import { type SignalDispatch } from "document-model";
 import {
   type SetEditorNameAction,
-  type SetEditorIdAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetEditorStatusAction,
 } from "./actions.js";
 import { type DocumentEditorState } from "../types.js";
 
@@ -11,11 +11,6 @@ export interface DocumentEditorBaseOperationsOperations {
   setEditorNameOperation: (
     state: DocumentEditorState,
     action: SetEditorNameAction,
-    dispatch?: SignalDispatch,
-  ) => void;
-  setEditorIdOperation: (
-    state: DocumentEditorState,
-    action: SetEditorIdAction,
     dispatch?: SignalDispatch,
   ) => void;
   addDocumentTypeOperation: (
@@ -26,6 +21,11 @@ export interface DocumentEditorBaseOperationsOperations {
   removeDocumentTypeOperation: (
     state: DocumentEditorState,
     action: RemoveDocumentTypeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setEditorStatusOperation: (
+    state: DocumentEditorState,
+    action: SetEditorStatusAction,
     dispatch?: SignalDispatch,
   ) => void;
 }

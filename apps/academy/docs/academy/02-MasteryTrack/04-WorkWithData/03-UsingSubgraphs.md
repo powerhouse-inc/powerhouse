@@ -78,7 +78,7 @@ Initializing Subgraph Manager...
   ➜  Reactor:   http://localhost:4001/d/powerhouse
 ```
 
-## 2. Building a to-do list subgraph
+## 2. Building a search subgraph
 
 Now that we've generated our subgraph its tome to define the GraphQL schema and implement the resolvers.
 
@@ -118,7 +118,7 @@ export const getResolvers = (subgraph: Subgraph) => {
         const todoItems: string[] = [];
         for (const docId of documents) {
           const doc: ToDoListDocument = await reactor.getDocument(docId);
-          if (doc.header.documentType !== "powerhouse/todo-list") {
+          if (doc.header.documentType !== "powerhouse/todolist") {
             continue;
           }
 
@@ -153,7 +153,12 @@ You should see the subgraph being registered in the console output:
 ### 3.2. Create some test data
 Before testing queries, let's create some To-do List documents with test data:
 
-1. Open Connect at `http://localhost:3001` in another terminal
+1. Start Connect 
+```bash
+ph connect
+```
+
+1. Open Connect at `http://localhost:3000` in the browser
 2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
 3. Create a new To-do List document
 4. Add some test items:
@@ -165,7 +170,7 @@ Before testing queries, let's create some To-do List documents with test data:
 Open your browser and go to:
 
 ```bash
-http://localhost:4001/graphql/to-do-list
+http://localhost:4001/graphql
 ```
 
 ### 3.4. Test the queries
@@ -173,10 +178,11 @@ http://localhost:4001/graphql/to-do-list
 **Query 1: Search for Todos **
 ```graphql
 query {
-  searchTodos(driveId: "powerhouse", searchTerm: "test")
+  searchTodos(driveId: "powerhouse", searchTerm: "Test")
 }
 ```
 
+You should get a list of the document Ids which contain the search term "Test".
 
 ### 3.5. Test real-time updates
 
@@ -190,9 +196,10 @@ To verify that your subgraph stays synchronized with document changes:
 
 This demonstrates the real-time synchronization between the document model and the subgraph through event processing.
 
-## 4. Working with the supergraph or gateway
 
-A supergraph is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
+## 4. Working with the GraphQL Gateway
+
+The GraphQL Gateway is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
 
 ### 4.1 Key concepts
 

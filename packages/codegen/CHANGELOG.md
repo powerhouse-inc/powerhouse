@@ -1,3 +1,47 @@
+## 4.1.0-dev.22 (2025-08-15)
+
+### 🩹 Fixes
+
+- **vetra:** use app id in editor app ([#1767](https://github.com/powerhouse-inc/powerhouse/pull/1767))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🚀 Features
+
+- added app document to vetra package ([#1762](https://github.com/powerhouse-inc/powerhouse/pull/1762))
+
+### 🩹 Fixes
+
+- **codegen:** codegen update for operations change ([689df960c](https://github.com/powerhouse-inc/powerhouse/commit/689df960c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.19 (2025-08-14)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

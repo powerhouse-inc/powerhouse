@@ -72,15 +72,15 @@ export class DriveAnalyticsProcessor implements IProcessor {
 
         for (const operation of chunk) {
           const revision = operation.index;
-          const actionType = this.getActionType(operation.type);
-          const target: Target = NODE_ACTIONS.includes(operation.type)
+          const actionType = this.getActionType(operation.action.type);
+          const target: Target = NODE_ACTIONS.includes(operation.action.type)
             ? "NODE"
             : "DRIVE";
 
           let targetId = driveId;
 
           if (target === "NODE") {
-            const operationInput = operation.input as NodeActionInput;
+            const operationInput = operation.action.input as NodeActionInput;
             targetId =
               operationInput.id ||
               operationInput.targetId ||
@@ -98,7 +98,7 @@ export class DriveAnalyticsProcessor implements IProcessor {
                 `ph/drive/${driveId}/${branch}/${scope}/${revision}`,
               ),
               operation: AnalyticsPath.fromString(
-                `ph/drive/operation/${operation.type}/${operation.index}`,
+                `ph/drive/operation/${operation.action.type}/${operation.index}`,
               ),
               target: AnalyticsPath.fromString(`ph/drive/target/${target}/${targetId}`),
               actionType: AnalyticsPath.fromString(

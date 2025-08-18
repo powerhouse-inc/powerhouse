@@ -2,15 +2,15 @@ import { createAction } from "document-model";
 import {
   z,
   type SetEditorNameInput,
-  type SetEditorIdInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetEditorStatusInput,
 } from "../types.js";
 import {
   type SetEditorNameAction,
-  type SetEditorIdAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetEditorStatusAction,
 } from "./actions.js";
 
 export const setEditorName = (input: SetEditorNameInput) =>
@@ -19,15 +19,6 @@ export const setEditorName = (input: SetEditorNameInput) =>
     { ...input },
     undefined,
     z.SetEditorNameInputSchema,
-    "global",
-  );
-
-export const setEditorId = (input: SetEditorIdInput) =>
-  createAction<SetEditorIdAction>(
-    "SET_EDITOR_ID",
-    { ...input },
-    undefined,
-    z.SetEditorIdInputSchema,
     "global",
   );
 
@@ -46,5 +37,14 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     { ...input },
     undefined,
     z.RemoveDocumentTypeInputSchema,
+    "global",
+  );
+
+export const setEditorStatus = (input: SetEditorStatusInput) =>
+  createAction<SetEditorStatusAction>(
+    "SET_EDITOR_STATUS",
+    { ...input },
+    undefined,
+    z.SetEditorStatusInputSchema,
     "global",
   );

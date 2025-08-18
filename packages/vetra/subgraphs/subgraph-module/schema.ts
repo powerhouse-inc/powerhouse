@@ -7,6 +7,12 @@ export const schema: DocumentNode = gql`
   """
   type SubgraphModuleState {
     name: String!
+    status: StatusType!
+  }
+
+  enum StatusType {
+    DRAFT
+    CONFIRMED
   }
 
   """
@@ -32,6 +38,11 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: SubgraphModule_SetSubgraphNameInput
     ): Int
+    SubgraphModule_setSubgraphStatus(
+      driveId: String
+      docId: PHID
+      input: SubgraphModule_SetSubgraphStatusInput
+    ): Int
   }
 
   """
@@ -39,5 +50,8 @@ export const schema: DocumentNode = gql`
   """
   input SubgraphModule_SetSubgraphNameInput {
     name: String!
+  }
+  input SubgraphModule_SetSubgraphStatusInput {
+    status: StatusType!
   }
 `;

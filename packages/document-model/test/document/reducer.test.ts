@@ -183,16 +183,25 @@ describe("Base reducer", () => {
       }),
     );
 
+    const action = fakeAction({
+      type: "TEST_2",
+      input: {},
+      scope: "global",
+      index: 3,
+    });
+
     expect(() => {
-      wrappedEmptyReducer(
-        document,
-        fakeAction({
-          type: "TEST_2",
-          input: {},
-          scope: "global",
-          index: 3,
-        }),
-      );
+      wrappedEmptyReducer(document, action, undefined, {
+        replayOptions: {
+          operation: {
+            action,
+            hash: "",
+            timestamp: action.timestamp,
+            index: 3,
+            skip: 0,
+          },
+        },
+      });
     }).toThrow(
       "Missing operations: expected 2 with skip 0 or equivalent, got index 3 with skip 0",
     );
@@ -218,18 +227,26 @@ describe("Base reducer", () => {
       }),
     );
 
+    const action = fakeAction({
+      type: "TEST_2",
+      input: {},
+      scope: "global",
+      index: 4,
+    });
+
     expect(() => {
-      wrappedEmptyReducer(
-        document,
-        fakeAction({
-          type: "TEST_2",
-          input: {},
-          scope: "global",
-          index: 4,
-        }),
-        undefined,
-        { skip: 1 },
-      );
+      wrappedEmptyReducer(document, action, undefined, {
+        skip: 1,
+        replayOptions: {
+          operation: {
+            action,
+            hash: "",
+            timestamp: action.timestamp,
+            index: 4,
+            skip: 1,
+          },
+        },
+      });
     }).toThrow(
       "Missing operations: expected 2 with skip 0 or equivalent, got index 4 with skip 1",
     );
@@ -255,33 +272,34 @@ describe("Base reducer", () => {
       }),
     );
 
-    document = wrappedEmptyReducer(
-      document,
-      fakeAction({
-        type: "TEST_2",
-        input: {},
-        scope: "global",
-        index: 3,
-      }),
-      undefined,
-      { skip: 1 },
-    );
+    const action = fakeAction({
+      type: "TEST_2",
+      input: {},
+      scope: "global",
+    });
+    document = wrappedEmptyReducer(document, action, undefined, {
+      skip: 1,
+      pruneOnSkip: false,
+      replayOptions: {
+        operation: {
+          action,
+          skip: 1,
+          index: 3,
+          timestamp: action.timestamp,
+          hash: "",
+        },
+      },
+    });
 
-    expect(document.operations.global).toMatchObject([
-      {
-        type: "TEST_0",
-        index: 0,
-      },
-      {
-        type: "TEST_1",
-        index: 1,
-      },
-      {
-        type: "TEST_2",
-        index: 3,
-        skip: 1,
-      },
-    ]);
+    expect(document.operations.global[0].action.type).toBe("TEST_0");
+    expect(document.operations.global[0].index).toBe(0);
+    expect(document.operations.global[0].skip).toBe(0);
+    expect(document.operations.global[1].action.type).toBe("TEST_1");
+    expect(document.operations.global[1].index).toBe(1);
+    expect(document.operations.global[1].skip).toBe(0);
+    expect(document.operations.global[2].action.type).toBe("TEST_2");
+    expect(document.operations.global[2].index).toBe(3);
+    expect(document.operations.global[2].skip).toBe(1);
   });
 
   it("should not throw errors from reducer", () => {

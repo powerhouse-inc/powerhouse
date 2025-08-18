@@ -21,15 +21,9 @@ export const mockOperation: Operation = {
   id: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
   hash: "onCoFcadHQoqpoie/XuS7ItuNOQ=",
   index: 0,
-  input: {
-    id: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
-    name: "Example input",
-  },
   skip: 0,
   timestamp: "2024-06-13T14:39:12.936Z",
-  type: "EXAMPLE_OPERATION",
   error: undefined,
-  scope: "global",
   action: {
     id: "411c010c-ecd5-4445-aafd-0b227b7781bd",
     timestamp: "2024-06-13T14:39:12.936Z",

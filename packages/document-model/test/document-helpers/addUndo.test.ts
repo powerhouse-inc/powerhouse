@@ -120,7 +120,7 @@ describe("addUndo", () => {
     expect(result[3]).toMatchObject({
       index: 3,
       skip: 1,
-      type: "NOOP",
+      action: { type: "NOOP" },
     });
   });
 

@@ -7,7 +7,11 @@ import {
   undoOperation,
 } from "./actions/operations.js";
 import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
-import { operationFromAction, operationFromOperation } from "./ph-factories.js";
+import {
+  actionFromAction,
+  operationFromAction,
+  operationFromOperation,
+} from "./ph-factories.js";
 import { type PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
@@ -124,7 +128,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   reuseLastOperationIndex = false,
   skip = 0,
 ): TDocument {
-  const scope = operation.scope;
+  const scope = operation.action.scope;
   const operations: Operation[] = document.operations[scope].slice();
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
@@ -162,18 +166,17 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
  */
 export function updateDocument<TDocument extends PHDocument>(
   document: TDocument,
-  action: Action | Operation,
-  skip = 0,
+  action: Action,
   reuseLastOperationIndex = false,
+  skip = 0,
+  operation?: Operation,
 ): TDocument {
-  // duck type -- this determines if it's an operation or an action
-  // TEMPORARY
   let newDocument: TDocument;
-  if ("index" in action) {
+  if (operation) {
     // operation
     newDocument = updateOperationsForOperation(
       document,
-      action,
+      operation,
       reuseLastOperationIndex,
       skip,
     ) as TDocument;
@@ -341,7 +344,7 @@ function processUndoOperation<TDocument extends PHDocument>(
   );
 
   const clipboard = sortOperations(
-    [...document.clipboard, ...diff].filter((op) => op.type !== "NOOP"),
+    [...document.clipboard, ...diff].filter((op) => op.action.type !== "NOOP"),
   ).reverse();
 
   return { ...doc, clipboard } as TDocument;
@@ -371,10 +374,12 @@ export function baseReducer<TDocument extends PHDocument>(
     ignoreSkipOperations = false,
     reuseOperationResultingState = false,
     operationResultingStateParser,
+    pruneOnSkip = true,
   } = options;
 
-  let _action: Action = { ...action };
-  let skipValue = skip || 0;
+  let _action: Action = actionFromAction(action);
+
+  let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
     ...document,
   };
@@ -412,8 +417,9 @@ export function baseReducer<TDocument extends PHDocument>(
   newDocument = updateDocument(
     newDocument,
     _action,
-    skipValue,
     reuseLastOperationIndex,
+    skipValue,
+    options.replayOptions?.operation,
   );
 
   const isUndoAction = isUndo(action);
@@ -429,7 +435,7 @@ export function baseReducer<TDocument extends PHDocument>(
   }
 
   if (shouldProcessSkipOperation) {
-    newDocument = processSkipOperation(
+    const processed = processSkipOperation(
       newDocument,
       _action,
       customReducer,
@@ -437,6 +443,16 @@ export function baseReducer<TDocument extends PHDocument>(
       reuseOperationResultingState,
       operationResultingStateParser,
     );
+
+    // Preserve operations when pruneOnSkip is false
+    if (!pruneOnSkip) {
+      newDocument = {
+        ...processed,
+        operations: newDocument.operations,
+      };
+    } else {
+      newDocument = processed;
+    }
   }
 
   // wraps the custom reducer with Mutative to avoid
@@ -501,8 +517,11 @@ export function baseReducer<TDocument extends PHDocument>(
   // an hash and uses it instead of generating it
   const scope = _action.scope || "global";
   let hash = hashDocumentStateForScope(newDocument, scope);
-  if (options.hash && options.hash !== "") {
-    hash = options.hash;
+  if (
+    options.replayOptions?.operation.hash &&
+    options.replayOptions.operation.hash !== ""
+  ) {
+    hash = options.replayOptions.operation.hash;
   }
 
   // updates the last operation with the hash of the resulting state

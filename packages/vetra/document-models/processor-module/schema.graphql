@@ -19,11 +19,17 @@ type ProcessorModuleState {
   name: String!
   type: String!
   documentTypes: [DocumentTypeItem!]!
+  status: StatusType!
 }
 
 type DocumentTypeItem {
   id: OID!
   documentType: String!
+}
+
+enum StatusType {
+  DRAFT
+  CONFIRMED
 }
 
 
@@ -45,4 +51,8 @@ input AddDocumentTypeInput {
 
 input RemoveDocumentTypeInput {
   id: OID!
+}
+
+input SetProcessorStatusInput {
+  status: StatusType!
 }

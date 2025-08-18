@@ -1,6 +1,6 @@
 import {
-  type Operation,
   type DocumentOperations,
+  type Operation,
   type PHDocument,
 } from "document-model";
 
@@ -33,21 +33,21 @@ export function mergeOperations(
   }, {});
 
   const conflictOp = newOperations.find(
-    (op) => op.index < (minIndexByScope[op.scope] ?? 0),
+    (op) => op.index < (minIndexByScope[op.action.scope] ?? 0),
   );
   if (conflictOp) {
     throw new OperationError(
       "ERROR",
       conflictOp,
-      `Tried to add operation with index ${conflictOp.index} and document is at index ${minIndexByScope[conflictOp.scope]}`,
+      `Tried to add operation with index ${conflictOp.index} and document is at index ${minIndexByScope[conflictOp.action.scope]}`,
     );
   }
 
   return newOperations
     .sort((a, b) => a.index - b.index)
     .reduce<DocumentOperations>((acc, curr) => {
-      const existingOperations = acc[curr.scope] || [];
-      return { ...acc, [curr.scope]: [...existingOperations, curr] };
+      const existingOperations = acc[curr.action.scope] || [];
+      return { ...acc, [curr.action.scope]: [...existingOperations, curr] };
     }, currentOperations);
 }
 
@@ -59,8 +59,8 @@ export function isNoopUpdate(
     return false;
   }
 
-  const isNoopOp = operation.type === "NOOP";
-  const isNoopLatestOp = latestOperation.type === "NOOP";
+  const isNoopOp = operation.action.type === "NOOP";
+  const isNoopLatestOp = latestOperation.action.type === "NOOP";
   const isSameIndexOp = operation.index === latestOperation.index;
   const isSkipOpGreaterThanLatestOp = operation.skip > latestOperation.skip;
 

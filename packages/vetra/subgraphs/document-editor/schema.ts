@@ -6,9 +6,9 @@ export const schema: DocumentNode = gql`
   Subgraph definition for DocumentEditor (powerhouse/document-editor)
   """
   type DocumentEditorState {
-    name: String
-    id: OID
+    name: String!
     documentTypes: [DocumentTypeItem!]!
+    status: StatusType!
   }
 
   type DocumentTypeItem {
@@ -16,12 +16,17 @@ export const schema: DocumentNode = gql`
     documentType: String!
   }
 
+  enum StatusType {
+    DRAFT
+    CONFIRMED
+  }
+
   """
   Queries: DocumentEditor
   """
   type DocumentEditorQueries {
-    getDocument(driveId: String, docId: PHID): DocumentEditor
-    getDocuments: [DocumentEditor!]
+    getDocument(docId: PHID!, driveId: PHID): DocumentEditor
+    getDocuments(driveId: String!): [DocumentEditor!]
   }
 
   type Query {
@@ -32,17 +37,12 @@ export const schema: DocumentNode = gql`
   Mutations: DocumentEditor
   """
   type Mutation {
-    DocumentEditor_createDocument(driveId: String, name: String): String
+    DocumentEditor_createDocument(name: String!, driveId: String): String
 
     DocumentEditor_setEditorName(
       driveId: String
       docId: PHID
       input: DocumentEditor_SetEditorNameInput
-    ): Int
-    DocumentEditor_setEditorId(
-      driveId: String
-      docId: PHID
-      input: DocumentEditor_SetEditorIdInput
     ): Int
     DocumentEditor_addDocumentType(
       driveId: String
@@ -54,6 +54,11 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: DocumentEditor_RemoveDocumentTypeInput
     ): Int
+    DocumentEditor_setEditorStatus(
+      driveId: String
+      docId: PHID
+      input: DocumentEditor_SetEditorStatusInput
+    ): Int
   }
 
   """
@@ -62,14 +67,14 @@ export const schema: DocumentNode = gql`
   input DocumentEditor_SetEditorNameInput {
     name: String!
   }
-  input DocumentEditor_SetEditorIdInput {
-    id: OID!
-  }
   input DocumentEditor_AddDocumentTypeInput {
     id: OID!
     documentType: String!
   }
   input DocumentEditor_RemoveDocumentTypeInput {
     id: OID!
+  }
+  input DocumentEditor_SetEditorStatusInput {
+    status: StatusType!
   }
 `;

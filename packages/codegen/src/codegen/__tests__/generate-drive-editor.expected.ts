@@ -16,71 +16,66 @@ export const module: DriveEditorModule<DocumentDriveDocument> = {
 export default module;`;
 
 export const EXPECTED_EDITOR_CONTENT = `import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
-import { AnalyticsProvider } from '@powerhousedao/reactor-browser/analytics/context';
-import { DriveContextProvider } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
-import { type DocumentDriveDocument, addFolder, deleteNode, updateNode, generateNodesCopy, copyNode } from "document-drive";
+import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
+import { DriveContextProvider, useDriveContext } from "@powerhousedao/reactor-browser/hooks/useDriveContext";
+import { useInitializePHApp, useSetSelectedNode } from '@powerhousedao/state';
+import { type DocumentDriveDocument, type FileNode } from "document-drive";
 import { WagmiContext } from "@powerhousedao/design-system";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { useCallback } from "react";
-import { generateId } from "document-model";
 
 export type IProps = DriveEditorProps<DocumentDriveDocument>;
 
+/**
+ * Base editor component that renders the drive explorer interface.
+ * Customize document opening behavior and drive-level actions here.
+ */
 export function BaseEditor(props: IProps) {
-  const { dispatch, context } = props;
-  
-  const onAddFolder = useCallback((name: string, parentFolder?: string) => {
-    dispatch(addFolder({
-      id: generateId(),
-      name,
-      parentFolder,
-    }));
-  }, [dispatch]);
+  const { context, document } = props;
 
-  const onDeleteNode = useCallback((nodeId: string) => {
-    dispatch(deleteNode({ id: nodeId }));
-  }, [dispatch]);
+  // Get drive operations from context
+  const {
+    onAddFolder,
+    onRenameNode,
+    onCopyNode,
+    showDeleteNodeModal,
+  } = useDriveContext();
 
-  const renameNode = useCallback((nodeId: string, name: string) => {
-    dispatch(updateNode({ id: nodeId, name }));
-  }, [dispatch]);
+  const setSelectedNode = useSetSelectedNode();
 
-  const onCopyNode = useCallback((nodeId: string, targetName: string, parentId?: string) => {
-    const copyNodesInput = generateNodesCopy({
-      srcId: nodeId,
-      targetParentFolder: parentId,
-      targetName,
-    }, () => generateId(), props.document.state.global.nodes);
-
-    const copyNodesAction = copyNodesInput.map(input => {
-      return copyNode(input);
-    });
-
-    for (const copyNodeAction of copyNodesAction) {
-      dispatch(copyNodeAction);
-    }
-  }, [dispatch, props.document.state.global.nodes]);
+  // Handle document opening - customize this to modify document open behavior
+  const onOpenDocument = useCallback(
+    (node: FileNode) => {
+      setSelectedNode(node.id);
+    },
+    [setSelectedNode],
+  );
 
   return (
-    <div
-      className="new-drive-explorer"
-      style={{ height: "100%" }}
-    >
+    <div className="new-drive-explorer" style={{ height: "100%" }}>
       <DriveExplorer
-        driveId={props.document.header.id}
-        nodes={props.document.state.global.nodes}
+        driveId={document.header.id}
         onAddFolder={onAddFolder}
-        onDeleteNode={onDeleteNode}
-        renameNode={renameNode}
+        onRenameNode={onRenameNode}
         onCopyNode={onCopyNode}
+        onOpenDocument={onOpenDocument}
+        showDeleteNodeModal={showDeleteNodeModal}
         context={context}
       />
     </div>
   );
 }
 
+/**
+ * Main editor entry point with required providers.
+ * useInitializePHApp() is required for state management to work properly.
+ */
 export default function Editor(props: IProps) {
+  // Required: Initialize Powerhouse app state
+  useInitializePHApp();
+
   return (
+    // Required context providers for drive functionality
     <DriveContextProvider value={props.context}>
       <WagmiContext>
         <AnalyticsProvider databaseName={props.context.analyticsDatabaseName}>

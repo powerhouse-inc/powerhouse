@@ -116,29 +116,33 @@ export function addUndo(sortedOperations: Operation[]) {
 
   if (!latestOperation) return operationsCopy;
 
-  if (latestOperation.type === "NOOP") {
+  if (latestOperation.action.type === "NOOP") {
     operationsCopy.push({
       ...latestOperation,
       index: latestOperation.index,
-      type: "NOOP",
       skip: nextSkipNumber(sortedOperations),
+      action: {
+        ...latestOperation.action,
+
+        // TODO: this will break the signature...
+        id: generateId(),
+        timestamp: new Date().toISOString(),
+        type: "NOOP",
+      },
     });
   } else {
     operationsCopy.push({
       id: generateId(),
       timestamp: new Date().toISOString(),
-      type: "NOOP",
       index: latestOperation.index + 1,
-      input: {},
       skip: 1,
-      scope: latestOperation.scope,
       hash: latestOperation.hash,
       action: {
         id: generateId(),
         timestamp: new Date().toISOString(),
         type: "NOOP",
         input: {},
-        scope: latestOperation.scope,
+        scope: latestOperation.action.scope,
       },
     });
   }
@@ -432,11 +436,11 @@ export type OperationsByScope = Partial<Record<string, Operation[]>>;
 
 export function groupOperationsByScope(operations: Operation[]) {
   const result = operations.reduce<OperationsByScope>((acc, operation) => {
-    if (!acc[operation.scope]) {
-      acc[operation.scope] = [];
+    if (!acc[operation.action.scope]) {
+      acc[operation.action.scope] = [];
     }
 
-    acc[operation.scope]?.push(operation);
+    acc[operation.action.scope]?.push(operation);
 
     return acc;
   }, {});
@@ -520,14 +524,14 @@ export function removeExistingOperations(
   return newOperations.filter((newOperation) => {
     return !operationsHistory.some((historyOperation) => {
       return (
-        (newOperation.type === "NOOP" &&
+        (newOperation.action.type === "NOOP" &&
           newOperation.skip === 0 &&
           newOperation.index === historyOperation.index) ||
         (newOperation.index === historyOperation.index &&
           newOperation.skip === historyOperation.skip &&
-          newOperation.scope === historyOperation.scope &&
+          newOperation.action.scope === historyOperation.action.scope &&
           newOperation.hash === historyOperation.hash &&
-          newOperation.type === historyOperation.type)
+          newOperation.action.type === historyOperation.action.type)
       );
     });
   });

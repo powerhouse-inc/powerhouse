@@ -2,6 +2,7 @@ import {
   generateFromDocument,
   generateSubgraphFromDocumentModel,
   validateDocumentModelState,
+  generateManifest,
 } from "@powerhousedao/codegen";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import {
@@ -35,6 +36,26 @@ export class DocumentModelHandler implements DocumentHandler {
         logger.info(
           `✅ Code generation completed successfully for: ${state.name}`,
         );
+
+        // Update the manifest with the new document model
+        try {
+          logger.info(`🔄 Updating manifest with document model: ${state.name} (ID: ${state.id})`);
+          
+          generateManifest({
+            documentModels: [{
+              id: state.id,
+              name: state.name
+            }]
+          }, this.config.CURRENT_WORKING_DIR);
+
+          logger.info(`✅ Manifest updated successfully for document model: ${state.name}`);
+        } catch (manifestError) {
+          logger.error(
+            `⚠️ Failed to update manifest for document model ${state.name}:`,
+            manifestError,
+          );
+          // Don't throw here - code generation was successful
+        }
       } catch (error) {
         logger.error(
           `❌ Error during code generation for ${state.name}:`,

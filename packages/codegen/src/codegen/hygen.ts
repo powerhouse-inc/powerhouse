@@ -170,25 +170,29 @@ export async function generateEditor(
   dir: string,
   documentModelsDir: string,
   { skipFormat = false, verbose = true } = {},
+  editorId?: string,
 ) {
   // Generate the singular files for the document model logic
-  await run(
-    [
-      "powerhouse",
-      "generate-editor",
-      "--name",
-      name,
-      "--root-dir",
-      dir,
-      "--document-types",
-      documentTypes.join(","),
-      "--document-types-map",
-      JSON.stringify(documentTypesMap),
-      "--document-models-dir",
-      documentModelsDir,
-    ],
-    { skipFormat, verbose },
-  );
+  const args = [
+    "powerhouse",
+    "generate-editor",
+    "--name",
+    name,
+    "--root-dir",
+    dir,
+    "--document-types",
+    documentTypes.join(","),
+    "--document-types-map",
+    JSON.stringify(documentTypesMap),
+    "--document-models-dir",
+    documentModelsDir,
+  ];
+
+  if (editorId) {
+    args.push("--editor-id", editorId);
+  }
+
+  await run(args, { skipFormat, verbose });
 }
 
 export async function generateProcessor(
@@ -302,10 +306,21 @@ export async function generateDriveEditor(
   name: string,
   dir: string,
   { skipFormat = false } = {},
+  appId?: string,
 ) {
   // Generate the drive editor files
-  await run(
-    ["powerhouse", "generate-drive-editor", "--name", name, "--root-dir", dir],
-    { skipFormat },
-  );
+  const args = [
+    "powerhouse",
+    "generate-drive-editor",
+    "--name",
+    name,
+    "--root-dir",
+    dir,
+  ];
+
+  if (appId) {
+    args.push("--app-id", appId);
+  }
+
+  await run(args, { skipFormat });
 }

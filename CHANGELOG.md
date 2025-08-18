@@ -1,3 +1,68 @@
+## 4.1.0-dev.22 (2025-08-15)
+
+### 🩹 Fixes
+
+- **vetra:** use app id in editor app ([#1767](https://github.com/powerhouse-inc/powerhouse/pull/1767))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **academy:** hooks documentation ([a517eadce](https://github.com/powerhouse-inc/powerhouse/commit/a517eadce))
+- **document-drive:** the DocumentAlreadyExistsErrors now tell you if it was the slug or id that is not unique ([2f1600b2d](https://github.com/powerhouse-inc/powerhouse/commit/2f1600b2d))
+- **vetra:** update vetra document models with new status field ([#1765](https://github.com/powerhouse-inc/powerhouse/pull/1765))
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+- **academy:** subgraphs documentation update ([4f3a024ab](https://github.com/powerhouse-inc/powerhouse/commit/4f3a024ab))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Callme-T
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🚀 Features
+
+- added app document to vetra package ([#1762](https://github.com/powerhouse-inc/powerhouse/pull/1762))
+
+### 🩹 Fixes
+
+- fixing all the other projects so that they build with action / operation refactor ([c185b3552](https://github.com/powerhouse-inc/powerhouse/commit/c185b3552))
+- linter ([158db2a21](https://github.com/powerhouse-inc/powerhouse/commit/158db2a21))
+- **codegen:** codegen update for operations change ([689df960c](https://github.com/powerhouse-inc/powerhouse/commit/689df960c))
+- **document-drive:** deleting loads of duplicate tests, fixing some document drive compatibility issues ([d7212e639](https://github.com/powerhouse-inc/powerhouse/commit/d7212e639))
+- **document-drive:** fix major issue where operation needed submitted to reducer options ([30453f708](https://github.com/powerhouse-inc/powerhouse/commit/30453f708))
+- **document-drive:** fix remaining document-drive tests ([8265f133c](https://github.com/powerhouse-inc/powerhouse/commit/8265f133c))
+- **document-model:** unit tests need to use the same objects ([e9e176ab9](https://github.com/powerhouse-inc/powerhouse/commit/e9e176ab9))
+- **document-model:** remaining tests follow the same format ([81ea445bf](https://github.com/powerhouse-inc/powerhouse/commit/81ea445bf))
+- **vetra:** fixing compile issues due to operation action split ([73ff839ba](https://github.com/powerhouse-inc/powerhouse/commit/73ff839ba))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.19 (2025-08-14)
+
+### 🩹 Fixes
+
+- **academy:** subgraph example ([ae3e24458](https://github.com/powerhouse-inc/powerhouse/commit/ae3e24458))
+- **connect:** deduplicate operations fix ([d226b4d7c](https://github.com/powerhouse-inc/powerhouse/commit/d226b4d7c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 ### 🚀 Features

@@ -1,18 +1,18 @@
 import connectConfig from '#connect-config';
 import { useShowAddDriveModal } from '#hooks';
 import {
-  ConnectSidebar,
-  Icon,
-  SidebarAddDriveItem,
-  SidebarItem,
+    ConnectSidebar,
+    Icon,
+    SidebarAddDriveItem,
+    SidebarItem,
 } from '@powerhousedao/design-system';
 import {
-  logout,
-  openRenown,
-  setSelectedDrive,
-  useDrives,
-  useSelectedDrive,
-  useUser,
+    logout,
+    openRenown,
+    setSelectedDrive,
+    useDrives,
+    useSelectedDrive,
+    useUser,
 } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { ErrorBoundary } from 'react-error-boundary';

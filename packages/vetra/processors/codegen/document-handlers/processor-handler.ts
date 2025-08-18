@@ -15,8 +15,8 @@ export class ProcessorHandler implements DocumentHandler {
   ): Promise<void> {
     const state = strand.state as ProcessorModuleState;
 
-    // Check if we have a valid processor name, type, and document types
-    if (state.name && state.type && state.documentTypes.length > 0) {
+    // Check if we have a valid processor name, type, document types, and it's confirmed
+    if (state.name && state.type && state.documentTypes.length > 0 && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting processor generation for: ${state.name}`);
       try {
         // Map the type value from document state to generateProcessor expected values
@@ -53,9 +53,23 @@ export class ProcessorHandler implements DocumentHandler {
         }
       }
     } else {
-      logger.warn(
-        `⚠️ Skipping processor generation - missing name, type, or document types for processor`,
-      );
+      if (!state.name) {
+        logger.debug(
+          `⚠️ Skipping processor generation - missing name for processor`,
+        );
+      } else if (!state.type) {
+        logger.debug(
+          `⚠️ Skipping processor generation - missing type for processor "${state.name}"`,
+        );
+      } else if (state.documentTypes.length === 0) {
+        logger.debug(
+          `⚠️ Skipping processor generation - missing document types for processor "${state.name}"`,
+        );
+      } else if (state.status !== "CONFIRMED") {
+        logger.debug(
+          `ℹ️ Skipping processor generation - processor "${state.name}" is not confirmed (status: ${state.status})`,
+        );
+      }
     }
   }
 }

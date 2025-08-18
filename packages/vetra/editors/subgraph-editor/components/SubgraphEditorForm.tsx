@@ -1,33 +1,57 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "../../hooks/index.js";
+import { StatusPill } from "../../components/index.js";
 
 export interface SubgraphEditorFormProps {
   subgraphName?: string;
-  onConfirm?: (name: string) => void;
+  status?: string;
+  onNameChange?: (name: string) => void;
+  onConfirm?: () => void;
 }
 
 export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
   subgraphName: initialSubgraphName = "",
+  status = "DRAFT",
+  onNameChange,
   onConfirm
 }) => {
   const [subgraphName, setSubgraphName] = useState(initialSubgraphName);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   
-  // Check if the name is already set (read-only mode)
-  const isReadOnly = initialSubgraphName !== "";
+  // Use the debounce hook for name changes
+  useDebounce(subgraphName, onNameChange, 300);
 
   // Update local state when initialSubgraphName changes
   useEffect(() => {
     setSubgraphName(initialSubgraphName);
   }, [initialSubgraphName]);
 
+  // Reset confirmation state if status changes back to DRAFT
+  useEffect(() => {
+    if (status === "DRAFT") {
+      setIsConfirmed(false);
+    }
+  }, [status]);
+
+  // Check if form should be read-only
+  const isReadOnly = isConfirmed || status === "CONFIRMED";
+
   const handleConfirm = () => {
     if (subgraphName.trim()) {
-      onConfirm?.(subgraphName.trim());
+      setIsConfirmed(true); // Immediate UI update
+      onConfirm?.();
     }
   };
 
   return (
     <div className="space-y-6 p-6 bg-white">
-      <h2 className="text-lg font-medium text-gray-900">Subgraph Configuration</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium text-gray-900">Subgraph Configuration</h2>
+        <StatusPill 
+          status={status === "CONFIRMED" ? 'confirmed' : 'draft'} 
+          label={status === "CONFIRMED" ? 'Confirmed' : 'Draft'} 
+        />
+      </div>
       
       {/* Subgraph Name Field */}
       <div>

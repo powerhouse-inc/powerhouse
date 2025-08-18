@@ -5,12 +5,14 @@ import {
   type SetProcessorTypeInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetProcessorStatusInput,
 } from "../types.js";
 import {
   type SetProcessorNameAction,
   type SetProcessorTypeAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetProcessorStatusAction,
 } from "./actions.js";
 
 export const setProcessorName = (input: SetProcessorNameInput) =>
@@ -46,5 +48,14 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     { ...input },
     undefined,
     z.RemoveDocumentTypeInputSchema,
+    "global",
+  );
+
+export const setProcessorStatus = (input: SetProcessorStatusInput) =>
+  createAction<SetProcessorStatusAction>(
+    "SET_PROCESSOR_STATUS",
+    { ...input },
+    undefined,
+    z.SetProcessorStatusInputSchema,
     "global",
   );

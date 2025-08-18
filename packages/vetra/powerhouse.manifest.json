@@ -22,6 +22,10 @@
         {
             "id": "powerhouse/processor",
             "name": "Processor Module"
+        },
+        {
+            "id": "powerhouse/app",
+            "name": "App Module"
         }
     ],
     "editors": [
@@ -44,6 +48,11 @@
             "id": "processor-module-editor",
             "name": "Processor Module Editor",
             "documentTypes": ["powerhouse/processor"]
+        },
+        {
+            "id": "app-module-editor",
+            "name": "App Module Editor",
+            "documentTypes": ["powerhouse/app"]
         }
     ],
     "apps": [

@@ -1193,13 +1193,13 @@ export class BaseDocumentDriveServer
           ? this.legacyStorage.getOperationResultingState?.(
               documentId,
               lastRemainingOperation.index,
-              lastRemainingOperation.scope,
+              lastRemainingOperation.action.scope,
               "main",
             )
           : this.legacyStorage.getDriveOperationResultingState?.(
               documentId,
               lastRemainingOperation.index,
-              lastRemainingOperation.scope,
+              lastRemainingOperation.action.scope,
               "main",
             ));
       }
@@ -1264,7 +1264,7 @@ export class BaseDocumentDriveServer
     const signalResults: SignalResult[] = [];
     let newDocument = document;
 
-    const scope = operation.scope;
+    const scope = operation.action.scope;
     const documentOperations = garbageCollectDocumentOperations({
       ...document.operations,
       [scope]: skipHeaderOperations(document.operations[scope], operation),
@@ -1278,13 +1278,13 @@ export class BaseDocumentDriveServer
         ? this.legacyStorage.getOperationResultingState?.(
             documentId,
             lastRemainingOperation.index,
-            lastRemainingOperation.scope,
+            lastRemainingOperation.action.scope,
             "main",
           )
         : this.legacyStorage.getDriveOperationResultingState?.(
             documentId,
             lastRemainingOperation.index,
-            lastRemainingOperation.scope,
+            lastRemainingOperation.action.scope,
             "main",
           ));
     }
@@ -1292,8 +1292,7 @@ export class BaseDocumentDriveServer
     const operationSignals: (() => Promise<SignalResult>)[] = [];
     newDocument = documentModelModule.reducer(
       newDocument,
-      // TODO: fix this once refactor is complete
-      operation as Action,
+      operation.action,
       (signal) => {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
@@ -1313,12 +1312,16 @@ export class BaseDocumentDriveServer
           );
         }
       },
-      { skip: operation.skip, reuseOperationResultingState: true },
+      {
+        skip: operation.skip,
+        reuseOperationResultingState: true,
+        replayOptions: { operation },
+      },
     );
 
-    const appliedOperations = newDocument.operations[operation.scope].filter(
-      (op) => op.index == operation.index && op.skip == operation.skip,
-    );
+    const appliedOperations = newDocument.operations[
+      operation.action.scope
+    ].filter((op) => op.index == operation.index && op.skip == operation.skip);
     const appliedOperation = appliedOperations.at(0);
 
     if (!appliedOperation) {
@@ -1519,11 +1522,11 @@ export class BaseDocumentDriveServer
       const newOperation = operations.find(
         (op) =>
           !op.id ||
-          !document.operations[op.scope].find(
+          !document.operations[op.action.scope].find(
             (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
-              existingOp.type === op.type &&
+              existingOp.action.type === op.action.type &&
               existingOp.hash === op.hash,
           ),
       );
@@ -1900,7 +1903,7 @@ export class BaseDocumentDriveServer
           const syncUnit: SynchronizationUnit = {
             documentId,
             documentType: document.header.documentType,
-            scope: operation.scope,
+            scope: operation.action.scope,
             branch: "main", // TODO: handle branches
             revision: operation.index + 1,
             lastUpdated: operation.timestamp,
@@ -2096,11 +2099,11 @@ export class BaseDocumentDriveServer
       const newOperation = operations.find(
         (op) =>
           !op.id ||
-          !drive.operations[op.scope].find(
+          !drive.operations[op.action.scope].find(
             (existingOp: Operation) =>
               existingOp.id === op.id &&
               existingOp.index === op.index &&
-              existingOp.type === op.type &&
+              existingOp.action.type === op.action.type &&
               existingOp.hash === op.hash,
           ),
       );
@@ -2227,7 +2230,7 @@ export class BaseDocumentDriveServer
 
       // update listener cache
       const lastOperation = operationsApplied
-        .filter((op) => op.scope === "global")
+        .filter((op) => op.action.scope === "global")
         .slice()
         .pop();
 

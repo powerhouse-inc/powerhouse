@@ -82,7 +82,7 @@ export function deduplicateOperations(
   const newOperations: Operation[] = [];
 
   for (const operation of operationsToDeduplicate) {
-    const scope = operation.scope;
+    const scope = operation.action.scope;
     const index = operation.index;
     if (operationIndicesByScope[scope].has(index)) {
       const duplicatedExistingOperation = existingOperations[scope].find(
@@ -138,7 +138,7 @@ export function deduplicateOperations(
     if (uniqueOperationIds.has(id)) {
       console.warn(
         "skipping new operation with duplicate id in scope",
-        operation.scope,
+        operation.action.scope,
         operation,
       );
       continue;
@@ -177,7 +177,7 @@ export async function uploadOperations(
       if (!operation) {
         break;
       }
-      const { scope } = operation;
+      const scope = operation.action.scope;
 
       /*
           TODO: check why the waitForUpdate promise does not resolve after the first iteration

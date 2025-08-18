@@ -15,8 +15,10 @@ export const documentModel: DocumentModelState = {
       changeLog: [],
       state: {
         global: {
-          schema: "type SubgraphModuleState {\n  name: String!\n}",
-          initialValue: '"{\\n  \\"name\\": \\"\\"\\n}"',
+          schema:
+            "type SubgraphModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+          initialValue:
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\"\\n}"',
           examples: [],
         },
         local: {
@@ -36,6 +38,18 @@ export const documentModel: DocumentModelState = {
               name: "SET_SUBGRAPH_NAME",
               description: "",
               schema: "input SetSubgraphNameInput {\n  name: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "5a20e641-dc36-428e-8924-ecb07f3f1b94",
+              name: "SET_SUBGRAPH_STATUS",
+              description: "",
+              schema:
+                "input SetSubgraphStatusInput {\n  status: StatusType!\n}",
               template: "",
               reducer: "",
               errors: [],

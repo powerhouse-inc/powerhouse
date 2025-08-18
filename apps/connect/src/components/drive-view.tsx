@@ -1,12 +1,12 @@
 import connectConfig from '#connect-config';
 import { Breadcrumbs, useBreadcrumbs } from '@powerhousedao/design-system';
 import {
-  addFolder,
-  setSelectedNode,
-  useDocumentModelModules,
-  useSelectedDrive,
-  useSelectedNodePath,
-  useUserPermissions,
+    addFolder,
+    setSelectedNode,
+    useDocumentModelModules,
+    useSelectedDrive,
+    useSelectedNodePath,
+    useUserPermissions,
 } from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';

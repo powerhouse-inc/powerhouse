@@ -1,3 +1,39 @@
+## 4.1.0-dev.22 (2025-08-15)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+- **document-drive:** the DocumentAlreadyExistsErrors now tell you if it was the slug or id that is not unique ([2f1600b2d](https://github.com/powerhouse-inc/powerhouse/commit/2f1600b2d))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🩹 Fixes
+
+- **document-drive:** fix remaining document-drive tests ([8265f133c](https://github.com/powerhouse-inc/powerhouse/commit/8265f133c))
+- **document-drive:** fix major issue where operation needed submitted to reducer options ([30453f708](https://github.com/powerhouse-inc/powerhouse/commit/30453f708))
+- **document-drive:** deleting loads of duplicate tests, fixing some document drive compatibility issues ([d7212e639](https://github.com/powerhouse-inc/powerhouse/commit/d7212e639))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.19 (2025-08-14)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 ### 🩹 Fixes

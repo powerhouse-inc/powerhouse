@@ -1,3 +1,37 @@
+## 4.1.0-dev.22 (2025-08-15)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.21 (2025-08-15)
+
+### 🚀 Features
+
+- **vetra:** update manifest when new module is added ([#1766](https://github.com/powerhouse-inc/powerhouse/pull/1766))
+
+### 🩹 Fixes
+
+- fixed debug launch configuration now that source maps are in the proper locations ([c75d793ed](https://github.com/powerhouse-inc/powerhouse/commit/c75d793ed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.20 (2025-08-15)
+
+### 🩹 Fixes
+
+- linter ([158db2a21](https://github.com/powerhouse-inc/powerhouse/commit/158db2a21))
+- fixing all the other projects so that they build with action / operation refactor ([c185b3552](https://github.com/powerhouse-inc/powerhouse/commit/c185b3552))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.19 (2025-08-14)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.18 (2025-08-14)
 
 ### 🩹 Fixes

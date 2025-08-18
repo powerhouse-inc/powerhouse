@@ -13,7 +13,7 @@ export class DocumentEditorDebugTools {
     private operationsToTableObject(operations: Operation[]) {
         return operations.map(op => ({
             ...op,
-            input: JSON.stringify(op.input),
+            input: JSON.stringify(op.action.input),
         }));
     }
 

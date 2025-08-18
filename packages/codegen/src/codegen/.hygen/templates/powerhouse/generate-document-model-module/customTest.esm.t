@@ -39,10 +39,10 @@ describe('<%= h.changeCase.pascal(module) %> Operations', () => {
         );
 
         expect(updatedDocument.operations.<%= action.scope %>).toHaveLength(1);
-        expect(updatedDocument.operations.<%= action.scope %>[0].type).toBe(
+        expect(updatedDocument.operations.<%= action.scope %>[0].action.type).toBe(
             '<%= h.changeCase.constant(action.name) %>',
         );
-        expect(updatedDocument.operations.<%= action.scope %>[0].input).toStrictEqual(input);
+        expect(updatedDocument.operations.<%= action.scope %>[0].action.input).toStrictEqual(input);
         expect(updatedDocument.operations.<%= action.scope %>[0].index).toEqual(0);
     });
 <% }); _%> 

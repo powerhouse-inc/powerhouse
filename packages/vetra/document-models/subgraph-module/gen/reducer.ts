@@ -29,6 +29,15 @@ const stateReducer: StateReducer<SubgraphModuleDocument> = (
       );
       break;
 
+    case "SET_SUBGRAPH_STATUS":
+      z.SetSubgraphStatusInputSchema().parse(action.input);
+      BaseOperationsReducer.setSubgraphStatusOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+      break;
+
     default:
       return state;
   }

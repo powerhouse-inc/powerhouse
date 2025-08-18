@@ -3,5 +3,8 @@ import type { SubgraphModuleBaseOperationsOperations } from "../../gen/base-oper
 export const reducer: SubgraphModuleBaseOperationsOperations = {
     setSubgraphNameOperation(state, action, dispatch) {
         state.name = action.input.name;
+    },
+    setSubgraphStatusOperation(state, action, dispatch) {
+        state.status = action.input.status;
     }
 };

@@ -23,13 +23,6 @@ export default function Editor(props: IProps) {
     dispatch(actions.setEditorName({ name }));
   }, [unsafeCastOfDocument.state.global.name, dispatch]);
 
-  const onEditorIdChange = useCallback((id: string) => {
-    if (!unsafeCastOfDocument.state.global.id && !id) return;
-    if (id === unsafeCastOfDocument.state.global.id) return;
-
-    dispatch(actions.setEditorId({ id }));
-  }, [unsafeCastOfDocument.state.global.id, dispatch]);
-
   const onAddDocumentType = useCallback((input: AddDocumentTypeInput) => {
     dispatch(actions.addDocumentType(input));
   }, [dispatch]);
@@ -38,16 +31,20 @@ export default function Editor(props: IProps) {
     dispatch(actions.removeDocumentType(input));
   }, [dispatch]);
 
+  const onConfirm = useCallback(() => {
+    dispatch(actions.setEditorStatus({ status: "CONFIRMED" }));
+  }, [dispatch]);
+
   return (
     <div>
       <DocumentEditorForm
+        status={unsafeCastOfDocument.state.global.status}
         editorName={unsafeCastOfDocument.state.global.name ?? ""}
-        editorId={unsafeCastOfDocument.state.global.id ?? ""}
         documentTypes={unsafeCastOfDocument.state.global.documentTypes}
         onEditorNameChange={onEditorNameChange}
-        onEditorIdChange={onEditorIdChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}
+        onConfirm={onConfirm}
       />
     </div>
   );

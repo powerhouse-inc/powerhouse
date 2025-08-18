@@ -1,7 +1,6 @@
 import type {
   Action,
   ActionErrorCallback,
-  Operation,
   PHDocument,
   Reducer,
 } from "document-model";
@@ -14,14 +13,10 @@ export function useDocumentReducer<TDocument extends PHDocument>(
 ): readonly [TDocument, (action: Action) => void] {
   const [state, setState] = useState(initialState);
 
-  const dispatch = (
-    action: Action | Operation,
-    onErrorCallback?: ActionErrorCallback,
-  ) => {
+  const dispatch = (action: Action, onErrorCallback?: ActionErrorCallback) => {
     setState((_state) => {
       try {
-        // todo: force for now, while we refactor
-        const newState = reducer(_state, action as Action);
+        const newState = reducer(_state, action);
 
         const operation = newState.operations[action.scope].slice(-1)[0];
 

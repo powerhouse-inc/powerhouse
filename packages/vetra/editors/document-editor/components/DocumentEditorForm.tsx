@@ -1,38 +1,70 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { AddDocumentTypeInput, DocumentTypeItem, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";
+import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
-import type { DocumentTypeItem, AddDocumentTypeInput, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";
 
 export interface DocumentEditorFormProps {
   editorName?: string;
-  editorId?: string;
   documentTypes?: DocumentTypeItem[];
+  status?: string;
   onEditorNameChange?: (name: string) => void;
-  onEditorIdChange?: (id: string) => void;
   onAddDocumentType?: (input: AddDocumentTypeInput) => void;
   onRemoveDocumentType?: (input: RemoveDocumentTypeInput) => void;
+  onConfirm?: () => void;
 }
 
 export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   editorName: initialEditorName = "",
-  editorId: initialEditorId = "",
   documentTypes: initialDocumentTypes = [],
+  status = "DRAFT",
   onEditorNameChange,
-  onEditorIdChange,
   onAddDocumentType,
-  onRemoveDocumentType
+  onRemoveDocumentType,
+  onConfirm
 }) => {
   const [editorName, setEditorName] = useState(initialEditorName);
-  const [editorId, setEditorId] = useState(initialEditorId);
   const [documentTypes, setDocumentTypes] = useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [documentTypeInput, setDocumentTypeInput] = useState("");
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
-  // Use the debounce hook with callbacks
+  // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);
-  useDebounce(editorId, onEditorIdChange, 300);
+
+  // Update local state when initial values change
+  useEffect(() => {
+    setEditorName(initialEditorName);
+  }, [initialEditorName]);
+
+  useEffect(() => {
+    setDocumentTypes(initialDocumentTypes);
+  }, [initialDocumentTypes]);
+
+  // Reset confirmation state if status changes back to DRAFT
+  useEffect(() => {
+    if (status === "DRAFT") {
+      setIsConfirmed(false);
+    }
+  }, [status]);
+
+  // Check if form should be read-only
+  const isReadOnly = isConfirmed || status === "CONFIRMED";
+
+  const handleConfirm = () => {
+    if (editorName.trim() && documentTypes.length > 0) {
+      setIsConfirmed(true); // Immediate UI update
+      onConfirm?.();
+    }
+  };
 
   return (
     <div className="space-y-6 p-6 bg-white">
-      <h2 className="text-lg font-medium text-gray-900">Atlas Exploratory</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium text-gray-900">Editor Configuration</h2>
+        <StatusPill 
+          status={status === "CONFIRMED" ? 'confirmed' : 'draft'} 
+          label={status === "CONFIRMED" ? 'Confirmed' : 'Draft'} 
+        />
+      </div>
       
       {/* Editor Name Field */}
       <div>
@@ -43,24 +75,11 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           type="text"
           value={editorName}
           onChange={(e) => setEditorName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={isReadOnly}
+          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''
+          }`}
         />
-      </div>
-
-      {/* Editor ID Field */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Editor ID
-        </label>
-        <input
-          type="text"
-          value={editorId}
-          onChange={(e) => setEditorId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <p className="mt-1 text-xs text-gray-500">
-          This ID will be used to reference the document throughout your code
-        </p>
       </div>
 
       {/* Supported Document Types Field */}
@@ -69,31 +88,33 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           Supported Document Types
         </label>
         <div className="space-y-2">
-          <input
-            type="text"
-            value={documentTypeInput}
-            onChange={(e) => setDocumentTypeInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && documentTypeInput.trim()) {
-                e.preventDefault();
-                const newTypeInput: AddDocumentTypeInput = {
-                  id: Date.now().toString(), // Generate a unique ID
-                  documentType: documentTypeInput.trim()
-                };
-                if (!documentTypes.some(dt => dt.documentType === newTypeInput.documentType)) {
-                  const newType: DocumentTypeItem = {
-                    id: newTypeInput.id,
-                    documentType: newTypeInput.documentType
+          {!isReadOnly && (
+            <input
+              type="text"
+              value={documentTypeInput}
+              onChange={(e) => setDocumentTypeInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && documentTypeInput.trim()) {
+                  e.preventDefault();
+                  const newTypeInput: AddDocumentTypeInput = {
+                    id: Date.now().toString(), // Generate a unique ID
+                    documentType: documentTypeInput.trim()
                   };
-                  setDocumentTypes([...documentTypes, newType]);
-                  onAddDocumentType?.(newTypeInput);
+                  if (!documentTypes.some(dt => dt.documentType === newTypeInput.documentType)) {
+                    const newType: DocumentTypeItem = {
+                      id: newTypeInput.id,
+                      documentType: newTypeInput.documentType
+                    };
+                    setDocumentTypes([...documentTypes, newType]);
+                    onAddDocumentType?.(newTypeInput);
+                  }
+                  setDocumentTypeInput('');
                 }
-                setDocumentTypeInput('');
-              }
-            }}
-            placeholder="Type a document type and press Enter"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+              }}
+              placeholder="Type a document type and press Enter"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          )}
           <div className="space-y-1">
             {documentTypes.map((type) => (
               <div 
@@ -101,20 +122,35 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                 className="flex items-center py-1"
               >
                 <span className="text-sm text-gray-700">{type.documentType}</span>
-                <button
-                  onClick={() => {
-                    setDocumentTypes(documentTypes.filter((dt) => dt.id !== type.id));
-                    onRemoveDocumentType?.({ id: type.id });
-                  }}
-                  className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                >
-                  ×
-                </button>
+                {!isReadOnly && (
+                  <button
+                    onClick={() => {
+                      setDocumentTypes(documentTypes.filter((dt) => dt.id !== type.id));
+                      onRemoveDocumentType?.({ id: type.id });
+                    }}
+                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Confirm Button - only show if not in read-only mode */}
+      {!isReadOnly && (
+        <div>
+          <button
+            onClick={handleConfirm}
+            disabled={!editorName.trim() || documentTypes.length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            Confirm
+          </button>
+        </div>
+      )}
     </div>
   );
 };

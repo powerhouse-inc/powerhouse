@@ -17,7 +17,7 @@ export function validateOperations(operations: DocumentOperations) {
           details: {
             position: i,
             operation: ops[i],
-            scope: ops[i].scope,
+            scope: ops[i].action.scope,
           },
         });
       }

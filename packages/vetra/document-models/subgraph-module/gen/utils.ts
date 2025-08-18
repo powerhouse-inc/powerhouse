@@ -17,6 +17,7 @@ import { reducer } from "./reducer.js";
 
 export const initialGlobalState: SubgraphModuleState = {
   name: "",
+  status: "DRAFT",
 };
 export const initialLocalState: SubgraphModuleLocalState = {};
 

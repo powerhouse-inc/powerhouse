@@ -1,8 +1,10 @@
 import { type Operation } from "../../src/document/types.js";
+import { fakeAction } from "../helpers.js";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;
   skip: number;
+  type?: string;
 };
 
 export const buildOperation = (
@@ -11,10 +13,12 @@ export const buildOperation = (
 ): Operation => {
   if (shuffled) {
     return {
-      scope: "global",
-      type: "TEST",
+      action: fakeAction({
+        type: input.type ?? "TEST",
+        input: {},
+        scope: "global",
+      }),
       timestamp: new Date().toISOString(),
-      input: {},
       hash: `hash-${input.index}`,
       ...input,
     } as Operation;
@@ -23,9 +27,11 @@ export const buildOperation = (
   return {
     hash: `hash-${input.index}`,
     timestamp: new Date().toISOString(),
-    input: {},
-    scope: "global",
-    type: "TEST",
+    action: fakeAction({
+      type: input.type ?? "TEST",
+      input: {},
+      scope: "global",
+    }),
     ...input,
   } as Operation;
 };

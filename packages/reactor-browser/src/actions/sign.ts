@@ -33,7 +33,8 @@ export async function signAction(action: Action, document: PHDocument) {
     connectCrypto.sign,
   );
 
-  return unsafeSignedAction as Action;
+  // TODO: this is super dangerous and is caused by the `buildSignedAction` function returning an `Operation` instead of an `Action`
+  return unsafeSignedAction as unknown as Action;
 }
 
 export function addActionContext(action: Action) {

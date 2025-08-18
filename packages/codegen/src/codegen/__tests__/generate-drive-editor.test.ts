@@ -44,23 +44,16 @@ describe("generateDriveEditor", () => {
 
   it("should generate a drive editor with the correct files and content", async () => {
     const name = "AtlasDriveExplorer";
-    await generateDriveEditor(name, config);
+    await generateDriveEditor(name, config, "AtlasDriveExplorer");
 
     const editorDir = path.join(testDir, "atlas-drive-explorer");
     expect(fs.existsSync(editorDir)).toBe(true);
 
     expect(fs.existsSync(path.join(editorDir, "components"))).toBe(true);
-    expect(fs.existsSync(path.join(editorDir, "hooks"))).toBe(true);
     expect(fs.existsSync(path.join(editorDir, "types"))).toBe(true);
 
     expect(
       fs.existsSync(path.join(editorDir, "components/DriveExplorer.tsx")),
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(editorDir, "components/FileItemsGrid.tsx")),
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(editorDir, "components/FolderItemsGrid.tsx")),
     ).toBe(true);
     expect(
       fs.existsSync(path.join(editorDir, "components/FolderTree.tsx")),
@@ -70,13 +63,6 @@ describe("generateDriveEditor", () => {
     ).toBe(true);
     expect(
       fs.existsSync(path.join(editorDir, "components/CreateDocument.tsx")),
-    ).toBe(true);
-
-    expect(
-      fs.existsSync(path.join(editorDir, "hooks/useSelectedFolderChildren.ts")),
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(editorDir, "hooks/useTransformedNodes.ts")),
     ).toBe(true);
 
     expect(fs.existsSync(path.join(editorDir, "types/css.d.ts"))).toBe(true);
@@ -94,6 +80,17 @@ describe("generateDriveEditor", () => {
       .readFileSync(mainIndexPath, "utf-8")
       .replace(/\s+$/, "");
     expect(mainIndexContent).toBe(EXPECTED_MAIN_INDEX_CONTENT);
+  });
+
+  it("should generate a drive editor with default id when no appId is provided", async () => {
+    const name = "TestApp";
+    await generateDriveEditor(name, config); // No appId provided
+
+    const editorDir = path.join(testDir, "test-app");
+    const indexPath = path.join(editorDir, "index.ts");
+    const indexContent = fs.readFileSync(indexPath, "utf-8");
+    
+    expect(indexContent).toContain('id: "drive-editor-id"');
   });
 
   it("should append new exports to existing index.ts file", async () => {

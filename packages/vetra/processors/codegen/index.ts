@@ -8,6 +8,7 @@ import {
   PackageHandler,
   ProcessorHandler,
   SubgraphHandler,
+  AppHandler,
   type DocumentHandler,
 } from "./document-handlers/index.js";
 import { logger } from "./logger.js";
@@ -27,6 +28,7 @@ export class CodegenProcessor implements IProcessor {
     this.handlers.set("powerhouse/document-editor", new DocumentEditorHandler(config));
     this.handlers.set("powerhouse/subgraph", new SubgraphHandler(config));
     this.handlers.set("powerhouse/processor", new ProcessorHandler(config));
+    this.handlers.set("powerhouse/app", new AppHandler(config));
   }
 
   async onStrands<TDocument extends DocumentModelDocument>(

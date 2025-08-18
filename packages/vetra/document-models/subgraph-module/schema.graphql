@@ -17,6 +17,12 @@ scalar Amount
 scalar Upload
 type SubgraphModuleState {
   name: String!
+  status: StatusType!
+}
+
+enum StatusType {
+  DRAFT
+  CONFIRMED
 }
 
 
@@ -25,4 +31,8 @@ type SubgraphModuleState {
 
 input SetSubgraphNameInput {
   name: String!
+}
+
+input SetSubgraphStatusInput {
+  status: StatusType!
 }

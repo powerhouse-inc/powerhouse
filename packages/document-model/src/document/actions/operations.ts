@@ -47,7 +47,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
 
-    const isNewNoop = lastOperation?.type !== "NOOP";
+    const isNewNoop = lastOperation?.action.type !== "NOOP";
 
     if (isNewNoop) {
       nextIndex = nextIndex + 1;
@@ -114,7 +114,7 @@ export function redoOperation<TDocument extends PHDocument>(
     }
 
     const operationIndex = draft.document.clipboard.findLastIndex(
-      (op) => op.scope === scope,
+      (op) => op.action.scope === scope,
     );
     if (operationIndex < 0) {
       throw new Error(
@@ -125,9 +125,9 @@ export function redoOperation<TDocument extends PHDocument>(
     const operation = draft.document.clipboard.splice(operationIndex, 1)[0];
 
     draft.action = castDraft({
-      type: operation.type,
-      scope: operation.scope,
-      input: operation.input,
+      type: operation.action.type,
+      scope: operation.action.scope,
+      input: operation.action.input,
     } as Action);
   });
 }
