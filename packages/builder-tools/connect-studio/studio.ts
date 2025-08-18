@@ -70,6 +70,10 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.logLevel = options.logLevel;
   }
 
+  if (options.enableDocumentModelsHMR) {
+    serverOptions.enableDocumentModelsHMR = options.enableDocumentModelsHMR;
+  }
+
   return startServer(serverOptions).catch((error) => {
     throw error;
   });
