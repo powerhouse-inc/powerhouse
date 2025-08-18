@@ -285,9 +285,6 @@ export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
 export type ExtendedState<TDocumentState, TLocalState> = {
   /** The document model specific state. */
   state: BaseState<TDocumentState, TLocalState>;
-
-  /** The index of document attachments. */
-  attachments?: FileRegistry;
 };
 
 export type DocumentOperations = Record<string, Operation[]>;
@@ -332,10 +329,15 @@ export type BaseDocument<TDocumentState, TLocalState> = {
 } & ExtendedState<TDocumentState, TLocalState> & {
     /** The operations history of the document. */
     operations: DocumentOperations;
+
     /** The initial state of the document, enabling replaying operations. */
     initialState: ExtendedState<TDocumentState, TLocalState>;
+
     /** A list of undone operations */
     clipboard: Operation[];
+
+    /** The index of document attachments. */
+    attachments?: FileRegistry;
   };
 
 export type PHDocument<
