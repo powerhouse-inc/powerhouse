@@ -50,6 +50,16 @@ export type ActionSigner = {
 };
 
 export type ActionContext = {
+  /** The index of the previous operation, showing intended ordering. */
+  prevOpIndex?: number;
+
+  /** The hash of the previous operation, showing intended state. */
+  prevOpHash?: string;
+
+  /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
+  nonce?: string;
+
+  /** The signer of the action. */
   signer?: ActionSigner;
 };
 
@@ -59,16 +69,22 @@ export type ActionContext = {
 export type Action = {
   /** The id of the action. This is distinct from the operation id. */
   id: string;
-  /** The timestamp of the action. */
-  timestamp: string;
+
   /** The name of the action. */
   type: string;
+
+  /** The timestamp of the action. */
+  timestampUtcMs: string;
+
   /** The payload of the action. */
   input: unknown;
+
   /** The scope of the action */
   scope: string;
+
   /** The attachments included in the action. */
   attachments?: AttachmentInput[] | undefined;
+
   /** The context of the action. */
   context?: ActionContext;
 };
@@ -80,21 +96,27 @@ export type ActionWithAttachment = Action & {
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied. This overrides the skip count in the operation. */
   skip?: number;
+
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
+
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
+
   /** if true checks the hashes of the operations */
   checkHashes?: boolean;
+
   /** Options for performing a replay. */
   replayOptions?: {
     /** The previously created operation to verify against. */
     operation: Operation;
   };
+
   /** Optional parser for the operation resulting state, uses JSON.parse by default */
   operationResultingStateParser?: <TState>(
     state: string | null | undefined,
   ) => TState;
+
   /**
    * When true (default), the reducer will prune operations (garbage collect) when processing a skip.
    * When false, it will recompute state for the skip but preserve the existing operations history.
@@ -138,16 +160,22 @@ export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
 export type Operation = {
   /** Position of the operation in the history */
   index: number;
+
   /** Timestamp of when the operation was added */
-  timestamp: string;
+  timestampUtcMs: string;
+
   /** Hash of the resulting document data after the operation */
   hash: string;
+
   /** The number of operations skipped with this Operation */
   skip: number;
+
   /** Error message for a failed action */
   error?: string;
+
   /** The resulting state after the operation */
   resultingState?: string;
+
   /** Unique operation id. This is distinct from the action id and can be undefined and assigned later. */
   id?: string;
 

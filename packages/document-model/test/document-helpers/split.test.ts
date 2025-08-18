@@ -107,7 +107,7 @@ describe("split", () => {
             type: op.action.type,
             index: op.index,
             skip: op.skip,
-            timestamp: op.timestamp,
+            timestampUtcMs: op.timestampUtcMs,
           },
           true,
         ),

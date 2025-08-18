@@ -80,6 +80,8 @@ export type PHDocumentHeader = {
   meta?: PHDocumentMeta;
 };
 
+export type PHDocumentState = {};
+
 export type PHBaseState<TDocumentState = JsonSerializable> = {
   // todo: will not be optional in the future
   document?: TDocumentState;

@@ -63,7 +63,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.local).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -90,7 +90,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.local).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -120,7 +120,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
       ],
@@ -232,7 +232,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
 
@@ -243,7 +243,7 @@ describe("Local reducer", () => {
           index: 1,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
       ],
@@ -274,7 +274,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "global",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
         },
       ],
       local: [],

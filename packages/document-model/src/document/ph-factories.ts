@@ -16,7 +16,7 @@ import { generateId } from "./utils/crypto.js";
 export const actionFromAction = (action: Action): Action => {
   return {
     id: action.id,
-    timestamp: action.timestamp,
+    timestampUtcMs: action.timestampUtcMs,
     type: action.type,
     input: action.input,
     scope: action.scope,
@@ -34,7 +34,7 @@ export const operationFromAction = (
     ...action,
     action,
     id: generateId(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: "",
     error: undefined,
 

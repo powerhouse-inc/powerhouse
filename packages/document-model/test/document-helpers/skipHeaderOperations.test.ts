@@ -12,11 +12,11 @@ const fakeOperation = (
   return {
     index,
     skip,
-    timestamp,
+    timestampUtcMs: timestamp,
     hash: "123",
     action: {
       id: "123",
-      timestamp,
+      timestampUtcMs: timestamp,
       type,
       input: {},
       scope: "global",

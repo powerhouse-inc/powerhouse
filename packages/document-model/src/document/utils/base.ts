@@ -104,7 +104,7 @@ export function createAction<TAction extends Action>(
 
   const action: Action = {
     id: generateId(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     type,
     input,
     scope,
@@ -277,8 +277,8 @@ export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
     .flatMap((array) => array)
     .sort(
       (a, b) =>
-        new Date(a.operation.timestamp).getTime() -
-        new Date(b.operation.timestamp).getTime(),
+        new Date(a.operation.timestampUtcMs).getTime() -
+        new Date(b.operation.timestampUtcMs).getTime(),
     );
 }
 
@@ -290,7 +290,7 @@ export function getDocumentLastModified(document: PHDocument) {
   );
 
   return (
-    sortedOperations.at(-1)!.timestamp || document.header.lastModifiedAtUtcIso
+    sortedOperations.at(-1)!.timestampUtcMs || document.header.lastModifiedAtUtcIso
   );
 }
 
@@ -470,7 +470,7 @@ export function replayDocument<TDocument extends PHDocument>(
             return {
               ...operation,
               timestamp:
-                operations[scope][index]?.timestamp ?? operation.timestamp,
+                operations[scope][index]?.timestampUtcMs ?? operation.timestampUtcMs,
             };
           }),
         ],
@@ -485,8 +485,8 @@ export function replayDocument<TDocument extends PHDocument>(
     : Object.values(resultOperations).reduce((acc, curr) => {
         const operation = curr.at(-1);
         if (operation) {
-          if (operation.timestamp > acc) {
-            return operation.timestamp;
+          if (operation.timestampUtcMs > acc) {
+            return operation.timestampUtcMs;
           }
         }
 

@@ -92,14 +92,14 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a1,
         },
         {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a2,
         },
       ],
@@ -108,7 +108,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a3,
         },
       ],
@@ -127,7 +127,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -138,7 +138,7 @@ describe("Base utils", () => {
           hash: "",
           index: 1,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -149,7 +149,7 @@ describe("Base utils", () => {
           hash: "",
           index: 3,
           skip: 1,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -162,7 +162,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -192,8 +192,8 @@ describe("Base utils", () => {
     expect(newDocument.header.lastModifiedAtUtcIso).toBe(
       replayedDocument.header.lastModifiedAtUtcIso,
     );
-    expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
-      replayedDocument.operations.global.map((o) => o.timestamp),
+    expect(newDocument.operations.global.map((o) => o.timestampUtcMs)).toStrictEqual(
+      replayedDocument.operations.global.map((o) => o.timestampUtcMs),
     );
   });
 

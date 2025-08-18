@@ -37,7 +37,7 @@ describe("DocumentModel", () => {
     expect(fs.existsSync(`${tempDir}/test.phdm.zip`)).toBe(true);
 
     // keeps operation timestamp to check when loading
-    timestamp = documentModel.operations.global[0].timestamp;
+    timestamp = documentModel.operations.global[0].timestampUtcMs;
   });
 
   it("should load from zip", async () => {

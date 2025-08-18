@@ -14,7 +14,7 @@ const fakeOperation = (
     index,
     skip,
     hash,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     action: fakeAction({
       scope,
       type: "TEST",

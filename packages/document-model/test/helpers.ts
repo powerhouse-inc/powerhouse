@@ -13,7 +13,7 @@ export const fakeAction = (
 ): Action =>
   ({
     id: randomUUID(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     ...params,
   }) as Action;
 
@@ -123,7 +123,7 @@ export const fakeOperation = (index = 0, skip = 0, scope = "global") =>
   ({
     skip,
     index,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: `${index}`,
     action: fakeAction({
       type: "FAKE_OP",

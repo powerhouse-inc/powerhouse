@@ -393,7 +393,7 @@ describe("UNDO/REDO", () => {
       const op = {
         // using a fixed id, even though Action ids and Operation ids are different
         id: "noop-1",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         input: {},
         type: "NOOP",
         skip: 1,
@@ -419,7 +419,7 @@ describe("UNDO/REDO", () => {
     it("should replace previous noop operation and update skip number when a new noop is dispatched after another one", () => {
       const baseAction: Action = {
         id: "noop-2",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         input: {},
         type: "NOOP",
         scope: "global",
@@ -430,7 +430,7 @@ describe("UNDO/REDO", () => {
         skip: 0,
         index: 5,
         hash: "Ki38EB6gkUcnU3ceRsc88njPo3U=",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         action: baseAction,
       };
 
@@ -485,7 +485,7 @@ describe("UNDO/REDO", () => {
         index: 5,
         scope: "global",
         hash: "Ki38EB6gkUcnU3ceRsc88njPo3U=",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
       };
 
       document = countReducer(document, op as CountAction, undefined, {

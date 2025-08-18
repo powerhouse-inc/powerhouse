@@ -74,7 +74,7 @@ describe("Base reducer", () => {
     expect(newDocument.operations.global).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -98,7 +98,7 @@ describe("Base reducer", () => {
     const setNameAction = setName("Document");
     expect(setNameAction).toStrictEqual({
       id: setNameAction.id,
-      timestamp: setNameAction.timestamp,
+      timestampUtcMs: setNameAction.timestampUtcMs,
       type: SET_NAME,
       input: "Document",
       scope: "global",
@@ -196,7 +196,7 @@ describe("Base reducer", () => {
           operation: {
             action,
             hash: "",
-            timestamp: action.timestamp,
+            timestampUtcMs: action.timestampUtcMs,
             index: 3,
             skip: 0,
           },
@@ -241,7 +241,7 @@ describe("Base reducer", () => {
           operation: {
             action,
             hash: "",
-            timestamp: action.timestamp,
+            timestampUtcMs: action.timestampUtcMs,
             index: 4,
             skip: 1,
           },
@@ -285,7 +285,7 @@ describe("Base reducer", () => {
           action,
           skip: 1,
           index: 3,
-          timestamp: action.timestamp,
+          timestampUtcMs: action.timestampUtcMs,
           hash: "",
         },
       },
