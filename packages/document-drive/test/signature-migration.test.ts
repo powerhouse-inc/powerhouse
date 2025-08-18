@@ -113,8 +113,8 @@ describe.each(storageLayers)(
 
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument({
-        state: createBaseState(
+      const drive = createDocument(
+        createBaseState(
           {
             icon: null,
             name: "name",
@@ -125,8 +125,8 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        ),
-      });
+        )
+      );
       drive.header.id = driveId;
       drive.header.slug = driveId;
       drive.header.name = "name";
@@ -163,8 +163,8 @@ describe.each(storageLayers)(
       expect,
     }) => {
       const storage = await buildStorage();
-      const drive = createDocument({
-        state: createBaseState(
+      const drive = createDocument(
+        createBaseState(
           {
             icon: null,
             name: "name",
@@ -175,8 +175,8 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        ),
-      });
+        )
+      );
       drive.header.id = driveId;
       drive.header.name = "name";
 
@@ -239,8 +239,8 @@ describe.each(storageLayers)(
 
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument({
-        state: createBaseState(
+      const drive = createDocument(
+        createBaseState(
           {
             icon: null,
             name: "name",
@@ -251,8 +251,8 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        ),
-      });
+        )
+      );
       drive.header.id = driveId;
       drive.header.slug = driveId;
       drive.header.name = "name";

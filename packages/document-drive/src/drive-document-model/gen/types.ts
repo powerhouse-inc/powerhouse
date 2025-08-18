@@ -1,4 +1,4 @@
-import type { Action, ExtendedState, PHDocument } from "document-model";
+import type { Action, BaseState, PHDocument } from "document-model";
 import type { DocumentDriveAction } from "./actions.js";
 import type {
   AddFileInput,
@@ -15,7 +15,7 @@ export type {
   DocumentDriveLocalState,
   DocumentDriveState,
 };
-export type ExtendedDocumentDriveState = ExtendedState<
+export type ExtendedDocumentDriveState = BaseState<
   DocumentDriveState,
   DocumentDriveLocalState
 >;

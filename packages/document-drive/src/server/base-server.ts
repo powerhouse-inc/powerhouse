@@ -158,9 +158,9 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelModule.utils.createDocument({
-        ...initialState,
-      });
+      const document = documentModelModule.utils.createDocument(
+        initialState?.state
+      );
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
@@ -626,14 +626,12 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
-      state: {
-        ...baseState(),
-        global: {
-          icon: input.global.icon ?? null,
-          name: input.global.name,
-        },
-        local: input.local ?? {},
+      ...baseState(),
+      global: {
+        icon: input.global.icon ?? null,
+        name: input.global.name,
       },
+      local: input.local ?? {},
     });
 
     if (input.id && input.id.length > 0) {
@@ -933,9 +931,9 @@ export class BaseDocumentDriveServer
     // if no document was provided then create a new one
     const document =
       inputDocument ??
-      this.getDocumentModelModule(documentType).utils.createDocument({
-        state,
-      });
+      this.getDocumentModelModule(documentType).utils.createDocument(
+        state
+      );
 
     // get the header
     let header: PHDocumentHeader;
@@ -2507,7 +2505,7 @@ export class BaseDocumentDriveServer
     // create document before adding it to the drive
     const document = this.getDocumentModelModule(
       action.input.documentType,
-    ).utils.createDocument({ ...action.input.document });
+    ).utils.createDocument(action.input.document?.state || undefined);
     document.header.id = action.input.id;
     document.header.name = action.input.name;
     document.header.documentType = action.input.documentType;

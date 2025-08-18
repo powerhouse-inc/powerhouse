@@ -51,7 +51,7 @@ export function responseForDocument(
           ? op.action.input
           : JSON.stringify(op.action.input),
     })),
-    initialState: document.initialState.state.global,
+    initialState: document.initialState.global,
     __typename: typeName,
   };
 }

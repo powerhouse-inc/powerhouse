@@ -161,13 +161,11 @@ describe("Node Operations", () => {
   it("should handle deleteNode operation", () => {
     const input = generateMock(DeleteNodeInputSchema());
     const document = createDocument({
-      state: {
-        global: {
-          // @ts-expect-error mock
-          nodes: [input],
-        },
-        local: {},
+      global: {
+        // @ts-expect-error mock
+        nodes: [input],
       },
+      local: {},
     });
     const updatedDocument = reducer(document, creators.deleteNode(input));
 
@@ -246,8 +244,7 @@ describe("Node Operations", () => {
   it("should handle copyNode operation", () => {
     const input = generateMock(CopyNodeInputSchema());
     const document = createDocument({
-      state: {
-        global: {
+      global: {
           nodes: [
             // @ts-expect-error mock
             {
@@ -261,8 +258,7 @@ describe("Node Operations", () => {
             },
           ],
         },
-        local: {},
-      },
+      local: {},
     });
     const updatedDocument = reducer(document, creators.copyNode(input));
 
@@ -276,8 +272,7 @@ describe("Node Operations", () => {
   it("should handle duplicated id when copy a node", () => {
     const input = generateMock(CopyNodeInputSchema());
     const document = createDocument({
-      state: {
-        global: {
+      global: {
           nodes: [
             // @ts-expect-error mock
             {
@@ -291,8 +286,7 @@ describe("Node Operations", () => {
             },
           ],
         },
-        local: {},
-      },
+      local: {},
     });
 
     const updatedDocument = reducer(
@@ -369,8 +363,7 @@ describe("Node Operations", () => {
   it("should handle moveNode operation", () => {
     const input = generateMock(MoveNodeInputSchema());
     const document = createDocument({
-      state: {
-        global: {
+      global: {
           nodes: [
             // @ts-expect-error mock
             {
@@ -384,8 +377,7 @@ describe("Node Operations", () => {
             },
           ],
         },
-        local: {},
-      },
+      local: {},
     });
     const updatedDocument = reducer(document, creators.moveNode(input));
 

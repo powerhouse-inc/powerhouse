@@ -289,8 +289,8 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 describe("LRU Cache Specific Tests", () => {
   // Helper functions for test data
   function createTestDocument() {
-    return createDocumentModelDocument({
-      state: createBaseState(
+    return createDocumentModelDocument(
+      createBaseState(
         {
           id: `doc`,
           name: `Document`,
@@ -301,7 +301,7 @@ describe("LRU Cache Specific Tests", () => {
         },
         {},
       ),
-    });
+    );
   }
 
   function createTestDrive() {

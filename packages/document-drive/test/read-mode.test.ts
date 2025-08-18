@@ -69,11 +69,11 @@ function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
-  const doc = createDocument({
-    state: createState({
+  const doc = createDocument(
+    createState({
       global: state,
-    }),
-  });
+    })
+  );
   doc.header.id = id;
   doc.header.slug = slug;
 
@@ -83,11 +83,11 @@ function buildDriveDocument(
 function buildModelDocument(
   state: Partial<DocumentModelState>,
 ): DocumentModelDocument {
-  return createDocumentModelDocument({
-    state: createDocumentModelState({
+  return createDocumentModelDocument(
+    createDocumentModelState({
       global: state,
-    }),
-  });
+    })
+  );
 }
 
 function buildDocumentResponse(drive: PHDocument) {
@@ -348,16 +348,16 @@ describe.skip("Read mode methods", () => {
     const readDriveId = generateId();
     const documentId = generateId();
 
-    let drive = createDocument({
-      state: createBaseState(
+    let drive = createDocument(
+      createBaseState(
         {
           name: "Read drive",
           nodes: [],
           icon: null,
         },
         {},
-      ),
-    });
+      )
+    );
 
     drive.header.id = readDriveId;
     drive.header.slug = "read-drive";

@@ -103,11 +103,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const document = createDocument();
     const id = document.header.id;
-    document.initialState.state.global.id = "FOOOP";
+    document.initialState.global.id = "FOOOP";
     await storage.create(document);
 
     const result = await storage.get<DocumentModelDocument>(id);
-    expect(result.initialState.state.global.id).toBe("FOOOP");
+    expect(result.initialState.global.id).toBe("FOOOP");
   });
 
   it("should throw a DocumentAlreadyExistsError when creating a document if the document already exists", async ({
