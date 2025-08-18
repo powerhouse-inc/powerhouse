@@ -34,6 +34,7 @@ export function addLoginStatusEventHandler() {
 }
 
 export function dispatchSetUserEvent(user: User | undefined) {
+  console.log("dispatchSetUserEvent", user);
   const event = new CustomEvent("ph:setUser", {
     detail: { user },
   });

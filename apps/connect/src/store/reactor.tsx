@@ -20,6 +20,7 @@ import {
     extractNodeSlugFromPath,
     getDocuments,
     getDrives,
+    login,
     refreshReactorData,
 } from '@powerhousedao/reactor-browser';
 import {
@@ -116,18 +117,15 @@ export async function createReactor() {
 
     // initialize connect crypto
     const connectCrypto = await initConnectCrypto();
+    console.log('connectCrypto', connectCrypto);
 
     // initialize did
     const did = await connectCrypto.did();
+    console.log('did', did);
 
     // initialize renown
     const renown = initRenown(did, connectConfig.routerBasename);
-
-    // initialize user
-    const user = renown.user;
-
-    // initialize login status
-    const loginStatus = user ? 'authorized' : 'initial';
+    console.log('renown', renown);
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);
@@ -162,13 +160,14 @@ export async function createReactor() {
     const driveSlug = extractDriveSlugFromPath(path);
     const nodeSlug = extractNodeSlugFromPath(path);
 
+    // initialize user
+    const didFromUrl = getDidFromUrl();
+    await login(didFromUrl, reactor, renown, connectCrypto);
     // dispatch the events to set the values in the window object
     dispatchSetReactorEvent(reactor);
     dispatchSetConnectCryptoEvent(connectCrypto);
     dispatchSetDidEvent(did);
     dispatchSetRenownEvent(renown);
-    dispatchSetLoginStatusEvent(loginStatus);
-    dispatchSetUserEvent(user);
     dispatchSetAppConfigEvent(appConfig);
     dispatchSetProcessorManagerEvent(processorManager);
     dispatchSetDrivesEvent(drives);
@@ -243,4 +242,11 @@ function getAllowList() {
         return undefined;
     }
     return [...arbitrumAllowList, ...rwaAllowList];
+}
+
+function getDidFromUrl() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const didComponent = searchParams.get('user');
+    const did = didComponent ? decodeURIComponent(didComponent) : undefined;
+    return did;
 }

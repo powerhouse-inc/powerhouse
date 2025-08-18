@@ -1,5 +1,11 @@
+import { type IRenown } from "@renown/sdk";
 import { logger } from "document-drive";
-import { dispatchSetLoginStatusEvent } from "../events/user.js";
+import { type IConnectCrypto } from "../crypto/index.js";
+import {
+  dispatchSetLoginStatusEvent,
+  dispatchSetUserEvent,
+} from "../events/user.js";
+import { type Reactor } from "../types/reactor.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
@@ -13,12 +19,13 @@ export function openRenown() {
   window.open(url, "_self")?.focus();
 }
 
-export async function login(userDid: string) {
-  const renown = window.renown;
-  const connectCrypto = window.connectCrypto;
-  const reactor = window.reactor;
-
-  if (!renown || !connectCrypto) {
+export async function login(
+  userDid: string | undefined,
+  reactor: Reactor | undefined,
+  renown: IRenown | undefined,
+  connectCrypto: IConnectCrypto | undefined,
+) {
+  if (!renown || !connectCrypto || !reactor) {
     return;
   }
   try {
@@ -30,16 +37,13 @@ export async function login(userDid: string) {
       dispatchSetLoginStatusEvent("authorized");
       return user;
     }
-    const newUser = await renown.login(userDid);
+    const newUser = await renown.login(userDid ?? "");
     if (newUser) {
       dispatchSetLoginStatusEvent("authorized");
-
-      reactor?.setGenerateJwtHandler(
-        async (driveUrl) =>
-          connectCrypto.getBearerToken?.(driveUrl, newUser.address) ?? "",
+      dispatchSetUserEvent(newUser);
+      reactor.setGenerateJwtHandler(async (driveUrl) =>
+        connectCrypto.getBearerToken(driveUrl, newUser.address),
       );
-
-      return newUser;
     } else {
       dispatchSetLoginStatusEvent("not-authorized");
     }

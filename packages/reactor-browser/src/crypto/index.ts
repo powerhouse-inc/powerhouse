@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-private-class-members */
+
 import { createAuthBearerToken } from "@renown/sdk";
 import { bytesToBase64url } from "did-jwt";
 import type { Issuer } from "did-jwt-vc";
@@ -7,16 +8,12 @@ import {
   encodeDIDfromHexString,
   rawKeyInHexfromUncompressed,
 } from "did-key-creator";
-import { childLogger } from "document-drive";
 import { fromString } from "uint8arrays";
+
+import { childLogger } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID } from "../renown/constants.js";
 
-const logger = childLogger(["reactor-browser", "crypto"]);
-function ab2hex(ab: ArrayBuffer) {
-  return Array.prototype.map
-    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
-    .join("");
-}
+const logger = childLogger(["connect", "crypto"]);
 export type JwkKeyPair = {
   publicKey: JsonWebKey;
   privateKey: JsonWebKey;
@@ -27,19 +24,22 @@ export interface JsonWebKeyPairStorage {
   saveKeyPair(keyPair: JwkKeyPair): Promise<void>;
 }
 
+function ab2hex(ab: ArrayBuffer) {
+  return Array.prototype.map
+    .call(new Uint8Array(ab), (x: number) => ("00" + x.toString(16)).slice(-2))
+    .join("");
+}
+
 export interface IConnectCrypto {
   did: () => Promise<DID>;
   regenerateDid(): Promise<void>;
-
   sign: (data: Uint8Array) => Promise<Uint8Array>;
-  publicKey?: () => Promise<JsonWebKey>;
-  getIssuer?: () => Promise<Issuer>;
-  getBearerToken?: (
+  getIssuer: () => Promise<Issuer>;
+  getBearerToken: (
     driveUrl: string,
     address: string | undefined,
     refresh?: boolean,
   ) => Promise<string>;
-  verify?: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 }
 
 export type DID = `did:key:${string}`;
@@ -245,3 +245,5 @@ export class ConnectCrypto implements IConnectCrypto {
     };
   }
 }
+export * from "./browser.js";
+// export * from './electron.js';

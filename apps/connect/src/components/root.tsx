@@ -1,27 +1,13 @@
 import { ModalManager } from '#components';
 // import { isElectron, isMac } from '#hooks';
-import { login } from '@powerhousedao/reactor-browser';
-import { logger } from 'document-drive';
-import { Suspense, useEffect } from 'react';
-import { Outlet, useSearchParams } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
     // useEffect(() => {
     //     window.electronAPI?.ready();
     // }, []);
-
-    const [searchParams, setSearchParams] = useSearchParams();
-
-    useEffect(() => {
-        const userStr = searchParams.get('user');
-        if (userStr && login) {
-            const userDid = decodeURIComponent(userStr);
-            searchParams.delete('user');
-            setSearchParams(searchParams);
-            login(userDid).catch(logger.error);
-        }
-    }, [login, searchParams, setSearchParams]);
 
     // useEffect(() => {
     //     const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
