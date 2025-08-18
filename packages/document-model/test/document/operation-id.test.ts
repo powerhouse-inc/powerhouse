@@ -19,9 +19,9 @@ describe("Document Operation ID", () => {
   let initialState: ExtendedStateFromDocument<CountDocument>;
 
   beforeEach(() => {
-    initialState = baseCreateExtendedState<CountDocument>({
-      state: createBaseState({ count: 0 }, { name: "" }),
-    });
+    initialState = baseCreateExtendedState<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" })
+    );
 
     document = baseCreateDocument(initialState);
   });

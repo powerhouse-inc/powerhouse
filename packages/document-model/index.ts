@@ -63,7 +63,6 @@ export type {
   EditorDispatch,
   EditorModule,
   EditorProps,
-  ExtendedState,
   ExtendedStateFromDocument,
   FileRegistry,
   GlobalStateFromDocument,

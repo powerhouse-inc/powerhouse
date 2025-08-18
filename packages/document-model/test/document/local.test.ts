@@ -104,9 +104,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.global).toStrictEqual([]);
   });
   it("should update local name", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: createCountState(),
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     const newDocument = countReducer(document, setLocalName("test"));
     expect(newDocument.header.revision.local).toStrictEqual(1);
     expect(document.header.revision.local).toBe(undefined);
@@ -129,9 +127,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: createCountState(),
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
 
     expect(newDocument.header.revision).toStrictEqual({
@@ -170,9 +166,7 @@ describe("Local reducer", () => {
   });
 
   it("should redo local operation", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: createCountState(),
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
     newDocument = countReducer(newDocument, redo(1, "local"));
@@ -204,9 +198,7 @@ describe("Local reducer", () => {
   });
 
   it.skip("should prune local operations", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: createCountState(),
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, setLocalName("test 2"));
     expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });

@@ -5,7 +5,7 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { type Action, type ExtendedState } from "../types.js";
+import { type Action, type BaseState } from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
   type LoadStateAction,
@@ -96,12 +96,12 @@ export const prune = (
  * @category Actions
  */
 export const loadState = <S, T>(
-  state: Pick<ExtendedState<S, T>, "state"> & { name: string },
+  state: BaseState<S, T> & { name: string },
   operations: number,
 ) =>
   createAction<LoadStateAction>(
     "LOAD_STATE",
-    { state: { name: state.name, ...state.state }, operations },
+    { state, operations },
     undefined,
     LoadStateActionInputSchema,
   );

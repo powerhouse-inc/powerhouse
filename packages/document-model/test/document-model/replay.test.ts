@@ -15,10 +15,7 @@ import {
   increment,
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
-  const initialState = {
-    state: createCountState(),
-    attachments: {},
-  };
+  const initialState = createCountState();
   const initialDocument: BaseDocument<CountState, CountLocalState> = {
     header: {
       id: "",

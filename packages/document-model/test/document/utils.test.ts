@@ -177,9 +177,9 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: createBaseState({ count: 0 }, { name: "" }),
-    });
+    const document = baseCreateDocument<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" })
+    );
     const newDocument = countReducer(document, setLocalName("test"));
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -202,9 +202,9 @@ describe("Base utils", () => {
 
   it("should work with mutable reducer", () => {
     const reducer = createReducer<CountDocument>(mutableCountReducer);
-    const document = baseCreateDocument<CountDocument>({
-      state: createBaseState({ count: 0 }, { name: "" }),
-    });
+    const document = baseCreateDocument<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" })
+    );
     const newDocument = reducer(document, increment());
     expect(newDocument.state.global.count).toBe(1);
     expect(document.state.global.count).toBe(0);
