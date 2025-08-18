@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useReactor } from "@powerhousedao/state";
+import { useEffect, useState } from "react";
 import type {
-  DocumentTypeItem,
-  AddDocumentTypeInput,
+  DocumentTypeItem
 } from "../../../document-models/processor-module/index.js";
-import { useDebounce } from "../../hooks/index.js";
 import { StatusPill } from "../../components/index.js";
+import { useDebounce } from "../../hooks/index.js";
 
 export interface ProcessorEditorFormProps {
   processorName?: string;
@@ -33,8 +33,13 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const [processorType, setProcessorType] = useState(initialProcessorType);
   const [documentTypes, setDocumentTypes] =
     useState<DocumentTypeItem[]>(initialDocumentTypes);
-  const [documentTypeInput, setDocumentTypeInput] = useState("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
+
+  // Get available document types from reactor
+  const reactor = useReactor();
+  const docModels = reactor?.getDocumentModelModules() ?? [];
+  const availableDocumentTypes = docModels.map((model) => model.documentModel.id);
 
   // Use the debounce hook for name and type changes
   useDebounce(processorName, onNameChange, 300);
@@ -67,27 +72,6 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
     if (processorName.trim() && processorType && documentTypes.length > 0) {
       setIsConfirmed(true); // Immediate UI update
       onConfirm?.();
-    }
-  };
-
-  const handleAddDocumentType = () => {
-    if (documentTypeInput.trim()) {
-      const id = Date.now().toString();
-      const documentType = documentTypeInput.trim();
-      
-      if (
-        !documentTypes.some(
-          (dt) => dt.documentType === documentType,
-        )
-      ) {
-        const newType: DocumentTypeItem = {
-          id,
-          documentType,
-        };
-        setDocumentTypes([...documentTypes, newType]);
-        onAddDocumentType?.(id, documentType);
-      }
-      setDocumentTypeInput("");
     }
   };
 
@@ -153,20 +137,34 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           Document Types
         </label>
         <div className="space-y-2">
-          {!isReadOnly && (
-            <input
-              type="text"
-              value={documentTypeInput}
-              onChange={(e) => setDocumentTypeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddDocumentType();
+          {!isReadOnly && availableDocumentTypes.length > 0 && (
+            <select
+              value={selectedDocumentType}
+              onChange={(e) => {
+                const selectedValue = e.target.value;
+                if (selectedValue && !documentTypes.some(dt => dt.documentType === selectedValue)) {
+                  const id = Date.now().toString();
+                  const newType: DocumentTypeItem = {
+                    id,
+                    documentType: selectedValue
+                  };
+                  setDocumentTypes([...documentTypes, newType]);
+                  onAddDocumentType?.(id, selectedValue);
                 }
+                setSelectedDocumentType('');
               }}
-              placeholder="Type a document type and press Enter"
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            >
+              <option value="">Select a document type to add</option>
+              {availableDocumentTypes
+                .filter(docType => !documentTypes.some(dt => dt.documentType === docType))
+                .map((docType) => (
+                  <option key={docType} value={docType}>
+                    {docType}
+                  </option>
+                ))
+              }
+            </select>
           )}
           <div className="space-y-1">
             {documentTypes.map((type) => (
