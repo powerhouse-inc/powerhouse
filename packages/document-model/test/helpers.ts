@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { baseState } from "../src/document/ph-factories.js";
 import {
   type Action,
   type BaseState,
@@ -37,8 +38,7 @@ export function createBaseState<TGlobal, TLocal>(
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
   return {
-    auth: {},
-    document: { version: "1.0.0" },
+    ...baseState(),
     global,
     local,
   };

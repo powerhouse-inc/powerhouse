@@ -1,3 +1,4 @@
+import { baseState } from "#document/ph-factories.js";
 import {
   CreateDocument,
   CreateExtendedState,
@@ -30,8 +31,7 @@ export { fileExtension } from "./constants.js";
 
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
-    auth: {},
-    document: { version: "1.0.0" },
+    ...baseState(),
     global: { ...documentModelState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };

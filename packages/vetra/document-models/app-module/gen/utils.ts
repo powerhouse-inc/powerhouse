@@ -6,6 +6,7 @@ import {
   baseSaveToFileHandle,
   baseLoadFromFile,
   baseLoadFromInput,
+  baseState,
   generateId,
 } from "document-model";
 import {
@@ -25,6 +26,7 @@ const utils: DocumentModelUtils<AppModuleDocument> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
+      ...baseState(),
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

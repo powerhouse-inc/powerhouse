@@ -4,6 +4,7 @@ import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
   type BaseState,
+  baseState,
   documentModelDocumentModelModule,
   type DocumentModelModule,
   generateId,
@@ -233,8 +234,7 @@ export function createBaseState<TGlobal, TLocal>(
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
   return {
-    auth: {},
-    document: { version: "1.0.0" },
+    ...baseState(),
     global,
     local,
   };

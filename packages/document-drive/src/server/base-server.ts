@@ -46,6 +46,7 @@ import {
   type PHDocumentMeta,
   type SignalResult,
   attachBranch,
+  baseState,
   createPresignedHeader,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -626,8 +627,7 @@ export class BaseDocumentDriveServer
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
       state: {
-        auth: {},
-        document: { version: "1.0.0" },
+        ...baseState(),
         global: {
           icon: input.global.icon ?? null,
           name: input.global.name,

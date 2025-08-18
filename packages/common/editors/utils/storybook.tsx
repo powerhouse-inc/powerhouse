@@ -13,6 +13,7 @@ import {
   type DocumentDriveLocalState,
   type DocumentDriveState
 } from "document-drive";
+import { baseState } from "document-model";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -37,7 +38,7 @@ export function createDriveStory(
     driveDocumentModelModule.reducer,
     initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { name: "Powerhouse" }, local: {} },
+        state: { ...baseState(), global: { name: "Powerhouse" }, local: {} },
       }),
     },
     additionalStoryArgs,

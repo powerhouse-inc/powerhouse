@@ -137,7 +137,12 @@ export {
   setName,
   undo,
 } from "#document/actions/creators.js";
-export { actionContext } from "#document/ph-factories.js";
+export {
+  actionContext,
+  authState,
+  baseState,
+  documentState,
+} from "#document/ph-factories.js";
 export type { EditorContext } from "#document/types.js";
 export {
   attachBranch,
