@@ -7,7 +7,7 @@ import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
 import { PrismaClient } from "../src/storage/prisma/client/index.js";
 import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
-import { buildOperation } from "./utils.js";
+import { buildOperation, createBaseState } from "./utils.js";
 
 const prismaClient = new PrismaClient();
 
@@ -114,18 +114,18 @@ describe.each(storageLayers)(
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        state: {
-          global: {
+        state: createBaseState(
+          {
             icon: null,
             name: "name",
             nodes: [],
           },
-          local: {
+          {
             availableOffline: false,
             listeners: [],
             sharingType: null,
           },
-        },
+        ),
       });
       drive.header.id = driveId;
       drive.header.slug = driveId;
@@ -164,18 +164,18 @@ describe.each(storageLayers)(
     }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        state: {
-          global: {
+        state: createBaseState(
+          {
             icon: null,
             name: "name",
             nodes: [],
           },
-          local: {
+          {
             availableOffline: false,
             listeners: [],
             sharingType: null,
           },
-        },
+        ),
       });
       drive.header.id = driveId;
       drive.header.name = "name";
@@ -240,18 +240,18 @@ describe.each(storageLayers)(
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
       const drive = createDocument({
-        state: {
-          global: {
+        state: createBaseState(
+          {
             icon: null,
             name: "name",
             nodes: [],
           },
-          local: {
+          {
             availableOffline: false,
             listeners: [],
             sharingType: null,
           },
-        },
+        ),
       });
       drive.header.id = driveId;
       drive.header.slug = driveId;

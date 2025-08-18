@@ -3,6 +3,7 @@ import { type BaseDocumentDriveServer } from "#server/base-server";
 import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
+  type BaseState,
   documentModelDocumentModelModule,
   type DocumentModelModule,
   generateId,
@@ -221,3 +222,20 @@ export const fakeAction = (
     timestampUtcMs: new Date().toISOString(),
     ...params,
   }) as Action;
+
+/**
+ * Creates a default base state with the required auth and document properties
+ * @param global - The global state
+ * @param local - The local state
+ */
+export function createBaseState<TGlobal, TLocal>(
+  global: TGlobal,
+  local: TLocal,
+): BaseState<TGlobal, TLocal> {
+  return {
+    auth: {},
+    document: { version: "1.0.0" },
+    global,
+    local,
+  };
+}

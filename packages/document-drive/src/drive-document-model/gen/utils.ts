@@ -37,6 +37,8 @@ const utils: DocumentDriveUtils = {
   fileExtension: "phdd",
   createState(state) {
     return {
+      auth: {},
+      document: { version: "1.0.0" },
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

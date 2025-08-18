@@ -23,6 +23,7 @@ import {
   vitest,
 } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
+import { createBaseState } from "./utils.js";
 import {
   addFile,
   updateNode,
@@ -348,14 +349,14 @@ describe.skip("Read mode methods", () => {
     const documentId = generateId();
 
     let drive = createDocument({
-      state: {
-        global: {
+      state: createBaseState(
+        {
           name: "Read drive",
           nodes: [],
           icon: null,
         },
-        local: {},
-      },
+        {},
+      ),
     });
 
     drive.header.id = readDriveId;

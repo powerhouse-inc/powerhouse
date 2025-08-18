@@ -626,6 +626,8 @@ export class BaseDocumentDriveServer
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
       state: {
+        auth: {},
+        document: { version: "1.0.0" },
         global: {
           icon: input.global.icon ?? null,
           name: input.global.name,

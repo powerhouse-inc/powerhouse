@@ -10,6 +10,7 @@ import { LRUCacheStorage } from "../src/cache/lru.js";
 import InMemoryCache from "../src/cache/memory.js";
 import { ICache } from "../src/cache/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
+import { createBaseState } from "./utils.js";
 
 const initRedis = async () => {
   const redisClient = createClient({
@@ -289,8 +290,8 @@ describe("LRU Cache Specific Tests", () => {
   // Helper functions for test data
   function createTestDocument() {
     return createDocumentModelDocument({
-      state: {
-        global: {
+      state: createBaseState(
+        {
           id: `doc`,
           name: `Document`,
           author: { name: "author", website: "url" },
@@ -298,8 +299,8 @@ describe("LRU Cache Specific Tests", () => {
           extension: "md",
           specifications: [],
         },
-        local: {},
-      },
+        {},
+      ),
     });
   }
 
