@@ -383,7 +383,6 @@ export type EditorDispatch = (
 
 export type EditorProps = {
   document: PHDocument;
-  dispatch: EditorDispatch;
   context: EditorContext;
 };
 

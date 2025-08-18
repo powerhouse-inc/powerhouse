@@ -11,12 +11,12 @@ import {
     type IDocumentStorage,
     type IDriveOperationStorage,
 } from 'document-drive/storage/types';
-import type { ElectronAPI } from './preload.js';
+// import type { ElectronAPI } from './preload.js';
 import type { DocumentEditorDebugTools } from './utils/document-editor-debug-tools.js';
 
 declare global {
     interface Window {
-        electronAPI?: ElectronAPI;
+        // electronAPI?: ElectronAPI;
         connectCrypto?: IConnectCrypto;
         did?: DID;
         renown?: IRenown;

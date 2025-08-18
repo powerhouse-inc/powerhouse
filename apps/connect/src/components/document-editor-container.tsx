@@ -6,10 +6,9 @@ import {
     useParentFolder,
     useSelectedDocument,
     useSelectedDrive,
-    addDocumentOperations,
 } from '@powerhousedao/reactor-browser';
 import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
-import { type Operation, type PHDocument } from 'document-model';
+import { type PHDocument } from 'document-model';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
@@ -92,7 +91,7 @@ export function DocumentEditorContainer() {
                       documentModelModule.documentModel,
                   );
                   try {
-                      await openUrl(url);
+                      openUrl(url);
                   } catch (e) {
                       console.error('Error opening switchboard link', e);
                   }

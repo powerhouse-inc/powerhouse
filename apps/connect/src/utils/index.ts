@@ -1,5 +1,4 @@
 export * from './document-editor-debug-tools.js';
-export * from './document-model.js';
 export * from './drive-sections.js';
 export * from './file.js';
 export * from './join.js';

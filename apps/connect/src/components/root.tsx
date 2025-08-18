@@ -1,7 +1,5 @@
-import IconConnect from '#assets/icons/connect.svg?react';
-import IconLogo from '#assets/icons/logo.svg?react';
 import { ModalManager } from '#components';
-import { isElectron, isMac } from '#hooks';
+// import { isElectron, isMac } from '#hooks';
 import { login } from '@powerhousedao/reactor-browser';
 import { logger } from 'document-drive';
 import { Suspense, useEffect } from 'react';
@@ -9,9 +7,9 @@ import { Outlet, useSearchParams } from 'react-router-dom';
 import Sidebar from './sidebar.js';
 
 export default function Root() {
-    useEffect(() => {
-        window.electronAPI?.ready();
-    }, []);
+    // useEffect(() => {
+    //     window.electronAPI?.ready();
+    // }, []);
 
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -25,18 +23,18 @@ export default function Root() {
         }
     }, [login, searchParams, setSearchParams]);
 
-    useEffect(() => {
-        const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
-            window.history.pushState({}, '', `/${url}`);
-        });
+    // useEffect(() => {
+    //     const unsubscribe = window.electronAPI?.handleURL((_e, url) => {
+    //         window.history.pushState({}, '', `/${url}`);
+    //     });
 
-        return unsubscribe;
-    }, []);
+    //     return unsubscribe;
+    // }, []);
 
     return (
         <ModalManager>
             <div className="h-screen">
-                {isElectron && (
+                {/* {isElectron && (
                     <div
                         className={`h-8 w-full
                     ${isMac && 'justify-center'}
@@ -45,11 +43,9 @@ export default function Root() {
                         <IconLogo className="ml-1 mr-0.5 p-1.5" />
                         <IconConnect className="h-3 w-fit" />
                     </div>
-                )}
+                )} */}
                 <div
-                    className={`flex items-stretch overflow-auto
-                        ${isElectron ? 'h-app-height' : 'h-screen'}
-                    `}
+                    className={`flex items-stretch overflow-auto h-screen`}
                     role="presentation"
                     tabIndex={0}
                 >

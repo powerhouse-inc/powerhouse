@@ -9,15 +9,15 @@ export interface UseUndoRedoShortcutsProps {
 
 export const useUndoRedoShortcuts = (props: UseUndoRedoShortcutsProps) => {
     const { undo, redo, canRedo, canUndo } = props;
-    const { isMac } = window.electronAPI?.platformInfo || {};
+    // const { isMac } = window.electronAPI?.platformInfo || {};
 
-    let undoShortcut = 'ctrl+z';
-    let redoShortcut = 'ctrl+y';
+    const undoShortcut = 'ctrl+z';
+    const redoShortcut = 'ctrl+y';
 
-    if (isMac) {
-        undoShortcut = 'mod+z';
-        redoShortcut = 'mod+shift+z';
-    }
+    // if (isMac) {
+    //     undoShortcut = 'mod+z';
+    //     redoShortcut = 'mod+shift+z';
+    // }
 
     // set handler for undo
     useHotkeys(

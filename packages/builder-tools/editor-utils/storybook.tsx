@@ -144,22 +144,11 @@ export function createDocumentStory(
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return (
-        <Editor
-          {...args}
-          dispatch={dispatch}
-          document={document as PHDocument}
-        />
-      );
+      return <Editor {...args} document={document as PHDocument} />;
     },
     argTypes: {
       document: {
         control: "object",
-      },
-      dispatch: {
-        table: {
-          disable: true,
-        },
       },
       context: {
         theme: {

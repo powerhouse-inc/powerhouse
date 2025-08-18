@@ -3,7 +3,6 @@ export * from './useAcceptedCookies.js';
 export * from './useClientErrorHandler.js';
 export * from './useCookiebanner.js';
 export * from './useDefaultDocumentModelEditor/index.js';
-export * from './useEditorProps.js';
 export * from './useEnsInfo.js';
 export * from './useFeatureFlags/index.js';
 export * from './useInitSentry.js';

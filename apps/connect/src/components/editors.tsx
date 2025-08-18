@@ -7,13 +7,13 @@ import {
     type TimelineItem,
 } from '@powerhousedao/design-system';
 import {
-    useDispatchDocumentActionsOrOperations,
+    useDispatch,
     useDocumentModelModuleById,
     useEditorModuleById,
     useFallbackEditorModule,
     useUserPermissions,
 } from '@powerhousedao/reactor-browser';
-import { type Operation, type PHDocument, redo, undo } from 'document-model';
+import { type PHDocument, redo, undo } from 'document-model';
 import { Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
@@ -44,41 +44,45 @@ function FallbackEditorError(props: FallbackProps) {
 }
 
 export const DocumentEditor: React.FC<Props> = props => {
-    const { document, onClose, onExport, onOpenSwitchboardLink } = props;
-    const documentId = document.header.id;
+    const {
+        document: initialDocument,
+        onClose,
+        onExport,
+        onOpenSwitchboardLink,
+    } = props;
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const addDocumentActions = useDispatchDocumentActionsOrOperations(document);
-    const documentType = document.header.documentType;
+    const [document, dispatch] = useDispatch(initialDocument);
+    const documentId = document?.header.id ?? undefined;
+    const documentName = document?.header.name ?? undefined;
+    const documentType = document?.header.documentType ?? undefined;
+    const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
+    const createdAt = document?.header.createdAtUtcIso ?? undefined;
+    const globalOperations = document?.operations.global ?? [];
+    const localOperations = document?.operations.local ?? [];
+    const globalRevisionNumber = document?.header.revision.global ?? 0;
+    const localRevisionNumber = document?.header.revision.local ?? 0;
     const documentModelModule = useDocumentModelModuleById(documentType);
-    const preferredEditorModule = useEditorModuleById(
-        document.header.meta?.preferredEditor,
-    );
+    const preferredEditorModule = useEditorModuleById(preferredEditor);
     const fallbackEditorModule = useFallbackEditorModule(documentType);
     const editorModule = preferredEditorModule ?? fallbackEditorModule;
 
     const userPermissions = useUserPermissions();
 
-    const timelineItems = useTimelineItems(
-        documentId,
-        document.header.createdAtUtcIso,
-    );
+    const timelineItems = useTimelineItems(documentId, createdAt);
 
     const isLoadingEditor =
         editorModule === undefined ||
         (editorModule &&
-            !editorModule.documentTypes.includes(
-                document.header.documentType,
-            ) &&
+            documentType &&
+            !editorModule.documentTypes.includes(documentType) &&
             !editorModule.documentTypes.includes('*'));
 
-    const canUndo =
-        document.header.revision.global > 0 ||
-        document.header.revision.local > 0;
+    const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
     const canRedo = !!document?.clipboard.length;
-    const addUndoAction = () => addDocumentActions([undo()]);
-    const addRedoAction = () => addDocumentActions([redo()]);
+    const addUndoAction = () => dispatch(undo());
+    const addRedoAction = () => dispatch(redo());
     useUndoRedoShortcuts({
         undo: addUndoAction,
         redo: addRedoAction,
@@ -204,7 +208,7 @@ export const DocumentEditor: React.FC<Props> = props => {
                         onShowRevisionHistory={() =>
                             setRevisionHistoryVisible(true)
                         }
-                        title={document.header.name}
+                        title={documentName}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
@@ -230,10 +234,10 @@ export const DocumentEditor: React.FC<Props> = props => {
             {revisionHistoryVisible ? (
                 <RevisionHistory
                     key={documentId}
-                    documentTitle={document.header.name}
-                    documentId={document.header.id}
-                    globalOperations={document.operations.global}
-                    localOperations={document.operations.local}
+                    documentTitle={documentName ?? ''}
+                    documentId={documentId ?? ''}
+                    globalOperations={globalOperations}
+                    localOperations={localOperations}
                     onClose={() => setRevisionHistoryVisible(false)}
                 />
             ) : (
@@ -252,11 +256,11 @@ export const DocumentEditor: React.FC<Props> = props => {
                                         getRevisionFromDate(
                                             selectedTimelineItem?.startDate,
                                             selectedTimelineItem?.endDate,
-                                            document.operations.global,
+                                            globalOperations,
                                         ),
                                 }}
                                 document={document}
-                                documentNodeName={document.header.name}
+                                documentNodeName={documentName ?? ''}
                                 onClose={onClose}
                                 onExport={onExport}
                                 canUndo={canUndo}

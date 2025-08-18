@@ -1,28 +1,29 @@
+import { useDispatch } from "@powerhousedao/reactor-browser";
 import {
-  addModule,
-  addOperation,
-  addOperationError,
-  deleteModule,
-  deleteOperation,
-  deleteOperationError,
-  type DocumentModelDocument,
-  type EditorProps,
-  generateId,
-  setAuthorName,
-  setAuthorWebsite,
-  setInitialState,
-  setModelDescription,
-  setModelExtension,
-  setModelId,
-  setModelName,
-  setModuleName,
-  setOperationDescription,
-  setOperationErrorName,
-  setOperationName,
-  setOperationSchema,
-  setStateSchema,
+    addModule,
+    addOperation,
+    addOperationError,
+    deleteModule,
+    deleteOperation,
+    deleteOperationError,
+    type DocumentModelDocument,
+    type EditorProps,
+    generateId,
+    setAuthorName,
+    setAuthorWebsite,
+    setInitialState,
+    setModelDescription,
+    setModelExtension,
+    setModelId,
+    setModelName,
+    setModuleName,
+    setOperationDescription,
+    setOperationErrorName,
+    setOperationName,
+    setOperationSchema,
+    setStateSchema,
 } from "document-model";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
@@ -30,22 +31,24 @@ import { StateSchemas } from "./components/state-schemas.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { type Scope } from "./types/documents.js";
 import {
-  compareStringsWithoutWhitespace,
-  initializeModelSchema,
-  makeOperationInitialDoc,
+    compareStringsWithoutWhitespace,
+    initializeModelSchema,
+    makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
 export function DocumentModelEditor(props: EditorProps) {
-  const { document, dispatch } = props;
-  const unsafeCastOfDocument = document as DocumentModelDocument;
-  const documentNodeName = unsafeCastOfDocument.header.name;
+  const { document: initialDocument } = props;
+  const [unsafeDocument, dispatch] = useDispatch(initialDocument);
+  const document = unsafeDocument as DocumentModelDocument;
+
+  const documentNodeName = document.header.name;
   const {
     name: modelName,
     id: documentType,
     extension,
     description,
     author: { name: authorName, website: authorWebsite },
-  } = unsafeCastOfDocument.state.global;
+  } = document.state.global;
   const {
     state: {
       global: {
@@ -55,7 +58,7 @@ export function DocumentModelEditor(props: EditorProps) {
       local: { schema: localStateSchema, initialValue: localStateInitialValue },
     },
     modules,
-  } = unsafeCastOfDocument.state.global.specifications[0];
+  } = document.state.global.specifications[0];
   const operations = modules.flatMap((module) => module.operations);
   const shouldSetInitialName = useRef(
     !modelName && !!documentNodeName && operations.length === 0,
@@ -64,287 +67,241 @@ export function DocumentModelEditor(props: EditorProps) {
   useEffect(() => {
     if (!shouldSetInitialName.current || !documentNodeName) return;
 
-    dispatch(setModelName({ name: documentNodeName }));
-
-    // Initialize schema if it's the first time setting the name
-    initializeModelSchema({
-      modelName: documentNodeName,
-      setStateSchema: (schema: string, scope: Scope) => {
-        dispatch(setStateSchema({ schema, scope }));
-      },
-    });
-
+    const initialSchemaDoc = initializeModelSchema(documentNodeName);
+    const actions = [
+      setModelName({ name: documentNodeName }),
+      setStateSchema({ schema: initialSchemaDoc, scope: "global" }),
+    ];
+    dispatch(actions);
     shouldSetInitialName.current = false;
-  }, [documentNodeName]);
+  }, [documentNodeName, dispatch]);
 
-  const operationSchemasSdl = useMemo(
-    () => operations.flatMap((operation) => operation.schema ?? []).join("\n"),
-    [operations],
-  );
+  const operationSchemasSdl = operations
+    .flatMap((operation) => operation.schema ?? [])
+    .join("\n");
 
-  const handleSetModelId = useCallback(
-    (id: string) => {
-      if (compareStringsWithoutWhitespace(id, documentType)) return;
-      dispatch(setModelId({ id }));
-    },
-    [documentType],
-  );
+  const handleSetModelId = (id: string) => {
+    if (compareStringsWithoutWhitespace(id, documentType)) return;
+    dispatch([setModelId({ id })]);
+  };
 
-  const handleSetModelDescription = useCallback(
-    (newDescription: string) => {
-      if (compareStringsWithoutWhitespace(newDescription, description)) return;
-      dispatch(setModelDescription({ description: newDescription }));
-    },
-    [description],
-  );
+  const handleSetModelDescription = (newDescription: string) => {
+    if (compareStringsWithoutWhitespace(newDescription, description)) return;
+    dispatch(setModelDescription({ description: newDescription }));
+  };
 
-  const handleSetModelExtension = useCallback(
-    (newExtension: string) => {
-      if (compareStringsWithoutWhitespace(newExtension, extension)) return;
-      dispatch(setModelExtension({ extension: newExtension }));
-    },
-    [extension],
-  );
+  const handleSetModelExtension = (newExtension: string) => {
+    if (compareStringsWithoutWhitespace(newExtension, extension)) return;
+    dispatch(setModelExtension({ extension: newExtension }));
+  };
 
-  const handleSetModelName = useCallback(
-    (newName: string) => {
-      if (compareStringsWithoutWhitespace(newName, modelName)) return;
-      dispatch(setModelName({ name: newName }));
-    },
-    [modelName],
-  );
+  const handleSetModelName = (newName: string) => {
+    if (compareStringsWithoutWhitespace(newName, modelName)) return;
+    dispatch(setModelName({ name: newName }));
+  };
 
-  const handleSetAuthorName = useCallback(
-    (newAuthorName: string) => {
-      if (compareStringsWithoutWhitespace(newAuthorName, authorName)) return;
-      dispatch(setAuthorName({ authorName: newAuthorName }));
-    },
-    [authorName],
-  );
+  const handleSetAuthorName = (newAuthorName: string) => {
+    if (compareStringsWithoutWhitespace(newAuthorName, authorName)) return;
+    dispatch(setAuthorName({ authorName: newAuthorName }));
+  };
 
-  const handleSetAuthorWebsite = useCallback(
-    (newAuthorWebsite: string) => {
-      if (
-        compareStringsWithoutWhitespace(newAuthorWebsite, authorWebsite ?? "")
-      )
-        return;
-      dispatch(setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
-    },
-    [authorWebsite],
-  );
+  const handleSetAuthorWebsite = (newAuthorWebsite: string) => {
+    if (compareStringsWithoutWhitespace(newAuthorWebsite, authorWebsite ?? ""))
+      return;
+    dispatch(setAuthorWebsite({ authorWebsite: newAuthorWebsite }));
+  };
 
-  const handleSetStateSchema = useCallback(
-    (newSchema: string, scope: Scope) => {
-      const oldSchema =
-        scope === "global" ? globalStateSchema : localStateSchema;
-      if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
-      dispatch(setStateSchema({ schema: newSchema, scope }));
-    },
-    [globalStateSchema, localStateSchema],
-  );
+  const handleSetStateSchema = (newSchema: string, scope: Scope) => {
+    const oldSchema = scope === "global" ? globalStateSchema : localStateSchema;
+    if (compareStringsWithoutWhitespace(newSchema, oldSchema)) return;
+    dispatch(setStateSchema({ schema: newSchema, scope }));
+  };
 
-  const handleSetInitialState = useCallback(
-    (newInitialValue: string, scope: Scope) => {
-      const oldInitialValue =
-        scope === "global" ? globalStateInitialValue : localStateInitialValue;
-      if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
-        return;
-      dispatch(setInitialState({ initialValue: newInitialValue, scope }));
-    },
-    [globalStateInitialValue, localStateInitialValue],
-  );
+  const handleSetInitialState = (newInitialValue: string, scope: Scope) => {
+    const oldInitialValue =
+      scope === "global" ? globalStateInitialValue : localStateInitialValue;
+    if (compareStringsWithoutWhitespace(newInitialValue, oldInitialValue))
+      return;
+    dispatch(setInitialState({ initialValue: newInitialValue, scope }));
+  };
 
-  const handleAddModule = useCallback(
-    (name: string): Promise<string | undefined> => {
-      return new Promise((resolve) => {
-        try {
-          if (
-            modules.some((module) =>
-              compareStringsWithoutWhitespace(module.name, name),
-            )
-          ) {
-            resolve(undefined);
-            return;
-          }
-          const id = generateId();
-          dispatch(addModule({ id, name }));
-          resolve(id);
-        } catch (error) {
-          console.error("Failed to add module:", error);
-          resolve(undefined);
-        }
-      });
-    },
-    [modules],
-  );
-
-  const handleSetModuleName = useCallback(
-    (id: string, name: string) => {
-      if (
-        modules.some((module) =>
-          compareStringsWithoutWhitespace(module.name, name),
-        )
-      )
-        return;
-      dispatch(setModuleName({ id, name }));
-    },
-    [modules],
-  );
-
-  const handleDeleteModule = useCallback(
-    (id: string) => dispatch(deleteModule({ id })),
-    [],
-  );
-
-  const handleAddOperation = useCallback(
-    (moduleId: string, name: string): Promise<string | undefined> => {
-      return new Promise((resolve) => {
-        try {
-          const moduleOperationNames =
-            modules
-              .find((module) => module.id === moduleId)
-              ?.operations.map((operation) => operation.name)
-              .filter(Boolean) ?? [];
-          if (
-            moduleOperationNames.some((opName) =>
-              compareStringsWithoutWhitespace(opName, name),
-            )
-          ) {
-            resolve(undefined);
-            return;
-          }
-          const id = generateId();
-          dispatch(addOperation({ id, moduleId, name }));
-          resolve(id);
-        } catch (error) {
-          console.error("Failed to add operation:", error);
-          resolve(undefined);
-        }
-      });
-    },
-    [modules],
-  );
-
-  const handleSetOperationName = useCallback(
-    (id: string, name: string) => {
-      const operationModule = modules.find((module) =>
-        module.operations.some((operation) => operation.id === id),
-      );
-      const operationNames =
-        operationModule?.operations
-          .map((operation) => operation.name)
-          .filter(Boolean) ?? [];
-      if (
-        operationNames.some((opName) =>
-          compareStringsWithoutWhitespace(opName, name),
-        )
-      )
-        return;
-      dispatch(setOperationName({ id, name }));
-    },
-    [modules],
-  );
-
-  const handleSetOperationSchema = useCallback(
-    (id: string, newSchema: string) => {
-      const operation = operations.find((operation) => operation.id === id);
-      if (
-        operation?.schema &&
-        compareStringsWithoutWhitespace(newSchema, operation.schema)
-      )
-        return;
-      dispatch(setOperationSchema({ id, schema: newSchema }));
-    },
-    [operations],
-  );
-
-  const handleSetOperationDescription = useCallback(
-    (id: string, newDescription: string) => {
-      const operationDescription =
-        operations.find((operation) => operation.id === id)?.description ?? "";
-      if (compareStringsWithoutWhitespace(operationDescription, newDescription))
-        return;
-      dispatch(setOperationDescription({ id, description: newDescription }));
-    },
-    [operations],
-  );
-
-  const handleDeleteOperation = useCallback(
-    (id: string) => dispatch(deleteOperation({ id })),
-    [],
-  );
-
-  const handleAddOperationError = useCallback(
-    (operationId: string, errorName: string): Promise<string | undefined> => {
-      return new Promise((resolve) => {
-        try {
-          const operation = operations.find(
-            (operation) => operation.id === operationId,
-          );
-          const operationErrorNames =
-            operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
-          if (
-            operationErrorNames.some((name) =>
-              compareStringsWithoutWhitespace(name, errorName),
-            )
-          ) {
-            resolve(undefined);
-            return;
-          }
-          const id = generateId();
-          dispatch(addOperationError({ id, operationId, errorName }));
-          resolve(id);
-        } catch (error) {
-          console.error("Failed to add operation error:", error);
-          resolve(undefined);
-        }
-      });
-    },
-    [operations],
-  );
-
-  const handleDeleteOperationError = useCallback(
-    (id: string) => dispatch(deleteOperationError({ id })),
-    [],
-  );
-
-  const handleSetOperationErrorName = useCallback(
-    (operationId: string, errorId: string, errorName: string) => {
-      const operation = operations.find(
-        (operation) => operation.id === operationId,
-      );
-      const operationErrorNames =
-        operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
-      if (
-        operationErrorNames.some((name) =>
-          compareStringsWithoutWhitespace(name, errorName),
-        )
-      )
-        return;
-      dispatch(setOperationErrorName({ id: errorId, errorName }));
-    },
-    [operations],
-  );
-
-  const addOperationAndInitialSchema = useCallback(
-    async (moduleId: string, name: string): Promise<string | undefined> => {
+  const handleAddModule = (name: string): Promise<string | undefined> => {
+    return new Promise((resolve) => {
       try {
-        const id = await handleAddOperation(moduleId, name);
-        if (!id) return undefined;
-        try {
-          handleSetOperationSchema(id, makeOperationInitialDoc(name));
-          return id;
-        } catch (error) {
-          console.error("Failed to update operation schema:", error);
-          return undefined;
+        if (
+          modules.some((module) =>
+            compareStringsWithoutWhitespace(module.name, name),
+          )
+        ) {
+          resolve(undefined);
+          return;
         }
+        const id = generateId();
+        dispatch(addModule({ id, name }));
+        resolve(id);
       } catch (error) {
-        console.error("Failed to add operation and schema:", error);
+        console.error("Failed to add module:", error);
+        resolve(undefined);
+      }
+    });
+  };
+
+  const handleSetModuleName = (id: string, name: string) => {
+    if (
+      modules.some((module) =>
+        compareStringsWithoutWhitespace(module.name, name),
+      )
+    )
+      return;
+    dispatch(setModuleName({ id, name }));
+  };
+
+  const handleDeleteModule = (id: string) => {
+    dispatch(deleteModule({ id }));
+  };
+
+  const handleAddOperation = (
+    moduleId: string,
+    name: string,
+  ): Promise<string | undefined> => {
+    return new Promise((resolve) => {
+      try {
+        const moduleOperationNames =
+          modules
+            .find((module) => module.id === moduleId)
+            ?.operations.map((operation) => operation.name)
+            .filter(Boolean) ?? [];
+        if (
+          moduleOperationNames.some((opName) =>
+            compareStringsWithoutWhitespace(opName, name),
+          )
+        ) {
+          resolve(undefined);
+          return;
+        }
+        const id = generateId();
+        dispatch(addOperation({ id, moduleId, name }));
+        resolve(id);
+      } catch (error) {
+        console.error("Failed to add operation:", error);
+        resolve(undefined);
+      }
+    });
+  };
+
+  const handleSetOperationName = (id: string, name: string) => {
+    const operationModule = modules.find((module) =>
+      module.operations.some((operation) => operation.id === id),
+    );
+    const operationNames =
+      operationModule?.operations
+        .map((operation) => operation.name)
+        .filter(Boolean) ?? [];
+    if (
+      operationNames.some((opName) =>
+        compareStringsWithoutWhitespace(opName, name),
+      )
+    )
+      return;
+    dispatch(setOperationName({ id, name }));
+  };
+
+  const handleSetOperationSchema = (id: string, newSchema: string) => {
+    const operation = operations.find((operation) => operation.id === id);
+    if (
+      operation?.schema &&
+      compareStringsWithoutWhitespace(newSchema, operation.schema)
+    )
+      return;
+    dispatch(setOperationSchema({ id, schema: newSchema }));
+  };
+
+  const handleSetOperationDescription = (
+    id: string,
+    newDescription: string,
+  ) => {
+    const operationDescription =
+      operations.find((operation) => operation.id === id)?.description ?? "";
+    if (compareStringsWithoutWhitespace(operationDescription, newDescription))
+      return;
+    dispatch(setOperationDescription({ id, description: newDescription }));
+  };
+
+  const handleDeleteOperation = (id: string) => {
+    dispatch(deleteOperation({ id }));
+  };
+
+  const handleAddOperationError = (
+    operationId: string,
+    errorName: string,
+  ): Promise<string | undefined> => {
+    return new Promise((resolve) => {
+      try {
+        const operation = operations.find(
+          (operation) => operation.id === operationId,
+        );
+        const operationErrorNames =
+          operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
+        if (
+          operationErrorNames.some((name) =>
+            compareStringsWithoutWhitespace(name, errorName),
+          )
+        ) {
+          resolve(undefined);
+          return;
+        }
+        const id = generateId();
+        dispatch(addOperationError({ id, operationId, errorName }));
+        resolve(id);
+      } catch (error) {
+        console.error("Failed to add operation error:", error);
+        resolve(undefined);
+      }
+    });
+  };
+
+  const handleDeleteOperationError = (id: string) => {
+    dispatch(deleteOperationError({ id }));
+  };
+
+  const handleSetOperationErrorName = (
+    operationId: string,
+    errorId: string,
+    errorName: string,
+  ) => {
+    const operation = operations.find(
+      (operation) => operation.id === operationId,
+    );
+    const operationErrorNames =
+      operation?.errors.map((error) => error.name).filter(Boolean) ?? [];
+    if (
+      operationErrorNames.some((name) =>
+        compareStringsWithoutWhitespace(name, errorName),
+      )
+    )
+      return;
+    dispatch(setOperationErrorName({ id: errorId, errorName }));
+  };
+
+  const addOperationAndInitialSchema = async (
+    moduleId: string,
+    name: string,
+  ): Promise<string | undefined> => {
+    try {
+      const id = await handleAddOperation(moduleId, name);
+      if (!id) return undefined;
+      try {
+        handleSetOperationSchema(id, makeOperationInitialDoc(name));
+        return id;
+      } catch (error) {
+        console.error("Failed to update operation schema:", error);
         return undefined;
       }
-    },
-    [handleAddOperation, handleSetOperationSchema],
-  );
+    } catch (error) {
+      console.error("Failed to add operation and schema:", error);
+      return undefined;
+    }
+  };
 
   return (
     <main className="min-h-dvh bg-gray-50">

@@ -1,6 +1,6 @@
 const currentVersion = import.meta.env.APP_VERSION;
 
-export const isElectron = window.navigator.userAgent.includes('Electron');
+// export const isElectron = window.navigator.userAgent.includes('Electron');
 
 // eslint-disable-next-line @typescript-eslint/no-deprecated
 export const isMac = window.navigator.appVersion.includes('Mac');

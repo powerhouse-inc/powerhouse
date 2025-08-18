@@ -22,25 +22,25 @@ export default function Content() {
     const selectedFolder = useSelectedFolder();
     const selectedDocument = useSelectedDocument();
 
-    useEffect(() => {
-        return window.electronAPI?.handleFileOpen(async file => {
-            if (!selectedDrive?.header.id || !selectedDocument?.header.id) {
-                return;
-            }
+    // useEffect(() => {
+    //     return window.electronAPI?.handleFileOpen(async file => {
+    //         if (!selectedDrive?.header.id || !selectedDocument?.header.id) {
+    //             return;
+    //         }
 
-            await addFile(
-                file.content,
-                selectedDrive.header.id,
-                file.name,
-                selectedFolder?.id,
-            );
-        });
-    }, [
-        selectedDrive?.header.id,
-        selectedFolder?.id,
-        selectedDocument?.header.id,
-        addFile,
-    ]);
+    //         await addFile(
+    //             file.content,
+    //             selectedDrive.header.id,
+    //             file.name,
+    //             selectedFolder?.id,
+    //         );
+    //     });
+    // }, [
+    //     selectedDrive?.header.id,
+    //     selectedFolder?.id,
+    //     selectedDocument?.header.id,
+    //     addFile,
+    // ]);
 
     return (
         <ContentContainer>

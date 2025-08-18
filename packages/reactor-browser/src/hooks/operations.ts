@@ -1,8 +1,6 @@
 import {
-  type DocumentDriveAction,
   type DocumentDriveDocument,
   type DriveInput,
-  type GetDocumentOptions,
   type Listener,
   type Node,
   PullResponderTransmitter,
@@ -21,7 +19,6 @@ import {
   removeTrigger as baseRemoveTrigger,
   updateFile as baseUpdateFile,
   createDriveState,
-  documentDriveReducer,
   generateNodesCopy,
   isFileNode,
   isFolderNode,
@@ -34,10 +31,8 @@ import {
 import {
   type Action,
   type ActionSigner,
-  type DocumentModelModule,
   type Operation,
   type PHDocument,
-  type Reducer,
   baseLoadFromInput,
   baseSaveToFileHandle,
   buildSignedAction,
@@ -45,153 +40,36 @@ import {
   createZip,
   generateId,
 } from "document-model";
-import { useSign } from "./crypto.js";
-import { useDocumentModelModuleById } from "./vetra-packages.js";
+import { useState } from "react";
 
-export function useDispatchDocumentActionsOrOperations(
-  document: PHDocument | undefined,
-) {
-  const documentId = document?.header.id;
-  const documentType = document?.header.documentType;
-  const documentModelModule = useDocumentModelModuleById(documentType);
-  const sign = useSign();
-  async function makeSignedActionWithContext(
-    actionOrOperation: Action | Operation,
-  ) {
-    if (!documentModelModule) {
-      logger.error(`Document model '${documentType}' not found`);
-      return;
-    }
-    if (!sign) {
-      logger.error("No sign function found");
-      return;
-    }
-    if (!document) {
-      logger.error("No document found");
-      return;
-    }
-    const unsafeSignedActionOrOperationCastAsAction =
-      (await signOperationOrAction(
-        actionOrOperation,
-        document,
-        documentModelModule.reducer,
-      )) as Action;
+export async function signAction(action: Action, document: PHDocument) {
+  const reactor = window.reactor;
+  if (!reactor) return action;
 
-    const signedActionWithContext = addActionContext(
-      unsafeSignedActionOrOperationCastAsAction,
-    );
-
-    return signedActionWithContext;
+  const documentModelModules = reactor.getDocumentModelModules();
+  const documentModelModule = documentModelModules.find(
+    (module) => module.documentModel.id === document.header.documentType,
+  );
+  if (!documentModelModule) {
+    logger.error(`Document model '${document.header.documentType}' not found`);
+    return action;
   }
-
-  async function makeSignedActionsWithContext(
-    actionsOrOperations: Action[] | Operation[],
-  ) {
-    const signedActionsWithContext = await Promise.all(
-      actionsOrOperations.map(makeSignedActionWithContext),
-    );
-    return signedActionsWithContext.filter((a) => a !== undefined);
-  }
-
-  return async function dispatchDocumentActionsOrOperations(
-    actionsOrOperations: Action[] | Operation[],
-  ) {
-    if (!documentId) return;
-
-    const unsafeSignedActionsOrOperationsWithContextCastAsOperations =
-      (await makeSignedActionsWithContext(actionsOrOperations)) as Operation[];
-    const result = await addDocumentOperations(
-      document.header.id,
-      unsafeSignedActionsOrOperationsWithContextCastAsOperations,
-    );
-    return result;
-  };
-}
-
-function assertIsDocumentDriveDocument(
-  document: PHDocument | undefined,
-): asserts document is DocumentDriveDocument {
-  if (document?.header.documentType !== "document-drive") {
-    throw new Error("Document is not a document-drive document");
-  }
-}
-
-export function useDispatchDriveActionOrOperation(
-  document: PHDocument | undefined,
-) {
-  const sign = useSign();
-  assertIsDocumentDriveDocument(document);
-  async function makeSignedActionWithContext(
-    actionOrOperation: Action | Operation,
-  ) {
-    if (!sign) {
-      logger.error("No sign function found");
-      return;
-    }
-    if (!document) {
-      logger.error("No document found");
-      return;
-    }
-    const unsafeSignedActionOrOperationCastAsAction =
-      (await signOperationOrAction(
-        actionOrOperation,
-        document,
-        documentDriveReducer,
-      )) as Action;
-
-    const signedActionWithContext = addActionContext(
-      unsafeSignedActionOrOperationCastAsAction,
-    );
-
-    return signedActionWithContext;
-  }
-
-  return async function dispatchDriveActionOrOperation(
-    actionOrOperation: Action | Operation,
-  ) {
-    const unsafeSignedActionOrOperationCastAsDriveAction =
-      (await makeSignedActionWithContext(
-        actionOrOperation,
-      )) as DocumentDriveAction;
-    const result = await addDriveAction(
-      document.header.id,
-      unsafeSignedActionOrOperationCastAsDriveAction,
-    );
-    return result;
-  };
-}
-
-export async function signOperationOrAction(
-  operationOrAction: Operation | Action,
-  document: PHDocument,
-  reducer?: Reducer<any>,
-) {
+  const reducer = documentModelModule.reducer;
   const user = window.user;
   const connectCrypto = window.connectCrypto;
-  const action =
-    "action" in operationOrAction
-      ? operationOrAction.action
-      : operationOrAction;
-  if (!user || !connectCrypto) return operationOrAction;
-  if (!action.context?.signer) return operationOrAction;
-  if (!reducer) {
-    logger.error(
-      `Document model '${document.header.documentType}' does not have a reducer`,
-    );
-    return operationOrAction;
-  }
+  if (!user || !connectCrypto) return action;
+  if (!action.context?.signer) return action;
 
-  const context: ActionSigner = action.context.signer;
-
-  const signedOperation = await buildSignedAction(
+  const actionSigner = action.context.signer;
+  const unsafeSignedAction = await buildSignedAction(
     action,
     reducer,
     document,
-    context,
+    actionSigner,
     connectCrypto.sign,
   );
 
-  return signedOperation;
+  return unsafeSignedAction as Action;
 }
 
 export function addActionContext(action: Action) {
@@ -218,19 +96,118 @@ export function addActionContext(action: Action) {
   };
 }
 
-export async function uploadDocumentOperations(
-  documentId: string,
-  document: PHDocument,
+async function makeSignedActionWithContext(
+  action: Action | undefined,
+  document: PHDocument | undefined,
+) {
+  if (!action) {
+    logger.error("No action found");
+    return;
+  }
+  if (!document) {
+    logger.error("No document found");
+    return;
+  }
+  const signedAction = await signAction(action, document);
+  const signedActionWithContext = addActionContext(signedAction);
+  return signedActionWithContext;
+}
+
+async function makeSignedActionsWithContext(
+  actionOrActions: Action[] | Action | undefined,
+  document: PHDocument | undefined,
+) {
+  if (!actionOrActions) {
+    logger.error("No actions found");
+    return;
+  }
+  const actions = Array.isArray(actionOrActions)
+    ? actionOrActions
+    : [actionOrActions];
+
+  const signedActionsWithContext = await Promise.all(
+    actions.map((action) => makeSignedActionWithContext(action, document)),
+  );
+  return signedActionsWithContext.filter((a) => a !== undefined);
+}
+
+export async function queueActions(
+  document: PHDocument | undefined,
+  actionOrActions: Action[] | Action | undefined,
+) {
+  if (!actionOrActions) {
+    logger.error("No actions found");
+    return;
+  }
+  const actions = Array.isArray(actionOrActions)
+    ? actionOrActions
+    : [actionOrActions];
+
+  if (actions.length === 0) {
+    logger.error("No actions found");
+    return;
+  }
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
+  if (!document) {
+    logger.error("No document found");
+    return;
+  }
+
+  const result = await reactor.queueActions(document.header.id, actions);
+  if (result.status !== "SUCCESS") {
+    logger.error(result.error);
+  }
+  return result.document;
+}
+
+async function dispatchActions(
+  actionOrActions: Action[] | Action | undefined,
+  document: PHDocument | undefined,
+) {
+  const signedActionsWithContext = await makeSignedActionsWithContext(
+    actionOrActions,
+    document,
+  );
+  if (!signedActionsWithContext) {
+    logger.error("No signed actions with context found");
+    return;
+  }
+  const result = await queueActions(document, signedActionsWithContext);
+  return result;
+}
+
+export function useDispatch(initialDocument: PHDocument | undefined) {
+  const [document, setDocument] = useState(initialDocument);
+
+  function dispatch(actionOrActions: Action[] | Action | undefined) {
+    dispatchActions(actionOrActions, document)
+      .then((result) => {
+        setDocument(result);
+      })
+      .catch(logger.error);
+  }
+  return [document, dispatch] as const;
+}
+
+export async function uploadOperations(
+  document: PHDocument | undefined,
   pushOperations: (
-    id: string,
+    document: PHDocument,
     operations: Operation[],
   ) => Promise<PHDocument | undefined>,
   options?: { waitForSync?: boolean; operationsLimit?: number },
 ) {
+  if (!document) {
+    logger.error("No document found");
+    return;
+  }
   const operationsLimit = options?.operationsLimit || 50;
 
   logger.verbose(
-    `uploadDocumentOperations(documentId:${documentId}, ops: ${Object.keys(document.operations).join(",")}, limit:${operationsLimit})`,
+    `uploadDocumentOperations(documentId:${document.header.id}, ops: ${Object.keys(document.operations).join(",")}, limit:${operationsLimit})`,
   );
 
   for (const operations of Object.values(document.operations)) {
@@ -261,16 +238,16 @@ export async function uploadDocumentOperations(
           }
           */
 
-      await pushOperations(documentId, chunk);
+      await pushOperations(document, chunk);
 
       logger.verbose(
-        `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
+        `uploadDocumentOperations:for:waitForUpdate(${document.header.id}:${scope} rev ${operation.index}): NEXT`,
       );
     }
   }
 
   logger.verbose(
-    `uploadDocumentOperations:for:waitForUpdate(${documentId}): END`,
+    `uploadDocumentOperations:for:waitForUpdate(${document.header.id}): END`,
   );
 }
 
@@ -292,17 +269,16 @@ export function downloadFile(document: PHDocument) {
     .catch(logger.error);
 }
 
-export async function exportFile(
-  document: PHDocument,
-  documentModelModule: DocumentModelModule | undefined,
-) {
-  if (!documentModelModule) {
-    throw new Error(
-      `Document model not specified: ${document.header.documentType}`,
-    );
+export async function exportFile(document: PHDocument) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
   }
-
-  const extension = documentModelModule.documentModel.extension;
+  const documentModelModules = reactor.getDocumentModelModules();
+  const documentModelModule = documentModelModules.find(
+    (module) => module.documentModel.id === document.header.documentType,
+  );
+  const extension = documentModelModule?.documentModel.extension;
 
   // Fallback for browsers that don't support showSaveFilePicker
   // @ts-expect-error - showSaveFilePicker is not defined in the type
@@ -340,10 +316,12 @@ export async function exportFile(
   }
 }
 
-export async function loadFile(
-  path: string | File,
-  documentModelModules: DocumentModelModule[],
-) {
+export async function loadFile(path: string | File) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
+  const documentModelModules = reactor.getDocumentModelModules();
   const baseDocument = await baseLoadFromInput(
     path,
     (state: PHDocument) => state,
@@ -442,91 +420,38 @@ function deduplicateOperations(
   return operationsDedupedById;
 }
 
-export async function addDriveAction(
-  driveId: string,
-  action: DocumentDriveAction,
+export async function queueOperations(
+  document: PHDocument | undefined,
+  operationOrOperations: Operation[] | Operation | undefined,
 ) {
-  const reactor = window.reactor;
-  const did = window.did;
-  const user = window.user;
-  const connectCrypto = window.connectCrypto;
-  if (!reactor) {
+  if (!operationOrOperations) {
+    logger.error("No operations found");
     return;
   }
+  const operations = Array.isArray(operationOrOperations)
+    ? operationOrOperations
+    : [operationOrOperations];
 
-  const oldDrive = await reactor.getDrive(driveId);
-  // TODO: the type for reactor.getDrive says it cannot fail, so why do we need this?
-  if (!oldDrive) {
-    return;
-  }
-
-  const driveCopy = { ...oldDrive };
-
-  const newDrive = documentDriveReducer(oldDrive, addActionContext(action));
-  const scope = action.scope;
-  const operations = newDrive.operations[scope];
-  const operation = operations.findLast((op) => op.type === action.type);
-  if (!operation) {
-    throw new Error("There was an error applying the operation");
-  }
-
-  if (!connectCrypto) {
-    throw new Error("Connect crypto is not loaded");
-  }
-
-  // sign operation
-  const unsafeCastOfOperationOrActionToOperation = (await signOperationOrAction(
-    operation,
-    driveCopy,
-    documentDriveReducer,
-  )) as Operation;
-
-  try {
-    const result = await reactor.queueOperation(
-      driveId,
-      unsafeCastOfOperationOrActionToOperation,
-    );
-
-    if (result.status !== "SUCCESS") {
-      logger.error(result.error);
-    }
-
-    // TODO: add validation
-    // this type is a lie
-    return result.document as DocumentDriveDocument;
-  } catch (error) {
-    logger.error(error);
-    return oldDrive;
-  }
-}
-
-export async function addDocumentOperations(
-  documentId: string,
-  operationsToAdd: Operation[],
-) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
   }
-  const document = await reactor.getDocument(documentId);
-  const newOperations = deduplicateOperations(
+  if (!document) {
+    logger.error("No document found");
+    return;
+  }
+  const deduplicatedOperations = deduplicateOperations(
     document.operations,
-    operationsToAdd,
+    operations,
   );
-  const result = await reactor.queueOperations(documentId, newOperations);
+  const result = await reactor.queueOperations(
+    document.header.id,
+    deduplicatedOperations,
+  );
   if (result.status !== "SUCCESS") {
     logger.error(result.error);
   }
   return result.document;
-}
-
-export async function openFile(id: string, options?: GetDocumentOptions) {
-  const reactor = window.reactor;
-  if (!reactor) {
-    return;
-  }
-  const document = await reactor.getDocument(id, options);
-  return document;
 }
 
 export async function addDocument(
@@ -550,6 +475,7 @@ export async function addDocument(
     throw new Error("User is not allowed to create documents");
   }
 
+  const drive = await reactor.getDrive(driveId);
   const documentId = id ?? generateId();
   const reactorDocumentModelModules = reactor.getDocumentModelModules();
   const documentModelModuleFromReactor = reactorDocumentModelModules.find(
@@ -574,9 +500,12 @@ export async function addDocument(
     parentFolder: parentFolder ?? null,
   });
 
-  const newDrive = await addDriveAction(driveId, action);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
+    action,
+  )) as DocumentDriveDocument;
 
-  const node = newDrive?.state.global.nodes.find(
+  const node = unsafeCastAsDrive.state.global.nodes.find(
     (node) => node.id === documentId,
   );
   if (!node || !isFileNode(node)) {
@@ -606,8 +535,11 @@ export async function addFile(
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create files");
   }
-  const reactorDocumentModelModules = reactor.getDocumentModelModules();
-  const document = await loadFile(file, reactorDocumentModelModules);
+  const document = await loadFile(file);
+
+  if (!document) {
+    throw new Error("No document loaded");
+  }
 
   // first create the file with the initial state of document
   const initialDocument: PHDocument = {
@@ -640,7 +572,7 @@ export async function addFile(
   const waitForSync =
     driveDocument && driveDocument.state.local.listeners.length > 0;
 
-  uploadDocumentOperations(fileNode.id, document, addDocumentOperations, {
+  uploadOperations(document, queueOperations, {
     waitForSync,
   }).catch((error) => {
     throw error;
@@ -654,23 +586,30 @@ export async function updateFile(
   name?: string,
   parentFolder?: string,
 ) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
   const isAllowedToCreateDocuments =
     window.userPermissions?.isAllowedToCreateDocuments;
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to update files");
   }
-  const drive = await addDriveAction(
-    driveId,
+  const drive = await reactor.getDrive(driveId);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
     baseUpdateFile({
       id: nodeId,
-      name: name || undefined,
+      name: name ?? undefined,
       parentFolder,
       documentType,
     }),
-  );
+  )) as DocumentDriveDocument;
 
-  const node = drive?.state.global.nodes.find((node) => node.id === nodeId);
+  const node = unsafeCastAsDrive.state.global.nodes.find(
+    (node) => node.id === nodeId,
+  );
   if (!node || !isFileNode(node)) {
     throw new Error("There was an error updating document");
   }
@@ -682,6 +621,10 @@ export async function addFolder(
   name: string,
   parentFolder?: string,
 ) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
   const isAllowedToCreateDocuments =
     window.userPermissions?.isAllowedToCreateDocuments;
 
@@ -689,16 +632,19 @@ export async function addFolder(
     throw new Error("User is not allowed to create folders");
   }
   const folderId = generateId();
-  const drive = await addDriveAction(
-    driveId,
+  const drive = await reactor.getDrive(driveId);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
     baseAddFolder({
       id: folderId,
       name,
       parentFolder,
     }),
-  );
+  )) as DocumentDriveDocument;
 
-  const node = drive?.state.global.nodes.find((node) => node.id === folderId);
+  const node = unsafeCastAsDrive.state.global.nodes.find(
+    (node) => node.id === folderId,
+  );
   if (!node || !isFolderNode(node)) {
     throw new Error("There was an error adding folder");
   }
@@ -706,18 +652,18 @@ export async function addFolder(
 }
 
 export async function deleteNode(driveId: string, nodeId: string) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
   const isAllowedToCreateDocuments =
     window.userPermissions?.isAllowedToCreateDocuments;
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to delete documents");
   }
-  await addDriveAction(
-    driveId,
-    baseDeleteNode({
-      id: nodeId,
-    }),
-  );
+  const drive = await reactor.getDrive(driveId);
+  await queueActions(drive, baseDeleteNode({ id: nodeId }));
 }
 
 export async function renameNode(
@@ -725,21 +671,25 @@ export async function renameNode(
   nodeId: string,
   name: string,
 ): Promise<Node | undefined> {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
   const isAllowedToCreateDocuments =
     window.userPermissions?.isAllowedToCreateDocuments;
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to rename documents");
   }
-  const drive = await addDriveAction(
-    driveId,
-    updateNode({
-      id: nodeId,
-      name,
-    }),
-  );
+  const drive = await reactor.getDrive(driveId);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
+    updateNode({ id: nodeId, name }),
+  )) as DocumentDriveDocument;
 
-  const node = drive?.state.global.nodes.find((node) => node.id === nodeId);
+  const node = unsafeCastAsDrive.state.global.nodes.find(
+    (node) => node.id === nodeId,
+  );
   if (!node) {
     throw new Error("There was an error renaming node");
   }
@@ -768,12 +718,11 @@ export async function moveNode(src: Node, target: Node | undefined) {
     throw new Error("Node is not in any drive");
   }
 
-  await addDriveAction(
-    driveForNode.header.id,
-    baseMoveNode({
-      srcFolder: src.id,
-      targetParentFolder: target?.id,
-    }),
+  const drive = await reactor.getDrive(driveForNode.header.id);
+
+  await queueActions(
+    drive,
+    baseMoveNode({ srcFolder: src.id, targetParentFolder: target?.id }),
   );
 }
 
@@ -812,6 +761,7 @@ export async function copyNode(src: Node, target: Node | undefined) {
   const copyActions = copyNodesInput.map((copyNodeInput) =>
     baseCopyNode(copyNodeInput),
   );
+  // TODO: why does this use addActions instead of queueActions?
   const result = await reactor.addActions(driveForNode.header.id, copyActions);
 
   if (result.status !== "SUCCESS") {
@@ -871,13 +821,18 @@ export async function deleteDrive(driveId: string) {
 }
 
 export async function renameDrive(driveId: string, name: string) {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
   const isAllowedToCreateDocuments =
     window.userPermissions?.isAllowedToCreateDocuments;
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to rename drives");
   }
-  const renamedDrive = await addDriveAction(driveId, setDriveName({ name }));
+  const drive = await reactor.getDrive(driveId);
+  const renamedDrive = await queueActions(drive, setDriveName({ name }));
   return renamedDrive;
 }
 
@@ -895,8 +850,9 @@ export async function setDriveAvailableOffline(
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to change drive availability");
   }
-  const updatedDrive = await addDriveAction(
-    driveId,
+  const drive = await reactor.getDrive(driveId);
+  const updatedDrive = await queueActions(
+    drive,
     setAvailableOffline({ availableOffline }),
   );
   return updatedDrive;
@@ -916,8 +872,9 @@ export async function setDriveSharingType(
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to change drive availability");
   }
-  const updatedDrive = await addDriveAction(
-    driveId,
+  const drive = await reactor.getDrive(driveId);
+  const updatedDrive = await queueActions(
+    drive,
     setSharingType({ type: sharingType }),
   );
   return updatedDrive;
@@ -968,9 +925,17 @@ export async function clearStorage() {
 }
 
 export async function removeTrigger(driveId: string, triggerId: string) {
-  const drive = await addDriveAction(driveId, baseRemoveTrigger({ triggerId }));
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
+  const drive = await reactor.getDrive(driveId);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
+    baseRemoveTrigger({ triggerId }),
+  )) as DocumentDriveDocument;
 
-  const trigger = drive?.state.local.triggers.find(
+  const trigger = unsafeCastAsDrive.state.local.triggers.find(
     (trigger) => trigger.id === triggerId,
   );
 
@@ -1039,9 +1004,17 @@ export async function registerNewPullResponderTrigger(
 }
 
 export async function addTrigger(driveId: string, trigger: Trigger) {
-  const drive = await addDriveAction(driveId, baseAddTrigger({ trigger }));
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
+  const drive = await reactor.getDrive(driveId);
+  const unsafeCastAsDrive = (await queueActions(
+    drive,
+    baseAddTrigger({ trigger }),
+  )) as DocumentDriveDocument;
 
-  const newTrigger = drive?.state.local.triggers.find(
+  const newTrigger = unsafeCastAsDrive.state.local.triggers.find(
     (trigger) => trigger.id === trigger.id,
   );
 

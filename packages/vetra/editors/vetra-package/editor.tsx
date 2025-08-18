@@ -1,15 +1,17 @@
+import { useDispatch } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import {
-  type VetraPackageDocument,
-  actions,
+    type VetraPackageDocument,
+    actions
 } from "../../document-models/vetra-package/index.js";
 import { MetaForm } from "./components/MetaForm.js";
 
 export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const { document: initialDocument } = props;
+  const [document, dispatch] = useDispatch(initialDocument);
   const unsafeCastOfDocument = document as VetraPackageDocument;
   console.log(">>>>> document:",unsafeCastOfDocument.state.global);
 

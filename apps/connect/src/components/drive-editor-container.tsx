@@ -1,21 +1,12 @@
 import connectConfig from '#connect-config';
-import { useEditorProps, useNodeActions, useShowDeleteNodeModal } from '#hooks';
-import { useDocumentDispatch } from '#utils';
+import { useNodeActions, useShowDeleteNodeModal } from '#hooks';
 import { GenericDriveExplorer } from '@powerhousedao/common';
 import {
-    addDocument,
-    addDriveAction,
-    addFile,
-    getSyncStatusSync,
     useDefaultDriveEditorModule,
     useDriveEditorModuleById,
     useSelectedDrive,
 } from '@powerhousedao/reactor-browser';
-import {
-    type DocumentDriveAction,
-    driveDocumentModelModule,
-} from 'document-drive';
-import { type DocumentModelModule, type Operation } from 'document-model';
+import { type DocumentModelModule } from 'document-model';
 import { useCallback } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
