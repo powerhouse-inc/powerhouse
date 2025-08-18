@@ -1,6 +1,6 @@
 import {
   BaseDocumentClass,
-  type ExtendedState,
+  type ExtendedStateFromDocument,
   type PartialState,
   applyMixins,
   type SignalDispatch,
@@ -8,6 +8,7 @@ import {
 import {
   type SubgraphModuleState,
   type SubgraphModuleLocalState,
+  type SubgraphModuleDocument,
 } from "./types.js";
 import { type SubgraphModuleAction } from "./actions.js";
 import { reducer } from "./reducer.js";
@@ -28,12 +29,7 @@ class SubgraphModule extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<
-      ExtendedState<
-        PartialState<SubgraphModuleState>,
-        PartialState<SubgraphModuleLocalState>
-      >
-    >,
+    initialState?: Partial<ExtendedStateFromDocument<SubgraphModuleDocument>>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);
