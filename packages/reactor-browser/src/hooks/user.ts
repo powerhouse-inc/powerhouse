@@ -3,7 +3,7 @@ import {
   subscribeToLoginStatus,
   subscribeToUser,
   subscribeToUserPermissions,
-} from "../events/events.js";
+} from "../events/user.js";
 
 export function useUser() {
   const user = useSyncExternalStore(subscribeToUser, () => window.user);

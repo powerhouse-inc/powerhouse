@@ -8,10 +8,8 @@ import {
 } from "document-drive";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { type DocumentModelModule } from "document-model";
-import {
-  dispatchSetDocumentsEvent,
-  dispatchSetDrivesEvent,
-} from "./events/events.js";
+import { dispatchSetDocumentsEvent } from "./events/documents.js";
+import { dispatchSetDrivesEvent } from "./events/drives.js";
 import { type Reactor } from "./types/reactor.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 

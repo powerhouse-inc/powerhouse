@@ -3,7 +3,7 @@ import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
 import {
   dispatchSetVetraPackagesEvent,
   subscribeToVetraPackages,
-} from "../events/events.js";
+} from "../events/vetra-packages.js";
 import { type VetraPackage } from "../types/vetra.js";
 
 export function useVetraPackages(): VetraPackage[] | undefined {

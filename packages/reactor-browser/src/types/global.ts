@@ -39,7 +39,7 @@ import {
   type UserPermissionsUpdatedEvent,
   type UserUpdatedEvent,
   type VetraPackagesUpdatedEvent,
-} from "../events/events.js";
+} from "../events/types.js";
 import { type VetraPackage } from "./vetra.js";
 
 export type UserPermissions = {

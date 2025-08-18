@@ -1,5 +1,5 @@
 import { logger } from "document-drive";
-import { dispatchSetLoginStatusEvent } from "../events/events.js";
+import { dispatchSetLoginStatusEvent } from "../events/user.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
