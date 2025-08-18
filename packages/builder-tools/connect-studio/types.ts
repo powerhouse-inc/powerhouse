@@ -10,6 +10,7 @@ export type ConnectStudioOptions = {
   packages?: { packageName: string }[];
   phCliVersion?: string;
   logLevel?: LogLevel;
+  enableDocumentsHMR?: boolean;
 };
 
 export type StartServerOptions = {
@@ -20,4 +21,5 @@ export type StartServerOptions = {
   open?: boolean;
   phCliVersion?: string;
   logLevel?: LogLevel;
+  enableDocumentsHMR?: boolean;
 };
