@@ -22,7 +22,7 @@ export const Default: Story = {
   args: {
     addSize: 2,
     delSize: 1,
-    timestamp: "2025-04-15T21:32:35.688Z",
+    timestampUtcMs: "2025-04-15T21:32:35.688Z",
     additions: 10,
     deletions: 10,
   },
@@ -32,7 +32,7 @@ export const NoChanges: Story = {
   args: {
     addSize: 0,
     delSize: 0,
-    timestamp: "2025-04-15T18:30:00.000Z",
+    timestampUtcMs: "2025-04-15T18:30:00.000Z",
     additions: 0,
     deletions: 0,
   },
@@ -42,7 +42,7 @@ export const LargeAddition: Story = {
   args: {
     addSize: 4,
     delSize: 0,
-    timestamp: "2025-04-16T10:45:22.123Z",
+    timestampUtcMs: "2025-04-16T10:45:22.123Z",
     additions: 50,
     deletions: 0,
   },
@@ -52,7 +52,7 @@ export const LargeDeletion: Story = {
   args: {
     addSize: 0,
     delSize: 4,
-    timestamp: "2025-04-17T14:20:15.456Z",
+    timestampUtcMs: "2025-04-17T14:20:15.456Z",
     additions: 0,
     deletions: 45,
   },
@@ -62,7 +62,7 @@ export const BalancedChanges: Story = {
   args: {
     addSize: 3,
     delSize: 3,
-    timestamp: "2025-04-18T09:15:30.789Z",
+    timestampUtcMs: "2025-04-18T09:15:30.789Z",
     additions: 25,
     deletions: 25,
   },

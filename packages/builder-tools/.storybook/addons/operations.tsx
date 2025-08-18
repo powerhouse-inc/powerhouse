@@ -13,7 +13,7 @@ const OperationsPanel = (
     .concat(operations.local)
     .sort(
       (op1, op2) =>
-        new Date(op1.timestamp).getTime() - new Date(op2.timestamp).getTime(),
+        new Date(op1.timestampUtcMs).getTime() - new Date(op2.timestampUtcMs).getTime(),
     );
   return (
     <table
@@ -51,7 +51,7 @@ const OperationsPanel = (
               </pre>
             </td>
             <td>{op.index}</td>
-            <td>{new Date(op.timestamp).toISOString()}</td>
+            <td>{new Date(op.timestampUtcMs).toISOString()}</td>
             <td>{op.hash}</td>
             <td>{op.scope}</td>
             <td>

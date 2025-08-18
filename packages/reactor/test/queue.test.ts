@@ -19,7 +19,7 @@ describe("InMemoryQueue", () => {
     overrides: Partial<Operation> = {},
   ): Operation => ({
     index: 1,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
     type: "test-operation",
@@ -501,7 +501,7 @@ describe("InMemoryQueue", () => {
     it("should preserve all job properties", async () => {
       const operation = createTestOperation({
         index: 42,
-        timestamp: "2023-01-01T00:00:00.000Z",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
         hash: "custom-hash",
         skip: 5,
         type: "custom-operation",

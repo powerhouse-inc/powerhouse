@@ -134,7 +134,7 @@ export const viteLoadExternalPackages = (
             .forEach((module) => {
               server.ws.send("studio:external-packages-updated", {
                 url: module.url,
-                timestamp: timestamp,
+                timestampUtcMs: timestamp,
               });
             });
           return modules;

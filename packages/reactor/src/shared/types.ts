@@ -6,7 +6,7 @@ export type Operation = {
   /** Position of the operation in the history */
   index: number;
   /** Timestamp of when the operation was added */
-  timestamp: string;
+  timestampUtcMs: string;
   /** Hash of the resulting document data after the operation */
   hash: string;
   /** The number of operations skipped with this Operation */

@@ -108,7 +108,7 @@ export class InternalTransmitter implements ITransmitter {
 
       const action: Action = {
         id: operation.actionId,
-        timestamp: operation.timestamp,
+        timestampUtcMs: operation.timestampUtcMs,
         type: operation.type,
         input: operation.input,
         context: operation.context,

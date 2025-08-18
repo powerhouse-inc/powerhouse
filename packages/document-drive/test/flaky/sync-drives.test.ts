@@ -159,7 +159,7 @@ describe("Document Drive Server interaction", () => {
                       name: o.type,
                       input: stringify(o.input),
                       hash: o.hash,
-                      timestamp: o.timestamp,
+                      timestampUtcMs: o.timestampUtcMs,
                       type: o.type,
                     })),
                   })),

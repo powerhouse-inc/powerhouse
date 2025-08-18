@@ -22,11 +22,11 @@ export const mockOperation: Operation = {
   hash: "onCoFcadHQoqpoie/XuS7ItuNOQ=",
   index: 0,
   skip: 0,
-  timestamp: "2024-06-13T14:39:12.936Z",
+  timestampUtcMs: "2024-06-13T14:39:12.936Z",
   error: undefined,
   action: {
     id: "411c010c-ecd5-4445-aafd-0b227b7781bd",
-    timestamp: "2024-06-13T14:39:12.936Z",
+    timestampUtcMs: "2024-06-13T14:39:12.936Z",
     type: "EXAMPLE_OPERATION",
     input: {
       id: "6wYLICDhX5w1Hq7mIo6CRbXUV1I=",
@@ -68,31 +68,31 @@ export const mockOperations = [
   mockOperation,
   {
     ...mockOperation,
-    timestamp: "2024-06-14T14:39:12.936Z",
+    timestampUtcMs: "2024-06-14T14:39:12.936Z",
   },
-  { ...mockOperation, timestamp: "2024-06-14T14:39:12.936Z" },
-  { ...mockOperation, timestamp: "2024-06-14T14:39:12.936Z", skip: 2 },
-  { ...mockOperation, timestamp: "2024-06-14T14:39:12.936Z" },
-  { ...mockOperation, timestamp: "2024-06-14T14:39:12.936Z" },
+  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
+  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z", skip: 2 },
+  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
+  { ...mockOperation, timestampUtcMs: "2024-06-14T14:39:12.936Z" },
   {
     ...mockOperation,
-    timestamp: "2024-06-14T14:39:12.936Z",
+    timestampUtcMs: "2024-06-14T14:39:12.936Z",
   },
-  { ...mockOperation, timestamp: "2024-06-15T14:39:12.936Z", skip: 1 },
+  { ...mockOperation, timestampUtcMs: "2024-06-15T14:39:12.936Z", skip: 1 },
   {
     ...mockOperation,
-    timestamp: "2024-06-15T14:39:12.936Z",
+    timestampUtcMs: "2024-06-15T14:39:12.936Z",
     error: "Data mismatch detected",
   },
   {
     ...mockOperation,
-    timestamp: "2024-06-15T14:39:12.936Z",
+    timestampUtcMs: "2024-06-15T14:39:12.936Z",
   },
-  { ...mockOperation, timestamp: "2024-06-15T14:39:12.936Z" },
+  { ...mockOperation, timestampUtcMs: "2024-06-15T14:39:12.936Z" },
   ...Array.from({ length: 100 }, (_, index) =>
     Array.from({ length: 5 }, () => ({
       ...mockOperation,
-      timestamp: addDays(`2024-06-15T14:39:12.936Z`, index).toISOString(),
+      timestampUtcMs: addDays(`2024-06-15T14:39:12.936Z`, index).toISOString(),
     })),
   ).flat(),
 ].map((op, index) => ({

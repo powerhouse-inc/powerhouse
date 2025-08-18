@@ -218,6 +218,6 @@ export const fakeAction = (
 ): Action =>
   ({
     id: generateId(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     ...params,
   }) as Action;

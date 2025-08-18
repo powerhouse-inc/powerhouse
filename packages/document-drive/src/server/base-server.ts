@@ -1906,7 +1906,7 @@ export class BaseDocumentDriveServer
             scope: operation.action.scope,
             branch: "main", // TODO: handle branches
             revision: operation.index + 1,
-            lastUpdated: operation.timestamp,
+            lastUpdated: operation.timestampUtcMs,
           };
 
           // checks if this sync unit was already added
@@ -2264,7 +2264,7 @@ export class BaseDocumentDriveServer
                 documentType: document.header.documentType,
                 scope: "global",
                 branch: "main",
-                lastUpdated: lastOperation.timestamp,
+                lastUpdated: lastOperation.timestampUtcMs,
                 revision: lastOperation.index,
               },
             ],
@@ -2641,7 +2641,7 @@ export class BaseDocumentDriveServer
         ...op,
         action: {
           id: op.actionId,
-          timestamp: op.timestamp,
+          timestampUtcMs: op.timestampUtcMs,
           type: op.type,
           input: op.input,
           context: op.context,

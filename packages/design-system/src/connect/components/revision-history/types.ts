@@ -3,13 +3,13 @@ export type Skip = {
   height: number;
   operationIndex: number;
   skipCount: number;
-  timestamp: string;
+  timestampUtcMs: string;
 };
 
 export type Day = {
   type: "day";
   height: number;
-  timestamp: string;
+  timestampUtcMs: string;
 };
 
 //  [
@@ -38,7 +38,7 @@ export type Revision = {
   operationInput: Record<string, any>;
   address: `0x${string}` | undefined;
   chainId: number | undefined;
-  timestamp: string;
+  timestampUtcMs: string;
   signatures: Signature[] | undefined;
   errors: string[] | undefined;
 };

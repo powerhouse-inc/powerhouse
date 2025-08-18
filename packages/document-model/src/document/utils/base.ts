@@ -290,7 +290,8 @@ export function getDocumentLastModified(document: PHDocument) {
   );
 
   return (
-    sortedOperations.at(-1)!.timestampUtcMs || document.header.lastModifiedAtUtcIso
+    sortedOperations.at(-1)!.timestampUtcMs ||
+    document.header.lastModifiedAtUtcIso
   );
 }
 
@@ -470,7 +471,8 @@ export function replayDocument<TDocument extends PHDocument>(
             return {
               ...operation,
               timestamp:
-                operations[scope][index]?.timestampUtcMs ?? operation.timestampUtcMs,
+                operations[scope][index]?.timestampUtcMs ??
+                operation.timestampUtcMs,
             };
           }),
         ],

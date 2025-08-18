@@ -577,7 +577,8 @@ export class BrowserStorage
             scope: unit.scope,
             branch: unit.branch,
             lastUpdated:
-              operations.at(-1)?.timestamp ?? document.header.createdAtUtcIso,
+              operations.at(-1)?.timestampUtcMs ??
+              document.header.createdAtUtcIso,
             revision: operationsToRevision(operations),
           };
         } catch {

@@ -233,7 +233,7 @@ type TestDefinition${id} {
 
           return {
             id: generateId(),
-            timestamp: new Date().toISOString(),
+            timestampUtcMs: new Date().toISOString(),
             type: "SET_STATE_SCHEMA" as const,
             input: {
               schema: newStateSchema,
@@ -255,7 +255,7 @@ type TestLocalDefinition${id} {
 
           return {
             id: generateId(),
-            timestamp: new Date().toISOString(),
+            timestampUtcMs: new Date().toISOString(),
             type: "SET_STATE_SCHEMA" as const,
             input: {
               schema: newStateSchema,
@@ -270,7 +270,7 @@ type TestLocalDefinition${id} {
 
           return {
             id: generateId(),
-            timestamp: new Date().toISOString(),
+            timestampUtcMs: new Date().toISOString(),
             type: "ADD_MODULE" as const,
             input: {
               id: uuidv7(),
@@ -286,7 +286,7 @@ type TestLocalDefinition${id} {
 
           return {
             id: generateId(),
-            timestamp: new Date().toISOString(),
+            timestampUtcMs: new Date().toISOString(),
             type: "ADD_OPERATION" as const,
             input: {
               id: uuidv7(),

@@ -10,7 +10,7 @@ export interface TimelineBarProps {
   readonly className?: string;
   addSize?: 0 | 1 | 2 | 3 | 4;
   delSize?: 0 | 1 | 2 | 3 | 4;
-  timestamp?: string;
+  timestampUtcMs?: string;
   additions?: number;
   deletions?: number;
   onClick?: () => void;
@@ -47,7 +47,7 @@ const formatTimestamp = (isoString?: string) => {
 export const TimelineBar: React.FC<TimelineBarProps> = ({
   onClick,
   className,
-  timestamp,
+  timestampUtcMs: timestamp,
   additions,
   deletions,
   addSize = 0,

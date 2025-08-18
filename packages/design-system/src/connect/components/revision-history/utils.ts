@@ -6,14 +6,14 @@ export function makeRows(operations: Operation[]) {
   const seenDays = new Set<string>();
 
   for (const operation of operations) {
-    const day = operation.timestamp.split("T")[0];
+    const day = operation.timestampUtcMs.split("T")[0];
 
     if (!seenDays.has(day)) {
       seenDays.add(day);
       revisionsAndSkips.push({
         type: "day",
         height: 32,
-        timestamp: day,
+        timestampUtcMs: day,
       });
     }
 
@@ -29,7 +29,7 @@ export function makeRows(operations: Operation[]) {
         | `0x${string}`
         | undefined,
       chainId: operation.action?.context?.signer?.user.chainId,
-      timestamp: operation.timestamp,
+      timestampUtcMs: operation.timestampUtcMs,
       signatures: makeSignatures(
         (operation.action?.context?.signer?.signatures as
           | string[][]
@@ -44,7 +44,7 @@ export function makeRows(operations: Operation[]) {
         height: 34,
         operationIndex: operation.index,
         skipCount: operation.skip,
-        timestamp: operation.timestamp,
+        timestampUtcMs: operation.timestampUtcMs,
       });
     }
   }
@@ -56,7 +56,7 @@ export function getUniqueDatesInOrder(operations: Operation[]) {
   const dates = new Set<string>();
 
   for (const operation of operations) {
-    const date = operation.timestamp.split("T")[0];
+    const date = operation.timestampUtcMs.split("T")[0];
     dates.add(date);
   }
 

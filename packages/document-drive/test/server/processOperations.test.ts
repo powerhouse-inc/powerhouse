@@ -25,7 +25,7 @@ import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
-    const { id, timestamp, ...operation } = op;
+    const { id, timestampUtcMs, ...operation } = op;
     return operation;
   });
 

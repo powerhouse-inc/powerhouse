@@ -366,7 +366,7 @@ describe("ReactorMcpProvider", () => {
   //         input: "Operation Name",
   //         scope: "global",
   //         index: 1,
-  //         timestamp: new Date().toISOString(),
+  //         timestampUtcMs: new Date().toISOString(),
   //         hash: "test-hash",
   //         skip: 0,
   //       },

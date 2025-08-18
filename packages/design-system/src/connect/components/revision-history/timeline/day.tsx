@@ -1,8 +1,8 @@
 import { Icon } from "#powerhouse";
 import { format } from "date-fns";
 
-export function Day(props: { readonly timestamp: string }) {
-  const { timestamp } = props;
+export function Day(props: { readonly timestampUtcMs: string }) {
+  const { timestampUtcMs: timestamp } = props;
   const formattedDate = format(timestamp, "MMM dd, yyyy");
   return (
     <h2 className="-ml-6 flex items-center gap-1 bg-slate-50 py-2 text-xs text-slate-100">
