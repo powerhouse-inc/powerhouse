@@ -34,8 +34,6 @@ export function DriveEditorContainer() {
         [showModal],
     );
     const showDeleteNodeModal = useShowDeleteNodeModal();
-    const analyticsDatabaseName = connectConfig.analytics.databaseName;
-    const showSearchBar = false;
 
     const driveEditor = useDriveEditorModuleById(
         selectedDrive?.header.meta?.preferredEditor,
@@ -57,8 +55,6 @@ export function DriveEditorContainer() {
             <DriveEditorComponent
                 context={{
                     ...nodeActions,
-                    showSearchBar,
-                    analyticsDatabaseName,
                     showCreateDocumentModal,
                     showDeleteNodeModal,
                 }}

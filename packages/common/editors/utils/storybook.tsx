@@ -2,7 +2,6 @@ import {
   createDocumentStory,
   type DocumentStory,
   type EditorStoryArgs,
-  type EditorStoryComponent,
   type EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
@@ -32,7 +31,6 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
       (Story, context) => (
         <DriveContextProvider
           value={{
-            analyticsDatabaseName: "test",
             onAddFile: () => Promise.resolve(),
             onAddFolder: () => Promise.resolve(undefined),
             onRenameNode: () => Promise.resolve(undefined),
@@ -40,7 +38,6 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
             onMoveNode: () => Promise.resolve(),
             onDuplicateNode: () => Promise.resolve(),
             showDeleteNodeModal: () => {},
-            showSearchBar: false,
             showCreateDocumentModal(documentModel: DocumentModelModule) {
               return Promise.resolve({
                 name: `New ${documentModel.documentModel.name}`,

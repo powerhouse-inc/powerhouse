@@ -3,6 +3,7 @@ import { BrowserKeyStorage } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import {
     addPHEventHandlers,
+    dispatchSetAppConfigEvent,
     dispatchSetConnectCryptoEvent,
     dispatchSetDidEvent,
     dispatchSetDocumentsEvent,
@@ -14,7 +15,6 @@ import {
     dispatchSetSelectedDriveIdEvent,
     dispatchSetSelectedNodeIdEvent,
     dispatchSetUserEvent,
-    dispatchSetUserPermissionsEvent,
     dispatchSetVetraPackagesEvent,
     extractDriveSlugFromPath,
     extractNodeSlugFromPath,
@@ -111,6 +111,9 @@ export async function createReactor() {
     // add window event handlers for updates
     addPHEventHandlers();
 
+    // initialize app config
+    const appConfig = getAppConfig();
+
     // initialize connect crypto
     const connectCrypto = await initConnectCrypto();
 
@@ -125,12 +128,6 @@ export async function createReactor() {
 
     // initialize login status
     const loginStatus = user ? 'authorized' : 'initial';
-
-    // initialize user permissions
-    const userPermissions = {
-        isAllowedToCreateDocuments: true,
-        isAllowedToEditDocuments: true,
-    };
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);
@@ -172,7 +169,7 @@ export async function createReactor() {
     dispatchSetRenownEvent(renown);
     dispatchSetLoginStatusEvent(loginStatus);
     dispatchSetUserEvent(user);
-    dispatchSetUserPermissionsEvent(userPermissions);
+    dispatchSetAppConfigEvent(appConfig);
     dispatchSetProcessorManagerEvent(processorManager);
     dispatchSetDrivesEvent(drives);
     dispatchSetDocumentsEvent(documents);
@@ -225,4 +222,25 @@ export async function createReactor() {
         logger.verbose('operationsAdded', ...args);
         refreshReactorData(reactor).catch(logger.error);
     });
+}
+
+function getAppConfig() {
+    const allowList = getAllowList();
+    const analyticsDatabaseName = connectConfig.analytics.databaseName;
+    const showSearchBar = connectConfig.content.showSearchBar;
+    return {
+        allowList,
+        analyticsDatabaseName,
+        showSearchBar,
+    };
+}
+
+function getAllowList() {
+    const arbitrumAllowList =
+        import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST.split(',');
+    const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST.split(',');
+    if (!arbitrumAllowList.length && !rwaAllowList.length) {
+        return undefined;
+    }
+    return [...arbitrumAllowList, ...rwaAllowList];
 }

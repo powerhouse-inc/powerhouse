@@ -14,6 +14,7 @@ import {
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
+  useShowSearchBar,
   useUserPermissions,
   type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
@@ -33,7 +34,6 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const unsafeCastOfDocument = document as DocumentDriveDocument;
 
   const {
-    showSearchBar,
     showCreateDocumentModal,
     onRenameNode,
     onDuplicateNode,
@@ -48,9 +48,8 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
-  const userPermissions = useUserPermissions();
-  const isAllowedToCreateDocuments =
-    userPermissions?.isAllowedToCreateDocuments ?? false;
+  const { isAllowedToCreateDocuments } = useUserPermissions();
+  const showSearchBar = useShowSearchBar();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
     showCreateDocumentModal(documentModel);
   };

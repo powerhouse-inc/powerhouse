@@ -1,10 +1,6 @@
 import { type User } from "document-model";
-import { type LoginStatus, type UserPermissions } from "../types/global.js";
-import {
-  type SetLoginStatusEvent,
-  type SetUserEvent,
-  type SetUserPermissionsEvent,
-} from "./types.js";
+import { type LoginStatus } from "../types/global.js";
+import { type SetLoginStatusEvent, type SetUserEvent } from "./types.js";
 
 export function dispatchSetLoginStatusEvent(
   loginStatus: LoginStatus | undefined,
@@ -62,38 +58,4 @@ export function subscribeToUser(onStoreChange: () => void) {
 
 export function addUserEventHandler() {
   window.addEventListener("ph:setUser", handleSetUserEvent);
-}
-
-export function dispatchSetUserPermissionsEvent(
-  userPermissions: UserPermissions | undefined,
-) {
-  const event = new CustomEvent("ph:setUserPermissions", {
-    detail: { userPermissions },
-  });
-  window.dispatchEvent(event);
-}
-
-export function dispatchUserPermissionsUpdatedEvent() {
-  const event = new CustomEvent("ph:userPermissionsUpdated");
-  window.dispatchEvent(event);
-}
-
-export function handleSetUserPermissionsEvent(event: SetUserPermissionsEvent) {
-  const userPermissions = event.detail.userPermissions;
-  window.userPermissions = userPermissions;
-  dispatchUserPermissionsUpdatedEvent();
-}
-
-export function subscribeToUserPermissions(onStoreChange: () => void) {
-  window.addEventListener("ph:userPermissionsUpdated", onStoreChange);
-  return () => {
-    window.removeEventListener("ph:userPermissionsUpdated", onStoreChange);
-  };
-}
-
-export function addUserPermissionsEventHandler() {
-  window.addEventListener(
-    "ph:setUserPermissions",
-    handleSetUserPermissionsEvent,
-  );
 }

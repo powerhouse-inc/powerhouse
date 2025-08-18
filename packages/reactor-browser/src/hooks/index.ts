@@ -1,3 +1,4 @@
+export * from "./config.js";
 export * from "./crypto.js";
 export * from "./documents.js";
 export * from "./drive-context.js";

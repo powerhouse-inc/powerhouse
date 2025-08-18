@@ -13,6 +13,7 @@ import {
 import { type PHDocument } from "document-model";
 import { type DID, type IConnectCrypto } from "../crypto/index.js";
 import {
+  type AppConfigUpdatedEvent,
   type ConnectCryptoUpdatedEvent,
   type DidUpdatedEvent,
   type DocumentsUpdatedEvent,
@@ -23,6 +24,7 @@ import {
   type RenownUpdatedEvent,
   type SelectedDriveIdUpdatedEvent,
   type SelectedNodeIdUpdatedEvent,
+  type SetAppConfigEvent,
   type SetConnectCryptoEvent,
   type SetDidEvent,
   type SetDocumentsEvent,
@@ -34,9 +36,7 @@ import {
   type SetSelectedDriveIdEvent,
   type SetSelectedNodeIdEvent,
   type SetUserEvent,
-  type SetUserPermissionsEvent,
   type SetVetraPackagesEvent,
-  type UserPermissionsUpdatedEvent,
   type UserUpdatedEvent,
   type VetraPackagesUpdatedEvent,
 } from "../events/types.js";
@@ -52,6 +52,12 @@ export type LoginStatus =
   | "checking"
   | "not-authorized"
   | "authorized";
+
+export type AppConfig = {
+  showSearchBar?: boolean;
+  analyticsDatabaseName?: string;
+  allowList?: string[];
+};
 
 declare global {
   interface Window {
@@ -72,6 +78,7 @@ declare global {
     phDocuments?: PHDocument[] | undefined;
     phSelectedDriveId?: string | undefined;
     phSelectedNodeId?: string | undefined;
+    phAppConfig?: AppConfig | undefined;
   }
 
   interface WindowEventMap {
@@ -87,8 +94,6 @@ declare global {
     "ph:loginStatusUpdated": LoginStatusUpdatedEvent;
     "ph:setUser": SetUserEvent;
     "ph:userUpdated": UserUpdatedEvent;
-    "ph:setUserPermissions": SetUserPermissionsEvent;
-    "ph:userPermissionsUpdated": UserPermissionsUpdatedEvent;
     "ph:setProcessorManager": SetProcessorManagerEvent;
     "ph:processorManagerUpdated": ProcessorManagerUpdatedEvent;
     "ph:setDrives": SetDrivesEvent;
@@ -101,5 +106,7 @@ declare global {
     "ph:selectedDriveIdUpdated": SelectedDriveIdUpdatedEvent;
     "ph:setSelectedNodeId": SetSelectedNodeIdEvent;
     "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
+    "ph:setAppConfig": SetAppConfigEvent;
+    "ph:appConfigUpdated": AppConfigUpdatedEvent;
   }
 }

@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from "react";
-import {
-  subscribeToLoginStatus,
-  subscribeToUser,
-  subscribeToUserPermissions,
-} from "../events/user.js";
+import { subscribeToLoginStatus, subscribeToUser } from "../events/user.js";
+import { useAllowList } from "./config.js";
 
 export function useUser() {
   const user = useSyncExternalStore(subscribeToUser, () => window.user);
@@ -11,11 +8,25 @@ export function useUser() {
 }
 
 export function useUserPermissions() {
-  const userPermissions = useSyncExternalStore(
-    subscribeToUserPermissions,
-    () => window.userPermissions,
-  );
-  return userPermissions;
+  const user = useUser();
+  const allowList = useAllowList();
+  if (!allowList) {
+    return {
+      isAllowedToCreateDocuments: true,
+      isAllowedToEditDocuments: true,
+    };
+  }
+  if (!user) {
+    return {
+      isAllowedToCreateDocuments: false,
+      isAllowedToEditDocuments: false,
+    };
+  }
+
+  return {
+    isAllowedToCreateDocuments: allowList.includes(user.address),
+    isAllowedToEditDocuments: allowList.includes(user.address),
+  };
 }
 
 export function useLoginStatus() {

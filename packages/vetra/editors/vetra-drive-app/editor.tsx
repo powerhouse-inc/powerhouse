@@ -1,5 +1,5 @@
 import { WagmiContext } from "@powerhousedao/design-system";
-import { addDocument, DriveContextProvider, setSelectedNode, useDocumentModelModules, useDriveContext, type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { addDocument, DriveContextProvider, setSelectedNode, useAnalyticsDatabaseName, useDocumentModelModules, useDriveContext, type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import {
   type DocumentDriveDocument,
@@ -71,10 +71,11 @@ export function BaseEditor(props: IProps) {
 }
 
 export default function Editor(props: IProps) {
+  const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
-        <AnalyticsProvider databaseName={props.context.analyticsDatabaseName}>
+        <AnalyticsProvider databaseName={analyticsDatabaseName}>
           <BaseEditor {...props} />
         </AnalyticsProvider>
       </WagmiContext>

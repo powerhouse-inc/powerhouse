@@ -5,7 +5,7 @@ import {
 } from "document-drive";
 import { type PHDocument } from "document-model";
 import { type DID, type IConnectCrypto } from "../crypto/index.js";
-import { type LoginStatus, type UserPermissions } from "../types/global.js";
+import { type AppConfig, type LoginStatus } from "../types/global.js";
 import { type Reactor } from "../types/reactor.js";
 import { type VetraPackage } from "../types/vetra.js";
 
@@ -39,11 +39,6 @@ export type SetUserEvent = CustomEvent<{
 }>;
 export type UserUpdatedEvent = CustomEvent;
 
-export type SetUserPermissionsEvent = CustomEvent<{
-  userPermissions: UserPermissions | undefined;
-}>;
-export type UserPermissionsUpdatedEvent = CustomEvent;
-
 export type SetProcessorManagerEvent = CustomEvent<{
   processorManager: ProcessorManager | undefined;
 }>;
@@ -72,3 +67,8 @@ export type SetVetraPackagesEvent = CustomEvent<{
   vetraPackages: VetraPackage[] | undefined;
 }>;
 export type VetraPackagesUpdatedEvent = CustomEvent;
+
+export type SetAppConfigEvent = CustomEvent<{
+  appConfig: AppConfig | undefined;
+}>;
+export type AppConfigUpdatedEvent = CustomEvent;

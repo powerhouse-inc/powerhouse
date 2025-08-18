@@ -21,7 +21,6 @@ declare global {
         did?: DID;
         renown?: IRenown;
         user?: User | undefined;
-        userPermissions?: UserPermissions | undefined;
 
         documentEditorDebugTools?: DocumentEditorDebugTools;
         reactor?: IDocumentDriveServer;

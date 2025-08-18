@@ -7,12 +7,6 @@ import { type FC } from "react";
  * for managing document drive functionality.
  */
 export type IDriveContext = {
-  /** Controls the visibility of the search bar in the drive interface */
-  showSearchBar: boolean;
-  /**
-   * The name of the analytics database to use for the drive editor
-   */
-  analyticsDatabaseName: string;
   /**
    * Callback to add a new file to the drive
    * @param file - The file to be added
