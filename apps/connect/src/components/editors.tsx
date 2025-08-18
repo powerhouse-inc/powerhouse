@@ -7,7 +7,7 @@ import {
     type TimelineItem,
 } from '@powerhousedao/design-system';
 import {
-    useDispatch,
+    useDocumentById,
     useDocumentModelModuleById,
     useEditorModuleById,
     useFallbackEditorModule,
@@ -53,7 +53,7 @@ export const DocumentEditor: React.FC<Props> = props => {
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const [document, dispatch] = useDispatch(initialDocument);
+    const [document, dispatch] = useDocumentById(initialDocument.header.id);
     const documentId = document?.header.id ?? undefined;
     const documentName = document?.header.name ?? undefined;
     const documentType = document?.header.documentType ?? undefined;

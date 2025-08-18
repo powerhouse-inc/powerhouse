@@ -22,7 +22,7 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-    const selectedDrive = useSelectedDrive();
+    const [selectedDrive] = useSelectedDrive();
     const nodeActions = useNodeActions();
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(

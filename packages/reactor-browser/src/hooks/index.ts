@@ -8,4 +8,3 @@ export * from "./reactor.js";
 export * from "./renown.js";
 export * from "./user.js";
 export * from "./vetra-packages.js";
-export * from "./operations.js";

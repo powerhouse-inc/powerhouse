@@ -1,3 +1,4 @@
+export * from "./actions/index.js";
 export * from "./constants.js";
 export * from "./context/index.js";
 export * from "./document-model.js";

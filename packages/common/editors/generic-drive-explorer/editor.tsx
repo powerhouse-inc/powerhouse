@@ -43,7 +43,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     onMoveNode,
     showDeleteNodeModal,
   } = useDriveContext();
-  const selectedDrive = useSelectedDrive();
+  const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();

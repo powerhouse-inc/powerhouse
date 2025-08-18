@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { useDispatch } from "./dispatch.js";
 import { useFileNodes, useSelectedNodeId } from "./nodes.js";
 
 function getDocumentsSnapshot() {
@@ -34,23 +35,24 @@ export function useSelectedDocument() {
   const selectedDocument = documents?.find(
     (d) => d.header.id === selectedNodeId,
   );
-  return selectedDocument;
+  return useDispatch(selectedDocument);
 }
 
 /** Returns the document type of a document by id. */
 export function useDocumentTypeById(id: string | null | undefined) {
-  const document = useDocumentById(id);
+  const [document] = useDocumentById(id);
   return document?.header.documentType;
 }
 
 /** Returns the document type of the selected document. */
 export function useSelectedDocumentType() {
-  const selectedDocument = useSelectedDocument();
+  const [selectedDocument] = useSelectedDocument();
   return selectedDocument?.header.documentType;
 }
 
 /** Returns a document by id. */
 export function useDocumentById(id: string | null | undefined) {
   const documents = useSelectedDriveDocuments();
-  return documents?.find((d) => d.header.id === id);
+  const document = documents?.find((d) => d.header.id === id);
+  return useDispatch(document);
 }

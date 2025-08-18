@@ -1,9 +1,9 @@
-import { useDispatch } from "@powerhousedao/reactor-browser";
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import {
-    actions,
-    type DocumentTypeItem, type ProcessorModuleDocument
+  actions,
+  type DocumentTypeItem, type ProcessorModuleDocument
 } from "../../document-models/processor-module/index.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 
@@ -11,7 +11,7 @@ export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
   const { document: initialDocument } = props;
-  const [document, dispatch] = useDispatch(initialDocument);
+  const [document, dispatch] = useDocumentById(initialDocument.header.id);
  const unsafeCastOfDocument = document as ProcessorModuleDocument
   const onConfirm = useCallback(
     (name: string, type: string, documentTypes: DocumentTypeItem[]) => {

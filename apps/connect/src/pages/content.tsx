@@ -6,21 +6,19 @@ import {
     HomeScreenItem,
 } from '@powerhousedao/design-system';
 import {
-    addFile,
     setSelectedDrive,
     useDrives,
     useSelectedDocument,
     useSelectedDrive,
     useSelectedFolder,
 } from '@powerhousedao/reactor-browser';
-import { useEffect } from 'react';
 import { DocumentEditorContainer } from '../components/document-editor-container.js';
 import { DriveEditorContainer } from '../components/drive-editor-container.js';
 import { DriveIcon } from '../components/drive-icon.js';
 export default function Content() {
-    const selectedDrive = useSelectedDrive();
+    const [selectedDrive] = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
-    const selectedDocument = useSelectedDocument();
+    const [selectedDocument] = useSelectedDocument();
 
     // useEffect(() => {
     //     return window.electronAPI?.handleFileOpen(async file => {

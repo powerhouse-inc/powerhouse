@@ -1,27 +1,26 @@
-import { useDispatch } from "@powerhousedao/reactor-browser";
 import {
-    addModule,
-    addOperation,
-    addOperationError,
-    deleteModule,
-    deleteOperation,
-    deleteOperationError,
-    type DocumentModelDocument,
-    type EditorProps,
-    generateId,
-    setAuthorName,
-    setAuthorWebsite,
-    setInitialState,
-    setModelDescription,
-    setModelExtension,
-    setModelId,
-    setModelName,
-    setModuleName,
-    setOperationDescription,
-    setOperationErrorName,
-    setOperationName,
-    setOperationSchema,
-    setStateSchema,
+  addModule,
+  addOperation,
+  addOperationError,
+  deleteModule,
+  deleteOperation,
+  deleteOperationError,
+  type DocumentModelDocument,
+  type EditorProps,
+  generateId,
+  setAuthorName,
+  setAuthorWebsite,
+  setInitialState,
+  setModelDescription,
+  setModelExtension,
+  setModelId,
+  setModelName,
+  setModuleName,
+  setOperationDescription,
+  setOperationErrorName,
+  setOperationName,
+  setOperationSchema,
+  setStateSchema,
 } from "document-model";
 import { useEffect, useRef } from "react";
 import { Divider } from "./components/divider.js";
@@ -31,14 +30,15 @@ import { StateSchemas } from "./components/state-schemas.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { type Scope } from "./types/documents.js";
 import {
-    compareStringsWithoutWhitespace,
-    initializeModelSchema,
-    makeOperationInitialDoc,
+  compareStringsWithoutWhitespace,
+  initializeModelSchema,
+  makeOperationInitialDoc,
 } from "./utils/helpers.js";
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 export function DocumentModelEditor(props: EditorProps) {
   const { document: initialDocument } = props;
-  const [unsafeDocument, dispatch] = useDispatch(initialDocument);
+  const [unsafeDocument, dispatch] = useDocumentById(initialDocument.header.id);
   const document = unsafeDocument as DocumentModelDocument;
 
   const documentNodeName = document.header.name;

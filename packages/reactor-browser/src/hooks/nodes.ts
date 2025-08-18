@@ -17,7 +17,7 @@ import { useDrives, useSelectedDrive } from "./drives.js";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
-  const selectedDrive = useSelectedDrive();
+  const [selectedDrive] = useSelectedDrive();
   return selectedDrive?.state.global.nodes;
 }
 
@@ -72,7 +72,7 @@ export function useParentFolder(id: string | null | undefined) {
 /** Returns the selected folder or document's parent folder. */
 export function useSelectedParentFolder() {
   const selectedFolder = useSelectedFolder();
-  const selectedDocument = useSelectedDocument();
+  const [selectedDocument] = useSelectedDocument();
   const selectedNodeId = selectedDocument?.header.id ?? selectedFolder?.id;
   return useParentFolder(selectedNodeId);
 }
@@ -80,7 +80,7 @@ export function useSelectedParentFolder() {
 /** Returns the path to a node. */
 export function useNodePath(id: string | null | undefined): Node[] {
   const nodes = useNodes();
-  const selectedDrive = useSelectedDrive();
+  const [selectedDrive] = useSelectedDrive();
   if (!nodes || !selectedDrive) return [];
   const driveFolderNode = makeFolderNodeFromDrive(selectedDrive);
 
@@ -110,7 +110,7 @@ export function useSelectedFolder(): FolderNode | undefined {
 /** Returns the path to the selected node. */
 export function useSelectedNodePath() {
   const selectedFolder = useSelectedFolder();
-  const selectedDocument = useSelectedDocument();
+  const [selectedDocument] = useSelectedDocument();
   const selectedNodeId = selectedDocument?.header.id ?? selectedFolder?.id;
   return useNodePath(selectedNodeId);
 }

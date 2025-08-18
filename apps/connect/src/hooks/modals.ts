@@ -8,6 +8,7 @@ import {
     addDrive,
     addRemoteDrive,
     deleteDrive,
+    deleteNode,
     renameDrive,
     setDriveAvailableOffline,
     setDriveSharingType,
@@ -17,7 +18,6 @@ import {
     useDrives,
     useSelectedDrive,
     useSelectedParentFolder,
-    deleteNode,
 } from '@powerhousedao/reactor-browser';
 import {
     type DocumentDriveDocument,
@@ -184,7 +184,7 @@ export function useShowDriveSettingsModal() {
 
 export function useShowDeleteNodeModal() {
     const { showModal } = useModal();
-    const selectedDrive = useSelectedDrive();
+    const [selectedDrive] = useSelectedDrive();
     const selectedParentFolder = useSelectedParentFolder();
     const showDeleteNodeModal = useCallback(
         (node: Node) => {

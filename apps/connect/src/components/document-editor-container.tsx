@@ -19,12 +19,12 @@ import { DocumentEditor } from './editors.js';
 export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const unwrappedSelectedDrive = useSelectedDrive();
-    const selectedDocument = useSelectedDocument();
+    const [selectedDrive] = useSelectedDrive();
+    const [selectedDocument] = useSelectedDocument();
     const parentFolder = useParentFolder(selectedDocument?.header.id);
     const documentType = selectedDocument?.header.documentType;
-    const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
-    const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
+    const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
+    const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
     const documentModelModule = useDocumentModelModuleById(documentType);
 
     const exportDocument = useCallback(

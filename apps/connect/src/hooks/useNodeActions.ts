@@ -67,7 +67,7 @@ export function useDebugHandlers() {
 }
 
 export function useNodeActions(): TNodeActions {
-    const selectedDrive = useSelectedDrive();
+    const [selectedDrive] = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedParentFolder = useSelectedParentFolder();
 

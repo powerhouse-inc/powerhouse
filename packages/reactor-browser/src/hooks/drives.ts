@@ -13,6 +13,7 @@ import {
   getDriveAvailableOffline,
   getDriveSharingType,
 } from "../utils/drives.js";
+import { useDispatch } from "./dispatch.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives() {
@@ -22,7 +23,10 @@ export function useDrives() {
 
 export function useDriveById(driveId: string | undefined | null) {
   const drives = useDrives();
-  return drives?.find((drive) => drive.header.id === driveId);
+  const drive = drives?.find((drive) => drive.header.id === driveId);
+  const [document, dispatch] = useDispatch(drive);
+  const unsafeDrive = document as DocumentDriveDocument | undefined;
+  return [unsafeDrive, dispatch] as const;
 }
 
 export function useSelectedDriveId() {
@@ -34,13 +38,15 @@ export function useSelectedDriveId() {
 }
 
 /** Returns the selected drive */
-export function useSelectedDrive(): DocumentDriveDocument | undefined {
+export function useSelectedDrive() {
   const selectedDriveId = useSelectedDriveId();
   const drives = useDrives();
   const selectedDrive = drives?.find(
     (drive) => drive.header.id === selectedDriveId,
   );
-  return selectedDrive;
+  const [document, dispatch] = useDispatch(selectedDrive);
+  const unsafeDrive = document as DocumentDriveDocument | undefined;
+  return [unsafeDrive, dispatch] as const;
 }
 
 export function setSelectedDrive(
@@ -55,7 +61,7 @@ export function setSelectedDrive(
 
 /** Returns the remote URL for a drive. */
 export function useDriveRemoteUrl(driveId: string | null | undefined) {
-  const drive = useDriveById(driveId);
+  const [drive] = useDriveById(driveId);
   const pullResponderUrl = useDrivePullResponderUrl(driveId);
 
   if (!drive) return undefined;
@@ -74,7 +80,7 @@ export function useDriveRemoteUrl(driveId: string | null | undefined) {
 export function useDrivePullResponderTrigger(
   driveId: string | null | undefined,
 ): Trigger | undefined {
-  const drive = useDriveById(driveId);
+  const [drive] = useDriveById(driveId);
 
   const pullResponder = drive?.state.local.triggers.find(
     (trigger) => trigger.type === "PullResponder",
@@ -99,21 +105,21 @@ export function useDriveIsRemote(driveId: string | null | undefined) {
 export function useDriveSharingType(
   driveId: string | null | undefined,
 ): SharingType | undefined {
-  const drive = useDriveById(driveId);
+  const [drive] = useDriveById(driveId);
   if (!drive) return undefined;
   return getDriveSharingType(drive);
 }
 
 /** Returns the sharing type for the selected drive. */
 export function useSelectedDriveSharingType(): SharingType | undefined {
-  const drive = useSelectedDrive();
+  const [drive] = useSelectedDrive();
   if (!drive) return undefined;
   return getDriveSharingType(drive);
 }
 
 /** Returns  whether a drive is available offline. */
 export function useDriveAvailableOffline(driveId: string | null | undefined) {
-  const drive = useDriveById(driveId);
+  const [drive] = useDriveById(driveId);
   if (!drive) return false;
   return getDriveAvailableOffline(drive);
 }
