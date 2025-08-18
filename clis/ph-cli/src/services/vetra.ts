@@ -172,9 +172,18 @@ export async function startVetra({
     const baseConfig = getConfig(configFile);
     const https = baseConfig.reactor?.https;
 
-    // Always start Vetra Switchboard
+    // Use vetraUrl from config if no explicit remoteDrive is provided
+    const configVetraUrl = baseConfig.vetraUrl;
+    const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
+
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
+      if (resolvedVetraUrl) {
+        const source = remoteDrive
+          ? "command line argument"
+          : "powerhouse.config.json";
+        console.log(`Using vetraUrl from ${source}: ${resolvedVetraUrl}`);
+      }
     }
     const switchboardResult = await startLocalVetraSwitchboard(
       {
@@ -185,9 +194,9 @@ export async function startVetra({
         configFile,
         verbose,
       },
-      remoteDrive, // Pass the remote drive if provided
+      resolvedVetraUrl,
     );
-    const driveUrl = remoteDrive || switchboardResult.driveUrl;
+    const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");
