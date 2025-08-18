@@ -20,7 +20,7 @@ describe("Document Operation ID", () => {
 
   beforeEach(() => {
     initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     document = baseCreateDocument(initialState);

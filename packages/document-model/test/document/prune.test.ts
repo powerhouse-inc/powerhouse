@@ -53,7 +53,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune last 3 operations", async () => {
     const document = baseCreateDocument<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -89,7 +89,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should prune 2 operations", async () => {
     const document = baseCreateDocument<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -126,7 +126,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should undo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -165,7 +165,7 @@ describe("PRUNE operation", () => {
 
   it.skip("should redo pruned state", async () => {
     const document = baseCreateDocument<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     let newDocument = countReducer(document, increment());

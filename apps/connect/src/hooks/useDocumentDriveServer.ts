@@ -292,7 +292,7 @@ export function useDocumentDriveServer() {
             }
 
             const newDocument = documentModelModule.utils.createDocument({
-                ...document,
+                ...document?.state,
             });
             newDocument.header = createPresignedHeader(
                 documentId,
@@ -347,7 +347,7 @@ export function useDocumentDriveServer() {
                 header: document.header,
                 history: document.history,
                 initialState: document.initialState,
-                state: document.initialState.state,
+                state: document.initialState,
                 operations: {
                     global: [],
                     local: [],

@@ -305,7 +305,7 @@ describe("Base reducer", () => {
 
   it("should not throw errors from reducer", () => {
     const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     let document = baseCreateDocument<CountDocument>(initialState);
@@ -320,7 +320,7 @@ describe("Base reducer", () => {
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
     const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     let document = baseCreateDocument<CountDocument>(initialState);
@@ -335,7 +335,7 @@ describe("Base reducer", () => {
 
   it("should include error message into error operation prop", () => {
     const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     let document = baseCreateDocument<CountDocument>(initialState);
@@ -371,7 +371,7 @@ describe("Base reducer", () => {
 
   it("should not include error message in successful operations", () => {
     const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     let document = baseCreateDocument<CountDocument>(initialState);

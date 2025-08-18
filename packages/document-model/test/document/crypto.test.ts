@@ -118,9 +118,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = baseCreateDocument<CountDocument>(
-      createCountState()
-    );
+    let document = baseCreateDocument<CountDocument>(createCountState());
 
     document = countReducer(document, increment());
     const hash = hashDocumentStateForScope(document, "global");

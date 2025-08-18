@@ -17,16 +17,13 @@ import { baseState } from "document-model";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
-  type ExtendedState,
+  type ExtendedStateFromDocument,
   type PartialState,
 } from "document-model";
 
 export function createDriveStory(
   Editor: EditorStoryComponent<DocumentDriveDocument>,
-  initialState?: ExtendedState<
-    PartialState<DocumentDriveState>,
-    PartialState<DocumentDriveLocalState>
-  >,
+  initialState?: ExtendedStateFromDocument<DocumentDriveDocument>,
   additionalStoryArgs?: EditorStoryArgs<DocumentDriveDocument>,
   decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
 ): {
@@ -38,7 +35,7 @@ export function createDriveStory(
     driveDocumentModelModule.reducer,
     initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
-        state: { ...baseState(), global: { name: "Powerhouse" }, local: {} },
+        ...baseState(), global: { name: "Powerhouse" }, local: {},
       }),
     },
     additionalStoryArgs,

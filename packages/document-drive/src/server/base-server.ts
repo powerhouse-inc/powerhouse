@@ -159,7 +159,7 @@ export class BaseDocumentDriveServer
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
       const document = documentModelModule.utils.createDocument(
-        initialState?.state
+        initialState?.state,
       );
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
@@ -931,9 +931,7 @@ export class BaseDocumentDriveServer
     // if no document was provided then create a new one
     const document =
       inputDocument ??
-      this.getDocumentModelModule(documentType).utils.createDocument(
-        state
-      );
+      this.getDocumentModelModule(documentType).utils.createDocument(state);
 
     // get the header
     let header: PHDocumentHeader;

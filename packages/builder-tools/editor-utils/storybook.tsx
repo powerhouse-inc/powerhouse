@@ -7,7 +7,7 @@ import {
   type Action,
   type ActionContext,
   type EditorProps,
-  type ExtendedState,
+  type ExtendedStateFromDocument,
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
   type PHDocument,
@@ -57,12 +57,7 @@ export type DriveDocumentStory<TDocument extends PHDocument> = StoryObj<
 export function createDocumentStory<TDocument extends PHDocument>(
   Editor: EditorStoryComponent<TDocument>,
   reducer: Reducer<TDocument>,
-  initialState: Partial<
-    ExtendedState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
+  initialState: Partial<ExtendedStateFromDocument<TDocument>>,
   additionalStoryArgs?: EditorStoryArgs<TDocument>,
   decorators?: Decorator<EditorStoryProps<TDocument>>[],
 ): {

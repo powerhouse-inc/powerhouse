@@ -205,7 +205,12 @@ export abstract class BaseDocumentClass<
     },
     operations: number,
   ) {
-    this.dispatch(loadState({ name: state.name, ...state.state }, operations) as TCustomAction);
+    this.dispatch(
+      loadState(
+        { name: state.name, ...state.state },
+        operations,
+      ) as TCustomAction,
+    );
     return this;
   }
 }

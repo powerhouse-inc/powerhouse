@@ -298,7 +298,7 @@ describe("skip operations", () => {
   describe("replayOperations", () => {
     it("should ignore operation 2, when operation 3 -> (skip=1)", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);
@@ -343,7 +343,7 @@ describe("skip operations", () => {
 
     it("should ignore operation 2, 3 and 4, when operation 5 -> (skip=3)", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);
@@ -389,7 +389,7 @@ describe("skip operations", () => {
 
     it("should ignore operation 2 and 5, when operation 3 -> (skip=1) and operation 6 -> (skip=1)", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);
@@ -453,7 +453,7 @@ describe("skip operations", () => {
 
     it("should ignore all the previous operations, when operation 5 -> (skip=4)", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);
@@ -495,7 +495,7 @@ describe("skip operations", () => {
 
     it("should skip operations when dispatch a new action with an skip value", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);
@@ -534,7 +534,7 @@ describe("skip operations", () => {
 
     it("should not process and skip operation that throws an error", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       let document = baseCreateDocument<CountDocument>(initialState);

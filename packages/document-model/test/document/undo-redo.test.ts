@@ -19,7 +19,7 @@ describe("UNDO/REDO", () => {
 
   beforeEach(() => {
     const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" })
+      createBaseState({ count: 0 }, { name: "" }),
     );
 
     document = baseCreateDocument(initialState);
@@ -92,7 +92,7 @@ describe("UNDO/REDO", () => {
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       document = baseCreateDocument(initialState);
@@ -110,7 +110,7 @@ describe("UNDO/REDO", () => {
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
       const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" })
+        createBaseState({ count: 0 }, { name: "" }),
       );
 
       document = baseCreateDocument(initialState);
