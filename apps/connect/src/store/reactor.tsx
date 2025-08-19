@@ -8,13 +8,11 @@ import {
     dispatchSetDidEvent,
     dispatchSetDocumentsEvent,
     dispatchSetDrivesEvent,
-    dispatchSetLoginStatusEvent,
     dispatchSetProcessorManagerEvent,
     dispatchSetReactorEvent,
     dispatchSetRenownEvent,
     dispatchSetSelectedDriveIdEvent,
     dispatchSetSelectedNodeIdEvent,
-    dispatchSetUserEvent,
     dispatchSetVetraPackagesEvent,
     extractDriveSlugFromPath,
     extractNodeSlugFromPath,
@@ -235,13 +233,18 @@ function getAppConfig() {
 }
 
 function getAllowList() {
-    const arbitrumAllowList =
-        import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST.split(',');
-    const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST.split(',');
+    const arbitrumAllowList = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
+    const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
     if (!arbitrumAllowList.length && !rwaAllowList.length) {
         return undefined;
     }
-    return [...arbitrumAllowList, ...rwaAllowList];
+    if (arbitrumAllowList.length) {
+        return arbitrumAllowList.split(',').filter(Boolean);
+    }
+    if (rwaAllowList.length) {
+        return rwaAllowList.split(',').filter(Boolean);
+    }
+    return undefined;
 }
 
 function getDidFromUrl() {

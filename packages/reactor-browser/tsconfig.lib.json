@@ -23,7 +23,7 @@
       "path": "../renown"
     }
   ],
-  "include": ["**/*", "package.json"],
+  "include": ["**/*"],
   "exclude": [
     "node_modules",
     "dist",

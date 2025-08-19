@@ -11,7 +11,6 @@ type ImportMetaEnv = {
   REQUIRES_HARD_REFRESH: boolean
   SENTRY_RELEASE: string
   BASE_PATH: string
-  BASE_HREF: string
   PH_CONNECT_APP_REQUIRES_HARD_REFRESH: string
   SENTRY_AUTH_TOKEN: string
   SENTRY_ORG: string

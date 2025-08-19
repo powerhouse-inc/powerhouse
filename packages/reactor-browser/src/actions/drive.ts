@@ -17,6 +17,7 @@ import {
   type Trigger,
 } from "document-drive";
 import { generateId } from "document-model";
+import { getUserPermissions } from "../utils/user.js";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(drive: DriveInput, preferredEditor?: string) {
@@ -24,8 +25,7 @@ export async function addDrive(drive: DriveInput, preferredEditor?: string) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
@@ -58,8 +58,7 @@ export async function deleteDrive(driveId: string) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to delete drives");
@@ -72,8 +71,7 @@ export async function renameDrive(driveId: string, name: string) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to rename drives");
@@ -91,8 +89,7 @@ export async function setDriveAvailableOffline(
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to change drive availability");
@@ -113,8 +110,7 @@ export async function setDriveSharingType(
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to change drive availability");

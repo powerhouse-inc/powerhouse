@@ -71,7 +71,6 @@ declare global {
     renown?: IRenown | undefined;
     user?: User | undefined;
     loginStatus?: LoginStatus | undefined;
-    userPermissions?: UserPermissions | undefined;
     vetraPackages?: VetraPackage[] | undefined;
     phProcessorManager?: ProcessorManager | undefined;
     phDrives?: DocumentDriveDocument[] | undefined;

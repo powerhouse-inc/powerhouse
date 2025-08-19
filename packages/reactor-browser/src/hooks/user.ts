@@ -16,16 +16,10 @@ export function useUserPermissions() {
       isAllowedToEditDocuments: true,
     };
   }
-  if (!user) {
-    return {
-      isAllowedToCreateDocuments: false,
-      isAllowedToEditDocuments: false,
-    };
-  }
 
   return {
-    isAllowedToCreateDocuments: allowList.includes(user.address),
-    isAllowedToEditDocuments: allowList.includes(user.address),
+    isAllowedToCreateDocuments: allowList.includes(user?.address ?? ""),
+    isAllowedToEditDocuments: allowList.includes(user?.address ?? ""),
   };
 }
 

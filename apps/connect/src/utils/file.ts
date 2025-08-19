@@ -50,11 +50,8 @@ export async function exportFile(
         });
 
         await baseSaveToFileHandle(document, fileHandle);
-        const path = (await fileHandle.getFile()).path;
-        // if (typeof window !== 'undefined') {
-        //     window.electronAPI?.fileSaved(document, path);
-        // }
-        return path;
+        const path = await fileHandle.getFile();
+        return path.name;
     } catch (e) {
         // ignores error if user cancelled the file picker
         if (!(e instanceof DOMException && e.name === 'AbortError')) {

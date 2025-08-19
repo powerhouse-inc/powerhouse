@@ -26,6 +26,7 @@ import {
   queueOperations,
   uploadOperations,
 } from "../actions/queue.js";
+import { getUserPermissions } from "../utils/user.js";
 
 export function downloadFile(document: PHDocument) {
   const zip = createZip(document);
@@ -128,8 +129,7 @@ export async function addDocument(
     return;
   }
 
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create documents");
@@ -189,8 +189,7 @@ export async function addFile(
     return;
   }
 
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create files");
@@ -250,8 +249,7 @@ export async function updateFile(
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to update files");
@@ -285,8 +283,7 @@ export async function addFolder(
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create folders");
@@ -316,8 +313,7 @@ export async function deleteNode(driveId: string, nodeId: string) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to delete documents");
@@ -335,8 +331,7 @@ export async function renameNode(
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to rename documents");
@@ -361,8 +356,7 @@ export async function moveNode(src: Node, target: Node | undefined) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to move documents");
@@ -391,8 +385,7 @@ export async function copyNode(src: Node, target: Node | undefined) {
   if (!reactor) {
     return;
   }
-  const isAllowedToCreateDocuments =
-    window.userPermissions?.isAllowedToCreateDocuments;
+  const { isAllowedToCreateDocuments } = getUserPermissions();
 
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to copy documents");

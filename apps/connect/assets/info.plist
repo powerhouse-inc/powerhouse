@@ -6,7 +6,7 @@
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.electron.document-model-electron.budget-statement</string>
+			<string>com.electron.connect.budget-statement</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 			<string>public.data</string>
@@ -28,7 +28,7 @@
 		</dict>
     <dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.electron.document-model-electron.maker-dao.scope-framework</string>
+			<string>com.electron.connect.maker-dao.scope-framework</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 			<string>public.data</string>
