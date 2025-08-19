@@ -1,6 +1,5 @@
 export * from './document-editor-debug-tools.js';
 export * from './drive-sections.js';
-export * from './file.js';
 export * from './join.js';
 export * from './openUrl.js';
 export * from './path.js';

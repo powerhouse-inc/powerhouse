@@ -56,35 +56,15 @@ export async function exportFile(document: PHDocument) {
     (module) => module.documentModel.id === document.header.documentType,
   );
   const extension = documentModelModule?.documentModel.extension;
-
-  // Fallback for browsers that don't support showSaveFilePicker
-  // @ts-expect-error - showSaveFilePicker is not defined in the type
-  if (!window.showSaveFilePicker) {
-    downloadFile(document);
-    return;
-  }
   try {
-    // @ts-expect-error - showSaveFilePicker is not defined in the type
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const fileHandle = await window.showSaveFilePicker({
-      // @ts-expect-error - Document model should know that name can be defined in global state
-      suggestedName: `${document.name || document.state.global?.name || "Untitled"}.${
+      suggestedName: `${document.header.name || "Untitled"}.${
         extension ? `${extension}.` : ""
       }zip`,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     await baseSaveToFileHandle(document, fileHandle);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const path = (await fileHandle.getFile()).path;
-    if (typeof window !== "undefined") {
-      /* eslint-disable */
-      // @ts-expect-error - electronAPI is not defined in the type
-      window.electronAPI?.fileSaved(document, path);
-      /* eslint-enable */
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return path;
+    return fileHandle;
   } catch (e) {
     // ignores error if user cancelled the file picker
     if (!(e instanceof DOMException && e.name === "AbortError")) {

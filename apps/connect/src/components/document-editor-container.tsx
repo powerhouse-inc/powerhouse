@@ -1,4 +1,6 @@
+import { openUrl } from '#utils';
 import {
+    exportFile,
     setSelectedNode,
     useDocumentModelModuleById,
     useDriveIsRemote,
@@ -9,10 +11,9 @@ import {
 } from '@powerhousedao/reactor-browser';
 import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import { type PHDocument } from 'document-model';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { exportFile, openUrl } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
 
@@ -27,46 +28,44 @@ export function DocumentEditorContainer() {
     const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
     const documentModelModule = useDocumentModelModuleById(documentType);
 
-    const exportDocument = useCallback(
-        (document: PHDocument) => {
-            const validationErrors = validateDocument(document);
+    const exportDocument = (document: PHDocument) => {
+        const validationErrors = validateDocument(document);
 
-            if (validationErrors.length) {
-                showModal('confirmationModal', {
-                    title: t('modals.exportDocumentWithErrors.title'),
-                    body: (
-                        <div>
-                            <p>{t('modals.exportDocumentWithErrors.body')}</p>
-                            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-                                {validationErrors.map((error, index) => (
-                                    <li key={index}>{error.message}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    ),
-                    cancelLabel: t('common.cancel'),
-                    continueLabel: t('common.export'),
-                    onCancel(closeModal) {
-                        closeModal();
-                    },
-                    onContinue(closeModal) {
-                        closeModal();
-                        return exportFile(document, documentModelModule);
-                    },
-                });
-            } else {
-                return exportFile(document, documentModelModule);
-            }
-        },
-        [documentModelModule, showModal, t],
-    );
+        if (validationErrors.length) {
+            showModal('confirmationModal', {
+                title: t('modals.exportDocumentWithErrors.title'),
+                body: (
+                    <div>
+                        <p>{t('modals.exportDocumentWithErrors.body')}</p>
+                        <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
+                            {validationErrors.map((error, index) => (
+                                <li key={index}>{error.message}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ),
+                cancelLabel: t('common.cancel'),
+                continueLabel: t('common.export'),
+                onCancel(closeModal) {
+                    closeModal();
+                },
+                onContinue(closeModal) {
+                    closeModal();
+                    return exportFile(document);
+                },
+            });
+        } else {
+            return exportFile(document);
+        }
+    };
 
-    const onExport = useCallback(() => {
+    const onExport = () => {
         if (selectedDocument) {
             return exportDocument(selectedDocument);
         }
-    }, [exportDocument, selectedDocument]);
+    };
 
+    // TODO: fix this mess
     const onOpenSwitchboardLink = useMemo(() => {
         return isRemoteDrive
             ? async () => {

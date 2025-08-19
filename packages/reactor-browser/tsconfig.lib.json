@@ -6,7 +6,7 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "types": [],
+    "types": ["@types/wicg-file-system-access"],
     "experimentalDecorators": true
   },
   "references": [

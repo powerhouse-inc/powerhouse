@@ -1,4 +1,3 @@
-// import type { ElectronAPI } from './preload.js';
 import type { DocumentEditorDebugTools } from './utils/document-editor-debug-tools.js';
 
 declare global {
