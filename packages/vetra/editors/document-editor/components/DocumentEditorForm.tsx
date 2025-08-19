@@ -1,4 +1,5 @@
 import { useReactor } from "@powerhousedao/reactor-browser";
+import { type DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 import type { AddDocumentTypeInput, DocumentTypeItem, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";
 import { StatusPill } from "../../components/index.js";
@@ -27,11 +28,30 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   const [documentTypes, setDocumentTypes] = useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<string[]>([]);
 
   // Get available document types from reactor
   const reactor = useReactor();
-  const docModels = reactor?.getDocumentModelModules() ?? [];
-  const availableDocumentTypes = docModels.map((model) => model.documentModel.id);
+
+  useEffect(() => {
+    async function loadData() {
+      const driveDocs = await reactor?.getDocuments("vetra");
+      if (!driveDocs) {
+        return;
+      }
+
+      const docTypes = (await Promise.all(driveDocs.map(async (docId) => {
+        const document = await reactor?.getDocument(docId);
+        if (document?.header.documentType === "powerhouse/document-model") {
+          const documentModel = document as DocumentModelDocument;
+          return documentModel.state.global.id;
+        }
+        return null;
+      }))).filter(e => e !== null);
+      setAvailableDocumentTypes(docTypes);
+    }
+    loadData();
+  }, [reactor]);
 
   // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);
