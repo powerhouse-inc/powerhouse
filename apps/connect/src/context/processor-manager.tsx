@@ -82,7 +82,10 @@ async function registerDiffAnalyzer(
         '@powerhousedao/diff-analyzer/processors'
     );
 
-    const wrappedFactory = (driveHeader: import('document-model').PHDocumentHeader) => {
+    const wrappedFactory = (
+        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+        driveHeader: import('document-model').PHDocumentHeader,
+    ) => {
         return processorFactory({ analyticsStore })(driveHeader.id);
     };
 
