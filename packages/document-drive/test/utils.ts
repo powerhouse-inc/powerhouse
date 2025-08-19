@@ -36,7 +36,7 @@ export function buildOperation<TDocument extends PHDocument>(
   index?: number,
 ): Operation {
   const newDocument = reducer(document, action);
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
   const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return { ...operation, index: index ?? operation.index } as Operation;
@@ -50,7 +50,7 @@ export function buildOperations<TDocument extends PHDocument>(
   const operations: Operation[] = [];
   for (const action of actions) {
     document = reducer(document, action);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
     const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
   }
@@ -67,7 +67,7 @@ export function buildOperationAndDocument<TDocument extends PHDocument>(
   operation: Operation;
 } {
   const newDocument = reducer(document, action);
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
   const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return {

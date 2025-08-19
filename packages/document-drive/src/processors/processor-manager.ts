@@ -81,6 +81,8 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ) {
+    const drive = await this.drive.getDrive(driveId);
+
     let listeners = this.identifierToListeners.get(identifier);
     if (!listeners) {
       listeners = [];
@@ -96,7 +98,7 @@ export class ProcessorManager implements IProcessorManager {
     // don't let the factory throw, we want to continue with the rest of the processors
     let processors: ProcessorRecord[] = [];
     try {
-      processors = await factory(driveId);
+      processors = await factory(drive.header);
     } catch (e) {
       this.logger.error(`Error creating processors for drive ${driveId}:`, e);
       return;

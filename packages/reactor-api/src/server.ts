@@ -199,9 +199,9 @@ function setupEventListeners(
 
       await processorManager.registerFactory(
         packageName,
-        async (driveId: string) =>
+        async (driveHeader) =>
           (
-            await Promise.all(factories.map((factory) => factory(driveId)))
+            await Promise.all(factories.map((factory) => factory(driveHeader)))
           ).flat(),
       );
     }
@@ -424,15 +424,15 @@ export async function startAPI(
 
     await processorManager.registerFactory(
       packageName,
-      async (driveId: string) =>
+      async (driveHeader) =>
         (
           await Promise.all(
             validFactories.map(async (factory) => {
               try {
-                return await factory(driveId);
+                return await factory(driveHeader);
               } catch (e) {
                 logger.error(
-                  `Error creating processor for drive ${driveId}:`,
+                  `Error creating processor for drive ${driveHeader.id}:`,
                   e,
                 );
 

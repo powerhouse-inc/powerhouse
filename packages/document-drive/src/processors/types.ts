@@ -1,6 +1,6 @@
 import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
-import { type PHDocument } from "document-model";
+import { type PHDocumentHeader, type PHDocument } from "document-model";
 import { type Kysely, type QueryCreator } from "kysely";
 import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
 
@@ -72,11 +72,11 @@ export type ProcessorRecord = {
 /**
  * A factory function that returns a list of processor records for a given drive.
  *
- * @param driveId The drive to create processors for.
+ * @param driveHeader The drive header to create processors for.
  * @returns A list of processor records.
  */
 export type ProcessorFactory = (
-  driveId: string,
+  driveHeader: PHDocumentHeader,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**

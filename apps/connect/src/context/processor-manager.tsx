@@ -82,9 +82,13 @@ async function registerDiffAnalyzer(
         '@powerhousedao/diff-analyzer/processors'
     );
 
+    const wrappedFactory = (driveHeader: import('document-model').PHDocumentHeader) => {
+        return processorFactory({ analyticsStore })(driveHeader.id);
+    };
+
     return await manager.registerFactory(
         '@powerhousedao/diff-analyzer',
-        processorFactory({ analyticsStore }),
+        wrappedFactory,
     );
 }
 

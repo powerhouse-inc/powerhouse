@@ -8,6 +8,7 @@ import {
   type ProcessorFactory,
   type ProcessorRecord,
 } from "document-drive/processors/types";
+import { type PHDocumentHeader } from "document-model";
   
   // Import other processor factories here as they are generated
   import { codegenProcessorFactory } from "./codegen/factory.js";
@@ -22,12 +23,12 @@ import {
     factories.push(codegenProcessorFactory(module));
   
     // Return the inner function that will be called for each drive
-    return async (driveId: string) => {
+    return async (driveHeader: PHDocumentHeader) => {
       const processors: ProcessorRecord[] = [];
   
-      // Call each cached factory with the driveId
+      // Call each cached factory with the driveHeader
       for (const factory of factories) {
-        processors.push(...(await factory(driveId)));
+        processors.push(...(await factory(driveHeader)));
       }
   
       return processors;

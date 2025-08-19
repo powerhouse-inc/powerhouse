@@ -9,6 +9,7 @@ import {
   type DocumentModelState,
   type DocumentSpecification,
   type ImportScriptModule,
+  type PHDocumentHeader,
   type Reducer,
   type SubgraphModule,
 } from "document-model";
@@ -16,7 +17,7 @@ import {
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
-}) => (driveId: string) => ProcessorRecord[];
+}) => (driveHeader: PHDocumentHeader) => ProcessorRecord[];
 
 export type VetraMeta = {
   id: string;

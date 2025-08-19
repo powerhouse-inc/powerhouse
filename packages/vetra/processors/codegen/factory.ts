@@ -2,13 +2,14 @@ import {
   type IProcessorHostModule,
   type ProcessorRecord,
 } from "document-drive/processors/types";
+import { type PHDocumentHeader } from "document-model";
 import { CodegenProcessor } from "./index.js";
 
 export const codegenProcessorFactory =
   (module: IProcessorHostModule) =>
-  (driveId: string): ProcessorRecord[] => {
+  (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     // Create the processor
-    if (driveId !== "vetra") {
+    if (driveHeader.slug !== "vetra") {
       return [];
     }
 
