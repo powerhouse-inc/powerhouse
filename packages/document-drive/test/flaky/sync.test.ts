@@ -49,7 +49,7 @@ describe("Document Drive Server with %s", () => {
       branch: "main",
       operations: [
         {
-          timestamp: "2024-01-24T18:57:33.899Z",
+          timestampUtcMs: "2024-01-24T18:57:33.899Z",
           index: 0,
           skip: 0,
           type: "ADD_FILE",
@@ -81,7 +81,7 @@ describe("Document Drive Server with %s", () => {
       branch: "main",
       operations: [
         {
-          timestamp: "2024-01-24T18:57:33.899Z",
+          timestampUtcMs: "2024-01-24T18:57:33.899Z",
           index: 0,
           skip: 0,
           type: "SET_NAME",
@@ -325,7 +325,7 @@ describe("Document Drive Server with %s", () => {
                   input:
                     '{"documentType":"powerhouse/document-model","id":"1.1","name":"document 1","synchronizationUnits":[{"branch":"main","scope":"global","syncId":"1"},{"branch":"main","scope":"local","syncId":"2"}]}',
                   skip: 0,
-                  timestamp: "2024-01-01T00:00:00.000Z",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   type: "ADD_FILE",
                 },
               ],
@@ -389,7 +389,7 @@ describe("Document Drive Server with %s", () => {
               driveId: "1",
               operations: [
                 {
-                  timestamp: "2024-01-01T00:00:00.000Z",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   hash: "Fd20qtObIUDJwJHse6VqFK8ObWY=",
                   input: '"Test"',
                   type: "SET_NAME",
@@ -457,7 +457,7 @@ describe("Document Drive Server with %s", () => {
       type: "ADD_FILE",
       scope: "global",
       hash: "1912p2O/5+/f+JbNQJIBUXQZ5n0=",
-      timestamp: expect.stringMatching(
+      timestampUtcMs: expect.stringMatching(
         /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
       ) as string,
       input: {
@@ -542,7 +542,7 @@ describe("Document Drive Server with %s", () => {
       type: "ADD_FILE",
       scope: "global",
       hash: "9ic1WgNomITicM0piSYLTqgDx7w=",
-      timestamp: "2024-01-01T00:00:00.000Z",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
       input: {
         id: "1.1",
         name: "local document 1",
@@ -573,7 +573,7 @@ describe("Document Drive Server with %s", () => {
         type: "ADD_FILE",
         scope: "global",
         hash: "1912p2O/5+/f+JbNQJIBUXQZ5n0=",
-        timestamp: expect.stringMatching(
+        timestampUtcMs: expect.stringMatching(
           /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
         ) as string,
         input: {
@@ -636,7 +636,7 @@ describe("Document Drive Server with %s", () => {
       type: "ADD_FILE",
       scope: "global",
       hash: "9ic1WgNomITicM0piSYLTqgDx7w=",
-      timestamp: "2024-01-01T00:00:00.000Z",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
       input: {
         id: "1.1",
         name: "local document 1",
@@ -750,7 +750,7 @@ describe("Document Drive Server with %s", () => {
       type: "ADD_FILE",
       scope: "global",
       hash: "9ic1WgNomITicM0piSYLTqgDx7w=",
-      timestamp: "2024-01-01T00:00:00.000Z",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
       input: {
         id: "1.1",
         name: "local document 1",

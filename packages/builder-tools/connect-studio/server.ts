@@ -5,6 +5,8 @@ import {
   resolveConnect,
   runShellScriptPlugin,
   viteConnectDevStudioPlugin,
+  viteDocumentModelsHMR,
+  viteEditorsHMR,
   viteLoadExternalPackages,
 } from "#connect-utils";
 import tailwindcss from "@tailwindcss/vite";
@@ -120,11 +122,7 @@ export async function startServer(
         allow: generateAllowedPaths(projectRoot),
       },
       watch: {
-        ignored: [
-          "**/document-models/**",
-          "**/subgraphs/**",
-          "**/powerhouse.manifest.json",
-        ],
+        ignored: ["**/subgraphs/**", "**/powerhouse.manifest.json"],
       },
     },
     optimizeDeps: {
@@ -174,6 +172,9 @@ export async function startServer(
       }),
       viteConnectDevStudioPlugin(true, studioPath),
       viteLoadExternalPackages(true, options.packages, studioPath),
+      // Only enable documents HMR when explicitly requested (e.g., from ph-cli vetra)
+      options.enableDocumentsHMR && viteDocumentModelsHMR(studioPath),
+      options.enableDocumentsHMR && viteEditorsHMR(studioPath),
       viteEnvs({
         declarationFile: join(studioPath, ".env"),
         computedEnv,

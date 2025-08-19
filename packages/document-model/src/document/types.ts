@@ -50,6 +50,16 @@ export type ActionSigner = {
 };
 
 export type ActionContext = {
+  /** The index of the previous operation, showing intended ordering. */
+  prevOpIndex?: number;
+
+  /** The hash of the previous operation, showing intended state. */
+  prevOpHash?: string;
+
+  /** A nonce, to cover specific signing attacks and to prevent replay attacks from no-ops. */
+  nonce?: string;
+
+  /** The signer of the action. */
   signer?: ActionSigner;
 };
 
@@ -59,16 +69,22 @@ export type ActionContext = {
 export type Action = {
   /** The id of the action. This is distinct from the operation id. */
   id: string;
-  /** The timestamp of the action. */
-  timestamp: string;
+
   /** The name of the action. */
   type: string;
+
+  /** The timestamp of the action. */
+  timestampUtcMs: string;
+
   /** The payload of the action. */
   input: unknown;
+
   /** The scope of the action */
   scope: string;
+
   /** The attachments included in the action. */
   attachments?: AttachmentInput[] | undefined;
+
   /** The context of the action. */
   context?: ActionContext;
 };
@@ -80,21 +96,27 @@ export type ActionWithAttachment = Action & {
 export type ReducerOptions = {
   /** The number of operations to skip before this new action is applied. This overrides the skip count in the operation. */
   skip?: number;
+
   /** When true the skip count is ignored and the action is applied regardless of the skip count */
   ignoreSkipOperations?: boolean;
+
   /** if true reuses the provided action resulting state instead of replaying it */
   reuseOperationResultingState?: boolean;
+
   /** if true checks the hashes of the operations */
   checkHashes?: boolean;
+
   /** Options for performing a replay. */
   replayOptions?: {
     /** The previously created operation to verify against. */
     operation: Operation;
   };
+
   /** Optional parser for the operation resulting state, uses JSON.parse by default */
   operationResultingStateParser?: <TState>(
     state: string | null | undefined,
   ) => TState;
+
   /**
    * When true (default), the reducer will prune operations (garbage collect) when processing a skip.
    * When false, it will recompute state for the skip but preserve the existing operations history.
@@ -136,33 +158,24 @@ export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
  * @typeParam A - The type of the action.
  */
 export type Operation = {
-  /////////////////////////////////////////////////////////////////////////////
-  // Temporary action fields.
-  /////////////////////////////////////////////////////////////////////////////
-  /** The name of the action. */
-  //type: string;
-  /** The payload of the action. */
-  //input: unknown;
-  /** The scope of the action */
-  //scope: string;
-  /** The attachments included in the action. */
-  //attachments?: AttachmentInput[] | undefined;
-  /** The context of the action. */
-  //context?: ActionContext;
-  /////////////////////////////////////////////////////////////////////////////
-
   /** Position of the operation in the history */
   index: number;
+
   /** Timestamp of when the operation was added */
-  timestamp: string;
+  timestampUtcMs: string;
+
   /** Hash of the resulting document data after the operation */
   hash: string;
+
   /** The number of operations skipped with this Operation */
   skip: number;
+
   /** Error message for a failed action */
   error?: string;
+
   /** The resulting state after the operation */
   resultingState?: string;
+
   /** Unique operation id. This is distinct from the action id and can be undefined and assigned later. */
   id?: string;
 
@@ -207,18 +220,17 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type BaseState<TDocumentState, TLocalState> =
-  PHBaseState<TDocumentState> & {
-    /**
-     * Use {@link PHBaseState} `document` instead.
-     */
-    global: TDocumentState;
+export type BaseState<TGlobalState, TLocalState> = PHBaseState & {
+  /**
+   * Use {@link PHBaseState} `document` instead.
+   */
+  global: TGlobalState;
 
-    /**
-     * Not a requirement for BaseState, but could be in extended states.
-     */
-    local: TLocalState;
-  };
+  /**
+   * Not a requirement for BaseState, but could be in extended states.
+   */
+  local: TLocalState;
+};
 
 export type PartialState<TState> = TState | Partial<TState>;
 
@@ -233,7 +245,7 @@ export type CreateState<TDocument extends PHDocument> = (
 
 export type CreateExtendedState<TDocument extends BaseDocument<any, any>> = (
   extendedState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
@@ -262,21 +274,13 @@ export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
 
 export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
   initialState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
   >,
   createState?: CreateState<TDocument>,
 ) => TDocument;
-
-export type ExtendedState<TDocumentState, TLocalState> = {
-  /** The document model specific state. */
-  state: BaseState<TDocumentState, TLocalState>;
-
-  /** The index of document attachments. */
-  attachments?: FileRegistry;
-};
 
 export type DocumentOperations = Record<string, Operation[]>;
 
@@ -317,14 +321,22 @@ export type BaseDocument<TDocumentState, TLocalState> = {
 
   /** The history of the document. */
   history: PHDocumentHistory;
-} & ExtendedState<TDocumentState, TLocalState> & {
-    /** The operations history of the document. */
-    operations: DocumentOperations;
-    /** The initial state of the document, enabling replaying operations. */
-    initialState: ExtendedState<TDocumentState, TLocalState>;
-    /** A list of undone operations */
-    clipboard: Operation[];
-  };
+
+  /** The document model specific state. */
+  state: BaseState<TDocumentState, TLocalState>;
+
+  /** The initial state of the document, enabling replaying operations. */
+  initialState: BaseState<TDocumentState, TLocalState>;
+
+  /** The operations history of the document. */
+  operations: DocumentOperations;
+
+  /** A list of undone operations */
+  clipboard: Operation[];
+
+  /** The index of document attachments. */
+  attachments?: FileRegistry;
+};
 
 export type PHDocument<
   TGlobalState = unknown,
@@ -502,11 +514,10 @@ export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
   LocalStateFromDocument<TDocument>
 >;
 
-export type ExtendedStateFromDocument<TDocument extends PHDocument> =
-  ExtendedState<
-    PartialState<DocumentStateFromDocument<TDocument>>,
-    PartialState<LocalStateFromDocument<TDocument>>
-  >;
+export type ExtendedStateFromDocument<TDocument extends PHDocument> = BaseState<
+  PartialState<DocumentStateFromDocument<TDocument>>,
+  PartialState<LocalStateFromDocument<TDocument>>
+>;
 
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;

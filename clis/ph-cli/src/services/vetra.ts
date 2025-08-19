@@ -200,9 +200,7 @@ export async function startVetra({
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
       await spawnConnect(
-        connectPort
-          ? { configFile, verbose, connectPort }
-          : { configFile, verbose },
+        { configFile, verbose, connectPort, enableDocumentsHMR: true },
         driveUrl,
       );
     }

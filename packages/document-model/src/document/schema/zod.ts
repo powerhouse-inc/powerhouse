@@ -6,12 +6,12 @@ import {
   type LoadStateAction,
   type LoadStateActionInput,
   type LoadStateActionStateInput,
-  type Operation,
+  type IOperation as Operation,
   type PruneAction,
   type PruneActionInput,
   type RedoAction,
   type SetNameAction,
-  type SetNameOperation,
+  // type SetNameOperation,
   type UndoAction,
 } from "./types.js";
 
@@ -73,6 +73,8 @@ export function LoadStateActionSchema(): z.ZodObject<
   Properties<LoadStateAction>
 > {
   return z.object({
+    id: z.string(),
+    timestampUtcMs: z.string(),
     input: z.lazy(() => LoadStateActionInputSchema()),
     type: Load_StateSchema,
     scope: OperationScopeSchema(),
@@ -102,13 +104,15 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
     __typename: z.literal("Operation").optional(),
     hash: z.string(),
     index: z.number(),
-    timestamp: z.string().datetime(),
+    timestampUtcMs: z.string().datetime(),
     type: z.string(),
   });
 }
 
 export function PruneActionSchema(): z.ZodObject<Properties<PruneAction>> {
   return z.object({
+    id: z.string(),
+    timestampUtcMs: z.string(),
     input: z.lazy(() => PruneActionInputSchema()),
     type: PruneSchema,
     scope: OperationScopeSchema(),
@@ -129,7 +133,7 @@ export const RedoActionInputSchema = z.number;
 export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
   return z.object({
     id: z.string(),
-    timestamp: z.string().datetime(),
+    timestampUtcMs: z.string().datetime(),
     input: RedoActionInputSchema(),
     type: RedoSchema,
     scope: OperationScopeSchema(),
@@ -141,32 +145,32 @@ export const SetNameActionInputSchema = z.string;
 export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
   return z.object({
     id: z.string(),
-    timestamp: z.string().datetime(),
+    timestampUtcMs: z.string().datetime(),
     input: SetNameActionInputSchema(),
     type: Set_NameSchema,
     scope: z.literal("global"),
   });
 }
 
-export function SetNameOperationSchema(): z.ZodObject<
-  Properties<SetNameOperation>
-> {
-  return z.object({
-    __typename: z.literal("SetNameOperation").optional(),
-    hash: z.string(),
-    index: z.number(),
-    input: z.string(),
-    timestamp: z.string().datetime(),
-    type: z.string(),
-  });
-}
+// export function SetNameOperationSchema(): z.ZodObject<
+//   Properties<SetNameOperation>
+// > {
+//   return z.object({
+//     __typename: z.literal("SetNameOperation").optional(),
+//     hash: z.string(),
+//     index: z.number(),
+//     input: z.string(),
+//     timestampUtcMs: z.string().datetime(),
+//     type: z.string(),
+//   });
+// }
 
 export const UndoActionInputSchema = z.number;
 
 export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
   return z.object({
     id: z.string(),
-    timestamp: z.string().datetime(),
+    timestampUtcMs: z.string().datetime(),
     input: UndoActionInputSchema(),
     type: UndoSchema,
     scope: OperationScopeSchema(),

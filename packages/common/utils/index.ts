@@ -8,7 +8,7 @@ export const getRevisionFromDate = (
   if (!startDate || !endDate) return 0;
 
   const operation = operations.find((operation) => {
-    const operationDate = new Date(operation.timestamp);
+    const operationDate = new Date(operation.timestampUtcMs);
     return operationDate >= startDate && operationDate <= endDate;
   });
 

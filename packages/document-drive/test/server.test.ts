@@ -1078,7 +1078,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     ]);
 
     const storageUnits = await storage.findStorageUnitsBy({}, 10);
-    expect(storageUnits.units).toHaveLength(5);
+    expect(storageUnits.units).toHaveLength(8);
   });
 
   it("should store all operation attributes", async ({ expect }) => {

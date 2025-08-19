@@ -138,7 +138,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       documentId,
       documentType: document.header.documentType,
       lastUpdated:
-        lastOperation?.timestamp ?? document.header.lastModifiedAtUtcIso,
+        lastOperation?.timestampUtcMs ?? document.header.lastModifiedAtUtcIso,
       revision: operationsToRevision(operations),
     };
   }
@@ -167,7 +167,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       (operation) =>
         Object.keys(filter).length === 0 ||
         ((filter.since === undefined ||
-          isBefore(filter.since, operation.timestamp)) &&
+          isBefore(filter.since, operation.timestampUtcMs)) &&
           (filter.fromRevision === undefined ||
             operation.index >= filter.fromRevision)),
     );
@@ -202,7 +202,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
       actionId: operation.action.id,
       hash: operation.hash,
       index: operation.index,
-      timestamp: operation.timestamp,
+      timestampUtcMs: operation.timestampUtcMs,
       type: operation.action.type,
       input: operation.action.input as object,
       skip: operation.skip,

@@ -64,13 +64,15 @@ export type IDocument = {
 export type IOperation = {
   hash: Scalars["String"]["output"];
   index: Scalars["Int"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   type: Scalars["String"]["output"];
 };
 
 export type Load_State = "LOAD_STATE";
 
 export type LoadStateAction = {
+  id: Scalars["String"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: LoadStateActionInput;
   type: Load_State;
   scope: string;
@@ -126,6 +128,8 @@ export type Operation = IOperation & {
 export type Prune = "PRUNE";
 
 export type PruneAction = {
+  id: Scalars["String"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: PruneActionInput;
   type: Prune;
   scope: string;
@@ -145,7 +149,7 @@ export type Redo = "REDO";
 
 export type RedoAction = {
   id: Scalars["String"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
   type: Redo;
   scope: string;
@@ -155,7 +159,7 @@ export type Set_Name = "SET_NAME";
 
 export type SetNameAction = {
   id: Scalars["String"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["String"]["input"];
   type: Set_Name;
   scope: "global";
@@ -174,7 +178,7 @@ export type Undo = "UNDO";
 
 export type UndoAction = {
   id: Scalars["String"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
   type: Undo;
   scope: string;
@@ -184,7 +188,7 @@ export type NOOP = "NOOP";
 
 export type NOOPAction = {
   id: Scalars["String"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
+  timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Unknown"]["input"];
   type: NOOP;
   scope: string;

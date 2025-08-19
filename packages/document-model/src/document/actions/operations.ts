@@ -167,12 +167,12 @@ export function pruneOperation<TDocument extends PHDocument>(
   // if and operation is pruned then reuses the timestamp of the last operation
   // if not then assigns the timestamp of the following unpruned operation
   const loadStateTimestamp = actionsToKeepStart.length
-    ? actionsToKeepStart[actionsToKeepStart.length - 1].timestamp
+    ? actionsToKeepStart[actionsToKeepStart.length - 1].timestampUtcMs
     : actionsToKeepEnd.length
-      ? actionsToKeepEnd[0].timestamp
+      ? actionsToKeepEnd[0].timestampUtcMs
       : new Date().toISOString();
 
-  const action = loadState({ name, state: newState }, actionsToPrune.length);
+  const action = loadState({ name, ...newState }, actionsToPrune.length);
 
   // replaces pruned operations with LOAD_STATE
   return replayOperations(
@@ -185,7 +185,7 @@ export function pruneOperation<TDocument extends PHDocument>(
           skip: 0,
           ...action,
           action,
-          timestamp: loadStateTimestamp,
+          timestampUtcMs: loadStateTimestamp,
           index: loadStateIndex,
           hash: hashDocumentStateForScope({ state: newState }, "global"),
         },

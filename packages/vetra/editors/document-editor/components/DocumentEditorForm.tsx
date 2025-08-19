@@ -1,3 +1,4 @@
+import { useReactor } from "@powerhousedao/state";
 import { useEffect, useState } from "react";
 import type { AddDocumentTypeInput, DocumentTypeItem, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";
 import { StatusPill } from "../../components/index.js";
@@ -24,8 +25,13 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 }) => {
   const [editorName, setEditorName] = useState(initialEditorName);
   const [documentTypes, setDocumentTypes] = useState<DocumentTypeItem[]>(initialDocumentTypes);
-  const [documentTypeInput, setDocumentTypeInput] = useState("");
+  const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
+
+  // Get available document types from reactor
+  const reactor = useReactor();
+  const docModels = reactor?.getDocumentModelModules() ?? [];
+  const availableDocumentTypes = docModels.map((model) => model.documentModel.id);
 
   // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);
@@ -88,32 +94,37 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           Supported Document Types
         </label>
         <div className="space-y-2">
-          {!isReadOnly && (
-            <input
-              type="text"
-              value={documentTypeInput}
-              onChange={(e) => setDocumentTypeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && documentTypeInput.trim()) {
-                  e.preventDefault();
+          {!isReadOnly && availableDocumentTypes.length > 0 && (
+            <select
+              value={selectedDocumentType}
+              onChange={(e) => {
+                const selectedValue = e.target.value;
+                if (selectedValue && !documentTypes.some(dt => dt.documentType === selectedValue)) {
                   const newTypeInput: AddDocumentTypeInput = {
                     id: Date.now().toString(), // Generate a unique ID
-                    documentType: documentTypeInput.trim()
+                    documentType: selectedValue
                   };
-                  if (!documentTypes.some(dt => dt.documentType === newTypeInput.documentType)) {
-                    const newType: DocumentTypeItem = {
-                      id: newTypeInput.id,
-                      documentType: newTypeInput.documentType
-                    };
-                    setDocumentTypes([...documentTypes, newType]);
-                    onAddDocumentType?.(newTypeInput);
-                  }
-                  setDocumentTypeInput('');
+                  const newType: DocumentTypeItem = {
+                    id: newTypeInput.id,
+                    documentType: newTypeInput.documentType
+                  };
+                  setDocumentTypes([...documentTypes, newType]);
+                  onAddDocumentType?.(newTypeInput);
                 }
+                setSelectedDocumentType('');
               }}
-              placeholder="Type a document type and press Enter"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            >
+              <option value="">Select a document type to add</option>
+              {availableDocumentTypes
+                .filter(docType => !documentTypes.some(dt => dt.documentType === docType))
+                .map((docType) => (
+                  <option key={docType} value={docType}>
+                    {docType}
+                  </option>
+                ))
+              }
+            </select>
           )}
           <div className="space-y-1">
             {documentTypes.map((type) => (

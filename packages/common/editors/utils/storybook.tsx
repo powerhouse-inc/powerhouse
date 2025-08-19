@@ -23,7 +23,7 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
     driveDocumentModelModule.reducer,
     initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
-        state: { global: { name: "Powerhouse" }, local: {} },
+        ...baseState(), global: { name: "Powerhouse" }, local: {},
       }),
     },
     additionalStoryArgs,

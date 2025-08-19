@@ -21,7 +21,7 @@ interface EnqueuedJob {
   jobId: string;
   documentId: string;
   scope: string;
-  timestamp: string;
+  timestampUtcMs: string;
 }
 
 export class EventQueueManager implements IQueueManager {
@@ -151,7 +151,7 @@ export class EventQueueManager implements IQueueManager {
       jobId,
       documentId: job.documentId,
       scope,
-      timestamp: new Date().toUTCString(),
+      timestampUtcMs: new Date().toUTCString(),
     });
 
     this.emit("jobAdded", jobValue);

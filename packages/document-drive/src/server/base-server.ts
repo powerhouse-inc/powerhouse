@@ -46,6 +46,7 @@ import {
   type PHDocumentMeta,
   type SignalResult,
   attachBranch,
+  baseState,
   createPresignedHeader,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -157,9 +158,9 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelModule.utils.createDocument({
-        ...initialState,
-      });
+      const document = documentModelModule.utils.createDocument(
+        initialState?.state,
+      );
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
@@ -625,13 +626,12 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     const document = createDocument({
-      state: {
-        global: {
-          icon: input.global.icon ?? null,
-          name: input.global.name,
-        },
-        local: input.local ?? {},
+      ...baseState(),
+      global: {
+        icon: input.global.icon ?? null,
+        name: input.global.name,
       },
+      local: input.local ?? {},
     });
 
     if (input.id && input.id.length > 0) {
@@ -931,9 +931,7 @@ export class BaseDocumentDriveServer
     // if no document was provided then create a new one
     const document =
       inputDocument ??
-      this.getDocumentModelModule(documentType).utils.createDocument({
-        state,
-      });
+      this.getDocumentModelModule(documentType).utils.createDocument(state);
 
     // get the header
     let header: PHDocumentHeader;
@@ -1906,7 +1904,7 @@ export class BaseDocumentDriveServer
             scope: operation.action.scope,
             branch: "main", // TODO: handle branches
             revision: operation.index + 1,
-            lastUpdated: operation.timestamp,
+            lastUpdated: operation.timestampUtcMs,
           };
 
           // checks if this sync unit was already added
@@ -2264,7 +2262,7 @@ export class BaseDocumentDriveServer
                 documentType: document.header.documentType,
                 scope: "global",
                 branch: "main",
-                lastUpdated: lastOperation.timestamp,
+                lastUpdated: lastOperation.timestampUtcMs,
                 revision: lastOperation.index,
               },
             ],
@@ -2505,7 +2503,7 @@ export class BaseDocumentDriveServer
     // create document before adding it to the drive
     const document = this.getDocumentModelModule(
       action.input.documentType,
-    ).utils.createDocument({ ...action.input.document });
+    ).utils.createDocument(action.input.document?.state || undefined);
     document.header.id = action.input.id;
     document.header.name = action.input.name;
     document.header.documentType = action.input.documentType;
@@ -2641,7 +2639,7 @@ export class BaseDocumentDriveServer
         ...op,
         action: {
           id: op.actionId,
-          timestamp: op.timestamp,
+          timestampUtcMs: op.timestampUtcMs,
           type: op.type,
           input: op.input,
           context: op.context,

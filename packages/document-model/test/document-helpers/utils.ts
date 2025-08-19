@@ -18,7 +18,7 @@ export const buildOperation = (
         input: {},
         scope: "global",
       }),
-      timestamp: new Date().toISOString(),
+      timestampUtcMs: new Date().toISOString(),
       hash: `hash-${input.index}`,
       ...input,
     } as Operation;
@@ -26,7 +26,7 @@ export const buildOperation = (
 
   return {
     hash: `hash-${input.index}`,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     action: fakeAction({
       type: input.type ?? "TEST",
       input: {},

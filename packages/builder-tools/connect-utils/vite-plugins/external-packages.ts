@@ -20,13 +20,21 @@ function generateImportScript(
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
-  const hasModule =
+  const hasJsModule =
+    localPackage && fs.existsSync(resolve(targetDir, LOCAL_JS));
+  const hasTsModule =
     localPackage &&
-    (fs.existsSync(resolve(targetDir, LOCAL_JS)) ||
-      fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts"))));
+    fs.existsSync(resolve(targetDir, LOCAL_JS.replace(".js", ".ts")));
+  const hasModule = hasJsModule || hasTsModule;
   const hasStyles =
     localPackage && fs.existsSync(resolve(targetDir, LOCAL_CSS));
-  const localJsPath = hasModule ? LOCAL_JS : undefined;
+
+  // Use the correct file extension based on what actually exists
+  const localJsPath = hasModule
+    ? hasJsModule
+      ? LOCAL_JS
+      : LOCAL_JS.replace(".js", ".ts")
+    : undefined;
   const localCssPath = hasStyles ? LOCAL_CSS : undefined;
 
   const fileContent = makeImportScriptFromPackages({
@@ -134,7 +142,7 @@ export const viteLoadExternalPackages = (
             .forEach((module) => {
               server.ws.send("studio:external-packages-updated", {
                 url: module.url,
-                timestamp: timestamp,
+                timestampUtcMs: timestamp,
               });
             });
           return modules;

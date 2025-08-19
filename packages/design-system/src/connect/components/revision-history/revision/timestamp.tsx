@@ -2,11 +2,11 @@ import { Tooltip } from "#connect";
 import { format } from "date-fns";
 
 export type TimestampProps = {
-  readonly timestamp: number | string;
+  readonly timestampUtcMs: number | string;
 };
 
 export function Timestamp(props: TimestampProps) {
-  const { timestamp } = props;
+  const { timestampUtcMs: timestamp } = props;
 
   const timestampNumber =
     typeof timestamp === "string" && !timestamp.includes("-")

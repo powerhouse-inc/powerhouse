@@ -150,7 +150,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
       scope: "global",
       branch: "main",
       hash: "+oWJspzrQnYtIYN+ceBaV+pgy0g=",
-      timestamp: expect.stringMatching(
+      timestampUtcMs: expect.stringMatching(
         /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)/,
       ),
       input: {

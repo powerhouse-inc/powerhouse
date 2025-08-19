@@ -1,4 +1,9 @@
 import {
+  type PHAuthState,
+  type PHBaseState,
+  type PHDocumentState,
+} from "./ph-types.js";
+import {
   type Action,
   type ActionContext,
   type ActionSigner,
@@ -16,7 +21,7 @@ import { generateId } from "./utils/crypto.js";
 export const actionFromAction = (action: Action): Action => {
   return {
     id: action.id,
-    timestamp: action.timestamp,
+    timestampUtcMs: action.timestampUtcMs,
     type: action.type,
     input: action.input,
     scope: action.scope,
@@ -34,7 +39,7 @@ export const operationFromAction = (
     ...action,
     action,
     id: generateId(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: "",
     error: undefined,
 
@@ -82,4 +87,24 @@ export const actionSigner = (
   user,
   app,
   signatures,
+});
+
+/**
+ * Creates a default PHAuthState
+ */
+export const authState = (): PHAuthState => ({});
+
+/**
+ * Creates a default PHDocumentState
+ */
+export const documentState = (): PHDocumentState => ({
+  version: "1.0.0",
+});
+
+/**
+ * Creates a default PHBaseState with auth and document properties
+ */
+export const baseState = (): PHBaseState => ({
+  auth: authState(),
+  document: documentState(),
 });

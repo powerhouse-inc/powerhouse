@@ -18,6 +18,7 @@ import { validateOperations } from "../../src/document/utils/validation.js";
 import {
   type CountDocument,
   countReducer,
+  createBaseState,
   fakeAction,
   increment,
   mutableCountReducer,
@@ -92,14 +93,14 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a1,
         },
         {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a2,
         },
       ],
@@ -108,7 +109,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: a3,
         },
       ],
@@ -127,7 +128,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -138,7 +139,7 @@ describe("Base utils", () => {
           hash: "",
           index: 1,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -149,7 +150,7 @@ describe("Base utils", () => {
           hash: "",
           index: 3,
           skip: 1,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -162,7 +163,7 @@ describe("Base utils", () => {
           hash: "",
           index: 0,
           skip: 0,
-          timestamp: "",
+          timestampUtcMs: "",
           action: fakeAction({
             type: "TEST_ACTION",
             input: { id: "test" },
@@ -176,9 +177,9 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
     const newDocument = countReducer(document, setLocalName("test"));
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -192,16 +193,18 @@ describe("Base utils", () => {
     expect(newDocument.header.lastModifiedAtUtcIso).toBe(
       replayedDocument.header.lastModifiedAtUtcIso,
     );
-    expect(newDocument.operations.global.map((o) => o.timestamp)).toStrictEqual(
-      replayedDocument.operations.global.map((o) => o.timestamp),
+    expect(
+      newDocument.operations.global.map((o) => o.timestampUtcMs),
+    ).toStrictEqual(
+      replayedDocument.operations.global.map((o) => o.timestampUtcMs),
     );
   });
 
   it("should work with mutable reducer", () => {
     const reducer = createReducer<CountDocument>(mutableCountReducer);
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
     const newDocument = reducer(document, increment());
     expect(newDocument.state.global.count).toBe(1);
     expect(document.state.global.count).toBe(0);

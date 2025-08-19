@@ -19,7 +19,7 @@ export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
 export type TimelineDividerItem = {
   id: string;
   type: "divider";
-  timestamp?: string;
+  timestampUtcMs?: string;
   title?: string;
   subtitle?: string;
   revision?: number;
@@ -74,11 +74,11 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
     (items: Array<TimelineBarItem | TimelineDividerItem>) => {
       return items.map((item) => {
         if (item.type === "divider") {
-          const { timestamp, title, subtitle } = item;
+          const { timestampUtcMs, title, subtitle } = item;
           return (
             <HDivider
               key={item.id}
-              timestamp={timestamp}
+              timestampUtcMs={timestampUtcMs}
               title={title}
               subtitle={subtitle}
               onClick={() => handleClick(item)}
@@ -90,7 +90,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
         return (
           <TimelineBar
             key={item.id}
-            timestamp={item.timestamp}
+            timestampUtcMs={item.timestampUtcMs}
             addSize={item.addSize}
             delSize={item.delSize}
             additions={item.additions}

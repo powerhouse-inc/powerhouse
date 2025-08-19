@@ -6,7 +6,7 @@ import { twMerge } from "tailwind-merge";
 
 export interface HDividerProps {
   className?: string;
-  timestamp?: string;
+  timestampUtcMs?: string;
   title?: string;
   subtitle?: string;
   onClick?: () => void;
@@ -16,7 +16,7 @@ export interface HDividerProps {
 export const HDivider = (props: HDividerProps) => {
   const {
     className,
-    timestamp,
+    timestampUtcMs: timestamp,
     title,
     subtitle,
     onClick,

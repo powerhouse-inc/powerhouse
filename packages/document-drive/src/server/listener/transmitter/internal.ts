@@ -87,7 +87,7 @@ export class InternalTransmitter implements ITransmitter {
         stateByIndex.set(
           index,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-          (document.initialState.state as any)[strand.scope],
+          (document.initialState as any)[strand.scope],
         );
       } else {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
@@ -108,7 +108,7 @@ export class InternalTransmitter implements ITransmitter {
 
       const action: Action = {
         id: operation.actionId,
-        timestamp: operation.timestamp,
+        timestampUtcMs: operation.timestampUtcMs,
         type: operation.type,
         input: operation.input,
         context: operation.context,

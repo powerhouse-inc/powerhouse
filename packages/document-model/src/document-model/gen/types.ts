@@ -1,11 +1,11 @@
-import type { BaseDocument, ExtendedState } from "../../document/types.js";
+import type { BaseDocument, BaseState } from "../../document/types.js";
 import type {
   DocumentModelState,
   DocumentModelLocalState,
 } from "./schema/types.js";
 import type { DocumentModelAction } from "./actions.js";
 
-export type ExtendedDocumentModelState = ExtendedState<
+export type ExtendedDocumentModelState = BaseState<
   DocumentModelState,
   DocumentModelLocalState
 >;

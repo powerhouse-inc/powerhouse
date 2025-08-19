@@ -132,7 +132,7 @@ export class DriveSubgraph extends Subgraph {
       actionId: String!
       input: String!
       hash: String!
-      timestamp: String!
+      timestampUtcMs: String!
       error: String
       context: InputOperationContext
     }
@@ -145,7 +145,7 @@ export class DriveSubgraph extends Subgraph {
       actionId: String!
       input: String!
       hash: String!
-      timestamp: String!
+      timestampUtcMs: String!
       error: String
       context: OperationContext
     }
@@ -419,7 +419,7 @@ export class DriveSubgraph extends Subgraph {
               branch: "main",
               action: {
                 id: op.actionId,
-                timestamp: op.timestamp,
+                timestampUtcMs: op.timestampUtcMs,
                 scope: strandGql.scope,
                 type: op.type,
                 input: JSON.parse(op.input) as DocumentModelInput,
@@ -514,7 +514,7 @@ export class DriveSubgraph extends Subgraph {
             name: op.type,
             input: JSON.stringify(op.input),
             hash: op.hash,
-            timestamp: op.timestamp,
+            timestampUtcMs: op.timestampUtcMs,
             type: op.type,
             context: op.context,
             id: op.id,

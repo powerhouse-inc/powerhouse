@@ -1,3 +1,4 @@
+import { baseState } from "#document/ph-factories.js";
 import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
@@ -15,12 +16,12 @@ import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
   type Action,
+  type BaseState,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
-  type ExtendedState,
   type ExtendedStateFromDocument,
   type GlobalStateFromDocument,
   type LocalStateFromDocument,
@@ -104,7 +105,7 @@ export function createAction<TAction extends Action>(
 
   const action: Action = {
     id: generateId(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     type,
     input,
     scope,
@@ -162,21 +163,21 @@ export function createReducer<TDocument extends PHDocument>(
 
 export function baseCreateExtendedState<TDocument extends PHDocument>(
   initialState?: Partial<
-    ExtendedState<
+    BaseState<
       PartialState<GlobalStateFromDocument<TDocument>>,
       PartialState<LocalStateFromDocument<TDocument>>
     >
   >,
   createState?: CreateState<TDocument>,
 ): ExtendedStateFromDocument<TDocument> {
-  return {
-    state:
-      createState?.(initialState?.state) ??
-      ((initialState?.state ?? {
-        global: {},
-        local: {},
-      }) as BaseStateFromDocument<TDocument>),
-  };
+  return (
+    createState?.(initialState) ??
+    ((initialState ?? {
+      ...baseState(),
+      global: {},
+      local: {},
+    }) as BaseStateFromDocument<TDocument>)
+  );
 }
 
 /**
@@ -194,7 +195,7 @@ export function baseCreateDocument<TDocument extends PHDocument>(
 
   const header = createUnsignedHeader();
   return {
-    ...state,
+    state,
     header,
     initialState: state,
     operations: { global: [], local: [] },
@@ -277,8 +278,8 @@ export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
     .flatMap((array) => array)
     .sort(
       (a, b) =>
-        new Date(a.operation.timestamp).getTime() -
-        new Date(b.operation.timestamp).getTime(),
+        new Date(a.operation.timestampUtcMs).getTime() -
+        new Date(b.operation.timestampUtcMs).getTime(),
     );
 }
 
@@ -290,7 +291,8 @@ export function getDocumentLastModified(document: PHDocument) {
   );
 
   return (
-    sortedOperations.at(-1)!.timestamp || document.header.lastModifiedAtUtcIso
+    sortedOperations.at(-1)!.timestampUtcMs ||
+    document.header.lastModifiedAtUtcIso
   );
 }
 
@@ -379,11 +381,8 @@ export function replayDocument<TDocument extends PHDocument>(
         );
         documentState = {
           ...documentState,
-          state: {
-            ...documentState.state,
-            // TODO how to deal with attachments?
-            [scope]: scopeState,
-          },
+          // TODO how to deal with attachments?
+          [scope]: scopeState,
         };
         initialOperations[scope as keyof typeof initialOperations].push(
           ...scopeOperations.slice(0, index + 1),
@@ -470,7 +469,8 @@ export function replayDocument<TDocument extends PHDocument>(
             return {
               ...operation,
               timestamp:
-                operations[scope][index]?.timestamp ?? operation.timestamp,
+                operations[scope][index]?.timestampUtcMs ??
+                operation.timestampUtcMs,
             };
           }),
         ],
@@ -485,8 +485,8 @@ export function replayDocument<TDocument extends PHDocument>(
     : Object.values(resultOperations).reduce((acc, curr) => {
         const operation = curr.at(-1);
         if (operation) {
-          if (operation.timestamp > acc) {
-            return operation.timestamp;
+          if (operation.timestampUtcMs > acc) {
+            return operation.timestampUtcMs;
           }
         }
 

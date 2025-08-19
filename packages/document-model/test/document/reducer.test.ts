@@ -13,6 +13,7 @@ import {
 import {
   type CountDocument,
   countReducer,
+  createBaseState,
   error,
   fakeAction,
   increment,
@@ -74,7 +75,7 @@ describe("Base reducer", () => {
     expect(newDocument.operations.global).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -98,7 +99,7 @@ describe("Base reducer", () => {
     const setNameAction = setName("Document");
     expect(setNameAction).toStrictEqual({
       id: setNameAction.id,
-      timestamp: setNameAction.timestamp,
+      timestampUtcMs: setNameAction.timestampUtcMs,
       type: SET_NAME,
       input: "Document",
       scope: "global",
@@ -196,7 +197,7 @@ describe("Base reducer", () => {
           operation: {
             action,
             hash: "",
-            timestamp: action.timestamp,
+            timestampUtcMs: action.timestampUtcMs,
             index: 3,
             skip: 0,
           },
@@ -241,7 +242,7 @@ describe("Base reducer", () => {
           operation: {
             action,
             hash: "",
-            timestamp: action.timestamp,
+            timestampUtcMs: action.timestampUtcMs,
             index: 4,
             skip: 1,
           },
@@ -285,7 +286,7 @@ describe("Base reducer", () => {
           action,
           skip: 1,
           index: 3,
-          timestamp: action.timestamp,
+          timestampUtcMs: action.timestampUtcMs,
           hash: "",
         },
       },
@@ -303,9 +304,9 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer", () => {
-    const initialState = baseCreateExtendedState<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const initialState = baseCreateExtendedState<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
 
     let document = baseCreateDocument<CountDocument>(initialState);
 
@@ -318,9 +319,9 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
-    const initialState = baseCreateExtendedState<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const initialState = baseCreateExtendedState<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
 
     let document = baseCreateDocument<CountDocument>(initialState);
 
@@ -333,9 +334,9 @@ describe("Base reducer", () => {
   });
 
   it("should include error message into error operation prop", () => {
-    const initialState = baseCreateExtendedState<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const initialState = baseCreateExtendedState<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
 
     let document = baseCreateDocument<CountDocument>(initialState);
 
@@ -369,9 +370,9 @@ describe("Base reducer", () => {
   });
 
   it("should not include error message in successful operations", () => {
-    const initialState = baseCreateExtendedState<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const initialState = baseCreateExtendedState<CountDocument>(
+      createBaseState({ count: 0 }, { name: "" }),
+    );
 
     let document = baseCreateDocument<CountDocument>(initialState);
 

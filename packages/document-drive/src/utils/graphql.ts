@@ -273,14 +273,12 @@ export async function fetchDocument<TDocument extends PHDocument>(
     ? {
         clipboard: result.document.clipboard,
         header: result.document.header,
-        initialState: {
-          ...utils.createExtendedState({
-            // TODO: getDocument should return all the initial state fields
-            state: utils.createState({
-              global: result.document.initialState,
-            }),
+        initialState: utils.createExtendedState({
+          // TODO: getDocument should return all the initial state fields
+          ...utils.createState({
+            global: result.document.initialState,
           }),
-        },
+        }),
         operations: {
           global: result.document.operations.map(({ inputText, ...o }) => ({
             ...o,

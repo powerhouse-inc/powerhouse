@@ -89,7 +89,7 @@ export const addActionsTool = {
 //         input: z.unknown().describe("The payload of the action"),
 //         scope: z.string().describe("The scope of the action"),
 //         index: z.number().describe("Position of the operation in the history"),
-//         timestamp: z
+//         timestampUtcMs: z
 //           .string()
 //           .describe("Timestamp of when the operation was added"),
 //         hash: z.string().describe("Hash of the resulting document data"),
@@ -388,7 +388,7 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       const actions = params.actions.map((paramAction) => {
         const action = {
           id: generateId(),
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           ...paramAction,
           input: paramAction.input ?? {},
         };

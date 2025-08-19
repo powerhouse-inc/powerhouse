@@ -6,7 +6,7 @@ export type OperationIndex = {
   index: number;
   skip: number;
   id?: string;
-  timestamp?: string;
+  timestampUtcMs?: string;
 };
 
 export enum IntegrityIssueType {
@@ -126,20 +126,20 @@ export function addUndo(sortedOperations: Operation[]) {
 
         // TODO: this will break the signature...
         id: generateId(),
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
       },
     });
   } else {
     operationsCopy.push({
       id: generateId(),
-      timestamp: new Date().toISOString(),
+      timestampUtcMs: new Date().toISOString(),
       index: latestOperation.index + 1,
       skip: 1,
       hash: latestOperation.hash,
       action: {
         id: generateId(),
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
         input: {},
         scope: latestOperation.action.scope,
@@ -174,8 +174,8 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
-        new Date(a.timestamp || "").getTime() -
-        new Date(b.timestamp || "").getTime(),
+        new Date(a.timestampUtcMs || "").getTime() -
+        new Date(b.timestampUtcMs || "").getTime(),
     )
     .map((op, i) => ({
       ...op,
@@ -192,8 +192,8 @@ export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
   return [...opsA, ...opsB]
     .sort(
       (a, b) =>
-        new Date(a.timestamp || "").getTime() -
-        new Date(b.timestamp || "").getTime(),
+        new Date(a.timestampUtcMs || "").getTime() -
+        new Date(b.timestampUtcMs || "").getTime(),
     )
     .sort((a, b) => a.index - b.index)
     .map((op, i) => ({

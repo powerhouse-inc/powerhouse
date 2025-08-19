@@ -93,7 +93,7 @@ describe("EventBus", () => {
       const results: Array<{
         eventType: number;
         data: any;
-        timestamp: number;
+        timestampUtcMs: number;
       }> = [];
       const eventType1 = 1;
       const eventType2 = 2;
@@ -101,13 +101,13 @@ describe("EventBus", () => {
       // Subscriber for event type 1 with delay
       eventBus.subscribe(eventType1, async (type, data: any) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
-        results.push({ eventType: type, data, timestamp: Date.now() });
+        results.push({ eventType: type, data, timestampUtcMs: Date.now() });
       });
 
       // Subscriber for event type 2 with shorter delay
       eventBus.subscribe(eventType2, async (type, data: any) => {
         await new Promise((resolve) => setTimeout(resolve, 50));
-        results.push({ eventType: type, data, timestamp: Date.now() });
+        results.push({ eventType: type, data, timestampUtcMs: Date.now() });
       });
 
       const startTime = Date.now();
@@ -143,7 +143,7 @@ describe("EventBus", () => {
       const results: Array<{
         emitId: string;
         subscriberId: number;
-        timestamp: number;
+        timestampUtcMs: number;
       }> = [];
       const eventType = 1;
 
@@ -153,7 +153,7 @@ describe("EventBus", () => {
         results.push({
           emitId: data.emitId,
           subscriberId: 1,
-          timestamp: Date.now(),
+          timestampUtcMs: Date.now(),
         });
       });
 
@@ -162,7 +162,7 @@ describe("EventBus", () => {
         results.push({
           emitId: data.emitId,
           subscriberId: 2,
-          timestamp: Date.now(),
+          timestampUtcMs: Date.now(),
         });
       });
 

@@ -19,7 +19,7 @@ function createMinimalJob(): Job {
       type: "CREATE",
       input: { data: "test" },
       index: 0,
-      timestamp: "2023-01-01T00:00:00.000Z",
+      timestampUtcMs: "2023-01-01T00:00:00.000Z",
       hash: "hash-123",
       skip: 0,
     },

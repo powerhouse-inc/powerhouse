@@ -23,7 +23,7 @@ type BarItem = {
   delSize: 0 | 1 | 2 | 3 | 4;
   additions: number;
   deletions: number;
-  timestamp: string;
+  timestampUtcMs: string;
   startDate: Date;
   endDate: Date;
   revision?: number;
@@ -116,7 +116,7 @@ function metricsToItems(metrics: GroupedPeriodResults): TimelineItem[] {
         delSize: getBarSize(deletions),
         additions,
         deletions,
-        timestamp: startDate.toISOString(),
+        timestampUtcMs: startDate.toISOString(),
         startDate: startDate,
         endDate: new Date(result.end as unknown as Date),
         revision: 0,

@@ -7,7 +7,7 @@ const EVENT_TYPE_ASYNC = 2;
 const EVENT_TYPE_MIXED = 3;
 
 // Test data
-const TEST_DATA = { message: "test event", timestamp: Date.now() };
+const TEST_DATA = { message: "test event", timestampUtcMs: Date.now() };
 
 /**
  * Creates a synchronous subscriber that performs minimal work
@@ -15,7 +15,7 @@ const TEST_DATA = { message: "test event", timestamp: Date.now() };
 function createSyncSubscriber(id: string) {
   return (type: number, data: any) => {
     // Minimal synchronous work
-    const result = data.timestamp + id.length;
+    const result = data.timestampUtcMs + id.length;
     return result;
   };
 }
@@ -29,7 +29,7 @@ function createAsyncSubscriber(id: string, delayMs: number = 0) {
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-    return data.timestamp + id.length;
+    return data.timestampUtcMs + id.length;
   };
 }
 
@@ -41,10 +41,10 @@ function createMixedSubscriber(id: string, asyncProbability: number = 0.5) {
     if (Math.random() < asyncProbability) {
       // Async path with minimal delay
       await new Promise((resolve) => setImmediate(resolve));
-      return data.timestamp + id.length;
+      return data.timestampUtcMs + id.length;
     } else {
       // Sync path
-      return data.timestamp + id.length;
+      return data.timestampUtcMs + id.length;
     }
   };
 }
@@ -363,7 +363,7 @@ describe("EventBus Error Handling Performance", () => {
       if (shouldError) {
         throw new Error("Test error");
       }
-      return data.timestamp;
+      return data.timestampUtcMs;
     };
   }
 
@@ -373,7 +373,7 @@ describe("EventBus Error Handling Performance", () => {
       if (shouldError) {
         throw new Error("Test async error");
       }
-      return data.timestamp;
+      return data.timestampUtcMs;
     };
   }
 

@@ -544,7 +544,7 @@ export class FilesystemStorage
       units.map(async (unit) => {
         try {
           const document = await this.get<PHDocument>(unit.documentId);
-          if (!document || !document.operations[unit.scope]) {
+          if (!document?.operations[unit.scope]) {
             return undefined;
           }
 
@@ -556,7 +556,8 @@ export class FilesystemStorage
             scope: unit.scope,
             branch: unit.branch,
             lastUpdated:
-              operations.at(-1)?.timestamp ?? document.header.createdAtUtcIso,
+              operations.at(-1)?.timestampUtcMs ??
+              document.header.createdAtUtcIso,
             revision: operationsToRevision(operations),
           };
         } catch {

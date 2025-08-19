@@ -298,7 +298,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                 branch
                 operations {
                   id
-                  timestamp
+                  timestampUtcMs
                   skip
                   type
                   input
@@ -347,7 +347,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     branch
                     operations {
                       id
-                      timestamp
+                      timestampUtcMs
                       skip
                       type
                       input

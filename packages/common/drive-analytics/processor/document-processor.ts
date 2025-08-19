@@ -57,7 +57,7 @@ export class DocumentAnalyticsProcessor implements IProcessor {
           const seriesInput: AnalyticsSeriesInput = {
             source,
             metric: "DocumentOperations",
-            start: DateTime.fromISO(operation.timestamp),
+            start: DateTime.fromISO(operation.timestampUtcMs),
             value: 1,
             dimensions: {
               drive: AnalyticsPath.fromString(

@@ -3,7 +3,7 @@ import { type InternalTransmitterUpdate } from "document-drive/server/listener/t
 import { type DocumentModelDocument } from "document-model";
 import { type VetraPackageState } from "../../../document-models/vetra-package/index.js";
 import { logger } from "../logger.js";
-import { type DocumentHandler, type Config } from "./types.js";
+import { type Config, type DocumentHandler } from "./types.js";
 
 export class PackageHandler implements DocumentHandler {
   documentType = "powerhouse/package";
@@ -19,8 +19,8 @@ export class PackageHandler implements DocumentHandler {
       category: state.category ?? "",
       description: state.description ?? "",
       publisher: {
-        name: state.author.name ?? "",
-        url: state.author.website ?? "",
+        name: state.author?.name ?? "",
+        url: state.author?.website ?? "",
       },
     }, this.config.CURRENT_WORKING_DIR);
     logger.info("✅ Manifest generated successfully");

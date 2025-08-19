@@ -154,7 +154,7 @@ export const getDocumentModelTypeDefs = (
       id: String!
       type: String!
       index: Int!
-      timestamp: DateTime!
+      timestampUtcMs: DateTime!
       hash: String!
       skip: Int
       inputText: String

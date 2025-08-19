@@ -1,6 +1,6 @@
 import {
   BaseDocumentClass,
-  type ExtendedState,
+  type ExtendedStateFromDocument,
   type PartialState,
   applyMixins,
   type SignalDispatch,
@@ -8,6 +8,7 @@ import {
 import {
   type VetraPackageState,
   type VetraPackageLocalState,
+  type VetraPackageDocument,
 } from "./types.js";
 import { type VetraPackageAction } from "./actions.js";
 import { reducer } from "./reducer.js";
@@ -28,12 +29,7 @@ class VetraPackage extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<
-      ExtendedState<
-        PartialState<VetraPackageState>,
-        PartialState<VetraPackageLocalState>
-      >
-    >,
+    initialState?: Partial<ExtendedStateFromDocument<VetraPackageDocument>>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);

@@ -37,7 +37,7 @@ export const WithCustomClass: Story = {
 
 export const WithTimestamp: Story = {
   args: {
-    timestamp: getPastTimestamp(),
+    timestampUtcMs: getPastTimestamp(),
   },
 };
 
@@ -45,7 +45,7 @@ export const WithAtlasDocumentTitle: Story = {
   args: {
     title: "Atlas Document",
     subtitle: "Created",
-    timestamp: getPastTimestamp(),
+    timestampUtcMs: getPastTimestamp(),
   },
 };
 
@@ -53,7 +53,7 @@ export const WithRatifiedDocumentTitle: Story = {
   args: {
     title: "Ratified Atlas Document",
     subtitle: "Created",
-    timestamp: getPastTimestamp(),
+    timestampUtcMs: getPastTimestamp(),
   },
 };
 
@@ -62,7 +62,7 @@ export const Selected: Story = {
     isSelected: true,
     title: "Atlas Document",
     subtitle: "Created",
-    timestamp: getPastTimestamp(),
+    timestampUtcMs: getPastTimestamp(),
   },
 };
 
@@ -71,6 +71,6 @@ export const SelectedWithRatified: Story = {
     isSelected: true,
     title: "Ratified Atlas Document",
     subtitle: "Created",
-    timestamp: getPastTimestamp(),
+    timestampUtcMs: getPastTimestamp(),
   },
 };

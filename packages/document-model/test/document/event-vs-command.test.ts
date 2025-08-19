@@ -42,7 +42,7 @@ describe("Event", () => {
         operation: {
           index: 3,
           hash: "test-4-hash",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           skip: 1,
           action,
         },
@@ -161,7 +161,7 @@ describe("Event", () => {
         operation: {
           index: 3,
           hash: "test-4-hash",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           skip: 1,
           action,
         },
@@ -232,7 +232,7 @@ describe("Event", () => {
         operation: {
           index: 3,
           hash: "test-4-hash",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           skip: 1,
           action,
         },

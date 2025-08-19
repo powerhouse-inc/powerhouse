@@ -4,6 +4,7 @@ import { prune, redo, undo } from "../../src/document/actions/creators.js";
 import {
   type CountDocument,
   countReducer,
+  createCountState,
   fakeAction,
   setLocalName,
   wrappedEmptyReducer,
@@ -63,7 +64,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.local).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -90,7 +91,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.local).toMatchObject([
       {
         type: "TEST",
-        timestamp: new Date().toISOString(),
+        timestampUtcMs: new Date().toISOString(),
         index: 0,
         skip: 0,
         input: {},
@@ -103,9 +104,7 @@ describe("Local reducer", () => {
     expect(newDocument.operations.global).toStrictEqual([]);
   });
   it("should update local name", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     const newDocument = countReducer(document, setLocalName("test"));
     expect(newDocument.header.revision.local).toStrictEqual(1);
     expect(document.header.revision.local).toBe(undefined);
@@ -120,7 +119,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
       ],
@@ -128,9 +127,7 @@ describe("Local reducer", () => {
   });
 
   it("should undo local operation", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
 
     expect(newDocument.header.revision).toStrictEqual({
@@ -142,14 +139,8 @@ describe("Local reducer", () => {
       document: 0,
       local: 2,
     });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "" },
-    });
-    expect(document.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "" },
-    });
+    expect(newDocument.state).toStrictEqual(createCountState());
+    expect(document.state).toStrictEqual(createCountState());
 
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -175,9 +166,7 @@ describe("Local reducer", () => {
   });
 
   it("should redo local operation", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, undo(1, "local"));
     newDocument = countReducer(newDocument, redo(1, "local"));
@@ -185,10 +174,7 @@ describe("Local reducer", () => {
       document: 0,
       local: 3,
     });
-    expect(newDocument.state).toStrictEqual({
-      global: { count: 0 },
-      local: { name: "test" },
-    });
+    expect(newDocument.state).toStrictEqual(createCountState(0, "test"));
     expect(newDocument.clipboard.length).toBe(0);
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -212,9 +198,7 @@ describe("Local reducer", () => {
   });
 
   it.skip("should prune local operations", async () => {
-    const document = baseCreateDocument<CountDocument>({
-      state: { global: { count: 0 }, local: { name: "" } },
-    });
+    const document = baseCreateDocument<CountDocument>(createCountState());
     let newDocument = countReducer(document, setLocalName("test"));
     newDocument = countReducer(newDocument, setLocalName("test 2"));
     expect(newDocument.header.revision).toStrictEqual({ global: 0, local: 2 });
@@ -232,7 +216,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
 
@@ -243,7 +227,7 @@ describe("Local reducer", () => {
           index: 1,
           skip: 0,
           scope: "local",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
           error: undefined,
         },
       ],
@@ -274,7 +258,7 @@ describe("Local reducer", () => {
           index: 0,
           skip: 0,
           scope: "global",
-          timestamp: new Date().toISOString(),
+          timestampUtcMs: new Date().toISOString(),
         },
       ],
       local: [],

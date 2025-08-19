@@ -80,9 +80,19 @@ export type PHDocumentHeader = {
   meta?: PHDocumentMeta;
 };
 
-export type PHBaseState<TDocumentState = JsonSerializable> = {
-  // todo: will not be optional in the future
-  document?: TDocumentState;
+export type PHAuthState = {};
+
+export type PHDocumentState = {
+  /** The current version of the document. */
+  version: string;
+};
+
+export type PHBaseState = {
+  /** Carries authentication information. */
+  auth: PHAuthState;
+
+  /** Carries information about the document. */
+  document: PHDocumentState;
 };
 
 export type PHDocumentHistory = {};

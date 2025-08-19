@@ -1,7 +1,10 @@
 import { randomUUID } from "crypto";
+import { baseState } from "../src/document/ph-factories.js";
 import {
   type Action,
+  type BaseState,
   type Operation,
+  type PartialState,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
@@ -13,7 +16,7 @@ export const fakeAction = (
 ): Action =>
   ({
     id: randomUUID(),
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     ...params,
   }) as Action;
 
@@ -24,6 +27,32 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 };
 
 export const wrappedEmptyReducer = createReducer(emptyReducer);
+
+/**
+ * Creates a default base state with the required auth and document properties
+ * @param global - The global state (defaults to empty object)
+ * @param local - The local state (defaults to empty object)
+ */
+export function createBaseState<TGlobal, TLocal>(
+  global: TGlobal,
+  local: TLocal,
+): BaseState<TGlobal, TLocal> {
+  return {
+    ...baseState(),
+    global,
+    local,
+  };
+}
+
+/**
+ * Creates a default count base state for testing
+ */
+export function createCountState(
+  count = 0,
+  name = "",
+): BaseState<CountState, CountLocalState> {
+  return createBaseState({ count }, { name });
+}
 
 // Counter reducer that supports increment/decrement actions
 export type IncrementAction = Action & { type: "INCREMENT"; input: {} };
@@ -123,7 +152,7 @@ export const fakeOperation = (index = 0, skip = 0, scope = "global") =>
   ({
     skip,
     index,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: `${index}`,
     action: fakeAction({
       type: "FAKE_OP",

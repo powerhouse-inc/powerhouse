@@ -26,7 +26,7 @@ export const generateLargeTimeline = (itemCount: number) => {
       timeline.push({
         id: `divider-${i}`,
         type: "divider",
-        timestamp: timestamps[i],
+        timestampUtcMs: timestamps[i],
         title: i % 2 === 0 ? "Atlas Document" : "Ratified Atlas Document",
         subtitle: "Created",
       });
@@ -56,7 +56,7 @@ export const generateLargeTimeline = (itemCount: number) => {
       type: "bar",
       addSize,
       delSize,
-      timestamp: timestamps[i],
+      timestampUtcMs: timestamps[i],
       additions,
       deletions,
     });

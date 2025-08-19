@@ -27,7 +27,7 @@ describe("InMemoryJobExecutor", () => {
     overrides: Partial<Operation> = {},
   ): Operation => ({
     index: 1,
-    timestamp: new Date().toISOString(),
+    timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
     type: "test-operation",

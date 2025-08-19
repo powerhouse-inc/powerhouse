@@ -177,7 +177,7 @@ export type ErrorStatus = Exclude<UpdateStatus, "SUCCESS">;
 
 export type OperationUpdate = {
   actionId: string;
-  timestamp: string;
+  timestampUtcMs: string;
   index: number;
   skip: number;
   type: string;

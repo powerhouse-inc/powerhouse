@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    timestamp: 1719232415114,
+    timestampUtcMs: 1719232415114,
   },
   render: (props) => (
     <TooltipProvider>

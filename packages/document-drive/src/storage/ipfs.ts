@@ -480,7 +480,7 @@ export class IPFSStorage
               documentId: unit.documentId,
               scope: unit.scope,
               branch: unit.branch,
-              lastUpdated: operation.timestamp,
+              lastUpdated: operation.timestampUtcMs,
               revision: operation.index,
             };
           }
