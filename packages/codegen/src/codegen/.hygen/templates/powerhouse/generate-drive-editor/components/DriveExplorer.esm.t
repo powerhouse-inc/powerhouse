@@ -21,7 +21,7 @@ import {
   useSetSelectedNode,
   getDriveSharingType,
   makeFolderNodeFromDrive,
-} from "@powerhousedao/state";
+} from "@powerhousedao/reactor-browser";
 import { EditorContainer } from "./EditorContainer.js";
 import { FolderTree } from "./FolderTree.js";
 import type { DocumentModelModule } from "document-model";

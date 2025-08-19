@@ -17,6 +17,7 @@ import {
   type PHDocument,
   baseLoadFromInput,
   baseSaveToFileHandle,
+  baseState,
   createPresignedHeader,
   createZip,
   generateId,
@@ -126,7 +127,7 @@ export async function addDocument(
   }
 
   const newDocument = documentModelModuleFromReactor.utils.createDocument({
-    ...document,
+    ...document?.state,
   });
   newDocument.header = createPresignedHeader(documentId, documentType);
   newDocument.header.name = name;
@@ -185,7 +186,11 @@ export async function addFile(
     header: document.header,
     history: document.history,
     initialState: document.initialState,
-    state: document.initialState.state,
+    state: {
+      global: document.state.global,
+      local: document.state.local,
+      ...baseState(),
+    },
     operations: {
       global: [],
       local: [],
