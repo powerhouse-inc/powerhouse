@@ -32,6 +32,7 @@ export const PACKAGES = [
   "switchboard-gui",
   "renown",
   "config",
+  "vetra",
   ...SPECIAL_PACKAGES,
 ];
 
