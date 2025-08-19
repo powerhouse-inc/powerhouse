@@ -9,15 +9,16 @@ import {
   type DocumentModelDocument,
   type DocumentModelState,
 } from "document-model";
-import { logger } from "../logger.js";
-import { type Config, type DocumentHandler } from "./types.js";
+import { logger } from "../../logger.js";
+import { BaseDocumentGen } from "../base-document-gen.js";
 
-export class DocumentModelHandler implements DocumentHandler {
-  documentType = "powerhouse/document-model";
+/**
+ * Generator for document model documents
+ */
+export class DocumentModelGenerator extends BaseDocumentGen {
+  readonly supportedDocumentTypes = "powerhouse/document-model";
 
-  constructor(private config: Config) {}
-
-  async handle(
+  async generate(
     strand: InternalTransmitterUpdate<DocumentModelDocument>,
   ): Promise<void> {
     const state = strand.state as DocumentModelState;
@@ -74,12 +75,14 @@ export class DocumentModelHandler implements DocumentHandler {
           `❌ Error during code generation for ${state.name}:`,
           error,
         );
+        throw error;
       }
     } else {
       logger.error(
         `❌ Validation failed for document model: ${state.name}`,
         validationResult.errors,
       );
+      throw new Error(`Validation failed for document model: ${state.name}`);
     }
   }
 }

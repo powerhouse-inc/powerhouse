@@ -1,7 +1,9 @@
-export { DocumentModelHandler } from "./document-model-handler.js";
-export { PackageHandler } from "./package-handler.js";
-export { DocumentEditorHandler } from "./document-editor-handler.js";
-export { SubgraphHandler } from "./subgraph-handler.js";
-export { ProcessorHandler } from "./processor-handler.js";
-export { AppHandler } from "./app-handler.js";
-export type { DocumentHandler, Config } from "./types.js";
+export { BaseDocumentGen } from "./base-document-gen.js";
+export { DocumentCodegenFactory } from "./document-codegen-factory.js";
+export { DocumentCodegenManager } from "./document-codegen-manager.js";
+
+// Generator classes
+export * from "./generators/index.js";
+
+// Types
+export type { Config, DocumentHandler } from "./types.js";

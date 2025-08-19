@@ -1,33 +1,43 @@
 import { generateEditor, generateManifest } from "@powerhousedao/codegen";
+import { kebabCase } from "change-case";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { type DocumentModelDocument } from "document-model";
-import { kebabCase } from "change-case";
-import { type DocumentEditorState } from "../../../document-models/document-editor/index.js";
-import { logger } from "../logger.js";
-import { type DocumentHandler, type Config } from "./types.js";
+import { type DocumentEditorState } from "../../../../document-models/document-editor/index.js";
+import { logger } from "../../logger.js";
+import { BaseDocumentGen } from "../base-document-gen.js";
 
-export class DocumentEditorHandler implements DocumentHandler {
-  documentType = "powerhouse/document-editor";
-  
-  constructor(private config: Config) {}
+/**
+ * Generator for document editor documents
+ */
+export class DocumentEditorGenerator extends BaseDocumentGen {
+  readonly supportedDocumentTypes = "powerhouse/document-editor";
 
-  async handle(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
+  async generate(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): Promise<void> {
     const state = strand.state as DocumentEditorState;
 
     // Check if we have a valid editor name, document types, and it's confirmed
-    if (state.name && state.documentTypes.length > 0 && state.status === "CONFIRMED") {
+    if (
+      state.name &&
+      state.documentTypes.length > 0 &&
+      state.status === "CONFIRMED"
+    ) {
       logger.info(`🔄 Starting editor generation for: ${state.name}`);
       try {
         // Extract document types from the state
-        const documentTypes = state.documentTypes.map(
-          (dt) => dt.documentType,
-        );
+        const documentTypes = state.documentTypes.map((dt) => dt.documentType);
 
         // Generate editor ID using kebabCase
         const editorId: string = kebabCase(state.name);
 
         // Generate the editor using the codegen function
-        await generateEditor(state.name, documentTypes, this.config.PH_CONFIG, editorId);
+        await generateEditor(
+          state.name,
+          documentTypes,
+          this.config.PH_CONFIG,
+          editorId,
+        );
 
         logger.info(
           `✅ Editor generation completed successfully for: ${state.name}`,
@@ -35,17 +45,26 @@ export class DocumentEditorHandler implements DocumentHandler {
 
         // Update the manifest with the new editor
         try {
-          logger.info(`🔄 Updating manifest with editor: ${state.name} (ID: ${editorId})`);
-          
-          generateManifest({
-            editors: [{
-              id: editorId,
-              name: state.name,
-              documentTypes: documentTypes
-            }]
-          }, this.config.CURRENT_WORKING_DIR);
+          logger.info(
+            `🔄 Updating manifest with editor: ${state.name} (ID: ${editorId})`,
+          );
 
-          logger.info(`✅ Manifest updated successfully for editor: ${state.name}`);
+          generateManifest(
+            {
+              editors: [
+                {
+                  id: editorId,
+                  name: state.name,
+                  documentTypes: documentTypes,
+                },
+              ],
+            },
+            this.config.CURRENT_WORKING_DIR,
+          );
+
+          logger.info(
+            `✅ Manifest updated successfully for editor: ${state.name}`,
+          );
         } catch (manifestError) {
           logger.error(
             `⚠️ Failed to update manifest for editor ${state.name}:`,
@@ -61,19 +80,23 @@ export class DocumentEditorHandler implements DocumentHandler {
         if (error instanceof Error) {
           logger.error(`❌ Error message: ${error.message}`);
         }
+        throw error;
       }
     } else {
       if (!state.name) {
-        logger.debug(
-          `⚠️ Skipping editor generation - missing name for editor`,
-        );
+        logger.debug(`⚠️ Skipping editor generation - missing name for editor`);
+        throw new Error("Editor name is missing");
       } else if (state.documentTypes.length === 0) {
         logger.debug(
           `⚠️ Skipping editor generation - missing document types for editor "${state.name}"`,
         );
+        throw new Error(`Editor "${state.name}" has no document types`);
       } else if (state.status !== "CONFIRMED") {
         logger.debug(
           `ℹ️ Skipping editor generation - editor "${state.name}" is not confirmed (status: ${state.status})`,
+        );
+        throw new Error(
+          `Editor "${state.name}" is not confirmed (status: ${state.status})`,
         );
       }
     }
