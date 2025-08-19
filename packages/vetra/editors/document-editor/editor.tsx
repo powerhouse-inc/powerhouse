@@ -1,22 +1,27 @@
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
+import { useCallback } from "react";
 import {
-  type DocumentEditorDocument,
-  type AddDocumentTypeInput,
+  type AddDocumentTypeInput, type DocumentEditorDocument,
   type RemoveDocumentTypeInput,
-  actions,
+  actions
 } from "../../document-models/document-editor/index.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
-import { useCallback } from "react";
 
-export type IProps = EditorProps<DocumentEditorDocument>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const { document: initialDocument } = props;
+  const [document, dispatch] = useDocumentById(initialDocument.header.id);
+ const unsafeCastOfDocument = document as DocumentEditorDocument
+  console.log(">>>>> document:", unsafeCastOfDocument.state.global);
 
   const onEditorNameChange = useCallback((name: string) => {
-    if (name === document.state.global.name) return;
+    if (!unsafeCastOfDocument.state.global.name && !name) return;
+    if (name === unsafeCastOfDocument.state.global.name) return;
+
     dispatch(actions.setEditorName({ name }));
-  }, [document.state.global.name, dispatch]);
+  }, [unsafeCastOfDocument.state.global.name, dispatch]);
 
   const onAddDocumentType = useCallback((input: AddDocumentTypeInput) => {
     dispatch(actions.addDocumentType(input));
@@ -33,9 +38,9 @@ export default function Editor(props: IProps) {
   return (
     <div>
       <DocumentEditorForm
-        editorName={document.state.global.name ?? ""}
-        documentTypes={document.state.global.documentTypes}
-        status={document.state.global.status}
+        status={unsafeCastOfDocument.state.global.status}
+        editorName={unsafeCastOfDocument.state.global.name ?? ""}
+        documentTypes={unsafeCastOfDocument.state.global.documentTypes}
         onEditorNameChange={onEditorNameChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}

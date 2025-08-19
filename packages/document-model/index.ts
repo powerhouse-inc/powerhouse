@@ -27,6 +27,7 @@ export type {
   Module,
   Scalars,
   ScopeState,
+  DocumentSpecification,
 } from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,
@@ -89,6 +90,8 @@ export type {
   StateReducer,
   User,
   ValidationError,
+  ImportScriptModule,
+  SubgraphModule,
 } from "#document/types.js";
 export {
   baseCreateDocument,

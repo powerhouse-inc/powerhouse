@@ -1,13 +1,20 @@
 import { LOCAL } from '@powerhousedao/design-system';
+import {
+    addRemoteDrive,
+    addTrigger,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    renameDrive,
+    setDriveSharingType,
+    useDrives,
+} from '@powerhousedao/reactor-browser';
 import { getDriveIdBySlug } from '@powerhousedao/reactor-browser/utils/switchboard';
-import { useDrives } from '@powerhousedao/state';
 import {
     logger,
     type PullResponderTrigger,
     type Trigger,
 } from 'document-drive';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 
 export type ClientErrorHandler = {
     strandsErrorHandler: (
@@ -33,14 +40,6 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     const [pullResponderTriggerMap, setPullResponderTriggerMap] = useState<
         Map<string, PullResponderTrigger>
     >(new Map());
-    const {
-        addTrigger,
-        removeTrigger,
-        registerNewPullResponderTrigger,
-        renameDrive,
-        addRemoteDrive,
-        setDriveSharingType,
-    } = useDocumentDriveServer();
     const drives = useDrives();
 
     const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());

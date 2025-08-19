@@ -9,7 +9,7 @@ export interface UseUndoRedoShortcutsProps {
 
 export const useUndoRedoShortcuts = (props: UseUndoRedoShortcutsProps) => {
     const { undo, redo, canRedo, canUndo } = props;
-    const { isMac } = window.electronAPI?.platformInfo || {};
+    const isMac = window.navigator.userAgent.includes('Mac');
 
     let undoShortcut = 'ctrl+z';
     let redoShortcut = 'ctrl+y';

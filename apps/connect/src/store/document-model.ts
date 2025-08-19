@@ -1,131 +1,89 @@
-import { useFeatureFlag } from '#hooks';
-import { driveDocumentModelModule } from 'document-drive';
 import {
-    documentModelDocumentModelModule,
-    type DocumentModelLib,
-    type DocumentModelModule,
-    type PHDocument,
-} from 'document-model';
-import { atom, useAtomValue } from 'jotai';
-import { unwrap } from 'jotai/utils';
-import { externalPackagesAtom } from './external-packages.js';
+    type VetraDocumentModelModule,
+    type VetraPackage,
+    COMMON_PACKAGE_ID,
+} from '@powerhousedao/reactor-browser';
+import {
+    loadDocumentModelEditor,
+    loadGenericDriveExplorerEditorModule,
+} from './editor.js';
 
-const staticBaseDocumentModels = [
-    driveDocumentModelModule,
-    documentModelDocumentModelModule,
-] as DocumentModelModule[];
-
-export const baseDocumentModels = staticBaseDocumentModels;
-
-// removes document models with the same id, keeping the one that appears later
-function getUniqueDocumentModels(
-    ...documentModels: DocumentModelModule[]
-): DocumentModelModule[] {
-    const uniqueModels = new Map<string, DocumentModelModule>();
-
-    for (const model of documentModels) {
-        uniqueModels.set(model.documentModel.id, model);
-    }
-
-    return Array.from(uniqueModels.values());
-}
-
-function getDocumentModelsFromModules(modules: DocumentModelLib[]) {
-    return modules
-        .map(module => module.documentModels)
-        .reduce((acc, val) => acc.concat(val), []);
-}
-
-export const documentModelsAtom = atom(async get => {
-    const externalModules = (await get(
-        externalPackagesAtom,
-    )) as DocumentModelLib[];
-    const externalDocumentModels =
-        getDocumentModelsFromModules(externalModules);
-
-    const result = getUniqueDocumentModels(
-        ...baseDocumentModels,
-        ...externalDocumentModels,
-    );
-    return result;
-});
-documentModelsAtom.debugLabel = 'documentModelsAtomInConnect';
-
-// blocks rendering until document models are loaded.
-export const useDocumentModels = () => useAtomValue(documentModelsAtom);
-
-const unwrappedDocumentModelsAtom = unwrap(documentModelsAtom);
-unwrappedDocumentModelsAtom.debugLabel = 'unwrappedDocumentModelsAtomInConnect';
-
-// will return undefined until document models are initialized. Does not block rendering.
-export const useUnwrappedDocumentModelModules = () =>
-    useAtomValue(unwrappedDocumentModelsAtom);
-
-function getDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string | undefined,
-    documentModels: DocumentModelModule[] | undefined,
-) {
-    return documentModels?.find(d => d.documentModel.id === documentType) as
-        | DocumentModelModule<TDocument>
-        | undefined;
-}
-
-export function useDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string,
-) {
-    const documentModelModules = useUnwrappedDocumentModelModules();
-    return getDocumentModelModule<TDocument>(
+async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
+    const { documentModelDocumentModelModule } = await import('document-model');
+    const documentModel = documentModelDocumentModelModule.documentModel;
+    const name = documentModel.name;
+    const documentType = documentModel.id;
+    const unsafeIdFromDocumentType = documentType;
+    const extension = documentModel.extension;
+    const specifications = documentModel.specifications;
+    const reducer = documentModelDocumentModelModule.reducer;
+    const actions = documentModelDocumentModelModule.actions;
+    const utils = documentModelDocumentModelModule.utils;
+    const vetraDocumentModelModule: VetraDocumentModelModule = {
+        id: unsafeIdFromDocumentType,
+        name,
         documentType,
-        documentModelModules,
-    );
+        extension,
+        specifications,
+        reducer,
+        actions,
+        utils,
+        documentModel,
+    };
+    return vetraDocumentModelModule;
 }
 
-export const useGetDocumentModelModule = <TDocument extends PHDocument>() => {
-    const documentModelModules = useUnwrappedDocumentModelModules();
-    return (documentType: string | undefined) =>
-        getDocumentModelModule<TDocument>(documentType, documentModelModules);
-};
+async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule> {
+    const { driveDocumentModelModule } = await import('document-drive');
+    const documentModel = driveDocumentModelModule.documentModel;
+    const name = documentModel.name;
+    const documentType = documentModel.id;
+    const unsafeIdFromDocumentType = documentType;
+    const extension = documentModel.extension;
+    const specifications = documentModel.specifications;
+    const reducer = driveDocumentModelModule.reducer;
+    const actions = driveDocumentModelModule.actions;
+    const utils = driveDocumentModelModule.utils;
+    const vetraDocumentModelModule: VetraDocumentModelModule = {
+        id: unsafeIdFromDocumentType,
+        name,
+        documentType,
+        extension,
+        specifications,
+        reducer,
+        actions,
+        utils,
+        documentModel,
+    };
+    return vetraDocumentModelModule;
+}
 
-/**
- * Returns an array of filtered document models based on the enabled and disabled editors (feature flag).
- * If enabledEditors is set to '*', returns all document models.
- * If disabledEditors is set to '*', returns an empty array.
- * If disabledEditors is an array, filters out document models whose IDs are included in the disabledEditors array.
- * If enabledEditors is an array, filters document models whose IDs are included in the enabledEditors array.
- * @returns {Array<DocumentModel>} The filtered document models.
- */
-export const useFilteredDocumentModels = () => {
-    const documentModels = useUnwrappedDocumentModelModules();
-    const { config } = useFeatureFlag();
-    const { enabledEditors, disabledEditors } = config.editors;
-
-    if (!documentModels) {
-        return undefined;
-    }
-
-    const filteredDocumentModels = documentModels.filter(
-        model => model.documentModel.id !== 'powerhouse/document-drive',
-    );
-
-    if (enabledEditors === '*') {
-        return documentModels;
-    }
-
-    if (disabledEditors === '*') {
-        return [];
-    }
-
-    if (disabledEditors) {
-        return filteredDocumentModels.filter(
-            d => !disabledEditors.includes(d.documentModel.id),
-        );
-    }
-
-    if (enabledEditors) {
-        return filteredDocumentModels.filter(d =>
-            enabledEditors.includes(d.documentModel.id),
-        );
-    }
-
-    return filteredDocumentModels;
-};
+export async function loadCommonPackage(): Promise<VetraPackage> {
+    const documentModelDocumentModelModule =
+        await loadDocumentModelDocumentModelModule();
+    const driveDocumentModelModule = await loadDriveDocumentModelModule();
+    const documentModelEditorModule = await loadDocumentModelEditor();
+    const genericDriveExplorerEditorModule =
+        await loadGenericDriveExplorerEditorModule();
+    const vetraPackage: VetraPackage = {
+        id: COMMON_PACKAGE_ID,
+        name: 'Common',
+        description: 'Common',
+        category: 'Common',
+        author: {
+            name: 'Powerhouse',
+            website: 'https://powerhousedao.com',
+        },
+        modules: {
+            documentModelModules: [
+                documentModelDocumentModelModule,
+                driveDocumentModelModule,
+            ],
+            editorModules: [
+                documentModelEditorModule,
+                genericDriveExplorerEditorModule,
+            ],
+        },
+    };
+    return vetraPackage;
+}

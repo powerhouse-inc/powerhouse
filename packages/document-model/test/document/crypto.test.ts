@@ -278,7 +278,12 @@ describe("Crypto utils", () => {
           true,
           ["verify"],
         );
-        return crypto.subtle.verify(algorithm, importedKey, signature, data);
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          signature as BufferSource,
+          data as BufferSource,
+        );
       },
     );
 
@@ -337,7 +342,12 @@ describe("Crypto utils", () => {
           true,
           ["verify"],
         );
-        return crypto.subtle.verify(algorithm, importedKey, signature, data);
+        return crypto.subtle.verify(
+          algorithm,
+          importedKey,
+          signature as BufferSource,
+          data as BufferSource,
+        );
       },
     );
     expect(verified).toBe(false);

@@ -1,24 +1,13 @@
 import connectConfig from '#connect-config';
-import {
-    useDocumentDriveServer,
-    useDocumentEditor as useDocumentEditorProps,
-    useEditorProps,
-    useNodeActions,
-    useShowDeleteNodeModal,
-} from '#hooks';
-import {
-    useDriveEditor,
-    useFilteredDocumentModels,
-    useGetDocumentModelModule,
-    useGetEditor,
-} from '#store';
-import { useDocumentDispatch } from '#utils';
+import { useNodeActions, useShowDeleteNodeModal } from '#hooks';
 import { GenericDriveExplorer } from '@powerhousedao/common';
-import { type IDriveContext } from '@powerhousedao/reactor-browser';
-import { useSelectedDocument, useSelectedDrive } from '@powerhousedao/state';
-import { driveDocumentModelModule } from 'document-drive';
-import { type DocumentModelModule, type Operation } from 'document-model';
-import { useCallback, useMemo } from 'react';
+import {
+    useDefaultDriveEditorModule,
+    useDriveEditorModuleById,
+    useSelectedDrive,
+} from '@powerhousedao/reactor-browser';
+import { type DocumentModelModule } from 'document-model';
+import { useCallback } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useModal } from './modal/index.js';
 
@@ -33,32 +22,8 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-    const { addDriveOperation, getSyncStatusSync } = useDocumentDriveServer();
-    const selectedDrive = useSelectedDrive();
-    const selectedDocument = useSelectedDocument();
+    const [selectedDrive] = useSelectedDrive();
     const nodeActions = useNodeActions();
-    const [, _dispatch, error] = useDocumentDispatch(
-        driveDocumentModelModule.reducer,
-        selectedDrive,
-    );
-    const onAddOperation = useCallback(
-        async (operation: Operation) => {
-            if (!selectedDrive?.header.id) {
-                throw new Error('No drive selected');
-            }
-            await addDriveOperation(selectedDrive.header.id, operation);
-        },
-        [addDriveOperation, selectedDrive?.header.id],
-    );
-
-    const editorProps = useEditorProps(
-        selectedDrive,
-        _dispatch,
-        onAddOperation,
-    );
-
-    const { isAllowedToCreateDocuments } = editorProps;
-
     const { showModal } = useModal();
     const showCreateDocumentModal = useCallback(
         (documentModel: DocumentModelModule) => {
@@ -69,51 +34,18 @@ export function DriveEditorContainer() {
         [showModal],
     );
     const showDeleteNodeModal = useShowDeleteNodeModal();
-    const { addFile, addDocument } = useDocumentDriveServer();
-    const documentModels = useFilteredDocumentModels() ?? [];
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
-    const analyticsDatabaseName = connectConfig.analytics.databaseName;
-    const showSearchBar = false;
 
-    const driveContext: IDriveContext = useMemo(
-        () => ({
-            ...nodeActions,
-            showSearchBar,
-            isAllowedToCreateDocuments,
-            documentModels,
-            analyticsDatabaseName,
-            getSyncStatusSync,
-            getDocumentModelModule,
-            getEditor,
-            addFile,
-            showCreateDocumentModal,
-            showDeleteNodeModal,
-            useDocumentEditorProps,
-            addDocument,
-        }),
-        [
-            nodeActions,
-            isAllowedToCreateDocuments,
-            documentModels,
-            addFile,
-            addDocument,
-            getSyncStatusSync,
-            getDocumentModelModule,
-            getEditor,
-            showDeleteNodeModal,
-            showCreateDocumentModal,
-        ],
-    );
-
-    const driveEditor = useDriveEditor(
+    const driveEditor = useDriveEditorModuleById(
         selectedDrive?.header.meta?.preferredEditor,
     );
+    const defaultDriveEditor = useDefaultDriveEditorModule();
 
     const DriveEditorComponent =
-        driveEditor?.Component ?? GenericDriveExplorer.Component;
+        driveEditor?.Component ??
+        defaultDriveEditor?.Component ??
+        GenericDriveExplorer.Component;
 
-    if (selectedDocument || !selectedDrive) return null;
+    if (!selectedDrive) return null;
 
     return (
         <ErrorBoundary
@@ -121,14 +53,12 @@ export function DriveEditorContainer() {
             key={selectedDrive.header.id}
         >
             <DriveEditorComponent
-                {...editorProps}
                 context={{
-                    ...editorProps.context,
-                    ...driveContext,
+                    ...nodeActions,
+                    showCreateDocumentModal,
+                    showDeleteNodeModal,
                 }}
-                onSwitchboardLinkClick={undefined} // TODO
                 document={selectedDrive}
-                error={error}
             />
         </ErrorBoundary>
     );

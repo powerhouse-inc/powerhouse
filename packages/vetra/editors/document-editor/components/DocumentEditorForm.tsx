@@ -1,4 +1,4 @@
-import { useReactor } from "@powerhousedao/state";
+import { useReactor } from "@powerhousedao/reactor-browser";
 import { type DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 import type { AddDocumentTypeInput, DocumentTypeItem, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";

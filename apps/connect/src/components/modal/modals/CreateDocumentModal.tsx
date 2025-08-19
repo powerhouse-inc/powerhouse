@@ -1,11 +1,11 @@
-import { useDocumentDriveServer } from '#hooks';
 import { CreateDocumentModal as ConnectCreateDocumentModal } from '@powerhousedao/design-system';
 import {
+    addDocument,
+    setSelectedNode,
     useSelectedDrive,
     useSelectedFolder,
     useSelectedParentFolder,
-    useSetSelectedNode,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { type DocumentModelModule } from 'document-model';
 
 export interface CreateDocumentModalProps {
@@ -18,11 +18,9 @@ export const CreateDocumentModal: React.FC<
     CreateDocumentModalProps
 > = props => {
     const { open, documentModel, onClose } = props;
-    const selectedDrive = useSelectedDrive();
-    const setSelectedNode = useSetSelectedNode();
+    const [selectedDrive] = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const parentFolder = useSelectedParentFolder();
-    const { addDocument } = useDocumentDriveServer();
 
     const onCreateDocument = async (documentName: string) => {
         onClose();
@@ -34,7 +32,7 @@ export const CreateDocumentModal: React.FC<
             documentModel.documentModel.id,
             selectedFolder?.id ?? parentFolder?.id,
         );
-        setSelectedNode(node?.id);
+        setSelectedNode(node);
     };
 
     return (

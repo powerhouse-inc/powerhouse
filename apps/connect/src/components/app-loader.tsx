@@ -1,41 +1,28 @@
-import { useLoadInitialData, useRenown } from '#hooks';
-import { Provider } from 'jotai';
-import { DevTools } from 'jotai-devtools';
-import 'jotai-devtools/styles.css';
-import { lazy, StrictMode, Suspense } from 'react';
+import { useLoadInitialData } from '#hooks';
+import { StrictMode, Suspense } from 'react';
 import { useLoadData } from '../hooks/useLoadData.js';
 import '../i18n';
 import { AppSkeleton } from './app-skeleton.js';
-
-const App = lazy(() => import('./app.js'));
-const CookieBanner = lazy(() =>
-    import('./cookie-banner.js').then(m => ({ default: m.CookieBanner })),
-);
-
-const ModalManager = lazy(() =>
-    import('./modal/modal.js').then(m => ({ default: m.ModalManager })),
-);
+import App from './app.js';
+import { ModalManager } from './modal/index.js';
+import { CookieBanner } from './cookie-banner.js';
 
 function Load() {
     useLoadInitialData();
     useLoadData();
-    useRenown();
     return null;
 }
 
-export const AppLoader = (
+export const AppLoader = () => (
     <StrictMode>
-        <Provider>
-            {import.meta.env.DEV && <DevTools />}
-            <Suspense fallback={<AppSkeleton />} name="AppLoader">
-                <Load />
-                <App />
-            </Suspense>
-            <Suspense name="CookieBanner">
-                <ModalManager>
-                    <CookieBanner />
-                </ModalManager>
-            </Suspense>
-        </Provider>
+        <Suspense fallback={<AppSkeleton />} name="AppLoader">
+            <Load />
+            <App />
+        </Suspense>
+        <Suspense name="CookieBanner">
+            <ModalManager>
+                <CookieBanner />
+            </ModalManager>
+        </Suspense>
     </StrictMode>
 );

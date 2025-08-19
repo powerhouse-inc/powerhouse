@@ -2,32 +2,43 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
 unless_exists: true
 ---
+import {
+  addDocument,
+  useDocumentModelModules,
+  useEditorModules,
+  useSelectedDriveId,
+  useSelectedFolder,
+  type VetraDocumentModelModule,
+} from "@powerhousedao/reactor-browser";
 import { Button } from "@powerhousedao/design-system";
-import { type DocumentModelModule } from "document-model";
-
-interface CreateDocumentProps {
-  documentModels?: DocumentModelModule[];
-  createDocument: (doc: DocumentModelModule) => void;
-}
-
-// Helper function to extract document specification from different module formats
-function getDocumentSpec(doc: DocumentModelModule) {
-  if ("documentModelState" in doc) {
-    return doc.documentModelState as DocumentModelModule["documentModel"];
-  }
-
-  return doc.documentModel;
-}
 
 /**
  * Document creation UI component.
  * Displays available document types as clickable buttons.
- * Customize available document types by filtering documentModels prop.
  */
-export const CreateDocument: React.FC<CreateDocumentProps> = ({
-  documentModels,
-  createDocument,
-}) => {
+export const CreateDocument = () => {
+  const selectedDriveId = useSelectedDriveId();
+  const selectedFolder = useSelectedFolder();
+  const documentModelModules = useDocumentModelModules();
+  const editorModules = useEditorModules();
+
+  async function handleAddDocument(module: VetraDocumentModelModule) {
+    if (!selectedDriveId) {
+      return;
+    }
+    await addDocument(
+      selectedDriveId,
+      `New ${module.documentModel.id} document`,
+      module.documentModel.id,
+      selectedFolder?.id,
+      undefined,
+      undefined,
+      editorModules?.find((e) =>
+        e.documentTypes.includes(module.documentModel.id),
+      )?.id,
+    );
+  }
+
   return (
     <div className="px-6">
       {/* Customize section title here */}
@@ -36,24 +47,25 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
       </h3>
       {/* Customize layout by changing flex-wrap, gap, or grid layout */}
       <div className="flex w-full flex-wrap gap-4">
-        {documentModels?.map((doc) => {
-          const spec = getDocumentSpec(doc);
+        {documentModelModules?.map((documentModelModule) => {
           return (
             <Button
-              key={spec.id}
+              key={documentModelModule.documentModel.id}
               color="light" // Customize button appearance
               size="small"
               className="cursor-pointer"
-              title={spec.name}
-              aria-description={spec.description}
-              onClick={() => createDocument(doc)}
+              title={documentModelModule.documentModel.name}
+              aria-description={documentModelModule.documentModel.description}
+              onClick={() => handleAddDocument(documentModelModule)}
             >
               {/* Customize document type display format */}
-              <span className="text-sm">{spec.name}</span>
+              <span className="text-sm">
+                {documentModelModule.documentModel.name}
+              </span>
             </Button>
           );
         })}
       </div>
     </div>
   );
-}; 
+};

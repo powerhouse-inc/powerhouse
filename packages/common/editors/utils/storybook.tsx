@@ -2,40 +2,30 @@ import {
   createDocumentStory,
   type DocumentStory,
   type EditorStoryArgs,
-  type EditorStoryComponent,
   type EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { type Decorator, type Meta } from "@storybook/react";
-import {
-  driveDocumentModelModule,
-  type DocumentDriveDocument,
-  type DocumentDriveLocalState,
-  type DocumentDriveState
-} from "document-drive";
-import { baseState } from "document-model";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type ExtendedStateFromDocument,
-  type PartialState,
-} from "document-model";
+import { driveDocumentModelModule } from "document-drive";
+import { baseState, type DocumentModelModule } from "document-model";
 
-export function createDriveStory(
-  Editor: EditorStoryComponent<DocumentDriveDocument>,
-  initialState?: ExtendedStateFromDocument<DocumentDriveDocument>,
-  additionalStoryArgs?: EditorStoryArgs<DocumentDriveDocument>,
-  decorators?: Decorator<EditorStoryProps<DocumentDriveDocument>>[],
+export function createDriveStory<T extends (props: any) => React.JSX.Element>(
+  Editor: T,
+  initialState?: any,
+  additionalStoryArgs?: EditorStoryArgs,
+  decorators?: Decorator<EditorStoryProps>[],
 ): {
-  meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<DocumentDriveDocument>;
+  meta: Meta<T>;
+  CreateDocumentStory: DocumentStory;
 } {
   const story = createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
     initialState ?? {
       ...driveDocumentModelModule.utils.createExtendedState({
-        ...baseState(), global: { name: "Powerhouse" }, local: {},
+        ...baseState(),
+        global: { name: "Powerhouse" },
+        local: {},
       }),
     },
     additionalStoryArgs,
@@ -43,34 +33,13 @@ export function createDriveStory(
       (Story, context) => (
         <DriveContextProvider
           value={{
-            analyticsDatabaseName: "test",
             onAddFile: () => Promise.resolve(),
             onAddFolder: () => Promise.resolve(undefined),
             onRenameNode: () => Promise.resolve(undefined),
             onCopyNode: () => Promise.resolve(),
             onMoveNode: () => Promise.resolve(),
             onDuplicateNode: () => Promise.resolve(),
-            onAddAndSelectNewFolder: () => Promise.resolve(),
-            getSyncStatusSync: () => undefined,
             showDeleteNodeModal: () => {},
-            getDocumentModelModule: () => undefined,
-            getEditor: () => undefined,
-            useDocumentEditorProps: () => ({
-              dispatch: () => {},
-              document: context.args.document,
-              error: undefined,
-            }),
-            showSearchBar: false,
-            isAllowedToCreateDocuments: true,
-            documentModels: [
-              documentModelDocumentModelModule as DocumentModelModule,
-            ],
-            addFile() {
-              throw new Error("addFile not implemented");
-            },
-            addDocument() {
-              throw new Error("addDocument not implemented");
-            },
             showCreateDocumentModal(documentModel: DocumentModelModule) {
               return Promise.resolve({
                 name: `New ${documentModel.documentModel.name}`,
@@ -84,5 +53,8 @@ export function createDriveStory(
       ...(decorators ?? []),
     ],
   );
-  return story;
+  return story as {
+    meta: Meta<T>;
+    CreateDocumentStory: DocumentStory;
+  };
 }

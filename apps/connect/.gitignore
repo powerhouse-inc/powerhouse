@@ -57,8 +57,6 @@ dist/
 yalc.lock
 .yalc/
 
-# Electron-Forge
-out/
 .vercel
 
 # Generated assets

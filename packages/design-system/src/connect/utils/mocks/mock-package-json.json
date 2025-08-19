@@ -1,5 +1,5 @@
 {
-  "name": "document-model-electron",
+  "name": "connect",
   "productName": "Powerhouse-Connect",
   "version": "1.0.0-alpha.6",
   "description": "Powerhouse Connect",
@@ -8,12 +8,12 @@
   "author": "acaldas@powerhouse.inc",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+    "url": "git+https://github.com/powerhouse-inc/connect.git"
   },
   "bugs": {
-    "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+    "url": "https://github.com/powerhouse-inc/connect/issues"
   },
-  "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
+  "homepage": "https://github.com/powerhouse-inc/connect#readme",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",

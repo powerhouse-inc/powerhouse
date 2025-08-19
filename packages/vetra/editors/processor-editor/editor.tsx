@@ -1,26 +1,36 @@
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
+import { useCallback } from "react";
 import {
-  type ProcessorModuleDocument,
-  type DocumentTypeItem,
-  actions,
+  actions, type ProcessorModuleDocument
 } from "../../document-models/processor-module/index.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
-import { useCallback } from "react";
 
-export type IProps = EditorProps<ProcessorModuleDocument>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const { document: initialDocument } = props;
+  const [document, dispatch] = useDocumentById(initialDocument.header.id);
+ const unsafeCastOfDocument = document as ProcessorModuleDocument
+  const onConfirm = useCallback(
+    () => {
+      // Dispatch all actions at once
+      dispatch([
+        actions.setProcessorStatus({ status: "CONFIRMED" }),
+      ]);
+    },
+    [dispatch],
+  );
 
   const onNameChange = useCallback((name: string) => {
-    if (name === document.state.global.name) return;
+    if (name === unsafeCastOfDocument.state.global.name) return;
     dispatch(actions.setProcessorName({ name }));
-  }, [document.state.global.name, dispatch]);
+  }, [unsafeCastOfDocument.state.global.name, dispatch]);
 
   const onTypeChange = useCallback((type: string) => {
-    if (type === document.state.global.type) return;
+    if (type === unsafeCastOfDocument.state.global.type) return;
     dispatch(actions.setProcessorType({ type }));
-  }, [document.state.global.type, dispatch]);
+  }, [unsafeCastOfDocument.state.global.type, dispatch]);
 
   const onAddDocumentType = useCallback((id: string, documentType: string) => {
     dispatch(actions.addDocumentType({ id, documentType }));
@@ -30,21 +40,17 @@ export default function Editor(props: IProps) {
     dispatch(actions.removeDocumentType({ id }));
   }, [dispatch]);
 
-  const onConfirm = useCallback(() => {
-    dispatch(actions.setProcessorStatus({ status: "CONFIRMED" }));
-  }, [dispatch]);
-
   return (
     <div>
       <ProcessorEditorForm
-        processorName={document.state.global.name ?? ""}
-        processorType={document.state.global.type ?? ""}
-        documentTypes={document.state.global.documentTypes ?? []}
-        status={document.state.global.status}
         onNameChange={onNameChange}
         onTypeChange={onTypeChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}
+        status={unsafeCastOfDocument.state.global.status}
+        processorName={unsafeCastOfDocument.state.global.name ?? ""}
+        processorType={unsafeCastOfDocument.state.global.type ?? ""}
+        documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
         onConfirm={onConfirm}
       />
     </div>

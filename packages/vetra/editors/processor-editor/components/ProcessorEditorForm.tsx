@@ -1,7 +1,7 @@
-import { useReactor } from "@powerhousedao/state";
+import { useReactor } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import type {
-  DocumentTypeItem
+    DocumentTypeItem
 } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";

@@ -1,7 +1,6 @@
-import { useDefaultDocumentModelEditor } from '#hooks';
 import { DefaultEditor as BaseDefaultEditor } from '@powerhousedao/design-system';
 import { type DocumentModelModule } from 'document-model';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 const mapDocumentModelsToOptions = (documentModels: DocumentModelModule[]) =>
     documentModels.map(document => ({
@@ -15,8 +14,9 @@ const documentModelEditorOptions = [
 ] as const;
 
 export const DefaultEditor: React.FC = () => {
-    const [documentModelEditor, setDocumentModelEditor] =
-        useDefaultDocumentModelEditor();
+    const [documentModelEditor, setDocumentModelEditor] = useState<
+        (typeof documentModelEditorOptions)[number]
+    >(documentModelEditorOptions[1]);
 
     const handleSetDocumentEditor = useCallback((value: string) => {
         const option = documentModelEditorOptions.find(dm => dm.value == value);

@@ -4,10 +4,10 @@ import {
   FormInput,
   Label,
   LOCAL,
-  type SharingType,
   SharingTypeFormInput,
 } from "#connect";
 import { Button } from "#powerhouse";
+import { type SharingType } from "document-drive";
 import { type App } from "document-model";
 import { type SubmitHandler, useForm } from "react-hook-form";
 

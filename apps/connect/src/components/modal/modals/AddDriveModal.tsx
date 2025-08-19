@@ -1,10 +1,13 @@
-import { useConnectCrypto } from '#hooks';
-import { useApps, useUser } from '#store';
 import {
     type AddLocalDriveInput,
     type AddRemoteDriveInput,
     AddDriveModal as ConnectAddLocalDriveModal,
 } from '@powerhousedao/design-system';
+import {
+    useConnectCrypto,
+    useDriveEditorModules,
+    useUser,
+} from '@powerhousedao/reactor-browser';
 import { requestPublicDrive } from 'document-drive';
 type Props = {
     open: boolean;
@@ -16,8 +19,8 @@ type Props = {
 export function AddDriveModal(props: Props) {
     const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
     const user = useUser();
-    const apps = useApps();
-    const { getBearerToken } = useConnectCrypto();
+    const driveEditorModules = useDriveEditorModules();
+    const connectCrypto = useConnectCrypto();
 
     async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
         await onAddLocalDrive(data);
@@ -36,13 +39,16 @@ export function AddDriveModal(props: Props) {
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
                 try {
-                    const authToken = await getBearerToken(url, user?.address);
+                    const authToken = await connectCrypto?.getBearerToken?.(
+                        url,
+                        user?.address,
+                    );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
                     });
                 } catch (error) {
                     console.error(error);
-                    const authToken = await getBearerToken(
+                    const authToken = await connectCrypto?.getBearerToken?.(
                         url,
                         user?.address,
                         true,
@@ -55,7 +61,13 @@ export function AddDriveModal(props: Props) {
             onOpenChange={status => {
                 if (!status) return onClose();
             }}
-            appOptions={apps}
+            appOptions={
+                driveEditorModules?.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    driveEditor: pkg.id,
+                })) || []
+            }
         />
     );
 }

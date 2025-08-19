@@ -1,5 +1,5 @@
 {
-  "name": "document-model-electron",
+  "name": "connect",
   "productName": "Powerhouse-Connect",
   "version": "1.0.0-alpha.6",
   "description": "Powerhouse Connect",
@@ -8,20 +8,13 @@
   "author": "acaldas@powerhouse.inc",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/powerhouse-inc/document-model-electron.git"
+    "url": "git+https://github.com/powerhouse-inc/connect.git"
   },
   "bugs": {
-    "url": "https://github.com/powerhouse-inc/document-model-electron/issues"
+    "url": "https://github.com/powerhouse-inc/connect/issues"
   },
-  "homepage": "https://github.com/powerhouse-inc/document-model-electron#readme",
+  "homepage": "https://github.com/powerhouse-inc/connect#readme",
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "VITE_BASE_HREF=./ electron-forge make",
-    "make:mac": "VITE_BASE_HREF=./ electron-forge make -p darwin",
-    "make:linux": "VITE_BASE_HREF=./ electron-forge make -p linux",
-    "make:windows": "VITE_BASE_HREF=./ electron-forge make -p win32",
-    "publish": "electron-forge publish",
     "lint": "eslint --ext .js,.ts,.tsx . && tsc --noemit --project tsconfig.spec.json",
     "format": "prettier --write \"**/*.+(js|ts|jsx|tsx|json)\"",
     "dev:web": "vite -c vite.renderer.config.ts",
@@ -35,14 +28,6 @@
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
-    "@electron-forge/cli": "^6.1.1",
-    "@electron-forge/maker-deb": "^6.1.1",
-    "@electron-forge/maker-rpm": "^6.1.1",
-    "@electron-forge/maker-squirrel": "^6.1.1",
-    "@electron-forge/maker-zip": "^6.1.1",
-    "@electron-forge/plugin-vite": "^6.1.1",
-    "@electron-forge/publisher-electron-release-server": "^6.2.1",
-    "@electron-forge/publisher-github": "^7.2.0",
     "@playwright/test": "^1.41.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",

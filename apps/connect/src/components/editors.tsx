@@ -1,21 +1,4 @@
-import {
-    useConnectCrypto,
-    useConnectDid,
-    useUndoRedoShortcuts,
-    useUserPermissions,
-} from '#hooks';
-import {
-    themeAtom,
-    useGetDocumentModelModule,
-    useGetEditor,
-    useUser,
-} from '#store';
-import {
-    addActionContext,
-    type DocumentDispatchCallback,
-    signOperation,
-    useDocumentDispatch,
-} from '#utils';
+import { useUndoRedoShortcuts } from '#hooks';
 import { getRevisionFromDate, useTimelineItems } from '@powerhousedao/common';
 import {
     Button,
@@ -23,18 +6,15 @@ import {
     RevisionHistory,
     type TimelineItem,
 } from '@powerhousedao/design-system';
-import { logger } from 'document-drive';
 import {
-    type Action,
-    type ActionErrorCallback,
-    type EditorContext,
-    type Operation,
-    type PHDocument,
-    redo,
-    undo,
-} from 'document-model';
-import { useAtomValue } from 'jotai';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+    useDocumentById,
+    useDocumentModelModuleById,
+    useEditorModuleById,
+    useFallbackEditorModule,
+    useUserPermissions,
+} from '@powerhousedao/reactor-browser';
+import { type PHDocument, redo, undo } from 'document-model';
+import { Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { useNavigate } from 'react-router-dom';
 import { EditorLoader } from './editor-loader.js';
@@ -44,7 +24,6 @@ type Props<TDocument extends PHDocument = PHDocument> = {
     document: TDocument;
     onClose: () => void;
     onExport: () => void;
-    onAddOperation: (operation: Operation) => Promise<void>;
     onOpenSwitchboardLink?: () => Promise<void>;
 };
 
@@ -66,122 +45,47 @@ function FallbackEditorError(props: FallbackProps) {
 
 export const DocumentEditor: React.FC<Props> = props => {
     const {
-        document,
+        document: initialDocument,
         onClose,
         onExport,
-        onAddOperation,
         onOpenSwitchboardLink,
     } = props;
-    const documentId = document.header.id;
     const [selectedTimelineItem, setSelectedTimelineItem] =
         useState<TimelineItem | null>(null);
     const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
-    const theme = useAtomValue(themeAtom);
-    const user = useUser() || undefined;
-    const connectDid = useConnectDid();
-    const { sign } = useConnectCrypto();
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const getEditor = useGetEditor();
-    const documentType = document.header.documentType;
-    const documentModel = useMemo(
-        () => (documentType ? getDocumentModelModule(documentType) : undefined),
-        [documentType, getDocumentModelModule],
-    );
+    const [document, dispatch] = useDocumentById(initialDocument.header.id);
+    const documentId = document?.header.id ?? undefined;
+    const documentName = document?.header.name ?? undefined;
+    const documentType = document?.header.documentType ?? undefined;
+    const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
+    const createdAt = document?.header.createdAtUtcIso ?? undefined;
+    const globalOperations = document?.operations.global ?? [];
+    const localOperations = document?.operations.local ?? [];
+    const globalRevisionNumber = document?.header.revision.global ?? 0;
+    const localRevisionNumber = document?.header.revision.local ?? 0;
+    const documentModelModule = useDocumentModelModuleById(documentType);
+    const preferredEditorModule = useEditorModuleById(preferredEditor);
+    const fallbackEditorModule = useFallbackEditorModule(documentType);
+    const editorModule = preferredEditorModule ?? fallbackEditorModule;
 
-    const editor = useMemo(
-        () => (documentType ? getEditor(documentType) : undefined),
-        [documentType, getEditor],
-    );
-
-    const [, _dispatch, error] = useDocumentDispatch(
-        documentModel?.reducer,
-        document,
-    );
-    const context: EditorContext = useMemo(
-        () => ({ theme, user }),
-        [theme, user],
-    );
     const userPermissions = useUserPermissions();
 
-    const timelineItems = useTimelineItems(
-        documentId,
-        document.header.createdAtUtcIso,
-    );
-
-    const dispatch = useCallback(
-        (action: Action, onErrorCallback?: ActionErrorCallback) => {
-            const callback: DocumentDispatchCallback<PHDocument> = (
-                operation,
-                state,
-            ) => {
-                if (!documentId) return;
-
-                const { prevState } = state;
-
-                signOperation(
-                    operation,
-                    sign,
-                    documentId,
-                    prevState,
-                    documentModel?.reducer,
-                    user,
-                )
-                    .then(op => {
-                        window.documentEditorDebugTools?.pushOperation(
-                            operation,
-                        );
-                        return onAddOperation(op);
-                    })
-                    .catch(logger.error);
-            };
-
-            _dispatch(
-                addActionContext(action, connectDid, user),
-                callback,
-                onErrorCallback,
-            );
-        },
-        [
-            _dispatch,
-            connectDid,
-            documentModel?.reducer,
-            onAddOperation,
-            documentId,
-            sign,
-            user,
-        ],
-    );
-
-    const showRevisionHistory = useCallback(
-        () => setRevisionHistoryVisible(true),
-        [],
-    );
-
-    const hideRevisionHistory = useCallback(
-        () => setRevisionHistoryVisible(false),
-        [],
-    );
-    const handleUndo = useCallback(() => {
-        dispatch(undo());
-    }, [dispatch]);
-
-    const handleRedo = useCallback(() => {
-        dispatch(redo());
-    }, [dispatch]);
+    const timelineItems = useTimelineItems(documentId, createdAt);
 
     const isLoadingEditor =
-        editor === undefined ||
-        (editor &&
-            !editor.documentTypes.includes(document.header.documentType) &&
-            !editor.documentTypes.includes('*'));
+        editorModule === undefined ||
+        (editorModule &&
+            documentType &&
+            !editorModule.documentTypes.includes(documentType) &&
+            !editorModule.documentTypes.includes('*'));
 
-    const canUndo =
-        document.header.revision.global > 0 ||
-        document.header.revision.local > 0;
+    const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
     const canRedo = !!document?.clipboard.length;
+    const addUndoAction = () => dispatch(undo());
+    const addRedoAction = () => dispatch(redo());
     useUndoRedoShortcuts({
-        undo: handleUndo,
-        redo: handleRedo,
+        undo: addUndoAction,
+        redo: addRedoAction,
         canUndo,
         canRedo,
     });
@@ -211,22 +115,19 @@ export const DocumentEditor: React.FC<Props> = props => {
         }
     }, [editorError, documentId]);
 
-    const handleEditorError = useCallback(
-        (error: Error, info: React.ErrorInfo) => {
-            setEditorError({
-                error,
-                documentId,
-                info,
-            });
-        },
-        [documentId],
-    );
+    const handleEditorError = (error: Error, info: React.ErrorInfo) => {
+        setEditorError({
+            error,
+            documentId,
+            info,
+        });
+    };
 
     if (isLoadingEditor) {
         return <EditorLoader message="Loading editor" />;
     }
 
-    if (!documentModel) {
+    if (!documentModelModule) {
         return (
             <EditorError
                 message={
@@ -256,7 +157,7 @@ export const DocumentEditor: React.FC<Props> = props => {
         );
     }
 
-    if (!editor) {
+    if (!editorModule) {
         return (
             <EditorError
                 message={
@@ -286,13 +187,13 @@ export const DocumentEditor: React.FC<Props> = props => {
         );
     }
 
-    const EditorComponent = editor.Component;
+    const EditorComponent = editorModule.Component;
     const {
         disableExternalControls,
         documentToolbarEnabled,
         showSwitchboardLink,
         timelineEnabled,
-    } = editor.config;
+    } = editorModule.config;
 
     const handleSwitchboardLinkClick =
         showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
@@ -304,8 +205,10 @@ export const DocumentEditor: React.FC<Props> = props => {
                     <DocumentToolbar
                         onClose={onClose}
                         onExport={onExport}
-                        onShowRevisionHistory={showRevisionHistory}
-                        title={document.header.name}
+                        onShowRevisionHistory={() =>
+                            setRevisionHistoryVisible(true)
+                        }
+                        title={documentName}
                         onSwitchboardLinkClick={handleSwitchboardLinkClick}
                         timelineButtonVisible={timelineEnabled}
                         timelineItems={timelineItems.data}
@@ -316,10 +219,10 @@ export const DocumentEditor: React.FC<Props> = props => {
                 <div className="mb-4 flex justify-end gap-10">
                     <Button onClick={onExport}>Export</Button>
                     <div className="flex gap-4">
-                        <Button onClick={handleUndo} disabled={!canUndo}>
+                        <Button onClick={addUndoAction} disabled={!canUndo}>
                             Undo
                         </Button>
-                        <Button onClick={handleRedo} disabled={!canRedo}>
+                        <Button onClick={addRedoAction} disabled={!canRedo}>
                             Redo
                         </Button>
                     </div>
@@ -331,11 +234,11 @@ export const DocumentEditor: React.FC<Props> = props => {
             {revisionHistoryVisible ? (
                 <RevisionHistory
                     key={documentId}
-                    documentTitle={document.header.name}
-                    documentId={document.header.id}
-                    globalOperations={document.operations.global}
-                    localOperations={document.operations.local}
-                    onClose={hideRevisionHistory}
+                    documentTitle={documentName ?? ''}
+                    documentId={documentId ?? ''}
+                    globalOperations={globalOperations}
+                    localOperations={localOperations}
+                    onClose={() => setRevisionHistoryVisible(false)}
                 />
             ) : (
                 <Suspense fallback={<EditorLoader />} name="EditorLoader">
@@ -347,30 +250,27 @@ export const DocumentEditor: React.FC<Props> = props => {
                         {!editorError?.error && (
                             <EditorComponent
                                 key={documentId}
-                                error={error}
                                 context={{
-                                    ...context,
                                     readMode: !!selectedTimelineItem,
                                     selectedTimelineRevision:
                                         getRevisionFromDate(
                                             selectedTimelineItem?.startDate,
                                             selectedTimelineItem?.endDate,
-                                            document.operations.global,
+                                            globalOperations,
                                         ),
                                 }}
                                 document={document}
-                                documentNodeName={document.header.name}
-                                dispatch={dispatch}
+                                documentNodeName={documentName ?? ''}
                                 onClose={onClose}
                                 onExport={onExport}
                                 canUndo={canUndo}
                                 canRedo={canRedo}
-                                undo={handleUndo}
-                                redo={handleRedo}
                                 onSwitchboardLinkClick={
                                     handleSwitchboardLinkClick
                                 }
-                                onShowRevisionHistory={showRevisionHistory}
+                                onShowRevisionHistory={() =>
+                                    setRevisionHistoryVisible(true)
+                                }
                                 isAllowedToCreateDocuments={
                                     userPermissions?.isAllowedToCreateDocuments ??
                                     false

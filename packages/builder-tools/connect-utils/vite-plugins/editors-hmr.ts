@@ -45,15 +45,13 @@ export const viteEditorsHMR = (targetDir: string): PluginOption => {
     handleHotUpdate({ file, server, modules }) {
       // Check if this is an editors index file change
       const isEditorsIndex =
-        file.endsWith("editors/index.js") ||
-        file.endsWith("editors/index.ts");
+        file.endsWith("editors/index.js") || file.endsWith("editors/index.ts");
 
       // Check if this is the external-packages.js file that gets regenerated
       const isExternalPackagesFile = file === importPath;
 
       // Ignore other editors files to prevent unwanted updates
-      const isOtherEditorsFile =
-        file.includes("/editors/") && !isEditorsIndex;
+      const isOtherEditorsFile = file.includes("/editors/") && !isEditorsIndex;
 
       if (isOtherEditorsFile) {
         // Return empty array to prevent any HMR for non-index files

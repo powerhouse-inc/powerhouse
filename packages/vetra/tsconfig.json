@@ -9,10 +9,9 @@
   },
   "include": [
     "**/*",
-    "package.json",
-    "powerhouse.config.json",
-    "powerhouse.manifest.json"
+    "./powerhouse.manifest.json"
   ],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-model"

@@ -1,7 +1,9 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "jsx": "preserve"
   },
   "include": ["**/*"],
   "exclude": [
@@ -15,6 +17,10 @@
   ],
   "references": [
     { "path": "../document-model" },
+    { "path": "../document-drive" },
+    { "path": "../reactor-browser" },
+    { "path": "../design-system" },
+    { "path": "../common" },
     { "path": "../config" },
     { "path": "./tsconfig.hygen.json" }
   ]

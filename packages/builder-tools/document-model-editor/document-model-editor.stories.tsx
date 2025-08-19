@@ -4,6 +4,7 @@ import {
   baseState,
   documentModelCreateExtendedState,
   documentModelReducer,
+  type DocumentSpecification,
   generateId,
 } from "document-model";
 import { v7 as uuidv7 } from "uuid";
@@ -221,8 +222,11 @@ const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
       backgroundUpdateActions: [
         (document) => {
           const id = uuidv7().split("-").at(-1);
+          const unsafeGlobalState = document.state.global as {
+            specifications: DocumentSpecification[];
+          };
           const oldStateSchema =
-            document.state.global.specifications[0].state.global.schema;
+            unsafeGlobalState.specifications[0].state.global.schema;
           const newTypeDef = `
 type TestDefinition${id} {
   test: String
@@ -243,8 +247,11 @@ type TestDefinition${id} {
         },
         (document) => {
           const id = uuidv7().split("-").at(-1);
+          const unsafeLocalState = document.state.local as {
+            specifications: DocumentSpecification[];
+          };
           const oldStateSchema =
-            document.state.global.specifications[0].state.local.schema;
+            unsafeLocalState.specifications[0].state.local.schema;
           const newTypeDef = `
 type TestLocalDefinition${id} {
   test: String
@@ -264,8 +271,11 @@ type TestLocalDefinition${id} {
           };
         },
         (document) => {
+          const unsafeGlobalState = document.state.global as {
+            specifications: DocumentSpecification[];
+          };
           const moduleIndex =
-            document.state.global.specifications[0].modules.length + 1;
+            unsafeGlobalState.specifications[0].modules.length + 1;
 
           return {
             id: generateId(),
@@ -279,7 +289,10 @@ type TestLocalDefinition${id} {
           };
         },
         (document) => {
-          const modules = document.state.global.specifications[0].modules;
+          const unsafeGlobalState = document.state.global as {
+            specifications: DocumentSpecification[];
+          };
+          const modules = unsafeGlobalState.specifications[0].modules;
           const module = modules[0];
           const operationIndex = module.operations.length + 1;
 

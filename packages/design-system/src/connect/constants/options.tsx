@@ -1,11 +1,8 @@
 import {
-  CLOUD,
   type DebugNodeOption,
-  LOCAL,
   type NodeOption,
   type NormalNodeOption,
   type OptionMetadata,
-  PUBLIC,
 } from "#connect";
 import { Icon } from "#powerhouse";
 
@@ -37,17 +34,17 @@ export const nodeOptions = [...normalNodeOptions, ...debugNodeOptions] as const;
 
 export const sharingTypeOptions = [
   {
-    value: LOCAL,
+    value: "LOCAL",
     icon: <Icon name="Lock" />,
     description: "Only available to you",
   },
   {
-    value: CLOUD,
+    value: "CLOUD",
     icon: <Icon name="People" />,
     description: "Only available to people in this drive",
   },
   {
-    value: PUBLIC,
+    value: "PUBLIC",
     icon: <Icon name="Globe" />,
     description: "Available to everyone",
     disabled: true,

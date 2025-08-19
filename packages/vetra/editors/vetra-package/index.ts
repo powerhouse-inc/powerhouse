@@ -1,8 +1,7 @@
 import type { EditorModule } from "document-model";
-import type { VetraPackageDocument } from "../../document-models/vetra-package/index.js";
 import Editor from "./editor.js";
 
-export const module: EditorModule<VetraPackageDocument> = {
+export const module: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/package"],
   config: {

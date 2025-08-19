@@ -84,7 +84,6 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
-    "@powerhousedao/state": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@tailwindcss/cli": "^4.0.15",
     "@testing-library/react": "^16.3.0",

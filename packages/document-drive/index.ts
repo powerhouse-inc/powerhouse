@@ -24,7 +24,6 @@ export type {
   AddListenerInput,
   FileNode,
   FolderNode,
-  Listener,
   ListenerFilter,
   PullResponderTriggerData,
   TransmitterType,
@@ -43,7 +42,12 @@ export {
   isFolderNode,
   isValidName,
 } from "#drive-document-model/src/utils";
-export type { IProcessor } from "#processors/types";
+export { ProcessorManager } from "#processors/processor-manager";
+export type {
+  IProcessor,
+  IRelationalDb,
+  ProcessorRecord,
+} from "#processors/types";
 export { EventQueueManager as BaseQueueManager } from "#queue/event";
 export {
   ReadDocumentNotFoundError,
@@ -78,8 +82,10 @@ export type {
   DriveInput,
   GetDocumentOptions,
   IDocumentDriveServer,
+  Listener,
   ListenerRevision,
   RemoteDriveOptions,
+  SharingType,
   StrandUpdate,
   SyncStatus,
 } from "#server/types";

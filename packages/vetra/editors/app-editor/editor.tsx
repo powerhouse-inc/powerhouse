@@ -1,20 +1,23 @@
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
+import { useCallback } from "react";
 import {
   type AppModuleDocument,
   actions,
 } from "../../document-models/app-module/index.js";
 import { AppEditorForm } from "./components/AppEditorForm.js";
-import { useCallback } from "react";
 
-export type IProps = EditorProps<AppModuleDocument>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const { document: initialDocument } = props;
+  const [document, dispatch] = useDocumentById(initialDocument.header.id);
+  const unsafeCastOfDocument = document as AppModuleDocument;
 
   const onNameChange = useCallback((name: string) => {
-    if (name === document.state.global.name) return;
+    if (name === unsafeCastOfDocument.state.global.name) return;
     dispatch(actions.setAppName({ name }));
-  }, [document.state.global.name, dispatch]);
+  }, [unsafeCastOfDocument.state.global.name, dispatch]);
 
   const onConfirm = useCallback(() => {
     dispatch(actions.setAppStatus({ status: "CONFIRMED" }));
@@ -23,8 +26,8 @@ export default function Editor(props: IProps) {
   return (
     <div>
       <AppEditorForm
-        appName={document.state.global.name ?? ""}
-        status={document.state.global.status}
+        appName={unsafeCastOfDocument.state.global.name ?? ""}
+        status={unsafeCastOfDocument.state.global.status}
         onNameChange={onNameChange}
         onConfirm={onConfirm}
       />

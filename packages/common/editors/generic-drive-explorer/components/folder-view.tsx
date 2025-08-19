@@ -2,14 +2,18 @@ import type { BaseProps } from "#editors/utils/index";
 import {
   FolderItem,
   useDrop,
-  type SharingType,
   type TNodeActions,
 } from "@powerhousedao/design-system";
 import {
   useFileChildNodesForId,
   useFolderChildNodesForId,
-} from "@powerhousedao/state";
-import { type FolderNode, type Node, type SyncStatus } from "document-drive";
+} from "@powerhousedao/reactor-browser";
+import {
+  type FolderNode,
+  type Node,
+  type SharingType,
+  type SyncStatus,
+} from "document-drive";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
 import FileContentView from "./file-content-view.js";
@@ -20,7 +24,7 @@ type IFolderViewProps = BaseProps &
     node: FolderNode | undefined;
     sharingType: SharingType;
     isAllowedToCreateDocuments: boolean;
-    setSelectedNode: (id: string | undefined) => void;
+    setSelectedNode: (id: Node | string | undefined) => void;
     showDeleteNodeModal: (node: Node) => void;
     getSyncStatusSync: (
       syncId: string,

@@ -1,17 +1,21 @@
 import { type TNodeActions } from '@powerhousedao/design-system';
 import {
+    addFile,
+    addFolder,
+    addTrigger,
+    copyNode,
+    moveNode,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    renameNode,
+    setSelectedNode,
     useSelectedDrive,
     useSelectedFolder,
     useSelectedParentFolder,
-    useSetSelectedNode,
-} from '@powerhousedao/state';
+} from '@powerhousedao/reactor-browser';
 import { type Node } from 'document-drive';
 import { useCallback, useMemo } from 'react';
-import { useDocumentDriveServer } from './useDocumentDriveServer.js';
 export function useDebugHandlers() {
-    const { removeTrigger, addTrigger, registerNewPullResponderTrigger } =
-        useDocumentDriveServer();
-
     const onAddTrigger = useCallback(
         async (driveId: string) => {
             const url = window.prompt('url') || '';
@@ -63,12 +67,9 @@ export function useDebugHandlers() {
 }
 
 export function useNodeActions(): TNodeActions {
-    const selectedDrive = useSelectedDrive();
+    const [selectedDrive] = useSelectedDrive();
     const selectedFolder = useSelectedFolder();
     const selectedParentFolder = useSelectedParentFolder();
-    const setSelectedNode = useSetSelectedNode();
-    const { addFolder, addFile, renameNode, copyNode, moveNode } =
-        useDocumentDriveServer();
 
     const onAddFile = useCallback(
         async (file: File, parent: Node | undefined) => {
@@ -135,7 +136,7 @@ export function useNodeActions(): TNodeActions {
             );
 
             if (newFolder) {
-                setSelectedNode(newFolder.id);
+                setSelectedNode(newFolder);
             }
         },
         [onAddFolder, selectedFolder, selectedParentFolder, setSelectedNode],

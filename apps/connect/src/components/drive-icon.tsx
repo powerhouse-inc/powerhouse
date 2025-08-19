@@ -1,5 +1,5 @@
 import { Icon } from '@powerhousedao/design-system';
-import { getDriveSharingType } from '@powerhousedao/state';
+import { getDriveSharingType } from '@powerhousedao/reactor-browser';
 import { type DocumentDriveDocument } from 'document-drive';
 
 export function DriveIcon({

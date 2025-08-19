@@ -1,13 +1,15 @@
 import IconRenown from '#assets/icons/renown.svg?react';
 import { DotsLoader } from '#components';
-import { useLogin } from '#hooks';
-import { useUser } from '#store';
 import { Button } from '@powerhousedao/design-system';
+import {
+    openRenown,
+    useLoginStatus,
+    useUser,
+} from '@powerhousedao/reactor-browser';
 
 export const Login: React.FC = () => {
     const user = useUser();
-
-    const { openRenown, status } = useLogin();
+    const status = useLoginStatus();
 
     return (
         <div>

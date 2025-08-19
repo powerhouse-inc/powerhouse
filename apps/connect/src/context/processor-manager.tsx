@@ -1,4 +1,9 @@
 import connectConfig from '#connect-config';
+import {
+    useProcessorManager,
+    useProcessors,
+    type Processors,
+} from '@powerhousedao/reactor-browser';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
 import {
     AnalyticsProvider,
@@ -11,15 +16,11 @@ import {
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
 import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
-import { useProcessorManager } from '@powerhousedao/state';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
+import { generateId } from 'document-model';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
-import {
-    useExternalProcessors,
-    type Processors,
-} from '../store/external-processors';
 
 const logger = childLogger(['reactor-analytics']);
 
@@ -140,7 +141,7 @@ export function DriveAnalyticsProcessor() {
 }
 
 export function ExternalProcessors() {
-    const externalProcessors = useExternalProcessors();
+    const processors = useProcessors();
     const store = useAnalyticsStoreAsync();
     const relationalDb = useRelationalDb();
     const manager = useProcessorManager();
@@ -151,7 +152,7 @@ export function ExternalProcessors() {
             !store.data ||
             !manager ||
             hasRegistered.current ||
-            externalProcessors.length === 0 ||
+            processors?.length === 0 ||
             !relationalDb.db
         ) {
             return;
@@ -159,17 +160,17 @@ export function ExternalProcessors() {
 
         hasRegistered.current = true;
 
-        let index = 0;
-        for (const { packageName, processors } of externalProcessors) {
+        if (!processors) {
+            return;
+        }
+        for (const processor of processors) {
             registerExternalProcessors(
                 manager,
                 store.data,
                 relationalDb.db,
-                `${packageName}-${index}`,
-                processors,
+                generateId(),
+                processor,
             ).catch(logger.error);
-
-            index++;
         }
     }, [store.data, manager, relationalDb]);
 

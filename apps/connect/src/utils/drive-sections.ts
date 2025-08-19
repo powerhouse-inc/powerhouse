@@ -11,8 +11,8 @@ import {
     FOLDER,
     LOCAL,
     PUBLIC,
-    type SharingType,
 } from '@powerhousedao/design-system';
+import { type SharingType } from 'document-drive';
 import { type ReactNode } from 'react';
 
 type AllNodeOptions =

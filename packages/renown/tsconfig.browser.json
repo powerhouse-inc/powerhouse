@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["DOM", "ESNext"]
   },
-  "include": ["src/**/*.browser.ts"],
+  "include": ["src/**/*.browser.ts", "src/init.ts", "src/event/event.ts"],
   "references": [
     {
       "path": "./tsconfig.common.json"

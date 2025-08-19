@@ -1,4 +1,10 @@
-import { type ExternalPackage } from '#store';
+import {
+    convertLegacyLibToVetraPackage,
+    setVetraPackages,
+} from '@powerhousedao/reactor-browser';
+import { logger } from 'document-drive';
+import { type DocumentModelLib } from 'document-model';
+import { useEffect, useRef } from 'react';
 import type { ViteHotContext } from 'vite/types/hot.js';
 
 export type PackagesUpdate = {
@@ -68,20 +74,32 @@ export async function handlePackageEvents(
     return hmr.off('studio:external-package-added', handler);
 }
 
-export async function subscribeExternalPackages(
-    callback: (modules: Promise<ExternalPackage[]>) => void,
-) {
-    const hmr = await getHMRModule();
-    const handler = (data: PackagesUpdate) => {
-        const modules = import(
-            /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-        ) as Promise<{
-            default: ExternalPackage[];
-        }>;
-        callback(modules.then(m => m.default));
-    };
-    hmr?.on('studio:external-packages-updated', handler);
-    return () => {
-        hmr?.off('studio:external-packages-updated', handler);
-    };
+export function useSubscribeToVetraPackages() {
+    const hmrRef = useRef<ViteHotContext>();
+
+    useEffect(() => {
+        const handler = async (data: PackagesUpdate) => {
+            const modulesImport = import(
+                /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
+            ) as Promise<{
+                default: DocumentModelLib[];
+            }>;
+            const modules = await modulesImport;
+            const legacyLibs = modules.default;
+            const vetraPackages = legacyLibs.map(
+                convertLegacyLibToVetraPackage,
+            );
+            setVetraPackages(vetraPackages);
+        };
+        async function subscribe() {
+            const hmr = await getHMRModule();
+            hmrRef.current = hmr;
+            hmr?.on('studio:external-packages-updated', handler);
+        }
+        subscribe().catch(logger.error);
+
+        return () => {
+            hmrRef.current?.off('studio:external-packages-updated', handler);
+        };
+    }, []);
 }

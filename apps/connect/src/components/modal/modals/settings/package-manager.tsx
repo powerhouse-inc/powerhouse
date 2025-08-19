@@ -1,8 +1,11 @@
 import { addExternalPackage, removeExternalPackage } from '#services';
-import { useExternalPackages, useMutableExternalPackages } from '#store';
 import { PH_PACKAGES } from '@powerhousedao/config/packages';
 import { PackageManager as BasePackageManager } from '@powerhousedao/design-system';
-import { useDrives } from '@powerhousedao/state';
+import {
+    makeVetraPackageManifest,
+    useDrives,
+    useVetraPackages,
+} from '@powerhousedao/reactor-browser';
 import { type Manifest } from 'document-model';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,7 +13,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const LOCAL_REACTOR_VALUE = 'local-reactor';
 const LOCAL_REACTOR_LABEL = 'Local Reactor';
 
-function manifestToDetails(manifest: Manifest, id: string, removable: boolean) {
+function manifestToDetails(
+    manifest: Manifest | undefined,
+    id: string,
+    removable: boolean,
+) {
+    if (!manifest) {
+        return undefined;
+    }
+
     const documentModels =
         manifest.documentModels?.map(dm => `Document Model: ${dm.name}`) ?? [];
     const editors =
@@ -33,8 +44,7 @@ export interface SettingsModalProps {
 }
 
 export const PackageManager: React.FC = () => {
-    const packages = useExternalPackages();
-    const isMutable = useMutableExternalPackages();
+    const vetraPackages = useVetraPackages();
     const drives = useDrives();
     const [reactor, setReactor] = useState('');
 
@@ -81,13 +91,9 @@ export const PackageManager: React.FC = () => {
         });
     }, [reactor, options]);
 
-    const packagesInfo = useMemo(() => {
-        return [
-            ...packages.map(pkg =>
-                manifestToDetails(pkg.manifest, pkg.id, true),
-            ),
-        ];
-    }, [packages]);
+    const packagesInfo = vetraPackages?.map(pkg =>
+        makeVetraPackageManifest(pkg),
+    );
 
     const handleReactorChange = useCallback(
         (reactor?: string) => setReactor(reactor ?? ''),
@@ -119,10 +125,23 @@ export const PackageManager: React.FC = () => {
 
     return (
         <BasePackageManager
-            mutable={isMutable}
+            mutable={true}
             reactorOptions={options ?? []}
             reactor={reactor}
-            packages={packagesInfo}
+            packages={
+                packagesInfo?.map(pkg => ({
+                    id: pkg.id,
+                    name: pkg.name,
+                    description: pkg.description,
+                    category: pkg.category,
+                    publisher: pkg.author.name,
+                    publisherUrl: pkg.author.website ?? '',
+                    modules: Object.values(pkg.modules).flatMap(modules =>
+                        modules.map(module => module.name),
+                    ),
+                    removable: true,
+                })) ?? []
+            }
             onReactorChange={handleReactorChange}
             onInstall={handleInstall}
             onUninstall={handleUninstall}

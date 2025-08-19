@@ -3,8 +3,6 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
-
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/drive/creators.js";
 import { reducer } from "../../gen/reducer.js";
@@ -15,6 +13,7 @@ import {
 } from "../../gen/schema/zod.js";
 import { DocumentDriveDocument } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
+import { generateMock } from "./generate-mock.js";
 
 describe("Drive Operations", () => {
   let document: DocumentDriveDocument;

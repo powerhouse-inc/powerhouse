@@ -1,5 +1,4 @@
-import { useUserPermissions } from '#hooks';
-import { useReactor } from '@powerhousedao/state';
+import { useReactor, useUserPermissions } from '@powerhousedao/reactor-browser';
 import {
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
@@ -85,7 +84,6 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
         this.server = documentDrive;
     }
 
-    /* eslint-disable @typescript-eslint/no-non-null-assertion */
     @checkServer
     migrateReadDrive(id: string, options: RemoteDriveOptions) {
         return this.server!.migrateReadDrive(id, options);
@@ -150,8 +148,6 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     ): Promise<ReadDrivesListenerUnsubscribe> {
         return this.server!.onReadDrivesUpdate(listener);
     }
-
-    /* eslint-enable @typescript-eslint/no-non-null-assertion */
 }
 
 const ReadModeInstance = new ReadModeContextImpl();

@@ -503,13 +503,9 @@ export function renameSchemaType(
   return print(updatedAst);
 }
 
-export function initializeModelSchema(params: {
-  modelName: string;
-  setStateSchema: (schema: string, scope: Scope) => void;
-}) {
-  const { modelName, setStateSchema } = params;
+export function initializeModelSchema(modelName: string) {
   const initialSchemaDoc = makeInitialSchemaDoc(modelName, "global");
-  setStateSchema(initialSchemaDoc, "global");
+  return initialSchemaDoc;
 }
 
 export function updateModelSchemaNames(params: {
@@ -558,7 +554,8 @@ export function handleModelNameChange(params: {
   const hasExistingSchema = !!globalStateSchema;
 
   if (!hasExistingSchema) {
-    initializeModelSchema({ modelName: newName, setStateSchema });
+    const initialSchemaDoc = initializeModelSchema(newName);
+    setStateSchema(initialSchemaDoc, "global");
     return;
   }
 

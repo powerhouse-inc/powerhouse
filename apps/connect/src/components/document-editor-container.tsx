@@ -1,94 +1,71 @@
-import { useDocumentDriveServer } from '#hooks';
-import { useGetDocumentModelModule } from '#store';
-import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
+import { openUrl } from '#utils';
 import {
+    exportFile,
+    setSelectedNode,
+    useDocumentModelModuleById,
     useDriveIsRemote,
     useDriveRemoteUrl,
-    useParentFolderId,
+    useParentFolder,
     useSelectedDocument,
     useSelectedDrive,
-    useSetSelectedNode,
-} from '@powerhousedao/state';
-import { type Operation, type PHDocument } from 'document-model';
-import { useCallback, useMemo } from 'react';
+} from '@powerhousedao/reactor-browser';
+import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
+import { type PHDocument } from 'document-model';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useModal } from '../components/modal/index.js';
-import { exportFile, openUrl } from '../utils/index.js';
 import { validateDocument } from '../utils/validate-document.js';
 import { DocumentEditor } from './editors.js';
 
 export function DocumentEditorContainer() {
     const { t } = useTranslation();
     const { showModal } = useModal();
-    const { addDocumentOperations } = useDocumentDriveServer();
-    const unwrappedSelectedDrive = useSelectedDrive();
-    const selectedDocument = useSelectedDocument();
-    const parentFolderId = useParentFolderId(selectedDocument?.header.id);
+    const [selectedDrive] = useSelectedDrive();
+    const [selectedDocument] = useSelectedDocument();
+    const parentFolder = useParentFolder(selectedDocument?.header.id);
     const documentType = selectedDocument?.header.documentType;
-    const isRemoteDrive = useDriveIsRemote(unwrappedSelectedDrive?.header.id);
-    const remoteUrl = useDriveRemoteUrl(unwrappedSelectedDrive?.header.id);
-    const getDocumentModelModule = useGetDocumentModelModule();
-    const documentModelModule = documentType
-        ? getDocumentModelModule(documentType)
-        : undefined;
-    const setSelectedNode = useSetSelectedNode();
+    const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
+    const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
+    const documentModelModule = useDocumentModelModuleById(documentType);
 
-    const onAddOperation = useCallback(
-        async (operation: Operation) => {
-            if (!selectedDocument?.header.id) {
-                return;
-            }
-            await addDocumentOperations(selectedDocument.header.id, [
-                operation,
-            ]);
-        },
-        [addDocumentOperations, selectedDocument],
-    );
+    const exportDocument = (document: PHDocument) => {
+        const validationErrors = validateDocument(document);
 
-    const onClose = useCallback(() => {
-        setSelectedNode(parentFolderId);
-    }, [parentFolderId, setSelectedNode]);
+        if (validationErrors.length) {
+            showModal('confirmationModal', {
+                title: t('modals.exportDocumentWithErrors.title'),
+                body: (
+                    <div>
+                        <p>{t('modals.exportDocumentWithErrors.body')}</p>
+                        <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
+                            {validationErrors.map((error, index) => (
+                                <li key={index}>{error.message}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ),
+                cancelLabel: t('common.cancel'),
+                continueLabel: t('common.export'),
+                onCancel(closeModal) {
+                    closeModal();
+                },
+                onContinue(closeModal) {
+                    closeModal();
+                    return exportFile(document);
+                },
+            });
+        } else {
+            return exportFile(document);
+        }
+    };
 
-    const exportDocument = useCallback(
-        (document: PHDocument) => {
-            const validationErrors = validateDocument(document);
-
-            if (validationErrors.length) {
-                showModal('confirmationModal', {
-                    title: t('modals.exportDocumentWithErrors.title'),
-                    body: (
-                        <div>
-                            <p>{t('modals.exportDocumentWithErrors.body')}</p>
-                            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-                                {validationErrors.map((error, index) => (
-                                    <li key={index}>{error.message}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    ),
-                    cancelLabel: t('common.cancel'),
-                    continueLabel: t('common.export'),
-                    onCancel(closeModal) {
-                        closeModal();
-                    },
-                    onContinue(closeModal) {
-                        closeModal();
-                        return exportFile(document, getDocumentModelModule);
-                    },
-                });
-            } else {
-                return exportFile(document, getDocumentModelModule);
-            }
-        },
-        [getDocumentModelModule, showModal, t],
-    );
-
-    const onExport = useCallback(() => {
+    const onExport = () => {
         if (selectedDocument) {
             return exportDocument(selectedDocument);
         }
-    }, [exportDocument, selectedDocument]);
+    };
 
+    // TODO: fix this mess
     const onOpenSwitchboardLink = useMemo(() => {
         return isRemoteDrive
             ? async () => {
@@ -113,7 +90,7 @@ export function DocumentEditorContainer() {
                       documentModelModule.documentModel,
                   );
                   try {
-                      await openUrl(url);
+                      openUrl(url);
                   } catch (e) {
                       console.error('Error opening switchboard link', e);
                   }
@@ -127,9 +104,8 @@ export function DocumentEditorContainer() {
         <div className="flex-1 rounded-2xl bg-gray-50 p-4">
             <DocumentEditor
                 document={selectedDocument}
-                onClose={onClose}
+                onClose={() => setSelectedNode(parentFolder)}
                 onExport={onExport}
-                onAddOperation={onAddOperation}
                 onOpenSwitchboardLink={onOpenSwitchboardLink}
             />
         </div>

@@ -798,3 +798,5 @@ export interface ISynchronizationManager {
 
   getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus;
 }
+
+export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";

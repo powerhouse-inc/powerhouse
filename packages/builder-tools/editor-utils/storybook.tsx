@@ -8,16 +8,22 @@ import {
   type ActionContext,
   type EditorProps,
   type ExtendedStateFromDocument,
-  type GlobalStateFromDocument,
-  type LocalStateFromDocument,
   type PHDocument,
-  type PartialState,
   type Reducer,
 } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 
-export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
+export type EditorStoryArgs = Partial<{
+  user: {
+    address: string;
+    networkId: string;
+    chainId: number;
+    ens: {
+      name: string;
+      avatarUrl: string;
+    };
+  };
   isAllowedToCreateDocuments: boolean;
   isAllowedToEditDocuments: boolean;
   canUndo: boolean;
@@ -28,54 +34,47 @@ export type EditorStoryArgs<TDocument extends PHDocument> = Partial<{
   onShowRevisionHistory: () => void;
   simulateBackgroundUpdates?: {
     backgroundUpdateRate: number;
-    backgroundUpdateActions: ((document: TDocument) => Action)[];
+    backgroundUpdateActions: ((document: PHDocument) => Action)[];
   };
 }>;
 
-export type EditorStoryProps<TDocument extends PHDocument> =
-  EditorProps<TDocument> & EditorStoryArgs<TDocument>;
+export type EditorStoryProps = EditorProps & EditorStoryArgs;
 
-export type DriveEditorStoryProps<TDocument extends PHDocument> =
-  DriveEditorProps<TDocument> & EditorStoryArgs<TDocument>;
+export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
 
-export type EditorStoryComponent<TDocument extends PHDocument> = (
-  props: EditorStoryProps<TDocument>,
+export type EditorStoryComponent = (
+  props: EditorStoryProps,
 ) => React.JSX.Element;
 
-export type DriveEditorStoryComponent<TDocument extends PHDocument> = (
-  props: DriveEditorStoryProps<TDocument>,
+export type DriveEditorStoryComponent = (
+  props: DriveEditorStoryProps,
 ) => React.JSX.Element;
 
-export type DocumentStory<TDocument extends PHDocument> = StoryObj<
-  EditorStoryComponent<TDocument>
->;
+export type DocumentStory = StoryObj<EditorStoryComponent>;
 
-export type DriveDocumentStory<TDocument extends PHDocument> = StoryObj<
-  DriveEditorStoryComponent<TDocument>
->;
+export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
-export function createDocumentStory<TDocument extends PHDocument>(
-  Editor: EditorStoryComponent<TDocument>,
-  reducer: Reducer<TDocument>,
-  initialState: Partial<ExtendedStateFromDocument<TDocument>>,
-  additionalStoryArgs?: EditorStoryArgs<TDocument>,
-  decorators?: Decorator<EditorStoryProps<TDocument>>[],
+export function createDocumentStory(
+  Editor: EditorStoryComponent,
+  reducer: Reducer<any>,
+  initialState: unknown,
+  additionalStoryArgs?: EditorStoryArgs,
+  decorators?: Decorator<EditorStoryProps>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<TDocument>;
+  CreateDocumentStory: DocumentStory;
 } {
   const meta = {
     component: Editor,
     decorators: [
       (Story, { args }) => {
-        const darkTheme = args.context.theme === "dark";
         return (
           <div
             style={{
               padding: "0",
               height: "100vh",
-              color: darkTheme ? "white" : "black",
-              backgroundColor: darkTheme ? "#1A1D1F" : "white",
+              color: "black",
+              backgroundColor: "white",
             }}
           >
             <Story />
@@ -85,7 +84,7 @@ export function createDocumentStory<TDocument extends PHDocument>(
       (Story, { args }) => {
         const [, setArgs] = useArgs<typeof args>();
         const emit = useChannel({
-          DOCUMENT: (document: TDocument) => {
+          DOCUMENT: (document: PHDocument) => {
             setArgs({ document });
           },
         });
@@ -98,7 +97,7 @@ export function createDocumentStory<TDocument extends PHDocument>(
       const [error, setError] = useState<unknown>();
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentReducer(
+      const [document, _dispatch] = useDocumentReducer<PHDocument>(
         reducer,
         args.document,
         (error) => {
@@ -108,12 +107,12 @@ export function createDocumentStory<TDocument extends PHDocument>(
       );
       function dispatch(action: Action) {
         const context: ActionContext = {};
-        if (args.context.user) {
+        if (args.user) {
           context.signer = {
             user: {
-              address: args.context.user.address,
-              networkId: args.context.user.networkId,
-              chainId: args.context.user.chainId,
+              address: args.user.address,
+              networkId: args.user.networkId,
+              chainId: args.user.chainId,
             },
             app: {
               name: "storybook",
@@ -140,28 +139,16 @@ export function createDocumentStory<TDocument extends PHDocument>(
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document));
+            dispatch(createAction(document as PHDocument));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return (
-        <Editor
-          {...args}
-          dispatch={dispatch}
-          document={document}
-          error={error}
-        />
-      );
+      return <Editor {...args} document={document as PHDocument} />;
     },
     argTypes: {
       document: {
         control: "object",
-      },
-      dispatch: {
-        table: {
-          disable: true,
-        },
       },
       context: {
         theme: {
@@ -177,21 +164,20 @@ export function createDocumentStory<TDocument extends PHDocument>(
     },
   } satisfies Meta<typeof Editor>;
 
-  const CreateDocumentStory: DocumentStory<TDocument> = {
+  const CreateDocumentStory: DocumentStory = {
     name: "New document",
     args: {
-      document: baseCreateDocument(initialState),
-      context: {
-        theme: "light",
-        user: {
-          address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-          networkId: "eip155",
-          chainId: 1,
-          ens: {
-            name: "vitalik.eth",
-            avatarUrl:
-              "https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif",
-          },
+      document: baseCreateDocument(
+        initialState as Partial<ExtendedStateFromDocument<PHDocument>>,
+      ),
+      user: {
+        address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+        networkId: "eip155",
+        chainId: 1,
+        ens: {
+          name: "vitalik.eth",
+          avatarUrl:
+            "https://ipfs.io/ipfs/QmSP4nq9fnN9dAiCj42ug9Wa79rqmQerZXZch82VqpiH7U/image.gif",
         },
       },
       ...additionalStoryArgs,
