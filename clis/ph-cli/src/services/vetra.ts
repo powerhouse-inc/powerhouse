@@ -21,6 +21,7 @@ export type DevOptions = {
   verbose?: boolean;
   remoteDrive?: string;
   disableConnect?: boolean;
+  interactive?: boolean;
 };
 
 async function startLocalVetraSwitchboard(
@@ -162,11 +163,22 @@ export async function startVetra({
   verbose = false,
   remoteDrive,
   disableConnect = false,
+  interactive = false,
 }: DevOptions) {
   try {
     // Set default log level to info if not already specified
     if (!process.env.LOG_LEVEL) {
       setLogLevel("info");
+    }
+
+    // Set environment variable for interactive code generation
+    if (interactive) {
+      process.env.CODEGEN_INTERACTIVE = "true";
+      if (verbose) {
+        console.log(
+          "Interactive code generation enabled (CODEGEN_INTERACTIVE=true)",
+        );
+      }
     }
 
     const baseConfig = getConfig(configFile);

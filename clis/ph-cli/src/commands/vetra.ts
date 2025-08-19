@@ -17,6 +17,7 @@ export const vetra: CommandActionType<
     ...options,
     verbose: options.logs,
     disableConnect: options.disableConnect,
+    interactive: options.interactive,
   });
 };
 
@@ -49,6 +50,10 @@ export function vetraCommand(program: Command) {
     .option(
       "--disable-connect",
       "Skip Connect initialization (only start switchboard and reactor)",
+    )
+    .option(
+      "--interactive",
+      "Enable interactive mode for code generation (requires user confirmation before generating code)",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting

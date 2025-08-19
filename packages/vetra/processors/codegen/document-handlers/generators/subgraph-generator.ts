@@ -12,6 +12,35 @@ import { BaseDocumentGen } from "../base-document-gen.js";
 export class SubgraphGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/subgraph";
 
+  /**
+   * Validate if this subgraph strand should be processed
+   */
+  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+    // First run base validation
+    if (!super.shouldProcess(strand)) {
+      return false;
+    }
+
+    const state = strand.state as SubgraphModuleState;
+    if (!state) {
+      logger.debug(`>>> No state found for subgraph: ${strand.documentId}`);
+      return false;
+    }
+
+    // Check if we have a valid subgraph name and it's confirmed
+    if (!state.name) {
+      logger.debug(`>>> No name found for subgraph: ${strand.documentId}`);
+      return false;
+    }
+
+    if (state.status !== "CONFIRMED") {
+      logger.debug(`>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`);
+      return false;
+    }
+
+    return true;
+  }
+
   async generate(
     strand: InternalTransmitterUpdate<DocumentModelDocument>,
   ): Promise<void> {
