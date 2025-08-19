@@ -145,6 +145,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
             ...strand,
             operations: strand.operations.map((op) => ({
               ...op,
+              actionId: op.actionId,
               input: stringify(op.input),
             })),
           })),
