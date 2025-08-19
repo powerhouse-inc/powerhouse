@@ -1,3 +1,7 @@
+---
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/DriveExplorer.tsx"
+unless_exists: true
+---
 import {
   Breadcrumbs,
   CreateDocumentModal,

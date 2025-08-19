@@ -1,3 +1,7 @@
+---
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/FolderTree.tsx"
+unless_exists: true
+---
 import type { FolderNode } from "document-drive";
 import { useState } from "react";
 

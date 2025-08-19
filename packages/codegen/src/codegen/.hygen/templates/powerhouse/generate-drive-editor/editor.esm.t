@@ -1,3 +1,7 @@
+---
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
+unless_exists: true
+---
 import { WagmiContext } from "@powerhousedao/design-system";
 import {
   AnalyticsProvider,

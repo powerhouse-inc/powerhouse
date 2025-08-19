@@ -1,3 +1,7 @@
+---
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/EditorContainer.tsx"
+unless_exists: true
+---
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import {
   DefaultEditorLoader,

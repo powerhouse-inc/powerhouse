@@ -1,3 +1,7 @@
+---
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
+unless_exists: true
+---
 import {
   addDocument,
   useDocumentModelModules,
