@@ -1,8 +1,8 @@
 import {
   generateFromDocument,
+  generateManifest,
   generateSubgraphFromDocumentModel,
   validateDocumentModelState,
-  generateManifest,
 } from "@powerhousedao/codegen";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import {
@@ -10,14 +10,16 @@ import {
   type DocumentModelState,
 } from "document-model";
 import { logger } from "../logger.js";
-import { type DocumentHandler, type Config } from "./types.js";
+import { type Config, type DocumentHandler } from "./types.js";
 
 export class DocumentModelHandler implements DocumentHandler {
   documentType = "powerhouse/document-model";
-  
+
   constructor(private config: Config) {}
 
-  async handle(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
+  async handle(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): Promise<void> {
     const state = strand.state as DocumentModelState;
     const validationResult = validateDocumentModelState(state);
 
@@ -26,7 +28,9 @@ export class DocumentModelHandler implements DocumentHandler {
         `🔄 Starting code generation for document model: ${state.name}`,
       );
       try {
-        await generateFromDocument(state, this.config.PH_CONFIG, { verbose: false });
+        await generateFromDocument(state, this.config.PH_CONFIG, {
+          verbose: false,
+        });
         await generateSubgraphFromDocumentModel(
           state.name,
           state,
@@ -39,16 +43,25 @@ export class DocumentModelHandler implements DocumentHandler {
 
         // Update the manifest with the new document model
         try {
-          logger.info(`🔄 Updating manifest with document model: ${state.name} (ID: ${state.id})`);
-          
-          generateManifest({
-            documentModels: [{
-              id: state.id,
-              name: state.name
-            }]
-          }, this.config.CURRENT_WORKING_DIR);
+          logger.info(
+            `🔄 Updating manifest with document model: ${state.name} (ID: ${state.id})`,
+          );
 
-          logger.info(`✅ Manifest updated successfully for document model: ${state.name}`);
+          generateManifest(
+            {
+              documentModels: [
+                {
+                  id: state.id,
+                  name: state.name,
+                },
+              ],
+            },
+            this.config.CURRENT_WORKING_DIR,
+          );
+
+          logger.info(
+            `✅ Manifest updated successfully for document model: ${state.name}`,
+          );
         } catch (manifestError) {
           logger.error(
             `⚠️ Failed to update manifest for document model ${state.name}:`,
@@ -63,7 +76,7 @@ export class DocumentModelHandler implements DocumentHandler {
         );
       }
     } else {
-      logger.debug(
+      logger.error(
         `❌ Validation failed for document model: ${state.name}`,
         validationResult.errors,
       );
