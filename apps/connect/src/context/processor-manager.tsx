@@ -19,7 +19,7 @@ import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
-import { generateId } from 'document-model';
+import { generateId, type PHDocumentHeader } from 'document-model';
 import { useEffect, useRef, type PropsWithChildren } from 'react';
 
 const logger = childLogger(['reactor-analytics']);
@@ -82,10 +82,7 @@ async function registerDiffAnalyzer(
         '@powerhousedao/diff-analyzer/processors'
     );
 
-    const wrappedFactory = (
-        // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-        driveHeader: import('document-model').PHDocumentHeader,
-    ) => {
+    const wrappedFactory = (driveHeader: PHDocumentHeader) => {
         return processorFactory({ analyticsStore })(driveHeader.id);
     };
 
