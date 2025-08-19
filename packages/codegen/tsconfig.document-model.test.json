@@ -1,7 +1,13 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@powerhousedao/reactor-api": ["./src/codegen/__tests__/mocks/reactor-api"]
+    }
   },
-  "include": ["src/codegen/__tests__/.out/**/*.ts"]
+  "include": [
+    "src/codegen/__tests__/.out/**/*.ts",
+    "src/codegen/__tests__/mocks/**/*.d.ts"
+  ]
 }

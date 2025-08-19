@@ -225,6 +225,13 @@ importers:
         version: 5.9.2
 
   apps/connect:
+    optionalDependencies:
+      '@esbuild/linux-x64':
+        specifier: ^0.21.4
+        version: 0.21.5
+      '@rollup/rollup-linux-x64-musl':
+        specifier: 4.14.3
+        version: 4.14.3
     devDependencies:
       '@didtools/key-webcrypto':
         specifier: ^0.2.0
@@ -388,13 +395,6 @@ importers:
       xvfb-maybe:
         specifier: ^0.2.1
         version: 0.2.1
-    optionalDependencies:
-      '@esbuild/linux-x64':
-        specifier: ^0.21.4
-        version: 0.21.5
-      '@rollup/rollup-linux-x64-musl':
-        specifier: 4.14.3
-        version: 4.14.3
 
   apps/switchboard:
     dependencies:
@@ -796,9 +796,6 @@ importers:
       '@graphql-codegen/core':
         specifier: ^4.0.2
         version: 4.0.2(graphql@16.11.0)
-      '@powerhousedao/reactor-api':
-        specifier: workspace:*
-        version: link:../reactor-api
       '@types/react':
         specifier: ^18.3.1
         version: 18.3.23
@@ -1296,6 +1293,22 @@ importers:
       zod:
         specifier: ^3.24.3
         version: 3.25.76
+    optionalDependencies:
+      '@prisma/client':
+        specifier: 5.17.0
+        version: 5.17.0(prisma@5.17.0)
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      redis:
+        specifier: ^4.6.15
+        version: 4.7.1
+      sequelize:
+        specifier: ^6.37.3
+        version: 6.37.7(sqlite3@5.1.7)
+      sqlite3:
+        specifier: ^5.1.7
+        version: 5.1.7
     devDependencies:
       '@anatine/zod-mock':
         specifier: ^3.14.0
@@ -1336,22 +1349,6 @@ importers:
       webdriverio:
         specifier: ^9.0.9
         version: 9.19.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-    optionalDependencies:
-      '@prisma/client':
-        specifier: 5.17.0
-        version: 5.17.0(prisma@5.17.0)
-      localforage:
-        specifier: ^1.10.0
-        version: 1.10.0
-      redis:
-        specifier: ^4.6.15
-        version: 4.7.1
-      sequelize:
-        specifier: ^6.37.3
-        version: 6.37.7(sqlite3@5.1.7)
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
 
   packages/document-model:
     dependencies:
@@ -35206,7 +35203,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.7.0
       webextension-polyfill: 0.10.0
 
   external-editor@3.1.0:
