@@ -1,17 +1,20 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
+import { kebabCase } from "change-case";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { type DocumentModelDocument } from "document-model";
-import { kebabCase } from "change-case";
-import { type AppModuleState } from "../../../document-models/app-module/index.js";
-import { logger } from "../logger.js";
-import { type DocumentHandler, type Config } from "./types.js";
+import { type AppModuleState } from "../../../../document-models/app-module/index.js";
+import { logger } from "../../logger.js";
+import { BaseDocumentGen } from "../base-document-gen.js";
 
-export class AppHandler implements DocumentHandler {
-  documentType = "powerhouse/app";
-  
-  constructor(private config: Config) {}
+/**
+ * Generator for app documents
+ */
+export class AppGenerator extends BaseDocumentGen {
+  readonly supportedDocumentTypes = "powerhouse/app";
 
-  async handle(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
+  async generate(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): Promise<void> {
     const state = strand.state as AppModuleState;
 
     // Check if we have a valid app name and it's confirmed
@@ -30,17 +33,26 @@ export class AppHandler implements DocumentHandler {
 
         // Update the manifest with the new app
         try {
-          logger.info(`🔄 Updating manifest with app: ${state.name} (ID: ${appId})`);
-          
-          generateManifest({
-            apps: [{
-              id: appId,
-              name: state.name,
-              driveEditor: appId
-            } as any]
-          }, this.config.CURRENT_WORKING_DIR);
+          logger.info(
+            `🔄 Updating manifest with app: ${state.name} (ID: ${appId})`,
+          );
 
-          logger.info(`✅ Manifest updated successfully for app: ${state.name}`);
+          generateManifest(
+            {
+              apps: [
+                {
+                  id: appId,
+                  name: state.name,
+                  driveEditor: appId,
+                } as any,
+              ],
+            },
+            this.config.CURRENT_WORKING_DIR,
+          );
+
+          logger.info(
+            `✅ Manifest updated successfully for app: ${state.name}`,
+          );
         } catch (manifestError) {
           logger.error(
             `⚠️ Failed to update manifest for app ${state.name}:`,
@@ -56,15 +68,20 @@ export class AppHandler implements DocumentHandler {
         if (error instanceof Error) {
           logger.error(`❌ Error message: ${error.message}`);
         }
+        throw error;
       }
     } else {
       if (!state.name) {
         logger.debug(
           `⚠️ Skipping drive editor generation - missing name for app`,
         );
+        throw new Error("App name is missing");
       } else if (state.status !== "CONFIRMED") {
         logger.debug(
           `ℹ️ Skipping drive editor generation - app "${state.name}" is not confirmed (status: ${state.status})`,
+        );
+        throw new Error(
+          `App "${state.name}" is not confirmed (status: ${state.status})`,
         );
       }
     }
