@@ -1,5 +1,4 @@
 import connectConfig from '#connect-config';
-import { BrowserKeyStorage } from '#services';
 import { createBrowserDocumentDriveServer, createBrowserStorage } from '#utils';
 import {
     addPHEventHandlers,
@@ -18,90 +17,21 @@ import {
     extractNodeSlugFromPath,
     getDocuments,
     getDrives,
+    initConnectCrypto,
+    initReactor,
     login,
     refreshReactorData,
 } from '@powerhousedao/reactor-browser';
-import {
-    ConnectCrypto,
-    type IConnectCrypto,
-} from '@powerhousedao/reactor-browser/crypto/index';
-import { initRenown, type IRenown } from '@renown/sdk';
-import { logger, type IDocumentDriveServer as Reactor } from 'document-drive';
+import { initRenown } from '@renown/sdk';
+import { logger } from 'document-drive';
 import { ProcessorManager } from 'document-drive/processors/processor-manager';
-import { generateId } from 'document-model';
 import { loadCommonPackage } from './document-model.js';
 import { loadExternalPackages } from './external-packages.js';
-
-async function initReactor(
-    reactor: Reactor,
-    renown: IRenown | undefined,
-    connectCrypto: IConnectCrypto | undefined,
-) {
-    await initJwtHandler(reactor, renown, connectCrypto);
-    const errors = await reactor.initialize();
-    const error = errors?.at(0);
-    if (error) {
-        throw error;
-    }
-}
-
-export async function handleCreateFirstLocalDrive(
-    reactor: Reactor | undefined,
-) {
-    const localDrivesEnabled = connectConfig.drives.sections.LOCAL.enabled;
-    if (!localDrivesEnabled || reactor === undefined) return;
-
-    const drives = await getDrives(reactor);
-    const hasDrives = drives.length > 0;
-    if (hasDrives) return;
-
-    const driveId = generateId();
-    const driveSlug = `my-local-drive-${driveId}`;
-    const document = await reactor.addDrive({
-        id: driveId,
-        slug: driveSlug,
-        global: {
-            name: 'My Local Drive',
-            icon: null,
-        },
-        local: {
-            availableOffline: false,
-            sharingType: 'private',
-            listeners: [],
-            triggers: [],
-        },
-    });
-    return document;
-}
-
-async function initJwtHandler(
-    reactor: Reactor,
-    renown: IRenown | undefined,
-    connectCrypto: IConnectCrypto | undefined,
-) {
-    let user = renown?.user;
-    if (user instanceof Function) {
-        user = await user();
-    }
-    if (!connectCrypto || !user) {
-        return;
-    }
-
-    reactor.setGenerateJwtHandler(async driveUrl => {
-        return connectCrypto.getBearerToken?.(driveUrl, user.address) ?? '';
-    });
-}
 
 async function loadVetraPackages() {
     const commonPackage = await loadCommonPackage();
     const externalPackages = await loadExternalPackages();
     return [commonPackage, ...externalPackages];
-}
-
-async function initConnectCrypto() {
-    const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
-    await connectCrypto.did();
-    return connectCrypto;
 }
 
 export async function createReactor() {
@@ -115,15 +45,12 @@ export async function createReactor() {
 
     // initialize connect crypto
     const connectCrypto = await initConnectCrypto();
-    console.log('connectCrypto', connectCrypto);
 
     // initialize did
     const did = await connectCrypto.did();
-    console.log('did', did);
 
     // initialize renown
     const renown = initRenown(did, connectConfig.routerBasename);
-    console.log('renown', renown);
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);

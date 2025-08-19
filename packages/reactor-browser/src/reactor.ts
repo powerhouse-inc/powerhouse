@@ -1,13 +1,19 @@
+import { type IRenown } from "@renown/sdk";
 import {
   BaseQueueManager,
+  InMemoryCache,
+  ReactorBuilder,
   type DefaultRemoteDriveInput,
   type DocumentDriveServerOptions,
   type IDocumentDriveServer,
-  InMemoryCache,
-  ReactorBuilder,
 } from "document-drive";
 import { BrowserStorage } from "document-drive/storage/browser";
-import { type DocumentModelModule } from "document-model";
+import { generateId, type DocumentModelModule } from "document-model";
+import {
+  BrowserKeyStorage,
+  ConnectCrypto,
+  type IConnectCrypto,
+} from "./crypto/index.js";
 import { dispatchSetDocumentsEvent } from "./events/documents.js";
 import { dispatchSetDrivesEvent } from "./events/drives.js";
 import { type Reactor } from "./types/reactor.js";
@@ -89,4 +95,70 @@ export async function refreshReactorData(reactor: Reactor | undefined) {
   const documents = await getDocuments(reactor);
   dispatchSetDrivesEvent(drives);
   dispatchSetDocumentsEvent(documents);
+}
+
+export async function initReactor(
+  reactor: Reactor,
+  renown: IRenown | undefined,
+  connectCrypto: IConnectCrypto | undefined,
+) {
+  await initJwtHandler(reactor, renown, connectCrypto);
+  const errors = await reactor.initialize();
+  const error = errors?.at(0);
+  if (error) {
+    throw error;
+  }
+}
+
+export async function handleCreateFirstLocalDrive(
+  reactor: Reactor | undefined,
+  localDrivesEnabled = true,
+) {
+  if (!localDrivesEnabled || reactor === undefined) return;
+
+  const drives = await getDrives(reactor);
+  const hasDrives = drives.length > 0;
+  if (hasDrives) return;
+
+  const driveId = generateId();
+  const driveSlug = `my-local-drive-${driveId}`;
+  const document = await reactor.addDrive({
+    id: driveId,
+    slug: driveSlug,
+    global: {
+      name: "My Local Drive",
+      icon: null,
+    },
+    local: {
+      availableOffline: false,
+      sharingType: "private",
+      listeners: [],
+      triggers: [],
+    },
+  });
+  return document;
+}
+
+async function initJwtHandler(
+  reactor: Reactor,
+  renown: IRenown | undefined,
+  connectCrypto: IConnectCrypto | undefined,
+) {
+  let user = renown?.user;
+  if (user instanceof Function) {
+    user = await user();
+  }
+  if (!connectCrypto || !user) {
+    return;
+  }
+
+  reactor.setGenerateJwtHandler(async (driveUrl) => {
+    return connectCrypto.getBearerToken(driveUrl, user.address);
+  });
+}
+
+export async function initConnectCrypto() {
+  const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+  await connectCrypto.did();
+  return connectCrypto;
 }
