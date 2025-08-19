@@ -1,3 +1,13 @@
+## 4.1.0-dev.23 (2025-08-19)
+
+### 🩹 Fixes
+
+- **vetra:** prevent browser refresh when adding new document or editors ([ef979fc39](https://github.com/powerhouse-inc/powerhouse/commit/ef979fc39))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.22 (2025-08-15)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

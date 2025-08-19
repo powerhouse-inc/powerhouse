@@ -1,3 +1,25 @@
+## 4.1.0-dev.23 (2025-08-19)
+
+### 🚀 Features
+
+- **vetra:** implement document type selection in editors ([bcd1879a1](https://github.com/powerhouse-inc/powerhouse/commit/bcd1879a1))
+
+### 🩹 Fixes
+
+- remove old commented out code ([9bb8d7665](https://github.com/powerhouse-inc/powerhouse/commit/9bb8d7665))
+- apply refactoring to document-drive ([0175b6eff](https://github.com/powerhouse-inc/powerhouse/commit/0175b6eff))
+- fix downstream consequences of getting rid of extended state ([2177d6e41](https://github.com/powerhouse-inc/powerhouse/commit/2177d6e41))
+- **document-drive:** fixing misspelling in gql query ([35c5dc708](https://github.com/powerhouse-inc/powerhouse/commit/35c5dc708))
+- **vetra:** prevent browser refresh when adding new document or editors ([ef979fc39](https://github.com/powerhouse-inc/powerhouse/commit/ef979fc39))
+- **vetra:** handle optional author properties in package manifest generation ([39c64a30f](https://github.com/powerhouse-inc/powerhouse/commit/39c64a30f))
+- **vetra:** build fixes for updates ([0a32b5570](https://github.com/powerhouse-inc/powerhouse/commit/0a32b5570))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.22 (2025-08-15)
 
 ### 🩹 Fixes

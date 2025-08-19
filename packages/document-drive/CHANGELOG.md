@@ -1,3 +1,15 @@
+## 4.1.0-dev.23 (2025-08-19)
+
+### 🩹 Fixes
+
+- fix downstream consequences of getting rid of extended state ([2177d6e41](https://github.com/powerhouse-inc/powerhouse/commit/2177d6e41))
+- **document-drive:** fixing misspelling in gql query ([35c5dc708](https://github.com/powerhouse-inc/powerhouse/commit/35c5dc708))
+- apply refactoring to document-drive ([0175b6eff](https://github.com/powerhouse-inc/powerhouse/commit/0175b6eff))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.22 (2025-08-15)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

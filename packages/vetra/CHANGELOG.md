@@ -1,3 +1,19 @@
+## 4.1.0-dev.23 (2025-08-19)
+
+### 🚀 Features
+
+- **vetra:** implement document type selection in editors ([bcd1879a1](https://github.com/powerhouse-inc/powerhouse/commit/bcd1879a1))
+
+### 🩹 Fixes
+
+- **vetra:** build fixes for updates ([0a32b5570](https://github.com/powerhouse-inc/powerhouse/commit/0a32b5570))
+- **vetra:** handle optional author properties in package manifest generation ([39c64a30f](https://github.com/powerhouse-inc/powerhouse/commit/39c64a30f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.22 (2025-08-15)
 
 ### 🩹 Fixes

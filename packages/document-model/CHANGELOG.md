@@ -1,3 +1,14 @@
+## 4.1.0-dev.23 (2025-08-19)
+
+### 🩹 Fixes
+
+- fix downstream consequences of getting rid of extended state ([2177d6e41](https://github.com/powerhouse-inc/powerhouse/commit/2177d6e41))
+- remove old commented out code ([9bb8d7665](https://github.com/powerhouse-inc/powerhouse/commit/9bb8d7665))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.22 (2025-08-15)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
