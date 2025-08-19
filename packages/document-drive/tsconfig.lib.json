@@ -7,9 +7,6 @@
     {
       "path": "../document-model"
     },
-    {
-      "path": "../codegen"
-    }
   ],
   "include": ["src", "index.ts"],
 }

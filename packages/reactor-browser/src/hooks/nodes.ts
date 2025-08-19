@@ -127,6 +127,16 @@ export function useChildNodes(): Node[] {
   );
 }
 
+export function useAllFolderNodes(): FolderNode[] {
+  const nodes = useNodes();
+  return sortNodesByName(nodes?.filter((n) => isFolderNodeKind(n)) || []);
+}
+
+export function useAllFileNodes(): FileNode[] {
+  const nodes = useNodes();
+  return sortNodesByName(nodes?.filter((n) => isFileNodeKind(n)) || []);
+}
+
 /** Returns the folder child nodes for the selected drive or folder. */
 export function useFolderChildNodes(): FolderNode[] {
   const childNodes = useChildNodes();

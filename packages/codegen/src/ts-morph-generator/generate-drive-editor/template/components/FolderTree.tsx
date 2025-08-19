@@ -1,9 +1,5 @@
----
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/FolderTree.tsx"
-unless_exists: true
----
-import { useState } from "react";
 import type { FolderNode } from "document-drive";
+import { useState } from "react";
 
 interface FolderTreeProps {
   folders: FolderNode[];
@@ -39,7 +35,7 @@ export function FolderTree({
   };
 
   // Recursive function to render folder tree structure
-  const renderFolder = (folder: FolderNode, level: number = 0) => {
+  const renderFolder = (folder: FolderNode, level = 0) => {
     const hasChildren = folders.some((f) => f.parentFolder === folder.id);
     const isExpanded = expandedFolders.has(folder.id);
     const isSelected = selectedNodeId === folder.id;
@@ -47,7 +43,7 @@ export function FolderTree({
     return (
       <div key={folder.id}>
         <div
-          className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${
+          className={`flex cursor-pointer items-center rounded px-2 py-1 text-sm hover:bg-gray-100 ${
             isSelected ? "bg-blue-100 text-blue-800" : ""
           }`}
           style={{ paddingLeft: `${level * 16 + 8}px` }} // Customize indentation here
@@ -56,7 +52,7 @@ export function FolderTree({
           {/* Expand/collapse button for folders with children */}
           {hasChildren && (
             <button
-              className="w-4 h-4 mr-1 flex items-center justify-center"
+              className="mr-1 flex h-4 w-4 items-center justify-center"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleFolder(folder.id);
@@ -65,7 +61,7 @@ export function FolderTree({
               {isExpanded ? "▼" : "▶"} {/* Customize expand icons here */}
             </button>
           )}
-          {!hasChildren && <div className="w-5 mr-1" />}
+          {!hasChildren && <div className="mr-1 w-5" />}
           {/* Customize folder icon and styling here */}
           <span>📁 {folder.name}</span>
         </div>
@@ -86,7 +82,7 @@ export function FolderTree({
       {/* Root Directory Option */}
       {/* Customize root folder appearance here */}
       <div
-        className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded text-sm ${
+        className={`flex cursor-pointer items-center rounded px-2 py-1 text-sm hover:bg-gray-100 ${
           !selectedNodeId ? "bg-blue-100 text-blue-800" : ""
         }`}
         onClick={() => onSelectNode(undefined)}

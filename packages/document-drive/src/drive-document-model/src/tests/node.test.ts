@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "./generate-mock.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/node/creators.js";
 import { reducer } from "../../gen/reducer.js";

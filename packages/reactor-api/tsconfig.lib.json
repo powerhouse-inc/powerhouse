@@ -15,6 +15,9 @@
     },
     {
       "path": "../renown"
+    },
+    {
+      "path": "../reactor-mcp"
     }
   ],
   "include": ["src", "index.ts", "types.d.ts"],
