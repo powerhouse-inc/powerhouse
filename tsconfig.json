@@ -2,25 +2,7 @@
   "extends": "./tsconfig.options.json",
   "references": [
     {
-      "path": "./packages/config"
-    },
-    {
-      "path": "./packages/design-system"
-    },
-    {
-      "path": "./packages/document-drive"
-    },
-    {
-      "path": "./packages/document-model"
-    },
-    {
-      "path": "./packages/reactor-browser"
-    },
-    {
-      "path": "./packages/reactor-api"
-    },
-    {
-      "path": "./packages/reactor-local"
+      "path": "./apps/academy"
     },
     {
       "path": "./apps/connect"
@@ -38,7 +20,46 @@
       "path": "./packages/builder-tools"
     },
     {
+      "path": "./packages/codegen"
+    },
+    {
       "path": "./packages/common"
+    },
+    {
+      "path": "./packages/config"
+    },
+    {
+      "path": "./packages/design-system"
+    },
+    {
+      "path": "./packages/document-drive"
+    },
+    {
+      "path": "./packages/document-model"
+    },
+    {
+      "path": "./packages/reactor"
+    },
+    {
+      "path": "./packages/reactor-api"
+    },
+    {
+      "path": "./packages/reactor-browser"
+    },
+    {
+      "path": "./packages/reactor-local"
+    },
+    {
+      "path": "./packages/reactor-mcp"
+    },
+    {
+      "path": "./packages/renown"
+    },
+    {
+      "path": "./packages/switchboard-gui"
+    },
+    {
+      "path": "./packages/vetra"
     }
   ],
   "files": []

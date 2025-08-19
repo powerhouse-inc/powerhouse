@@ -36,6 +36,6 @@
         ],
         "experimentalDecorators": true
     },
-    "include": ["src", "e2e-tests", "custom.d.ts"],
-    "exclude": ["src/workers/*.ts"]
+    "include": ["**/*"],
+    "exclude": ["src/workers/*.ts","*.mts", "scripts/*.js", "scripts/*.ts", "vite.config.ts"]
 }

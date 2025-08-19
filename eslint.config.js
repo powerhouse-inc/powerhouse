@@ -5,56 +5,28 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import { globalIgnores } from "eslint/config";
 
 export default tseslint.config(
+  globalIgnores([
+    "**/node_modules/",
+    "**/dist/",
+    "**/.ph/",
+    "**/storybook-static/",
+    "**/.vite/",
+    "**/.nx/",
+    "**/build/",
+    "**/.docusaurus/",
+    "**/.ph/",
+    "**/external-packages.js",
+    "**/.out/",
+    "**/prisma/"
+
+  ]),
   eslint.configs.recommended,
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
   eslintPluginPrettierRecommended,
-  {
-    ignores: [
-      "node_modules/",
-      "dist/",
-      "build/",
-      "storybook-static/",
-      "coverage/",
-      "gen/",
-      "docs/",
-      "**/node_modules/",
-      "**/dist/",
-      "**/ts-dist/",
-      "**/build/",
-      "**/storybook-static/",
-      "**/.storybook/",
-      "**/coverage/",
-      "**/gen/",
-      "**/docs/",
-      "**/browser.js",
-      "**/src/assets/**/*",
-      "**/postcss.config.js",
-      "**/postcss.config.cjs",
-      "**/postcss.config.mjs",
-      "**/create-require.js",
-      ".nx/",
-      "packages/codegen/**/__tests__",
-      "packages/document-drive/**/*.test.ts",
-      "packages/document-drive/**/*.bench.ts",
-      "packages/reactor-api/**/*.test.ts",
-      "packages/reactor-api/**/*.bench.ts",
-      "apps/connect/cypress/**/*.ts",
-      "**/.vite/",
-      "**/out/",
-      "**/forge.config.js",
-      "**/vite.config.ts.timestamp-*.mjs",
-      "apps/connect/src/vite-env.d.ts",
-      "apps/connect/src/external-packages.js",
-      "**/*.config.*",
-      "clis/ph-cli/.ph/",
-      "packages/document-drive/src/storage/prisma/client/",
-      "clis/ph-cli/test/utils.test.ts",
-      "apps/connect/public/*.js",
-    ],
-  },
   {
     languageOptions: {
       sourceType: "module",
@@ -74,6 +46,8 @@ export default tseslint.config(
       },
     },
     rules: {
+      "@typescript-eslint/dot-notation": "off",
+      "@typescript-eslint/no-deprecated": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/consistent-indexed-object-style": "off",
       "@typescript-eslint/no-duplicate-type-constituents": "off",
