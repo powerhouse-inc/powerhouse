@@ -10,7 +10,7 @@ import {
     baseSaveToFileHandle,
     baseLoadFromFile,
     baseLoadFromInput,
-    baseState,
+    defaultBaseState,
     generateId,
  } from 'document-model';
 import { 
@@ -26,7 +26,7 @@ export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalSta
 const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
-        return { ...baseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
+        return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
     createExtendedState(extendedState) {
         return baseCreateExtendedState(
@@ -60,5 +60,13 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
         return baseLoadFromInput(input, reducer);
     },
 };
+
+export const createDocument = utils.createDocument;
+export const createState = utils.createState;
+export const createExtendedState = utils.createExtendedState;
+export const saveToFile = utils.saveToFile;
+export const saveToFileHandle = utils.saveToFileHandle;
+export const loadFromFile = utils.loadFromFile;
+export const loadFromInput = utils.loadFromInput;
 
 export default utils;
