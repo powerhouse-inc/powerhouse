@@ -1,3 +1,16 @@
+## 4.1.0-dev.27 (2025-08-20)
+
+### 🩹 Fixes
+
+- extract metadata tags and labels for docker ([bb9c81ce7](https://github.com/powerhouse-inc/powerhouse/commit/bb9c81ce7))
+- use github tag properly ([95ccff4b8](https://github.com/powerhouse-inc/powerhouse/commit/95ccff4b8))
+- proper tag for docker images ([e73e10617](https://github.com/powerhouse-inc/powerhouse/commit/e73e10617))
+- use patname secret instead of github token ([db9dfd5cd](https://github.com/powerhouse-inc/powerhouse/commit/db9dfd5cd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.26 (2025-08-20)
 
 ### 🩹 Fixes
