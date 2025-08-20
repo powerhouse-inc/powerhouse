@@ -273,12 +273,7 @@ export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
 ) => TDocument | Promise<TDocument>;
 
 export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
-  initialState?: Partial<
-    BaseState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
+  initialState?: Partial<PHBaseState>,
   createState?: CreateState<TDocument>,
 ) => TDocument;
 

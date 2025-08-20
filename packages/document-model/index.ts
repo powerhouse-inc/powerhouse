@@ -24,10 +24,10 @@ export type {
   Author,
   DocumentModelInput,
   Operation as DocumentModelOperation,
+  DocumentSpecification,
   Module,
   Scalars,
   ScopeState,
-  DocumentSpecification,
 } from "#document-model/gen/schema/types.js";
 export type {
   DocumentModelAction,
@@ -40,7 +40,14 @@ export {
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
-export type { PHDocumentHeader, PHDocumentMeta } from "#document/ph-types.js";
+export type {
+  PHAuthState,
+  PHBaseState,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  PHDocumentSignatureInfo,
+  PHDocumentState,
+} from "#document/ph-types.js";
 export type {
   Action,
   ActionContext,
@@ -67,6 +74,7 @@ export type {
   ExtendedStateFromDocument,
   FileRegistry,
   GlobalStateFromDocument,
+  ImportScriptModule,
   InputMaybe,
   LoadFromFile,
   LoadFromInput,
@@ -88,10 +96,9 @@ export type {
   SignalResult,
   Signature,
   StateReducer,
+  SubgraphModule,
   User,
   ValidationError,
-  ImportScriptModule,
-  SubgraphModule,
 } from "#document/types.js";
 export {
   baseCreateDocument,
@@ -141,9 +148,12 @@ export {
 } from "#document/actions/creators.js";
 export {
   actionContext,
-  authState,
-  baseState,
-  documentState,
+  createAuthState,
+  createBaseState,
+  createDocumentState,
+  defaultAuthState,
+  defaultBaseState,
+  defaultDocumentState,
 } from "#document/ph-factories.js";
 export type { EditorContext } from "#document/types.js";
 export {

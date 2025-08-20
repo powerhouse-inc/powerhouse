@@ -6,7 +6,7 @@ import {
   baseSaveToFileHandle,
   baseLoadFromFile,
   baseLoadFromInput,
-  baseState,
+  defaultBaseState,
   generateId,
 } from "document-model";
 import {
@@ -27,7 +27,7 @@ const utils: DocumentModelUtils<DocumentEditorDocument> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
-      ...baseState(),
+      ...defaultBaseState(),
       
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },

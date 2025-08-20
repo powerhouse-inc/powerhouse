@@ -1,4 +1,4 @@
-import { baseState } from "#document/ph-factories.js";
+import { defaultBaseState } from "#document/ph-factories.js";
 import { type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
@@ -173,7 +173,7 @@ export function baseCreateExtendedState<TDocument extends PHDocument>(
   return (
     createState?.(initialState) ??
     ((initialState ?? {
-      ...baseState(),
+      ...defaultBaseState(),
       global: {},
       local: {},
     }) as BaseStateFromDocument<TDocument>)

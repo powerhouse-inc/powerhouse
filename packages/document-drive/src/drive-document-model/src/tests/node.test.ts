@@ -20,6 +20,7 @@ import {
 } from "../../gen/schema/zod.js";
 import { DocumentDriveDocument } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
+import { createDocumentWithNodes } from "./test-factories.js";
 
 describe("Node Operations", () => {
   let document: DocumentDriveDocument;
@@ -160,13 +161,7 @@ describe("Node Operations", () => {
 
   it("should handle deleteNode operation", () => {
     const input = generateMock(DeleteNodeInputSchema());
-    const document = createDocument({
-      global: {
-        // @ts-expect-error mock
-        nodes: [input],
-      },
-      local: {},
-    });
+    const document = createDocumentWithNodes([input]);
     const updatedDocument = reducer(document, creators.deleteNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -243,23 +238,16 @@ describe("Node Operations", () => {
   });
   it("should handle copyNode operation", () => {
     const input = generateMock(CopyNodeInputSchema());
-    const document = createDocument({
-      global: {
-          nodes: [
-            // @ts-expect-error mock
-            {
-              id: input.srcId,
-              name: "Node 1",
-            },
-            // @ts-expect-error mock
-            {
-              id: input.targetId,
-              name: "Node 2",
-            },
-          ],
-        },
-      local: {},
-    });
+    const document = createDocumentWithNodes([
+      {
+        id: input.srcId,
+        name: "Node 1",
+      },
+      {
+        id: input.targetId,
+        name: "Node 2",
+      },
+    ]);
     const updatedDocument = reducer(document, creators.copyNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
@@ -271,23 +259,16 @@ describe("Node Operations", () => {
   });
   it("should handle duplicated id when copy a node", () => {
     const input = generateMock(CopyNodeInputSchema());
-    const document = createDocument({
-      global: {
-          nodes: [
-            // @ts-expect-error mock
-            {
-              id: "1",
-              name: "Node 1",
-            },
-            // @ts-expect-error mock
-            {
-              id: "2",
-              name: "Node 2",
-            },
-          ],
-        },
-      local: {},
-    });
+    const document = createDocumentWithNodes([
+      {
+        id: "1",
+        name: "Node 1",
+      },
+      {
+        id: "2",
+        name: "Node 2",
+      },
+    ]);
 
     const updatedDocument = reducer(
       document,
@@ -362,23 +343,16 @@ describe("Node Operations", () => {
   });
   it("should handle moveNode operation", () => {
     const input = generateMock(MoveNodeInputSchema());
-    const document = createDocument({
-      global: {
-          nodes: [
-            // @ts-expect-error mock
-            {
-              id: input.srcFolder,
-              name: "Node 1",
-            },
-            {
-              // @ts-expect-error mock
-              id: input.targetParentFolder,
-              name: "Node 2",
-            },
-          ],
-        },
-      local: {},
-    });
+    const document = createDocumentWithNodes([
+      {
+        id: input.srcFolder,
+        name: "Node 1",
+      },
+      {
+        id: input.targetParentFolder ?? undefined,
+        name: "Node 2",
+      },
+    ]);
     const updatedDocument = reducer(document, creators.moveNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);

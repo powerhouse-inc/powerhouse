@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
-import { baseState } from "../src/document/ph-factories.js";
+import { defaultBaseState } from "../src/document/ph-factories.js";
 import {
   type Action,
   type BaseState,
   type Operation,
-  type PartialState,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
@@ -38,7 +37,7 @@ export function createBaseState<TGlobal, TLocal>(
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
   return {
-    ...baseState(),
+    ...defaultBaseState(),
     global,
     local,
   };

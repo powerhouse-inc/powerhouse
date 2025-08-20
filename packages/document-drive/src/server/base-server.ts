@@ -6,8 +6,8 @@ import {
   removeTrigger,
   setSharingType,
 } from "#drive-document-model/gen/creators";
-import { createDocument } from "#drive-document-model/gen/utils";
 import { type LegacyAddFileAction } from "#drive-document-model/module";
+import { createDriveDocument } from "#drive-document-model/ph-factories";
 import {
   type ActionJob,
   type DocumentJob,
@@ -46,7 +46,6 @@ import {
   type PHDocumentMeta,
   type SignalResult,
   attachBranch,
-  baseState,
   createPresignedHeader,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -625,13 +624,10 @@ export class BaseDocumentDriveServer
     input: DriveInput,
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
-    const document = createDocument({
-      ...baseState(),
-      global: {
-        icon: input.global.icon ?? null,
-        name: input.global.name,
-      },
-      local: input.local ?? {},
+    // Create document with custom global and local state
+    const document = createDriveDocument({
+      global: input.global,
+      local: input.local,
     });
 
     if (input.id && input.id.length > 0) {
