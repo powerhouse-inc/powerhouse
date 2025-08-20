@@ -1,3 +1,13 @@
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🚀 Features
+
+- added interactive mode to vetra command ([#1775](https://github.com/powerhouse-inc/powerhouse/pull/1775))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.30 (2025-08-20)
 
 ### 🩹 Fixes

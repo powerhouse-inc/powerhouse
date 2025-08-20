@@ -1,3 +1,19 @@
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🚀 Features
+
+- added interactive mode to vetra command ([#1775](https://github.com/powerhouse-inc/powerhouse/pull/1775))
+
+### 🩹 Fixes
+
+- **codegen:** document drive templates ([0561a1991](https://github.com/powerhouse-inc/powerhouse/commit/0561a1991))
+- **vetra:** improve error handling in document generation processors ([518c875f3](https://github.com/powerhouse-inc/powerhouse/commit/518c875f3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.30 (2025-08-20)
 
 ### 🩹 Fixes

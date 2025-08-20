@@ -1,3 +1,13 @@
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🩹 Fixes
+
+- **connect:** preserve built-in packages during hmr updates ([8398c0f06](https://github.com/powerhouse-inc/powerhouse/commit/8398c0f06))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.30 (2025-08-20)
 
 ### 🩹 Fixes

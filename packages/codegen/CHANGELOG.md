@@ -1,3 +1,13 @@
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🩹 Fixes
+
+- **codegen:** document drive templates ([0561a1991](https://github.com/powerhouse-inc/powerhouse/commit/0561a1991))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.30 (2025-08-20)
 
 ### 🩹 Fixes
