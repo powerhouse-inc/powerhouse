@@ -1,3 +1,13 @@
+## 4.1.0-dev.26 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy alternative approach ([2a5522cdc](https://github.com/powerhouse-inc/powerhouse/commit/2a5522cdc))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.25 (2025-08-20)
 
 ### 🩹 Fixes
