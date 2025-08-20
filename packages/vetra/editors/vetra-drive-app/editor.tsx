@@ -41,7 +41,11 @@ export function BaseEditor(props: IProps) {
 
   const onCreatePackageFile = useCallback(
     () => {
-      addDocument(driveId, 'vetra-package', DOCUMENT_TYPES.documentPackage)
+      addDocument(
+        driveId,
+        'vetra-package',
+        DOCUMENT_TYPES.documentPackage,
+      )
     },
     [driveId],
   );

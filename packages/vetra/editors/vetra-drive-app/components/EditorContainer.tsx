@@ -4,11 +4,10 @@ import {
   DefaultEditorLoader,
 } from "@powerhousedao/design-system";
 import {
-  useSelectedDrive,
+  useDocumentById,
   type IDriveContext,
   type VetraDocumentModelModule, type VetraEditorModule
 } from "@powerhousedao/reactor-browser";
-import { error } from "console";
 import { Suspense } from "react";
   
   export interface EditorContainerProps {
@@ -21,9 +20,8 @@ import { Suspense } from "react";
   }
   
   export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-    const { context, editorModule } = props;
-    const drive = useSelectedDrive();
-  
+    const { context, editorModule, documentId } = props;
+    const [document] = useDocumentById(documentId);
   
     const loadingContent = (
       <div className="flex-1 flex justify-center items-center h-full">
@@ -39,8 +37,8 @@ import { Suspense } from "react";
       <Suspense fallback={loadingContent}>
         <EditorComponent
           context={context}
-          document={drive}
-          error={error}
+          document={document}
+          error={console.error}
         />
       </Suspense>
     );
