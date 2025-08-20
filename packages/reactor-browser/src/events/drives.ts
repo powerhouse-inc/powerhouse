@@ -1,5 +1,4 @@
 import { type DocumentDriveDocument } from "document-drive";
-import { extractDriveIdFromSlug } from "../utils/url.js";
 import { dispatchSetSelectedNodeIdEvent } from "./nodes.js";
 import { type SetDrivesEvent, type SetSelectedDriveIdEvent } from "./types.js";
 
@@ -45,7 +44,11 @@ export function dispatchSelectedDriveIdUpdatedEvent() {
 
 export function handleSetSelectedDriveIdEvent(event: SetSelectedDriveIdEvent) {
   const driveSlug = event.detail.driveSlug;
-  const driveId = extractDriveIdFromSlug(driveSlug);
+
+  // Find the drive by slug to get its actual ID
+  const drive = window.phDrives?.find((d) => d.header.slug === driveSlug);
+  const driveId = drive?.header.id;
+
   window.phSelectedDriveId = driveId;
   dispatchSelectedDriveIdUpdatedEvent();
   dispatchSetSelectedNodeIdEvent(undefined);
