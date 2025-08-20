@@ -30,26 +30,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.PATNAME }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/connect
-          tags: |
-            type=raw,value=latest,enable={{startsWith(env.GITHUB_TAG, 'v') && !contains(env.GITHUB_TAG, '-dev') && !contains(env.GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-staging')}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=short
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./apps/connect
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/connect:${{ env.GITHUB_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -81,26 +67,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.PATNAME }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/switchboard
-          tags: |
-            type=raw,value=latest,enable={{startsWith(env.GITHUB_TAG, 'v') && !contains(env.GITHUB_TAG, '-dev') && !contains(env.GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-staging')}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=short
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./apps/switchboard
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}/switchboard:${{ env.GITHUB_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
