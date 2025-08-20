@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Get tags
+        run: git fetch --tags origin
       - name: Set last tag
         run: echo "GITHUB_TAG=$(git tag --sort=version:refname | tail -n 1)" >> $GITHUB_ENV
       - name: Set up Docker Buildx
@@ -39,13 +41,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            TAG=${{ 
-              startsWith(env.GITHUB_TAG, 'v') && (
-                contains(env.GITHUB_TAG, '-dev') && 'dev' || 
-                contains(env.GITHUB_TAG, '-staging') && 'staging' || 
-                'latest'
-              )
-            }}
+            TAG=${{env.GITHUB_TAG}}
 
   switchboard:
     runs-on: ubuntu-latest
@@ -55,6 +51,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Get tags
+        run: git fetch --tags origin
       - name: Set last tag
         run: echo "GITHUB_TAG=$(git tag --sort=version:refname | tail -n 1)" >> $GITHUB_ENV
       - name: Set up Docker Buildx
@@ -76,10 +74,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            TAG=${{ 
-              startsWith(env.GITHUB_TAG, 'v') && (
-                contains(env.GITHUB_TAG, '-dev') && 'dev' || 
-                contains(env.GITHUB_TAG, '-staging') && 'staging' || 
-                'latest'
-              )
-            }} 
+            TAG=${{env.GITHUB_TAG}} 

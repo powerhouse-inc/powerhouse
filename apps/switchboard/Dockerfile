@@ -38,8 +38,10 @@ ARG TAG=latest
 ENV TAG=$TAG
 
 RUN pnpm add -g ph-cmd@$TAG
-RUN if [ "$TAG" = "dev" ] || [ "$TAG" = "staging" ]; then \
-        ph init project --${TAG} --package-manager pnpm; \
+RUN if [[ "$TAG" == *"dev"* ]]; then \
+        ph init project --dev --package-manager pnpm; \
+    elif [[ "$TAG" == *"staging"* ]]; then \
+        ph init project --staging --package-manager pnpm; \
     else \
         ph init project --package-manager pnpm; \
     fi
