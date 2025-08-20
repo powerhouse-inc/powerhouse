@@ -1,3 +1,13 @@
+## 4.1.0-dev.30 (2025-08-20)
+
+### 🩹 Fixes
+
+- add additional tags ([4f0cf8658](https://github.com/powerhouse-inc/powerhouse/commit/4f0cf8658))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.29 (2025-08-20)
 
 ### 🩹 Fixes
