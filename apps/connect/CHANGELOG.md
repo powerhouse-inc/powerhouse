@@ -1,3 +1,13 @@
+## 4.1.0-dev.25 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy ([b057a7cce](https://github.com/powerhouse-inc/powerhouse/commit/b057a7cce))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.24 (2025-08-20)
 
 ### 🚀 Features
