@@ -36,9 +36,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/connect
           tags: |
-            type=raw,value=latest,enable={{startsWith($GITHUB_TAG, 'v') && !contains($GITHUB_TAG, '-dev') && !contains($GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-staging')}}
+            type=raw,value=latest,enable={{startsWith(env.GITHUB_TAG, 'v') && !contains(env.GITHUB_TAG, '-dev') && !contains(env.GITHUB_TAG, '-staging')}}
+            type=raw,value=dev,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-dev')}}
+            type=raw,value=staging,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-staging')}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
@@ -87,9 +87,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/switchboard
           tags: |
-            type=raw,value=latest,enable={{startsWith($GITHUB_TAG, 'v') && !contains($GITHUB_TAG, '-dev') && !contains($GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-staging')}}
+            type=raw,value=latest,enable={{startsWith(env.GITHUB_TAG, 'v') && !contains(env.GITHUB_TAG, '-dev') && !contains(env.GITHUB_TAG, '-staging')}}
+            type=raw,value=dev,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-dev')}}
+            type=raw,value=staging,enable={{startsWith(env.GITHUB_TAG, 'v') && contains(env.GITHUB_TAG, '-staging')}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
