@@ -119,7 +119,6 @@ export class DocumentCodegenManager {
           `❌ Error generating code for document type "${documentType}":`,
           error,
         );
-        throw error;
       } finally {
         // Clean up the timer reference
         this.debounceTimers.delete(documentType);

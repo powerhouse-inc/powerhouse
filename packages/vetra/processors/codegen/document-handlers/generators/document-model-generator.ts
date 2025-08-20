@@ -82,7 +82,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         `❌ Validation failed for document model: ${state.name}`,
         validationResult.errors,
       );
-      throw new Error(`Validation failed for document model: ${state.name}`);
+      return;
     }
   }
 }

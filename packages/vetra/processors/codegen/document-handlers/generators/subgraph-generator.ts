@@ -63,21 +63,18 @@ export class SubgraphGenerator extends BaseDocumentGen {
           `❌ Error during subgraph generation for ${state.name}:`,
           error,
         );
-        throw error;
       }
     } else {
       if (!state.name) {
-        logger.debug(
-          `⚠️ Skipping subgraph generation - missing name for subgraph`,
+        logger.error(
+          `❌ Skipping subgraph generation - missing name for subgraph`,
         );
-        throw new Error("Subgraph name is missing");
+        return;
       } else if (state.status !== "CONFIRMED") {
-        logger.debug(
-          `ℹ️ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
+        logger.error(
+          `❌ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
         );
-        throw new Error(
-          `Subgraph "${state.name}" is not confirmed (status: ${state.status})`,
-        );
+        return;
       }
     }
   }

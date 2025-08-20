@@ -80,24 +80,21 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
         if (error instanceof Error) {
           logger.error(`❌ Error message: ${error.message}`);
         }
-        throw error;
       }
     } else {
       if (!state.name) {
-        logger.debug(`⚠️ Skipping editor generation - missing name for editor`);
-        throw new Error("Editor name is missing");
+        logger.error(`❌ Skipping editor generation - missing name for editor`);
+        return;
       } else if (state.documentTypes.length === 0) {
-        logger.debug(
-          `⚠️ Skipping editor generation - missing document types for editor "${state.name}"`,
+        logger.error(
+          `❌ Skipping editor generation - missing document types for editor "${state.name}"`,
         );
-        throw new Error(`Editor "${state.name}" has no document types`);
+        return;
       } else if (state.status !== "CONFIRMED") {
-        logger.debug(
-          `ℹ️ Skipping editor generation - editor "${state.name}" is not confirmed (status: ${state.status})`,
+        logger.error(
+          `❌ Skipping editor generation - editor "${state.name}" is not confirmed (status: ${state.status})`,
         );
-        throw new Error(
-          `Editor "${state.name}" is not confirmed (status: ${state.status})`,
-        );
+        return;
       }
     }
   }
