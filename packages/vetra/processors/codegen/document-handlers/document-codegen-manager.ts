@@ -123,7 +123,7 @@ export class DocumentCodegenManager {
         // Clean up the timer reference
         this.debounceTimers.delete(documentType);
       }
-    }, 10000); // 10 second debounce
+    }, 1000); // 10 second debounce
 
     // Store the timer reference
     this.debounceTimers.set(documentType, debounceTimer);

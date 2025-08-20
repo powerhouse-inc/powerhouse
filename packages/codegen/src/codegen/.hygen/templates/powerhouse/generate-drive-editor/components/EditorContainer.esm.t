@@ -15,8 +15,6 @@ import {
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { error } from "console";
-import { title } from "process";
 import { Suspense, useCallback, useState } from "react";
 
 /**
@@ -81,7 +79,7 @@ export const EditorContainer = (props: { handleClose: () => void }) => {
         onExport={onExport}
         onShowRevisionHistory={() => setShowRevisionHistory(true)}
         onSwitchboardLinkClick={() => {}} // Customize switchboard integration
-        title={title}
+        title={selectedDocument.header.name}
         timelineButtonVisible={editorModule.config.timelineEnabled}
         timelineItems={timelineItems.data}
         onTimelineItemClick={setSelectedTimelineItem}
@@ -98,7 +96,7 @@ export const EditorContainer = (props: { handleClose: () => void }) => {
         }}
         dispatch={dispatch}
         document={document}
-        error={error}
+        error={console.error}
       />
     </Suspense>
   );
