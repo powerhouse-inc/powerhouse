@@ -54,9 +54,9 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{ 
-              startsWith($GITHUB_TAG, 'v') && (
-                contains($GITHUB_TAG, '-dev') && 'dev' || 
-                contains($GITHUB_TAG, '-staging') && 'staging' || 
+              startsWith(env.GITHUB_TAG, 'v') && (
+                contains(env.GITHUB_TAG, '-dev') && 'dev' || 
+                contains(env.GITHUB_TAG, '-staging') && 'staging' || 
                 'latest'
               )
             }}
@@ -105,9 +105,9 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{ 
-              startsWith($GITHUB_TAG, 'v') && (
-                contains($GITHUB_TAG, '-dev') && 'dev' || 
-                contains($GITHUB_TAG, '-staging') && 'staging' || 
+              startsWith(env.GITHUB_TAG, 'v') && (
+                contains(env.GITHUB_TAG, '-dev') && 'dev' || 
+                contains(env.GITHUB_TAG, '-staging') && 'staging' || 
                 'latest'
               )
             }} 
