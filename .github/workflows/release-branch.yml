@@ -23,7 +23,6 @@ on:
 
 env:
   NX_ISOLATE_PLUGINS: false
-  GITHUB_TOKEN: ${{ secrets. PATNAME }}
 
 jobs:
   build-and-publish:
@@ -92,7 +91,7 @@ jobs:
         run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.PATNAME }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
