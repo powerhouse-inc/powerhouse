@@ -36,9 +36,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/connect
           tags: |
-            type=raw,value=latest,enable={{startsWith(GITHUB_TAG, 'v') && !contains(GITHUB_TAG, '-dev') && !contains(GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith(GITHUB_TAG, 'v') && contains(GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith(GITHUB_TAG, 'v') && contains(GITHUB_TAG, '-staging')}}
+            type=raw,value=latest,enable={{startsWith($GITHUB_TAG, 'v') && !contains($GITHUB_TAG, '-dev') && !contains($GITHUB_TAG, '-staging')}}
+            type=raw,value=dev,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-dev')}}
+            type=raw,value=staging,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-staging')}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
@@ -54,9 +54,9 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{ 
-              startsWith(GITHUB_TAG, 'v') && (
-                contains(GITHUB_TAG, '-dev') && 'dev' || 
-                contains(GITHUB_TAG, '-staging') && 'staging' || 
+              startsWith($GITHUB_TAG, 'v') && (
+                contains($GITHUB_TAG, '-dev') && 'dev' || 
+                contains($GITHUB_TAG, '-staging') && 'staging' || 
                 'latest'
               )
             }}
@@ -69,7 +69,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      - name: Set last tag
+        run: echo "GITHUB_TAG=$(git tag --sort=version:refname | tail -n 1)" >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -86,9 +87,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/switchboard
           tags: |
-            type=raw,value=latest,enable={{startsWith(GITHUB_TAG, 'v') && !contains(GITHUB_TAG, '-dev') && !contains(GITHUB_TAG, '-staging')}}
-            type=raw,value=dev,enable={{startsWith(GITHUB_TAG, 'v') && contains(GITHUB_TAG, '-dev')}}
-            type=raw,value=staging,enable={{startsWith(GITHUB_TAG, 'v') && contains(GITHUB_TAG, '-staging')}}
+            type=raw,value=latest,enable={{startsWith($GITHUB_TAG, 'v') && !contains($GITHUB_TAG, '-dev') && !contains($GITHUB_TAG, '-staging')}}
+            type=raw,value=dev,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-dev')}}
+            type=raw,value=staging,enable={{startsWith($GITHUB_TAG, 'v') && contains($GITHUB_TAG, '-staging')}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
@@ -104,9 +105,9 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{ 
-              startsWith(GITHUB_TAG, 'v') && (
-                contains(GITHUB_TAG, '-dev') && 'dev' || 
-                contains(GITHUB_TAG, '-staging') && 'staging' || 
+              startsWith($GITHUB_TAG, 'v') && (
+                contains($GITHUB_TAG, '-dev') && 'dev' || 
+                contains($GITHUB_TAG, '-staging') && 'staging' || 
                 'latest'
               )
             }} 
