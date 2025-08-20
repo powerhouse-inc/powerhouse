@@ -1,3 +1,43 @@
+## 4.1.0-dev.24 (2025-08-20)
+
+### 🚀 Features
+
+- **codegen:** add drive explorer template ([9c27219dc](https://github.com/powerhouse-inc/powerhouse/commit/9c27219dc))
+- **connect,reactor-browser:** remove more old electron garbage ([5cd255568](https://github.com/powerhouse-inc/powerhouse/commit/5cd255568))
+- **reactor-browser,connect:** move connect crypto to reactor browser ([c3c913892](https://github.com/powerhouse-inc/powerhouse/commit/c3c913892))
+- **connect:** remove redundant global types ([48e8ed60b](https://github.com/powerhouse-inc/powerhouse/commit/48e8ed60b))
+- **connect:** remove broken electron code ([3f28d6a46](https://github.com/powerhouse-inc/powerhouse/commit/3f28d6a46))
+- **reactor-browser,connect:** simplify login ([975f04b93](https://github.com/powerhouse-inc/powerhouse/commit/975f04b93))
+- **reactor-browser:** add app config hooks ([911800ba7](https://github.com/powerhouse-inc/powerhouse/commit/911800ba7))
+- **reactor-browser,connect:** add dispatch function to state hooks ([46ba715ec](https://github.com/powerhouse-inc/powerhouse/commit/46ba715ec))
+- **reactor-browser,connect:** remove wasted code ([5a628b3fb](https://github.com/powerhouse-inc/powerhouse/commit/5a628b3fb))
+- **reactor-browser,connect,vetra:** move state hooks into reactor browser and eliminate redundant and dead code ([30fa16f1f](https://github.com/powerhouse-inc/powerhouse/commit/30fa16f1f))
+- **connect,state,renown:** add state hook for renown ([5beb1252b](https://github.com/powerhouse-inc/powerhouse/commit/5beb1252b))
+- **connect:** set selected drive with drive object where possible ([f1ea28672](https://github.com/powerhouse-inc/powerhouse/commit/f1ea28672))
+- **connect:** remove unused dep ([ef492bc7a](https://github.com/powerhouse-inc/powerhouse/commit/ef492bc7a))
+- **connect,state,reactor-browser:** eliminate jotai ([53b1ab759](https://github.com/powerhouse-inc/powerhouse/commit/53b1ab759))
+- **state:** use default drive editor module id ([3b3062dd3](https://github.com/powerhouse-inc/powerhouse/commit/3b3062dd3))
+- **state:** add fallback editor ([69b5f93be](https://github.com/powerhouse-inc/powerhouse/commit/69b5f93be))
+- **state:** watch document models and add to reactor when changes ([21b7f51ac](https://github.com/powerhouse-inc/powerhouse/commit/21b7f51ac))
+- **state:** rename to vetra packages ([c415b7dc2](https://github.com/powerhouse-inc/powerhouse/commit/c415b7dc2))
+- **state:** use ph packages atoms ([6421fbeea](https://github.com/powerhouse-inc/powerhouse/commit/6421fbeea))
+- **state:** add ph packages atoms ([e7a0bc96f](https://github.com/powerhouse-inc/powerhouse/commit/e7a0bc96f))
+
+### 🩹 Fixes
+
+- **connect:** fixing linter and type issue ([ba3603a96](https://github.com/powerhouse-inc/powerhouse/commit/ba3603a96))
+- **connect:** lint issue ([ee0bf5133](https://github.com/powerhouse-inc/powerhouse/commit/ee0bf5133))
+- today claude taught me I could mock a package to fix circular references ([dcb83174c](https://github.com/powerhouse-inc/powerhouse/commit/dcb83174c))
+- **connect:** stray log ([078cd6f77](https://github.com/powerhouse-inc/powerhouse/commit/078cd6f77))
+- **connect:** stray log ([31c1740a9](https://github.com/powerhouse-inc/powerhouse/commit/31c1740a9))
+- **connect:** re-add removed renown hook ([8f26d5461](https://github.com/powerhouse-inc/powerhouse/commit/8f26d5461))
+- **monorepo:** numerous build issues ([04349dd25](https://github.com/powerhouse-inc/powerhouse/commit/04349dd25))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.23 (2025-08-19)
 
 ### 🩹 Fixes
