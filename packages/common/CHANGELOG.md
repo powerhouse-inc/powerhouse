@@ -1,3 +1,30 @@
+## 4.1.0-dev.24 (2025-08-20)
+
+### 🚀 Features
+
+- **codegen:** add drive explorer template ([9c27219dc](https://github.com/powerhouse-inc/powerhouse/commit/9c27219dc))
+- **connect,reactor-browser:** remove more old electron garbage ([5cd255568](https://github.com/powerhouse-inc/powerhouse/commit/5cd255568))
+- **connect:** remove broken electron code ([3f28d6a46](https://github.com/powerhouse-inc/powerhouse/commit/3f28d6a46))
+- **reactor-browser:** add app config hooks ([911800ba7](https://github.com/powerhouse-inc/powerhouse/commit/911800ba7))
+- **reactor-browser,connect:** add dispatch function to state hooks ([46ba715ec](https://github.com/powerhouse-inc/powerhouse/commit/46ba715ec))
+- **reactor-browser,connect,vetra:** move state hooks into reactor browser and eliminate redundant and dead code ([30fa16f1f](https://github.com/powerhouse-inc/powerhouse/commit/30fa16f1f))
+- **connect,state,renown:** add state hook for renown ([5beb1252b](https://github.com/powerhouse-inc/powerhouse/commit/5beb1252b))
+- **connect:** remove unused dep ([ef492bc7a](https://github.com/powerhouse-inc/powerhouse/commit/ef492bc7a))
+- **connect,state,reactor-browser:** eliminate jotai ([53b1ab759](https://github.com/powerhouse-inc/powerhouse/commit/53b1ab759))
+- **state:** rename to vetra packages ([c415b7dc2](https://github.com/powerhouse-inc/powerhouse/commit/c415b7dc2))
+- **state:** use ph packages atoms ([6421fbeea](https://github.com/powerhouse-inc/powerhouse/commit/6421fbeea))
+
+### 🩹 Fixes
+
+- today claude taught me I could mock a package to fix circular references ([dcb83174c](https://github.com/powerhouse-inc/powerhouse/commit/dcb83174c))
+- **vetra,reactor-browser,builder-tools:** use base state type ([0ed258c14](https://github.com/powerhouse-inc/powerhouse/commit/0ed258c14))
+- **monorepo:** numerous build issues ([04349dd25](https://github.com/powerhouse-inc/powerhouse/commit/04349dd25))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.23 (2025-08-19)
 
 ### 🩹 Fixes

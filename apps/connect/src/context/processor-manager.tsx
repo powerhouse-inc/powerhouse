@@ -10,17 +10,17 @@ import {
   useAnalyticsStoreAsync,
 } from "@powerhousedao/reactor-browser/analytics/context";
 import {
-  live,
-  useSetPGliteDB,
-  type PGlite,
-  type PGliteWithLive,
-} from "@powerhousedao/reactor-browser/pglite";
-import { useRelationalDb } from "@powerhousedao/reactor-browser/relational";
-import { childLogger } from "document-drive";
-import type { ProcessorManager } from "document-drive/processors/processor-manager";
-import { type IRelationalDb } from "document-drive/processors/types";
-import { generateId, type PHDocumentHeader } from "document-model";
-import { useEffect, useRef, type PropsWithChildren } from "react";
+    live,
+    useSetPGliteDB,
+    type PGlite,
+    type PGliteWithLive,
+} from '@powerhousedao/reactor-browser/pglite';
+import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
+import { childLogger } from 'document-drive';
+import type { ProcessorManager } from 'document-drive/processors/processor-manager';
+import { type IRelationalDb } from 'document-drive/processors/types';
+import { generateId, type PHDocumentHeader } from 'document-model';
+import { useEffect, useRef, type PropsWithChildren } from 'react';
 
 const logger = childLogger(["reactor-analytics"]);
 
@@ -82,9 +82,9 @@ async function registerDiffAnalyzer(
     "@powerhousedao/diff-analyzer/processors"
   );
 
-  const wrappedFactory = (driveHeader: PHDocumentHeader) => {
-    return processorFactory({ analyticsStore })(driveHeader.id);
-  };
+    const wrappedFactory = (driveHeader: PHDocumentHeader) => {
+        return processorFactory({ analyticsStore })(driveHeader.id);
+    };
 
   return await manager.registerFactory(
     "@powerhousedao/diff-analyzer",
