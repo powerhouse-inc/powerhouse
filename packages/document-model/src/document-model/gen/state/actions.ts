@@ -1,11 +1,11 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action, ActionWithAttachment } from "../../../document/types.js";
 import {
-  AddStateExampleInput,
-  DeleteStateExampleInput,
-  ReorderStateExamplesInput,
-  SetInitialStateInput,
-  SetStateSchemaInput,
-  UpdateStateExampleInput,
+  type AddStateExampleInput,
+  type DeleteStateExampleInput,
+  type ReorderStateExamplesInput,
+  type SetInitialStateInput,
+  type SetStateSchemaInput,
+  type UpdateStateExampleInput,
 } from "../schema/types.js";
 
 export type SetStateSchemaAction = Action & {

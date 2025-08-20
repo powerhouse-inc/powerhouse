@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { CopyNodeInput, DocumentDriveState } from "../../gen/types.js";
+import {
+  type CopyNodeInput,
+  type DocumentDriveState,
+} from "../../gen/types.js";
 
 import {
   generateNodesCopy,

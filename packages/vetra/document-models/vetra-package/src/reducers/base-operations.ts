@@ -5,10 +5,10 @@ export const reducer: VetraPackageBaseOperationsOperations = {
     state.name = action.input.name;
   },
   setPackageDescriptionOperation(state, action, dispatch) {
-    state.description = action.input.description
+    state.description = action.input.description;
   },
   setPackageCategoryOperation(state, action, dispatch) {
-    state.category = action.input.category
+    state.category = action.input.category;
   },
   setPackageAuthorOperation(state, action, dispatch) {
     state.author = {
@@ -35,5 +35,5 @@ export const reducer: VetraPackageBaseOperationsOperations = {
   },
   setPackageNpmUrlOperation(state, action, dispatch) {
     state.npmUrl = action.input.url;
-  }
+  },
 };

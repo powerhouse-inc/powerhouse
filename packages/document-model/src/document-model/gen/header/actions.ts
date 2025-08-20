@@ -1,11 +1,11 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action, ActionWithAttachment } from "../../../document/types.js";
 import {
-  SetAuthorNameInput,
-  SetAuthorWebsiteInput,
-  SetModelDescriptionInput,
-  SetModelExtensionInput,
-  SetModelIdInput,
-  SetModelNameInput,
+  type SetAuthorNameInput,
+  type SetAuthorWebsiteInput,
+  type SetModelDescriptionInput,
+  type SetModelExtensionInput,
+  type SetModelIdInput,
+  type SetModelNameInput,
 } from "../schema/types.js";
 
 export type SetModelNameAction = Action & {

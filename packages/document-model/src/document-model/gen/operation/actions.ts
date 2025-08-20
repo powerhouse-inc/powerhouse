@@ -1,15 +1,15 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action, ActionWithAttachment } from "../../../document/types.js";
 import {
-  AddOperationInput,
-  DeleteOperationInput,
-  MoveOperationInput,
-  ReorderModuleOperationsInput,
-  SetOperationDescriptionInput,
-  SetOperationNameInput,
-  SetOperationReducerInput,
-  SetOperationSchemaInput,
-  SetOperationScopeInput,
-  SetOperationTemplateInput,
+  type AddOperationInput,
+  type DeleteOperationInput,
+  type MoveOperationInput,
+  type ReorderModuleOperationsInput,
+  type SetOperationDescriptionInput,
+  type SetOperationNameInput,
+  type SetOperationReducerInput,
+  type SetOperationSchemaInput,
+  type SetOperationScopeInput,
+  type SetOperationTemplateInput,
 } from "../schema/types.js";
 
 export type AddOperationAction = Action & {

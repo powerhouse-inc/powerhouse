@@ -12,11 +12,33 @@ async function generateCombinedCliDocs() {
     const __dirname = path.dirname(__filename);
 
     // Define paths
-    const academyDocsDir = path.resolve(__dirname, "..", "docs", "academy", "04-APIReferences");
+    const academyDocsDir = path.resolve(
+      __dirname,
+      "..",
+      "docs",
+      "academy",
+      "04-APIReferences",
+    );
     const targetDocFile = path.join(academyDocsDir, "00-PowerhouseCLI.md");
 
-    const phCliCommandsPath = path.resolve(__dirname, "..", "..", "..", "clis", "ph-cli", "COMMANDS.md");
-    const phCmdCommandsPath = path.resolve(__dirname, "..", "..", "..", "clis", "ph-cmd", "COMMANDS.md");
+    const phCliCommandsPath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "clis",
+      "ph-cli",
+      "COMMANDS.md",
+    );
+    const phCmdCommandsPath = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "clis",
+      "ph-cmd",
+      "COMMANDS.md",
+    );
 
     // Read COMMANDS.md files
     const phCliCommandsContent = fs.readFileSync(phCliCommandsPath, "utf8");
@@ -27,13 +49,18 @@ async function generateCombinedCliDocs() {
       const tocHeader = "## Table of Contents";
       const tocIndex = content.indexOf(tocHeader);
       if (tocIndex === -1) {
-        console.warn(`Warning: "## Table of Contents" not found in ${cliName} COMMANDS.md. Including entire file.`);
+        console.warn(
+          `Warning: "## Table of Contents" not found in ${cliName} COMMANDS.md. Including entire file.`,
+        );
         return content;
       }
-      let commandsSection = content.substring(tocIndex + tocHeader.length).trim();
-      
+      let commandsSection = content
+        .substring(tocIndex + tocHeader.length)
+        .trim();
+
       // Remove the auto-generation footer
-      const footerRegex = /---\\n\\n\\\*This document was automatically generated from the help text in the codebase\\\.\\\*\\n?$/m;
+      const footerRegex =
+        /---\\n\\n\\\*This document was automatically generated from the help text in the codebase\\\.\\\*\\n?$/m;
       commandsSection = commandsSection.replace(footerRegex, "").trim();
       return commandsSection;
     };
@@ -42,7 +69,7 @@ async function generateCombinedCliDocs() {
     const phCmdDocs = extractCommands(phCmdCommandsContent, "ph-cmd");
 
     // Prepare the combined markdown
-    let combinedDocs = `### ph-cmd Commands\\n\\n${phCmdDocs}\\n\\n### ph-cli Commands\\n\\n${phCliDocs}`;
+    const combinedDocs = `### ph-cmd Commands\\n\\n${phCmdDocs}\\n\\n### ph-cli Commands\\n\\n${phCliDocs}`;
 
     // Read the target documentation file
     let targetDocContent = fs.readFileSync(targetDocFile, "utf8");
@@ -54,11 +81,13 @@ async function generateCombinedCliDocs() {
     const endIndex = targetDocContent.indexOf(endPlaceholder);
 
     if (startIndex === -1 || endIndex === -1) {
-      console.error(`Error: Placeholders not found in ${targetDocFile}. Please ensure the file contains:\\n${startPlaceholder}\\n...\\n${endPlaceholder}`);
+      console.error(
+        `Error: Placeholders not found in ${targetDocFile}. Please ensure the file contains:\\n${startPlaceholder}\\n...\\n${endPlaceholder}`,
+      );
       process.exit(1);
     }
 
-    targetDocContent = 
+    targetDocContent =
       targetDocContent.substring(0, startIndex + startPlaceholder.length) +
       "\\n<!-- This content is automatically generated. Do not edit directly. -->\\n" +
       combinedDocs +
@@ -68,8 +97,9 @@ async function generateCombinedCliDocs() {
     // Write the updated content back to the target file
     fs.writeFileSync(targetDocFile, targetDocContent);
 
-    console.log(`✅ Combined CLI documentation has been generated at ${targetDocFile}`);
-
+    console.log(
+      `✅ Combined CLI documentation has been generated at ${targetDocFile}`,
+    );
   } catch (error) {
     console.error("Failed to generate combined CLI documentation:", error);
     process.exit(1);
@@ -77,4 +107,4 @@ async function generateCombinedCliDocs() {
 }
 
 // Run the script
-generateCombinedCliDocs(); 
+generateCombinedCliDocs();

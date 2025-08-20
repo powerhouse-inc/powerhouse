@@ -127,7 +127,7 @@ export type Listener = {
 export type ListenerCallInfo = {
   data: Maybe<Scalars["String"]["output"]>;
   name: Maybe<Scalars["String"]["output"]>;
-  transmitterType: Maybe<TransmitterType | `${TransmitterType}`>;
+  transmitterType: Maybe<TransmitterType | TransmitterType>;
 };
 
 export type ListenerFilter = {
@@ -185,7 +185,7 @@ export type TransmitterType =
 export type Trigger = {
   data: Maybe<TriggerData>;
   id: Scalars["ID"]["output"];
-  type: TriggerType | `${TriggerType}`;
+  type: TriggerType | TriggerType;
 };
 
 export type TriggerData = PullResponderTriggerData;

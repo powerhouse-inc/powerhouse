@@ -197,12 +197,10 @@ function setupEventListeners(
         }),
       );
 
-      await processorManager.registerFactory(
-        packageName,
-        async (driveHeader) =>
-          (
-            await Promise.all(factories.map((factory) => factory(driveHeader)))
-          ).flat(),
+      await processorManager.registerFactory(packageName, async (driveHeader) =>
+        (
+          await Promise.all(factories.map((factory) => factory(driveHeader)))
+        ).flat(),
       );
     }
   });
@@ -422,25 +420,23 @@ export async function startAPI(
       continue;
     }
 
-    await processorManager.registerFactory(
-      packageName,
-      async (driveHeader) =>
-        (
-          await Promise.all(
-            validFactories.map(async (factory) => {
-              try {
-                return await factory(driveHeader);
-              } catch (e) {
-                logger.error(
-                  `Error creating processor for drive ${driveHeader.id}:`,
-                  e,
-                );
+    await processorManager.registerFactory(packageName, async (driveHeader) =>
+      (
+        await Promise.all(
+          validFactories.map(async (factory) => {
+            try {
+              return await factory(driveHeader);
+            } catch (e) {
+              logger.error(
+                `Error creating processor for drive ${driveHeader.id}:`,
+                e,
+              );
 
-                return [];
-              }
-            }),
-          )
-        ).flat(),
+              return [];
+            }
+          }),
+        )
+      ).flat(),
     );
   }
 

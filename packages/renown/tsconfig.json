@@ -11,5 +11,5 @@
       "path": "./tsconfig.node.json"
     }
   ],
-  "include": ["src/index.ts"]
+  "include": ["**/*"]
 }

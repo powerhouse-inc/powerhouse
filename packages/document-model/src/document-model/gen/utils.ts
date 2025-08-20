@@ -1,12 +1,12 @@
 import { baseState } from "#document/ph-factories.js";
 import {
-  CreateDocument,
-  CreateExtendedState,
-  CreateState,
-  LoadFromFile,
-  LoadFromInput,
-  SaveToFile,
-  SaveToFileHandle,
+  type CreateDocument,
+  type CreateExtendedState,
+  type CreateState,
+  type LoadFromFile,
+  type LoadFromInput,
+  type SaveToFile,
+  type SaveToFileHandle,
 } from "#document/types.js";
 import {
   baseCreateDocument,
@@ -25,7 +25,7 @@ import {
   initialLocalState,
 } from "./constants.js";
 import { reducer } from "./reducer.js";
-import { DocumentModelDocument } from "./types.js";
+import { type DocumentModelDocument } from "./types.js";
 
 export { fileExtension } from "./constants.js";
 

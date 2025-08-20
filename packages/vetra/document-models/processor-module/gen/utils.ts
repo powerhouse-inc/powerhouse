@@ -29,7 +29,7 @@ const utils: DocumentModelUtils<ProcessorModuleDocument> = {
   createState(state) {
     return {
       ...baseState(),
-      
+
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

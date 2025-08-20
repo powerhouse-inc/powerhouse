@@ -35,7 +35,7 @@ const utils: DocumentModelUtils<VetraPackageDocument> = {
   createState(state) {
     return {
       ...baseState(),
-      
+
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

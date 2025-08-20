@@ -1,9 +1,9 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action, ActionWithAttachment } from "../../../document/types.js";
 import {
-  AddChangeLogItemInput,
-  DeleteChangeLogItemInput,
-  ReorderChangeLogItemsInput,
-  UpdateChangeLogItemInput,
+  type AddChangeLogItemInput,
+  type DeleteChangeLogItemInput,
+  type ReorderChangeLogItemsInput,
+  type UpdateChangeLogItemInput,
 } from "../schema/types.js";
 
 export type AddChangeLogItemAction = Action & {

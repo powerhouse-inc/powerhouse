@@ -28,7 +28,7 @@ const utils: DocumentModelUtils<DocumentEditorDocument> = {
   createState(state) {
     return {
       ...baseState(),
-      
+
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };

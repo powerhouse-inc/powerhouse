@@ -5,7 +5,11 @@ import {
   applyMixins,
   type SignalDispatch,
 } from "document-model";
-import { type AppModuleState, type AppModuleLocalState, type AppModuleDocument } from "./types.js";
+import {
+  type AppModuleState,
+  type AppModuleLocalState,
+  type AppModuleDocument,
+} from "./types.js";
 import { type AppModuleAction } from "./actions.js";
 import { reducer } from "./reducer.js";
 import utils from "./utils.js";

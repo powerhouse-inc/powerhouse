@@ -26,6 +26,7 @@ export class EventBusAggregateError extends Error {
     const message = `EventBus emit failed with ${errors.length} error(s): ${errors
       .map((e) => {
         if (e && typeof e === "object" && "message" in e) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
           return e.message;
         }
         return String(e);

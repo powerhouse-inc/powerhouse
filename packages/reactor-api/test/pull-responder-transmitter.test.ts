@@ -2,13 +2,13 @@ import {
   addFile,
   addFolder,
   driveDocumentModelModule,
-  IDocumentDriveServer,
+  type IDocumentDriveServer,
   PullResponderTransmitter,
   ReactorBuilder,
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
 } from "document-model";
 import { setupServer } from "msw/node";

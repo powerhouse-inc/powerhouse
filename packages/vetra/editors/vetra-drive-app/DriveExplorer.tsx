@@ -1,9 +1,13 @@
-import { type IDriveContext, useDocumentModelModuleById, useEditorModuleById } from '@powerhousedao/reactor-browser';
+import {
+  type IDriveContext,
+  useDocumentModelModuleById,
+  useEditorModuleById,
+} from "@powerhousedao/reactor-browser";
 import { type FileNode } from "document-drive";
-import type React from 'react';
-import { DriveHeader } from './components/DriveHeader.js';
-import { ModuleSpecificationsSection } from './components/ModuleSpecificationsSection.js';
-import { PackageInformationSection } from './components/PackageInformationSection.js';
+import type React from "react";
+import { DriveHeader } from "./components/DriveHeader.js";
+import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";
+import { PackageInformationSection } from "./components/PackageInformationSection.js";
 
 interface DriveExplorerProps {
   context: IDriveContext;
@@ -48,12 +52,12 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
 }) => {
   const documentModuleModule = useDocumentModelModuleById(packageDocumentId);
   const editorModule = useEditorModuleById(packageDocumentId);
-  
+
   return (
     <div className="min-h-screen bg-white">
       <DriveHeader onShareClick={onShareDrive} />
-      
-      <div className="bg-white mx-6 mt-6 ">
+
+      <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection
           className="mb-6"
           context={context}

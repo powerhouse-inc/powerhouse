@@ -1,12 +1,12 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action, ActionWithAttachment } from "../../../document/types.js";
 import {
-  AddOperationErrorInput,
-  DeleteOperationErrorInput,
-  ReorderOperationErrorsInput,
-  SetOperationErrorCodeInput,
-  SetOperationErrorDescriptionInput,
-  SetOperationErrorNameInput,
-  SetOperationErrorTemplateInput,
+  type AddOperationErrorInput,
+  type DeleteOperationErrorInput,
+  type ReorderOperationErrorsInput,
+  type SetOperationErrorCodeInput,
+  type SetOperationErrorDescriptionInput,
+  type SetOperationErrorNameInput,
+  type SetOperationErrorTemplateInput,
 } from "../schema/types.js";
 
 export type AddOperationErrorAction = Action & {

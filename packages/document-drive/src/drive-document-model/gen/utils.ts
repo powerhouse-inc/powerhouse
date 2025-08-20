@@ -1,8 +1,8 @@
 import { driveDocumentType } from "#drive-document-model/constants";
 import {
-  CreateDocument,
-  CreateExtendedState,
-  CreateState,
+  type CreateDocument,
+  type CreateExtendedState,
+  type CreateState,
   type DocumentModelUtils,
   baseCreateDocument,
   baseCreateExtendedState,

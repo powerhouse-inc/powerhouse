@@ -1,6 +1,9 @@
 import { applyMixins, BaseDocumentClass } from "#document/object.js";
-import { ExtendedStateFromDocument, SignalDispatch } from "#document/types.js";
-import { DocumentModelAction } from "./actions.js";
+import {
+  type ExtendedStateFromDocument,
+  type SignalDispatch,
+} from "#document/types.js";
+import { type DocumentModelAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
 import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Module from "./module/object.js";
@@ -10,9 +13,9 @@ import DocumentModel_Operation from "./operation/object.js";
 import { reducer } from "./reducer.js";
 import DocumentModel_State from "./state/object.js";
 import {
-  DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
+  type DocumentModelDocument,
+  type DocumentModelLocalState,
+  type DocumentModelState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 import DocumentModel_Versioning from "./versioning/object.js";

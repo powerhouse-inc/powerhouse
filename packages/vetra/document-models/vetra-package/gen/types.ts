@@ -5,7 +5,8 @@ import type { VetraPackageAction } from "./actions.js";
 export { z } from "./schema/index.js";
 export type * from "./schema/types.js";
 type VetraPackageLocalState = Record<PropertyKey, never>;
-export type ExtendedVetraPackageState = ExtendedStateFromDocument<VetraPackageDocument>;
+export type ExtendedVetraPackageState =
+  ExtendedStateFromDocument<VetraPackageDocument>;
 export type VetraPackageDocument = PHDocument<
   VetraPackageState,
   VetraPackageLocalState

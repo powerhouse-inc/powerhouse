@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable prefer-const */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { describe, expect, it } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { type IEventBus } from "../src/events/interfaces.js";

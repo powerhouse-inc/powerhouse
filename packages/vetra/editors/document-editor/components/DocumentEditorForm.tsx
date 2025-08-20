@@ -1,7 +1,11 @@
 import { useReactor } from "@powerhousedao/reactor-browser";
 import { type DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
-import type { AddDocumentTypeInput, DocumentTypeItem, RemoveDocumentTypeInput } from "../../../document-models/document-editor/index.js";
+import type {
+  AddDocumentTypeInput,
+  DocumentTypeItem,
+  RemoveDocumentTypeInput,
+} from "../../../document-models/document-editor/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -22,13 +26,16 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   onEditorNameChange,
   onAddDocumentType,
   onRemoveDocumentType,
-  onConfirm
+  onConfirm,
 }) => {
   const [editorName, setEditorName] = useState(initialEditorName);
-  const [documentTypes, setDocumentTypes] = useState<DocumentTypeItem[]>(initialDocumentTypes);
+  const [documentTypes, setDocumentTypes] =
+    useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<string[]>([]);
+  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
+    string[]
+  >([]);
 
   // Get available document types from reactor
   const reactor = useReactor();
@@ -40,14 +47,18 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
         return;
       }
 
-      const docTypes = (await Promise.all(driveDocs.map(async (docId) => {
-        const document = await reactor?.getDocument(docId);
-        if (document?.header.documentType === "powerhouse/document-model") {
-          const documentModel = document as DocumentModelDocument;
-          return documentModel.state.global.id;
-        }
-        return null;
-      }))).filter(e => e !== null);
+      const docTypes = (
+        await Promise.all(
+          driveDocs.map(async (docId) => {
+            const document = await reactor?.getDocument(docId);
+            if (document?.header.documentType === "powerhouse/document-model") {
+              const documentModel = document as DocumentModelDocument;
+              return documentModel.state.global.id;
+            }
+            return null;
+          }),
+        )
+      ).filter((e) => e !== null);
       setAvailableDocumentTypes(docTypes);
     }
     loadData();
@@ -83,18 +94,20 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-6 bg-white">
+    <div className="space-y-6 bg-white p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-900">Editor Configuration</h2>
-        <StatusPill 
-          status={status === "CONFIRMED" ? 'confirmed' : 'draft'} 
-          label={status === "CONFIRMED" ? 'Confirmed' : 'Draft'} 
+        <h2 className="text-lg font-medium text-gray-900">
+          Editor Configuration
+        </h2>
+        <StatusPill
+          status={status === "CONFIRMED" ? "confirmed" : "draft"}
+          label={status === "CONFIRMED" ? "Confirmed" : "Draft"}
         />
       </div>
-      
+
       {/* Editor Name Field */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="mb-2 block text-sm font-medium text-gray-700">
           Editor Name
         </label>
         <input
@@ -102,15 +115,15 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           value={editorName}
           onChange={(e) => setEditorName(e.target.value)}
           disabled={isReadOnly}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-            isReadOnly ? 'bg-gray-100 cursor-not-allowed' : ''
+          className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            isReadOnly ? "cursor-not-allowed bg-gray-100" : ""
           }`}
         />
       </div>
 
       {/* Supported Document Types Field */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="mb-2 block text-sm font-medium text-gray-700">
           Supported Document Types
         </label>
         <div className="space-y-2">
@@ -119,44 +132,50 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
               value={selectedDocumentType}
               onChange={(e) => {
                 const selectedValue = e.target.value;
-                if (selectedValue && !documentTypes.some(dt => dt.documentType === selectedValue)) {
+                if (
+                  selectedValue &&
+                  !documentTypes.some((dt) => dt.documentType === selectedValue)
+                ) {
                   const newTypeInput: AddDocumentTypeInput = {
                     id: Date.now().toString(), // Generate a unique ID
-                    documentType: selectedValue
+                    documentType: selectedValue,
                   };
                   const newType: DocumentTypeItem = {
                     id: newTypeInput.id,
-                    documentType: newTypeInput.documentType
+                    documentType: newTypeInput.documentType,
                   };
                   setDocumentTypes([...documentTypes, newType]);
                   onAddDocumentType?.(newTypeInput);
                 }
-                setSelectedDocumentType('');
+                setSelectedDocumentType("");
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes
-                .filter(docType => !documentTypes.some(dt => dt.documentType === docType))
+                .filter(
+                  (docType) =>
+                    !documentTypes.some((dt) => dt.documentType === docType),
+                )
                 .map((docType) => (
                   <option key={docType} value={docType}>
                     {docType}
                   </option>
-                ))
-              }
+                ))}
             </select>
           )}
           <div className="space-y-1">
             {documentTypes.map((type) => (
-              <div 
-                key={type.id}
-                className="flex items-center py-1"
-              >
-                <span className="text-sm text-gray-700">{type.documentType}</span>
+              <div key={type.id} className="flex items-center py-1">
+                <span className="text-sm text-gray-700">
+                  {type.documentType}
+                </span>
                 {!isReadOnly && (
                   <button
                     onClick={() => {
-                      setDocumentTypes(documentTypes.filter((dt) => dt.id !== type.id));
+                      setDocumentTypes(
+                        documentTypes.filter((dt) => dt.id !== type.id),
+                      );
                       onRemoveDocumentType?.({ id: type.id });
                     }}
                     className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
@@ -176,7 +195,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           <button
             onClick={handleConfirm}
             disabled={!editorName.trim() || documentTypes.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             Confirm
           </button>

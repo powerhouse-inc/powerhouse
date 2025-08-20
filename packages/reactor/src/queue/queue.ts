@@ -1,6 +1,6 @@
-import { IEventBus } from "../events/interfaces.js";
-import { IQueue } from "./interfaces.js";
-import { Job, JobAvailableEvent, QueueEventTypes } from "./types.js";
+import { type IEventBus } from "../events/interfaces.js";
+import { type IQueue } from "./interfaces.js";
+import { type Job, type JobAvailableEvent, QueueEventTypes } from "./types.js";
 
 /**
  * In-memory implementation of the IQueue interface.

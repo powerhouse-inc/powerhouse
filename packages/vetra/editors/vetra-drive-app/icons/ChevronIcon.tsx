@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface ChevronIconProps {
   width?: number;
@@ -10,8 +10,8 @@ interface ChevronIconProps {
 export const ChevronIcon: React.FC<ChevronIconProps> = ({
   width = 24,
   height = 24,
-  className = '',
-  stroke = 'currentColor'
+  className = "",
+  stroke = "currentColor",
 }) => {
   return (
     <svg

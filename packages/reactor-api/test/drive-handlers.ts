@@ -1,5 +1,5 @@
-import { IDocumentDriveServer } from "document-drive";
-import { graphql, GraphQLQuery, HttpResponse } from "msw";
+import { type IDocumentDriveServer } from "document-drive";
+import { graphql, type GraphQLQuery, HttpResponse } from "msw";
 import { DriveSubgraph } from "../src/graphql/drive/index.js";
 
 export const createDriveHandlers = (

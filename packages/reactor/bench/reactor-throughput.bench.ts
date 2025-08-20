@@ -2,7 +2,7 @@ import { bench, describe } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
-import { Job } from "../src/queue/types.js";
+import { type Job } from "../src/queue/types.js";
 
 // Pre-create shared components to avoid setup overhead
 const eventBus = new EventBus();

@@ -42,7 +42,8 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
-    "document-model": "workspace:*"
+    "document-model": "workspace:*",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@didtools/key-did": "^1.0.0",

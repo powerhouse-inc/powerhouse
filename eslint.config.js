@@ -3,9 +3,9 @@ import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { globalIgnores } from "eslint/config";
 
 export default tseslint.config(
   globalIgnores([
@@ -20,8 +20,7 @@ export default tseslint.config(
     "**/.ph/",
     "**/external-packages.js",
     "**/.out/",
-    "**/prisma/"
-
+    "**/prisma/",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.stylisticTypeChecked,
@@ -37,7 +36,13 @@ export default tseslint.config(
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["vitest.workspace.ts"],
+          allowDefaultProject: [
+            "vitest.workspace.ts",
+            "vitest.config.ts",
+            "eslint.config.js",
+            // TODO: remove this once we have a better way to handle release scripts
+            "tools/scripts/release.ts",
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
@@ -46,6 +51,8 @@ export default tseslint.config(
       },
     },
     rules: {
+      "no-constant-condition": "off",
+      "@typescript-eslint/no-extraneous-class": "off",
       "@typescript-eslint/dot-notation": "off",
       "@typescript-eslint/no-deprecated": "off",
       "@typescript-eslint/no-explicit-any": "off",

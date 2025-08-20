@@ -1,4 +1,7 @@
-import { DocumentModelLocalState, DocumentModelState } from "./types.js";
+import {
+  type DocumentModelLocalState,
+  type DocumentModelState,
+} from "./types.js";
 
 export const documentModelState: DocumentModelState = {
   id: "",

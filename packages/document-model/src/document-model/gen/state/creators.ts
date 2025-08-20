@@ -9,12 +9,12 @@ import {
   type UpdateStateExampleInput,
 } from "../schema/index.js";
 import {
-  AddStateExampleAction,
-  DeleteStateExampleAction,
-  ReorderStateExamplesAction,
-  SetInitialStateAction,
-  SetStateSchemaAction,
-  UpdateStateExampleAction,
+  type AddStateExampleAction,
+  type DeleteStateExampleAction,
+  type ReorderStateExamplesAction,
+  type SetInitialStateAction,
+  type SetStateSchemaAction,
+  type UpdateStateExampleAction,
 } from "./actions.js";
 
 export const setStateSchema = (input: SetStateSchemaInput) =>
@@ -23,7 +23,7 @@ export const setStateSchema = (input: SetStateSchemaInput) =>
     { ...input },
     undefined,
     z.SetStateSchemaInputSchema,
-    "global"
+    "global",
   );
 
 export const setInitialState = (input: SetInitialStateInput) =>
@@ -32,7 +32,7 @@ export const setInitialState = (input: SetInitialStateInput) =>
     { ...input },
     undefined,
     z.SetInitialStateInputSchema,
-    "global"
+    "global",
   );
 
 export const addStateExample = (input: AddStateExampleInput) =>
@@ -41,7 +41,7 @@ export const addStateExample = (input: AddStateExampleInput) =>
     { ...input },
     undefined,
     z.AddStateExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const updateStateExample = (input: UpdateStateExampleInput) =>
@@ -50,7 +50,7 @@ export const updateStateExample = (input: UpdateStateExampleInput) =>
     { ...input },
     undefined,
     z.UpdateStateExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const deleteStateExample = (input: DeleteStateExampleInput) =>
@@ -59,7 +59,7 @@ export const deleteStateExample = (input: DeleteStateExampleInput) =>
     { ...input },
     undefined,
     z.DeleteStateExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
@@ -68,5 +68,5 @@ export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
     { ...input },
     undefined,
     z.ReorderStateExamplesInputSchema,
-    "global"
+    "global",
   );

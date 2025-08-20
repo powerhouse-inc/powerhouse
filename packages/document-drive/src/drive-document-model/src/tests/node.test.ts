@@ -18,7 +18,7 @@ import {
   UpdateFileInputSchema,
   UpdateNodeInputSchema,
 } from "../../gen/schema/zod.js";
-import { DocumentDriveDocument } from "../../gen/types.js";
+import { type DocumentDriveDocument } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
 
 describe("Node Operations", () => {
@@ -245,19 +245,19 @@ describe("Node Operations", () => {
     const input = generateMock(CopyNodeInputSchema());
     const document = createDocument({
       global: {
-          nodes: [
-            // @ts-expect-error mock
-            {
-              id: input.srcId,
-              name: "Node 1",
-            },
-            // @ts-expect-error mock
-            {
-              id: input.targetId,
-              name: "Node 2",
-            },
-          ],
-        },
+        nodes: [
+          // @ts-expect-error mock
+          {
+            id: input.srcId,
+            name: "Node 1",
+          },
+          // @ts-expect-error mock
+          {
+            id: input.targetId,
+            name: "Node 2",
+          },
+        ],
+      },
       local: {},
     });
     const updatedDocument = reducer(document, creators.copyNode(input));
@@ -273,19 +273,19 @@ describe("Node Operations", () => {
     const input = generateMock(CopyNodeInputSchema());
     const document = createDocument({
       global: {
-          nodes: [
-            // @ts-expect-error mock
-            {
-              id: "1",
-              name: "Node 1",
-            },
-            // @ts-expect-error mock
-            {
-              id: "2",
-              name: "Node 2",
-            },
-          ],
-        },
+        nodes: [
+          // @ts-expect-error mock
+          {
+            id: "1",
+            name: "Node 1",
+          },
+          // @ts-expect-error mock
+          {
+            id: "2",
+            name: "Node 2",
+          },
+        ],
+      },
       local: {},
     });
 
@@ -364,19 +364,19 @@ describe("Node Operations", () => {
     const input = generateMock(MoveNodeInputSchema());
     const document = createDocument({
       global: {
-          nodes: [
+        nodes: [
+          // @ts-expect-error mock
+          {
+            id: input.srcFolder,
+            name: "Node 1",
+          },
+          {
             // @ts-expect-error mock
-            {
-              id: input.srcFolder,
-              name: "Node 1",
-            },
-            {
-              // @ts-expect-error mock
-              id: input.targetParentFolder,
-              name: "Node 2",
-            },
-          ],
-        },
+            id: input.targetParentFolder,
+            name: "Node 2",
+          },
+        ],
+      },
       local: {},
     });
     const updatedDocument = reducer(document, creators.moveNode(input));

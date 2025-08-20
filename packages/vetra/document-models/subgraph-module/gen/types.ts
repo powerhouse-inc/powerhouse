@@ -5,7 +5,8 @@ import type { SubgraphModuleAction } from "./actions.js";
 export { z } from "./schema/index.js";
 export type * from "./schema/types.js";
 type SubgraphModuleLocalState = Record<PropertyKey, never>;
-export type ExtendedSubgraphModuleState = ExtendedStateFromDocument<SubgraphModuleDocument>;
+export type ExtendedSubgraphModuleState =
+  ExtendedStateFromDocument<SubgraphModuleDocument>;
 export type SubgraphModuleDocument = PHDocument<
   SubgraphModuleState,
   SubgraphModuleLocalState
