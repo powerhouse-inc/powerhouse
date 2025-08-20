@@ -11,6 +11,24 @@ import { BaseDocumentGen } from "../base-document-gen.js";
 export class PackageGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/package";
 
+  /**
+   * Validate if this package strand should be processed
+   */
+  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+    // First run base validation
+    if (!super.shouldProcess(strand)) {
+      return false;
+    }
+
+    const state = strand.state as VetraPackageState;
+    if (!state) {
+      logger.debug(`>>> No state found for package: ${strand.documentId}`);
+      return false;
+    }
+
+    return true;
+  }
+
   async generate(
     strand: InternalTransmitterUpdate<DocumentModelDocument>,
   ): Promise<void> {

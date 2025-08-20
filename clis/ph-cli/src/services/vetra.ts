@@ -21,6 +21,7 @@ export type DevOptions = {
   verbose?: boolean;
   remoteDrive?: string;
   disableConnect?: boolean;
+  interactive?: boolean;
 };
 
 async function startLocalVetraSwitchboard(
@@ -162,6 +163,7 @@ export async function startVetra({
   verbose = false,
   remoteDrive,
   disableConnect = false,
+  interactive = false,
 }: DevOptions) {
   try {
     // Set default log level to info if not already specified
@@ -169,12 +171,31 @@ export async function startVetra({
       setLogLevel("info");
     }
 
+    // Set environment variable for interactive code generation
+    if (interactive) {
+      process.env.CODEGEN_INTERACTIVE = "true";
+      if (verbose) {
+        console.log(
+          "Interactive code generation enabled (CODEGEN_INTERACTIVE=true)",
+        );
+      }
+    }
+
     const baseConfig = getConfig(configFile);
     const https = baseConfig.reactor?.https;
 
-    // Always start Vetra Switchboard
+    // Use vetraUrl from config if no explicit remoteDrive is provided
+    const configVetraUrl = baseConfig.vetraUrl;
+    const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
+
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
+      if (resolvedVetraUrl) {
+        const source = remoteDrive
+          ? "command line argument"
+          : "powerhouse.config.json";
+        console.log(`Using vetraUrl from ${source}: ${resolvedVetraUrl}`);
+      }
     }
     const switchboardResult = await startLocalVetraSwitchboard(
       {
@@ -185,9 +206,9 @@ export async function startVetra({
         configFile,
         verbose,
       },
-      remoteDrive, // Pass the remote drive if provided
+      resolvedVetraUrl,
     );
-    const driveUrl = remoteDrive || switchboardResult.driveUrl;
+    const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");

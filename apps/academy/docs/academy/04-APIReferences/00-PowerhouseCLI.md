@@ -744,6 +744,10 @@ Options:
                         
   --disable-connect          Skip Connect initialization (only start switchboard and reactor).
                             Use this when you only need the backend services running.
+                        
+  --interactive              Enable interactive mode for code generation. When enabled, the system
+                            will prompt for user confirmation before generating code. This is useful
+                            for development when you want control over when code regeneration happens.
 
 Examples:
   $ ph vetra                                              # Start Vetra environment with defaults
@@ -753,6 +757,7 @@ Examples:
   $ ph vetra --logs                                       # Enable detailed logging
   $ ph vetra --remote-drive http://localhost:4001/d/docs  # Connect to remote drive
   $ ph vetra --disable-connect                            # Start only backend services
+  $ ph vetra --interactive                                # Enable interactive code generation mode
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 
