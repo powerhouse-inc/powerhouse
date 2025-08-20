@@ -1,3 +1,13 @@
+## 4.1.0-dev.28 (2025-08-20)
+
+### 🩹 Fixes
+
+- removed metadata extraction from commit ([637960021](https://github.com/powerhouse-inc/powerhouse/commit/637960021))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.27 (2025-08-20)
 
 ### 🩹 Fixes
