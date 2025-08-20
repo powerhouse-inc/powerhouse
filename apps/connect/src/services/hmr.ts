@@ -79,6 +79,9 @@ export function useSubscribeToVetraPackages() {
 
     useEffect(() => {
         const handler = async (data: PackagesUpdate) => {
+            // Get current packages to preserve built-in ones
+            const currentPackages = window.vetraPackages || [];
+
             const modulesImport = import(
                 /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
             ) as Promise<{
@@ -86,10 +89,18 @@ export function useSubscribeToVetraPackages() {
             }>;
             const modules = await modulesImport;
             const legacyLibs = modules.default;
-            const vetraPackages = legacyLibs.map(
+
+            const newVetraPackages = legacyLibs.map(
                 convertLegacyLibToVetraPackage,
             );
-            setVetraPackages(vetraPackages);
+
+            // Only preserve the built-in common package, replace all external packages
+            const preservedPackages = currentPackages.filter(
+                pkg => pkg.id === 'powerhouse/common',
+            );
+
+            const mergedPackages = [...preservedPackages, ...newVetraPackages];
+            setVetraPackages(mergedPackages);
         };
         async function subscribe() {
             const hmr = await getHMRModule();
