@@ -1,3 +1,13 @@
+## 4.1.0-dev.29 (2025-08-20)
+
+### 🩹 Fixes
+
+- fetch tags :-) ([df0b7beba](https://github.com/powerhouse-inc/powerhouse/commit/df0b7beba))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.28 (2025-08-20)
 
 ### 🩹 Fixes
