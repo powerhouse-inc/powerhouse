@@ -4,16 +4,27 @@
     // See also https://aka.ms/tsconfig_modules
     "module": "nodenext",
     "target": "esnext",
+
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
+
     // Stricter Typechecking Options
+
+    // these are now included by default when you run tsc --init
+    // enabling them on our repo produces 1839 errors
+    // they are both checking for essentially the same thing, one for arrays, one for objects
+    // "is it possible that the value at this index in the array is undefined?"
+    // "is it possible that the value at this key in the object is undefined?"
+    // we have decided to say "yes" to both in all cases
     // "noUncheckedIndexedAccess": true,
     // "exactOptionalPropertyTypes": true,
+
     // required configs for monorepo
     "composite": true,
     "incremental": true,
+    
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",

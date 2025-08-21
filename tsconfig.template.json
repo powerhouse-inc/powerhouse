@@ -1,0 +1,15 @@
+{ 
+  // extend our monorepo's base tsconfig
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    // output transpiled code in the dist file relative to this package's root
+    "outDir": "./dist"
+  },
+  // include all files in this package's root
+  "include": [
+    "**/*"
+  ],
+  // add monorepo package paths here
+  // whenever you add "workspace:*" to this package's package.json, also add the path here
+  "references": []
+}
