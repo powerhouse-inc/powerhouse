@@ -1,3 +1,7 @@
+## 4.1.0-staging.1 (2025-08-21)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.33 (2025-08-21)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
