@@ -29,6 +29,7 @@ import {
 import {
   type CountDocument,
   countReducer,
+  createCountDocumentState,
   createCountState,
   increment,
 } from "../helpers.js";
@@ -82,7 +83,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with empty previousState", () => {
-    const document = baseCreateDocument<CountDocument>(createCountState());
+    const document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
 
     const action = increment();
     const documentWithOp = countReducer(document, action);
@@ -118,7 +119,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = baseCreateDocument<CountDocument>(createCountState());
+    let document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
 
     document = countReducer(document, increment());
     const hash = hashDocumentStateForScope(document, "global");
@@ -173,7 +174,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(createCountState());
+    const document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
     document.header.id = "1";
 
     const action = increment();
@@ -247,7 +248,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(createCountState());
+    const document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
 
     const operation = await buildSignedAction(
       { ...increment() /*, id: "123"*/ },
@@ -307,7 +308,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(createCountState());
+    const document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
     document.header.id = "1";
 
     const operation = await buildSignedAction(

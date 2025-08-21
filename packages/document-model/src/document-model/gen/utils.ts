@@ -1,7 +1,6 @@
 import { defaultBaseState } from "#document/ph-factories.js";
 import {
   CreateDocument,
-  CreateExtendedState,
   CreateState,
   LoadFromFile,
   LoadFromInput,
@@ -10,7 +9,6 @@ import {
 } from "#document/types.js";
 import {
   baseCreateDocument,
-  baseCreateExtendedState,
 } from "#document/utils/base.js";
 import {
   baseLoadFromFile,
@@ -32,21 +30,16 @@ export { fileExtension } from "./constants.js";
 export const createState: CreateState<DocumentModelDocument> = (state) => {
   return {
     ...defaultBaseState(),
-    global: { ...documentModelState, ...state?.global },
-    local: { ...initialLocalState, ...state?.local },
+    global: { ...documentModelState, ...(state?.global ?? {}) },
+    local: { ...initialLocalState, ...(state?.local ?? {}) },
   };
 };
 
-export const createExtendedState: CreateExtendedState<DocumentModelDocument> = (
-  extendedState,
-) => {
-  return baseCreateExtendedState({ ...extendedState }, createState);
-};
 
 export const createDocument: CreateDocument<DocumentModelDocument> = (
   state,
 ) => {
-  const document = baseCreateDocument(createExtendedState(state), createState);
+  const document = baseCreateDocument(createState, state);
   document.header.documentType = documentType;
 
   return document;

@@ -10,7 +10,6 @@ import {
 import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
 import {
   createDocument,
-  createExtendedState,
 } from "../../src/document-model/gen/utils.js";
 import { replayOperations } from "../../src/document/utils/base.js";
 import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
@@ -18,7 +17,7 @@ import { garbageCollectDocumentOperations } from "../../src/document/utils/docum
 describe("Document Operations", () => {
   describe("Skip header operations", () => {
     it("should include skip param in base operations with default value to 0 if not provided", () => {
-      let document = createDocument(createExtendedState());
+      let document = createDocument();
 
       document = reducer(document, setModelId({ id: "<id>" }));
       document = reducer(document, setModelName({ name: "<name>" }));
@@ -429,8 +428,7 @@ describe("Document Operations", () => {
 
   describe("state replayOperations", () => {
     it("skipped operations should be ignored when re-calculate document state", () => {
-      const initialState = createExtendedState();
-      let document = createDocument(initialState);
+      let document = createDocument();
 
       document = reducer(
         document,
@@ -456,7 +454,7 @@ describe("Document Operations", () => {
       document = reducer(document, setModelId({ id: "<id>" }));
 
       const replayedDoc = replayOperations<DocumentModelDocument>(
-        initialState,
+        document.initialState,
         garbageCollectDocumentOperations(document.operations),
         stateReducer,
       );

@@ -36,7 +36,6 @@ export type {
   DocumentModelState,
 } from "#document-model/gen/types.js";
 export {
-  createExtendedState as documentModelCreateExtendedState,
   loadFromFile as documentModelLoadFromFile,
 } from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
@@ -61,7 +60,6 @@ export type {
   BaseStateFromDocument,
   CreateChildDocumentInput,
   CreateDocument,
-  CreateExtendedState,
   CreateState,
   DocumentAction,
   DocumentModelLib,
@@ -71,7 +69,6 @@ export type {
   EditorDispatch,
   EditorModule,
   EditorProps,
-  ExtendedStateFromDocument,
   FileRegistry,
   GlobalStateFromDocument,
   ImportScriptModule,
@@ -102,7 +99,6 @@ export type {
 } from "#document/types.js";
 export {
   baseCreateDocument,
-  baseCreateExtendedState,
   createAction,
   createReducer,
   hashDocumentStateForScope,

@@ -1,5 +1,5 @@
 import { applyMixins, BaseDocumentClass } from "#document/object.js";
-import { ExtendedStateFromDocument, SignalDispatch } from "#document/types.js";
+import { BaseStateFromDocument, SignalDispatch } from "#document/types.js";
 import { DocumentModelAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
 import DocumentModel_Header from "./header/object.js";
@@ -42,7 +42,7 @@ class DocumentModelClass extends BaseDocumentClass<
   static fileExtension = fileExtension;
 
   constructor(
-    initialState?: Partial<ExtendedStateFromDocument<DocumentModelDocument>>,
+    initialState?: Partial<BaseStateFromDocument<DocumentModelDocument>>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, createDocument(initialState), dispatch);

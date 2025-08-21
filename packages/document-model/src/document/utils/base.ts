@@ -1,5 +1,4 @@
-import { defaultBaseState } from "#document/ph-factories.js";
-import { type PHDocumentHeader } from "#document/ph-types.js";
+import { PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
@@ -16,18 +15,13 @@ import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
   type Action,
-  type BaseState,
   type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
-  type ExtendedStateFromDocument,
-  type GlobalStateFromDocument,
-  type LocalStateFromDocument,
   type MappedOperation,
   type Operation,
-  type PartialState,
   type PHDocument,
   type Reducer,
   type ReducerOptions,
@@ -161,47 +155,27 @@ export function createReducer<TDocument extends PHDocument>(
   return reducer;
 }
 
-export function baseCreateExtendedState<TDocument extends PHDocument>(
-  initialState?: Partial<
-    BaseState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
-  createState?: CreateState<TDocument>,
-): ExtendedStateFromDocument<TDocument> {
-  return (
-    createState?.(initialState) ??
-    ((initialState ?? {
-      ...defaultBaseState(),
-      global: {},
-      local: {},
-    }) as BaseStateFromDocument<TDocument>)
-  );
-}
-
 /**
  * Important note: it is the responsibility of the caller to set the document type
  * on the header.
  */
 export function baseCreateDocument<TDocument extends PHDocument>(
-  initialState?: Partial<ExtendedStateFromDocument<TDocument>>,
-  createState?: CreateState<TDocument>,
+  createState: CreateState<TDocument>,
+  initialState?: Partial<PHBaseState>,
 ): TDocument {
-  const state: ExtendedStateFromDocument<TDocument> = baseCreateExtendedState(
-    initialState,
-    createState,
-  );
-
+  const state = createState(initialState);
   const header = createUnsignedHeader();
-  return {
-    state,
+  const phDocument: PHDocument = {
     header,
+    state,
     initialState: state,
     operations: { global: [], local: [] },
     clipboard: [],
     attachments: {},
-  } as unknown as TDocument;
+    history: [],
+  };
+
+  return phDocument as TDocument;
 }
 
 export function hashDocumentStateForScope(
@@ -296,11 +270,18 @@ export function getDocumentLastModified(document: PHDocument) {
   );
 }
 
+// Default createState function that just returns the state as-is
+const defaultCreateState = <TDocument extends PHDocument>(
+  state?: Partial<PHBaseState>,
+) => {
+  return state as BaseStateFromDocument<TDocument>;
+};
+
 // Runs the operations on the initial data using the
 // provided reducer, wrapped with the document reducer.
 // This rebuilds the document according to the provided actions.
 export function replayOperations<TDocument extends PHDocument>(
-  initialState: ExtendedStateFromDocument<TDocument>,
+  initialState: BaseStateFromDocument<TDocument>,
   clearedOperations: DocumentOperations,
   stateReducer: StateReducer<TDocument>,
   dispatch?: SignalDispatch,
@@ -341,7 +322,7 @@ export type ReplayDocumentOptions = {
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
 export function replayDocument<TDocument extends PHDocument>(
-  initialState: ExtendedStateFromDocument<TDocument>,
+  initialState: BaseStateFromDocument<TDocument>,
   operations: DocumentOperations,
   reducer: Reducer<TDocument>,
   dispatch?: SignalDispatch,
@@ -398,7 +379,10 @@ export function replayDocument<TDocument extends PHDocument>(
   }
 
   // builds a new document from the initial data
-  const document = baseCreateDocument(documentState);
+  const document = baseCreateDocument(
+    defaultCreateState<TDocument>,
+    documentState,
+  );
   if (header?.slug) {
     document.header.slug = header.slug;
   }

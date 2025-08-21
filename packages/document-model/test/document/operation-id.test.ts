@@ -1,7 +1,6 @@
-import { type ExtendedStateFromDocument } from "#document/types.js";
+import { type BaseStateFromDocument } from "#document/types.js";
 import {
   baseCreateDocument,
-  baseCreateExtendedState,
   replayOperations,
 } from "#document/utils/base.js";
 import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
@@ -11,19 +10,18 @@ import {
   type CountDocument,
   countReducer,
   createBaseState,
+  createCountDocumentState,
   increment,
 } from "../helpers.js";
 
 describe("Document Operation ID", () => {
   let document: CountDocument;
-  let initialState: ExtendedStateFromDocument<CountDocument>;
+  let initialState: BaseStateFromDocument<CountDocument>;
 
   beforeEach(() => {
-    initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" }),
-    );
+    initialState = createBaseState({ count: 0 }, { name: "" });
 
-    document = baseCreateDocument(initialState);
+    document = baseCreateDocument(createCountDocumentState, initialState);
   });
 
   it("should add an id to new operations", () => {

@@ -2,7 +2,7 @@
 // Event = operation => should keep the same operation information but execute the action input against the document
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
-import { fakeAction, wrappedEmptyReducer } from "../helpers.js";
+import { defaultPHDocumentCreateState, fakeAction, wrappedEmptyReducer } from "../helpers.js";
 
 describe("Event", () => {
   beforeAll(() => {
@@ -10,7 +10,7 @@ describe("Event", () => {
   });
 
   it("should not re-assingn index to an event", () => {
-    let document = baseCreateDocument();
+    let document = baseCreateDocument(defaultPHDocumentCreateState);
 
     document = wrappedEmptyReducer(
       document,
@@ -68,7 +68,7 @@ describe("Event", () => {
   });
 
   it("should remove skipped operations", () => {
-    let document = baseCreateDocument();
+    let document = baseCreateDocument(defaultPHDocumentCreateState);
 
     document = wrappedEmptyReducer(
       document,
@@ -129,7 +129,7 @@ describe("Event", () => {
   });
 
   it("should continue with next index after an operation", () => {
-    let document = baseCreateDocument();
+    let document = baseCreateDocument(defaultPHDocumentCreateState);
 
     document = wrappedEmptyReducer(
       document,
@@ -200,7 +200,7 @@ describe("Event", () => {
   });
 
   it("should calculate the right document revision when last action is an event", () => {
-    let document = baseCreateDocument();
+    let document = baseCreateDocument(defaultPHDocumentCreateState);
 
     document = wrappedEmptyReducer(
       document,
