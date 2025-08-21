@@ -109,6 +109,7 @@ async function spawnConnect(
       env: {
         ...process.env,
         PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
+        PH_CONNECT_DRIVES_PRESERVE_STRATEGY: "preserve-all",
       },
     },
   ) as ChildProcessWithoutNullStreams;
