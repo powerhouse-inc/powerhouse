@@ -35,9 +35,7 @@ export type {
   DocumentModelLocalState,
   DocumentModelState,
 } from "#document-model/gen/types.js";
-export {
-  loadFromFile as documentModelLoadFromFile,
-} from "#document-model/gen/utils.js";
+export { loadFromFile as documentModelLoadFromFile } from "#document-model/gen/utils.js";
 export { applyMixins, BaseDocumentClass } from "#document/object.js";
 export type {
   PHAuthState,

@@ -2,7 +2,11 @@
 // Event = operation => should keep the same operation information but execute the action input against the document
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
-import { defaultPHDocumentCreateState, fakeAction, wrappedEmptyReducer } from "../helpers.js";
+import {
+  defaultPHDocumentCreateState,
+  fakeAction,
+  wrappedEmptyReducer,
+} from "../helpers.js";
 
 describe("Event", () => {
   beforeAll(() => {

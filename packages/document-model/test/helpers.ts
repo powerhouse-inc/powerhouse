@@ -13,7 +13,9 @@ import { createAction, createReducer } from "../src/document/utils/base.js";
 /**
  * Default createState function for PHDocument
  */
-export const defaultPHDocumentCreateState: CreateState<PHDocument> = (state) => {
+export const defaultPHDocumentCreateState: CreateState<PHDocument> = (
+  state,
+) => {
   return {
     ...defaultBaseState(),
     global: state?.global ?? {},

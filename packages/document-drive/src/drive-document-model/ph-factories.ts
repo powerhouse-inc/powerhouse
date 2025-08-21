@@ -5,8 +5,8 @@
 import {
   createBaseState,
   defaultBaseState,
-  PHAuthState,
-  PHDocumentState,
+  type PHAuthState,
+  type PHDocumentState,
   type PHBaseState,
 } from "document-model";
 import type {

@@ -307,7 +307,10 @@ describe("Base reducer", () => {
   it("should not throw errors from reducer", () => {
     const initialState = createBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(createCountDocumentState, initialState);
+    let document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
+      initialState,
+    );
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -320,7 +323,10 @@ describe("Base reducer", () => {
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
     const initialState = createBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(createCountDocumentState, initialState);
+    let document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
+      initialState,
+    );
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -333,7 +339,10 @@ describe("Base reducer", () => {
   it("should include error message into error operation prop", () => {
     const initialState = createBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(createCountDocumentState, initialState);
+    let document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
+      initialState,
+    );
 
     document = countReducer(document, increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
@@ -367,7 +376,10 @@ describe("Base reducer", () => {
   it("should not include error message in successful operations", () => {
     const initialState = createBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(createCountDocumentState, initialState);
+    let document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
+      initialState,
+    );
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());

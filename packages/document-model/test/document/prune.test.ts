@@ -20,7 +20,10 @@ import {
 
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(createCountDocumentState, createCountState());
+    const document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
+      createCountState(),
+    );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
     newDocument = countReducer(newDocument, increment());

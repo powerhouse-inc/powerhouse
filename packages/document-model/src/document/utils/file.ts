@@ -1,8 +1,5 @@
 import { type PHDocumentHeader } from "#document/ph-types.js";
-import {
-  type BaseStateFromDocument,
-  type Reducer,
-} from "#document/types.js";
+import { type BaseStateFromDocument, type Reducer } from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
