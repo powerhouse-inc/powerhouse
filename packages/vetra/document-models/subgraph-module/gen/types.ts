@@ -1,11 +1,11 @@
-import type { PHDocument, ExtendedStateFromDocument } from "document-model";
+import type { PHDocument, BaseStateFromDocument } from "document-model";
 import type { SubgraphModuleState } from "./schema/types.js";
 import type { SubgraphModuleAction } from "./actions.js";
 
 export { z } from "./schema/index.js";
 export type * from "./schema/types.js";
 type SubgraphModuleLocalState = Record<PropertyKey, never>;
-export type ExtendedSubgraphModuleState = ExtendedStateFromDocument<SubgraphModuleDocument>;
+export type ExtendedsubgraphmoduleState = BaseStateFromDocument<SubgraphModuleDocument>;
 export type SubgraphModuleDocument = PHDocument<
   SubgraphModuleState,
   SubgraphModuleLocalState

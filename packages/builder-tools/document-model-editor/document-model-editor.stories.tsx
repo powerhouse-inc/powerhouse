@@ -1,8 +1,8 @@
 import { createDocumentStory } from "#editor-utils/storybook";
 import { type Meta, type StoryObj } from "@storybook/react";
 import {
+  createState as documentModelCreateState,
   defaultBaseState,
-  documentModelCreateExtendedState,
   documentModelReducer,
   type DocumentSpecification,
   generateId,
@@ -13,13 +13,13 @@ import { DocumentModelEditor } from "./editor.js";
 const { meta, CreateDocumentStory: Empty } = createDocumentStory(
   DocumentModelEditor,
   documentModelReducer,
-  documentModelCreateExtendedState(),
+  documentModelCreateState(),
 );
 
 const { CreateDocumentStory: WithData } = createDocumentStory(
   DocumentModelEditor,
   documentModelReducer,
-  documentModelCreateExtendedState({
+  documentModelCreateState({
     ...defaultBaseState(),
     global: {
       id: "test type",
@@ -120,7 +120,7 @@ const { CreateDocumentStory: WithData } = createDocumentStory(
 const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
   DocumentModelEditor,
   documentModelReducer,
-  documentModelCreateExtendedState({
+  documentModelCreateState({
     ...defaultBaseState(),
     global: {
       id: "test type",

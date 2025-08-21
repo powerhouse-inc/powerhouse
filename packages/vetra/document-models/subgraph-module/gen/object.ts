@@ -1,6 +1,6 @@
 import {
   BaseDocumentClass,
-  type ExtendedStateFromDocument,
+  type BaseStateFromDocument,
   type PartialState,
   applyMixins,
   type SignalDispatch,
@@ -29,7 +29,7 @@ class SubgraphModule extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<ExtendedStateFromDocument<SubgraphModuleDocument>>,
+    initialState?: Partial<BaseStateFromDocument<SubgraphModuleDocument>>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);

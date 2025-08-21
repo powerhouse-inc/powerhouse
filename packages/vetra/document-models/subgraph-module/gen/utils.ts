@@ -1,7 +1,6 @@
 import {
   type DocumentModelUtils,
   baseCreateDocument,
-  baseCreateExtendedState,
   baseSaveToFile,
   baseSaveToFileHandle,
   baseLoadFromFile,
@@ -32,13 +31,10 @@ const utils: DocumentModelUtils<SubgraphModuleDocument> = {
       local: { ...initialLocalState, ...state?.local },
     };
   },
-  createExtendedState(extendedState) {
-    return baseCreateExtendedState({ ...extendedState }, utils.createState);
-  },
   createDocument(state) {
     const document = baseCreateDocument(
-      utils.createExtendedState(state),
       utils.createState,
+      state,
     );
 
     document.header.documentType = "powerhouse/subgraph";

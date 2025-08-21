@@ -1,6 +1,6 @@
 import {
   BaseDocumentClass,
-  type ExtendedStateFromDocument,
+  type BaseStateFromDocument,
   type PartialState,
   applyMixins,
   type SignalDispatch,
@@ -29,7 +29,7 @@ class ProcessorModule extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<ExtendedStateFromDocument<ProcessorModuleDocument>>,
+    initialState?: Partial<BaseStateFromDocument<ProcessorModuleDocument>>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);
