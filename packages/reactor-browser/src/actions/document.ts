@@ -17,7 +17,7 @@ import {
   type PHDocument,
   baseLoadFromInput,
   baseSaveToFileHandle,
-  baseState,
+  defaultBaseState,
   createPresignedHeader,
   createZip,
   generateId,
@@ -189,7 +189,7 @@ export async function addFile(
     state: {
       global: document.state.global,
       local: document.state.local,
-      ...baseState(),
+      ...defaultBaseState(),
     },
     operations: {
       global: [],

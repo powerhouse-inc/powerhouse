@@ -92,19 +92,48 @@ export const actionSigner = (
 /**
  * Creates a default PHAuthState
  */
-export const authState = (): PHAuthState => ({});
+export const defaultAuthState = (): PHAuthState => ({});
 
 /**
  * Creates a default PHDocumentState
  */
-export const documentState = (): PHDocumentState => ({
+export const defaultDocumentState = (): PHDocumentState => ({
   version: "1.0.0",
 });
 
 /**
  * Creates a default PHBaseState with auth and document properties
  */
-export const baseState = (): PHBaseState => ({
-  auth: authState(),
-  document: documentState(),
+export const defaultBaseState = (): PHBaseState => ({
+  auth: defaultAuthState(),
+  document: defaultDocumentState(),
+});
+
+/**
+ * Creates a PHAuthState with the given properties
+ */
+export const createAuthState = (auth?: Partial<PHAuthState>): PHAuthState => ({
+  ...defaultAuthState(),
+  ...auth,
+});
+
+/**
+ * Creates a PHDocumentState with the given properties
+ */
+export const createDocumentState = (
+  document?: Partial<PHDocumentState>,
+): PHDocumentState => ({
+  ...defaultDocumentState(),
+  ...document,
+});
+
+/**
+ * Creates a PHBaseState with the given auth and document properties
+ */
+export const createBaseState = (
+  auth?: Partial<PHAuthState>,
+  document?: Partial<PHDocumentState>,
+): PHBaseState => ({
+  auth: createAuthState(auth),
+  document: createDocumentState(document),
 });
