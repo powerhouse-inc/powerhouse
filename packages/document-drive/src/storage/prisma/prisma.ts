@@ -8,8 +8,8 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   Action,
   AttachmentInput,
+  BaseStateFromDocument,
   DocumentOperations,
-  ExtendedStateFromDocument,
   FileRegistry,
   Operation,
   PHDocument,
@@ -492,10 +492,11 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       header,
       initialState: JSON.parse(
         dbDoc.initialState,
-      ) as ExtendedStateFromDocument<TDocument>,
+      ) as BaseStateFromDocument<TDocument>,
       operations: operationsByScope,
       clipboard: [],
       attachments: {},
+      history: [],
       state: undefined,
     };
 

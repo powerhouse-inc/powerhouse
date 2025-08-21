@@ -1,11 +1,9 @@
 import { driveDocumentType } from "#drive-document-model/constants";
 import {
   CreateDocument,
-  CreateExtendedState,
   CreateState,
   type DocumentModelUtils,
   baseCreateDocument,
-  baseCreateExtendedState,
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
@@ -43,13 +41,10 @@ const utils: DocumentDriveUtils = {
       local: { ...initialLocalState, ...state?.local },
     };
   },
-  createExtendedState(extendedState) {
-    return baseCreateExtendedState({ ...extendedState }, utils.createState);
-  },
   createDocument(state) {
     const document = baseCreateDocument(
-      utils.createExtendedState(state),
       utils.createState,
+      state,
     );
 
     document.header.documentType = driveDocumentType;
@@ -75,8 +70,6 @@ const utils: DocumentDriveUtils = {
 
 export const createDocument: CreateDocument<DocumentDriveDocument> =
   utils.createDocument;
-export const createExtendedState: CreateExtendedState<DocumentDriveDocument> =
-  utils.createExtendedState;
 export const createState: CreateState<DocumentDriveDocument> =
   utils.createState;
 
