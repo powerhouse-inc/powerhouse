@@ -1,3 +1,13 @@
+## 4.1.0-dev.32 (2025-08-21)
+
+### 🩹 Fixes
+
+- **ph-cli:** resolve local document model loading in switchboard and vetra ([262f13035](https://github.com/powerhouse-inc/powerhouse/commit/262f13035))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.31 (2025-08-20)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
