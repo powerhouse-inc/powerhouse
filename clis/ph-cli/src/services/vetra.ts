@@ -206,6 +206,7 @@ export async function startVetra({
         generate,
         port: resolvedSwitchboardPort,
         watch,
+        dev: true, // Vetra always runs in dev mode to load local packages
         https,
         configFile,
         verbose,
