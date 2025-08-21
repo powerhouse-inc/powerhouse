@@ -1,14 +1,13 @@
 {
   "extends": "../../tsconfig.options.json",
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
   "compilerOptions": {
     "outDir": "./dist",
-    "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "jsx": "preserve",
-    "jsxImportSource": "preact"
-  }
+    "paths": {
+      "react": ["./node_modules/preact/compat/"],
+      "react-dom": ["./node_modules/preact/compat/"]
+    },
+    "jsxImportSource": "preact",
+    "jsx": "preserve"
+  },
+  "include": ["**/*"],
 }

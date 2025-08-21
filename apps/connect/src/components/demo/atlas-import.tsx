@@ -5,7 +5,7 @@ import { addRemoteDrive, useReactor } from "@powerhousedao/reactor-browser";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "../../services/toast";
+import { toast } from "../../services/toast.js";
 
 const REACTOR_URL = "https://apps.powerhouse.io/sky-atlas/staging/switchboard";
 const MIN_LOADING_TIME = 2000;

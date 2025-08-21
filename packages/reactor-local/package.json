@@ -12,9 +12,10 @@
   },
   "scripts": {
     "start": "vite-node src/index.ts",
-    "build:tsc": "tsc --build",
-    "build": "tsc --build",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },

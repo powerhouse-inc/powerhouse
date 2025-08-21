@@ -9,15 +9,15 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
+    "build": "vite build",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "preview": "vite preview",
     "prepack": "npm run build",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
-    "prebuild": "npm run clean"
+    "clean:node_modules": "rimraf node_modules"
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",

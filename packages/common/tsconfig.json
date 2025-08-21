@@ -5,14 +5,11 @@
       "node",
       "vitest/globals",
       "@types/wicg-file-system-access",
-      "@storybook/types"
     ],
     "outDir": "./dist",
-    "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "resolveJsonModule": true
   },
-  "include": ["**/*", "./package.json"],
+  "include": ["**/*"],
   "exclude": ["dist", "node_modules", "storybook-static"],
   "references": [
     {

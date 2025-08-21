@@ -200,10 +200,10 @@ describe("default remote drives", () => {
     await server.initialize();
 
     expect(mockCallback).toHaveBeenCalledTimes(2);
-    expect(mockCallback.mock.calls[0]![0]).toBe("ADDING");
-    expect(mockCallback.mock.calls[0]![3]).toBe(undefined);
-    expect(mockCallback.mock.calls[1]![0]).toBe("SUCCESS");
-    expect(mockCallback.mock.calls[1]![3]).toBe(drive1.id);
+    expect(mockCallback.mock.calls[0][0]).toBe("ADDING");
+    expect(mockCallback.mock.calls[0][3]).toBe(undefined);
+    expect(mockCallback.mock.calls[1][0]).toBe("SUCCESS");
+    expect(mockCallback.mock.calls[1][3]).toBe(drive1.id);
   });
 
   it("should not add an existing remote drive", async () => {
@@ -226,8 +226,8 @@ describe("default remote drives", () => {
     await server2.initialize();
 
     expect(mockCallback).toHaveBeenCalledTimes(1);
-    expect(mockCallback.mock.calls[0]![0]).toBe("ALREADY_ADDED");
-    expect(mockCallback.mock.calls[0]![3]).toBe(drive1.id);
+    expect(mockCallback.mock.calls[0][0]).toBe("ALREADY_ADDED");
+    expect(mockCallback.mock.calls[0][3]).toBe(drive1.id);
   });
 });
 

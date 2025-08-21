@@ -88,7 +88,9 @@ jobs:
         working-directory: packages/document-drive
 
       - name: Build
-        run: pnpm nx run document-drive:build
+        run: pnpm build
+        working-directory: packages/document-drive
 
       - name: Run tests
-        run: pnpm nx run document-drive:test
+        run: pnpm test
+        working-directory: packages/document-drive

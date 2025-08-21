@@ -5,14 +5,22 @@ import {
   type PHDocumentHeader,
 } from "document-model";
 
+type ResponseForDrive = {
+  id: string;
+  slug: string;
+  meta: Record<string, unknown> | undefined;
+  name: string;
+  icon: string | undefined;
+};
 export function responseForDrive(drive: DocumentDriveDocument) {
-  return {
+  const response: ResponseForDrive = {
     id: drive.header.id,
     slug: drive.header.slug,
     meta: drive.header.meta,
     name: drive.state.global.name,
     icon: drive.state.global.icon ?? undefined,
   };
+  return response;
 }
 
 export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {

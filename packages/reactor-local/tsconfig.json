@@ -3,8 +3,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "lib": ["ESNext"],
-    "types": ["node", "./types.d.ts"],
+    "types": ["node"],
   },
+  "include": ["**/*"],
   "references": [
     {
       "path": "../document-drive"
@@ -12,6 +13,5 @@
     {
       "path": "../reactor-api"
     }
-  ],
-  "include": ["**/*"]
+  ]
 }

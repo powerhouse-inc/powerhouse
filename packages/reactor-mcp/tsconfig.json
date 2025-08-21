@@ -1,15 +1,19 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true
+    "outDir": "./dist",
+    "types": ["node"]
   },
-  "files": [],
+  "include": ["**/*"],
   "references": [
     {
-      "path": "tsconfig.lib.json"
+      "path": "../codegen"
     },
     {
-      "path": "tsconfig.test.json"
+      "path": "../document-model"
+    },
+    {
+      "path": "../document-drive"
     }
-  ]
+  ],
 }

@@ -1,9 +1,4 @@
-import { DocumentModelAction } from "../../document-model/gen/actions.js";
-import {
-  type DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "../../document-model/gen/types.js";
+import { type DocumentModelDocument } from "../../document-model/gen/types.js";
 import { type StateReducer as TStateReducer } from "../../document/types.js";
 import { createReducer, isDocumentAction } from "../../document/utils/base.js";
 import { reducer as HeaderReducer } from "../custom/reducers/header.js";

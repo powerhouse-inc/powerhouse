@@ -557,7 +557,7 @@ describe("InMemoryJobExecutor", () => {
       await realExecutor.start({ maxConcurrency: 3 });
 
       // Mock performJobExecution to take longer so we can observe concurrency
-      const executorInstance = realExecutor as InMemoryJobExecutor;
+      const executorInstance = realExecutor;
       (executorInstance as any).performJobExecution = vi
         .fn()
         .mockImplementation(() => {

@@ -1,4 +1,4 @@
-import { DocumentModelModule } from "document-model";
+import { type DocumentModelModule } from "document-model";
 import { describe, test } from "vitest";
 import { ReactorBuilder } from "../src/server/builder.js";
 

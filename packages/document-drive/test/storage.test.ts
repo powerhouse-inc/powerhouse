@@ -1,24 +1,24 @@
 import {
-  DocumentAlreadyExistsError,
-  DocumentNotFoundError,
+  type DocumentAlreadyExistsError,
+  type DocumentNotFoundError,
 } from "#server/error";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { describe, it } from "vitest";
 import {
   createDocument,
-  DocumentModelDocument,
+  type DocumentModelDocument,
   generateId,
 } from "../../document-model/index.js";
 import InMemoryCache from "../src/cache/memory.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { type DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";
 import { FilesystemStorage } from "../src/storage/filesystem.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { PrismaClient } from "../src/storage/prisma/client/index.js";
 import { PrismaStorage } from "../src/storage/prisma/prisma.js";
-import { IDocumentStorage } from "../src/storage/types.js";
+import { type IDocumentStorage } from "../src/storage/types.js";
 
 const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],

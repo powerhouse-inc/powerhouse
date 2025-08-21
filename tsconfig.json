@@ -60,6 +60,9 @@
     },
     {
       "path": "./packages/vetra"
+    },
+    {
+      "path": "./test/connect-e2e"
     }
   ],
   "files": []

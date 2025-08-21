@@ -2,6 +2,8 @@ import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // @ts-expect-error
+  plugins: [react()],
   test: {
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
     exclude: [...defaultExclude, "test/__screenshots__/**"],
@@ -14,7 +16,6 @@ export default defineConfig({
       instances: [{ browser: "chromium" }],
     },
   },
-  plugins: [react()],
   optimizeDeps: {
     exclude: ["@electric-sql/pglite"],
   },

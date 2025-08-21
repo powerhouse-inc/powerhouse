@@ -10,7 +10,7 @@ import {
   type TooltipProps as TooltipPrimitiveProps,
   Trigger,
 } from "@radix-ui/react-tooltip";
-import * as React from "react";
+import { forwardRef } from "react";
 
 interface TooltipProps
   extends TooltipPrimitiveProps,
@@ -20,7 +20,7 @@ interface TooltipProps
   triggerAsChild?: boolean;
 }
 
-const TooltipContent = React.forwardRef<
+const TooltipContent = forwardRef<
   React.ElementRef<typeof Content>,
   TooltipContentProps
 >(({ children, className, ...props }, ref) => {

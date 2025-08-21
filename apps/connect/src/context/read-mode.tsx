@@ -84,21 +84,25 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     this.server = documentDrive;
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   migrateReadDrive(id: string, options: RemoteDriveOptions) {
     return this.server!.migrateReadDrive(id, options);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   addReadDrive(url: string, options?: RemoteDriveOptions) {
     return this.server!.addReadDrive(url, options);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   getReadDrives(): Promise<string[]> {
     return this.server!.getReadDrives();
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   getReadDriveBySlug(
     slug: string,
@@ -106,11 +110,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.getReadDriveBySlug(slug);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   getReadDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
     return this.server!.getReadDrive(id);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   getReadDriveContext(
     id: string,
@@ -118,11 +124,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.getReadDriveContext(id);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
     return this.server!.fetchDrive(id);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   fetchDocument<TDocument extends PHDocument>(
     driveId: string,
@@ -137,11 +145,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.fetchDocument(driveId, documentId, documentType);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined> {
     return this.server!.deleteReadDrive(id);
   }
 
+  // @ts-expect-error todo this decorator is using wrong arguments
   @checkServer
   onReadDrivesUpdate(
     listener: ReadDrivesListener,

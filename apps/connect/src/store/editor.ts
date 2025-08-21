@@ -5,7 +5,7 @@ import {
 
 export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
   const { GenericDriveExplorer: genericDriveExplorerEditorModule } =
-    await import("@powerhousedao/common/editors/generic-drive-explorer/index");
+    await import("@powerhousedao/common");
   const name = "Generic Drive Explorer";
   const documentTypes = genericDriveExplorerEditorModule.documentTypes;
   const Component = genericDriveExplorerEditorModule.Component;

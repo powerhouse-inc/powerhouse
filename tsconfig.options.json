@@ -1,20 +1,26 @@
 {
   "compilerOptions": {
-    // required configs for monorepo
-    "composite": true,
+    // Environment Settings
+    // See also https://aka.ms/tsconfig_modules
+    "module": "nodenext",
+    "target": "esnext",
+    // Other Outputs
+    "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
+    // Stricter Typechecking Options
+    // "noUncheckedIndexedAccess": true,
+    // "exactOptionalPropertyTypes": true,
+    // required configs for monorepo
+    "composite": true,
     "incremental": true,
-    "skipLibCheck": true,
-    // required configs for esm interoperability
+    // Recommended Options
     "strict": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "forceConsistentCasingInFileNames": true
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
   }
 }

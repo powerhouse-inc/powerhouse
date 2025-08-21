@@ -2,6 +2,7 @@ import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type DocumentDriveDocument } from "document-drive";
 import React from "react";
+// @ts-expect-error
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
 import { DangerZone } from "./danger-zone.js";

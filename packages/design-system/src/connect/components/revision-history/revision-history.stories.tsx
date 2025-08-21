@@ -1,8 +1,10 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { type Operation } from "document-model";
 import { globalOperations, localOperations } from "./mocks.js";
+// @ts-expect-error
 import nsOperations from "./ns-operations.json";
 import { RevisionHistory } from "./revision-history.js";
+// @ts-expect-error
 import skipOperations from "./skip-operations.json";
 
 const meta = {

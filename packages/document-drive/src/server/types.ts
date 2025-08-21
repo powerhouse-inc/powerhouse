@@ -22,7 +22,7 @@ import {
   type ReducerOptions,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
-import { type SignalResult } from "../../../document-model/src/document/signal.js";
+import { type SignalResult } from "document-model";
 import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
   type OperationError,

@@ -23,13 +23,11 @@
     "./*": "./dist/src/*.js"
   },
   "scripts": {
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix",
-    "build": "tsc --build",
-    "build:watch": "tsc --build --watch",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
+    "build:watch": "pnpm tsc --watch",
     "test:browser": "vitest run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
@@ -42,14 +40,14 @@
     "@types/react-dom": "^18.3.1",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
-    "@vitejs/plugin-react": "^4.4.1",
-    "@vitest/browser": "^3.1.2",
+    "@vitejs/plugin-react": "^5.0.1",
+    "@vitest/browser": "^3.2.4",
     "playwright": "^1.51.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vite-plugin-node-polyfills": "^0.23.0",
-    "vitest": "^3.1.2",
-    "vitest-browser-react": "^0.2.0"
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vitest": "^3.2.4",
+    "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
     "react": "^18.3.1",

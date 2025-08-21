@@ -1,8 +1,7 @@
 import { setTimeout } from "node:timers/promises";
 import { describe, it } from "vitest";
 import {
-  DocumentModelDocument,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
 } from "../../document-model/index.js";
 import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
@@ -20,14 +19,14 @@ import {
   reducer as documentDriveReducer,
   reducer,
 } from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { type DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { EventQueueManager } from "../src/queue/event.js";
-import { IQueueManager } from "../src/queue/types.js";
+import { type IQueueManager } from "../src/queue/types.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import {
-  IBaseDocumentDriveServer,
-  IOperationResult,
+  type IBaseDocumentDriveServer,
+  type IOperationResult,
 } from "../src/server/types.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { buildOperation, buildOperations } from "./utils.js";
@@ -179,10 +178,8 @@ describe.each(queueLayers)(
         }),
       ]);
 
-      const docModelDocument = (await server.getDocument(
-        documentId,
-      )) as DocumentModelDocument;
-      expect(docModelDocument.state.global.name).toBe("foo");
+      const docModelDocument = await server.getDocument(documentId);
+      expect((docModelDocument.state as any).global.name).toBe("foo");
     });
 
     it("orders strands correctly", async ({ expect }) => {
@@ -287,10 +284,8 @@ describe.each(queueLayers)(
         drive.state.global.nodes.findIndex((n: any) => n.id === folderId),
       );
 
-      const docModelDocument = (await server.getDocument(
-        fileId,
-      )) as DocumentModelDocument;
-      expect(docModelDocument.state.global.name).toBe("foo");
+      const docModelDocument = await server.getDocument(fileId);
+      expect((docModelDocument.state as any).global.name).toBe("foo");
     });
 
     it("does not block a document queue when the drive queue processes a delete node operation", async ({

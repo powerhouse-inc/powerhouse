@@ -266,7 +266,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.action!.context!.signer!;
+    const signer = operation.action.context!.signer!;
     const verified = await verifyOperationSignature(
       signer.signatures.at(0)!,
       signer,
@@ -281,8 +281,8 @@ describe("Crypto utils", () => {
         return crypto.subtle.verify(
           algorithm,
           importedKey,
-          signature as BufferSource,
-          data as BufferSource,
+          new Uint8Array(signature),
+          new Uint8Array(data),
         );
       },
     );
@@ -327,7 +327,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.action!.context!.signer!;
+    const signer = operation.action.context!.signer!;
     const signature = signer.signatures.at(0)!;
 
     signature[4] = "FAKE SIGNATURE";
@@ -345,8 +345,8 @@ describe("Crypto utils", () => {
         return crypto.subtle.verify(
           algorithm,
           importedKey,
-          signature as BufferSource,
-          data as BufferSource,
+          new Uint8Array(signature),
+          new Uint8Array(data),
         );
       },
     );

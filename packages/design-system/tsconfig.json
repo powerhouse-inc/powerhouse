@@ -1,15 +1,42 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "lib": [
+      "esnext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client",
+      "@storybook/types",
+      "node",
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom",
+    ],
   },
-  "files": [],
   "references": [
     {
-      "path": "tsconfig.lib.json"
+      "path": "../document-model"
     },
     {
-      "path": "tsconfig.test.json"
+      "path": "../config"
+    },
+    {
+      "path": "../reactor-browser"
     }
+  ],
+  "include": [
+    "**/*",
+    "**/*.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "storybook-static",
+    "package.json",
+    "tsconfig.json"
   ]
 }

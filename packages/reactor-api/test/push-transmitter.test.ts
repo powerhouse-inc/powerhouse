@@ -122,7 +122,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId: driveId,
@@ -185,7 +185,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId,
@@ -245,7 +245,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId,

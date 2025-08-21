@@ -15,16 +15,14 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
-    "build:tsc": "tsc --build",
-    "build": "pnpm run build:tsc",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
     "start": "node dist/src/index.js",
-    "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
+    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "install-packages": "node dist/src/install-packages.js",
-    "postbuild": "pnpm run install-packages",
-    "prepublishOnly": "npm run build",
+    "build": "pnpm run install-packages",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },
@@ -49,7 +47,7 @@
     "redis": "^4.7.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.9"

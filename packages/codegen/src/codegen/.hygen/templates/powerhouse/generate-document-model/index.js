@@ -1,14 +1,13 @@
-import { paramCase } from "change-case";
-import { type DocumentModelState, type ScopeState } from "document-model";
-
-function documentModelToString(documentModel: DocumentModelState) {
+const { paramCase } = require("change-case");
+    
+function documentModelToString(documentModel) {
   return JSON.stringify(
     {
       ...documentModel,
       specifications: documentModel.specifications.map((s) => ({
         ...s,
         state: Object.keys(s.state).reduce((values, scope) => {
-          const state = s.state[scope as keyof typeof s.state];
+          const state = s.state[scope];
           return {
             ...values,
             [scope]: {
@@ -26,29 +25,9 @@ function documentModelToString(documentModel: DocumentModelState) {
   );
 }
 
-export type Args = {
-  documentModel: string;
-  rootDir: string;
-};
-
-export default {
-  params: ({
-    args,
-  }: {
-    args: Args;
-  }): {
-    rootDir: string;
-    documentModel: string;
-    documentTypeId: string;
-    documentType: string;
-    extension: string;
-    modules: Array<{ name: string; [key: string]: any }>;
-    fileExtension: string;
-    hasLocalSchema: boolean;
-    initialGlobalState: string;
-    initialLocalState: string;
-  } => {
-    const documentModel = JSON.parse(args.documentModel) as DocumentModelState;
+module.exports = {
+  params: ({ args }) => {
+    const documentModel = JSON.parse(args.documentModel);
     const latestSpec =
       documentModel.specifications[documentModel.specifications.length - 1];
 
@@ -69,7 +48,7 @@ export default {
   },
 };
 
-function getInitialStates(scopeState: ScopeState) {
+function getInitialStates(scopeState) {
   const { global, local } = scopeState;
   const scopes = { global, local };
 
@@ -89,10 +68,10 @@ function getInitialStates(scopeState: ScopeState) {
   };
 }
 
-function isEmptyStateSchema(schema: string) {
+function isEmptyStateSchema(schema) {
   return schema === "" || !schema.includes("{");
 }
 
-function handleEmptyState(state: string) {
+function handleEmptyState(state) {
   return state === "" ? "{}" : state;
 }

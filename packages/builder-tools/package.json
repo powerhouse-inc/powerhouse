@@ -14,6 +14,7 @@
     "dist"
   ],
   "exports": {
+    ".": "./dist/index.js",
     "./connect-studio": "./dist/connect-studio/index.js",
     "./connect-build": "./dist/connect-build/index.js",
     "./document-model-editor": "./dist/document-model-editor/index.js",
@@ -27,13 +28,13 @@
   },
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "build": "npm run build:css && tsc --build",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "build": "npm run build:css",
     "storybook": "storybook dev -p 6006",
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "prepublishOnly": "npm run build",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
+    "prepublishOnly": "pnpm build",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"
   },

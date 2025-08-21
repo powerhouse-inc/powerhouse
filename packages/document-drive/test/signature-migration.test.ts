@@ -1,5 +1,5 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { ActionContext, Operation, generateId } from "document-model";
+import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type ActionContext, type Operation, generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
@@ -125,7 +125,7 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.slug = driveId;
@@ -175,7 +175,7 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.name = "name";
@@ -191,7 +191,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.action!.context = {
+      driveOperation.action.context = {
         signer: {
           app: {
             name: "name",
@@ -251,7 +251,7 @@ describe.each(storageLayers)(
             listeners: [],
             sharingType: null,
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.slug = driveId;
@@ -267,7 +267,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.action!.context = {
+      driveOperation.action.context = {
         signer: {
           app: {
             name: "name",

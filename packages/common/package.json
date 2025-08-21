@@ -11,11 +11,8 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./*": "./dist/*.js",
-    "./drive-analytics": "./dist/drive-analytics/index.js"
+    ".": "./dist/index.js"
   },
-  "types": "./dist/index.d.ts",
   "imports": {
     "#document-models/*": "./dist/document-models/*.js",
     "#editors/*": "./dist/editors/*.js"
@@ -24,15 +21,13 @@
   "scripts": {
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "build:css": "pnpm dlx @tailwindcss/cli -i ./editors/styles.css -o ./dist/editors/styles.css",
-    "build:tsc": "tsc --build",
-    "lint": "eslint",
-    "build": "npm run build:css && npm run build:tsc",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
+    "build": "pnpm build:css",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "prepublishOnly": "npm run build",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "build-storybook": "storybook build"
   },
   "peerDependencies": {
     "@powerhousedao/reactor-browser": "workspace:*",

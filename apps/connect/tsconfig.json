@@ -1,8 +1,53 @@
 {
-    "files": [],
+    "extends": "../../tsconfig.options.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "outDir": "./dist",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "paths": {
+            "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
+            "#assets/*": ["./assets/*"],
+            "#connect-config": ["./src/connect.config.js"],
+            "#services": ["./src/services/index.ts"],
+            "#hooks": ["./src/hooks/index.ts"],
+            "#store": ["./src/store/index.ts"],
+            "#utils": ["./src/utils/index.ts"],
+            "#components": ["./src/components/index.ts"],
+            "#context": ["./src/context/index.ts"]
+        },
+        "types": [
+            "vite/client",
+            "vite-plugin-svgr/client",
+            "@types/wicg-file-system-access",
+            "vite-envs"
+        ],
+    },
+    "include": ["**/*", "**/*.json"],
+    "exclude": ["dist", "node_modules", "storybook-static", "./tsconfig.json"],
     "references": [
-        { "path": "./tsconfig.app.json" },
-        { "path": "./tsconfig.node.json" },
-        { "path": "./tsconfig.sw.json" }
+        {
+            "path": "../../packages/document-model"
+        },
+        {
+            "path": "../../packages/document-drive"
+        },
+        {
+            "path": "../../packages/design-system"
+        },
+        {
+            "path": "../../packages/common"
+        },
+        {
+            "path": "../../packages/config"
+        },
+        {
+            "path": "../../packages/reactor-browser"
+        },
+        {
+            "path": "../../packages/renown"
+        },
+        {
+            "path": "../../packages/builder-tools"
+        }
     ]
 }

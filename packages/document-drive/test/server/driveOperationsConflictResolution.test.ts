@@ -1,11 +1,14 @@
 import { BrowserStorage } from "#storage/browser";
 import { FilesystemStorage } from "#storage/filesystem";
 import { PrismaStorage } from "#storage/prisma/prisma";
-import { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
+import {
+  type IDocumentStorage,
+  type IDriveOperationStorage,
+} from "#storage/types";
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
-  Operation,
+  type DocumentModelModule,
+  type Operation,
 } from "document-model";
 import { existsSync, rmSync } from "fs";
 import path from "path";
@@ -17,16 +20,16 @@ import {
 } from "../../src/drive-document-model/gen/node/creators.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
 import {
-  DocumentDriveDocument,
-  Node,
+  type DocumentDriveDocument,
+  type Node,
 } from "../../src/drive-document-model/gen/types.js";
 import { createDocument } from "../../src/drive-document-model/gen/utils.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
 import {
-  IDocumentDriveServer,
-  IOperationResult,
+  type IDocumentDriveServer,
+  type IOperationResult,
 } from "../../src/server/types.js";
 import { PrismaClient } from "../../src/storage/prisma/client/index.js";
 import { DriveBasicClient } from "../utils.js";
@@ -588,7 +591,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
           targetParentFolder: undefined,
         },
         generateId,
-        (client1.getDocument() as DocumentDriveDocument).state.global.nodes,
+        client1.getDocument().state.global.nodes,
       );
 
       const copyActions = copyNodesInput.map((copyNodeInput) =>
@@ -622,7 +625,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
           targetParentFolder: undefined,
         },
         generateId,
-        (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
+        client2.getDocument().state.global.nodes,
       );
 
       const copyNodesInput3 = generateNodesCopy(
@@ -632,7 +635,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
           targetParentFolder: undefined,
         },
         generateId,
-        (client2.getDocument() as DocumentDriveDocument).state.global.nodes,
+        client2.getDocument().state.global.nodes,
       );
 
       const copyActions2 = copyNodesInput2.map((copyNodeInput) =>
@@ -672,8 +675,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       // sync client 2 with server
       await client2.syncDocument();
 
-      const client2Nodes = (client2.getDocument() as DocumentDriveDocument)
-        .state.global.nodes;
+      const client2Nodes = client2.getDocument().state.global.nodes;
 
       // TODO: validate that there are not duplicated operations after operation id implementation
       expect(client2Nodes).toHaveLength(8);

@@ -139,12 +139,12 @@ export function createDocumentStory(
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document as PHDocument));
+            dispatch(createAction(document));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} document={document as PHDocument} />;
+      return <Editor {...args} document={document} />;
     },
     argTypes: {
       document: {

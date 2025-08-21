@@ -4,5 +4,19 @@
     "outDir": "./dist",
     "lib": ["ESNext"],
   },
-  "include": ["**/*"]
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    }
+  ]
 }

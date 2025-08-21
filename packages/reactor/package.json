@@ -18,11 +18,11 @@
     "./dist"
   ],
   "scripts": {
-    "build": "pnpm run build:tsc",
-    "build:tsc": "tsc --build",
-    "prebuild": "pnpm run clean",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "test": "vitest run",
-    "lint": "eslint",
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules"

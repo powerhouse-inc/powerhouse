@@ -1,4 +1,4 @@
-import { type Action, ActionWithAttachment } from "../../../document/types.js";
+import { type Action } from "../../../document/types.js";
 import {
   type AddModuleInput,
   type DeleteModuleInput,

@@ -1,5 +1,5 @@
-import { Suspense } from "react";
-import GraphQLIframe from "../../components/graphql/iframe";
+import { Suspense } from "preact/compat";
+import GraphQLIframe from "../../components/graphql/iframe.js";
 
 export default function GraphQLDrive({ driveId }: { driveId: string }) {
   return (

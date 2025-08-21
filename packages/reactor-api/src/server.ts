@@ -398,6 +398,8 @@ export async function startAPI(
     const factories = fns.map((fn) => {
       try {
         return fn({
+          // TODO: figure out why this type comes out as any
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           analyticsStore: module.analyticsStore,
           relationalDb: module.relationalDb,
         });

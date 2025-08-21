@@ -1,5 +1,6 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { DependencyVersions } from "./dependency-versions.js";
+// @ts-expect-error
 import mockPackageJson from "./mock-package-json.json";
 
 const meta = {

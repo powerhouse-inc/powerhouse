@@ -1,7 +1,7 @@
 import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
 import { isLogLevel, logger, setLogLevel } from "document-drive/utils/logger";
 import pkg from "../package.json" with { type: "json" };
-import { getBasePath } from "./utils/browser";
+import { getBasePath } from "./utils/browser.js";
 
 const version = pkg.version;
 const APP_VERSION = import.meta.env.APP_VERSION || version;

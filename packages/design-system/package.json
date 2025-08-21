@@ -35,22 +35,18 @@
     "#services": "./dist/src/services/index.js"
   },
   "scripts": {
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src && tsc --build",
+    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src",
     "build:watch": "build --watch",
-    "prebuild": "npm run clean && npm run create-icon-components",
     "storybook": "storybook dev -p 6006",
-    "prestorybook": "npm run build",
     "build-storybook": "storybook build",
-    "prebuild-storybook": "npm run build",
     "test": "vitest run --exclude \"src/scalars/**\"",
     "test:watch": "vitest watch",
-    "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861"
   },
   "author": {
     "name": "https://www.powerhouse.inc/"

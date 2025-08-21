@@ -30,11 +30,10 @@
     }
   },
   "scripts": {
-    "build:tsc": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
-    "build:tsc:node": "tsc -p tsconfig.node.json --noEmit",
-    "build:tsc:browser": "tsc -p tsconfig.browser.json --noEmit",
-    "build": "tsc --build",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "lint": "eslint --cache",
+    "lint:fix": "pnpm lint --fix",
+    "lint:quiet": "pnpm lint --quiet",
     "clean": "rimraf dist/",
     "clean:node_modules": "rimraf node_modules"
   },

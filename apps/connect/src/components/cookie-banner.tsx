@@ -5,7 +5,7 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
 import { useCookieBanner } from "../hooks/useCookiebanner.js";
-import i18n from "../i18n";
+import i18n from "../i18n/index.js";
 import { useModal } from "./modal/index.js";
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {

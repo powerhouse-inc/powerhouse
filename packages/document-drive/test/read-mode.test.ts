@@ -5,12 +5,12 @@ import {
 import {
   createDocument as createDocumentModelDocument,
   createState as createDocumentModelState,
-  DocumentModelDocument,
+  type DocumentModelDocument,
   documentModelDocumentModelModule,
-  DocumentModelModule,
-  DocumentModelState,
+  type DocumentModelModule,
+  type DocumentModelState,
   generateId,
-  PHDocument,
+  type PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
 import {
@@ -30,8 +30,8 @@ import {
 } from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import {
-  DocumentDriveDocument,
-  DocumentDriveState,
+  type DocumentDriveDocument,
+  type DocumentDriveState,
 } from "../src/drive-document-model/gen/types.js";
 import {
   createDocument,
@@ -44,8 +44,8 @@ import {
   ReadDriveSlugNotFoundError,
 } from "../src/read-mode/errors.js";
 import { ReadModeService } from "../src/read-mode/service.js";
-import { ReadDriveContext } from "../src/read-mode/types.js";
-import { DocumentModelNotFoundError } from "../src/server/error.js";
+import { type ReadDriveContext } from "../src/read-mode/types.js";
+import { type DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
@@ -72,7 +72,7 @@ function buildDriveDocument(
   const doc = createDocument(
     createState({
       global: state,
-    })
+    }),
   );
   doc.header.id = id;
   doc.header.slug = slug;
@@ -86,7 +86,7 @@ function buildModelDocument(
   return createDocumentModelDocument(
     createDocumentModelState({
       global: state,
-    })
+    }),
   );
 }
 
@@ -356,7 +356,7 @@ describe.skip("Read mode methods", () => {
           icon: null,
         },
         {},
-      )
+      ),
     );
 
     drive.header.id = readDriveId;

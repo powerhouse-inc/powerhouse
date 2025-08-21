@@ -1,4 +1,3 @@
-// @ts-check
 import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
@@ -7,26 +6,118 @@ import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+const ignores = [
+  "**/node_modules/",
+  "**/dist/",
+  "**/.ph/",
+  "**/storybook-static/",
+  "**/.vite/",
+  "**/.nx/",
+  "**/build/",
+  "**/.docusaurus/",
+  "**/.ph/",
+  "**/external-packages.js",
+  "**/.out/",
+  "**/prisma/",
+  "**/flaky/",
+  "**/.storybook/",
+  "**/*.bench.ts",
+  "**/babel.config.js",
+  "packages/codegen/src/codegen/__tests__/.test-project",
+  "packages/codegen/src/codegen/.hygen/",
+  "apps/connect/src/vite-env.d.ts",
+  "commitlint.config.cjs",
+];
+
+const typescriptRules = {
+  "no-constant-condition": "off",
+  "@typescript-eslint/no-extraneous-class": "off",
+  "@typescript-eslint/dot-notation": "off",
+  "@typescript-eslint/no-deprecated": "off",
+  "@typescript-eslint/no-explicit-any": "off",
+  "@typescript-eslint/consistent-indexed-object-style": "off",
+  "@typescript-eslint/no-duplicate-type-constituents": "off",
+  "@typescript-eslint/explicit-function-return-type": "off",
+  "@typescript-eslint/consistent-type-imports": [
+    "error",
+    {
+      prefer: "type-imports",
+      fixStyle: "inline-type-imports",
+    },
+  ],
+  "@typescript-eslint/array-type": "off",
+  "@typescript-eslint/prefer-function-type": "off",
+  "@typescript-eslint/strict-boolean-expressions": "off",
+  "@typescript-eslint/prefer-nullish-coalescing": "off",
+  "@typescript-eslint/no-confusing-void-expression": "off",
+  "@typescript-eslint/consistent-type-definitions": "off",
+  "@typescript-eslint/no-empty-function": "off",
+  "@typescript-eslint/no-misused-promises": "off",
+  "@typescript-eslint/prefer-reduce-type-parameter": "off",
+  "@typescript-eslint/prefer-for-of": "off",
+  "@typescript-eslint/require-await": "warn",
+  "@typescript-eslint/ban-ts-comment": "off",
+  "@typescript-eslint/unbound-method": "off",
+  "@typescript-eslint/no-empty-object-type": "warn",
+  "@typescript-eslint/no-non-null-assertion": "off",
+  "@typescript-eslint/prefer-find": "warn",
+  "@typescript-eslint/no-floating-promises": "warn",
+  "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
+  "@typescript-eslint/restrict-plus-operands": "warn",
+  "@typescript-eslint/return-await": "warn",
+  "@typescript-eslint/no-dynamic-delete": "warn",
+  "@typescript-eslint/no-unnecessary-type-assertion": "off",
+  "@typescript-eslint/no-unused-vars": "warn",
+  "@typescript-eslint/no-unnecessary-condition": "warn",
+  "@typescript-eslint/no-unnecessary-type-parameters": "off",
+  "@typescript-eslint/restrict-template-expressions": [
+    "warn",
+    {
+      allowNumber: true,
+    },
+  ],
+};
+
+const reactRules = {
+  ...typescriptRules,
+  "react/require-default-props": "off",
+  "react/jsx-no-literals": "off",
+  "react/forbid-component-props": "off",
+  "react/no-multi-comp": "off",
+  "react/destructuring-assignment": "off",
+  "react/function-component-definition": "off",
+  "react/prop-types": "off",
+  "react/no-unused-prop-types": "warn",
+  "react/jsx-max-depth": "off",
+  "react/no-array-index-key": "off",
+  "react/jsx-no-bind": "off",
+  "react/button-has-type": "off",
+  "react/hook-use-state": "off",
+  "react/jsx-no-useless-fragment": "off",
+  "react/jsx-props-no-spreading": "off",
+};
+
+const unsafeRules = {
+  ...typescriptRules,
+  "@typescript-eslint/no-unsafe-declaration-merging": "off",
+  "@typescript-eslint/no-unsafe-assignment": "off",
+  "@typescript-eslint/no-unsafe-member-access": "off",
+  "@typescript-eslint/no-unsafe-call": "off",
+  "@typescript-eslint/no-unsafe-return": "off",
+  "@typescript-eslint/no-unsafe-argument": "off",
+  "@typescript-eslint/await-thenable": "off",
+  "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+  "@typescript-eslint/no-require-imports": "off",
+};
+
 export default tseslint.config(
-  globalIgnores([
-    "**/node_modules/",
-    "**/dist/",
-    "**/.ph/",
-    "**/storybook-static/",
-    "**/.vite/",
-    "**/.nx/",
-    "**/build/",
-    "**/.docusaurus/",
-    "**/.ph/",
-    "**/external-packages.js",
-    "**/.out/",
-    "**/prisma/",
-  ]),
+  globalIgnores(ignores),
   eslint.configs.recommended,
-  ...tseslint.configs.stylisticTypeChecked,
-  ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
   {
+    files: ["**/*.ts"],
+    extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       sourceType: "module",
       ecmaVersion: "latest",
@@ -42,67 +133,32 @@ export default tseslint.config(
             "eslint.config.js",
             // TODO: remove this once we have a better way to handle release scripts
             "tools/scripts/release.ts",
+            "packages/.storybook/*",
           ],
         },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    // @ts-expect-error - figure out how to use a js type annotation here
+    rules: typescriptRules,
+  },
+  {
+    files: ["**/*.tsx"],
+    extends: [tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      sourceType: "module",
+      ecmaVersion: "latest",
+      globals: {
+        ...globals.browser,
+      },
+      parserOptions: {
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
         ecmaFeatures: {
           jsx: true,
         },
       },
     },
-    rules: {
-      "no-constant-condition": "off",
-      "@typescript-eslint/no-extraneous-class": "off",
-      "@typescript-eslint/dot-notation": "off",
-      "@typescript-eslint/no-deprecated": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/consistent-indexed-object-style": "off",
-      "@typescript-eslint/no-duplicate-type-constituents": "off",
-      "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        {
-          prefer: "type-imports",
-          fixStyle: "inline-type-imports",
-        },
-      ],
-      "@typescript-eslint/array-type": "off",
-      "@typescript-eslint/prefer-function-type": "off",
-      "@typescript-eslint/strict-boolean-expressions": "off",
-      "@typescript-eslint/prefer-nullish-coalescing": "off",
-      "@typescript-eslint/no-confusing-void-expression": "off",
-      "@typescript-eslint/consistent-type-definitions": "off",
-      "@typescript-eslint/no-empty-function": "off",
-      "@typescript-eslint/no-misused-promises": "off",
-      "@typescript-eslint/prefer-reduce-type-parameter": "off",
-      "@typescript-eslint/prefer-for-of": "off",
-      "@typescript-eslint/require-await": "warn",
-      "@typescript-eslint/ban-ts-comment": "off",
-      "@typescript-eslint/unbound-method": "off",
-      "@typescript-eslint/no-empty-object-type": "warn",
-      "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/prefer-find": "warn",
-      "@typescript-eslint/no-floating-promises": "warn",
-      "@typescript-eslint/use-unknown-in-catch-callback-variable": "off",
-      "@typescript-eslint/restrict-plus-operands": "warn",
-      "@typescript-eslint/return-await": "warn",
-      "@typescript-eslint/no-dynamic-delete": "warn",
-      "@typescript-eslint/no-unnecessary-type-assertion": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-unnecessary-condition": "warn",
-      "@typescript-eslint/no-unnecessary-type-parameters": "off",
-      "@typescript-eslint/restrict-template-expressions": [
-        "warn",
-        {
-          allowNumber: true,
-        },
-      ],
-    },
-  },
-  {
-    files: ["**/*.tsx"],
-    ...reactPlugin.configs.flat.all,
-    ...reactPlugin.configs.flat["jsx-runtime"],
     settings: {
       react: {
         version: "detect",
@@ -112,22 +168,32 @@ export default tseslint.config(
       react: reactPlugin,
       "react-hooks": reactHooksPlugin,
     },
-    rules: {
-      "react/require-default-props": "off",
-      "react/jsx-no-literals": "off",
-      "react/forbid-component-props": "off",
-      "react/no-multi-comp": "off",
-      "react/destructuring-assignment": "off",
-      "react/function-component-definition": "off",
-      "react/prop-types": "off",
-      "react/no-unused-prop-types": "warn",
-      "react/jsx-max-depth": "off",
-      "react/no-array-index-key": "off",
-      "react/jsx-no-bind": "off",
-      "react/button-has-type": "off",
-      "react/hook-use-state": "off",
-      "react/jsx-no-useless-fragment": "off",
-      "react/jsx-props-no-spreading": "off",
-    },
+    rules: reactRules,
+  },
+  {
+    files: ["**/*.js", "**/*.cjs", "**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    extends: [tseslint.configs.recommendedTypeChecked],
+    files: [
+      "**/test/*.ts",
+      "**/test/*.tsx",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.bench.ts",
+      "**/__tests__/*.ts",
+      "apps/academy/**/*",
+      "packages/document-drive/src/utils/logger.ts",
+      // TODO: our generated code should not be unsafe
+      "**/gen/*.ts",
+      // TODO: figure out why the type of viteEnvs is unsafe
+      "apps/connect/vite.config.ts",
+      // TODO: replace codegen templates with something safe
+      "packages/codegen/src/codegen/.hygen/templates/**/*",
+      // TODO: file system utils call functions which are not implemented and just throw errors
+      "packages/document-model/src/document/utils/file.ts",
+    ],
+    rules: unsafeRules,
   },
 );

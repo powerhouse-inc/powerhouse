@@ -1,4 +1,5 @@
 node_modules/
+.eslintcache
 .nx/cache
 .nx/workspace-data
 **/dist/

@@ -1,7 +1,7 @@
 import { useLoadInitialData } from "#hooks";
 import { StrictMode, Suspense } from "react";
 import { useLoadData } from "../hooks/useLoadData.js";
-import "../i18n";
+import "../i18n/index.js";
 import { AppSkeleton } from "./app-skeleton.js";
 import App from "./app.js";
 import { ModalManager } from "./modal/index.js";

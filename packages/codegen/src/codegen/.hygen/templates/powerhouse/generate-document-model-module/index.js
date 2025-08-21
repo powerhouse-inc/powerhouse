@@ -1,29 +1,15 @@
-import { paramCase } from "change-case";
-import { type DocumentModelState } from "document-model";
-import { type Args } from "../generate-document-model/index.js";
+const { paramCase } = require("change-case");
 
-type ModuleArgs = Args & { module: string };
-type OperationError =
-  DocumentModelState["specifications"][number]["modules"][number]["operations"][number]["errors"][number];
-type Actions = {
-  name: string | null;
-  hasInput: boolean;
-  hasAttachment: boolean | undefined;
-  scope: string;
-  state: string;
-  errors: OperationError[];
-};
-
-export default {
-  params: ({ args }: { args: ModuleArgs }) => {
-    const documentModel = JSON.parse(args.documentModel) as DocumentModelState;
+module.exports = {
+  params: ({ args }) => {
+    const documentModel = JSON.parse(args.documentModel);
     const latestSpec =
       documentModel.specifications[documentModel.specifications.length - 1];
     const filteredModules = latestSpec.modules.filter(
       (m) => m.name === args.module,
     );
 
-    const actions: Actions[] =
+    const actions =
       filteredModules.length > 0
         ? filteredModules[0].operations.map((a) => ({
             name: a.name,
@@ -35,7 +21,7 @@ export default {
           }))
         : [];
 
-    const errors = actions.reduce<OperationError[]>((acc, action) => {
+    const errors = actions.reduce((acc, action) => {
       action.errors.forEach((error) => {
         const existingError = acc.find((e) => e.code === error.code);
         if (!existingError) {
