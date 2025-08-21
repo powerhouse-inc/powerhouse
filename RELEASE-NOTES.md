@@ -89,6 +89,10 @@ The `Action` and `Operation` types have a number of changes:
 - `Operation` no longer extends `Action`, it _has_ one.
 - Some fields have been renamed or removed.
 
+### `ExtendedState` has been removed
+
+This includes `createExtendedState`, `ExtendedStateFromDocument`, and `CreateExtendedState` functions.
+
 ## Migration Steps
 
 1. Update to the lastest `codegen` package.
