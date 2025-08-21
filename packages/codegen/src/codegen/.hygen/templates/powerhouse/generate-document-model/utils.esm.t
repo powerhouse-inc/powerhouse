@@ -5,7 +5,6 @@ force: true
 import { 
     type DocumentModelUtils,
     baseCreateDocument,
-    baseCreateExtendedState,
     baseSaveToFile,
     baseSaveToFileHandle,
     baseLoadFromFile,
@@ -28,16 +27,10 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
     createState(state) {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
-    createExtendedState(extendedState) {
-        return baseCreateExtendedState(
-            { ...extendedState },
-            utils.createState
-        );
-    },
     createDocument(state) {
         const document = baseCreateDocument(
-            utils.createExtendedState(state),
-            utils.createState
+            utils.createState,
+            state
         );
 
         document.header.documentType = '<%- documentTypeId %>';
@@ -63,7 +56,6 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
 
 export const createDocument = utils.createDocument;
 export const createState = utils.createState;
-export const createExtendedState = utils.createExtendedState;
 export const saveToFile = utils.saveToFile;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromFile = utils.loadFromFile;
