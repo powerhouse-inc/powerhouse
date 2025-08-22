@@ -5,7 +5,6 @@ unless_exists: true
 import {
   addDocument,
   useDocumentModelModules,
-  useEditorModules,
   useSelectedDriveId,
   useSelectedFolder,
   type VetraDocumentModelModule,
@@ -20,7 +19,6 @@ export const CreateDocument = () => {
   const selectedDriveId = useSelectedDriveId();
   const selectedFolder = useSelectedFolder();
   const documentModelModules = useDocumentModelModules();
-  const editorModules = useEditorModules();
 
   async function handleAddDocument(module: VetraDocumentModelModule) {
     if (!selectedDriveId) {
@@ -28,14 +26,9 @@ export const CreateDocument = () => {
     }
     await addDocument(
       selectedDriveId,
-      `New ${module.documentModel.id} document`,
+      `New ${module.documentModel.name} document`,
       module.documentModel.id,
       selectedFolder?.id,
-      undefined,
-      undefined,
-      editorModules?.find((e) =>
-        e.documentTypes.includes(module.documentModel.id),
-      )?.id,
     );
   }
 

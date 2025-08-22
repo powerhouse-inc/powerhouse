@@ -42,4 +42,23 @@ export abstract class BaseDocumentGen {
     }
     return [...this.supportedDocumentTypes];
   }
+
+  /**
+   * Validate if this strand should be processed
+   * Override this method in specific generators to add custom validation logic
+   */
+  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+     // Basic validation: ensure strand has required properties
+     if (!strand.documentId || !strand.documentType) {
+      return false;
+    }
+
+    // Basic validation: check if document type is supported
+    if (!this.supportsDocumentType(strand.documentType)) {
+      return false;
+    }
+
+    // Default to processing if basic validation passes
+    return true;
+  }
 }

@@ -243,16 +243,6 @@ export type CreateState<TDocument extends PHDocument> = (
   >,
 ) => BaseStateFromDocument<TDocument>;
 
-export type CreateExtendedState<TDocument extends BaseDocument<any, any>> = (
-  extendedState?: Partial<
-    BaseState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
-  createState?: CreateState<TDocument>,
-) => ExtendedStateFromDocument<TDocument>;
-
 export type SaveToFileHandle = (
   document: PHDocument,
   input: FileSystemFileHandle,
@@ -273,12 +263,7 @@ export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
 ) => TDocument | Promise<TDocument>;
 
 export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
-  initialState?: Partial<
-    BaseState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
+  initialState?: Partial<PHBaseState>,
   createState?: CreateState<TDocument>,
 ) => TDocument;
 
@@ -354,7 +339,6 @@ export type AttachmentRef = string; // TODO `attachment://${string}`;
 export type DocumentModelUtils<TDocument extends PHDocument> = {
   fileExtension: string;
   createState: CreateState<TDocument>;
-  createExtendedState: CreateExtendedState<TDocument>;
   createDocument: CreateDocument<TDocument>;
   loadFromFile: LoadFromFile<TDocument>;
   loadFromInput: LoadFromInput<TDocument>;
@@ -512,11 +496,6 @@ export type LocalStateFromDocument<TDocument extends PHDocument> =
 export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
   DocumentStateFromDocument<TDocument>,
   LocalStateFromDocument<TDocument>
->;
-
-export type ExtendedStateFromDocument<TDocument extends PHDocument> = BaseState<
-  PartialState<DocumentStateFromDocument<TDocument>>,
-  PartialState<LocalStateFromDocument<TDocument>>
 >;
 
 export type Maybe<T> = T | null;

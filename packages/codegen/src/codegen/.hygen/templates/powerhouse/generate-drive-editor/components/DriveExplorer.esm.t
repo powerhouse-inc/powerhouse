@@ -116,10 +116,6 @@ export function DriveExplorer(props: DriveEditorProps) {
           fileName,
           documentModel.documentModel.id,
           selectedFolder?.id,
-          undefined,
-          editorModules?.find((e) =>
-            e.documentTypes.includes(documentModel.documentModel.id),
-          )?.id,
         );
 
         selectedDocumentModel.current = null;

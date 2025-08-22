@@ -1,3 +1,90 @@
+## 4.1.0-dev.33 (2025-08-21)
+
+### 🚀 Features
+
+- add configurable drive preservation strategy for vetra ([aa8676a13](https://github.com/powerhouse-inc/powerhouse/commit/aa8676a13))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.32 (2025-08-21)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🩹 Fixes
+
+- **connect:** preserve built-in packages during hmr updates ([8398c0f06](https://github.com/powerhouse-inc/powerhouse/commit/8398c0f06))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.30 (2025-08-20)
+
+### 🩹 Fixes
+
+- add additional tags ([4f0cf8658](https://github.com/powerhouse-inc/powerhouse/commit/4f0cf8658))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.29 (2025-08-20)
+
+### 🩹 Fixes
+
+- fetch tags :-) ([df0b7beba](https://github.com/powerhouse-inc/powerhouse/commit/df0b7beba))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.28 (2025-08-20)
+
+### 🩹 Fixes
+
+- removed metadata extraction from commit ([637960021](https://github.com/powerhouse-inc/powerhouse/commit/637960021))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.27 (2025-08-20)
+
+### 🩹 Fixes
+
+- extract metadata tags and labels for docker ([bb9c81ce7](https://github.com/powerhouse-inc/powerhouse/commit/bb9c81ce7))
+- use github tag properly ([95ccff4b8](https://github.com/powerhouse-inc/powerhouse/commit/95ccff4b8))
+- proper tag for docker images ([e73e10617](https://github.com/powerhouse-inc/powerhouse/commit/e73e10617))
+- use patname secret instead of github token ([db9dfd5cd](https://github.com/powerhouse-inc/powerhouse/commit/db9dfd5cd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.26 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy alternative approach ([2a5522cdc](https://github.com/powerhouse-inc/powerhouse/commit/2a5522cdc))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.25 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy ([b057a7cce](https://github.com/powerhouse-inc/powerhouse/commit/b057a7cce))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.24 (2025-08-20)
 
 ### 🚀 Features

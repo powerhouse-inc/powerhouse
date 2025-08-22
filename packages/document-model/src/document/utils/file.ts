@@ -1,8 +1,5 @@
 import { type PHDocumentHeader } from "#document/ph-types.js";
-import {
-  type ExtendedStateFromDocument,
-  type Reducer,
-} from "#document/types.js";
+import { type BaseStateFromDocument, type Reducer } from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
@@ -146,7 +143,7 @@ async function loadFromZip<TDocument extends PHDocument>(
   const initialStateStr = await initialStateZip.async("string");
   const initialState = JSON.parse(
     initialStateStr,
-  ) as ExtendedStateFromDocument<TDocument>;
+  ) as BaseStateFromDocument<TDocument>;
 
   const headerZip = zip.file("header.json");
   let header: PHDocumentHeader | undefined = undefined;

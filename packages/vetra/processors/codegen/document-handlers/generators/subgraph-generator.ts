@@ -12,6 +12,35 @@ import { BaseDocumentGen } from "../base-document-gen.js";
 export class SubgraphGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/subgraph";
 
+  /**
+   * Validate if this subgraph strand should be processed
+   */
+  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+    // First run base validation
+    if (!super.shouldProcess(strand)) {
+      return false;
+    }
+
+    const state = strand.state as SubgraphModuleState;
+    if (!state) {
+      logger.debug(`>>> No state found for subgraph: ${strand.documentId}`);
+      return false;
+    }
+
+    // Check if we have a valid subgraph name and it's confirmed
+    if (!state.name) {
+      logger.debug(`>>> No name found for subgraph: ${strand.documentId}`);
+      return false;
+    }
+
+    if (state.status !== "CONFIRMED") {
+      logger.debug(`>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`);
+      return false;
+    }
+
+    return true;
+  }
+
   async generate(
     strand: InternalTransmitterUpdate<DocumentModelDocument>,
   ): Promise<void> {
@@ -63,21 +92,18 @@ export class SubgraphGenerator extends BaseDocumentGen {
           `❌ Error during subgraph generation for ${state.name}:`,
           error,
         );
-        throw error;
       }
     } else {
       if (!state.name) {
-        logger.debug(
-          `⚠️ Skipping subgraph generation - missing name for subgraph`,
+        logger.error(
+          `❌ Skipping subgraph generation - missing name for subgraph`,
         );
-        throw new Error("Subgraph name is missing");
+        return;
       } else if (state.status !== "CONFIRMED") {
-        logger.debug(
-          `ℹ️ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
+        logger.error(
+          `❌ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
         );
-        throw new Error(
-          `Subgraph "${state.name}" is not confirmed (status: ${state.status})`,
-        );
+        return;
       }
     }
   }

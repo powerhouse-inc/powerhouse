@@ -51,6 +51,7 @@ export function switchboardCommand(program: Command) {
       "./powerhouse.config.json",
     )
     .option("--generate", "generate code when document model is updated")
+    .option("--dev", "enable development mode to load local packages")
     .option("--db-path <DB_PATH>", "path to the database")
     .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
     .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")

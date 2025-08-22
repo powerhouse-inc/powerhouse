@@ -6,8 +6,9 @@ import {
   baseCreateDocument,
   type Action,
   type ActionContext,
+  type BaseStateFromDocument,
+  type CreateState,
   type EditorProps,
-  type ExtendedStateFromDocument,
   type PHDocument,
   type Reducer,
 } from "document-model";
@@ -53,6 +54,11 @@ export type DriveEditorStoryComponent = (
 export type DocumentStory = StoryObj<EditorStoryComponent>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
+
+// Default createState function for PHDocument
+const defaultPHDocumentCreateState: CreateState<PHDocument> = (state) => {
+  return state as BaseStateFromDocument<PHDocument>;
+};
 
 export function createDocumentStory(
   Editor: EditorStoryComponent,
@@ -168,7 +174,8 @@ export function createDocumentStory(
     name: "New document",
     args: {
       document: baseCreateDocument(
-        initialState as Partial<ExtendedStateFromDocument<PHDocument>>,
+        defaultPHDocumentCreateState,
+        initialState as Partial<BaseStateFromDocument<PHDocument>>,
       ),
       user: {
         address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",

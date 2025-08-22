@@ -611,6 +611,10 @@ Options:
   --config-file <path>    Path to the powerhouse.config.js file. Default is 
                         './powerhouse.config.json'. This configures the switchboard behavior.
                         
+  --dev                   Enable development mode to load local packages from the current directory.
+                        This allows the switchboard to discover and load document models, processors,
+                        and subgraphs from your local development environment.
+                        
   --db-path <DB_PATH>     Path to the database for storing document data.
                         
   --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
@@ -626,6 +630,7 @@ Options:
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
+  $ ph switchboard --dev                     # Enable dev mode to load local packages
   $ ph switchboard --config-file custom.json # Use custom configuration file
   $ ph switchboard --packages pkg1 pkg2      # Load specific packages
   $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard
@@ -744,6 +749,10 @@ Options:
                         
   --disable-connect          Skip Connect initialization (only start switchboard and reactor).
                             Use this when you only need the backend services running.
+                        
+  --interactive              Enable interactive mode for code generation. When enabled, the system
+                            will prompt for user confirmation before generating code. This is useful
+                            for development when you want control over when code regeneration happens.
 
 Examples:
   $ ph vetra                                              # Start Vetra environment with defaults
@@ -753,6 +762,7 @@ Examples:
   $ ph vetra --logs                                       # Enable detailed logging
   $ ph vetra --remote-drive http://localhost:4001/d/docs  # Connect to remote drive
   $ ph vetra --disable-connect                            # Start only backend services
+  $ ph vetra --interactive                                # Enable interactive code generation mode
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 

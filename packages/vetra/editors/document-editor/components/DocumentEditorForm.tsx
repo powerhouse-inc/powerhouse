@@ -61,7 +61,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
       ).filter((e) => e !== null);
       setAvailableDocumentTypes(docTypes);
     }
-    loadData();
+    void loadData();
   }, [reactor]);
 
   // Use the debounce hook for name changes
@@ -132,10 +132,14 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
               value={selectedDocumentType}
               onChange={(e) => {
                 const selectedValue = e.target.value;
-                if (
-                  selectedValue &&
-                  !documentTypes.some((dt) => dt.documentType === selectedValue)
-                ) {
+                if (selectedValue) {
+                  // Remove existing document type if any
+                  if (documentTypes.length > 0) {
+                    const existingType = documentTypes[0];
+                    onRemoveDocumentType?.({ id: existingType.id });
+                  }
+
+                  // Add the new document type
                   const newTypeInput: AddDocumentTypeInput = {
                     id: Date.now().toString(), // Generate a unique ID
                     documentType: selectedValue,
@@ -144,24 +148,19 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                     id: newTypeInput.id,
                     documentType: newTypeInput.documentType,
                   };
-                  setDocumentTypes([...documentTypes, newType]);
+                  setDocumentTypes([newType]); // Replace with single item array
                   onAddDocumentType?.(newTypeInput);
                 }
                 setSelectedDocumentType("");
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select a document type to add</option>
-              {availableDocumentTypes
-                .filter(
-                  (docType) =>
-                    !documentTypes.some((dt) => dt.documentType === docType),
-                )
-                .map((docType) => (
-                  <option key={docType} value={docType}>
-                    {docType}
-                  </option>
-                ))}
+              <option value="">Select a document type</option>
+              {availableDocumentTypes.map((docType) => (
+                <option key={docType} value={docType}>
+                  {docType}
+                </option>
+              ))}
             </select>
           )}
           <div className="space-y-1">
@@ -173,9 +172,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                 {!isReadOnly && (
                   <button
                     onClick={() => {
-                      setDocumentTypes(
-                        documentTypes.filter((dt) => dt.id !== type.id),
-                      );
+                      setDocumentTypes([]);
                       onRemoveDocumentType?.({ id: type.id });
                     }}
                     className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"

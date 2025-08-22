@@ -1,14 +1,27 @@
 import { randomUUID } from "crypto";
-import { baseState } from "../src/document/ph-factories.js";
+import { defaultBaseState } from "../src/document/ph-factories.js";
 import {
   type Action,
   type BaseState,
+  type CreateState,
   type Operation,
-  type PartialState,
   type PHDocument,
   type StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
+
+/**
+ * Default createState function for PHDocument
+ */
+export const defaultPHDocumentCreateState: CreateState<PHDocument> = (
+  state,
+) => {
+  return {
+    ...defaultBaseState(),
+    global: state?.global ?? {},
+    local: state?.local ?? {},
+  };
+};
 
 export const fakeAction = (
   // including some of the operation fields while we refactor
@@ -38,7 +51,7 @@ export function createBaseState<TGlobal, TLocal>(
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
   return {
-    ...baseState(),
+    ...defaultBaseState(),
     global,
     local,
   };
@@ -53,6 +66,17 @@ export function createCountState(
 ): BaseState<CountState, CountLocalState> {
   return createBaseState({ count }, { name });
 }
+
+/**
+ * CreateState function for CountDocument to use with baseCreateDocument
+ */
+export const createCountDocumentState: CreateState<CountDocument> = (state) => {
+  return {
+    ...defaultBaseState(),
+    global: { count: 0, ...state?.global },
+    local: { name: "", ...state?.local },
+  };
+};
 
 // Counter reducer that supports increment/decrement actions
 export type IncrementAction = Action & { type: "INCREMENT"; input: {} };

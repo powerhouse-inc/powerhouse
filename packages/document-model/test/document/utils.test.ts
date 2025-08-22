@@ -19,6 +19,7 @@ import {
   type CountDocument,
   countReducer,
   createBaseState,
+  createCountDocumentState,
   fakeAction,
   increment,
   mutableCountReducer,
@@ -178,6 +179,7 @@ describe("Base utils", () => {
 
   it("should replay document and keep lastModified timestamp", async () => {
     const document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
       createBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = countReducer(document, setLocalName("test"));
@@ -203,6 +205,7 @@ describe("Base utils", () => {
   it("should work with mutable reducer", () => {
     const reducer = createReducer<CountDocument>(mutableCountReducer);
     const document = baseCreateDocument<CountDocument>(
+      createCountDocumentState,
       createBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = reducer(document, increment());

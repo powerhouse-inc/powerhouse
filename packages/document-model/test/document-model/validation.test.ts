@@ -14,7 +14,7 @@ import {
 import { type DocumentModelDocument } from "#document-model/gen/types.js";
 import { createDocument } from "#document-model/gen/utils.js";
 import {
-  type ExtendedStateFromDocument,
+  type BaseStateFromDocument,
   type ValidationError,
 } from "#document/types.js";
 
@@ -30,7 +30,7 @@ describe("DocumentModel Validation Error", () => {
       extension: "phdm",
       authorName: "test author",
       authorWebsite: "www.test.com",
-    } as Partial<ExtendedStateFromDocument<DocumentModelDocument>>);
+    } as Partial<BaseStateFromDocument<DocumentModelDocument>>);
   });
 
   describe("initial state", () => {

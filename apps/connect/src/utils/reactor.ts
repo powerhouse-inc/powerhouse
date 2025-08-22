@@ -8,12 +8,13 @@ import {
 } from "document-drive";
 import { BrowserStorage } from "document-drive/storage/browser";
 import {
-  type IDocumentAdminStorage,
-  type IDocumentOperationStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "document-drive/storage/types";
-import { type DocumentModelModule } from "document-model";
+    type IDocumentAdminStorage,
+    type IDocumentOperationStorage,
+    type IDocumentStorage,
+    type IDriveOperationStorage,
+} from 'document-drive/storage/types';
+import { type DocumentModelModule } from 'document-model';
+import { createRemoveOldRemoteDrivesConfig } from './drive-preservation.js';
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -56,18 +57,13 @@ export const getReactorDefaultDrivesConfig = (): Pick<
     }),
   );
 
-  return {
-    defaultDrives: {
-      remoteDrives,
-      removeOldRemoteDrives:
-        defaultDrivesUrl.length > 0
-          ? {
-              strategy: "preserve-by-url-and-detach",
-              urls: defaultDrivesUrl,
-            }
-          : { strategy: "preserve-all" },
-    },
-  };
+    return {
+        defaultDrives: {
+            remoteDrives,
+            removeOldRemoteDrives:
+                createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
+        },
+    };
 };
 
 export function createBrowserStorage(

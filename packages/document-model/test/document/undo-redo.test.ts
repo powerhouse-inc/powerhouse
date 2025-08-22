@@ -2,15 +2,13 @@ import { type Action, type Operation } from "#document/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { noop, redo, undo } from "../../src/document/actions/creators.js";
 import { processUndoRedo } from "../../src/document/reducer.js";
-import {
-  baseCreateDocument,
-  baseCreateExtendedState,
-} from "../../src/document/utils/base.js";
+import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
   type CountAction,
   type CountDocument,
   countReducer,
   createBaseState,
+  createCountDocumentState,
   increment,
 } from "../helpers.js";
 
@@ -18,11 +16,9 @@ describe("UNDO/REDO", () => {
   let document: CountDocument;
 
   beforeEach(() => {
-    const initialState = baseCreateExtendedState<CountDocument>(
-      createBaseState({ count: 0 }, { name: "" }),
-    );
+    const initialState = createBaseState({ count: 0 }, { name: "" });
 
-    document = baseCreateDocument(initialState);
+    document = baseCreateDocument(createCountDocumentState, initialState);
 
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -91,11 +87,9 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" }),
-      );
+      const initialState = createBaseState({ count: 0 }, { name: "" });
 
-      document = baseCreateDocument(initialState);
+      document = baseCreateDocument(createCountDocumentState, initialState);
 
       const skip = 0;
       const undoAction = undo();
@@ -109,11 +103,9 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = baseCreateExtendedState<CountDocument>(
-        createBaseState({ count: 0 }, { name: "" }),
-      );
+      const initialState = createBaseState({ count: 0 }, { name: "" });
 
-      document = baseCreateDocument(initialState);
+      document = baseCreateDocument(createCountDocumentState, initialState);
 
       const skip = 0;
       const redoAction = redo();

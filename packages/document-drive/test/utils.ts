@@ -4,7 +4,7 @@ import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
   type BaseState,
-  baseState,
+  defaultBaseState,
   documentModelDocumentModelModule,
   type DocumentModelModule,
   generateId,
@@ -234,7 +234,7 @@ export function createBaseState<TGlobal, TLocal>(
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
   return {
-    ...baseState(),
+    ...defaultBaseState(),
     global,
     local,
   };

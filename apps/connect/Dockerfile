@@ -32,7 +32,6 @@ ENV TAG=$TAG
 # Install ph-cmd
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN pnpm add -g ph-cmd@$TAG
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf.template
@@ -47,7 +46,15 @@ ENV PH_CONNECT_BASE_PATH="/"
 WORKDIR /app
 
 # Create and initialize the project
-RUN ph init project --package-manager pnpm --version ${TAG}
+RUN pnpm add -g ph-cmd@$TAG
+RUN if [[ "$TAG" == *"dev"* ]]; then \
+        ph init project --dev --package-manager pnpm; \
+    elif [[ "$TAG" == *"staging"* ]]; then \
+        ph init project --staging --package-manager pnpm; \
+    else \
+        ph init project --package-manager pnpm; \
+    fi
+
 WORKDIR /app/project
 
 # Copy and set up entrypoint script

@@ -1,3 +1,103 @@
+## 4.1.0-dev.33 (2025-08-21)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.32 (2025-08-21)
+
+### 🚀 Features
+
+- **vetra:** restrict document editor to single document type selection ([7280e5a26](https://github.com/powerhouse-inc/powerhouse/commit/7280e5a26))
+
+### 🩹 Fixes
+
+- updating the remainder of the projects with these breaking changes ([0d750fa6c](https://github.com/powerhouse-inc/powerhouse/commit/0d750fa6c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.31 (2025-08-20)
+
+### 🚀 Features
+
+- added interactive mode to vetra command ([#1775](https://github.com/powerhouse-inc/powerhouse/pull/1775))
+
+### 🩹 Fixes
+
+- **codegen:** document drive templates ([0561a1991](https://github.com/powerhouse-inc/powerhouse/commit/0561a1991))
+- **vetra:** improve error handling in document generation processors ([518c875f3](https://github.com/powerhouse-inc/powerhouse/commit/518c875f3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.30 (2025-08-20)
+
+### 🩹 Fixes
+
+- add additional tags ([4f0cf8658](https://github.com/powerhouse-inc/powerhouse/commit/4f0cf8658))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.29 (2025-08-20)
+
+### 🩹 Fixes
+
+- fetch tags :-) ([df0b7beba](https://github.com/powerhouse-inc/powerhouse/commit/df0b7beba))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.28 (2025-08-20)
+
+### 🩹 Fixes
+
+- removed metadata extraction from commit ([637960021](https://github.com/powerhouse-inc/powerhouse/commit/637960021))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.27 (2025-08-20)
+
+### 🩹 Fixes
+
+- extract metadata tags and labels for docker ([bb9c81ce7](https://github.com/powerhouse-inc/powerhouse/commit/bb9c81ce7))
+- use github tag properly ([95ccff4b8](https://github.com/powerhouse-inc/powerhouse/commit/95ccff4b8))
+- proper tag for docker images ([e73e10617](https://github.com/powerhouse-inc/powerhouse/commit/e73e10617))
+- **vetra:** document handling and module resolution ([0f686b5fb](https://github.com/powerhouse-inc/powerhouse/commit/0f686b5fb))
+- use patname secret instead of github token ([db9dfd5cd](https://github.com/powerhouse-inc/powerhouse/commit/db9dfd5cd))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.26 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy alternative approach ([2a5522cdc](https://github.com/powerhouse-inc/powerhouse/commit/2a5522cdc))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.25 (2025-08-20)
+
+### 🩹 Fixes
+
+- docker deploy ([b057a7cce](https://github.com/powerhouse-inc/powerhouse/commit/b057a7cce))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.24 (2025-08-20)
 
 ### 🚀 Features

@@ -2,13 +2,13 @@ name: powerhouse
 
 services:
   connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:main
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
       - BASE_PATH=/
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:3000:4000"
     networks:
       - powerhouse_network
     hostname: connect.powerhouse
@@ -18,12 +18,12 @@ services:
       redis:
         condition: service_healthy
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:main
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:dev
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
       - REDIS_TLS_URL=redis://redis:6379
     ports:
-      - "127.0.0.1:3000:4001"
+      - "127.0.0.1:4000:4001"
     hostname: switchboard.powerhouse
     networks:
       - powerhouse_network

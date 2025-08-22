@@ -1,8 +1,33 @@
 # Release Changelog
 
-## 🚀 **v5.1.0** (PRE-RELEASE)
+## 🚀 **(PRE-RELEASE)**
 
 ## BREAKING CHANGES
+
+### `ProcessorFactory` signature change.
+
+The `ProcessorFactory` now takes a `PHDocumentHeader` instead of a `driveId`.
+
+**Before (v5.0):**
+
+```typescript
+export type ProcessorFactory = (
+  driveId: string,
+) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+```
+
+**After (v5.1):**
+
+```typescript
+export type ProcessorFactory = (
+  driveHeader: PHDocumentHeader,
+) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+```
+
+## Migration Steps
+
+1. Update your processor factories to take a `PHDocumentHeader` instead of a `driveId`.
+2. If necessary, regenerate your processor with `ph generate` to get the latest changes.
 
 ### Type parameters have been removed
 
@@ -49,6 +74,24 @@ const operation: Operation = {
   scope: "global",
 };
 ```
+
+### `PHBaseState` changes
+
+The `PHBaseState` type has a number of changes:
+
+- It no longer has a type parameter.
+- `document` and `auth` scopes are now required.
+
+### `Action` and `Operation` changes
+
+The `Action` and `Operation` types have a number of changes:
+
+- `Operation` no longer extends `Action`, it _has_ one.
+- Some fields have been renamed or removed.
+
+### `ExtendedState` has been removed
+
+This includes `createExtendedState`, `ExtendedStateFromDocument`, and `CreateExtendedState` functions.
 
 ## Migration Steps
 

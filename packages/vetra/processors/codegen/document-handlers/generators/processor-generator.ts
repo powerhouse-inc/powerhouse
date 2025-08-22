@@ -11,6 +11,45 @@ import { BaseDocumentGen } from "../base-document-gen.js";
 export class ProcessorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/processor";
 
+  /**
+   * Validate if this processor strand should be processed
+   */
+  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+    // First run base validation
+    if (!super.shouldProcess(strand)) {
+      return false;
+    }
+
+    const state = strand.state as ProcessorModuleState;
+    if (!state) {
+      logger.debug(`>>> No state found for processor: ${strand.documentId}`);
+      return false;
+    }
+
+    // Check if we have a valid processor name, type, document types, and it's confirmed
+    if (!state.name) {
+      logger.debug(`>>> No name found for processor: ${strand.documentId}`);
+      return false;
+    }
+
+    if (!state.type) {
+      logger.debug(`>>> No type found for processor: ${state.name}`);
+      return false;
+    }
+
+    if (!state.documentTypes || state.documentTypes.length === 0) {
+      logger.debug(`>>> No document types found for processor: ${state.name}`);
+      return false;
+    }
+
+    if (state.status !== "CONFIRMED") {
+      logger.debug(`>>> Processor not confirmed: ${state.name} (status: ${state.status})`);
+      return false;
+    }
+
+    return true;
+  }
+
   async generate(
     strand: InternalTransmitterUpdate<DocumentModelDocument>,
   ): Promise<void> {
@@ -32,7 +71,8 @@ export class ProcessorGenerator extends BaseDocumentGen {
         } else if (state.type === "relational") {
           processorType = "relationalDb";
         } else {
-          throw new Error(`Unsupported processor type: ${state.type}`);
+          logger.error(`❌ Unsupported processor type: ${state.type}`);
+          return;
         }
 
         // Extract document types from the state
@@ -57,31 +97,28 @@ export class ProcessorGenerator extends BaseDocumentGen {
         if (error instanceof Error) {
           logger.error(`❌ Error message: ${error.message}`);
         }
-        throw error;
       }
     } else {
       if (!state.name) {
-        logger.debug(
-          `⚠️ Skipping processor generation - missing name for processor`,
+        logger.error(
+          `❌ Skipping processor generation - missing name for processor`,
         );
-        throw new Error("Processor name is missing");
+        return;
       } else if (!state.type) {
-        logger.debug(
-          `⚠️ Skipping processor generation - missing type for processor "${state.name}"`,
+        logger.error(
+          `❌ Skipping processor generation - missing type for processor "${state.name}"`,
         );
-        throw new Error(`Processor "${state.name}" has no type`);
+        return;
       } else if (state.documentTypes.length === 0) {
-        logger.debug(
-          `⚠️ Skipping processor generation - missing document types for processor "${state.name}"`,
+        logger.error(
+          `❌ Skipping processor generation - missing document types for processor "${state.name}"`,
         );
-        throw new Error(`Processor "${state.name}" has no document types`);
+        return;
       } else if (state.status !== "CONFIRMED") {
-        logger.debug(
-          `ℹ️ Skipping processor generation - processor "${state.name}" is not confirmed (status: ${state.status})`,
+        logger.error(
+          `❌ Skipping processor generation - processor "${state.name}" is not confirmed (status: ${state.status})`,
         );
-        throw new Error(
-          `Processor "${state.name}" is not confirmed (status: ${state.status})`,
-        );
+        return;
       }
     }
   }
