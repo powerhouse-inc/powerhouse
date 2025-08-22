@@ -43,7 +43,7 @@ describe("Drive operations", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   const storage: MemoryStorage = new MemoryStorage();
   let server = new ReactorBuilder(documentModels).withStorage(storage).build();

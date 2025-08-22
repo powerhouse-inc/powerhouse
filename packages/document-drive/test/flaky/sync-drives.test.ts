@@ -35,7 +35,7 @@ describe("Document Drive Server interaction", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   function setupHandlers(server: DocumentDriveServer) {
     const handlers = [

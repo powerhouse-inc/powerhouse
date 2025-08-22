@@ -3,21 +3,20 @@ import { type BaseDocumentDriveServer } from "#server/base-server";
 import { type IDocumentDriveServer } from "#server/types";
 import {
   type Action,
-  type BaseState,
-  defaultBaseState,
+  type PHBaseState,
   documentModelDocumentModelModule,
   type DocumentModelModule,
   generateId,
   type Operation,
   type PHDocument,
-  type PHReducer,
+  type Reducer,
 } from "document-model";
 import { type ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [
   driveDocumentModelModule,
   documentModelDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 export function expectUUID(expect: ExpectStatic): unknown {
   return expect.stringMatching(
@@ -30,7 +29,7 @@ export function expectUTCTimestamp(expect: ExpectStatic): unknown {
 }
 
 export function buildOperation<TDocument extends PHDocument>(
-  reducer: PHReducer<TDocument>,
+  reducer: Reducer<any>,
   document: TDocument,
   action: Action,
   index?: number,
@@ -43,13 +42,13 @@ export function buildOperation<TDocument extends PHDocument>(
 }
 
 export function buildOperations<TDocument extends PHDocument>(
-  reducer: PHReducer<TDocument>,
+  reducer: Reducer<any>,
   document: TDocument,
   actions: Array<Action>,
 ): Operation[] {
   const operations: Operation[] = [];
   for (const action of actions) {
-    document = reducer(document, action);
+    document = reducer(document, action) as TDocument;
 
     const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
@@ -58,7 +57,7 @@ export function buildOperations<TDocument extends PHDocument>(
 }
 
 export function buildOperationAndDocument<TDocument extends PHDocument>(
-  reducer: PHReducer<TDocument>,
+  reducer: Reducer<any>,
   document: TDocument,
   action: Action,
   index?: number,
@@ -71,7 +70,7 @@ export function buildOperationAndDocument<TDocument extends PHDocument>(
   const operation = newDocument.operations[action.scope].slice().pop()!;
 
   return {
-    document: newDocument,
+    document: newDocument as TDocument,
     operation: {
       ...operation,
       index: index ?? operation.index,
@@ -87,7 +86,7 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
     private driveId: string,
     private documentId: string,
     private document: TDocument,
-    private reducer: PHReducer<TDocument>,
+    private reducer: Reducer<any>,
   ) {}
 
   getDocument(): TDocument {
@@ -151,7 +150,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
     private server: IDocumentDriveServer,
     private driveId: string,
     private document: TDocument,
-    private reducer: PHReducer<TDocument>,
+    private reducer: Reducer<any>,
   ) {}
 
   getDocument(): TDocument {
@@ -232,9 +231,12 @@ export const fakeAction = (
 export function createBaseState<TGlobal, TLocal>(
   global: TGlobal,
   local: TLocal,
-): BaseState<TGlobal, TLocal> {
+): PHBaseState & { global: TGlobal; local: TLocal } {
   return {
-    ...defaultBaseState(),
+    auth: {},
+    document: {
+      version: "0",
+    },
     global,
     local,
   };

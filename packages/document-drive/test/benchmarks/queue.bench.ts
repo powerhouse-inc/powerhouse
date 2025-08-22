@@ -16,7 +16,7 @@ import { buildOperations } from "../utils.js";
 const documentModels = [
   driveDocumentModelModule,
   documentModelDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 const BENCH_OPTIONS: BenchOptions = {
   iterations: 10,

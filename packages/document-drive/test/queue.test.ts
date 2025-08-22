@@ -37,7 +37,7 @@ const REDIS_TLS_URL = process.env.REDIS_TLS_URL || "redis://localhost:6379";
 const documentModels = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 const queueLayers: [string, () => Promise<IQueueManager>][] = [
   // ["Memory Queue", () => Promise.resolve(new BaseQueueManager(3))],

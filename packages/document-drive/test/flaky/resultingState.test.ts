@@ -12,7 +12,7 @@ const cache = new InMemoryCache();
 describe("Document operations", () => {
   const documentModels = [
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   const storage = new PrismaStorage(prismaClient, cache);
   let server: IDocumentDriveServer;

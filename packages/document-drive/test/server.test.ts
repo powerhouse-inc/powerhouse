@@ -133,6 +133,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         global: {
           name: "name",
           icon: "icon",
+          nodes: [],
         },
         local: {
           availableOffline: false,

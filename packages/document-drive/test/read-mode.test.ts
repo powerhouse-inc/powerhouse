@@ -53,16 +53,14 @@ fetchMocker.enableMocks();
 const documentModels = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
-function getDocumentModelModule<TDocument extends PHDocument>(
-  id: string,
-): DocumentModelModule<TDocument> {
+function getDocumentModelModule(id: string): DocumentModelModule<any> {
   const documentModel = documentModels.find((d) => d.documentModel.id === id);
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }
-  return documentModel as unknown as DocumentModelModule<TDocument>;
+  return documentModel as unknown as DocumentModelModule<any>;
 }
 
 function buildDriveDocument(
@@ -71,7 +69,12 @@ function buildDriveDocument(
 ): DocumentDriveDocument {
   const doc = createDocument(
     createState({
-      global: state,
+      global: {
+        name: "",
+        icon: null,
+        nodes: [],
+        ...state,
+      },
     })
   );
   doc.header.id = id;
@@ -85,7 +88,16 @@ function buildModelDocument(
 ): DocumentModelDocument {
   return createDocumentModelDocument(
     createDocumentModelState({
-      global: state,
+      global: {
+        name: "",
+        id: "",
+        version: 0,
+        modules: [],
+        examples: [],
+        author: "",
+        description: "",
+        ...state,
+      } as DocumentModelState,
     })
   );
 }
@@ -349,14 +361,19 @@ describe.skip("Read mode methods", () => {
     const documentId = generateId();
 
     let drive = createDocument(
-      createBaseState(
-        {
+      createState({
+        global: {
           name: "Read drive",
           nodes: [],
           icon: null,
         },
-        {},
-      )
+        local: {
+          availableOffline: false,
+          listeners: [],
+          sharingType: "PUBLIC",
+          triggers: [],
+        },
+      }) as any
     );
 
     drive.header.id = readDriveId;

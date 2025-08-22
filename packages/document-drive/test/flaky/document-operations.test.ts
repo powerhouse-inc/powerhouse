@@ -20,7 +20,7 @@ describe("Document operations", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   let server = new ReactorBuilder(documentModels).build();
   beforeEach(async () => {

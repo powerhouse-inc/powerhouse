@@ -124,6 +124,7 @@ describe.each(storageLayers)(
             availableOffline: false,
             listeners: [],
             sharingType: null,
+            triggers: [],
           },
         )
       );
@@ -174,6 +175,7 @@ describe.each(storageLayers)(
             availableOffline: false,
             listeners: [],
             sharingType: null,
+            triggers: [],
           },
         )
       );
@@ -250,6 +252,7 @@ describe.each(storageLayers)(
             availableOffline: false,
             listeners: [],
             sharingType: null,
+            triggers: [],
           },
         )
       );
