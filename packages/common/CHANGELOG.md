@@ -1,3 +1,17 @@
+## 4.1.0-dev.33 (2025-08-21)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.32 (2025-08-21)
+
+### 🩹 Fixes
+
+- updating the remainder of the projects with these breaking changes ([0d750fa6c](https://github.com/powerhouse-inc/powerhouse/commit/0d750fa6c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.31 (2025-08-20)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

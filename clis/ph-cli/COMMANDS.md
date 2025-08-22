@@ -408,6 +408,10 @@ Options:
   --config-file <path>    Path to the powerhouse.config.js file. Default is 
                         './powerhouse.config.json'. This configures the switchboard behavior.
                         
+  --dev                   Enable development mode to load local packages from the current directory.
+                        This allows the switchboard to discover and load document models, processors,
+                        and subgraphs from your local development environment.
+                        
   --db-path <DB_PATH>     Path to the database for storing document data.
                         
   --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
@@ -423,6 +427,7 @@ Options:
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
+  $ ph switchboard --dev                     # Enable dev mode to load local packages
   $ ph switchboard --config-file custom.json # Use custom configuration file
   $ ph switchboard --packages pkg1 pkg2      # Load specific packages
   $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard

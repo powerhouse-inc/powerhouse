@@ -4,6 +4,5 @@
     "types": ["node", "vitest/globals", "jest"],
     "outDir": "./dist"
   },
-  "include": ["**/*"],
-  "exclude": ["test/**/*"]
+  "include": ["**/*"]
 }

@@ -1,3 +1,30 @@
+## 4.1.0-dev.33 (2025-08-21)
+
+### 🚀 Features
+
+- add configurable drive preservation strategy for vetra ([aa8676a13](https://github.com/powerhouse-inc/powerhouse/commit/aa8676a13))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.32 (2025-08-21)
+
+### 🚀 Features
+
+- **vetra:** restrict document editor to single document type selection ([7280e5a26](https://github.com/powerhouse-inc/powerhouse/commit/7280e5a26))
+
+### 🩹 Fixes
+
+- updating the remainder of the projects with these breaking changes ([0d750fa6c](https://github.com/powerhouse-inc/powerhouse/commit/0d750fa6c))
+- **ph-cli:** read reactor port from config file in vetra command ([efacf3ceb](https://github.com/powerhouse-inc/powerhouse/commit/efacf3ceb))
+- **ph-cli:** resolve local document model loading in switchboard and vetra ([262f13035](https://github.com/powerhouse-inc/powerhouse/commit/262f13035))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.31 (2025-08-20)
 
 ### 🚀 Features

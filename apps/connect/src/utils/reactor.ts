@@ -14,6 +14,7 @@ import {
     type IDriveOperationStorage,
 } from 'document-drive/storage/types';
 import { type DocumentModelModule } from 'document-model';
+import { createRemoveOldRemoteDrivesConfig } from './drive-preservation.js';
 
 const DEFAULT_DRIVES_URL =
     (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -60,12 +61,7 @@ export const getReactorDefaultDrivesConfig = (): Pick<
         defaultDrives: {
             remoteDrives,
             removeOldRemoteDrives:
-                defaultDrivesUrl.length > 0
-                    ? {
-                          strategy: 'preserve-by-url-and-detach',
-                          urls: defaultDrivesUrl,
-                      }
-                    : { strategy: 'preserve-all' },
+                createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
         },
     };
 };

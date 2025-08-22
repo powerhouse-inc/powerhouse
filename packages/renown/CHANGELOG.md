@@ -1,3 +1,11 @@
+## 4.1.0-dev.33 (2025-08-21)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.32 (2025-08-21)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.31 (2025-08-20)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

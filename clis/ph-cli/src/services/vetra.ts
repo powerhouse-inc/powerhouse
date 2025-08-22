@@ -109,6 +109,7 @@ async function spawnConnect(
       env: {
         ...process.env,
         PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
+        PH_CONNECT_DRIVES_PRESERVE_STRATEGY: "preserve-all",
       },
     },
   ) as ChildProcessWithoutNullStreams;
@@ -157,7 +158,7 @@ async function spawnConnect(
 export async function startVetra({
   generate,
   watch,
-  switchboardPort = DefaultReactorOptions.port,
+  switchboardPort,
   connectPort,
   configFile,
   verbose = false,
@@ -182,6 +183,10 @@ export async function startVetra({
     }
 
     const baseConfig = getConfig(configFile);
+
+    // Use config port if no CLI port provided, fallback to default
+    const resolvedSwitchboardPort =
+      switchboardPort ?? baseConfig.reactor?.port ?? DefaultReactorOptions.port;
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
@@ -200,8 +205,9 @@ export async function startVetra({
     const switchboardResult = await startLocalVetraSwitchboard(
       {
         generate,
-        port: switchboardPort,
+        port: resolvedSwitchboardPort,
         watch,
+        dev: true, // Vetra always runs in dev mode to load local packages
         https,
         configFile,
         verbose,
