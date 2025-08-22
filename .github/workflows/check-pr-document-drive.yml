@@ -83,6 +83,10 @@ jobs:
         run: pnpm prisma generate
         working-directory: packages/document-drive
 
+      - name: Copy Prisma files
+        run: pnpm copy-prisma
+        working-directory: packages/document-drive
+
       - name: Push database schema
         run: pnpm prisma db push
         working-directory: packages/document-drive
