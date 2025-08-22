@@ -8,12 +8,15 @@
     "prepare": "husky",
     "tsc": "tsc --build",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --cache --cache-strategy content",
+    "generate-document-drive-prisma": "pnpm --filter document-drive prisma-generate",
     "build:all": "pnpm -r --no-bail build",
     "test:all": "pnpm -r --no-bail test",
     "test:all:ci": "pnpm --filter !document-drive -r --no-bail test",
     "storybook:all": "pnpm -r --no-bail run build-storybook",
-    "check:all": "pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all",
-    "check:all:ci": "pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all:ci"
+    "check:all": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all",
+    "check:all:ci": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all:ci",
+    "simulate-fresh-git-clone": "pnpm exec scripts/simulate-fresh-git-clone.sh",
+    "simulate-check-all-ci": "pnpm simulate-fresh-git-clone && pnpm i --frozen-lockfile && pnpm check:all:ci"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
