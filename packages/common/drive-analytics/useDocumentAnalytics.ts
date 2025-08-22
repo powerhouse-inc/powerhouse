@@ -66,7 +66,7 @@ export const useDocumentAnalytics = (options: UseDocumentAnalyticsOptions) => {
   let sources: AnalyticsPath[] | undefined;
   if (options.filters?.driveId || options.filters?.documentId) {
     sources = [];
-    
+
     if (options.filters?.driveId && options.filters?.documentId) {
       // Specific drive and document combinations
       for (const driveId of options.filters.driveId) {
@@ -74,7 +74,9 @@ export const useDocumentAnalytics = (options: UseDocumentAnalyticsOptions) => {
           const branch = options.filters.branch?.[0] ?? "*";
           const scope = options.filters.scope?.[0] ?? "*";
           sources.push(
-            AnalyticsPath.fromString(`ph/doc/${driveId}/${documentId}/${branch}/${scope}`)
+            AnalyticsPath.fromString(
+              `ph/doc/${driveId}/${documentId}/${branch}/${scope}`,
+            ),
           );
         }
       }
@@ -84,7 +86,7 @@ export const useDocumentAnalytics = (options: UseDocumentAnalyticsOptions) => {
         const branch = options.filters.branch?.[0] ?? "*";
         const scope = options.filters.scope?.[0] ?? "*";
         sources.push(
-          AnalyticsPath.fromString(`ph/doc/${driveId}/*/${branch}/${scope}`)
+          AnalyticsPath.fromString(`ph/doc/${driveId}/*/${branch}/${scope}`),
         );
       }
     }

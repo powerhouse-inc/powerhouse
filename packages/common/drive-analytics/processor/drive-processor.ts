@@ -7,7 +7,6 @@ import {
 import { childLogger } from "document-drive";
 import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import type { PHDocument } from "document-model";
 
 const CREATE_NODE_ACTIONS = ["ADD_FILE", "ADD_FOLDER"];
 const DUPLICATE_NODE_ACTIONS = ["COPY_NODE"];
@@ -40,9 +39,7 @@ export class DriveAnalyticsProcessor implements IProcessor {
     //
   }
 
-  async onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     if (strands.length === 0) {
       return;
     }
@@ -100,7 +97,9 @@ export class DriveAnalyticsProcessor implements IProcessor {
               operation: AnalyticsPath.fromString(
                 `ph/drive/operation/${operation.action.type}/${operation.index}`,
               ),
-              target: AnalyticsPath.fromString(`ph/drive/target/${target}/${targetId}`),
+              target: AnalyticsPath.fromString(
+                `ph/drive/target/${target}/${targetId}`,
+              ),
               actionType: AnalyticsPath.fromString(
                 `ph/drive/actionType/${actionType}/${targetId}`,
               ),

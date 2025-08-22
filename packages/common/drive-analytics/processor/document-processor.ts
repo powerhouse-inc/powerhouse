@@ -7,7 +7,6 @@ import {
 import { childLogger } from "document-drive";
 import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import type { PHDocument } from "document-model";
 
 export type NodeTarget = "DRIVE" | "NODE";
 
@@ -19,9 +18,7 @@ export class DocumentAnalyticsProcessor implements IProcessor {
     //
   }
 
-  async onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     if (strands.length === 0) {
       return;
     }
