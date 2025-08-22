@@ -7,7 +7,7 @@ import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-/** these files are typically ignored by eslint by default, so there is no need to investigate why they are ignored */
+/** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
   // build artifacts
   "**/node_modules/",

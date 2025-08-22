@@ -77,7 +77,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter document-drive...
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm prisma generate
@@ -88,7 +88,10 @@ jobs:
         working-directory: packages/document-drive
 
       - name: Build
-        run: pnpm build
+        run: pnpm tsc
+
+      - name: Lint
+        run: pnpm lint
         working-directory: packages/document-drive
 
       - name: Run tests
