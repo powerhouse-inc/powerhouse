@@ -14,7 +14,6 @@ import {
   type InternalTransmitterUpdate,
 } from "document-drive/server/listener/transmitter/internal";
 import { type Listener } from "document-drive/server/types";
-import { type DocumentModelDocument } from "document-model";
 import { readFileSync } from "node:fs";
 
 export type ReactorOptions = StartServerOptions & {
@@ -97,9 +96,7 @@ async function addGenerateTransmitter(
   config: PowerhouseConfig,
 ) {
   const processor: IProcessor = {
-    onStrands: async function (
-      strands: InternalTransmitterUpdate<DocumentModelDocument>[],
-    ) {
+    onStrands: async function (strands: InternalTransmitterUpdate[]) {
       const documentPaths = new Set<string>();
       for (const strand of strands) {
         documentPaths.add(

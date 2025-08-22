@@ -10,13 +10,13 @@ import {
   ReactorBuilder,
   driveDocumentModelModule,
 } from "document-drive";
-import { DocumentAlreadyExistsError } from "document-drive/server/error";
 import RedisCache from "document-drive/cache/redis";
+import { DocumentAlreadyExistsError } from "document-drive/server/error";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
-  type DocumentModelModule,
   documentModelDocumentModelModule,
+  type DocumentModelModule,
 } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
@@ -75,7 +75,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const reactor = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[])
+  ] as unknown as DocumentModelModule[])
     .withStorage(storage)
     .withCache(cache)
     .build();
