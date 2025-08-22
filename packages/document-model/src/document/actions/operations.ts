@@ -1,7 +1,7 @@
-import { PHBaseState } from "#document/ph-types.js";
+import { type PHBaseState } from "#document/ph-types.js";
 import { castDraft, create, type Draft } from "mutative";
 import {
-  LoadStateActionInput,
+  type LoadStateActionInput,
   type PruneActionInput,
 } from "../schema/types.js";
 import { type Action, type PHDocument, type StateReducer } from "../types.js";

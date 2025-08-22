@@ -1,5 +1,5 @@
 import { actionSigner, operationWithContext } from "#document/ph-factories.js";
-import { PHBaseState } from "#document/ph-types.js";
+import { type PHBaseState } from "#document/ph-types.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import {

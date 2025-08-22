@@ -1,4 +1,4 @@
-import { PHBaseState } from "#document/ph-types.js";
+import { type PHBaseState } from "#document/ph-types.js";
 import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,

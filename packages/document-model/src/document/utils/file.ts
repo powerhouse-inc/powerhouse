@@ -1,4 +1,4 @@
-import { PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
+import { type PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
 import { type Reducer } from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";

@@ -12,7 +12,7 @@ import {
   operationFromAction,
   operationFromOperation,
 } from "./ph-factories.js";
-import { PHBaseState, type PHDocumentHeader } from "./ph-types.js";
+import { type PHBaseState, type PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
