@@ -1,15 +1,13 @@
 import { defaultBaseState } from "#document/ph-factories.js";
 import {
-  CreateDocument,
-  CreateState,
-  LoadFromFile,
-  LoadFromInput,
-  SaveToFile,
-  SaveToFileHandle,
+  type CreateDocument,
+  type CreateState,
+  type LoadFromFile,
+  type LoadFromInput,
+  type SaveToFile,
+  type SaveToFileHandle,
 } from "#document/types.js";
-import {
-  baseCreateDocument,
-} from "#document/utils/base.js";
+import { baseCreateDocument } from "#document/utils/base.js";
 import {
   baseLoadFromFile,
   baseLoadFromInput,
@@ -34,7 +32,6 @@ export const createState: CreateState<DocumentModelDocument> = (state) => {
     local: { ...initialLocalState, ...(state?.local ?? {}) },
   };
 };
-
 
 export const createDocument: CreateDocument<DocumentModelDocument> = (
   state,

@@ -58,16 +58,9 @@ export function BaseEditor(props: IProps) {
     [showCreateDocumentModal, documentModels?.length],
   );
 
-  const onCreatePackageFile = useCallback(
-    () => {
-      addDocument(
-        driveId,
-        'vetra-package',
-        DOCUMENT_TYPES.documentPackage,
-      )
-    },
-    [driveId],
-  );
+  const onCreatePackageFile = useCallback(() => {
+    addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage);
+  }, [driveId]);
 
   return (
     <div className="bg-white" style={{ height: "100%" }}>

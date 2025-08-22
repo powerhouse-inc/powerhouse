@@ -18,7 +18,10 @@ export class DocumentCodegenFactory {
   /**
    * Create a DocumentCodegenManager with all standard generators registered
    */
-  static createManager(config: Config, interactiveMode: boolean = false): DocumentCodegenManager {
+  static createManager(
+    config: Config,
+    interactiveMode: boolean = false,
+  ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 
     // Register all the standard generators
@@ -44,7 +47,7 @@ export class DocumentCodegenFactory {
   static createManagerWithGenerators(
     config: Config,
     generators: Array<new (config: Config) => any>,
-    interactiveMode: boolean = false
+    interactiveMode: boolean = false,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 

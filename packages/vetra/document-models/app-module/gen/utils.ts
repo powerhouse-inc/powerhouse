@@ -31,10 +31,7 @@ const utils: DocumentModelUtils<AppModuleDocument> = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(
-      utils.createState,
-      state,
-    );
+    const document = baseCreateDocument(utils.createState, state);
 
     document.header.documentType = "powerhouse/app";
 

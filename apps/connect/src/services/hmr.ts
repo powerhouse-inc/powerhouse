@@ -77,37 +77,35 @@ export async function handlePackageEvents(
 export function useSubscribeToVetraPackages() {
   const hmrRef = useRef<ViteHotContext>();
 
-    useEffect(() => {
-        const handler = async (data: PackagesUpdate) => {
-            // Get current packages to preserve built-in ones
-            const currentPackages = window.vetraPackages || [];
+  useEffect(() => {
+    const handler = async (data: PackagesUpdate) => {
+      // Get current packages to preserve built-in ones
+      const currentPackages = window.vetraPackages || [];
 
-            const modulesImport = import(
-                /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
-            ) as Promise<{
-                default: DocumentModelLib[];
-            }>;
-            const modules = await modulesImport;
-            const legacyLibs = modules.default;
+      const modulesImport = import(
+        /* @vite-ignore */ `${data.url}?t=${data.timestamp}`
+      ) as Promise<{
+        default: DocumentModelLib[];
+      }>;
+      const modules = await modulesImport;
+      const legacyLibs = modules.default;
 
-            const newVetraPackages = legacyLibs.map(
-                convertLegacyLibToVetraPackage,
-            );
+      const newVetraPackages = legacyLibs.map(convertLegacyLibToVetraPackage);
 
-            // Only preserve the built-in common package, replace all external packages
-            const preservedPackages = currentPackages.filter(
-                pkg => pkg.id === 'powerhouse/common',
-            );
+      // Only preserve the built-in common package, replace all external packages
+      const preservedPackages = currentPackages.filter(
+        (pkg) => pkg.id === "powerhouse/common",
+      );
 
-            const mergedPackages = [...preservedPackages, ...newVetraPackages];
-            setVetraPackages(mergedPackages);
-        };
-        async function subscribe() {
-            const hmr = await getHMRModule();
-            hmrRef.current = hmr;
-            hmr?.on('studio:external-packages-updated', handler);
-        }
-        subscribe().catch(logger.error);
+      const mergedPackages = [...preservedPackages, ...newVetraPackages];
+      setVetraPackages(mergedPackages);
+    };
+    async function subscribe() {
+      const hmr = await getHMRModule();
+      hmrRef.current = hmr;
+      hmr?.on("studio:external-packages-updated", handler);
+    }
+    subscribe().catch(logger.error);
 
     return () => {
       hmrRef.current?.off("studio:external-packages-updated", handler);

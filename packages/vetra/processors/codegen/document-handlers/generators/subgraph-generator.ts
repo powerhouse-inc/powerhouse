@@ -15,7 +15,9 @@ export class SubgraphGenerator extends BaseDocumentGen {
   /**
    * Validate if this subgraph strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -34,7 +36,9 @@ export class SubgraphGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 

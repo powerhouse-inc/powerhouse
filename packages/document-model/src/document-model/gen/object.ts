@@ -1,6 +1,9 @@
 import { applyMixins, BaseDocumentClass } from "#document/object.js";
-import { BaseStateFromDocument, SignalDispatch } from "#document/types.js";
-import { DocumentModelAction } from "./actions.js";
+import {
+  type BaseStateFromDocument,
+  type SignalDispatch,
+} from "#document/types.js";
+import { type DocumentModelAction } from "./actions.js";
 import { fileExtension } from "./constants.js";
 import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Module from "./module/object.js";

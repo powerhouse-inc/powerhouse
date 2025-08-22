@@ -5,7 +5,8 @@ import type { DocumentEditorAction } from "./actions.js";
 export { z } from "./schema/index.js";
 export type * from "./schema/types.js";
 type DocumentEditorLocalState = Record<PropertyKey, never>;
-export type ExtendeddocumenteditorState = BaseStateFromDocument<DocumentEditorDocument>;
+export type ExtendeddocumenteditorState =
+  BaseStateFromDocument<DocumentEditorDocument>;
 export type DocumentEditorDocument = PHDocument<
   DocumentEditorState,
   DocumentEditorLocalState

@@ -14,7 +14,9 @@ export class ProcessorGenerator extends BaseDocumentGen {
   /**
    * Validate if this processor strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -43,7 +45,9 @@ export class ProcessorGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> Processor not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> Processor not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 
