@@ -1,20 +1,20 @@
 import { Subgraph } from "#graphql/base/index.js";
 import { type Context, type SubgraphArgs } from "#graphql/types.js";
 import {
-  type InternalStrandUpdate,
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
+  type InternalStrandUpdate,
 } from "#sync/utils.js";
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { pascalCase } from "change-case";
 import {
+  PullResponderTransmitter,
   childLogger,
   type DocumentDriveDocument,
   type FileNode,
   type ListenerFilter,
   type ListenerRevision,
-  PullResponderTransmitter,
   type StrandUpdateGraphQL,
 } from "document-drive";
 import { type Listener } from "document-drive/server/types";
@@ -24,8 +24,8 @@ import {
 } from "document-drive/utils/gql-transformations";
 import { type DriveInfo } from "document-drive/utils/graphql";
 import {
-  type DocumentModelInput,
   generateId,
+  type DocumentModelInput,
   type Operation,
   type PHDocument,
 } from "document-model";
@@ -312,7 +312,8 @@ export class DriveSubgraph extends Subgraph {
             documentModel.id === document.header.documentType,
         );
 
-        const globalState = document.state.global;
+        // eslint-disable-next-line
+        const globalState = (document.state as any).global;
         if (!globalState)
           throw new Error("Document was found with no global state");
 

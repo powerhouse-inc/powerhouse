@@ -10,7 +10,7 @@ import {
   type DocumentModelModule,
 } from "document-model";
 import EventEmitter from "node:events";
-import { type StatWatcher, watchFile } from "node:fs";
+import { watchFile, type StatWatcher } from "node:fs";
 import type {
   IPackageLoader,
   IPackageManager,
@@ -106,11 +106,11 @@ export class PackageManager implements IPackageManager {
 
     // static prereqs
     documentModelModuleMap.set("document-drive", [
-      driveDocumentModelModule as DocumentModelModule,
+      driveDocumentModelModule as unknown as DocumentModelModule,
     ]);
 
     documentModelModuleMap.set("document-model", [
-      documentModelDocumentModelModule as DocumentModelModule,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
 
     for (const pkg of packages) {

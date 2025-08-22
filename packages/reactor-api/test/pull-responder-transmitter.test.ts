@@ -1,12 +1,14 @@
 import {
   addFile,
   addFolder,
+  DocumentDriveDocument,
   driveDocumentModelModule,
   IDocumentDriveServer,
   PullResponderTransmitter,
   ReactorBuilder,
 } from "document-drive";
 import {
+  DocumentModelDocument,
   documentModelDocumentModelModule,
   DocumentModelModule,
   generateId,
@@ -44,7 +46,7 @@ describe("Pull Responder Transmitter", () => {
     const builder = new ReactorBuilder([
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-    ] as DocumentModelModule[]);
+    ] as unknown as DocumentModelModule[]);
     const reactor = await builder.build();
     await reactor.initialize();
     return { reactor, listenerManager: builder.listenerManager! };
@@ -125,7 +127,9 @@ describe("Pull Responder Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(drive.state.global).toStrictEqual(result.document?.state.global);
+
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(drive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     await reactor.deleteDrive(driveId);
@@ -161,16 +165,20 @@ describe("Pull Responder Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(drive.state.global).toStrictEqual(result.document?.state.global);
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(drive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     await vi.waitFor(async () => {
-      const document = await reactor.getDocument(documentId);
+      const document = (await reactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(document)).toStrictEqual({
         global: -1,
         local: -1,
       });
-      expect(document.state.global).toStrictEqual(document?.state.global);
+      const resultDocument = result.document as DocumentDriveDocument;
+      expect(document.state.global).toStrictEqual(resultDocument.state.global);
     });
 
     await reactor.deleteDrive(driveId);
@@ -207,14 +215,15 @@ describe("Pull Responder Transmitter", () => {
     );
 
     await vi.waitFor(async () => {
-      const document = await reactor.getDocument(documentId);
+      const document = (await reactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(document)).toStrictEqual({
         global: 0,
         local: -1,
       });
-      expect(document.state.global).toStrictEqual(
-        result.document?.state.global,
-      );
+      const resultDocument = result.document as DocumentDriveDocument;
+      expect(document.state.global).toStrictEqual(resultDocument.state.global);
     });
 
     await reactor.deleteDrive(driveId);

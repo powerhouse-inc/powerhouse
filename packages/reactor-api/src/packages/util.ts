@@ -69,7 +69,7 @@ async function loadDependency<T = unknown>(
   try {
     // vite does not support this, but that's okay as we have provided the
     // vite-loader for this purpose
-    const module = await import(/* @vite-ignore */ fullPath);
+    const module = (await import(/* @vite-ignore */ fullPath)) as T;
     return module;
   } catch (e) {
     // Handle module not found errors with fallback resolution
