@@ -438,7 +438,7 @@ export class MemoryStorage
     for (const documentId of documents) {
       const document = this.documents[documentId];
       // might be a child that has not been synced yet
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
       if (!document) continue;
 
       // apply document type filter

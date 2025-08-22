@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-no-bind */
 import { Icon } from "#powerhouse";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";

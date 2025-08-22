@@ -51,7 +51,6 @@ function checkServer<
 }
 
 function bindClassMethods(instance: any) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const prototype = Object.getPrototypeOf(instance);
   const propertyNames = Object.getOwnPropertyNames(prototype);
 
@@ -62,7 +61,6 @@ function bindClassMethods(instance: any) {
       typeof descriptor.value === "function" &&
       name !== "constructor"
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       instance[name] = instance[name].bind(instance);
     }
   });

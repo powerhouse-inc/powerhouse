@@ -36,7 +36,6 @@ export class NodeStorage<
   set<Key extends keyof T>(key: Key, value?: T[Key]): void {
     const data = this.readData();
     if (value === undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete data[key];
     } else {
       data[key] = value;
@@ -46,7 +45,6 @@ export class NodeStorage<
 
   delete(key: keyof T): void {
     const data = this.readData();
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete data[key];
     this.writeData(data);
   }

@@ -1,26 +1,23 @@
 import {
+  applyMixins,
   BaseDocumentClass,
   type BaseStateFromDocument,
-  type PartialState,
-  applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type VetraPackageState,
-  type VetraPackageLocalState,
-  type VetraPackageDocument,
-} from "./types.js";
 import { type VetraPackageAction } from "./actions.js";
-import { reducer } from "./reducer.js";
-import utils from "./utils.js";
 import VetraPackage_BaseOperations from "./base-operations/object.js";
+import { reducer } from "./reducer.js";
+import {
+  type VetraPackageDocument,
+  type VetraPackageLocalState,
+  type VetraPackageState,
+} from "./types.js";
+import utils from "./utils.js";
 
 export * from "./base-operations/object.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface VetraPackage extends VetraPackage_BaseOperations {}
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class VetraPackage extends BaseDocumentClass<
   VetraPackageState,
   VetraPackageLocalState,

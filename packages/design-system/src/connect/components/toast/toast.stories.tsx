@@ -59,13 +59,10 @@ export const Default: Story = {
   render: (args) => {
     const { content, ...options } = args;
     return (
-      // eslint-disable-next-line react/button-has-type
       <button
         className="rounded-md bg-gray-800 px-4 py-2 text-white hover:bg-gray-900 active:opacity-80"
-        // eslint-disable-next-line react/jsx-no-bind
         onClick={() =>
           toast(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             content,
             // @ts-expect-error
             options,

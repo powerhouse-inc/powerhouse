@@ -7,8 +7,6 @@ import {
   type IRelationalQueryBuilder,
 } from "./types.js";
 import { relationalDbToQueryBuilder } from "./utils.js";
-import { get } from "http";
-import { Schema, string } from "zod";
 
 export type { IRelationalQueryBuilder } from "./types.js";
 
@@ -57,12 +55,10 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
   static [IS_RELATIONAL_DB_PROCESSOR] = true;
 
   static is(p: unknown): p is RelationalDbProcessor {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let proto = Object.getPrototypeOf(p);
     while (proto) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (proto.constructor?.[IS_RELATIONAL_DB_PROCESSOR]) return true;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       proto = Object.getPrototypeOf(proto);
     }
     return false;

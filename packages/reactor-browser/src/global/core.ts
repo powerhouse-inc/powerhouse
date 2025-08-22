@@ -20,7 +20,6 @@ export function clearGlobal(namespace: keyof PowerhouseGlobal): void {
   if (typeof window === "undefined") return;
 
   if (window.powerhouse?.[namespace]) {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete window.powerhouse[namespace];
     if (Object.keys(window.powerhouse).length === 0) {
       delete window.powerhouse;

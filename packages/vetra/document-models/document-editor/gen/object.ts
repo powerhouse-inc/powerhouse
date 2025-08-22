@@ -1,26 +1,23 @@
 import {
+  applyMixins,
   BaseDocumentClass,
   type BaseStateFromDocument,
-  type PartialState,
-  applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
-  type DocumentEditorDocument,
-} from "./types.js";
 import { type DocumentEditorAction } from "./actions.js";
-import { reducer } from "./reducer.js";
-import utils from "./utils.js";
 import DocumentEditor_BaseOperations from "./base-operations/object.js";
+import { reducer } from "./reducer.js";
+import {
+  type DocumentEditorDocument,
+  type DocumentEditorLocalState,
+  type DocumentEditorState,
+} from "./types.js";
+import utils from "./utils.js";
 
 export * from "./base-operations/object.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface DocumentEditor extends DocumentEditor_BaseOperations {}
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class DocumentEditor extends BaseDocumentClass<
   DocumentEditorState,
   DocumentEditorLocalState,

@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
 import { Icon } from "#powerhouse";
 import { useCommandState } from "cmdk";
 import type React from "react";

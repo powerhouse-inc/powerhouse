@@ -98,7 +98,6 @@ function getRetryTransactionsClient<T extends PrismaClient>(
   return prisma.$extends({
     client: {
       $transaction: (...args: Parameters<T["$transaction"]>) => {
-        // eslint-disable-next-line prefer-spread
         return backOff(() => prisma.$transaction.apply(prisma, args), {
           retry: (e) => {
             const code = (e as { code: string }).code;
@@ -849,7 +848,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       { isolationLevel: "Serializable", maxWait: 10000, timeout: 20000 },
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!result) {
       throw new Error("No operations were provided");
     }

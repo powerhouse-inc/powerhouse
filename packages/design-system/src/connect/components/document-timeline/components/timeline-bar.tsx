@@ -1,5 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
 import { Tooltip } from "#connect";
 import { Icon } from "#powerhouse";
 import { format, parseISO } from "date-fns";

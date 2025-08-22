@@ -1,6 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
-/* eslint-disable react/jsx-props-no-spreading */
 import React, { useId, useMemo, useRef } from "react";
 import { cn } from "../../lib/index.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";

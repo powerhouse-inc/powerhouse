@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import connectConfig from "#connect-config";
 import { serviceWorkerManager } from "#utils";
 import {

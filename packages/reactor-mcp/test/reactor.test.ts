@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-deprecated */
 import {
   driveDocumentModelModule,
   ReactorBuilder,
@@ -376,7 +374,7 @@ describe("ReactorMcpProvider", () => {
   //     expect(result.structuredContent).toMatchObject({
   //       result: {
   //         status: "ERROR",
-  //         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  //
   //         error: expect.any(String),
   //         operations: [],
   //         signals: [],
@@ -395,7 +393,6 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         driveIds: expect.arrayContaining([]),
       });
     });
@@ -426,15 +423,12 @@ describe("ReactorMcpProvider", () => {
       });
       const drive = await reactor.getDrive("test-drive-id");
       expect(drive).toMatchObject({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         header: expect.objectContaining({
           documentType: "powerhouse/document-drive",
         }),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         state: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           global: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             name: expect.any(String),
           }),
         }),
@@ -453,22 +447,18 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toStrictEqual({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         driveId: expect.any(String),
       });
       const drive = await reactor.getDrive(
         result.structuredContent!.driveId as string,
       );
       expect(drive).toMatchObject({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         header: expect.objectContaining({
           documentType: "powerhouse/document-drive",
         }),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         state: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           global: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             name: expect.any(String),
           }),
         }),
@@ -487,17 +477,13 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         drive: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           header: expect.objectContaining({
             documentType: "powerhouse/document-drive",
           }),
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
           state: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             global: expect.objectContaining({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               name: expect.any(String),
             }),
           }),
@@ -518,17 +504,13 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         drive: expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           header: expect.objectContaining({
             documentType: "powerhouse/document-drive",
           }),
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
           state: expect.objectContaining({
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             global: expect.objectContaining({
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               name: expect.any(String),
             }),
           }),

@@ -1,26 +1,23 @@
 import {
+  applyMixins,
   BaseDocumentClass,
   type BaseStateFromDocument,
-  type PartialState,
-  applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type AppModuleState,
-  type AppModuleLocalState,
-  type AppModuleDocument,
-} from "./types.js";
 import { type AppModuleAction } from "./actions.js";
-import { reducer } from "./reducer.js";
-import utils from "./utils.js";
 import AppModule_BaseOperations from "./base-operations/object.js";
+import { reducer } from "./reducer.js";
+import {
+  type AppModuleDocument,
+  type AppModuleLocalState,
+  type AppModuleState,
+} from "./types.js";
+import utils from "./utils.js";
 
 export * from "./base-operations/object.js";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface AppModule extends AppModule_BaseOperations {}
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 class AppModule extends BaseDocumentClass<
   AppModuleState,
   AppModuleLocalState,

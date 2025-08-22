@@ -68,7 +68,6 @@ export class PublicKeySigner implements ISigner {
           })
           .catch(reject);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!window.crypto?.subtle) {
           reject(new Error("Crypto module not available"));
         }

@@ -82,7 +82,6 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
               o.packageName.toLowerCase().includes(userInput.toLowerCase()),
             ) ?? [],
           renderOption: (option) => (
-            // eslint-disable-next-line react/jsx-props-no-spreading
             <PackageItem {...(option as unknown as PowerhousePackage)} />
           ),
         };
@@ -102,7 +101,6 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
             disabled={loading}
           />
         ) : (
-          // eslint-disable-next-line react/jsx-props-no-spreading
           <IdAutocomplete {...autoCompleteOptions} onChange={setValue} />
         )}
         <Button

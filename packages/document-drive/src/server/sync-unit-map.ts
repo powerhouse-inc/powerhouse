@@ -173,7 +173,6 @@ export class SyncUnitMap<Value> implements ISyncUnitMap<Value> {
         return this;
       },
       next(): IteratorResult<Value> {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         while (true) {
           const result = iter.next();
           if (result.done) return { done: true, value: undefined };

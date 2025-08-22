@@ -18,7 +18,6 @@ export default function Header() {
     auth
       .getDrives()
       .then((drives) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         setDrives(drives);
       })
       .catch(console.error);

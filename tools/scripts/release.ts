@@ -1,4 +1,3 @@
-/* eslint-disable */
 import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
 import semver, { ReleaseType } from "semver";

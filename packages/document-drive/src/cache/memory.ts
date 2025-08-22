@@ -11,7 +11,6 @@ export interface ICacheStorage<Value = unknown> {
 }
 
 export interface ICacheStorageManager {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   createStorage<Value extends {}>(): ICacheStorage<Value>;
 }
 

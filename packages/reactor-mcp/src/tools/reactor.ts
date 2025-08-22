@@ -304,7 +304,6 @@ type ToolRecord<T extends readonly ToolSchema[]> = {
 };
 
 // All tools array for type inference
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allTools = [
   getDocumentTool,
   createDocumentTool,

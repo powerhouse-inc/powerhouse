@@ -84,7 +84,6 @@ const useAuth = () => {
     uri: "/system",
   });
 
-  /* eslint-disable */
 
   const authLink = setContext((_, { headers }) => {
     return {

@@ -35,6 +35,11 @@ const ignores = [
   "packages/codegen/src/codegen/.hygen/",
   // TODO: replace with something more robust
   "apps/connect/src/vite-env.d.ts",
+  // TODO: these files had a blanket "eslint-disable" comment at the top and it was never re-enabled later in the file
+  "packages/switchboard-gui/src/hooks/useAuth.ts",
+  "packages/document-drive/src/storage/ipfs.ts",
+  "packages/document-drive/src/utils/migrations.ts",
+  "tools/scripts/release.ts",
 ];
 
 const typescriptRules = {
@@ -88,6 +93,10 @@ const unsafeRules = {
   "@typescript-eslint/no-unsafe-argument": "off",
   "@typescript-eslint/await-thenable": "off",
   "@typescript-eslint/no-require-imports": "off",
+  "@typescript-eslint/no-base-to-string": "off",
+  "@typescript-eslint/unbound-method": "off",
+  "@typescript-eslint/no-namespace": "off",
+  "prefer-const": "off",
 };
 
 export default tseslint.config(
@@ -170,6 +179,7 @@ export default tseslint.config(
       "**/*.test.tsx",
       "**/*.bench.ts",
       "**/__tests__/*.ts",
+      "apps/connect/cypress/e2e/**/*",
       // TODO: replace with something more robust
       "packages/document-drive/src/utils/logger.ts",
       // TODO: our generated code should not be unsafe
@@ -180,6 +190,32 @@ export default tseslint.config(
       "packages/codegen/src/codegen/.hygen/templates/**/*",
       // TODO: file system utils call functions which are not implemented and just throw errors
       "packages/document-model/src/document/utils/file.ts",
+      "apps/connect/scripts/render-skeleton.ts",
+      "apps/connect/src/components/modal/modals/DebugSettingsModal.tsx",
+      "apps/connect/src/context/read-mode.tsx",
+      "packages/builder-tools/connect-studio/server.ts",
+      "packages/codegen/src/codegen/hygen.ts",
+      "packages/design-system/src/connect/components/toast/toast.stories.tsx",
+      "clis/ph-cli/src/services/dev.ts",
+      "packages/design-system/src/powerhouse/utils/fixedForwardRef.ts",
+      "packages/design-system/src/ui/components/value-transformer/value-transformer.tsx",
+      "packages/document-drive/src/processors/relational.ts",
+      "packages/document-drive/src/server/listener/transmitter/internal.ts",
+      "packages/document-drive/src/utils/run-asap.ts",
+      "packages/document-model/src/document/utils/document-helpers.ts",
+      "packages/document-drive/src/utils/graphql.ts",
+      "packages/reactor/src/events/types.ts",
+      "packages/reactor-api/src/packages/util.ts",
+      "packages/vetra/subgraphs/vetra-package/resolvers.ts",
+      "packages/reactor-browser/src/context/read-mode.tsx",
+      "packages/document-model/src/document/object.ts",
+      "packages/switchboard-gui/src/components/header/header.tsx",
+      "packages/reactor-mcp/src/server.ts",
+      "packages/reactor-api/src/server.ts",
+      "packages/reactor-api/src/graphql/index.ts",
+      "packages/document-model/src/document/reducer.ts",
+      "packages/document-drive/src/read-mode/server.ts",
+      "packages/document-drive/src/queue/event.ts",
     ],
     rules: unsafeRules,
   },

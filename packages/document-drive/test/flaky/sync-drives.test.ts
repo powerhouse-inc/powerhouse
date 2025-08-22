@@ -59,10 +59,9 @@ describe("Document Drive Server interaction", () => {
 
             for (const s of sortedStrands) {
               const operations =
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 s.operations?.map((o) => ({
                   ...o,
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
                   input: JSON.parse(o.input.toString()),
                   skip: o.skip ?? 0,
                   scope: s.scope,

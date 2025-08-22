@@ -27,7 +27,6 @@ function spawnLocalSwitchboard(options?: ReactorOptions) {
 
   return new Promise<{ driveUrl: string }>((resolve) => {
     child.on("message", (message) => {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const text = message.toString();
 
       if (text.startsWith("driveUrl:")) {

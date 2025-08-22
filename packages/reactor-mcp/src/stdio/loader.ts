@@ -84,7 +84,6 @@ export class VitePackageLoader implements IPackageLoader {
       // duck type
       const documentModels: DocumentModelModule[] = [];
       for (const dm of exports) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (dm.documentModel) {
           documentModels.push(dm);
         }

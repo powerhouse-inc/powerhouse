@@ -1,5 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-props-no-spreading */
 import React, { useCallback, useId } from "react";
 import { cn } from "../../lib/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";

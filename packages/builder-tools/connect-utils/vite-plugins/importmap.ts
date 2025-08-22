@@ -238,7 +238,6 @@ async function generateImportMap(
       importMap = { ...importMap, ...imports };
       // TODO: this does not make sense.
       // We need to give this the actual correct type, or if we really don't know what it is, then make it `unknown`
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
     } else if (provider.toString() === "node_modules") {
       const { importMap: imports, buildModule } = await importFromNodeModules(
         name,

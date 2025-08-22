@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-deprecated */
 // TODO remove this when drive methods are deleted
 import { type AddFileAction } from "#drive-document-model/gen/actions";
 import {
@@ -605,7 +604,6 @@ export class BaseDocumentDriveServer
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   addDocument<TDocument extends PHDocument>(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     type: string,
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
@@ -826,7 +824,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     documentId?: string | GetDocumentOptions,
     options?: GetDocumentOptions,
-  ): Promise<TDocument> | Promise<TDocument> {
+  ): Promise<TDocument> {
     const id = typeof documentId === "string" ? documentId : driveId;
     const resolvedOptions =
       typeof documentId === "object" ? documentId : options;
@@ -2467,7 +2465,7 @@ export class BaseDocumentDriveServer
    */
   async addDriveAction(
     driveId: string,
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
+
     action: DocumentDriveAction | Action,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;

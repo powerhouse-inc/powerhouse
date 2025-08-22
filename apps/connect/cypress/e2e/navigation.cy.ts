@@ -282,7 +282,6 @@ describe("Navigation", () => {
     cy.get("#connect-debug-button").click();
 
     cy.intercept("POST", publicDriveUrl, (req) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (req.body.operationName === "strands") {
         req.alias = "graphqlQuery";
       }

@@ -27,7 +27,6 @@ import { type StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings
 const logger = createLogger();
-// eslint-disable-next-line @typescript-eslint/unbound-method
 const loggerWarn = logger.warn;
 /**
  * @param {string} msg

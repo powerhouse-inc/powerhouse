@@ -20,9 +20,9 @@ import {
   type PHDocumentHeader,
   type PHDocumentMeta,
   type ReducerOptions,
+  type SignalResult,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
-import { type SignalResult } from "document-model";
 import { type BaseDocumentDriveServer } from "./base-server.js";
 import {
   type OperationError,
@@ -90,7 +90,6 @@ export type CreateDocumentInputWithDocumentType = {
 };
 
 export type CreateDocumentInput<TDocument extends PHDocument> =
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   | LegacyCreateDocumentInput
   | CreateDocumentInputWithDocument<TDocument>
   | CreateDocumentInputWithHeader
@@ -407,7 +406,6 @@ export interface IBaseDocumentDriveServer {
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   addDocument<TDocument extends PHDocument>(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     documentType: string,
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
@@ -621,7 +619,7 @@ export interface IBaseDocumentDriveServer {
    */
   addDriveAction(
     driveId: string,
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
+
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
