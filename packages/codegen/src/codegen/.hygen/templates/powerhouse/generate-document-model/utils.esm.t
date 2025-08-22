@@ -3,7 +3,10 @@ to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
 import { 
-    type DocumentModelUtils,
+    type CreateDocument,
+    type CreateState,
+    type LoadFromFile,
+    type LoadFromInput,
     baseCreateDocument,
     baseSaveToFile,
     baseSaveToFileHandle,
@@ -13,52 +16,55 @@ import {
     generateId,
  } from 'document-model';
 import { 
-  <%= 'type ' + h.changeCase.pascal(documentType) %>Document,
   <%= 'type ' + h.changeCase.pascal(documentType) %>State,
   <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState
 } from './types.js';
+import { <%= h.changeCase.pascal(documentType) %>PHState } from './ph-factories.js';
 import { reducer } from './reducer.js';
 
 export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
 
-const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
-    fileExtension: '<%- fileExtension %>',
-    createState(state) {
-        return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
-    },
-    createDocument(state) {
-        const document = baseCreateDocument(
-            utils.createState,
-            state
-        );
-
-        document.header.documentType = '<%- documentTypeId %>';
-
-        // for backwards compatibility, but this is NOT a valid signed document id
-        document.header.id = generateId();
-
-        return document;
-    },
-    saveToFile(document, path, name) {
-        return baseSaveToFile(document, path, '<%- fileExtension %>', name);
-    },
-    saveToFileHandle(document, input) {
-        return baseSaveToFileHandle(document, input);
-    },
-    loadFromFile(path) {
-        return baseLoadFromFile(path, reducer);
-    },
-    loadFromInput(input) {
-        return baseLoadFromInput(input, reducer);
-    },
+export const createState: CreateState<<%= h.changeCase.pascal(documentType) %>PHState> = (state) => {
+    return { 
+        ...defaultBaseState(), 
+        global: { ...initialGlobalState, ...(state?.global ?? {}) }, 
+        local: { ...initialLocalState, ...(state?.local ?? {}) } 
+    };
 };
 
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFile = utils.saveToFile;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromFile = utils.loadFromFile;
-export const loadFromInput = utils.loadFromInput;
+export const createDocument: CreateDocument<<%= h.changeCase.pascal(documentType) %>PHState> = (state) => {
+    const document = baseCreateDocument(createState, state);
+    document.header.documentType = '<%- documentTypeId %>';
+    // for backwards compatibility, but this is NOT a valid signed document id
+    document.header.id = generateId();
+    return document;
+};
+
+export const saveToFile = (document: any, path: string, name?: string) => {
+    return baseSaveToFile(document, path, '<%- fileExtension %>', name);
+};
+
+export const saveToFileHandle = (document: any, input: any) => {
+    return baseSaveToFileHandle(document, input);
+};
+
+export const loadFromFile: LoadFromFile<<%= h.changeCase.pascal(documentType) %>PHState> = (path) => {
+    return baseLoadFromFile(path, reducer);
+};
+
+export const loadFromInput: LoadFromInput<<%= h.changeCase.pascal(documentType) %>PHState> = (input) => {
+    return baseLoadFromInput(input, reducer);
+};
+
+const utils = {
+    fileExtension: '<%- fileExtension %>',
+    createState,
+    createDocument,
+    saveToFile,
+    saveToFileHandle,
+    loadFromFile,
+    loadFromInput,
+};
 
 export default utils;

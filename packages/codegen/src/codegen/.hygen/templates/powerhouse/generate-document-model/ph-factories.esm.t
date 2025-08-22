@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/ph-factories.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/ph-factories.ts"
 force: true
 ---
 /**
@@ -17,8 +17,8 @@ import type {
   <%= h.changeCase.pascal(documentType) %>Document,
   <%= h.changeCase.pascal(documentType) %>LocalState,
   <%= h.changeCase.pascal(documentType) %>State,
-} from "./gen/types.js";
-import { createDocument } from "./gen/utils.js";
+} from "./types.js";
+import { createDocument } from "./utils.js";
 
 export function defaultGlobalState(): <%= h.changeCase.pascal(documentType) %>State {
   return <%- initialGlobalState %>;

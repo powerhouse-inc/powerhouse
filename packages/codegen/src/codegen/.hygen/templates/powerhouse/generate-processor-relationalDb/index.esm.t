@@ -5,14 +5,8 @@ force: true
 import { type IRelationalDb } from "document-drive/processors/types";
 import { RelationalDbProcessor } from "document-drive/processors/relational";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-<% documentTypes.forEach(type => { _%>
-import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
-%><% }); _%>
-<% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 import { up } from "./migrations.js";
 import { type DB } from "./schema.js";
-
-type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   static override getNamespace(driveId: string): string {
@@ -25,7 +19,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   }
 
   override async onStrands(
-    strands: InternalTransmitterUpdate<DocumentType>[],
+    strands: InternalTransmitterUpdate[],
   ): Promise<void> {
     if (strands.length === 0) {
       return;

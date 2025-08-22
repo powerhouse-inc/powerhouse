@@ -6,13 +6,14 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { type StateReducer, isDocumentAction, createReducer } from "document-model";
-import { <%= 'type ' + h.changeCase.pascal(documentType) %>Document, z } from './types.js';
+import { <%= h.changeCase.pascal(documentType) %>PHState } from './ph-factories.js';
+import { z } from './types.js';
 
 <% modules.forEach(m => { _%>
 import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>.js';
 <%_ }); %>
 
-const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>Document> =
+export const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>PHState> =
     (state, action, dispatch) => {
         if (isDocumentAction(action)) {
             return state;
@@ -34,4 +35,4 @@ const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>Documen
         }
     }
 
-export const reducer = createReducer<<%= h.changeCase.pascal(documentType) %>Document>(stateReducer);
+export const reducer = createReducer<<%= h.changeCase.pascal(documentType) %>PHState>(stateReducer);
