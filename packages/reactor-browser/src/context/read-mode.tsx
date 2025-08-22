@@ -1,26 +1,26 @@
 import {
+  ReadDriveNotFoundError,
   type BaseDocumentDriveServer,
   type IDocumentDriveServer,
   type IReadModeDriveServer,
   type ReadDocumentNotFoundError,
   type ReadDrive,
   type ReadDriveContext,
-  ReadDriveNotFoundError,
+  type ReadDriveSlugNotFoundError,
   type ReadDrivesListener,
   type ReadDrivesListenerUnsubscribe,
-  type ReadDriveSlugNotFoundError,
   type RemoteDriveOptions,
 } from "document-drive";
-import { type PHDocument } from "document-model";
+import { type PHBaseState, type PHDocument } from "document-model";
 import fastIsDeepEqual from "fast-deep-equal";
 import {
   createContext,
-  type FC,
-  type ReactNode,
   useContext,
   useEffect,
   useMemo,
   useState,
+  type FC,
+  type ReactNode,
 } from "react";
 import { useUserPermissions } from "../hooks/user.js";
 
@@ -137,12 +137,12 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
   }
 
   @checkServer
-  fetchDocument<TDocument extends PHDocument>(
+  fetchDocument<TState extends PHBaseState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | TDocument
+    | PHDocument<TState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

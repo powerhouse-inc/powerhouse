@@ -8,7 +8,7 @@ import { createBrowserDocumentDriveServer } from "../src/reactor.js";
 describe("reactor", () => {
   it("should create a reactor instance with minimal config", async () => {
     const documentModels = [
-      documentModelDocumentModelModule as DocumentModelModule,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
     ];
     const routerBasename = "/test";
 

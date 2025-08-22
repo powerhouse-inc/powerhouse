@@ -1,26 +1,26 @@
 import {
-  type DocumentDriveDocument,
-  type Node,
   addFile as baseAddFile,
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
   deleteNode as baseDeleteNode,
   moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
+  createDriveState,
   generateNodesCopy,
   isFileNode,
   isFolderNode,
   logger,
   updateNode,
+  type DocumentDriveDocument,
+  type Node,
 } from "document-drive";
 import {
-  type PHDocument,
   baseLoadFromInput,
   baseSaveToFileHandle,
-  defaultBaseState,
   createPresignedHeader,
   createZip,
   generateId,
+  type PHDocument,
 } from "document-model";
 import {
   queueActions,
@@ -171,12 +171,11 @@ export async function addFile(
   }
 
   const { isAllowedToCreateDocuments } = getUserPermissions();
-
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create files");
   }
-  const document = await loadFile(file);
 
+  const document = (await loadFile(file)) as DocumentDriveDocument;
   if (!document) {
     throw new Error("No document loaded");
   }
@@ -186,11 +185,10 @@ export async function addFile(
     header: document.header,
     history: document.history,
     initialState: document.initialState,
-    state: {
+    state: createDriveState({
       global: document.state.global,
       local: document.state.local,
-      ...defaultBaseState(),
-    },
+    }),
     operations: {
       global: [],
       local: [],

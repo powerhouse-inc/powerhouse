@@ -1,41 +1,51 @@
 import {
+  PullResponderTransmitter,
+  SynchronizationUnitNotFoundError,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
-  createDriveState,
-  type DocumentDriveDocument,
-  type DriveInput,
-  type Listener,
-  PullResponderTransmitter,
-  type PullResponderTrigger,
-  type RemoteDriveOptions,
   setAvailableOffline,
   setDriveName,
   setSharingType,
+  type DocumentDriveDocument,
+  type DriveInput,
+  type Listener,
+  type PullResponderTrigger,
+  type RemoteDriveOptions,
   type SharingType,
-  SynchronizationUnitNotFoundError,
   type SyncStatus,
   type Trigger,
 } from "document-drive";
-import { generateId } from "document-model";
+import {
+  createGlobalState,
+  createState,
+} from "document-drive/drive-document-model/gen/ph-factories";
+import { defaultBaseState, generateId } from "document-model";
+import { defaultLocalState } from "document-model/document-model/gen/ph-factories";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions } from "./queue.js";
 
-export async function addDrive(drive: DriveInput, preferredEditor?: string) {
+export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
   }
-  const { isAllowedToCreateDocuments } = getUserPermissions();
 
+  const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
   }
-  const id = drive.id || generateId();
-  const driveInput = createDriveState(drive);
+
+  const id = input.id || generateId();
+  const state = createState(
+    defaultBaseState(),
+    createGlobalState(input.global),
+    defaultLocalState(),
+  );
+
   const newDrive = await reactor.addDrive(
     {
-      global: driveInput.global,
-      local: driveInput.local,
+      global: state.global,
+      local: state.local,
       id,
     },
     preferredEditor,
