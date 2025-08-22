@@ -14,9 +14,9 @@ export type * from "./schema/types.js";
 export type {
   DocumentDriveAction,
   DocumentDriveLocalState,
+  DocumentDrivePHState,
   DocumentDriveState,
 };
-export type ExtendedDocumentDriveState = DocumentDrivePHState;
 export type DocumentDriveDocument = PHDocument<DocumentDrivePHState>;
 
 export type LegacySynchronizationUnit = {
@@ -30,4 +30,7 @@ export type LegacyAddFileInput = AddFileInput & {
   synchronizationUnits: Array<LegacySynchronizationUnit>;
 };
 
-export type LegacyAddFileAction = Action & { type: "ADD_FILE"; input: LegacyAddFileInput; };
+export type LegacyAddFileAction = Action & {
+  type: "ADD_FILE";
+  input: LegacyAddFileInput;
+};
