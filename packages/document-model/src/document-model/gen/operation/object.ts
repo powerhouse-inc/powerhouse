@@ -1,10 +1,9 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { DocumentModelPHState } from "../ph-factories.js";
 import {
   AddOperationInput,
   DeleteOperationInput,
-  DocumentModelState,
   MoveOperationInput,
   ReorderModuleOperationsInput,
   SetOperationDescriptionInput,
@@ -14,7 +13,6 @@ import {
   SetOperationScopeInput,
   SetOperationTemplateInput,
 } from "../schema/types.js";
-import { DocumentModelLocalState } from "../types.js";
 import {
   addOperation,
   deleteOperation,
@@ -28,11 +26,7 @@ import {
   setOperationTemplate,
 } from "./creators.js";
 
-export default class DocumentModel_Operation extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+export default class DocumentModel_Operation extends BaseDocumentClass<DocumentModelPHState> {
   public addOperation(input: AddOperationInput, options?: ReducerOptions) {
     return this.dispatch(addOperation(input), options);
   }

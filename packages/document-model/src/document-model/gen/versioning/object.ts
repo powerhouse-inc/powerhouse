@@ -1,13 +1,12 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { DocumentModelPHState } from "../ph-factories.js";
 import {
   AddChangeLogItemInput,
   DeleteChangeLogItemInput,
   ReorderChangeLogItemsInput,
   UpdateChangeLogItemInput,
 } from "../schema/types.js";
-import { DocumentModelLocalState, DocumentModelState } from "../types.js";
 import {
   addChangeLogItem,
   deleteChangeLogItem,
@@ -16,11 +15,7 @@ import {
   updateChangeLogItem,
 } from "./creators.js";
 
-export default class DocumentModel_Versioning extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+export default class DocumentModel_Versioning extends BaseDocumentClass<DocumentModelPHState> {
   public addChangeLogItem(
     input: AddChangeLogItemInput,
     options?: ReducerOptions,

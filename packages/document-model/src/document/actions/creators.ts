@@ -1,3 +1,4 @@
+import { PHBaseState } from "#document/ph-types.js";
 import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,
@@ -5,7 +6,7 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { type Action, type BaseState } from "../types.js";
+import { type Action } from "../types.js";
 import { createAction } from "../utils/base.js";
 import {
   type LoadStateAction,
@@ -95,8 +96,8 @@ export const prune = (
  * @param operations - Number of operations that were removed from the previous state.
  * @category Actions
  */
-export const loadState = <S, T>(
-  state: BaseState<S, T> & { name: string },
+export const loadState = <TState extends PHBaseState = PHBaseState>(
+  state: TState & { name: string },
   operations: number,
 ) =>
   createAction<LoadStateAction>(

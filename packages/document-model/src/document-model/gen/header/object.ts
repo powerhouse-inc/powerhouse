@@ -1,9 +1,7 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { DocumentModelPHState } from "../ph-factories.js";
 import {
-  DocumentModelLocalState,
-  DocumentModelState,
   SetAuthorNameInput,
   SetAuthorWebsiteInput,
   SetModelDescriptionInput,
@@ -20,11 +18,7 @@ import {
   setModelName,
 } from "./creators.js";
 
-export default class DocumentModel_Header extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+export default class DocumentModel_Header extends BaseDocumentClass<DocumentModelPHState> {
   public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
     return this.dispatch(setModelName(input), options);
   }

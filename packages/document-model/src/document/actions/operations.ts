@@ -1,11 +1,10 @@
+import { PHBaseState } from "#document/ph-types.js";
 import { castDraft, create, type Draft } from "mutative";
-import { type PruneActionInput } from "../schema/types.js";
 import {
-  type Action,
-  type BaseState,
-  type PHDocument,
-  type StateReducer,
-} from "../types.js";
+  LoadStateActionInput,
+  type PruneActionInput,
+} from "../schema/types.js";
+import { type Action, type PHDocument, type StateReducer } from "../types.js";
 import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
 import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";
 import { loadState, noop } from "./creators.js";
@@ -132,11 +131,11 @@ export function redoOperation<TDocument extends PHDocument>(
   });
 }
 
-export function pruneOperation<TDocument extends PHDocument>(
-  document: TDocument,
+export function pruneOperation<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   input: PruneActionInput,
-  wrappedReducer: StateReducer<TDocument>,
-): TDocument {
+  wrappedReducer: StateReducer<TState>,
+): PHDocument<TState> {
   const operations = document.operations.global;
 
   let { start, end } = input;
@@ -201,15 +200,13 @@ export function pruneOperation<TDocument extends PHDocument>(
   );
 }
 
-export function loadStateOperation<TDocument extends PHDocument>(
-  oldDocument: TDocument,
-  newDocument: { name: string; state?: BaseState<unknown, unknown> },
-): TDocument {
+export function loadStateOperation<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  action: LoadStateActionInput,
+): PHDocument<TState> {
   return {
-    ...oldDocument,
-    name: newDocument.name,
-    state:
-      newDocument.state ??
-      ({ global: {}, local: {} } as BaseState<unknown, unknown>),
+    ...document,
+    header: { ...document.header, name: action.state.name },
+    state: action.state.data as TState,
   };
 }

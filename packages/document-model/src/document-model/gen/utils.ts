@@ -7,9 +7,7 @@ import {
   SaveToFile,
   SaveToFileHandle,
 } from "#document/types.js";
-import {
-  baseCreateDocument,
-} from "#document/utils/base.js";
+import { baseCreateDocument } from "#document/utils/base.js";
 import {
   baseLoadFromFile,
   baseLoadFromInput,
@@ -22,12 +20,12 @@ import {
   fileExtension,
   initialLocalState,
 } from "./constants.js";
+import { DocumentModelPHState } from "./ph-factories.js";
 import { reducer } from "./reducer.js";
-import { DocumentModelDocument } from "./types.js";
 
 export { fileExtension } from "./constants.js";
 
-export const createState: CreateState<DocumentModelDocument> = (state) => {
+export const createState: CreateState<DocumentModelPHState> = (state) => {
   return {
     ...defaultBaseState(),
     global: { ...documentModelState, ...(state?.global ?? {}) },
@@ -35,10 +33,7 @@ export const createState: CreateState<DocumentModelDocument> = (state) => {
   };
 };
 
-
-export const createDocument: CreateDocument<DocumentModelDocument> = (
-  state,
-) => {
+export const createDocument: CreateDocument<DocumentModelPHState> = (state) => {
   const document = baseCreateDocument(createState, state);
   document.header.documentType = documentType;
 
@@ -53,10 +48,10 @@ export const saveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const loadFromFile: LoadFromFile<DocumentModelDocument> = (path) => {
+export const loadFromFile: LoadFromFile<DocumentModelPHState> = (path) => {
   return baseLoadFromFile(path, reducer);
 };
 
-export const loadFromInput: LoadFromInput<DocumentModelDocument> = (input) => {
+export const loadFromInput: LoadFromInput<DocumentModelPHState> = (input) => {
   return baseLoadFromInput(input, reducer);
 };

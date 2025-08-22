@@ -15,7 +15,6 @@ import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
 import { type SignalDispatch } from "../signal.js";
 import {
   type Action,
-  type BaseStateFromDocument,
   type CreateState,
   type DocumentAction,
   type DocumentOperations,
@@ -140,12 +139,12 @@ export function createAction<TAction extends Action>(
  *
  * @returns The new reducer.
  */
-export function createReducer<TDocument extends PHDocument>(
-  stateReducer: StateReducer<TDocument>,
+export function createReducer<TState extends PHBaseState = PHBaseState>(
+  stateReducer: StateReducer<TState>,
   documentReducer = baseReducer,
-): Reducer<TDocument> {
-  const reducer: Reducer<TDocument> = (
-    document: TDocument,
+): Reducer<TState> {
+  const reducer: Reducer<TState> = (
+    document: PHDocument<TState>,
     action: Action,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,
@@ -159,13 +158,13 @@ export function createReducer<TDocument extends PHDocument>(
  * Important note: it is the responsibility of the caller to set the document type
  * on the header.
  */
-export function baseCreateDocument<TDocument extends PHDocument>(
-  createState: CreateState<TDocument>,
-  initialState?: Partial<PHBaseState>,
-): TDocument {
+export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
+  createState: CreateState<TState>,
+  initialState?: Partial<TState>,
+): PHDocument<TState> {
   const state = createState(initialState);
   const header = createUnsignedHeader();
-  const phDocument: PHDocument = {
+  const phDocument: PHDocument<TState> = {
     header,
     state,
     initialState: state,
@@ -175,7 +174,7 @@ export function baseCreateDocument<TDocument extends PHDocument>(
     history: [],
   };
 
-  return phDocument as TDocument;
+  return phDocument;
 }
 
 export function hashDocumentStateForScope(
@@ -271,30 +270,30 @@ export function getDocumentLastModified(document: PHDocument) {
 }
 
 // Default createState function that just returns the state as-is
-const defaultCreateState = <TDocument extends PHDocument>(
-  state?: Partial<PHBaseState>,
+const defaultCreateState = <TState extends PHBaseState = PHBaseState>(
+  state?: Partial<TState>,
 ) => {
-  return state as BaseStateFromDocument<TDocument>;
+  return state as TState;
 };
 
 // Runs the operations on the initial data using the
 // provided reducer, wrapped with the document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayOperations<TDocument extends PHDocument>(
-  initialState: BaseStateFromDocument<TDocument>,
+export function replayOperations<TState extends PHBaseState = PHBaseState>(
+  initialState: TState,
   clearedOperations: DocumentOperations,
-  stateReducer: StateReducer<TDocument>,
+  stateReducer: StateReducer<TState>,
   dispatch?: SignalDispatch,
   header?: PHDocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
-): TDocument {
+): PHDocument<TState> {
   // wraps the provided custom reducer with the
   // base document reducer
   const wrappedReducer = createReducer(stateReducer, documentReducer);
 
-  return replayDocument<TDocument>(
+  return replayDocument<TState>(
     initialState,
     clearedOperations,
     wrappedReducer,
@@ -321,15 +320,15 @@ export type ReplayDocumentOptions = {
 // Runs the operations on the initial data using the
 // provided document reducer.
 // This rebuilds the document according to the provided actions.
-export function replayDocument<TDocument extends PHDocument>(
-  initialState: BaseStateFromDocument<TDocument>,
+export function replayDocument<TState extends PHBaseState = PHBaseState>(
+  initialState: TState,
   operations: DocumentOperations,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   dispatch?: SignalDispatch,
   header?: PHDocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
-): TDocument {
+): PHDocument<TState> {
   const {
     checkHashes = true,
     reuseOperationResultingState,
@@ -380,7 +379,7 @@ export function replayDocument<TDocument extends PHDocument>(
 
   // builds a new document from the initial data
   const document = baseCreateDocument(
-    defaultCreateState<TDocument>,
+    defaultCreateState<TState>,
     documentState,
   );
   if (header?.slug) {
@@ -415,7 +414,7 @@ export function replayDocument<TDocument extends PHDocument>(
         result = updateHeaderRevision(
           result,
           lastOperation.action.scope,
-        ) as TDocument;
+        ) as PHDocument<TState>;
       }
     }
   }
@@ -488,7 +487,7 @@ export function replayDocument<TDocument extends PHDocument>(
   return {
     ...result,
     operations: resultOperations,
-  } as TDocument;
+  } as PHDocument<TState>;
 }
 
 export function parseResultingState<TState>(

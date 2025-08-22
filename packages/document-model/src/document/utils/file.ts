@@ -1,5 +1,5 @@
-import { type PHDocumentHeader } from "#document/ph-types.js";
-import { type BaseStateFromDocument, type Reducer } from "#document/types.js";
+import { PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
+import { type Reducer } from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
@@ -112,38 +112,36 @@ export async function baseSaveToFileHandle(
  * @returns A promise that resolves to the document state after applying all the operations.
  * @throws An error if the initial state or the operations history is not found in the ZIP file.
  */
-export async function baseLoadFromFile<TDocument extends PHDocument>(
+export async function baseLoadFromFile<TState extends PHBaseState>(
   path: string,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const file = readFile(path);
   return baseLoadFromInput(file, reducer, options);
 }
 
-export async function baseLoadFromInput<TDocument extends PHDocument>(
+export async function baseLoadFromInput<TState extends PHBaseState>(
   input: FileInput,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const zip = new JSZip();
   await zip.loadAsync(input);
   return loadFromZip(zip, reducer, options);
 }
 
-async function loadFromZip<TDocument extends PHDocument>(
+async function loadFromZip<TState extends PHBaseState>(
   zip: JSZip,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const initialStateZip = zip.file("state.json");
   if (!initialStateZip) {
     throw new Error("Initial state not found");
   }
   const initialStateStr = await initialStateZip.async("string");
-  const initialState = JSON.parse(
-    initialStateStr,
-  ) as BaseStateFromDocument<TDocument>;
+  const initialState = JSON.parse(initialStateStr) as TState;
 
   const headerZip = zip.file("header.json");
   let header: PHDocumentHeader | undefined = undefined;

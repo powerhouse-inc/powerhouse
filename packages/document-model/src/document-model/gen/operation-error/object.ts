@@ -1,17 +1,15 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { DocumentModelPHState } from "../ph-factories.js";
 import {
   AddOperationErrorInput,
   DeleteOperationErrorInput,
-  DocumentModelLocalState,
   ReorderOperationErrorsInput,
   SetOperationErrorCodeInput,
   SetOperationErrorDescriptionInput,
   SetOperationErrorNameInput,
   SetOperationErrorTemplateInput,
 } from "../schema/types.js";
-import { DocumentModelState } from "../types.js";
 import {
   addOperationError,
   deleteOperationError,
@@ -22,11 +20,7 @@ import {
   setOperationErrorTemplate,
 } from "./creators.js";
 
-export default class DocumentModel_OperationError extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+export default class DocumentModel_OperationError extends BaseDocumentClass<DocumentModelPHState> {
   public addOperationError(
     input: AddOperationErrorInput,
     options?: ReducerOptions,

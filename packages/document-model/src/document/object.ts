@@ -1,10 +1,10 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
+import { PHBaseState } from "./ph-types.js";
 import { type SignalDispatch } from "./signal.js";
 import {
+  PHDocument,
   type Action,
   type AttachmentRef,
-  type BaseDocument,
-  type BaseState,
   type Reducer,
   type ReducerOptions,
 } from "./types.js";
@@ -17,13 +17,9 @@ import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocumentClass<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends Action,
-> {
-  protected _document: BaseDocument<TGlobalState, TLocalState>;
-  private _reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>;
+export abstract class BaseDocumentClass<TState extends PHBaseState> {
+  protected _document: PHDocument<TState>;
+  private _reducer: Reducer<TState>;
   private _signalDispatch?: SignalDispatch;
 
   /**
@@ -32,8 +28,8 @@ export abstract class BaseDocumentClass<
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    reducer: Reducer<TState>,
+    document: PHDocument<TState>,
     signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
@@ -46,7 +42,7 @@ export abstract class BaseDocumentClass<
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: TCustomAction, options?: ReducerOptions) {
+  protected dispatch(action: Action, options?: ReducerOptions) {
     this._document = this._reducer(
       this._document,
       action,
@@ -80,12 +76,11 @@ export abstract class BaseDocumentClass<
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends Action,
-  >(path: string, reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>) {
-    const state = await baseLoadFromFile(path, reducer);
+  protected static async stateFromFile<TState extends PHBaseState>(
+    path: string,
+    reducer: Reducer<TState>,
+  ) {
+    const state = await baseLoadFromFile<TState>(path, reducer);
     return state;
   }
 
@@ -162,7 +157,7 @@ export abstract class BaseDocumentClass<
    * @param name - The new name of the document.
    */
   public setName(name: string) {
-    this.dispatch(setName(name) as TCustomAction);
+    this.dispatch(setName(name));
     return this;
   }
 
@@ -171,7 +166,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to revert.
    */
   public undo(count: number) {
-    this.dispatch(undo(count) as TCustomAction);
+    this.dispatch(undo(count));
     return this;
   }
 
@@ -180,7 +175,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to reapply.
    */
   public redo(count: number) {
-    this.dispatch(redo(count) as TCustomAction);
+    this.dispatch(redo(count));
     return this;
   }
   /**
@@ -189,7 +184,7 @@ export abstract class BaseDocumentClass<
    * @param end - The ending index of the range to remove.
    */
   public prune(start?: number | undefined, end?: number | undefined) {
-    this.dispatch(prune(start, end) as TCustomAction);
+    this.dispatch(prune(start, end));
     return this;
   }
 
@@ -201,16 +196,11 @@ export abstract class BaseDocumentClass<
   public loadState(
     state: {
       name: string;
-      state: BaseState<TGlobalState, TLocalState>;
+      state: TState;
     },
     operations: number,
   ) {
-    this.dispatch(
-      loadState(
-        { name: state.name, ...state.state },
-        operations,
-      ) as TCustomAction,
-    );
+    this.dispatch(loadState({ name: state.name, ...state.state }, operations));
     return this;
   }
 }

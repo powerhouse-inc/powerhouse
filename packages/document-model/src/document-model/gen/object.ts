@@ -1,19 +1,14 @@
 import { applyMixins, BaseDocumentClass } from "#document/object.js";
-import { BaseStateFromDocument, SignalDispatch } from "#document/types.js";
-import { DocumentModelAction } from "./actions.js";
+import { SignalDispatch } from "#document/types.js";
 import { fileExtension } from "./constants.js";
 import DocumentModel_Header from "./header/object.js";
 import DocumentModel_Module from "./module/object.js";
 import DocumentModel_OperationError from "./operation-error/object.js";
 import DocumentModel_OperationExample from "./operation-example/object.js";
 import DocumentModel_Operation from "./operation/object.js";
+import { DocumentModelPHState } from "./ph-factories.js";
 import { reducer } from "./reducer.js";
 import DocumentModel_State from "./state/object.js";
-import {
-  DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "./types.js";
 import { createDocument } from "./utils.js";
 import DocumentModel_Versioning from "./versioning/object.js";
 
@@ -34,15 +29,11 @@ interface DocumentModelClass
     DocumentModel_Operation,
     DocumentModel_State {}
 
-class DocumentModelClass extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+class DocumentModelClass extends BaseDocumentClass<DocumentModelPHState> {
   static fileExtension = fileExtension;
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<DocumentModelDocument>>,
+    initialState?: Partial<DocumentModelPHState>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, createDocument(initialState), dispatch);

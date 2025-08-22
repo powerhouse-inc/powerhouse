@@ -12,7 +12,7 @@ import {
   operationFromAction,
   operationFromOperation,
 } from "./ph-factories.js";
-import { type PHDocumentHeader } from "./ph-types.js";
+import { PHBaseState, type PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
 import { type SignalDispatch } from "./signal.js";
 import {
@@ -202,11 +202,11 @@ export function updateDocument<TDocument extends PHDocument>(
  * @param wrappedReducer The custom reducer function being wrapped by the base reducer.
  * @returns The updated document state.
  */
-function _baseReducer<TDocument extends PHDocument>(
-  document: TDocument,
+function _baseReducer<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   action: Action,
-  wrappedReducer: StateReducer<TDocument>,
-): TDocument {
+  wrappedReducer: StateReducer<TState>,
+): PHDocument<TState> {
   // throws if action is not valid base action
   const parsedAction = DocumentActionSchema().parse(action);
 
@@ -216,7 +216,7 @@ function _baseReducer<TDocument extends PHDocument>(
     case PRUNE:
       return pruneOperation(document, parsedAction.input, wrappedReducer);
     case LOAD_STATE:
-      return loadStateOperation(document, parsedAction.input.state);
+      return loadStateOperation(document, parsedAction.input);
     default:
       return document;
   }
@@ -230,12 +230,12 @@ function _baseReducer<TDocument extends PHDocument>(
  * @param skip The number of operations to skip before applying the action.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
-export function processUndoRedo<TDocument extends PHDocument>(
-  document: TDocument,
+export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   action: Action,
   skip: number,
 ): {
-  document: TDocument;
+  document: PHDocument<TState>;
   action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
@@ -250,14 +250,14 @@ export function processUndoRedo<TDocument extends PHDocument>(
   }
 }
 
-function processSkipOperation<TDocument extends PHDocument>(
-  document: TDocument,
+function processSkipOperation<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   action: Action,
-  customReducer: StateReducer<TDocument>,
+  customReducer: StateReducer<TState>,
   skipValue: number,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
-): TDocument {
+): PHDocument<TState> {
   const scope = action.scope;
 
   const latestOperation = document.operations[scope].at(-1);
@@ -307,13 +307,13 @@ function processSkipOperation<TDocument extends PHDocument>(
   };
 }
 
-function processUndoOperation<TDocument extends PHDocument>(
-  document: TDocument,
+function processUndoOperation<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   scope: string,
-  customReducer: StateReducer<TDocument>,
+  customReducer: StateReducer<TState>,
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
-): TDocument {
+): PHDocument<TState> {
   const operations = [...document.operations[scope]];
   const sortedOperations = sortOperations(operations);
 
@@ -347,7 +347,7 @@ function processUndoOperation<TDocument extends PHDocument>(
     [...document.clipboard, ...diff].filter((op) => op.action.type !== "NOOP"),
   ).reverse();
 
-  return { ...doc, clipboard } as TDocument;
+  return { ...doc, clipboard } as PHDocument<TState>;
 }
 
 /**
@@ -362,13 +362,13 @@ function processUndoOperation<TDocument extends PHDocument>(
  * specific to the document's state.
  * @returns The new state of the document.
  */
-export function baseReducer<TDocument extends PHDocument>(
-  document: TDocument,
+export function baseReducer<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   action: Action,
-  customReducer: StateReducer<TDocument>,
+  customReducer: StateReducer<TState>,
   dispatch?: SignalDispatch,
   options: ReducerOptions = {},
-): TDocument {
+): PHDocument<TState> {
   const {
     skip,
     ignoreSkipOperations = false,

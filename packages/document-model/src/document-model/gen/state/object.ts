@@ -1,11 +1,9 @@
 import { BaseDocumentClass } from "../../../document/object.js";
 import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { DocumentModelPHState } from "../ph-factories.js";
 import {
   AddStateExampleInput,
   DeleteStateExampleInput,
-  DocumentModelLocalState,
-  DocumentModelState,
   ReorderStateExamplesInput,
   SetInitialStateInput,
   SetStateSchemaInput,
@@ -20,11 +18,7 @@ import {
   updateStateExample,
 } from "./creators.js";
 
-export default class DocumentModel_State extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
+export default class DocumentModel_State extends BaseDocumentClass<DocumentModelPHState> {
   public setStateSchema(input: SetStateSchemaInput, options?: ReducerOptions) {
     return this.dispatch(setStateSchema(input), options);
   }
