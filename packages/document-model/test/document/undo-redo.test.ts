@@ -7,7 +7,7 @@ import {
   type CountAction,
   type CountDocument,
   countReducer,
-  createBaseState,
+  createTestState,
   createCountDocumentState,
   increment,
 } from "../helpers.js";
@@ -16,7 +16,7 @@ describe("UNDO/REDO", () => {
   let document: CountDocument;
 
   beforeEach(() => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = createTestState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -87,7 +87,7 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = createBaseState({ count: 0 }, { name: "" });
+      const initialState = createTestState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -103,7 +103,7 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = createBaseState({ count: 0 }, { name: "" });
+      const initialState = createTestState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 

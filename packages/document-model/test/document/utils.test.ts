@@ -16,9 +16,9 @@ import {
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
 import {
-  type CountDocument,
+  type CountPHState,
   countReducer,
-  createBaseState,
+  createTestState,
   createCountDocumentState,
   fakeAction,
   increment,
@@ -178,9 +178,9 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
     const newDocument = countReducer(document, setLocalName("test"));
 
@@ -203,10 +203,10 @@ describe("Base utils", () => {
   });
 
   it("should work with mutable reducer", () => {
-    const reducer = createReducer<CountDocument>(mutableCountReducer);
-    const document = baseCreateDocument<CountDocument>(
+    const reducer = createReducer<CountPHState>(mutableCountReducer);
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
     const newDocument = reducer(document, increment());
     expect(newDocument.state.global.count).toBe(1);

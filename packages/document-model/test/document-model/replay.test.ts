@@ -5,10 +5,7 @@ import {
   replayDocument,
 } from "../../src/document/utils/base.js";
 import {
-  type CountAction,
-  type CountDocument,
-  type CountLocalState,
-  type CountState,
+  type CountPHState,
   baseCountReducer,
   countReducer,
   createCountState,
@@ -16,7 +13,7 @@ import {
 } from "../helpers.js";
 describe("DocumentModel Class", () => {
   const initialState = createCountState();
-  const initialDocument: BaseDocument<CountState, CountLocalState> = {
+  const initialDocument: BaseDocument<CountPHState> = {
     header: {
       id: "",
       sig: { publicKey: {}, nonce: "" },
@@ -42,7 +39,7 @@ describe("DocumentModel Class", () => {
 
   it("should call reducer once per operation", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
 
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
@@ -54,7 +51,7 @@ describe("DocumentModel Class", () => {
 
   it("should reuse past operation state if available when skipping", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
 
     let newDocument = reducer(initialDocument, increment(), undefined, {
       reuseOperationResultingState: true,
@@ -75,7 +72,7 @@ describe("DocumentModel Class", () => {
 
   it("should look for the latest resulting state when replaying the document", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
 
     let newDocument = reducer(initialDocument, increment(), undefined, {
       reuseOperationResultingState: true,
@@ -109,7 +106,7 @@ describe("DocumentModel Class", () => {
 
   it("should replay document with operations", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
     expect(mockReducer).toHaveBeenCalledTimes(2);
@@ -125,7 +122,7 @@ describe("DocumentModel Class", () => {
 
   it("should replay document with undone operations", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
 
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
@@ -146,7 +143,7 @@ describe("DocumentModel Class", () => {
 
   it("should reuse resulting state when replaying document with undone operations", () => {
     const mockReducer = vi.fn(baseCountReducer);
-    const reducer = createReducer<CountDocument>(mockReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
 
     let newDocument = reducer(initialDocument, increment(), undefined, {
       reuseOperationResultingState: true,

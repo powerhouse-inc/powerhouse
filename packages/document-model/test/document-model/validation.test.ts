@@ -6,6 +6,10 @@ import {
   validateStateSchemaName,
 } from "#document-model/custom/utils.js";
 import { setStateSchema } from "#document-model/gen/creators.js";
+import {
+  documentModelState,
+  initialLocalState,
+} from "#document-model/gen/constants.js";
 import { reducer } from "#document-model/gen/reducer.js";
 import {
   type Module,
@@ -13,10 +17,8 @@ import {
 } from "#document-model/gen/schema/types.js";
 import { type DocumentModelDocument } from "#document-model/gen/types.js";
 import { createDocument } from "#document-model/gen/utils.js";
-import {
-  type BaseStateFromDocument,
-  type ValidationError,
-} from "#document/types.js";
+import { defaultBaseState } from "#document/ph-factories.js";
+import { type ValidationError } from "#document/types.js";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";
@@ -24,13 +26,20 @@ describe("DocumentModel Validation Error", () => {
 
   beforeEach(() => {
     doc = createDocument({
-      id: "test-id",
-      name: documentName,
-      description: "test description",
-      extension: "phdm",
-      authorName: "test author",
-      authorWebsite: "www.test.com",
-    } as Partial<BaseStateFromDocument<DocumentModelDocument>>);
+      ...defaultBaseState(),
+      global: {
+        ...documentModelState,
+        id: "test-id",
+        name: documentName,
+        description: "test description",
+        extension: "phdm",
+        author: {
+          name: "test author",
+          website: "www.test.com",
+        },
+      },
+      local: initialLocalState,
+    });
   });
 
   describe("initial state", () => {

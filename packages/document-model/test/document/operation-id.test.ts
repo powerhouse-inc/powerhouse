@@ -1,22 +1,22 @@
-import { type BaseStateFromDocument } from "#document/types.js";
 import { baseCreateDocument, replayOperations } from "#document/utils/base.js";
 import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   baseCountReducer,
   type CountDocument,
+  type CountPHState,
   countReducer,
-  createBaseState,
+  createTestState,
   createCountDocumentState,
   increment,
 } from "../helpers.js";
 
 describe("Document Operation ID", () => {
   let document: CountDocument;
-  let initialState: BaseStateFromDocument<CountDocument>;
+  let initialState: CountPHState;
 
   beforeEach(() => {
-    initialState = createBaseState({ count: 0 }, { name: "" });
+    initialState = createTestState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
   });
@@ -113,7 +113,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -151,7 +151,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -195,7 +195,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,

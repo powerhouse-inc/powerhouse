@@ -10,8 +10,9 @@ import {
 import { baseCreateDocument } from "../../src/document/utils/base.js";
 import {
   type CountDocument,
+  type CountPHState,
   countReducer,
-  createBaseState,
+  createTestState,
   createCountDocumentState,
   createCountState,
   increment,
@@ -20,7 +21,7 @@ import {
 
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -39,7 +40,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            ...createBaseState({ count: 3 }, {}),
+            ...createTestState({ count: 3 }, {}),
           },
           4,
         ),
@@ -56,9 +57,9 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune last 3 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -77,7 +78,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            ...createBaseState({ count: 4 }, {}),
+            ...createTestState({ count: 4 }, {}),
           },
           3,
         ),
@@ -93,9 +94,9 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune 2 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -114,7 +115,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            ...createBaseState({ count: 3 }, {}),
+            ...createTestState({ count: 3 }, {}),
           },
           2,
         ),
@@ -131,9 +132,9 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should undo pruned state", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
     let newDocument = countReducer(document, increment());
     newDocument = countReducer(newDocument, setName("Document"));
@@ -156,7 +157,7 @@ describe("PRUNE operation", () => {
       ...loadState(
         {
           name: "Document",
-          ...createBaseState({ count: 4 }, {}),
+          ...createTestState({ count: 4 }, {}),
         },
         4,
       ),
@@ -171,9 +172,9 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should redo pruned state", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      createTestState({ count: 0 }, { name: "" }),
     );
 
     let newDocument = countReducer(document, increment());
@@ -196,7 +197,7 @@ describe("PRUNE operation", () => {
         ...loadState(
           {
             name: "Document",
-            ...createBaseState({ count: 4 }, { name: "" }),
+            ...createTestState({ count: 4 }, { name: "" }),
           },
           4,
         ),

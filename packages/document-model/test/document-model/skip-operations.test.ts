@@ -7,6 +7,7 @@ import {
   setModelId,
   setModelName,
 } from "../../src/document-model/gen/creators.js";
+import { type DocumentModelPHState } from "../../src/document-model/gen/ph-factories.js";
 import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
 import { createDocument } from "../../src/document-model/gen/utils.js";
 import { replayOperations } from "../../src/document/utils/base.js";
@@ -451,7 +452,7 @@ describe("Document Operations", () => {
       );
       document = reducer(document, setModelId({ id: "<id>" }));
 
-      const replayedDoc = replayOperations<DocumentModelDocument>(
+      const replayedDoc = replayOperations<DocumentModelPHState>(
         document.initialState,
         garbageCollectDocumentOperations(document.operations),
         stateReducer,
