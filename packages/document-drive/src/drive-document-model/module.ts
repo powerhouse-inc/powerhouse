@@ -3,9 +3,11 @@ import {
   type DocumentModelModule,
 } from "document-model";
 import { documentModel } from "./gen/document-model.js";
-import { actions as DocumentDriveActions, DocumentDrivePHState } from "./gen/index.js";
+import {
+  actions as DocumentDriveActions,
+  type DocumentDrivePHState,
+} from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
-import { type DocumentDriveDocument } from "./gen/types.js";
 import genUtils, { type DocumentDriveUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 

@@ -9,14 +9,14 @@ import {
 import { logger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
-import { type Action, type Operation } from "document-model";
+import { type Action, type Operation, type PHBaseState } from "document-model";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate = Omit<Operation, "scope"> & {
   /** The state, for a specific scope, of the document */
-  state: any;
+  state?: PHBaseState;
   /** The previous state, for a specific scope, of the document */
-  previousState: any;
+  previousState?: PHBaseState;
 };
 
 export type InternalTransmitterUpdate = {
@@ -50,7 +50,7 @@ export class InternalTransmitter implements ITransmitter {
     strand: StrandUpdate,
   ): Promise<InternalOperationUpdate[]> {
     const operations: InternalOperationUpdate[] = [];
-    const stateByIndex = new Map<number, any>();
+    const stateByIndex = new Map<number, PHBaseState>();
 
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
@@ -121,7 +121,7 @@ export class InternalTransmitter implements ITransmitter {
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
         const document = await this.drive.getDocument(strand.documentId);
-        const state = operations.at(-1)?.state ?? {};
+        const state = operations.at(-1)?.state ?? ({} as PHBaseState);
         updates.push({
           ...strand,
           documentType: document.header.documentType,

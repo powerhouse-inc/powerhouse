@@ -1,6 +1,6 @@
 import InMemoryCache from "#cache/memory";
+import { type DocumentDrivePHState } from "#drive-document-model/gen/index";
 import DriveUtils from "#drive-document-model/gen/utils";
-import { type DocumentDriveDocument } from "#drive-document-model/module";
 import { type CreateState } from "document-model";
 export type { DocumentDriveAction } from "#drive-document-model/gen/actions";
 export {
@@ -103,6 +103,5 @@ export {
 export type { ILogger } from "#utils/logger";
 export { isDocumentDrive } from "#utils/misc";
 export { InMemoryCache };
-import { DocumentDrivePHState } from "#drive-document-model/gen/index";
 export const createDriveState: CreateState<DocumentDrivePHState> =
   DriveUtils.createState;

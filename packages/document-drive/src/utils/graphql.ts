@@ -9,20 +9,20 @@ import {
   type DocumentModelModule,
   type DocumentModelState,
   type Operation,
-  type PHDocument,
   type PHBaseState,
+  type PHDocument,
 } from "document-model";
 import {
-  type BuildSchemaOptions,
   GraphQLError,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
-  type GraphQLOutputType,
   GraphQLScalarType,
   GraphQLUnionType,
-  type ParseOptions,
   buildSchema,
+  type BuildSchemaOptions,
+  type GraphQLOutputType,
+  type ParseOptions,
 } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
 import { logger } from "./logger.js";
@@ -198,29 +198,30 @@ export type DriveState = DriveInfo &
     nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
   };
 
-export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
-  revision: number;
-  state: any;
-  initialState: any;
-  operations: (Operation & {
-    inputText: string;
-  })[];
-};
+export type DocumentGraphQLResult<TState extends PHBaseState = PHBaseState> =
+  PHDocument<TState> & {
+    revision: number;
+    state: TState;
+    initialState: TState;
+    operations: (Operation & {
+      inputText: string;
+    })[];
+  };
 
-export async function fetchDocument<TDocument extends PHDocument, TState extends PHBaseState = PHBaseState>(
+export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
   url: string,
   documentId: string,
   documentModelModule: DocumentModelModule<TState>,
 ): Promise<
   GraphQLResult<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>
 > {
-  const { documentModel, utils } = documentModelModule;
+  const { documentModel } = documentModelModule;
   const name = pascalCase(documentModel.name);
   const stateFields = generateDocumentStateQueryFields(documentModel, name);
   const result = await requestGraphql<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>(
     url,
     gql`
@@ -269,36 +270,33 @@ export async function fetchDocument<TDocument extends PHDocument, TState extends
         `,
     { id: documentId },
   );
-  const document: any = result.document
-    ? {
-        clipboard: result.document.clipboard,
-        header: result.document.header,
-        initialState: utils.createState({
-          global: result.document.initialState,
-        } as any),
-        operations: {
-          global: result.document.operations.map(({ inputText, ...o }) => ({
-            ...o,
-            error: o.error ?? undefined,
-            scope: "global",
-            input: JSON.parse(inputText) as PHDocument,
-          })),
-          local: [],
-        },
-        state: result.document.state,
-      }
-    : null;
 
-  if (result?.document?.attachments) {
-    // eslint-disable-next-line
-    document.attachments = result.document.attachments;
+  if (!result.document) {
+    return { ...result, document: null };
   }
+
+  const document: DocumentGraphQLResult<TState> = {
+    clipboard: result.document.clipboard,
+    header: result.document.header,
+    initialState: result.document.initialState,
+    /** @ts-expect-error */
+    operations: {
+      global: result.document.operations.map(({ inputText, ...o }) => ({
+        ...o,
+        error: o.error ?? undefined,
+        scope: "global",
+        input: JSON.parse(inputText) as PHDocument<TState>,
+      })),
+      local: [],
+    },
+    state: result.document.state,
+    attachments: result.document.attachments,
+  };
 
   return {
     ...result,
-    // eslint-disable-next-line
     document,
   } as GraphQLResult<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>;
 }

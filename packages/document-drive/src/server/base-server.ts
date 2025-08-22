@@ -6,17 +6,17 @@ import {
   removeTrigger,
   setSharingType,
 } from "#drive-document-model/gen/creators";
+import { createDocumentDriveDocument } from "#drive-document-model/gen/ph-factories";
 import { type LegacyAddFileAction } from "#drive-document-model/module";
-import { createDriveDocument } from "#drive-document-model/ph-factories";
 import {
+  isActionJob,
+  isDocumentJob,
+  isOperationJob,
   type ActionJob,
   type DocumentJob,
   type IQueueManager,
   type Job,
   type OperationJob,
-  isActionJob,
-  isDocumentJob,
-  isOperationJob,
 } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
 import {
@@ -32,20 +32,12 @@ import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
 import {
   DocumentAlreadyExistsError,
+  childLogger,
   type DocumentDriveAction,
   type DocumentDriveDocument,
   type Trigger,
-  childLogger,
 } from "document-drive";
 import {
-  type Action,
-  type DocumentModelModule,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type PHBaseState,
-  type SignalResult,
   attachBranch,
   createPresignedHeader,
   garbageCollect,
@@ -59,6 +51,14 @@ import {
   skipHeaderOperations,
   sortOperations,
   validateHeader,
+  type Action,
+  type DocumentModelModule,
+  type Operation,
+  type PHDocument,
+  type PHDocumentHeader,
+  type PHDocumentMeta,
+  type Signal,
+  type SignalResult,
 } from "document-model";
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
@@ -69,16 +69,16 @@ import {
   type SynchronizationUnitNotFoundError,
 } from "./error.js";
 import {
-  type CancelPullLoop,
   PullResponderTransmitter,
+  type CancelPullLoop,
 } from "./listener/transmitter/pull-responder.js";
 import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
 import { type StrandUpdateSource } from "./listener/transmitter/types.js";
 import {
+  DefaultListenerManagerOptions,
   type AddOperationOptions,
   type Constructor,
   type CreateDocumentInput,
-  DefaultListenerManagerOptions,
   type DocumentDriveServerOptions,
   type DriveEvents,
   type DriveInput,
@@ -154,24 +154,28 @@ export class BaseDocumentDriveServer
     processDocumentJob: async ({
       documentId,
       documentType,
+      header: inputHeader,
       initialState,
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelModule.utils.createDocument(
-        initialState as any,
-      );
+      const document = documentModelModule.utils.createDocument(initialState);
+
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
       document.header.sig = header.sig;
       document.header.documentType = documentType;
 
+      if (inputHeader) {
+        document.header.meta = inputHeader.meta;
+      }
+
       try {
         const createdDocument = await this.createDocument(
           { document },
           options?.source ?? { type: "local" },
-          initialState?.header.meta,
+          document.header.meta,
         );
         return {
           status: "SUCCESS",
@@ -592,7 +596,7 @@ export class BaseDocumentDriveServer
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModelModule as any;
+    return documentModelModule;
   }
 
   getDocumentModelModules() {
@@ -624,7 +628,7 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
-    const document = createDriveDocument({
+    const document = createDocumentDriveDocument({
       global: input.global,
       local: input.local,
     });
@@ -1286,7 +1290,7 @@ export class BaseDocumentDriveServer
     newDocument = documentModelModule.reducer(
       newDocument,
       operation.action,
-      (signal: any) => {
+      (signal: Signal) => {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
           case "CREATE_CHILD_DOCUMENT":
@@ -1299,6 +1303,7 @@ export class BaseDocumentDriveServer
             handler = () => this.addChild(documentId, signal.input.newId);
             break;
         }
+
         if (handler) {
           operationSignals.push(() =>
             handler().then((result) => ({ signal, result }) as SignalResult),
@@ -1457,7 +1462,8 @@ export class BaseDocumentDriveServer
       jobId = await this.queueManager.addJob({
         documentId: id,
         documentType,
-        initialState: document,
+        initialState: document?.state,
+        header: document?.header,
         options,
       });
     } catch (error) {

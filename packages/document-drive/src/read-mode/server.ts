@@ -1,7 +1,7 @@
 import { type DocumentDriveServerConstructor } from "#server/base-server";
 import { type RemoteDriveOptions } from "#server/types";
 import { logger } from "#utils/logger";
-import { type PHDocument } from "document-model";
+import { type PHBaseState } from "document-model";
 import { type ReadDriveSlugNotFoundError } from "./errors.js";
 import { ReadModeService } from "./service.js";
 import {
@@ -77,12 +77,12 @@ export function ReadModeServer(
       return this.#readModeStorage.fetchDrive(id);
     }
 
-    fetchDocument<TDocument extends PHDocument>(
+    fetchDocument<TState extends PHBaseState = PHBaseState>(
       driveId: string,
       documentId: string,
       documentType: string,
     ) {
-      return this.#readModeStorage.fetchDocument<TDocument>(
+      return this.#readModeStorage.fetchDocument<TState>(
         driveId,
         documentId,
         documentType,

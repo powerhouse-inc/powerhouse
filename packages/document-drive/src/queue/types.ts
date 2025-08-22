@@ -1,5 +1,10 @@
 import { type AddOperationOptions, type IOperationResult } from "#server/types";
-import type { Action, Operation, PHDocument } from "document-model";
+import type {
+  Action,
+  Operation,
+  PHBaseState,
+  PHDocumentHeader,
+} from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {
@@ -10,7 +15,8 @@ export interface BaseJob {
 
 export interface DocumentJob extends Omit<BaseJob, "actions"> {
   documentType: string;
-  initialState?: PHDocument;
+  header?: Partial<PHDocumentHeader>;
+  initialState?: Partial<PHBaseState>;
 }
 
 export interface OperationJob extends BaseJob {

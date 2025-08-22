@@ -43,8 +43,11 @@ export function responseForDocument<TState extends PHBaseState = PHBaseState>(
     documentType: document.header.documentType,
     name: document.header.name,
     revision: document.header.revision.global || 0,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     stateJSON: (document.state as any).global,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     operations: (document.operations as any).global.map((op: Operation) => ({
       ...op,
       inputText:
@@ -52,6 +55,7 @@ export function responseForDocument<TState extends PHBaseState = PHBaseState>(
           ? op.action.input
           : JSON.stringify(op.action.input),
     })),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     initialState: (document.initialState as any).global,
     __typename: typeName,
   };

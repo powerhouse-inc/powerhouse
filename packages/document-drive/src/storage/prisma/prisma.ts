@@ -15,7 +15,7 @@ import type {
   PHDocumentHeader,
 } from "document-model";
 import { actionContext } from "document-model";
-import { type IBackOffOptions, backOff } from "exponential-backoff";
+import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { type ICache } from "../../cache/types.js";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import {
@@ -489,7 +489,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
     const doc = {
       header,
-      initialState: JSON.parse(dbDoc.initialState) as any,
+      initialState: JSON.parse(dbDoc.initialState) as TDocument["initialState"],
       operations: operationsByScope,
       clipboard: [],
       attachments: {},

@@ -9,10 +9,9 @@ import {
 } from "#server/types";
 import { type DriveInfo } from "#utils/graphql";
 import {
-  Action,
   type DocumentModelModule,
-  type PHDocument,
   type PHBaseState,
+  type PHDocument,
 } from "document-model";
 import {
   type ReadDocumentNotFoundError,
@@ -70,12 +69,12 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<TDocument extends PHDocument>(
+  fetchDocument<TState extends PHBaseState = PHBaseState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | TDocument
+    | PHDocument<TState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
