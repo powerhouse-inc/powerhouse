@@ -4,12 +4,13 @@ import {
   isDocumentAction,
   Reducer,
 } from "document-model";
+import { DocumentDrivePHState } from "./ph-factories.js";
 import { type DocumentDriveDocument, z } from "./types.js";
 
 import { reducer as DriveReducer } from "../src/reducers/drive.js";
 import { reducer as NodeReducer } from "../src/reducers/node.js";
 
-const stateReducer: StateReducer<DocumentDriveDocument> = (
+const stateReducer: StateReducer<DocumentDrivePHState> = (
   state,
   action,
   dispatch,
@@ -125,5 +126,5 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
   }
 };
 
-export const reducer: Reducer<DocumentDriveDocument> =
-  createReducer<DocumentDriveDocument>(stateReducer);
+export const reducer: Reducer<DocumentDrivePHState> =
+  createReducer<DocumentDrivePHState>(stateReducer);

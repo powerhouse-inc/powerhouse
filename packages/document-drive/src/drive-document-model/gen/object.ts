@@ -1,15 +1,16 @@
 import {
   BaseDocumentClass,
-  type BaseState,
   type PartialState,
   applyMixins,
   type SignalDispatch,
+  type PHBaseState,
 } from "document-model";
 import {
   type DocumentDriveState,
   type DocumentDriveLocalState,
 } from "./types.js";
 import { type DocumentDriveAction } from "./actions.js";
+import { DocumentDrivePHState } from "./ph-factories.js";
 import { reducer } from "./reducer.js";
 import utils from "./utils.js";
 import DocumentDrive_Node from "./node/object.js";
@@ -22,20 +23,11 @@ export * from "./drive/object.js";
 interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class DocumentDrive extends BaseDocumentClass<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> {
+class DocumentDrive extends BaseDocumentClass<DocumentDrivePHState> {
   static fileExtension = "phdd";
 
   constructor(
-    initialState?: Partial<
-      BaseState<
-        PartialState<DocumentDriveState>,
-        PartialState<DocumentDriveLocalState>
-      >
-    >,
+    initialState?: PartialState<DocumentDrivePHState>,
     dispatch?: SignalDispatch,
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);

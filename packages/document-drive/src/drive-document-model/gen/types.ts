@@ -1,5 +1,6 @@
-import type { Action, BaseState, PHDocument } from "document-model";
+import type { Action, PHDocument } from "document-model";
 import type { DocumentDriveAction } from "./actions.js";
+import { DocumentDrivePHState } from "./ph-factories.js";
 import type {
   AddFileInput,
   DocumentDriveLocalState,
@@ -15,14 +16,8 @@ export type {
   DocumentDriveLocalState,
   DocumentDriveState,
 };
-export type ExtendedDocumentDriveState = BaseState<
-  DocumentDriveState,
-  DocumentDriveLocalState
->;
-export type DocumentDriveDocument = PHDocument<
-  DocumentDriveState,
-  DocumentDriveLocalState
->;
+export type ExtendedDocumentDriveState = DocumentDrivePHState;
+export type DocumentDriveDocument = PHDocument<DocumentDrivePHState>;
 
 export type LegacySynchronizationUnit = {
   branch: Scalars["String"]["output"];

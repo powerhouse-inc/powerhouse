@@ -1,5 +1,4 @@
 import { type ListenerFilter } from "#drive-document-model/module";
-import { type PHDocument } from "document-model";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import {
   type IProcessor,
@@ -7,8 +6,6 @@ import {
   type IRelationalQueryBuilder,
 } from "./types.js";
 import { relationalDbToQueryBuilder } from "./utils.js";
-import { get } from "http";
-import { Schema, string } from "zod";
 
 export type { IRelationalQueryBuilder } from "./types.js";
 
@@ -113,9 +110,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
    * Abstract method that derived classes must implement.
    * This is where the business logic for processing document operations should be implemented.
    */
-  abstract onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void>;
+  abstract onStrands(strands: InternalTransmitterUpdate[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected.

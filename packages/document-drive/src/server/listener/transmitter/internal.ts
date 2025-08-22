@@ -9,33 +9,24 @@ import {
 import { logger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
-import {
-  type Action,
-  type GlobalStateFromDocument,
-  type LocalStateFromDocument,
-  type Operation,
-  type PHDocument,
-} from "document-model";
+import { type Action, type Operation } from "document-model";
 import { type ITransmitter, type StrandUpdateSource } from "./types.js";
 
-export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
-  Operation,
-  "scope"
-> & {
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
-  previousState:
-    | GlobalStateFromDocument<TDocument>
-    | LocalStateFromDocument<TDocument>;
+export type InternalOperationUpdate = Omit<Operation, "scope"> & {
+  /** The state, for a specific scope, of the document */
+  state: any;
+  /** The previous state, for a specific scope, of the document */
+  previousState: any;
 };
 
-export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
+export type InternalTransmitterUpdate = {
   driveId: string;
   documentId: string;
   documentType: string;
   scope: string;
   branch: string;
-  operations: InternalOperationUpdate<TDocument>[];
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
+  operations: InternalOperationUpdate[];
+  state: any; // The current state (global or local) for the scope
 };
 
 export class InternalTransmitter implements ITransmitter {
@@ -55,14 +46,11 @@ export class InternalTransmitter implements ITransmitter {
       taskQueueMethod === undefined ? RunAsap.runAsap : taskQueueMethod;
   }
 
-  async #buildInternalOperationUpdate<TDocument extends PHDocument>(
+  async #buildInternalOperationUpdate(
     strand: StrandUpdate,
-  ): Promise<InternalOperationUpdate<TDocument>[]> {
-    const operations: InternalOperationUpdate<TDocument>[] = [];
-    const stateByIndex = new Map<
-      number,
-      GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
-    >();
+  ): Promise<InternalOperationUpdate[]> {
+    const operations: InternalOperationUpdate[] = [];
+    const stateByIndex = new Map<number, any>();
 
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
@@ -78,10 +66,7 @@ export class InternalTransmitter implements ITransmitter {
       };
       const document = await (strand.documentId === strand.driveId
         ? this.drive.getDrive(strand.driveId, getDocumentOptions)
-        : this.drive.getDocument<TDocument>(
-            strand.documentId,
-            getDocumentOptions,
-          ));
+        : this.drive.getDocument(strand.documentId, getDocumentOptions));
 
       if (index < 0) {
         stateByIndex.set(

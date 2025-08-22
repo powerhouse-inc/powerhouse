@@ -12,6 +12,7 @@ import {
   Action,
   type DocumentModelModule,
   type PHDocument,
+  type PHBaseState,
 } from "document-model";
 import {
   type ReadDocumentNotFoundError,
@@ -83,6 +84,6 @@ export interface IReadModeDriveService {
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
 }
 
-export type GetDocumentModelModule = <TDocument extends PHDocument>(
+export type GetDocumentModelModule = (
   documentType: string,
-) => DocumentModelModule<TDocument>;
+) => DocumentModelModule<any>;

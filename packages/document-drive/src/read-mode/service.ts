@@ -98,8 +98,7 @@ export class ReadModeService implements IReadModeDriveService {
       return new ReadDriveNotFoundError(driveId);
     }
 
-    let documentModelModule: DocumentModelModule<TDocument> | undefined =
-      undefined;
+    let documentModelModule: DocumentModelModule | undefined = undefined;
     try {
       documentModelModule = this.#getDocumentModelModule(documentType);
     } catch (error) {

@@ -44,6 +44,7 @@ import {
   type PHDocument,
   type PHDocumentHeader,
   type PHDocumentMeta,
+  type PHBaseState,
   type SignalResult,
   attachBranch,
   createPresignedHeader,
@@ -158,7 +159,7 @@ export class BaseDocumentDriveServer
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
       const document = documentModelModule.utils.createDocument(
-        initialState?.state,
+        initialState as any,
       );
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
@@ -584,16 +585,14 @@ export class BaseDocumentDriveServer
     }
   }
 
-  protected getDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string,
-  ) {
+  protected getDocumentModelModule(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
       (module) => module.documentModel.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModelModule as unknown as DocumentModelModule<TDocument>;
+    return documentModelModule as any;
   }
 
   getDocumentModelModules() {
@@ -1018,7 +1017,7 @@ export class BaseDocumentDriveServer
 
     // if the document contains operations then
     // stores the operations in the storage
-    const operations = Object.values(document.operations).flat();
+    const operations = Object.values(document.operations).flat() as Operation[];
     if (operations.length) {
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
@@ -1217,7 +1216,7 @@ export class BaseDocumentDriveServer
       return documentStorage;
     }
 
-    const documentModelModule = this.getDocumentModelModule<TDocument>(
+    const documentModelModule = this.getDocumentModelModule(
       documentStorage.header.documentType,
     );
 
@@ -1242,7 +1241,7 @@ export class BaseDocumentDriveServer
         checkHashes: options?.checkHashes ?? true,
         reuseOperationResultingState: options?.checkHashes ?? true,
       },
-    );
+    ) as TDocument;
   }
 
   private async _performOperation(
@@ -1287,7 +1286,7 @@ export class BaseDocumentDriveServer
     newDocument = documentModelModule.reducer(
       newDocument,
       operation.action,
-      (signal) => {
+      (signal: any) => {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
           case "CREATE_CHILD_DOCUMENT":

@@ -8,9 +8,9 @@ import { pascalCase } from "change-case";
 import {
   type DocumentModelModule,
   type DocumentModelState,
-  type GlobalStateFromDocument,
   type Operation,
   type PHDocument,
+  type PHBaseState,
 } from "document-model";
 import {
   type BuildSchemaOptions,
@@ -200,17 +200,17 @@ export type DriveState = DriveInfo &
 
 export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
   revision: number;
-  state: GlobalStateFromDocument<TDocument>;
-  initialState: GlobalStateFromDocument<TDocument>;
+  state: any;
+  initialState: any;
   operations: (Operation & {
     inputText: string;
   })[];
 };
 
-export async function fetchDocument<TDocument extends PHDocument>(
+export async function fetchDocument<TDocument extends PHDocument, TState extends PHBaseState = PHBaseState>(
   url: string,
   documentId: string,
-  documentModelModule: DocumentModelModule<TDocument>,
+  documentModelModule: DocumentModelModule<TState>,
 ): Promise<
   GraphQLResult<{
     document: DocumentGraphQLResult<TDocument>;
@@ -275,7 +275,7 @@ export async function fetchDocument<TDocument extends PHDocument>(
         header: result.document.header,
         initialState: utils.createState({
           global: result.document.initialState,
-        }),
+        } as any),
         operations: {
           global: result.document.operations.map(({ inputText, ...o }) => ({
             ...o,

@@ -1,6 +1,6 @@
 import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
 import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
-import { type PHDocumentHeader, type PHDocument } from "document-model";
+import { type PHDocumentHeader } from "document-model";
 import { type Kysely, type QueryCreator } from "kysely";
 import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
 
@@ -50,9 +50,7 @@ export interface IProcessor {
    *
    * @param strands The strands to process.
    */
-  onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void>;
+  onStrands(strands: InternalTransmitterUpdate[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected. This is generally meant to

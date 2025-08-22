@@ -22,12 +22,9 @@ import {
   removeTrigger,
 } from "./creators.js";
 import { type DocumentDriveAction } from "../actions.js";
+import { DocumentDrivePHState } from "../ph-factories.js";
 
-export default class DocumentDrive_Drive extends BaseDocumentClass<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> {
+export default class DocumentDrive_Drive extends BaseDocumentClass<DocumentDrivePHState> {
   public setDriveName(input: SetDriveNameInput) {
     return this.dispatch(setDriveName(input));
   }

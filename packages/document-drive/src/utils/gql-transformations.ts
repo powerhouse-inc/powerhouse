@@ -1,6 +1,7 @@
 import { type DocumentDriveDocument } from "document-drive";
 import {
   type Operation,
+  type PHBaseState,
   type PHDocument,
   type PHDocumentHeader,
 } from "document-model";
@@ -29,8 +30,8 @@ export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
   operations: Operation[];
 };
 
-export function responseForDocument(
-  document: PHDocument,
+export function responseForDocument<TState extends PHBaseState = PHBaseState>(
+  document: PHDocument<TState>,
   typeName: string,
 ): PHDocumentGQL {
   return {
@@ -42,16 +43,16 @@ export function responseForDocument(
     documentType: document.header.documentType,
     name: document.header.name,
     revision: document.header.revision.global || 0,
-    state: document.state.global,
-    stateJSON: document.state.global,
-    operations: document.operations.global.map((op: Operation) => ({
+    state: (document.state as any).global,
+    stateJSON: (document.state as any).global,
+    operations: (document.operations as any).global.map((op: Operation) => ({
       ...op,
       inputText:
         typeof op.action.input === "string"
           ? op.action.input
           : JSON.stringify(op.action.input),
     })),
-    initialState: document.initialState.global,
+    initialState: (document.initialState as any).global,
     __typename: typeName,
   };
 }

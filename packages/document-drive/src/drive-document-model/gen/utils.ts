@@ -11,6 +11,7 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model";
+import { DocumentDrivePHState } from "./ph-factories.js";
 import { reducer } from "./reducer.js";
 import {
   type DocumentDriveDocument,
@@ -30,7 +31,7 @@ export const initialLocalState: DocumentDriveLocalState = {
   availableOffline: false,
 };
 
-export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;
+export type DocumentDriveUtils = DocumentModelUtils<DocumentDrivePHState>;
 
 const utils: DocumentDriveUtils = {
   fileExtension: "phdd",
@@ -42,7 +43,7 @@ const utils: DocumentDriveUtils = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(
+    const document = baseCreateDocument<DocumentDrivePHState>(
       utils.createState,
       state,
     );
@@ -68,9 +69,9 @@ const utils: DocumentDriveUtils = {
   },
 };
 
-export const createDocument: CreateDocument<DocumentDriveDocument> =
+export const createDocument: CreateDocument<DocumentDrivePHState> =
   utils.createDocument;
-export const createState: CreateState<DocumentDriveDocument> =
+export const createState: CreateState<DocumentDrivePHState> =
   utils.createState;
 
 export default utils;

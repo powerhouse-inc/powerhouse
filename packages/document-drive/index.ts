@@ -103,5 +103,6 @@ export {
 export type { ILogger } from "#utils/logger";
 export { isDocumentDrive } from "#utils/misc";
 export { InMemoryCache };
-export const createDriveState: CreateState<DocumentDriveDocument> =
+import { DocumentDrivePHState } from "#drive-document-model/gen/index";
+export const createDriveState: CreateState<DocumentDrivePHState> =
   DriveUtils.createState;

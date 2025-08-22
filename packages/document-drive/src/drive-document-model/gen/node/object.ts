@@ -20,12 +20,9 @@ import {
   moveNode,
 } from "./creators.js";
 import { type DocumentDriveAction } from "../actions.js";
+import { DocumentDrivePHState } from "../ph-factories.js";
 
-export default class DocumentDrive_Node extends BaseDocumentClass<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> {
+export default class DocumentDrive_Node extends BaseDocumentClass<DocumentDrivePHState> {
   public addFile(input: AddFileInput) {
     return this.dispatch(addFile(input));
   }
