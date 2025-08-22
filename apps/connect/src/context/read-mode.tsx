@@ -1,28 +1,28 @@
 import { useReactor, useUserPermissions } from '@powerhousedao/reactor-browser';
 import {
+    ReadDriveNotFoundError,
+    logger,
     type DocumentModelNotFoundError,
     type IDocumentDriveServer,
     type IReadModeDriveServer,
-    logger,
     type ReadDocumentNotFoundError,
     type ReadDrive,
     type ReadDriveContext,
-    ReadDriveNotFoundError,
+    type ReadDriveSlugNotFoundError,
     type ReadDrivesListener,
     type ReadDrivesListenerUnsubscribe,
-    type ReadDriveSlugNotFoundError,
     type RemoteDriveOptions,
 } from 'document-drive';
-import { type PHDocument } from 'document-model';
+import { type PHBaseState, type PHDocument } from 'document-model';
 import isEqual from 'fast-deep-equal';
 import {
     createContext,
-    type FC,
-    type ReactNode,
     useContext,
     useEffect,
     useMemo,
     useState,
+    type FC,
+    type ReactNode,
 } from 'react';
 
 export interface IReadModeContext extends IReadModeDriveServer {
@@ -124,12 +124,12 @@ class ReadModeContextImpl implements Omit<IReadModeContext, 'readDrives'> {
     }
 
     @checkServer
-    fetchDocument<TDocument extends PHDocument>(
+    fetchDocument<TState extends PHBaseState = PHBaseState>(
         driveId: string,
         documentId: string,
         documentType: string,
     ): Promise<
-        | TDocument
+        | PHDocument<TState>
         | DocumentModelNotFoundError
         | ReadDriveNotFoundError
         | ReadDocumentNotFoundError
