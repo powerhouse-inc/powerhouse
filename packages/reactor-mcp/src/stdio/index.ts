@@ -18,7 +18,7 @@ export interface IMcpOptions {
 const baseDocumentModels = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
-] as DocumentModelModule[];
+] as unknown as DocumentModelModule[];
 
 async function createReactor(documentModels: DocumentModelModule[] = []) {
   const builder = new ReactorBuilder(baseDocumentModels.concat(documentModels));

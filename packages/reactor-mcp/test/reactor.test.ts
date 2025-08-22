@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-deprecated */
 import {
-  driveDocumentModelModule,
   ReactorBuilder,
+  driveDocumentModelModule,
   type IDocumentDriveServer,
 } from "document-drive";
 import { DocumentNotFoundError } from "document-drive/server/error";
@@ -28,7 +27,7 @@ async function createReactor() {
   const builder = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[]);
+  ] as unknown as DocumentModelModule[]);
 
   const reactor = builder.build();
   await reactor.initialize();
