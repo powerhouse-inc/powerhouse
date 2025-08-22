@@ -1,3 +1,4 @@
+// @ts-check
 const { paramCase } = require("change-case");
 
 const generateDocumentModelMutations = {

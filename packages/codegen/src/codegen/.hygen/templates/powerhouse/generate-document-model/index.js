@@ -1,5 +1,6 @@
+// @ts-check
 const { paramCase } = require("change-case");
-    
+
 function documentModelToString(documentModel) {
   return JSON.stringify(
     {
