@@ -16,15 +16,11 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "lint": "eslint",
+    "build": "pnpm run install-packages",
     "start": "node dist/src/index.js",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "install-packages": "node dist/src/install-packages.js",
-    "build": "pnpm run install-packages",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "install-packages": "node dist/src/install-packages.js"
   },
   "author": "",
   "license": "ISC",

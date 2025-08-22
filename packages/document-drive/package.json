@@ -22,10 +22,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "tsc:watch": "tsc --watch",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
+    "lint": "eslint",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",

@@ -18,17 +18,14 @@
     "dist"
   ],
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
     "build": "npm run generate-commands-md && npm run generate-version",
     "dev": "tsx src/cli.ts",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix",
     "test": "vitest run",
-    "test:watch": "vitest watch",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",

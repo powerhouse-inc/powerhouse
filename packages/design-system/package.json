@@ -36,12 +36,9 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
+    "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src",
-    "build:watch": "build --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",

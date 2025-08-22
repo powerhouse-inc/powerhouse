@@ -7,25 +7,20 @@
     "directory": "packages/reactor"
   },
   "type": "module",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/src/index.js"
   },
   "imports": {
     "#*": "./dist/src/*"
   },
   "files": [
-    "./dist"
+    "dist"
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
+    "lint": "eslint",
     "test": "vitest run",
-    "bench": "vitest bench --run",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "bench": "vitest bench --run"
   },
   "publishConfig": {
     "access": "public"

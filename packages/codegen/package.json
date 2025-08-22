@@ -5,7 +5,7 @@
   "private": false,
   "type": "module",
   "files": [
-    "dist/*"
+    "dist"
   ],
   "repository": {
     "type": "git",
@@ -20,15 +20,11 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "lint:quiet": "eslint --quiet",
     "copy-hygen": "cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "npm run copy-hygen",
-    "prepublishOnly": "npm run build",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "clean:node_modules": "rimraf node_modules",
     "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
     "test": "vitest run"
   },

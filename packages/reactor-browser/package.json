@@ -24,13 +24,8 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "build:watch": "pnpm tsc --watch",
+    "lint": "eslint",
     "test:browser": "vitest run",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
     "install:playwright": "playwright install"
   },
   "devDependencies": {

@@ -19,18 +19,9 @@
   "publishConfig": {
     "access": "public"
   },
-  "nx-release-publish": {
-    "options": {
-      "packageRoot": "dist/{projectRoot}"
-    }
-  },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "clean": "rimraf dist/",
-    "clean:node_modules": "rimraf node_modules"
+    "lint": "eslint"
   },
   "dependencies": {
     "@microsoft/api-extractor": "^7.48.1"

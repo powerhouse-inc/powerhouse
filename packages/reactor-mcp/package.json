@@ -18,20 +18,16 @@
     "reactor-mcp": "./dist/src/cli.js"
   },
   "files": [
-    "./dist"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
+    "lint": "eslint",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "bench": "vitest bench"
   },
   "publishConfig": {
     "access": "public"

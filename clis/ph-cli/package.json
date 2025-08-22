@@ -18,17 +18,13 @@
     "dist"
   ],
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "tsc": "tsc",
     "build": "npm run generate-commands-md && npm run generate-version && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
     "test": "vitest --run"
   },
   "keywords": [],

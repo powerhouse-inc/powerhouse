@@ -25,14 +25,9 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "build:watch": "pnpm tsc --watch",
+    "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest watch",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "test:watch": "vitest watch"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",

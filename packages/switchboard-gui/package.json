@@ -8,16 +8,11 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "dev": "vite",
     "build": "vite build",
-    "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "preview": "vite preview",
-    "prepack": "npm run build",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",

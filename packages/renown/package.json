@@ -24,18 +24,9 @@
   "files": [
     "dist"
   ],
-  "nx-release-publish": {
-    "options": {
-      "packageRoot": "dist/{projectRoot}"
-    }
-  },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --cache",
-    "lint:fix": "pnpm lint --fix",
-    "lint:quiet": "pnpm lint --quiet",
-    "clean": "rimraf dist/",
-    "clean:node_modules": "rimraf node_modules"
+    "lint": "eslint"
   },
   "peerDependencies": {
     "document-model": "workspace:*"
