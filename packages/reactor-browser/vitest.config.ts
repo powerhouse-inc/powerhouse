@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig({
-  // @ts-expect-error
+  // @ts-expect-error - react vite plugin has wrong type according to vitest define config function
   plugins: [react()],
   test: {
     include: ["test/**/*.test.ts", "test/**/*.test.tsx"],

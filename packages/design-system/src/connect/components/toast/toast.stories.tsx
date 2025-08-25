@@ -64,7 +64,7 @@ export const Default: Story = {
         onClick={() =>
           toast(
             content,
-            // @ts-expect-error
+            // @ts-expect-error - storybook doesn't support the type
             options,
           )
         }

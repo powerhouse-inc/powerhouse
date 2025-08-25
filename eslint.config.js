@@ -157,8 +157,6 @@ const typescriptRules = {
   "@typescript-eslint/no-empty-object-type": "warn",
   // our overzealous generics force us to do this
   "@typescript-eslint/no-duplicate-type-constituents": "warn",
-  // we tend to just turn off typescript without saying why
-  "@typescript-eslint/ban-ts-comment": "off",
   // we use infinite loops
   "no-constant-condition": "off",
   // we use template literals with unsafe values

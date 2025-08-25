@@ -1,10 +1,10 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { type Operation } from "document-model";
 import { globalOperations, localOperations } from "./mocks.js";
-// @ts-expect-error
+// @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import nsOperations from "./ns-operations.json";
 import { RevisionHistory } from "./revision-history.js";
-// @ts-expect-error
+// @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import skipOperations from "./skip-operations.json";
 
 const meta = {
