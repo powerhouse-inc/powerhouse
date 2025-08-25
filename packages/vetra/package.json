@@ -48,7 +48,6 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "build": "pnpm build:css",
     "test": "vitest run",
     "test:watch": "vitest",
     "generate": "ph-cli generate",

@@ -30,7 +30,6 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "build": "npm run build:css",
     "storybook": "storybook dev -p 6006"
   },
   "devDependencies": {

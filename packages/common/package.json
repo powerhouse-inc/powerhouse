@@ -23,7 +23,6 @@
     "lint": "eslint",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
     "build:css": "pnpm dlx @tailwindcss/cli -i ./editors/styles.css -o ./dist/editors/styles.css",
-    "build": "pnpm build:css",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
