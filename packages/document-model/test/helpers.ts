@@ -34,7 +34,6 @@ export const fakeAction = (
   }) as Action;
 
 // Empty reducer that supports base actions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
   return state;
 };

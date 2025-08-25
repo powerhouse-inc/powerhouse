@@ -15,7 +15,9 @@ export class AppGenerator extends BaseDocumentGen {
   /**
    * Validate if this app strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -34,7 +36,9 @@ export class AppGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> App not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> App not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 

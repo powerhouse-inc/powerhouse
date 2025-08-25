@@ -21,7 +21,9 @@ export class DocumentModelGenerator extends BaseDocumentGen {
   /**
    * Validate if this document model strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -30,7 +32,9 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     // Validate document model state
     const state = strand.state as DocumentModelState;
     if (!state) {
-      logger.debug(`>>> No state found for document model: ${strand.documentId}`);
+      logger.debug(
+        `>>> No state found for document model: ${strand.documentId}`,
+      );
       return false;
     }
 
@@ -98,10 +102,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         // Don't throw here - code generation was successful
       }
     } catch (error) {
-      logger.error(
-        `❌ Error during code generation for ${state.name}:`,
-        error,
-      );
+      logger.error(`❌ Error during code generation for ${state.name}:`, error);
       // Don't throw - let codegen continue with other documents
       return;
     }

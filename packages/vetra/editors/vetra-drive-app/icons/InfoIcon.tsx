@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface InfoIconProps {
   width?: number;
@@ -11,9 +11,9 @@ interface InfoIconProps {
 export const InfoIcon: React.FC<InfoIconProps> = ({
   width = 16,
   height = 16,
-  className = '',
-  fill = 'none',
-  stroke = '#343839'
+  className = "",
+  fill = "none",
+  stroke = "#343839",
 }) => {
   return (
     <svg

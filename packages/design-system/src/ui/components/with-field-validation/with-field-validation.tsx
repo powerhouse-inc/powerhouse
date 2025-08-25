@@ -111,11 +111,9 @@ export const withFieldValidation = <
           name={name}
           defaultValue={(value ?? props.defaultValue) as unknown}
           disabled={props.disabled}
-          // eslint-disable-next-line react/jsx-no-bind
           render={({
             field: {
               // just preventing that onChange is included in the rest of the props
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               onChange: _,
               onBlur: onBlurController,
               value: internalValue,

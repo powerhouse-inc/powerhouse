@@ -1,11 +1,11 @@
-import { useInitSentry } from '#hooks';
+import { useInitSentry } from "#hooks";
 
 interface SentryProviderProps {
-    children?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const SentryProvider: React.FC<SentryProviderProps> = ({ children }) => {
-    useInitSentry();
+  useInitSentry();
 
-    return children;
+  return children;
 };

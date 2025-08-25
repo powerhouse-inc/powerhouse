@@ -27,7 +27,7 @@ export interface LRUCacheStorageOptions {
  *
  * @template Value - The type of values stored in the cache.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+
 export class LRUCacheStorage<Value extends {}> implements ICacheStorage {
   private cache: LRUCache<string, Value>;
   private logger = childLogger(["cache", "LRUCache"]);

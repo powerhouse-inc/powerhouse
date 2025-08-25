@@ -89,7 +89,7 @@ describe("generateDriveEditor", () => {
     const editorDir = path.join(testDir, "test-app");
     const indexPath = path.join(editorDir, "index.ts");
     const indexContent = fs.readFileSync(indexPath, "utf-8");
-    
+
     expect(indexContent).toContain('id: "drive-editor-id"');
   });
 

@@ -1,15 +1,15 @@
 import { BaseDocumentClass } from "../../../document/object.js";
-import { ReducerOptions } from "../../../document/types.js";
-import { DocumentModelAction } from "../actions.js";
+import { type ReducerOptions } from "../../../document/types.js";
+import { type DocumentModelAction } from "../actions.js";
 import {
-  DocumentModelLocalState,
-  DocumentModelState,
-  SetAuthorNameInput,
-  SetAuthorWebsiteInput,
-  SetModelDescriptionInput,
-  SetModelExtensionInput,
-  SetModelIdInput,
-  SetModelNameInput,
+  type DocumentModelLocalState,
+  type DocumentModelState,
+  type SetAuthorNameInput,
+  type SetAuthorWebsiteInput,
+  type SetModelDescriptionInput,
+  type SetModelExtensionInput,
+  type SetModelIdInput,
+  type SetModelNameInput,
 } from "../schema/types.js";
 import {
   setAuthorName,

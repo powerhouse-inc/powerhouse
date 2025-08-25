@@ -13,16 +13,16 @@ import {
   type SetOperationTemplateInput,
 } from "../schema/index.js";
 import {
-  AddOperationAction,
-  DeleteOperationAction,
-  MoveOperationAction,
-  ReorderModuleOperationsAction,
-  SetOperationDescriptionAction,
-  SetOperationNameAction,
-  SetOperationReducerAction,
-  SetOperationSchemaAction,
-  SetOperationScopeAction,
-  SetOperationTemplateAction,
+  type AddOperationAction,
+  type DeleteOperationAction,
+  type MoveOperationAction,
+  type ReorderModuleOperationsAction,
+  type SetOperationDescriptionAction,
+  type SetOperationNameAction,
+  type SetOperationReducerAction,
+  type SetOperationSchemaAction,
+  type SetOperationScopeAction,
+  type SetOperationTemplateAction,
 } from "./actions.js";
 
 export const addOperation = (input: AddOperationInput) =>

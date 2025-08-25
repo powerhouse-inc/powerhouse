@@ -1,7 +1,7 @@
 import { driveDocumentType } from "#drive-document-model/constants";
 import {
-  CreateDocument,
-  CreateState,
+  type CreateDocument,
+  type CreateState,
   type DocumentModelUtils,
   baseCreateDocument,
   baseLoadFromFile,
@@ -42,10 +42,7 @@ const utils: DocumentDriveUtils = {
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(
-      utils.createState,
-      state,
-    );
+    const document = baseCreateDocument(utils.createState, state);
 
     document.header.documentType = driveDocumentType;
 

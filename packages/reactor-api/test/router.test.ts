@@ -1,6 +1,6 @@
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
 } from "document-model";
 import { describe, expect, it } from "vitest";
 

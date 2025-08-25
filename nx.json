@@ -20,46 +20,6 @@
     "default": ["sharedGlobals"]
   },
   "targetDefaults": {
-    "build-storybook": {
-      "dependsOn": ["^build"]
-    },
-    "lint": {
-      "cache": true,
-      "dependsOn": ["^build"]
-    },
-    "lint:nx": {
-      "cache": true,
-      "dependsOn": ["^build"]
-    },
-    "generate": {
-      "dependsOn": ["^build"]
-    },
-    "dev": {
-      "dependsOn": ["^build"]
-    },
-    "test": {
-      "cache": true,
-      "dependsOn": ["build"]
-    },
-    "build": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": [
-        "noMarkdown",
-        "^noMarkdown",
-        "noStories",
-        "^noStories",
-        "noLicenses",
-        "^noLicenses",
-        "noTests",
-        "^noTests"
-      ]
-    },
-    "@nx/js:tsc": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": ["default", "^default"]
-    }
   },
   "release": {
     "projects": ["packages/*", "clis/*", "apps/*"],
@@ -80,14 +40,6 @@
       }
     }
   },
-  "plugins": [
-    {
-      "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "lint"
-      }
-    }
-  ],
   "pluginsConfig": {
     "@nx/js": {
       "projectsAffectedByDependencyUpdates": "auto"

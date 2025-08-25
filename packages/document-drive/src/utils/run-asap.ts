@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace RunAsap {
   export type Task<T = void> = () => T;
   export type AbortTask = () => void;
@@ -30,9 +29,7 @@ export namespace RunAsap {
 
   export const usePostMessage = (() => {
     const _main: unknown =
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       (typeof window === "object" && window) ||
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       (typeof global === "object" && global) ||
       (typeof self === "object" && self);
     if (!_main) {
@@ -41,9 +38,7 @@ export namespace RunAsap {
 
     const main = _main as Window;
     if (
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       !main.postMessage ||
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       !main.addEventListener ||
       (main as { importScripts?: unknown }).importScripts // web workers can't this method
     ) {

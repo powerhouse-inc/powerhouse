@@ -11,7 +11,6 @@ const FileSystemError = new Error("File system not available.");
  * Generates a secure UUID.
  */
 export function generateUUID() {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (typeof crypto === "undefined" || !crypto.randomUUID) {
     throw new Error("generateUUID is not available in unsecure contexts.");
   }

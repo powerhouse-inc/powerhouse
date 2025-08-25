@@ -55,7 +55,6 @@ export class EventQueueManager implements IQueueManager {
     ): T {
       return (async (...args: any) => {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           await method(...args);
         } catch (error) {
           throw error instanceof Error

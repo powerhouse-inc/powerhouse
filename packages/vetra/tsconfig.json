@@ -3,15 +3,12 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "outDir": "./dist",
-    "jsx": "react-jsx",
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "resolveJsonModule": true
   },
   "include": [
     "**/*",
     "./powerhouse.manifest.json"
   ],
-  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-model"

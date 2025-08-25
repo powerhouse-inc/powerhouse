@@ -1,11 +1,10 @@
-import SwitchboardLink from "../text/Link";
-import useAuth, { authStore } from "../../hooks/useAuth";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
-import Link from "../text/Link";
-import { useEffect, useState } from "react";
-import logo from "../../assets/logo.svg";
-import github from "../../assets/github.svg";
 import { route } from "preact-router";
+import { useEffect, useState } from "preact/hooks";
+import github from "../../assets/github.svg";
+import logo from "../../assets/logo.svg";
+import useAuth, { authStore } from "../../hooks/useAuth.js";
+import { default as Link, default as SwitchboardLink } from "../text/Link.js";
 
 export default function Header() {
   const address = authStore((state) => state.address);
@@ -19,7 +18,6 @@ export default function Header() {
     auth
       .getDrives()
       .then((drives) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         setDrives(drives);
       })
       .catch(console.error);

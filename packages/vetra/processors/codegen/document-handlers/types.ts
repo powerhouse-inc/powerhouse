@@ -4,7 +4,9 @@ import { type DocumentModelDocument } from "document-model";
 
 export interface DocumentHandler {
   documentType: string;
-  handle: (strand: InternalTransmitterUpdate<DocumentModelDocument>) => Promise<void>;
+  handle: (
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ) => Promise<void>;
 }
 
 export interface Config {

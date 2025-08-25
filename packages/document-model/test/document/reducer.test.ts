@@ -159,7 +159,6 @@ describe("Base reducer", () => {
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
       const input = action.input as CreateChildDocumentInput;
-      // eslint-disable-next-line
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
     });

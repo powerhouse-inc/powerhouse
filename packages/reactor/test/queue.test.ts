@@ -314,7 +314,7 @@ describe("InMemoryQueue", () => {
 
       // Manually corrupt the state to simulate orphaned index
       const queueInstance = queue as InMemoryQueue;
-      // @ts-ignore - accessing private property for testing
+      // @ts-expect-error - accessing private property for testing
       queueInstance.queues.clear();
 
       const removed = await queue.remove(job.id);

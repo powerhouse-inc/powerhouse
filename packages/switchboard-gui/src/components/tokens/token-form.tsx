@@ -1,5 +1,6 @@
-import { type FormEvent, useState } from "react";
-import useAuth from "../../hooks/useAuth";
+import { useState } from "preact/hooks";
+import useAuth from "../../hooks/useAuth.js";
+import type { FormEvent } from "preact/compat";
 
 const TokenForm = () => {
   const [formData, setFormData] = useState({

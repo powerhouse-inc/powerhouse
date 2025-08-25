@@ -34,16 +34,13 @@ const utils: DocumentModelUtils<VetraPackageDocument> = {
   createState(state) {
     return {
       ...defaultBaseState(),
-      
+
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };
   },
   createDocument(state) {
-    const document = baseCreateDocument(
-      utils.createState,
-      state,
-    );
+    const document = baseCreateDocument(utils.createState, state);
 
     document.header.documentType = "powerhouse/package";
 

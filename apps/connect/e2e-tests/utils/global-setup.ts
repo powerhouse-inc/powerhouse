@@ -1,3 +1,3 @@
 export default () => {
-    process.env.CI = 'e2e';
+  process.env.CI = "e2e";
 };

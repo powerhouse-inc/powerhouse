@@ -1,16 +1,22 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true,
+    "outDir": "./dist",
     "types": ["node"]
   },
-  "files": ["src/custom.d.ts"],
+  "include": ["**/*"],
   "references": [
     {
-      "path": "tsconfig.lib.json"
+      "path": "../document-model"
     },
     {
-      "path": "tsconfig.test.json"
+      "path": "../document-drive"
+    },
+    {
+      "path": "../renown"
+    },
+    {
+      "path": "../reactor-mcp"
     }
-  ]
+  ],
 }

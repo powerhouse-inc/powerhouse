@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import {
   type DocumentOperations,
   type Operation,

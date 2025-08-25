@@ -1,6 +1,6 @@
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
   setModelName,
 } from "document-model";
@@ -10,9 +10,9 @@ import { driveDocumentModelModule } from "../src/drive-document-model/module.js"
 import { ReactorBuilder } from "../src/server/builder.js";
 import { SwitchboardPushTransmitter } from "../src/server/listener/transmitter/switchboard-push.js";
 import {
-  Listener,
-  ListenerRevision,
-  StrandUpdate,
+  type Listener,
+  type ListenerRevision,
+  type StrandUpdate,
 } from "../src/server/types.js";
 import { expectUTCTimestamp } from "./utils.js";
 

@@ -47,9 +47,11 @@ export abstract class BaseDocumentGen {
    * Validate if this strand should be processed
    * Override this method in specific generators to add custom validation logic
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
-     // Basic validation: ensure strand has required properties
-     if (!strand.documentId || !strand.documentType) {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
+    // Basic validation: ensure strand has required properties
+    if (!strand.documentId || !strand.documentType) {
       return false;
     }
 

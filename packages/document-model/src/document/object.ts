@@ -188,7 +188,7 @@ export abstract class BaseDocumentClass<
    * @param start - The starting index of the range to remove.
    * @param end - The ending index of the range to remove.
    */
-  public prune(start?: number | undefined, end?: number | undefined) {
+  public prune(start?: number, end?: number) {
     this.dispatch(prune(start, end) as TCustomAction);
     return this;
   }
@@ -227,13 +227,10 @@ export abstract class BaseDocumentClass<
 
 export function applyMixins(derivedCtor: any, constructors: any[]) {
   constructors.forEach((baseCtor) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
       Object.defineProperty(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         derivedCtor.prototype,
         name,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
           Object.create(null),
       );

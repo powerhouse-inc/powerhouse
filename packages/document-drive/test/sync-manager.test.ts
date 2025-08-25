@@ -1,6 +1,9 @@
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
-import { DocumentModelModule, generateId } from "../../document-model/index.js";
+import {
+  type DocumentModelModule,
+  generateId,
+} from "../../document-model/index.js";
 import { documentModelDocumentModelModule as DocumentModel } from "../../document-model/src/document-model/module.js";
 import InMemoryCache from "../src/cache/memory.js";
 import * as DriveActions from "../src/drive-document-model/gen/creators.js";

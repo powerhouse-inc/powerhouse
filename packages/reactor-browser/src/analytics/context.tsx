@@ -185,7 +185,6 @@ export function AnalyticsProvider({
 }: AnalyticsProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
       <CreateAnalyticsStore {...props} />
       {children}
     </QueryClientProvider>

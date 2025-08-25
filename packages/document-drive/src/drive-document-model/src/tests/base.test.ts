@@ -1,4 +1,4 @@
-import { Signal } from "document-model";
+import { type Signal } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import {
   addFolder,

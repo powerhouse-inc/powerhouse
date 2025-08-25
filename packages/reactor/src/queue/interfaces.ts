@@ -1,4 +1,4 @@
-import { Job } from "./types.js";
+import { type Job } from "./types.js";
 
 /**
  * Interface for a job queue that manages write operations.

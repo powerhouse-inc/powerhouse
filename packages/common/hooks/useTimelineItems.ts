@@ -76,7 +76,6 @@ function addItemsDividers(items: BarItem[]): TimelineItem[] {
 }
 
 function metricsToItems(metrics: GroupedPeriodResults): TimelineItem[] {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!metrics) return [];
 
   const items = metrics

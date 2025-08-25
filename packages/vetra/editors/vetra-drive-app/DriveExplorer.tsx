@@ -1,10 +1,14 @@
-import { type IDriveContext, useDocumentModelModuleById, useFallbackEditorModule } from '@powerhousedao/reactor-browser';
+import {
+  type IDriveContext,
+  useDocumentModelModuleById,
+  useFallbackEditorModule,
+} from "@powerhousedao/reactor-browser";
 import { type FileNode } from "document-drive";
-import type React from 'react';
-import { DriveHeader } from './components/DriveHeader.js';
-import { ModuleSpecificationsSection } from './components/ModuleSpecificationsSection.js';
-import { PackageInformationSection } from './components/PackageInformationSection.js';
-import { DOCUMENT_TYPES } from './document-types.js';
+import type React from "react";
+import { DriveHeader } from "./components/DriveHeader.js";
+import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";
+import { PackageInformationSection } from "./components/PackageInformationSection.js";
+import { DOCUMENT_TYPES } from "./document-types.js";
 
 interface DriveExplorerProps {
   context: IDriveContext;
@@ -47,14 +51,18 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   driveId,
   onOpenDocument,
 }) => {
-  const vetraPackageModule = useDocumentModelModuleById(DOCUMENT_TYPES.documentPackage);
-  const vetraPackageEditorModule = useFallbackEditorModule(DOCUMENT_TYPES.documentPackage);
-  
+  const vetraPackageModule = useDocumentModelModuleById(
+    DOCUMENT_TYPES.documentPackage,
+  );
+  const vetraPackageEditorModule = useFallbackEditorModule(
+    DOCUMENT_TYPES.documentPackage,
+  );
+
   return (
     <div className="min-h-screen bg-white">
       <DriveHeader onShareClick={onShareDrive} />
-      
-      <div className="bg-white mx-6 mt-6 ">
+
+      <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection
           className="mb-6"
           context={context}
