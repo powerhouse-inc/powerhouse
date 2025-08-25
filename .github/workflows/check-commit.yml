@@ -70,11 +70,14 @@ jobs:
       - name: Run eslint
         run: pnpm lint
 
+      - name: Run misc build scripts
+        run: pnpm build:misc
+
+      - name: Run css build scripts
+        run: pnpm build:css
+
       - name: Run vite build scripts
         run: pnpm build:vite
-
-      - name: Run misc build scripts
-        run: pnpm build:all
 
       - name: Run storybook build scripts
         run: pnpm storybook:all
