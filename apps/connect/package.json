@@ -28,7 +28,7 @@
         "tsc": "tsc",
         "lint": "eslint",
         "dev": "vite dev",
-        "build": "vite build",
+        "build:vite": "vite build",
         "preview": "vite preview",
         "e2e": "playwright test",
         "cy:open": "cypress open",

@@ -10,11 +10,12 @@
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --cache --cache-strategy content",
     "generate-document-drive-prisma": "pnpm --filter document-drive prisma-generate",
     "build:all": "pnpm -r --no-bail build",
+    "build:vite": "pnpm -r --no-bail build:vite",
     "test:all": "pnpm -r --no-bail test",
     "test:all:ci": "pnpm --filter !document-drive --filter !reactor-api --filter !reactor-mcp -r --no-bail test",
     "storybook:all": "pnpm -r --no-bail run build-storybook",
     "check:all": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all",
-    "check:all:ci": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:all && pnpm storybook:all && pnpm test:all:ci",
+    "check:all:ci": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:all && pnpm build:vite && pnpm storybook:all && pnpm test:all:ci",
     "simulate-fresh-git-clone": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "simulate-check-all-ci": "pnpm simulate-fresh-git-clone && pnpm i --frozen-lockfile && pnpm check:all:ci"
   },

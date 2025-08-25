@@ -47,6 +47,17 @@ jobs:
           restore-keys: |
             eslint-${{ runner.os }}-
 
+       # --- Vite cache (prebundled deps, transform cache) ---
+      - name: Cache Vite deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/node_modules/.vite
+            **/node_modules/.cache/vite
+          key: vitecache-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '**/package.json', '**/vite.config.*', '**/tsconfig*.json') }}
+          restore-keys: |
+            vitecache-${{ runner.os }}-
+
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
@@ -59,7 +70,10 @@ jobs:
       - name: Run eslint
         run: pnpm lint
 
-      - name: Run package build scripts
+      - name: Run vite build scripts
+        run: pnpm build:vite
+
+      - name: Run misc build scripts
         run: pnpm build:all
 
       - name: Run storybook build scripts
