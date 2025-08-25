@@ -36,5 +36,6 @@ program.parseAsync(process.argv).catch((error: unknown) => {
       : typeof error === "string"
         ? error
         : JSON.stringify(error, null, 2);
+
   console.error(errorMessage);
 });
