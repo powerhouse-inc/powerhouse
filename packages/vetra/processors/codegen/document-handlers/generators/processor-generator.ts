@@ -1,6 +1,5 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 import { type ProcessorModuleState } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -14,7 +13,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
   /**
    * Validate if this processor strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -43,16 +42,16 @@ export class ProcessorGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> Processor not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> Processor not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as ProcessorModuleState;
 
     // Check if we have a valid processor name, type, document types, and it's confirmed

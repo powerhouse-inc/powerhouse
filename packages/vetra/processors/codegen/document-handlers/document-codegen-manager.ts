@@ -1,6 +1,8 @@
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
-import { InteractiveManager, type QueuedStrand } from "../interactive-manager.js";
+import {
+  InteractiveManager,
+  type QueuedStrand,
+} from "../interactive-manager.js";
 import { logger } from "../logger.js";
 import { type BaseDocumentGen } from "./base-document-gen.js";
 import { type Config } from "./types.js";
@@ -89,9 +91,7 @@ export class DocumentCodegenManager {
    * Route a document to the appropriate generator and handle the generation
    * Handles both interactive and non-interactive modes with queue-based processing
    */
-  async routeAndGenerate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async routeAndGenerate(strand: InternalTransmitterUpdate): Promise<void> {
     const documentType = strand.documentType;
 
     if (!documentType) {
@@ -111,20 +111,24 @@ export class DocumentCodegenManager {
 
     // Validate if this strand should be processed
     if (!generator.shouldProcess(strand)) {
-      logger.debug(`>>> Generator validation failed for ${documentType}:${strand.documentId}, skipping processing`);
+      logger.debug(
+        `>>> Generator validation failed for ${documentType}:${strand.documentId}, skipping processing`,
+      );
       return;
     }
 
     // Different flow for interactive vs non-interactive mode
     if (this.interactiveManager.isInteractive()) {
       // Interactive mode: queue strands and use debounce timer to trigger batch processing
-      logger.debug(`>>> Queueing strand for interactive processing: ${documentType}:${strand.documentId}`);
-      
+      logger.debug(
+        `>>> Queueing strand for interactive processing: ${documentType}:${strand.documentId}`,
+      );
+
       // Add strand to queue (will replace any existing strand for same document)
       this.interactiveManager.queueStrand(strand);
-      
+
       // Clear any existing debounce timer for interactive processing
-      const existingTimer = this.debounceTimers.get('interactive');
+      const existingTimer = this.debounceTimers.get("interactive");
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
@@ -135,18 +139,18 @@ export class DocumentCodegenManager {
           await this.interactiveManager.processQueueWithConfirmation(
             async (queuedStrands: QueuedStrand[]) => {
               await this.processQueuedStrands(queuedStrands);
-            }
+            },
           );
         } catch (error) {
           logger.error("❌ Error during interactive batch processing:", error);
         } finally {
           // Clean up the timer reference
-          this.debounceTimers.delete('interactive');
+          this.debounceTimers.delete("interactive");
         }
       }, DEFAULT_DEBOUNCE_TIME);
 
       // Store the timer reference using 'interactive' key
-      this.debounceTimers.set('interactive', debounceTimer);
+      this.debounceTimers.set("interactive", debounceTimer);
     } else {
       // Non-interactive mode: use debouncing per document type
       // Clear any existing debounce timer for this document type
@@ -161,7 +165,7 @@ export class DocumentCodegenManager {
           logger.info(
             `🔄 Routing document type "${documentType}" to generator (debounced)`,
           );
-          
+
           // Direct generation, no interactive confirmation
           await generator.generate(strand);
           logger.info(
@@ -187,15 +191,19 @@ export class DocumentCodegenManager {
   /**
    * Process multiple strands in priority order (document-model types first)
    */
-  private async processQueuedStrands(queuedStrands: QueuedStrand[]): Promise<void> {
+  private async processQueuedStrands(
+    queuedStrands: QueuedStrand[],
+  ): Promise<void> {
     logger.info(`🔄 Processing ${queuedStrands.length} queued strand(s)`);
-    
+
     // Sort by priority (document-model first to ensure dependencies exist)
     const documentModelStrands = queuedStrands.filter(
-      (qs: QueuedStrand) => qs.strand.documentType === "powerhouse/document-model",
+      (qs: QueuedStrand) =>
+        qs.strand.documentType === "powerhouse/document-model",
     );
     const otherStrands = queuedStrands.filter(
-      (qs: QueuedStrand) => qs.strand.documentType !== "powerhouse/document-model",
+      (qs: QueuedStrand) =>
+        qs.strand.documentType !== "powerhouse/document-model",
     );
 
     // Process document models first
@@ -207,17 +215,21 @@ export class DocumentCodegenManager {
     for (const queuedStrand of otherStrands) {
       await this.processStrand(queuedStrand.strand);
     }
-    
-    logger.info(`✅ Successfully processed all ${queuedStrands.length} queued strand(s)`);
+
+    logger.info(
+      `✅ Successfully processed all ${queuedStrands.length} queued strand(s)`,
+    );
   }
 
   /**
    * Process a single strand (used internally by processQueuedStrands)
    */
-  private async processStrand(strand: InternalTransmitterUpdate<DocumentModelDocument>): Promise<void> {
+  private async processStrand(
+    strand: InternalTransmitterUpdate,
+  ): Promise<void> {
     const documentType = strand.documentType;
     const generator = this.getGenerator(documentType);
-    
+
     if (!generator) {
       logger.warn(`⚠️ No generator found for document type: ${documentType}`);
       return;
@@ -226,9 +238,14 @@ export class DocumentCodegenManager {
     try {
       logger.info(`🔄 Generating code for document type: ${documentType}`);
       await generator.generate(strand);
-      logger.info(`✅ Successfully generated code for document type: ${documentType}`);
+      logger.info(
+        `✅ Successfully generated code for document type: ${documentType}`,
+      );
     } catch (error) {
-      logger.error(`❌ Error generating code for document type "${documentType}":`, error);
+      logger.error(
+        `❌ Error generating code for document type "${documentType}":`,
+        error,
+      );
       // Don't throw here to allow other strands to be processed
     }
   }

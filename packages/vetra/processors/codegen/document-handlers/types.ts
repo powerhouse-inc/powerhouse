@@ -1,10 +1,9 @@
 import { type PowerhouseConfig } from "@powerhousedao/config";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 
 export interface DocumentHandler {
   documentType: string;
-  handle: (strand: InternalTransmitterUpdate<DocumentModelDocument>) => Promise<void>;
+  handle: (strand: InternalTransmitterUpdate) => Promise<void>;
 }
 
 export interface Config {

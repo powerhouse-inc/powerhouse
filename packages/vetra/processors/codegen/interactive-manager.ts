@@ -1,10 +1,9 @@
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 import { createInterface } from "readline";
 import { logger } from "./logger.js";
 
 export interface QueuedStrand {
-  strand: InternalTransmitterUpdate<DocumentModelDocument>;
+  strand: InternalTransmitterUpdate;
   timestamp: number;
 }
 
@@ -28,15 +27,20 @@ export class InteractiveManager {
   /**
    * Add a strand to the queue, replacing any existing strand for the same document
    */
-  public queueStrand(strand: InternalTransmitterUpdate<DocumentModelDocument>): void {
-    const documentKey = this.getDocumentKey(strand.documentType, strand.documentId);
-    
+  public queueStrand(strand: InternalTransmitterUpdate): void {
+    const documentKey = this.getDocumentKey(
+      strand.documentType,
+      strand.documentId,
+    );
+
     this.strandQueue.set(documentKey, {
       strand,
       timestamp: Date.now(),
     });
-    
-    logger.debug(`>>> Queued strand for ${documentKey}, queue size: ${this.strandQueue.size}`);
+
+    logger.debug(
+      `>>> Queued strand for ${documentKey}, queue size: ${this.strandQueue.size}`,
+    );
   }
 
   /**
@@ -73,7 +77,9 @@ export class InteractiveManager {
       console.log("🔄 Code generation ready to run.");
       console.log("=".repeat(50));
 
-      process.stdout.write("Do you want to proceed with code generation? (y/n): \n\n");
+      process.stdout.write(
+        "Do you want to proceed with code generation? (y/n): \n\n",
+      );
 
       rl.on("line", (answer: string) => {
         rl.close();
@@ -103,14 +109,12 @@ export class InteractiveManager {
       const shouldProceed = await this.promptUserConfirmation();
 
       if (!shouldProceed) {
-        logger.info(
-          `❌ Code generation cancelled by user for ${documentType}`,
-        );
+        logger.info(`❌ Code generation cancelled by user for ${documentType}`);
         return null;
       }
 
       logger.info(`✅ User approved code generation for ${documentType}`);
-      
+
       const result = await generator();
       return result;
     } catch (error) {
@@ -129,10 +133,12 @@ export class InteractiveManager {
    * This is the main method for queue-based interactive processing
    */
   public async processQueueWithConfirmation(
-    processor: (strands: QueuedStrand[]) => Promise<void>
+    processor: (strands: QueuedStrand[]) => Promise<void>,
   ): Promise<void> {
     if (this.processingConfirmation) {
-      logger.debug("Already processing confirmation, skipping queue processing");
+      logger.debug(
+        "Already processing confirmation, skipping queue processing",
+      );
       return;
     }
 
@@ -164,8 +170,10 @@ export class InteractiveManager {
         return;
       }
 
-      logger.info(`✅ User approved code generation for ${queuedStrands.length} document(s)`);
-      
+      logger.info(
+        `✅ User approved code generation for ${queuedStrands.length} document(s)`,
+      );
+
       // Process all queued strands
       await processor(queuedStrands);
       logger.info("✅ Code generation completed");

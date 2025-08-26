@@ -1,18 +1,12 @@
 import {
   BaseDocumentClass,
-  type BaseStateFromDocument,
-  type PartialState,
   applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type ProcessorModuleState,
-  type ProcessorModuleLocalState,
-  type ProcessorModuleDocument,
-} from "./types.js";
+import { ProcessorModulePHState } from "./ph-factories.js";
 import { type ProcessorModuleAction } from "./actions.js";
 import { reducer } from "./reducer.js";
-import utils from "./utils.js";
+import { createDocument } from "./utils.js";
 import ProcessorModule_BaseOperations from "./base-operations/object.js";
 
 export * from "./base-operations/object.js";
@@ -21,18 +15,14 @@ export * from "./base-operations/object.js";
 interface ProcessorModule extends ProcessorModule_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class ProcessorModule extends BaseDocumentClass<
-  ProcessorModuleState,
-  ProcessorModuleLocalState,
-  ProcessorModuleAction
-> {
+class ProcessorModule extends BaseDocumentClass<ProcessorModulePHState> {
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<ProcessorModuleDocument>>,
+    initialState?: Partial<ProcessorModulePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {

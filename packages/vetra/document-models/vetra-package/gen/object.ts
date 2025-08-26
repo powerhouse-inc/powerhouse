@@ -1,18 +1,12 @@
 import {
   BaseDocumentClass,
-  type BaseStateFromDocument,
-  type PartialState,
   applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type VetraPackageState,
-  type VetraPackageLocalState,
-  type VetraPackageDocument,
-} from "./types.js";
+import { VetraPackagePHState } from "./ph-factories.js";
 import { type VetraPackageAction } from "./actions.js";
 import { reducer } from "./reducer.js";
-import utils from "./utils.js";
+import { createDocument } from "./utils.js";
 import VetraPackage_BaseOperations from "./base-operations/object.js";
 
 export * from "./base-operations/object.js";
@@ -21,18 +15,14 @@ export * from "./base-operations/object.js";
 interface VetraPackage extends VetraPackage_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class VetraPackage extends BaseDocumentClass<
-  VetraPackageState,
-  VetraPackageLocalState,
-  VetraPackageAction
-> {
+class VetraPackage extends BaseDocumentClass<VetraPackagePHState> {
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<VetraPackageDocument>>,
+    initialState?: Partial<VetraPackagePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {

@@ -1,6 +1,5 @@
 import { generateManifest } from "@powerhousedao/codegen";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 import { type VetraPackageState } from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -14,7 +13,7 @@ export class PackageGenerator extends BaseDocumentGen {
   /**
    * Validate if this package strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -29,9 +28,7 @@ export class PackageGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as VetraPackageState;
 
     logger.info("🔄 Generating manifest for package");

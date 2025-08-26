@@ -1,7 +1,6 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 import { type AppModuleState } from "../../../../document-models/app-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -15,7 +14,7 @@ export class AppGenerator extends BaseDocumentGen {
   /**
    * Validate if this app strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -34,16 +33,16 @@ export class AppGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> App not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> App not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as AppModuleState;
 
     // Check if we have a valid app name and it's confirmed

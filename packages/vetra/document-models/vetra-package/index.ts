@@ -12,12 +12,12 @@ import { reducer } from "./gen/reducer.js";
 import { documentModel } from "./gen/document-model.js";
 import genUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
-import { type VetraPackageDocument } from "./gen/types.js";
+import type { VetraPackagePHState } from "./gen/ph-factories.js";
 
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...VetraPackageActions };
 
-export const module: DocumentModelModule<VetraPackageDocument> = {
+export const module: DocumentModelModule<VetraPackagePHState> = {
   reducer,
   actions,
   utils,

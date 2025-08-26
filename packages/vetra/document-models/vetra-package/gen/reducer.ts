@@ -1,13 +1,17 @@
+// TODO: remove eslint-disable rules once refactor is done
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   type StateReducer,
   isDocumentAction,
   createReducer,
 } from "document-model";
-import { type VetraPackageDocument, z } from "./types.js";
+import { VetraPackagePHState } from "./ph-factories.js";
+import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 
-const stateReducer: StateReducer<VetraPackageDocument> = (
+export const stateReducer: StateReducer<VetraPackagePHState> = (
   state,
   action,
   dispatch,
@@ -112,4 +116,4 @@ const stateReducer: StateReducer<VetraPackageDocument> = (
   }
 };
 
-export const reducer = createReducer<VetraPackageDocument>(stateReducer);
+export const reducer = createReducer<VetraPackagePHState>(stateReducer);

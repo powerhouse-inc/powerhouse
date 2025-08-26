@@ -1,5 +1,8 @@
 import {
-  type DocumentModelUtils,
+  type CreateDocument,
+  type CreateState,
+  type LoadFromFile,
+  type LoadFromInput,
   baseCreateDocument,
   baseSaveToFile,
   baseSaveToFileHandle,
@@ -9,10 +12,10 @@ import {
   generateId,
 } from "document-model";
 import {
-  type VetraPackageDocument,
   type VetraPackageState,
   type VetraPackageLocalState,
 } from "./types.js";
+import { VetraPackagePHState } from "./ph-factories.js";
 import { reducer } from "./reducer.js";
 
 export const initialGlobalState: VetraPackageState = {
@@ -29,41 +32,46 @@ export const initialGlobalState: VetraPackageState = {
 };
 export const initialLocalState: VetraPackageLocalState = {};
 
-const utils: DocumentModelUtils<VetraPackageDocument> = {
+export const createState: CreateState<VetraPackagePHState> = (state) => {
+  return {
+    ...defaultBaseState(),
+    global: { ...initialGlobalState, ...(state?.global ?? {}) },
+    local: { ...initialLocalState, ...(state?.local ?? {}) },
+  };
+};
+
+export const createDocument: CreateDocument<VetraPackagePHState> = (state) => {
+  const document = baseCreateDocument(createState, state);
+  document.header.documentType = "powerhouse/package";
+  // for backwards compatibility, but this is NOT a valid signed document id
+  document.header.id = generateId();
+  return document;
+};
+
+export const saveToFile = (document: any, path: string, name?: string) => {
+  return baseSaveToFile(document, path, ".phdm", name);
+};
+
+export const saveToFileHandle = (document: any, input: any) => {
+  return baseSaveToFileHandle(document, input);
+};
+
+export const loadFromFile: LoadFromFile<VetraPackagePHState> = (path) => {
+  return baseLoadFromFile(path, reducer);
+};
+
+export const loadFromInput: LoadFromInput<VetraPackagePHState> = (input) => {
+  return baseLoadFromInput(input, reducer);
+};
+
+const utils = {
   fileExtension: ".phdm",
-  createState(state) {
-    return {
-      ...defaultBaseState(),
-      
-      global: { ...initialGlobalState, ...state?.global },
-      local: { ...initialLocalState, ...state?.local },
-    };
-  },
-  createDocument(state) {
-    const document = baseCreateDocument(
-      utils.createState,
-      state,
-    );
-
-    document.header.documentType = "powerhouse/package";
-
-    // for backwards compatibility, but this is NOT a valid signed document id
-    document.header.id = generateId();
-
-    return document;
-  },
-  saveToFile(document, path, name) {
-    return baseSaveToFile(document, path, ".phdm", name);
-  },
-  saveToFileHandle(document, input) {
-    return baseSaveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return baseLoadFromFile(path, reducer);
-  },
-  loadFromInput(input) {
-    return baseLoadFromInput(input, reducer);
-  },
+  createState,
+  createDocument,
+  saveToFile,
+  saveToFileHandle,
+  loadFromFile,
+  loadFromInput,
 };
 
 export default utils;

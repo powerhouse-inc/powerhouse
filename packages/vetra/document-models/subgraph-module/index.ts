@@ -12,12 +12,12 @@ import { reducer } from "./gen/reducer.js";
 import { documentModel } from "./gen/document-model.js";
 import genUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
-import { type SubgraphModuleDocument } from "./gen/types.js";
+import type { SubgraphModulePHState } from "./gen/ph-factories.js";
 
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...SubgraphModuleActions };
 
-export const module: DocumentModelModule<SubgraphModuleDocument> = {
+export const module: DocumentModelModule<SubgraphModulePHState> = {
   reducer,
   actions,
   utils,

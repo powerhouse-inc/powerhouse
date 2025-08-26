@@ -1,9 +1,8 @@
 import { getConfig } from "@powerhousedao/config/utils";
 import { type IProcessor } from "document-drive/processors/types";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
-import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { type DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
+import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { logger } from "./logger.js";
 
 const PH_CONFIG = getConfig();
@@ -36,34 +35,40 @@ export class CodegenProcessor implements IProcessor {
     }
   }
 
-  async onStrands<TDocument extends DocumentModelDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     logger.debug(">>> onStrands", strands);
-    
+
     // Filter strands to only include those that should be processed
     const validStrands = strands.filter((strand) => {
       const generator = this.manager.getGenerator(strand.documentType);
       if (!generator) {
-        logger.debug(`>>> No generator found for document type: ${strand.documentType}`);
+        logger.debug(
+          `>>> No generator found for document type: ${strand.documentType}`,
+        );
         return false;
       }
-      
+
       // Use the required shouldProcess method for validation
       const shouldProcessResult = generator.shouldProcess(strand);
       if (!shouldProcessResult) {
-        logger.debug(`>>> Generator validation failed for ${strand.documentType}:${strand.documentId}, skipping processing`);
+        logger.debug(
+          `>>> Generator validation failed for ${strand.documentType}:${strand.documentId}, skipping processing`,
+        );
       }
       return shouldProcessResult;
     });
-    
+
     if (validStrands.length > 0) {
-      logger.debug(`>>> Processing ${validStrands.length} valid strands (out of ${strands.length} total)`);
+      logger.debug(
+        `>>> Processing ${validStrands.length} valid strands (out of ${strands.length} total)`,
+      );
       for (const strand of validStrands) {
         await this.manager.routeAndGenerate(strand);
       }
     } else {
-      logger.debug(`>>> No valid strands to process (${strands.length} strands received)`);
+      logger.debug(
+        `>>> No valid strands to process (${strands.length} strands received)`,
+      );
     }
   }
 

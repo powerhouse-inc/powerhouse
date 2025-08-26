@@ -1,11 +1,10 @@
 import { BaseDocumentClass } from "document-model";
+import { DocumentEditorPHState } from "../ph-factories.js";
 import {
   type SetEditorNameInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
   type SetEditorStatusInput,
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
 } from "../types.js";
 import {
   setEditorName,
@@ -15,11 +14,7 @@ import {
 } from "./creators.js";
 import { type DocumentEditorAction } from "../actions.js";
 
-export default class DocumentEditor_BaseOperations extends BaseDocumentClass<
-  DocumentEditorState,
-  DocumentEditorLocalState,
-  DocumentEditorAction
-> {
+export default class DocumentEditor_BaseOperations extends BaseDocumentClass<DocumentEditorPHState> {
   public setEditorName(input: SetEditorNameInput) {
     return this.dispatch(setEditorName(input));
   }

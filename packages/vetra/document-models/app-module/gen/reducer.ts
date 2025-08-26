@@ -6,11 +6,12 @@ import {
   isDocumentAction,
   createReducer,
 } from "document-model";
-import { type AppModuleDocument, z } from "./types.js";
+import { AppModulePHState } from "./ph-factories.js";
+import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 
-const stateReducer: StateReducer<AppModuleDocument> = (
+export const stateReducer: StateReducer<AppModulePHState> = (
   state,
   action,
   dispatch,
@@ -43,4 +44,4 @@ const stateReducer: StateReducer<AppModuleDocument> = (
   }
 };
 
-export const reducer = createReducer<AppModuleDocument>(stateReducer);
+export const reducer = createReducer<AppModulePHState>(stateReducer);

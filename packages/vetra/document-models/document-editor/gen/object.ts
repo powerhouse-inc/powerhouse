@@ -1,18 +1,12 @@
 import {
   BaseDocumentClass,
-  type BaseStateFromDocument,
-  type PartialState,
   applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
-  type DocumentEditorDocument,
-} from "./types.js";
+import { DocumentEditorPHState } from "./ph-factories.js";
 import { type DocumentEditorAction } from "./actions.js";
 import { reducer } from "./reducer.js";
-import utils from "./utils.js";
+import { createDocument } from "./utils.js";
 import DocumentEditor_BaseOperations from "./base-operations/object.js";
 
 export * from "./base-operations/object.js";
@@ -21,18 +15,14 @@ export * from "./base-operations/object.js";
 interface DocumentEditor extends DocumentEditor_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class DocumentEditor extends BaseDocumentClass<
-  DocumentEditorState,
-  DocumentEditorLocalState,
-  DocumentEditorAction
-> {
+class DocumentEditor extends BaseDocumentClass<DocumentEditorPHState> {
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<DocumentEditorDocument>>,
+    initialState?: Partial<DocumentEditorPHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {

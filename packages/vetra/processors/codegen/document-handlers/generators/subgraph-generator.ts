@@ -1,7 +1,6 @@
 import { generateManifest, generateSubgraph } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentModelDocument } from "document-model";
 import { type SubgraphModuleState } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -15,7 +14,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
   /**
    * Validate if this subgraph strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
@@ -34,16 +33,16 @@ export class SubgraphGenerator extends BaseDocumentGen {
     }
 
     if (state.status !== "CONFIRMED") {
-      logger.debug(`>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`);
+      logger.debug(
+        `>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`,
+      );
       return false;
     }
 
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as SubgraphModuleState;
 
     // Check if we have a valid subgraph name and it's confirmed

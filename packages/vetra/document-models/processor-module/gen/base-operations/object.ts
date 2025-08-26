@@ -1,12 +1,11 @@
 import { BaseDocumentClass } from "document-model";
+import { ProcessorModulePHState } from "../ph-factories.js";
 import {
   type SetProcessorNameInput,
   type SetProcessorTypeInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
   type SetProcessorStatusInput,
-  type ProcessorModuleState,
-  type ProcessorModuleLocalState,
 } from "../types.js";
 import {
   setProcessorName,
@@ -17,11 +16,7 @@ import {
 } from "./creators.js";
 import { type ProcessorModuleAction } from "../actions.js";
 
-export default class ProcessorModule_BaseOperations extends BaseDocumentClass<
-  ProcessorModuleState,
-  ProcessorModuleLocalState,
-  ProcessorModuleAction
-> {
+export default class ProcessorModule_BaseOperations extends BaseDocumentClass<ProcessorModulePHState> {
   public setProcessorName(input: SetProcessorNameInput) {
     return this.dispatch(setProcessorName(input));
   }

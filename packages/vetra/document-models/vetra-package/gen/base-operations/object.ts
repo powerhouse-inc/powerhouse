@@ -1,4 +1,5 @@
 import { BaseDocumentClass } from "document-model";
+import { VetraPackagePHState } from "../ph-factories.js";
 import {
   type SetPackageNameInput,
   type SetPackageDescriptionInput,
@@ -10,8 +11,6 @@ import {
   type RemovePackageKeywordInput,
   type SetPackageGithubUrlInput,
   type SetPackageNpmUrlInput,
-  type VetraPackageState,
-  type VetraPackageLocalState,
 } from "../types.js";
 import {
   setPackageName,
@@ -27,11 +26,7 @@ import {
 } from "./creators.js";
 import { type VetraPackageAction } from "../actions.js";
 
-export default class VetraPackage_BaseOperations extends BaseDocumentClass<
-  VetraPackageState,
-  VetraPackageLocalState,
-  VetraPackageAction
-> {
+export default class VetraPackage_BaseOperations extends BaseDocumentClass<VetraPackagePHState> {
   public setPackageName(input: SetPackageNameInput) {
     return this.dispatch(setPackageName(input));
   }

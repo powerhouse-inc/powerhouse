@@ -1,18 +1,12 @@
 import {
   BaseDocumentClass,
-  type BaseStateFromDocument,
-  type PartialState,
   applyMixins,
   type SignalDispatch,
 } from "document-model";
-import {
-  type SubgraphModuleState,
-  type SubgraphModuleLocalState,
-  type SubgraphModuleDocument,
-} from "./types.js";
+import { SubgraphModulePHState } from "./ph-factories.js";
 import { type SubgraphModuleAction } from "./actions.js";
 import { reducer } from "./reducer.js";
-import utils from "./utils.js";
+import { createDocument } from "./utils.js";
 import SubgraphModule_BaseOperations from "./base-operations/object.js";
 
 export * from "./base-operations/object.js";
@@ -21,18 +15,14 @@ export * from "./base-operations/object.js";
 interface SubgraphModule extends SubgraphModule_BaseOperations {}
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-class SubgraphModule extends BaseDocumentClass<
-  SubgraphModuleState,
-  SubgraphModuleLocalState,
-  SubgraphModuleAction
-> {
+class SubgraphModule extends BaseDocumentClass<SubgraphModulePHState> {
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<SubgraphModuleDocument>>,
+    initialState?: Partial<SubgraphModulePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {

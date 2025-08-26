@@ -3,8 +3,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { actions } from "../../document-models/vetra-package/index.js";
 import { generateId } from "document-model";
+import { actions } from "../../document-models/vetra-package/index.js";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
 
@@ -19,12 +19,15 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
             const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
             const docId: string = args.docId || "";
             const doc = await reactor.getDocument(driveId, docId);
+
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              state: doc.state.global,
-              stateJSON: doc.state.global,
+              // these will be ripped out in the future, but for now all doc models have global state
+              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+              state: (doc.state as any).global ?? {},
+              stateJSON: (doc.state as any).global ?? "{}",
               revision: doc.header.revision["global"] ?? 0,
             };
           },
@@ -38,8 +41,10 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  state: doc.state.global,
-                  stateJSON: doc.state.global,
+                  // these will be ripped out in the future, but for now all doc models have global state
+                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+                  state: (doc.state as any).global ?? {},
+                  stateJSON: (doc.state as any).global ?? "{}",
                   revision: doc.header.revision["global"] ?? 0,
                 };
               }),
