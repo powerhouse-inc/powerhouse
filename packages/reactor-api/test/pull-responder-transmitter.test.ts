@@ -177,8 +177,10 @@ describe("Pull Responder Transmitter", () => {
         global: -1,
         local: -1,
       });
-      const resultDocument = result.document as DocumentDriveDocument;
-      expect(document.state.global).toStrictEqual(resultDocument.state.global);
+      const remoteDocument = (await remoteReactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
+      expect(document.state.global).toStrictEqual(remoteDocument.state.global);
     });
 
     await reactor.deleteDrive(driveId);

@@ -178,7 +178,7 @@ describe("Push Transmitter", () => {
         global: -1,
         local: -1,
       });
-      const resultDocument = result.document as DocumentDriveDocument;
+      const resultDocument = document as DocumentModelDocument;
       expect(remoteDocument.state.global).toStrictEqual(
         resultDocument.state.global,
       );
