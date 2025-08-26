@@ -8,7 +8,7 @@ import { type <%= documentTypesMap[type].name %>Document, actions } from "<%= do
 %><% }); _%>
 import { Button } from '@powerhousedao/design-system';
 
-export type IProps = <% if(!documentTypes.length){ %>EditorProps<PHDocument><% } else { %><% documentTypes.forEach((type, index) => { _%>EditorProps<<%= documentTypesMap[type].name %>Document%>%>><% if(index < documentTypes.length - 1){ %> | <% }%><% }); _%> <% } %>;
+export type IProps = EditorProps;
 
 export default function Editor(props: IProps) {
     return (
