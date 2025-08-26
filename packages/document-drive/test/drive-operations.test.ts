@@ -1,17 +1,17 @@
 import {
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
-  Operation,
+  type Operation,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveAction } from "../src/drive-document-model/gen/actions.js";
+import { type DocumentDriveAction } from "../src/drive-document-model/gen/actions.js";
 import {
   addFolder,
   setAvailableOffline,
 } from "../src/drive-document-model/gen/creators.js";
 import { reducer as documentDriveReducer } from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
+import { type DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import { MemoryStorage } from "../src/storage/memory.js";
@@ -178,7 +178,7 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive(id);
+    const drive = await server.getDrive(id);
     await expect(
       server.addOperations(
         id,

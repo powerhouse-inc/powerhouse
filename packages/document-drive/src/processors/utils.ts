@@ -22,7 +22,6 @@ export function hashNamespace(
   length = 10,
   algorithm: HashAlgorithms = "fnv1a",
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (algorithm === "fnv1a") {
     const requiredBits = Math.ceil(length * LOG2_26);
     const bitSize =
@@ -30,7 +29,6 @@ export function hashNamespace(
     const hash = fnv1a(str, { size: bitSize });
     return toBase26(hash, length);
   } else {
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     throw new Error(`Unsupported hashing algorithm: ${algorithm}`);
   }
 }

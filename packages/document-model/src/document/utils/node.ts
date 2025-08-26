@@ -36,9 +36,12 @@ export function writeFile(
           resolve(filePath);
         }
       });
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-      reject(error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        reject(error);
+      } else {
+        reject(new Error(String(error)));
+      }
     }
   });
 }

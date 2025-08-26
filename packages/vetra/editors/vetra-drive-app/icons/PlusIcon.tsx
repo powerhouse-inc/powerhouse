@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface PlusIconProps {
   width?: number;
@@ -10,8 +10,8 @@ interface PlusIconProps {
 export const PlusIcon: React.FC<PlusIconProps> = ({
   width = 24,
   height = 24,
-  className = '',
-  stroke = 'currentColor'
+  className = "",
+  stroke = "currentColor",
 }) => {
   return (
     <svg

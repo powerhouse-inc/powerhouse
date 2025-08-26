@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import { AddonPanel } from "@storybook/components";
 import { addons, types } from "@storybook/manager-api";
 import React from "react";

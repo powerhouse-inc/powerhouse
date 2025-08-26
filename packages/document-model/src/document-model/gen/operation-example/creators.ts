@@ -7,10 +7,10 @@ import {
   type UpdateOperationExampleInput,
 } from "../schema/index.js";
 import {
-  AddOperationExampleAction,
-  DeleteOperationExampleAction,
-  ReorderOperationExamplesAction,
-  UpdateOperationExampleAction,
+  type AddOperationExampleAction,
+  type DeleteOperationExampleAction,
+  type ReorderOperationExamplesAction,
+  type UpdateOperationExampleAction,
 } from "./actions.js";
 
 export const addOperationExample = (input: AddOperationExampleInput) =>
@@ -19,7 +19,7 @@ export const addOperationExample = (input: AddOperationExampleInput) =>
     { ...input },
     undefined,
     z.AddOperationExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const updateOperationExample = (input: UpdateOperationExampleInput) =>
@@ -28,7 +28,7 @@ export const updateOperationExample = (input: UpdateOperationExampleInput) =>
     { ...input },
     undefined,
     z.UpdateOperationExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const deleteOperationExample = (input: DeleteOperationExampleInput) =>
@@ -37,7 +37,7 @@ export const deleteOperationExample = (input: DeleteOperationExampleInput) =>
     { ...input },
     undefined,
     z.DeleteOperationExampleInputSchema,
-    "global"
+    "global",
   );
 
 export const reorderOperationExamples = (
@@ -48,5 +48,5 @@ export const reorderOperationExamples = (
     { ...input },
     undefined,
     z.ReorderOperationExamplesInputSchema,
-    "global"
+    "global",
   );

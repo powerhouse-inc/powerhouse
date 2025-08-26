@@ -22,6 +22,5 @@
     { "path": "../design-system" },
     { "path": "../common" },
     { "path": "../config" },
-    { "path": "./tsconfig.hygen.json" }
   ]
 }

@@ -120,7 +120,6 @@ export function resolveCreateDocumentInputId(
   input: CreateDocumentInput<PHDocument>,
 ) {
   if ("id" in input) {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     return input.id;
   } else if ("header" in input) {
     return input.header.id;

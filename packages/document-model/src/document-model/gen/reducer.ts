@@ -1,10 +1,5 @@
-import { DocumentModelAction } from "../../document-model/gen/actions.js";
-import {
-  DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "../../document-model/gen/types.js";
-import { StateReducer as TStateReducer } from "../../document/types.js";
+import { type DocumentModelDocument } from "../../document-model/gen/types.js";
+import { type StateReducer as TStateReducer } from "../../document/types.js";
 import { createReducer, isDocumentAction } from "../../document/utils/base.js";
 import { reducer as HeaderReducer } from "../custom/reducers/header.js";
 import { reducer as ModuleReducer } from "../custom/reducers/module.js";
@@ -66,7 +61,6 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
     return state;
   }
 
-
   switch (action.type) {
     case "SET_MODEL_NAME":
       SetModelNameInputSchema().parse(action.input);
@@ -105,17 +99,26 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
 
     case "UPDATE_CHANGE_LOG_ITEM":
       UpdateChangeLogItemInputSchema().parse(action.input);
-      VersioningReducer.updateChangeLogItemOperation(state.global, action as any);
+      VersioningReducer.updateChangeLogItemOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "DELETE_CHANGE_LOG_ITEM":
       DeleteChangeLogItemInputSchema().parse(action.input);
-      VersioningReducer.deleteChangeLogItemOperation(state.global, action as any);
+      VersioningReducer.deleteChangeLogItemOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "REORDER_CHANGE_LOG_ITEMS":
       ReorderChangeLogItemsInputSchema().parse(action.input);
-      VersioningReducer.reorderChangeLogItemsOperation(state.global, action as any);
+      VersioningReducer.reorderChangeLogItemsOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "RELEASE_NEW_VERSION":
@@ -151,7 +154,10 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
 
     case "ADD_OPERATION_ERROR":
       AddOperationErrorInputSchema().parse(action.input);
-      OperationErrorReducer.addOperationErrorOperation(state.global, action as any);
+      OperationErrorReducer.addOperationErrorOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "SET_OPERATION_ERROR_CODE":
@@ -188,7 +194,10 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
 
     case "DELETE_OPERATION_ERROR":
       DeleteOperationErrorInputSchema().parse(action.input);
-      OperationErrorReducer.deleteOperationErrorOperation(state.global, action as any);
+      OperationErrorReducer.deleteOperationErrorOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "REORDER_OPERATION_ERRORS":
@@ -253,17 +262,26 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
 
     case "SET_OPERATION_DESCRIPTION":
       SetOperationDescriptionInputSchema().parse(action.input);
-      OperationReducer.setOperationDescriptionOperation(state.global, action as any);
+      OperationReducer.setOperationDescriptionOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "SET_OPERATION_TEMPLATE":
       SetOperationTemplateInputSchema().parse(action.input);
-      OperationReducer.setOperationTemplateOperation(state.global, action as any);
+      OperationReducer.setOperationTemplateOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "SET_OPERATION_REDUCER":
       SetOperationReducerInputSchema().parse(action.input);
-      OperationReducer.setOperationReducerOperation(state.global, action as any);
+      OperationReducer.setOperationReducerOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "MOVE_OPERATION":
@@ -278,7 +296,10 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
 
     case "REORDER_MODULE_OPERATIONS":
       ReorderModuleOperationsInputSchema().parse(action.input);
-      OperationReducer.reorderModuleOperationsOperation(state.global, action as any);
+      OperationReducer.reorderModuleOperationsOperation(
+        state.global,
+        action as any,
+      );
       break;
 
     case "SET_STATE_SCHEMA":

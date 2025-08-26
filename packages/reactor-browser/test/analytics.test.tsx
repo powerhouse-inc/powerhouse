@@ -116,7 +116,6 @@ describe("Analytics Store", () => {
 
     await vi.waitFor(() => expect(queryResult.current.status).toBe("success"));
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const results = queryResult.current.data!;
 
     expect(results.length).toBe(1);

@@ -8,8 +8,8 @@ import {
   type UpdateNodeInput,
   type CopyNodeInput,
   type MoveNodeInput,
-  LegacyAddFileInput,
-  LegacyAddFileAction,
+  type LegacyAddFileInput,
+  type LegacyAddFileAction,
 } from "../types.js";
 import {
   type AddFileAction,

@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-private-class-members */
-
 import { createAuthBearerToken } from "@renown/sdk";
 import { bytesToBase64url } from "did-jwt";
 import type { Issuer } from "did-jwt-vc";
@@ -81,7 +79,6 @@ export class ConnectCrypto implements IConnectCrypto {
           })
           .catch(reject);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!window.crypto?.subtle) {
           reject(new Error("Crypto module not available"));
         }
@@ -192,19 +189,6 @@ export class ConnectCrypto implements IConnectCrypto {
       ),
     };
   }
-
-  #sign = async (
-    ...args: Parameters<SubtleCrypto["sign"]>
-  ): Promise<ArrayBuffer> => {
-    return (await this.#subtleCrypto).sign(...args);
-  };
-
-  #verify = async (
-    ...args: Parameters<SubtleCrypto["verify"]>
-  ): Promise<boolean> => {
-    return (await this.#subtleCrypto).verify(...args);
-  };
-
   #stringToBytes(s: string): Uint8Array {
     return fromString(s, "utf-8");
   }

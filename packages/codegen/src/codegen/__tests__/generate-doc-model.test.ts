@@ -343,11 +343,13 @@ describe("document model", () => {
 
       // Should have import for both InvalidStatusTransition and StatusAlreadySet errors in single import
       expect(generalReducerContent).toContain(
-        "import { InvalidStatusTransition, StatusAlreadySet } from \"../../gen/general/error.js\";",
+        'import { InvalidStatusTransition, StatusAlreadySet } from "../../gen/general/error.js";',
       );
 
       // Should contain the reducer code with both error usages
-      expect(generalReducerContent).toContain("throw new InvalidStatusTransition");
+      expect(generalReducerContent).toContain(
+        "throw new InvalidStatusTransition",
+      );
       expect(generalReducerContent).toContain("throw new StatusAlreadySet");
 
       // Check that the line-items module reducer imports DuplicateLineItem
@@ -359,11 +361,14 @@ describe("document model", () => {
         "reducers",
         "line-items.ts",
       );
-      const lineItemsReducerContent = readFileSync(lineItemsReducerPath, "utf-8");
+      const lineItemsReducerContent = readFileSync(
+        lineItemsReducerPath,
+        "utf-8",
+      );
 
       // Should have import for DuplicateLineItem error
       expect(lineItemsReducerContent).toContain(
-        "import { DuplicateLineItem } from \"../../gen/line-items/error.js\";",
+        'import { DuplicateLineItem } from "../../gen/line-items/error.js";',
       );
 
       // Should contain the reducer code with error usage

@@ -1,12 +1,12 @@
 import {
-  Action,
-  DocumentModelDocument,
+  type Action,
+  type DocumentModelDocument,
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
   documentModelReducer,
   garbageCollect,
   generateId,
-  Operation,
+  type Operation,
   setModelExtension,
   setModelId,
   setModelName,
@@ -14,13 +14,13 @@ import {
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import { addFile } from "#drive-document-model/gen/creators";
-import { BaseDocumentDriveServer } from "#server/base-server";
+import { type BaseDocumentDriveServer } from "#server/base-server";
 import { createPresignedHeader } from "document-model";
 import { undo } from "../../../document-model/src/document/actions/creators.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../../src/server/builder.js";
-import { IOperationResult } from "../../src/server/types.js";
+import { type IOperationResult } from "../../src/server/types.js";
 import { BasicClient, buildOperation, buildOperations } from "../utils.js";
 
 const mapExpectedOperations = (operations: Operation[]) =>
@@ -82,7 +82,7 @@ describe("processOperations", () => {
           name: "test",
           documentType: "powerhouse/document-model",
         }),
-      ) as Operation,
+      ),
     );
 
     let document = await server.getDocument<DocumentModelDocument>(documentId);

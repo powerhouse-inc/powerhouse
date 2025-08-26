@@ -3,12 +3,12 @@ import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
 import {
   createDocument as createDocumentModelDocument,
-  DocumentModelState,
+  type DocumentModelState,
   generateId,
 } from "../../document-model/index.js";
 import { LRUCacheStorage } from "../src/cache/lru.js";
 import InMemoryCache from "../src/cache/memory.js";
-import { ICache } from "../src/cache/types.js";
+import { type ICache } from "../src/cache/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 import { createBaseState } from "./utils.js";
 

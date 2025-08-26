@@ -100,7 +100,9 @@ export class DriveAnalyticsProcessor implements IProcessor {
               operation: AnalyticsPath.fromString(
                 `ph/drive/operation/${operation.action.type}/${operation.index}`,
               ),
-              target: AnalyticsPath.fromString(`ph/drive/target/${target}/${targetId}`),
+              target: AnalyticsPath.fromString(
+                `ph/drive/target/${target}/${targetId}`,
+              ),
               actionType: AnalyticsPath.fromString(
                 `ph/drive/actionType/${actionType}/${targetId}`,
               ),

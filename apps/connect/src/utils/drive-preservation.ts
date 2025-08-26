@@ -1,11 +1,11 @@
-import type { DocumentDriveServerOptions } from 'document-drive';
+import type { DocumentDriveServerOptions } from "document-drive";
 
 /**
  * Supported drive preservation strategies
  */
 const SUPPORTED_STRATEGIES = [
-    'preserve-all',
-    'preserve-by-url-and-detach',
+  "preserve-all",
+  "preserve-by-url-and-detach",
 ] as const;
 
 type SupportedStrategy = (typeof SUPPORTED_STRATEGIES)[number];
@@ -15,23 +15,21 @@ type SupportedStrategy = (typeof SUPPORTED_STRATEGIES)[number];
  * @returns Valid strategy or default 'preserve-by-url-and-detach'
  */
 export const getDrivePreservationStrategy = (): SupportedStrategy => {
-    const envStrategy = import.meta.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY as
-        | string
-        | undefined;
+  const envStrategy = import.meta.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY as
+    | string
+    | undefined;
 
-    if (!envStrategy) {
-        return 'preserve-by-url-and-detach';
-    }
+  if (!envStrategy) {
+    return "preserve-by-url-and-detach";
+  }
 
-    const isValidStrategy = (
-        strategy: string,
-    ): strategy is SupportedStrategy => {
-        return SUPPORTED_STRATEGIES.includes(strategy as SupportedStrategy);
-    };
+  const isValidStrategy = (strategy: string): strategy is SupportedStrategy => {
+    return SUPPORTED_STRATEGIES.includes(strategy as SupportedStrategy);
+  };
 
-    return isValidStrategy(envStrategy)
-        ? envStrategy
-        : 'preserve-by-url-and-detach';
+  return isValidStrategy(envStrategy)
+    ? envStrategy
+    : "preserve-by-url-and-detach";
 };
 
 /**
@@ -40,29 +38,29 @@ export const getDrivePreservationStrategy = (): SupportedStrategy => {
  * @returns RemoveOldRemoteDrives configuration
  */
 export const createRemoveOldRemoteDrivesConfig = (
-    defaultDrivesUrl: string[],
+  defaultDrivesUrl: string[],
 ): NonNullable<
-    DocumentDriveServerOptions['defaultDrives']
->['removeOldRemoteDrives'] => {
-    if (defaultDrivesUrl.length === 0) {
-        return { strategy: 'preserve-all' };
-    }
+  DocumentDriveServerOptions["defaultDrives"]
+>["removeOldRemoteDrives"] => {
+  if (defaultDrivesUrl.length === 0) {
+    return { strategy: "preserve-all" };
+  }
 
-    const strategy: SupportedStrategy = getDrivePreservationStrategy();
+  const strategy: SupportedStrategy = getDrivePreservationStrategy();
 
-    switch (strategy) {
-        case 'preserve-all':
-            return { strategy: 'preserve-all' };
-        case 'preserve-by-url-and-detach':
-            return {
-                strategy: 'preserve-by-url-and-detach',
-                urls: defaultDrivesUrl,
-            };
-        default:
-            // TypeScript exhaustiveness check - should never reach here
-            return {
-                strategy: 'preserve-by-url-and-detach',
-                urls: defaultDrivesUrl,
-            };
-    }
+  switch (strategy) {
+    case "preserve-all":
+      return { strategy: "preserve-all" };
+    case "preserve-by-url-and-detach":
+      return {
+        strategy: "preserve-by-url-and-detach",
+        urls: defaultDrivesUrl,
+      };
+    default:
+      // TypeScript exhaustiveness check - should never reach here
+      return {
+        strategy: "preserve-by-url-and-detach",
+        urls: defaultDrivesUrl,
+      };
+  }
 };

@@ -1,6 +1,6 @@
 import {
   createPresignedHeader,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
   setModelName,
 } from "document-model";
@@ -10,10 +10,10 @@ import { ReactorBuilder } from "../src/server/builder.js";
 import { InternalTransmitter } from "../src/server/listener/transmitter/internal.js";
 import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
-import { IProcessor } from "#processors/types";
+import { type IProcessor } from "#processors/types";
 import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { Listener } from "../src/server/types.js";
+import { type Listener } from "../src/server/types.js";
 
 describe("Internal Listener", () => {
   const documentModels = [

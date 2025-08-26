@@ -18,20 +18,16 @@
     "reactor-mcp": "./dist/src/cli.js"
   },
   "files": [
-    "./dist"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc --build",
-    "build:tsc": "tsc --build",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "bench": "vitest bench"
   },
   "publishConfig": {
     "access": "public"
@@ -54,7 +50,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.15.17",
+    "@types/node": "^24.3.0",
     "vitest": "^3.1.2"
   }
 }

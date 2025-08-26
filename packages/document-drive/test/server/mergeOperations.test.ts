@@ -1,4 +1,4 @@
-import { Operation } from "document-model";
+import { type Operation } from "document-model";
 import { describe, expect, it } from "vitest";
 import { mergeOperations } from "../../src/utils/misc.js";
 import { fakeAction } from "../utils.js";

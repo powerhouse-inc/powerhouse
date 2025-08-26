@@ -1,8 +1,12 @@
-import { IDriveContext, type VetraDocumentModelModule, type VetraEditorModule } from '@powerhousedao/reactor-browser';
-import type React from 'react';
-import { DOCUMENT_TYPES } from '../document-types.js';
+import {
+  type IDriveContext,
+  type VetraDocumentModelModule,
+  type VetraEditorModule,
+} from "@powerhousedao/reactor-browser";
+import type React from "react";
+import { DOCUMENT_TYPES } from "../document-types.js";
 import { EditorContainer } from "./EditorContainer.js";
-import { SectionAccordion } from './SectionAccordion.js';
+import { SectionAccordion } from "./SectionAccordion.js";
 
 interface PackageInformationSectionProps {
   className?: string;
@@ -14,7 +18,9 @@ interface PackageInformationSectionProps {
   driveId: string;
 }
 
-export const PackageInformationSection: React.FC<PackageInformationSectionProps> = ({
+export const PackageInformationSection: React.FC<
+  PackageInformationSectionProps
+> = ({
   className,
   context,
   packageDocumentId,
@@ -25,7 +31,7 @@ export const PackageInformationSection: React.FC<PackageInformationSectionProps>
 }) => {
   const createpackageContent = (
     <button
-      className="bg-zinc-50 w-full h-[200px] my-2 rounded-md border border-zinc-200 border-dashed"
+      className="my-2 h-[200px] w-full rounded-md border border-dashed border-zinc-200 bg-zinc-50"
       onClick={onAddPackageDocument}
     >
       Click to create package manifest
@@ -33,7 +39,11 @@ export const PackageInformationSection: React.FC<PackageInformationSectionProps>
   );
 
   return (
-    <SectionAccordion title="Package Information" defaultOpen={true} className={className}>
+    <SectionAccordion
+      title="Package Information"
+      defaultOpen={true}
+      className={className}
+    >
       <div className="">
         {packageDocumentId && documentModelModule && editorModule ? (
           <EditorContainer

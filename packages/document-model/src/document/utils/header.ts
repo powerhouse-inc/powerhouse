@@ -68,7 +68,6 @@ export class PublicKeySigner implements ISigner {
           })
           .catch(reject);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!window.crypto?.subtle) {
           reject(new Error("Crypto module not available"));
         }
@@ -105,8 +104,8 @@ export class PublicKeySigner implements ISigner {
       isValid = await subtleCrypto.verify(
         "Ed25519",
         this.publicCryptoKey,
-        signature as BufferSource,
-        data as BufferSource,
+        new Uint8Array(signature),
+        new Uint8Array(data),
       );
     } catch (error) {
       throw new Error("invalid signature");

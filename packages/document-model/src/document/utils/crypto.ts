@@ -14,12 +14,8 @@ import {
 } from "../types.js";
 
 export function generateId(method?: "UUIDv4"): string {
-  // TODO: this does not make sense. This type says that the input can only be either "UUIDv4" or undefined.
-  // But the purpose of the function is to determine if this is something else.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
   if (method && method.toString() !== "UUIDv4") {
     throw new Error(
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
       `Id generation method not supported: "${method.toString()}"`,
     );
   }

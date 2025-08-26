@@ -1,5 +1,5 @@
-import type React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface AccordionProps {
   isOpen: boolean;
@@ -14,10 +14,10 @@ export const Accordion: React.FC<AccordionProps> = ({
   onToggle,
   header,
   children,
-  className = ''
+  className = "",
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | 'auto'>('auto');
+  const [height, setHeight] = useState<number | "auto">("auto");
 
   useEffect(() => {
     const updateHeight = () => {
@@ -31,7 +31,7 @@ export const Accordion: React.FC<AccordionProps> = ({
     };
 
     updateHeight();
-    
+
     // Use ResizeObserver to detect content changes
     const resizeObserver = new ResizeObserver(updateHeight);
     if (contentRef.current) {
@@ -48,27 +48,29 @@ export const Accordion: React.FC<AccordionProps> = ({
       <div
         onClick={onToggle}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onToggle();
           }
         }}
         role="button"
         tabIndex={0}
-        className="w-full text-left focus:outline-none cursor-pointer"
+        className="w-full cursor-pointer text-left focus:outline-none"
       >
         {header}
       </div>
       <div
         className="overflow-hidden transition-all duration-300 ease-in-out"
         style={{
-          maxHeight: isOpen ? (height === 'auto' ? 'none' : `${height}px`) : '0px',
-          opacity: isOpen ? 1 : 0
+          maxHeight: isOpen
+            ? height === "auto"
+              ? "none"
+              : `${height}px`
+            : "0px",
+          opacity: isOpen ? 1 : 0,
         }}
       >
-        <div ref={contentRef}>
-          {children}
-        </div>
+        <div ref={contentRef}>{children}</div>
       </div>
     </div>
   );

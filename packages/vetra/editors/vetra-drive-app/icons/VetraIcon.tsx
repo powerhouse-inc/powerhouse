@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface VetraIconProps {
   width?: number;
@@ -10,8 +10,8 @@ interface VetraIconProps {
 export const VetraIcon: React.FC<VetraIconProps> = ({
   width = 23,
   height = 22,
-  className = '',
-  fill = '#343839'
+  className = "",
+  fill = "#343839",
 }) => {
   return (
     <svg

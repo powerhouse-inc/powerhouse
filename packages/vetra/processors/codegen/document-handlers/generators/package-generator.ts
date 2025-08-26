@@ -14,7 +14,9 @@ export class PackageGenerator extends BaseDocumentGen {
   /**
    * Validate if this package strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate<DocumentModelDocument>): boolean {
+  shouldProcess(
+    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+  ): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;

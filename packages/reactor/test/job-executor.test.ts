@@ -1,4 +1,4 @@
-import { Operation } from "#shared/types.js";
+import { type Operation } from "#shared/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { type IEventBus } from "../src/events/interfaces.js";
@@ -557,7 +557,7 @@ describe("InMemoryJobExecutor", () => {
       await realExecutor.start({ maxConcurrency: 3 });
 
       // Mock performJobExecution to take longer so we can observe concurrency
-      const executorInstance = realExecutor as InMemoryJobExecutor;
+      const executorInstance = realExecutor;
       (executorInstance as any).performJobExecution = vi
         .fn()
         .mockImplementation(() => {

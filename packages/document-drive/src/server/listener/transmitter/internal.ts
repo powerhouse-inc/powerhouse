@@ -84,13 +84,8 @@ export class InternalTransmitter implements ITransmitter {
           ));
 
       if (index < 0) {
-        stateByIndex.set(
-          index,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-          (document.initialState as any)[strand.scope],
-        );
+        stateByIndex.set(index, (document.initialState as any)[strand.scope]);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         stateByIndex.set(index, (document.state as any)[strand.scope]);
       }
       return stateByIndex.get(index);
@@ -128,7 +123,6 @@ export class InternalTransmitter implements ITransmitter {
 
   async transmit(
     strands: StrandUpdate[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _source: StrandUpdateSource,
   ): Promise<ListenerRevision[]> {
     const task = async (): Promise<ListenerRevision[]> => {

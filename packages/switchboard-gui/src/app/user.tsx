@@ -1,8 +1,8 @@
-import TokenForm from "../components/tokens/token-form";
-import TokensTable from "../components/tokens/tokens-table";
-import useAuth, { authStore } from "../hooks/useAuth";
 import { ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/solid";
-import Link from "../components/text/Link";
+import Link from "../components/text/Link.js";
+import TokenForm from "../components/tokens/token-form.js";
+import TokensTable from "../components/tokens/tokens-table.js";
+import useAuth, { authStore } from "../hooks/useAuth.js";
 
 const User = () => {
   const address = authStore((state) => state.address);

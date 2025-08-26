@@ -52,7 +52,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
-    // @ts-expect-error
+    // @ts-expect-error - storybook doesn't support the type
     render: PackageManagerWrapper,
     args: defaultArgs,
   };

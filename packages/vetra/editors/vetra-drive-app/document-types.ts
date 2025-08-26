@@ -6,4 +6,4 @@ export const DOCUMENT_TYPES = {
   documentSubgraph: "powerhouse/subgraph",
   documentProcessor: "powerhouse/processor",
   documentCodegenProcessor: "powerhouse/codegen-processor",
-}
+};

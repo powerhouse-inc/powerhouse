@@ -1,5 +1,3 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
 import { TooltipProvider } from "#connect";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {

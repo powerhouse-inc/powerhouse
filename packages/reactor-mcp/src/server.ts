@@ -66,7 +66,6 @@ export async function createServer(
   // server.registerTool("getDocumentModels", toolSchema, callback);
   Object.entries(reactorProvider.tools).forEach(
     ([toolName, { callback, ...schema }]) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       server.registerTool(toolName, schema as any, callback as any);
     },
   );

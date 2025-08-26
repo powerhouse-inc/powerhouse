@@ -1,8 +1,6 @@
 import { useReactor } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
-import type {
-    DocumentTypeItem
-} from "../../../document-models/processor-module/index.js";
+import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -39,7 +37,9 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   // Get available document types from reactor
   const reactor = useReactor();
   const docModels = reactor?.getDocumentModelModules() ?? [];
-  const availableDocumentTypes = docModels.map((model) => model.documentModel.id);
+  const availableDocumentTypes = docModels.map(
+    (model) => model.documentModel.id,
+  );
 
   // Use the debounce hook for name and type changes
   useDebounce(processorName, onNameChange, 300);
@@ -89,9 +89,9 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
         <h2 className="text-lg font-medium text-gray-900">
           Processor Configuration
         </h2>
-        <StatusPill 
-          status={status === "CONFIRMED" ? 'confirmed' : 'draft'} 
-          label={status === "CONFIRMED" ? 'Confirmed' : 'Draft'} 
+        <StatusPill
+          status={status === "CONFIRMED" ? "confirmed" : "draft"}
+          label={status === "CONFIRMED" ? "Confirmed" : "Draft"}
         />
       </div>
 
@@ -142,28 +142,33 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
               value={selectedDocumentType}
               onChange={(e) => {
                 const selectedValue = e.target.value;
-                if (selectedValue && !documentTypes.some(dt => dt.documentType === selectedValue)) {
+                if (
+                  selectedValue &&
+                  !documentTypes.some((dt) => dt.documentType === selectedValue)
+                ) {
                   const id = Date.now().toString();
                   const newType: DocumentTypeItem = {
                     id,
-                    documentType: selectedValue
+                    documentType: selectedValue,
                   };
                   setDocumentTypes([...documentTypes, newType]);
                   onAddDocumentType?.(id, selectedValue);
                 }
-                setSelectedDocumentType('');
+                setSelectedDocumentType("");
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select a document type to add</option>
               {availableDocumentTypes
-                .filter(docType => !documentTypes.some(dt => dt.documentType === docType))
+                .filter(
+                  (docType) =>
+                    !documentTypes.some((dt) => dt.documentType === docType),
+                )
                 .map((docType) => (
                   <option key={docType} value={docType}>
                     {docType}
                   </option>
-                ))
-              }
+                ))}
             </select>
           )}
           <div className="space-y-1">

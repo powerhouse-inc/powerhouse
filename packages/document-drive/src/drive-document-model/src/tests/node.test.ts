@@ -18,7 +18,7 @@ import {
   UpdateFileInputSchema,
   UpdateNodeInputSchema,
 } from "../../gen/schema/zod.js";
-import { DocumentDriveDocument } from "../../gen/types.js";
+import { type DocumentDriveDocument } from "../../gen/types.js";
 import { createDocument } from "../../gen/utils.js";
 import { createDocumentWithNodes } from "./test-factories.js";
 

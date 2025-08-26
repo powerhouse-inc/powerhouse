@@ -1,6 +1,3 @@
-/* eslint-disable react/jsx-no-bind */
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/button-has-type */
 import { Icon } from "#powerhouse";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
