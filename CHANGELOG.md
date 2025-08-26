@@ -1,3 +1,13 @@
+## 4.1.0-dev.34 (2025-08-26)
+
+### 🩹 Fixes
+
+- updated document editor templates ([470583a25](https://github.com/powerhouse-inc/powerhouse/commit/470583a25))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.33 (2025-08-21)
 
 ### 🚀 Features
