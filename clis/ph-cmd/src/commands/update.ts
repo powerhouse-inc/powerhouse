@@ -15,7 +15,7 @@ import {
 } from "../utils/index.js";
 import {
   ENV_MAP,
-  PH_PROJECT_DEPENDENCIES,
+  detectPowerhousePackages,
   updatePackageJson,
   type Environment,
 } from "./use.js";
@@ -57,11 +57,14 @@ const getLocalDependencyPath = (projectPath: string) => {
     fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"),
   ) as PackageJson;
 
+  // Get all Powerhouse packages from package.json
+  const powerhousePackages = detectPowerhousePackages(packageJson);
+  
   // filter dependencies
   const filteredDependencies = Object.entries({
     ...(packageJson.dependencies || {}),
     ...(packageJson.devDependencies || {}),
-  }).filter(([name]) => PH_PROJECT_DEPENDENCIES.includes(name));
+  }).filter(([name]) => powerhousePackages.includes(name));
 
   const [_, localDependencyPath] = filteredDependencies.find(
     ([_, version]) =>
@@ -80,13 +83,9 @@ const getInstalledDependencies = (projectPath: string) => {
     fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"),
   ) as PackageJson;
 
-  // Get all installed Powerhouse dependencies
-  const installedDeps = Object.keys({
-    ...(packageJson.dependencies || {}),
-    ...(packageJson.devDependencies || {}),
-  })
-    .filter((name) => PH_PROJECT_DEPENDENCIES.includes(name))
-    .sort(); // Sort dependencies alphabetically
+  // Get all installed Powerhouse dependencies using dynamic detection
+  const powerhousePackages = detectPowerhousePackages(packageJson);
+  const installedDeps = powerhousePackages.sort(); // Sort dependencies alphabetically
 
   return installedDeps;
 };
