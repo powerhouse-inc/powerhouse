@@ -1,5 +1,7 @@
-// Reactor Interface
+// Reactor Interface and Implementation
 export { type IReactor } from "./interfaces/reactor.js";
+export { Reactor } from "./reactor.js";
+export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,
   PropagationMode,

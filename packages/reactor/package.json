@@ -34,7 +34,9 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "document-model": "workspace:*"
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

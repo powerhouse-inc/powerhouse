@@ -91,7 +91,7 @@ export interface IReactor {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<Operation>>;
+  ): Promise<Record<string, PagedResults<Operation>>>;
 
   /**
    * Filters documents by criteria and returns a list of them
