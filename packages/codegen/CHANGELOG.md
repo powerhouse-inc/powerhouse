@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **codegen:** updating codegen with type fix ([3dc9b5f2d](https://github.com/powerhouse-inc/powerhouse/commit/3dc9b5f2d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 ### 🩹 Fixes

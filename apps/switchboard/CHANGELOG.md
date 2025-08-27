@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **switchboard, ph-cli:** slight type fixes ([b1bf76f1b](https://github.com/powerhouse-inc/powerhouse/commit/b1bf76f1b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

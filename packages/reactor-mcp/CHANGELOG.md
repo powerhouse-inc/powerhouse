@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** updates for type shuffle ([fc9d5c660](https://github.com/powerhouse-inc/powerhouse/commit/fc9d5c660))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

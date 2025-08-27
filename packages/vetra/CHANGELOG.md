@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **vetra:** regenerate and fix all document models ([b28d67aac](https://github.com/powerhouse-inc/powerhouse/commit/b28d67aac))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

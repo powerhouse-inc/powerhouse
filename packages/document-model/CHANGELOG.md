@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- linter fixes ([7dc6fac02](https://github.com/powerhouse-inc/powerhouse/commit/7dc6fac02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

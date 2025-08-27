@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **common:** type refactor for common ([c52c700b9](https://github.com/powerhouse-inc/powerhouse/commit/c52c700b9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

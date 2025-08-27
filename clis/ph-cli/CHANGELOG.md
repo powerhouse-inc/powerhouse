@@ -1,3 +1,18 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🚀 Features
+
+- replaced vetra icon svg ([bb61632ea](https://github.com/powerhouse-inc/powerhouse/commit/bb61632ea))
+
+### 🩹 Fixes
+
+- **switchboard, ph-cli:** slight type fixes ([b1bf76f1b](https://github.com/powerhouse-inc/powerhouse/commit/b1bf76f1b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

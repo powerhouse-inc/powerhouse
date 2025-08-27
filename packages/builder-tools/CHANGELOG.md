@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🩹 Fixes
+
+- **builder-tools:** fixes based on type changes ([61f95be48](https://github.com/powerhouse-inc/powerhouse/commit/61f95be48))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

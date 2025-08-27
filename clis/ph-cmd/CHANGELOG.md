@@ -1,3 +1,13 @@
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🚀 Features
+
+- **ph-cmd:** add dynamic package detection for use command ([#1792](https://github.com/powerhouse-inc/powerhouse/pull/1792))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.34 (2025-08-26)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
