@@ -1,3 +1,4 @@
+import { InMemoryCache } from "#cache";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
@@ -7,7 +8,6 @@ import {
   generateId,
 } from "../../document-model/index.js";
 import { LRUCacheStorage } from "../src/cache/lru.js";
-import InMemoryCache from "../src/cache/memory.js";
 import { type ICache } from "../src/cache/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 import { createBaseState } from "./utils.js";

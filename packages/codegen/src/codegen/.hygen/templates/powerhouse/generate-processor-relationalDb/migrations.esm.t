@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/migrations.ts"
 force: true
 ---
-import { type IRelationalDb } from "document-drive/processors/types"
+import { type IRelationalDb } from "document-drive"
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table 

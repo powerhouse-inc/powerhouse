@@ -17,9 +17,7 @@
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": "./dist/src/index.js"
-  },
+  "exports": "./dist/index.js",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint"

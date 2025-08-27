@@ -1,8 +1,8 @@
 import {
   type ConnectStudioOptions,
   startConnectStudio,
-} from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/utils";
+} from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config";
 import { readFileSync } from "fs";
 
 const packageJson = JSON.parse(readFileSync("./package.json", "utf8")) as {

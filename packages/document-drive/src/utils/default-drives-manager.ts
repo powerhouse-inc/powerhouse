@@ -1,4 +1,4 @@
-import { type IReadModeDriveServer } from "#read-mode/types";
+import { type IReadModeDriveServer } from "#read-mode";
 import {
   type DefaultRemoteDriveInfo,
   type DocumentDriveServerOptions,
@@ -7,7 +7,7 @@ import {
   type RemoteDriveAccessLevel,
   type RemoveDriveStrategy,
   type RemoveOldRemoteDrivesOption,
-} from "#server/types";
+} from "#server";
 import { type DocumentDriveDocument } from "../drive-document-model/gen/types.js";
 import { requestPublicDriveWithTokenFromReactor } from "./graphql.js";
 import { logger } from "./logger.js";

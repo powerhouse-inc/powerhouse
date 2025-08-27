@@ -1,4 +1,4 @@
-import { childLogger } from "#utils/logger";
+import { childLogger } from "#utils";
 import { LRUCache as BaseLRUCache, type LRUCache } from "lru-cache";
 import sizeof from "object-sizeof";
 import { type ICacheStorage } from "./memory.js";

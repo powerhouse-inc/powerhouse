@@ -1,5 +1,5 @@
-import { type PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
-import { hash } from "#utils/env";
+import { type PHBaseState, type PHDocumentHeader } from "#document";
+import { hash } from "#utils";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
 import {
@@ -9,6 +9,7 @@ import {
   REDO,
   SET_NAME,
   UNDO,
+  type DocumentAction,
 } from "../actions/types.js";
 import { baseReducer, updateHeaderRevision } from "../reducer.js";
 import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
@@ -17,7 +18,6 @@ import {
   type Action,
   type BaseStateFromDocument,
   type CreateState,
-  type DocumentAction,
   type DocumentOperations,
   type DocumentOperationsIgnoreMap,
   type MappedOperation,

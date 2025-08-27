@@ -1,12 +1,11 @@
-import { type ICache } from "#cache/types";
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type ICache } from "#cache";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import {
   type IDocumentStorage,
   type IDriveOperationStorage,
   type IStorageUnit,
-} from "#storage/types";
-import { childLogger } from "#utils/logger";
-import { isBefore, operationsToRevision } from "#utils/misc";
+} from "#storage";
+import { childLogger, isBefore, operationsToRevision } from "#utils";
 import {
   type DocumentModelModule,
   type PHDocument,

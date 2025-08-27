@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config";
 import { type Command } from "commander";
 import { listHelp } from "../help.js";
 import { type CommandActionType } from "../types.js";

@@ -1,4 +1,4 @@
-import { type AddOperationOptions, type IOperationResult } from "#server/types";
+import { type AddOperationOptions, type IOperationResult } from "#server";
 import type { Action, Operation, PHDocument } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 

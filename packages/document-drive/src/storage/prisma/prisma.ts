@@ -2,8 +2,8 @@ import {
   isValidDocumentId,
   isValidSlug,
   resolveStorageUnitsFilter,
-} from "#storage/utils";
-import { AbortError } from "#utils/errors";
+} from "#storage";
+import { AbortError } from "#utils";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
   Action,

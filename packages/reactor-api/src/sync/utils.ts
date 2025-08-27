@@ -1,10 +1,10 @@
 import {
+  operationsToRevision,
   type IDocumentDriveServer,
   type ListenerRevision,
   type PullResponderTransmitter,
   type StrandUpdate,
 } from "document-drive";
-import { operationsToRevision } from "document-drive/utils/misc";
 import { type Operation } from "document-model";
 
 // define types

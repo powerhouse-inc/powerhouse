@@ -1,14 +1,4 @@
 import {
-  BOOLEAN_GQL_PRIMITIVE_NAME,
-  FLOAT_GQL_PRIMITIVE_NAME,
-  type GqlPrimitiveNodeName,
-  gqlPrimitiveNodeNamesList,
-  ID_GQL_PRIMITIVE_NAME,
-  INT_GQL_PRIMITIVE_NAME,
-  STRING_GQL_PRIMITIVE_NAME,
-} from "#document-model-editor/constants/graphql-kinds";
-import { safeParseSdl } from "#document-model-editor/context/schema-context";
-import {
   getPHCustomScalarByTypeName,
   type Serializable,
 } from "@powerhousedao/document-engineering/graphql";
@@ -30,6 +20,16 @@ import {
   visit,
 } from "graphql";
 import { z } from "zod";
+import {
+  BOOLEAN_GQL_PRIMITIVE_NAME,
+  FLOAT_GQL_PRIMITIVE_NAME,
+  type GqlPrimitiveNodeName,
+  gqlPrimitiveNodeNamesList,
+  ID_GQL_PRIMITIVE_NAME,
+  INT_GQL_PRIMITIVE_NAME,
+  STRING_GQL_PRIMITIVE_NAME,
+} from "../constants/graphql-kinds.js";
+import { safeParseSdl } from "../context/schema-context.js";
 import { type Scope } from "../types/documents.js";
 
 export function makeStateSchemaNameForScope(modelName: string, scope: string) {

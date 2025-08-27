@@ -8,7 +8,7 @@ import {
   setDriveSharingType,
   useDrives,
 } from "@powerhousedao/reactor-browser";
-import { getDriveIdBySlug } from "@powerhousedao/reactor-browser/utils/switchboard";
+import { getDriveIdBySlug } from "@powerhousedao/reactor-browser";
 import {
   logger,
   type PullResponderTrigger,

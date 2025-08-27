@@ -1,4 +1,4 @@
-import { type DocumentModelState } from "document-model";
+import { type DocumentModelState, type Module } from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
 import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
@@ -7,9 +7,8 @@ import { ImportManager } from "../utilities/ImportManager.js";
 import { type FileGenerator } from "./FileGenerator.js";
 import {
   type CodeGeneratorOptions,
+  type CodegenOperation,
   type GenerationContext,
-  type ModuleSpec,
-  type Operation,
   type PHProjectDirectories,
 } from "./GenerationContext.js";
 
@@ -121,10 +120,10 @@ export class TSMorphCodeGenerator {
 
   private createGenerationContext(
     docModel: DocumentModelState,
-    module: ModuleSpec,
+    module: Module,
     forceUpdate = false,
   ): GenerationContext {
-    const operations: Operation[] = module.operations.map((op) => ({
+    const operations: CodegenOperation[] = module.operations.map((op) => ({
       ...op,
       hasInput: op.schema !== null,
       hasAttachment: op.schema?.includes(": Attachment"),

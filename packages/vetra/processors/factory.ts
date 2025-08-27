@@ -7,7 +7,7 @@ import {
   type IProcessorHostModule,
   type ProcessorFactory,
   type ProcessorRecord,
-} from "document-drive/processors/types";
+} from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 
 // Import other processor factories here as they are generated

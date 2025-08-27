@@ -2,8 +2,8 @@ import {
   type ListenerFilter,
   type PullResponderTriggerData,
   type Trigger,
-} from "#drive-document-model/gen/types";
-import { type ListenerRevision, type StrandUpdate } from "#server/types";
+} from "#drive-document-model";
+import { type ListenerRevision, type StrandUpdate } from "#server";
 
 export type StrandUpdateSource =
   | {

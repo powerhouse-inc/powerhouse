@@ -1,6 +1,8 @@
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { type BaseDocumentDriveServer } from "#server/base-server";
-import { type IDocumentDriveServer } from "#server/types";
+import { driveDocumentModelModule } from "#drive-document-model";
+import {
+  type BaseDocumentDriveServer,
+  type IDocumentDriveServer,
+} from "#server";
 import {
   type Action,
   type BaseState,

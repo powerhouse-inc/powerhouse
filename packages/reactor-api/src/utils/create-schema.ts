@@ -1,4 +1,3 @@
-import { type Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import {
   type GraphQLResolverMap,
@@ -10,6 +9,7 @@ import { type IDocumentDriveServer } from "document-drive";
 import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
+import type { Context } from "vm";
 
 export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,

@@ -1,9 +1,9 @@
 import {
+  DocumentNotFoundError,
   driveDocumentModelModule,
   ReactorBuilder,
   type IDocumentDriveServer,
 } from "document-drive";
-import { DocumentNotFoundError } from "document-drive/server/error";
 import {
   documentModelDocumentModelModule,
   generateId,

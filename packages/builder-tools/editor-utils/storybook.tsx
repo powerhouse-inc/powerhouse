@@ -1,4 +1,3 @@
-import { useDocumentReducer } from "#editor-utils/reducer";
 import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import { type Decorator, type Meta, type StoryObj } from "@storybook/react";
@@ -14,6 +13,7 @@ import {
 } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
+import { useDocumentReducer } from "./reducer.js";
 
 export type EditorStoryArgs = Partial<{
   user: {

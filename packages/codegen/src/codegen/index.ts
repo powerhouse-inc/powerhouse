@@ -2,7 +2,7 @@ import {
   type PartialPowerhouseManifest,
   type PowerhouseConfig,
   type PowerhouseManifest,
-} from "@powerhousedao/config/powerhouse";
+} from "@powerhousedao/config";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
 import {

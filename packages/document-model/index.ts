@@ -1,50 +1,6 @@
-export {
-  addModule,
-  addOperation,
-  addOperationError,
-  deleteModule,
-  deleteOperation,
-  deleteOperationError,
-  setAuthorName,
-  setAuthorWebsite,
-  setInitialState,
-  setModelDescription,
-  setModelExtension,
-  setModelId,
-  setModelName,
-  setModuleName,
-  setOperationDescription,
-  setOperationErrorName,
-  setOperationName,
-  setOperationSchema,
-  setStateSchema,
-} from "#document-model/gen/creators.js";
-export { reducer as documentModelReducer } from "#document-model/gen/reducer.js";
-export type {
-  Author,
-  DocumentModelInput,
-  Operation as DocumentModelOperation,
-  DocumentSpecification,
-  Module,
-  Scalars,
-  ScopeState,
-} from "#document-model/gen/schema/types.js";
-export type {
-  DocumentModelAction,
-  DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "#document-model/gen/types.js";
-export { loadFromFile as documentModelLoadFromFile } from "#document-model/gen/utils.js";
-export { applyMixins, BaseDocumentClass } from "#document/object.js";
-export type {
-  PHAuthState,
-  PHBaseState,
-  PHDocumentHeader,
-  PHDocumentMeta,
-  PHDocumentSignatureInfo,
-  PHDocumentState,
-} from "#document/ph-types.js";
+import { DocumentModelStateSchema } from "./src/document-model/gen/schema/zod.js";
+
+export { applyMixins, BaseDocumentClass } from "#document";
 export type {
   Action,
   ActionContext,
@@ -59,7 +15,6 @@ export type {
   CreateChildDocumentInput,
   CreateDocument,
   CreateState,
-  DocumentAction,
   DocumentModelLib,
   DocumentModelModule,
   DocumentModelUtils,
@@ -70,17 +25,20 @@ export type {
   FileRegistry,
   GlobalStateFromDocument,
   ImportScriptModule,
-  InputMaybe,
   LoadFromFile,
   LoadFromInput,
   LocalStateFromDocument,
   Manifest,
-  Maybe,
-  NOOPAction,
   Operation,
   ActionSignatureContext as OperationSignatureContext,
   PartialState,
+  PHAuthState,
+  PHBaseState,
   PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  PHDocumentSignatureInfo,
+  PHDocumentState,
   PHReducer,
   Reducer,
   ReducerOptions,
@@ -94,71 +52,103 @@ export type {
   SubgraphModule,
   User,
   ValidationError,
-} from "#document/types.js";
+} from "#document";
 export {
+  addModule,
+  addOperation,
+  addOperationError,
+  deleteModule,
+  deleteOperation,
+  deleteOperationError,
+  loadFromFile as documentModelLoadFromFile,
+  reducer as documentModelReducer,
+  setAuthorName,
+  setAuthorWebsite,
+  setInitialState,
+  setModelDescription,
+  setModelExtension,
+  setModelId,
+  setModelName,
+  setModuleName,
+  setOperationDescription,
+  setOperationErrorName,
+  setOperationName,
+  setOperationSchema,
+  setStateSchema,
+} from "#document-model";
+export type {
+  Author,
+  DocumentModelAction,
+  DocumentModelDocument,
+  DocumentModelInput,
+  DocumentModelLocalState,
+  DocumentModelState,
+  DocumentSpecification,
+  Module,
+  Scalars,
+  ScopeState,
+} from "#document-model";
+export {
+  attachBranch,
   baseCreateDocument,
-  createAction,
-  createReducer,
-  hashDocumentStateForScope,
-  isDocumentAction,
-  replayDocument,
-} from "#document/utils/base.js";
-export {
-  buildOperationSignature,
-  buildOperationSignatureMessage,
-  buildSignedAction,
-  generateId,
-} from "#document/utils/crypto.js";
-export {
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-  createZip,
-} from "#document/utils/file.js";
-export {
+  buildOperationSignature,
+  buildOperationSignatureMessage,
+  buildSignedAction,
+  createAction,
   createUnsignedHeader as createPresignedHeader,
+  createReducer,
+  createZip,
+  garbageCollect,
+  garbageCollectDocumentOperations,
+  generateId,
+  groupOperationsByScope,
+  hashDocumentStateForScope,
+  isDocumentAction,
+  merge,
+  precedes,
+  removeExistingOperations,
+  replayDocument,
+  reshuffleByTimestamp,
+  skipHeaderOperations,
+  sortOperations,
   validateHeader,
-} from "#document/utils/header.js";
+} from "#utils";
 
 export {
-  validateInitialState,
-  validateModule,
-  validateModuleOperation,
-  validateModules,
-  validateStateSchemaName,
-} from "#document-model/custom/utils.js";
-export type { OperationError as DocumentModelOperationError } from "#document-model/gen/schema/types.js";
-export { createDocument, createState } from "#document-model/gen/utils.js";
-export { documentModelDocumentModelModule } from "#document-model/module.js";
-export {
-  actions,
-  loadState,
-  noop,
-  prune,
-  redo,
-  setName,
-  undo,
-} from "#document/actions/creators.js";
-export {
   actionContext,
+  actions,
   createAuthState,
   createBaseState,
   createDocumentState,
   defaultAuthState,
   defaultBaseState,
   defaultDocumentState,
-} from "#document/ph-factories.js";
-export type { EditorContext } from "#document/types.js";
+  loadState,
+  noop,
+  prune,
+  redo,
+  setName,
+  undo,
+} from "#document";
+export type { EditorContext } from "#document";
 export {
-  attachBranch,
-  garbageCollect,
-  garbageCollectDocumentOperations,
-  groupOperationsByScope,
-  merge,
-  precedes,
-  removeExistingOperations,
-  reshuffleByTimestamp,
-  skipHeaderOperations,
-  sortOperations,
-} from "#document/utils/document-helpers.js";
+  createDocument,
+  createState,
+  documentModelDocumentModelModule,
+  validateInitialState,
+  validateModule,
+  validateModuleOperation,
+  validateModules,
+  validateStateSchemaName,
+} from "#document-model";
+export type {
+  OperationError as DocumentModelOperationError,
+  InputMaybe,
+  Maybe,
+  OperationError,
+} from "#document-model";
+export { DocumentModelStateSchema };

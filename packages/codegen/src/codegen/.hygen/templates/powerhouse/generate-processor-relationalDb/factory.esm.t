@@ -5,10 +5,10 @@ force: true
 import {
   type ProcessorRecord,
   type IProcessorHostModule
-} from "document-drive/processors/types";
+} from "document-drive";
 import {
   type RelationalDbProcessorFilter,
-} from "document-drive/processors/relational";
+} from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 import { <%= pascalName %>Processor } from "./index.js";
 

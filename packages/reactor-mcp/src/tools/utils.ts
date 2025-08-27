@@ -1,7 +1,10 @@
 import { type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { camelCase } from "change-case";
-import { type Action, type DocumentModelModule } from "document-model";
-import { type Operation } from "document-model/document-model/gen/schema/types";
+import {
+  type Action,
+  type DocumentModelModule,
+  type Operation,
+} from "document-model";
 import { type z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
@@ -86,12 +89,14 @@ export function validateDocumentModelAction(
     ];
 
   // Search through modules to find the operation that matches the action type (in SCREAMING_SNAKE_CASE)
-  let operation: Operation | null = null;
+  let operation: (Operation & { scope: string }) | null = null;
 
   for (const module of latestSpec.modules) {
-    const foundOp = module.operations.find((op) => op.name === action.type);
-    if (foundOp) {
-      operation = foundOp;
+    const unsafeOperationOrActionOrSomething = module.operations.find(
+      (op) => op.name === action.type,
+    ) as unknown as Operation & { scope: string };
+    if (unsafeOperationOrActionOrSomething) {
+      operation = unsafeOperationOrActionOrSomething;
       break;
     }
   }

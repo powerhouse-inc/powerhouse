@@ -3,7 +3,7 @@ import {
   type IListenerManager,
   type ITransmitterFactory,
   type Listener,
-} from "#server/types";
+} from "#server";
 import { PullResponderTransmitter } from "./pull-responder.js";
 import { SwitchboardPushTransmitter } from "./switchboard-push.js";
 import { type ITransmitter } from "./types.js";

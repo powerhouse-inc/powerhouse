@@ -1,8 +1,5 @@
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import {
-  type IRelationalDb,
-  type ProcessorRecord,
-} from "document-drive/processors/types";
+import { type IRelationalDb, type ProcessorRecord } from "document-drive";
 import {
   type Action,
   type Author,

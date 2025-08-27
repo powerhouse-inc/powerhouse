@@ -1,7 +1,6 @@
+import type { Operation } from "#document";
+import { skipHeaderOperations } from "#utils";
 import { describe, expect, it } from "vitest";
-
-import { type Operation } from "../../index.js";
-import { skipHeaderOperations } from "../../src/document/utils/document-helpers.js";
 
 const fakeOperation = (
   index: number,

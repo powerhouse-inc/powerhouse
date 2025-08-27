@@ -2,13 +2,13 @@ import {
   type IProcessorManager,
   type ProcessorFactory,
   type ProcessorRecord,
-} from "document-drive/processors/types";
-import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
+} from "#processors";
 import {
+  InternalTransmitter,
   type IDocumentDriveServer,
   type IListenerManager,
   type Listener,
-} from "document-drive/server/types";
+} from "#server";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";
 import { isRelationalDbProcessor } from "./relational.js";

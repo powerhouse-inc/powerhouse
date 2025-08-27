@@ -1,9 +1,7 @@
-import { addFolder } from "#drive-document-model/gen/creators";
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { EventQueueManager } from "#queue/event";
-import { type IQueueManager } from "#queue/types";
-import { ReactorBuilder } from "#server/builder";
-import { MemoryStorage } from "#storage/memory";
+import { addFolder, driveDocumentModelModule } from "#drive-document-model";
+import { EventQueueManager, type IQueueManager } from "#queue";
+import { ReactorBuilder } from "#server";
+import { MemoryStorage } from "#storage";
 import {
   createPresignedHeader,
   documentModelDocumentModelModule,

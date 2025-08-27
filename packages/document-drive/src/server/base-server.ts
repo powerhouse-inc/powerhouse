@@ -1,12 +1,12 @@
 // TODO remove this when drive methods are deleted
-import { type AddFileAction } from "#drive-document-model/gen/actions";
 import {
+  type AddFileAction,
+  type LegacyAddFileAction,
+  createDocument as createDriveDocument,
   removeListener,
   removeTrigger,
   setSharingType,
-} from "#drive-document-model/gen/creators";
-import { type LegacyAddFileAction } from "#drive-document-model/module";
-import { createDriveDocument } from "#drive-document-model/ph-factories";
+} from "#drive-document-model";
 import {
   type ActionJob,
   type DocumentJob,
@@ -16,19 +16,15 @@ import {
   isActionJob,
   isDocumentJob,
   isOperationJob,
-} from "#queue/types";
-import { ReadModeServer } from "#read-mode/server";
+} from "#queue";
+import { ReadModeServer } from "#read-mode";
+import { type IDocumentStorage, type IDriveOperationStorage } from "#storage";
 import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "#storage/types";
-import {
-  DefaultDrivesManager,
-  type IDefaultDrivesManager,
-} from "#utils/default-drives-manager";
-import { requestPublicDriveWithTokenFromReactor } from "#utils/graphql";
-import { isDocumentDrive, runAsapAsync } from "#utils/misc";
-import { RunAsap } from "#utils/run-asap";
+  RunAsap,
+  isDocumentDrive,
+  requestPublicDriveWithTokenFromReactor,
+  runAsapAsync,
+} from "#utils";
 import {
   DocumentAlreadyExistsError,
   type DocumentDriveAction,
@@ -61,6 +57,10 @@ import {
 import { ClientError } from "graphql-request";
 import { type Unsubscribe } from "nanoevents";
 import { type ICache } from "../cache/types.js";
+import {
+  DefaultDrivesManager,
+  type IDefaultDrivesManager,
+} from "../utils/default-drives-manager.js";
 import {
   ConflictOperationError,
   OperationError,
@@ -624,6 +624,7 @@ export class BaseDocumentDriveServer
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
     const document = createDriveDocument({
+      // @ts-expect-error TODO: fix this
       global: input.global,
       local: input.local,
     });

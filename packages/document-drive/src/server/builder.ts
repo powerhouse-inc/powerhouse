@@ -1,5 +1,5 @@
 import { type DocumentModelModule } from "document-model";
-import InMemoryCache from "../cache/memory.js";
+import { InMemoryCache } from "../cache/memory.js";
 import { type ICache } from "../cache/types.js";
 import { EventQueueManager } from "../queue/event.js";
 import { type IQueueManager } from "../queue/types.js";

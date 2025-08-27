@@ -1,10 +1,10 @@
-import { BrowserStorage } from "#storage/browser";
-import { FilesystemStorage } from "#storage/filesystem";
-import { PrismaStorage } from "#storage/prisma/prisma";
 import {
+  BrowserStorage,
+  FilesystemStorage,
+  PrismaStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
-} from "#storage/types";
+} from "#storage";
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
@@ -19,10 +19,7 @@ import {
   copyNode,
 } from "../../src/drive-document-model/gen/node/creators.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import {
-  type DocumentDriveDocument,
-  type Node,
-} from "../../src/drive-document-model/gen/types.js";
+import { type Node } from "../../src/drive-document-model/gen/types.js";
 import { createDocument } from "../../src/drive-document-model/gen/utils.js";
 import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
 import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";

@@ -1,6 +1,6 @@
-import { type ListenerFilter } from "#drive-document-model/gen/schema/types";
-import { type InternalTransmitterUpdate } from "#server/listener/transmitter/internal";
-import { type PHDocumentHeader, type PHDocument } from "document-model";
+import { type ListenerFilter } from "#drive-document-model";
+import { type InternalTransmitterUpdate } from "#server";
+import { type PHDocument, type PHDocumentHeader } from "document-model";
 import { type Kysely, type QueryCreator } from "kysely";
 import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
 

@@ -1,19 +1,19 @@
-import { defaultBaseState } from "#document/ph-factories.js";
 import {
+  defaultBaseState,
   type CreateDocument,
   type CreateState,
   type LoadFromFile,
   type LoadFromInput,
   type SaveToFile,
   type SaveToFileHandle,
-} from "#document/types.js";
-import { baseCreateDocument } from "#document/utils/base.js";
+} from "#document";
 import {
+  baseCreateDocument,
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-} from "#document/utils/file.js";
+} from "#utils";
 import {
   documentModelState,
   documentType,

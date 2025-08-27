@@ -10,11 +10,7 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./storage/prisma": "./dist/src/storage/prisma/prisma.js",
-    "./*": "./dist/src/*.js"
-  },
-  "imports": {
-    "#*": "./dist/src/*.js"
+    "./storage/prisma": "./dist/src/storage/prisma/prisma.js"
   },
   "files": [
     "./dist"

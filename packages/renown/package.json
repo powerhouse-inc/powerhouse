@@ -14,13 +14,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "imports": {
-    "#*": "./dist/src/*",
-    "#init/env": {
-      "node": "./dist/src/init.node.js",
-      "default": "./dist/src/init.browser.js"
-    }
-  },
+  "exports": "./dist/src/index.js",
   "files": [
     "dist"
   ],

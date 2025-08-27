@@ -1,4 +1,4 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import { type PHDocument } from "document-model";
 
 export interface IDocumentCache {}

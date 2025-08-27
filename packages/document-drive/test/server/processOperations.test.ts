@@ -13,8 +13,8 @@ import {
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { addFile } from "#drive-document-model/gen/creators";
-import { type BaseDocumentDriveServer } from "#server/base-server";
+import { addFile } from "#drive-document-model";
+import { type BaseDocumentDriveServer } from "#server";
 import { createPresignedHeader } from "document-model";
 import { undo } from "../../../document-model/src/document/actions/creators.js";
 import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";

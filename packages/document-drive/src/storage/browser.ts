@@ -1,15 +1,18 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-} from "#server/error";
-import { type SynchronizationUnitQuery } from "#server/types";
-import { AbortError } from "#utils/errors";
-import { migrateDocumentOperationSignatures } from "#utils/migrations";
-import { mergeOperations, operationsToRevision } from "#utils/misc";
+  type SynchronizationUnitQuery,
+} from "#server";
+import {
+  AbortError,
+  mergeOperations,
+  migrateDocumentOperationSignatures,
+  operationsToRevision,
+} from "#utils";
 import type { Operation, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {

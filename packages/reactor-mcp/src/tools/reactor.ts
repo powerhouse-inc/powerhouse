@@ -1,6 +1,9 @@
 import type { IDocumentDriveServer } from "document-drive";
-import { type DocumentModelState, generateId } from "document-model";
-import { DocumentModelStateSchema } from "document-model/document-model/gen/schema/zod";
+import {
+  type DocumentModelState,
+  DocumentModelStateSchema,
+  generateId,
+} from "document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";

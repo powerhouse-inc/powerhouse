@@ -1,6 +1,9 @@
-import { type BaseStateFromDocument } from "#document/types.js";
-import { baseCreateDocument, replayOperations } from "#document/utils/base.js";
-import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
+import { type BaseStateFromDocument } from "#document";
+import {
+  baseCreateDocument,
+  garbageCollectDocumentOperations,
+  replayOperations,
+} from "#utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   baseCountReducer,

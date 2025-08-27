@@ -1,8 +1,8 @@
-import { createDocumentStory } from "#editor-utils/storybook";
+import { createDocumentStory } from "#editor-utils";
 import { type Meta, type StoryObj } from "@storybook/react";
 import {
-  createState as documentModelCreateState,
   defaultBaseState,
+  createState as documentModelCreateState,
   documentModelReducer,
   type DocumentSpecification,
   generateId,

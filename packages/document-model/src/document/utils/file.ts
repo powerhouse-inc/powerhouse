@@ -1,6 +1,9 @@
-import { type PHDocumentHeader } from "#document/ph-types.js";
-import { type BaseStateFromDocument, type Reducer } from "#document/types.js";
-import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
+import {
+  type BaseStateFromDocument,
+  type PHDocumentHeader,
+  type Reducer,
+} from "#document";
+import { fetchFile, getFile, hash, readFile, writeFile } from "#utils";
 import JSZip from "jszip";
 import mime from "mime/lite";
 import {
@@ -118,6 +121,7 @@ export async function baseLoadFromFile<TDocument extends PHDocument>(
   options?: ReplayDocumentOptions,
 ): Promise<TDocument> {
   const file = readFile(path);
+  // @ts-expect-error - TODO NOT IMPLEMENTED
   return baseLoadFromInput(file, reducer, options);
 }
 
@@ -203,6 +207,7 @@ function getFileAttributes(
  * @returns A Promise that resolves to an object containing the base64-encoded data and MIME type of the attachment.
  */
 export async function getRemoteFile(url: string): Promise<AttachmentInput> {
+  // @ts-expect-error - TODO NOT IMPLEMENTED
   const { buffer, mimeType = "application/octet-stream" } =
     await fetchFile(url);
   const attributes = getFileAttributes(url);
@@ -224,6 +229,7 @@ export async function getLocalFile(path: string): Promise<AttachmentInput> {
   const buffer = await getFile(path);
   const mimeType = mime.getType(path) || "application/octet-stream";
   const attributes = getFileAttributes(path);
+  // @ts-expect-error - TODO NOT IMPLEMENTED
   const data = buffer.toString("base64");
   return { data, hash: hash(data), mimeType, ...attributes };
 }

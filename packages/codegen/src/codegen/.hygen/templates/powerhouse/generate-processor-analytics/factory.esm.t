@@ -2,8 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/factory.ts"
 force: true
 ---
-import { type ProcessorRecord } from "document-drive/processors/types";
-import { type IProcessorHostModule } from "document-drive/processors/types";
+import { type ProcessorRecord } from "document-drive";
+import { type IProcessorHostModule } from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 import { <%= pascalName %>Processor } from "./index.js";
 

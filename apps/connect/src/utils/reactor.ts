@@ -1,18 +1,16 @@
 import {
   BaseQueueManager,
+  BrowserStorage,
   type DefaultRemoteDriveInput,
   type DocumentDriveServerOptions,
-  type IDocumentDriveServer,
-  InMemoryCache,
-  ReactorBuilder,
-} from "document-drive";
-import { BrowserStorage } from "document-drive/storage/browser";
-import {
   type IDocumentAdminStorage,
+  type IDocumentDriveServer,
   type IDocumentOperationStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
-} from "document-drive/storage/types";
+  InMemoryCache,
+  ReactorBuilder,
+} from "document-drive";
 import { type DocumentModelModule } from "document-model";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 

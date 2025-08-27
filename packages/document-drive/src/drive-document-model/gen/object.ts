@@ -13,7 +13,7 @@ import {
   type DocumentDriveLocalState,
   type DocumentDriveState,
 } from "./types.js";
-import utils from "./utils.js";
+import * as utils from "./utils.js";
 
 export * from "./drive/object.js";
 export * from "./node/object.js";

@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import {
-  type Action,
   type DocumentFile,
   type LoadStateAction,
   type LoadStateActionInput,
@@ -37,13 +36,6 @@ export const RedoSchema = z.enum(["REDO"]);
 export const Set_NameSchema = z.enum(["SET_NAME"]);
 
 export const UndoSchema = z.enum(["UNDO"]);
-
-export function ActionSchema(): z.ZodObject<Properties<Action>> {
-  return z.object({
-    __typename: z.literal("Action").optional(),
-    type: z.string(),
-  });
-}
 
 export function OperationScopeSchema(): z.ZodString {
   return z.string();

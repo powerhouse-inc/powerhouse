@@ -9,7 +9,7 @@ import {
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser/utils/switchboard";
+import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser";
 import { type PHDocument } from "document-model";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

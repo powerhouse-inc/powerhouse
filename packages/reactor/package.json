@@ -7,12 +7,7 @@
     "directory": "packages/reactor"
   },
   "type": "module",
-  "exports": {
-    ".": "./dist/src/index.js"
-  },
-  "imports": {
-    "#*": "./dist/src/*"
-  },
+  "exports": "./dist/src/index.js",
   "files": [
     "dist"
   ],

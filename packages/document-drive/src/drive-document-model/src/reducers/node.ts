@@ -4,8 +4,8 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { DocumentIdValidationError } from "#server/error";
-import { isValidDocumentId } from "#storage/utils";
+import { DocumentIdValidationError } from "#server";
+import { isValidDocumentId } from "#storage";
 import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
 import { type FileNode } from "../../gen/types.js";
 import {

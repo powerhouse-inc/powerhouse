@@ -1,29 +1,14 @@
-import { type DocumentModelState } from "#document-model/gen/types.js";
-import type { Draft, Immutable } from "mutative";
+import { type DocumentModelState } from "#document-model";
+import type { Draft } from "mutative";
 import type { FC } from "react";
-import { type DocumentAction } from "./actions/types.js";
 import {
   type PHBaseState,
   type PHDocumentHeader,
   type PHDocumentHistory,
 } from "./ph-types.js";
-import type {
-  CreateChildDocumentInput,
-  Signal,
-  SignalDispatch,
-  SignalResult,
-} from "./signal.js";
+import type { SignalDispatch } from "./signal.js";
 import { type FileInput } from "./utils/file.js";
-export type { NOOPAction } from "./schema/types.js";
-export type {
-  CreateChildDocumentInput,
-  DocumentAction,
-  FileInput,
-  Immutable,
-  Signal,
-  SignalDispatch,
-  SignalResult,
-};
+
 //  [
 //     signerAddress,
 //     hash (docID, scope, operationID, operationName, operationInput),
@@ -497,6 +482,3 @@ export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
   DocumentStateFromDocument<TDocument>,
   LocalStateFromDocument<TDocument>
 >;
-
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = T | null | undefined;

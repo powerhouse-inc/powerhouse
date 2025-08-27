@@ -4,7 +4,7 @@ import {
   type IProcessorManager,
   type IRelationalDb,
   type ProcessorFactory,
-} from "document-drive/processors/types";
+} from "document-drive";
 import { type Express } from "express";
 import { type GraphQLManager } from "./graphql/graphql-manager.js";
 import { type IPackageManager } from "./packages/types.js";

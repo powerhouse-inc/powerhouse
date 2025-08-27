@@ -3,16 +3,16 @@
 import {
   type DocumentDriveAction,
   type DocumentDriveDocument,
-} from "#drive-document-model/gen/types";
+} from "#drive-document-model";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-} from "#server/error";
-import { type SynchronizationUnitQuery } from "#server/types";
-import { mergeOperations } from "#utils/misc";
+  type SynchronizationUnitQuery,
+} from "#server";
+import { mergeOperations } from "#utils";
 import { mfs, type MFS } from "@helia/mfs";
 import {
   type Operation,

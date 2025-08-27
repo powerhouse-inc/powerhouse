@@ -1,39 +1,41 @@
-import { config } from "#config.js";
-import { GraphQLManager } from "#graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "#graphql/playground.js";
-import { ImportPackageLoader } from "#packages/import-loader.js";
-import {
-  getUniqueDocumentModels,
-  PackageManager,
-} from "#packages/package-manager.js";
-import { type IPackageLoader } from "#packages/types.js";
 import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
-import { getConfig } from "@powerhousedao/config/utils";
-import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
+import { getConfig } from "@powerhousedao/config";
+import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import {
   childLogger,
+  createRelationalDb,
+  ProcessorManager,
   type DocumentDriveDocument,
   type IDocumentDriveServer,
-} from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
-import {
   type IProcessorHostModule,
   type IProcessorManager,
   type IRelationalDb,
   type ProcessorFactory,
-} from "document-drive/processors/types";
-import { createRelationalDb } from "document-drive/processors/utils";
+} from "document-drive";
 import express, { type Express } from "express";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
-import { type API, type Processor, type SubgraphClass } from "./types.js";
+import { config } from "./config.js";
+import { GraphQLManager } from "./graphql/graphql-manager.js";
+import { renderGraphqlPlayground } from "./graphql/playground.js";
+import { ImportPackageLoader } from "./packages/import-loader.js";
+import {
+  getUniqueDocumentModels,
+  PackageManager,
+} from "./packages/package-manager.js";
+import {
+  type API,
+  type IPackageLoader,
+  type Processor,
+  type SubgraphClass,
+} from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);

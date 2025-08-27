@@ -3,7 +3,7 @@ import {
   previewConnect,
   type ConnectBuildOptions,
   type ConnectPreviewOptions,
-} from "@powerhousedao/builder-tools/connect-build";
+} from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,

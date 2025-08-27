@@ -13,14 +13,11 @@
   "files": [
     "dist"
   ],
-  "types": "./dist/src/index.d.ts",
-  "main": "./dist/src/index.js",
   "exports": {
     ".": "./dist/src/index.js",
     "./analytics": "./dist/src/analytics/analytics.js",
     "./pglite": "./dist/src/pglite/index.js",
-    "./relational": "./dist/src/relational/index.js",
-    "./*": "./dist/src/*.js"
+    "./relational": "./dist/src/relational/index.js"
   },
   "scripts": {
     "tsc": "tsc",

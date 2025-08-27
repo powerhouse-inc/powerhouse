@@ -1,8 +1,4 @@
 import {
-  buildSubgraphSchemaModule,
-  createSchema,
-} from "#utils/create-schema.js";
-import {
   ApolloGateway,
   LocalCompose,
   RemoteGraphQLDataSource,
@@ -16,14 +12,21 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { childLogger, type IDocumentDriveServer } from "document-drive";
-import { type IRelationalDb } from "document-drive/processors/types";
-import { debounce } from "document-drive/server/listener/util";
+import {
+  childLogger,
+  debounce,
+  type IDocumentDriveServer,
+  type IRelationalDb,
+} from "document-drive";
 import type express from "express";
 import { Router, type IRouter } from "express";
 import { type GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import {
+  buildSubgraphSchemaModule,
+  createSchema,
+} from "../utils/create-schema.js";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { DriveSubgraph } from "./drive/index.js";
 import { type Subgraph, type SubgraphClass } from "./index.js";

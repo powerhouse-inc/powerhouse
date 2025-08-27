@@ -2,7 +2,7 @@ import { type LiveQueryResults } from "@electric-sql/pglite/live";
 import {
   type IRelationalQueryBuilder,
   type RelationalDbProcessorClass,
-} from "document-drive/processors/relational";
+} from "document-drive";
 import { type CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";

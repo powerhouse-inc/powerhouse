@@ -1,7 +1,7 @@
-import { type ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/utils";
+import { type ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config";
 import { blue, green, red } from "colorette";
-import { setLogLevel } from "document-drive/utils/logger";
+import { setLogLevel } from "document-drive";
 import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -2,8 +2,8 @@ import {
   type DocumentDriveLocalState,
   type FileNode,
   type FolderNode,
-} from "#drive-document-model/gen/types";
-import { type IBaseDocumentDriveServer } from "#server/types";
+} from "#drive-document-model";
+import { type IBaseDocumentDriveServer } from "#server";
 import { pascalCase } from "change-case";
 import {
   type DocumentModelModule,

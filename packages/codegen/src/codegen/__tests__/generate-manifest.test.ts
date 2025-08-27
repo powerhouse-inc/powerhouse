@@ -1,7 +1,7 @@
 import {
   type PartialPowerhouseManifest,
   type PowerhouseManifest,
-} from "@powerhousedao/config/powerhouse";
+} from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";

@@ -1,4 +1,4 @@
-import { type ListenerFilter } from "#drive-document-model/module";
+import { type ListenerFilter } from "#drive-document-model";
 import { type PHDocument } from "document-model";
 import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
 import {

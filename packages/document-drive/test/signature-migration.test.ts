@@ -1,4 +1,4 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import { type ActionContext, type Operation, generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 import { addFile } from "../src/drive-document-model/gen/creators.js";

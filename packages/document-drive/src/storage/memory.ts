@@ -1,14 +1,13 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-} from "#server/error";
-import { type SynchronizationUnitQuery } from "#server/types";
-import { AbortError } from "#utils/errors";
-import { mergeOperations, operationsToRevision } from "#utils/misc";
+  type SynchronizationUnitQuery,
+} from "#server";
+import { AbortError, mergeOperations, operationsToRevision } from "#utils";
 import { type Operation, type PHDocument } from "document-model";
 import {
   type IDocumentAdminStorage,

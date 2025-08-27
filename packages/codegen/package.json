@@ -12,11 +12,6 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": "./dist/index.js",
-  "imports": {
-    "#utils/*": "./dist/src/utils/*.js",
-    "#codegen/*": "./dist/src/codegen/*.js",
-    "#create-lib/*": "./dist/src/create-lib/*.js"
-  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

@@ -1,13 +1,13 @@
 import {
   type DocumentDriveDocument,
   type ListenerFilter,
-} from "#drive-document-model/gen/types";
-import { type DocumentModelNotFoundError } from "#server/error";
+} from "#drive-document-model";
 import {
   type DocumentDriveServerMixin,
+  type DocumentModelNotFoundError,
   type RemoteDriveOptions,
-} from "#server/types";
-import { type DriveInfo } from "#utils/graphql";
+} from "#server";
+import { type DriveInfo } from "#utils";
 import { type DocumentModelModule, type PHDocument } from "document-model";
 import {
   type ReadDocumentNotFoundError,

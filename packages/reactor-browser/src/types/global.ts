@@ -1,15 +1,13 @@
 import { type IRenown, type User } from "@renown/sdk";
 import {
   type DocumentDriveDocument,
-  type IDocumentDriveServer,
-  type ProcessorManager,
-} from "document-drive";
-import {
   type IDocumentAdminStorage,
+  type IDocumentDriveServer,
   type IDocumentOperationStorage,
   type IDocumentStorage,
   type IDriveOperationStorage,
-} from "document-drive/storage/types";
+  type ProcessorManager,
+} from "document-drive";
 import { type PHDocument } from "document-model";
 import { type DID, type IConnectCrypto } from "../crypto/index.js";
 import {

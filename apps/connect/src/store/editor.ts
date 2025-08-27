@@ -22,7 +22,7 @@ export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEdito
 
 export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
   const { documentModelEditorModule } = await import(
-    "@powerhousedao/builder-tools/document-model-editor"
+    "@powerhousedao/builder-tools"
   );
   const config = documentModelEditorModule.config;
   const unsafeIdFromConfig = config.id;

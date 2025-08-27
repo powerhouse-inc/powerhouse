@@ -1,14 +1,12 @@
-import { type IProcessor } from "#processors/types";
+import { type IProcessor } from "#processors";
 import {
   type GetDocumentOptions,
   type IBaseDocumentDriveServer,
   type IDocumentDriveServer,
   type ListenerRevision,
   type StrandUpdate,
-} from "#server/types";
-import { logger } from "#utils/logger";
-import { operationsToRevision } from "#utils/misc";
-import { RunAsap } from "#utils/run-asap";
+} from "#server";
+import { logger, operationsToRevision, RunAsap } from "#utils";
 import {
   type Action,
   type GlobalStateFromDocument,

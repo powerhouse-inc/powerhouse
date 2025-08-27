@@ -7,7 +7,7 @@ import {
   resolveConnect,
   runTsc,
 } from "#connect-utils";
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import {

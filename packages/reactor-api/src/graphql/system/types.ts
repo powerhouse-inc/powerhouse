@@ -1,3 +1,3 @@
-import { type Context } from "#graphql/types.js";
+import type { Context } from "../types.js";
 
 export type SystemContext = Context;

@@ -1,8 +1,8 @@
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  type CodegenOperation,
   type GenerationContext,
-  type Operation,
 } from "../core/GenerationContext.js";
 import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
 import { DirectoryManager } from "../utilities/DirectoryManager.js";
@@ -49,7 +49,7 @@ describe("ReducerGenerator Integration", () => {
 
   describe("generate", () => {
     it("should create a complete reducer file with proper AST structure", async () => {
-      const operations: Operation[] = [
+      const operations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_TEST_VALUE",
@@ -134,7 +134,7 @@ describe("ReducerGenerator Integration", () => {
 
     it("should handle existing reducer file and add new methods", async () => {
       // First, create a file with one method
-      const initialOperations: Operation[] = [
+      const initialOperations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",
@@ -163,7 +163,7 @@ describe("ReducerGenerator Integration", () => {
       await generator.generate(context);
 
       // Now add more operations
-      const newOperations: Operation[] = [
+      const newOperations: CodegenOperation[] = [
         ...initialOperations,
         {
           id: "2",
@@ -278,7 +278,7 @@ describe("ReducerGenerator Integration", () => {
     });
 
     it("should handle special characters and case conversion correctly", async () => {
-      const operations: Operation[] = [
+      const operations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_SPECIAL_VALUE",
@@ -324,7 +324,7 @@ describe("ReducerGenerator Integration", () => {
     });
 
     it("should skip operations with null or empty names", async () => {
-      const operations: Operation[] = [
+      const operations: CodegenOperation[] = [
         {
           id: "1",
           name: "VALID_ACTION",
@@ -398,7 +398,7 @@ describe("ReducerGenerator Integration", () => {
     });
 
     it("should generate custom reducer code when provided", async () => {
-      const operations: Operation[] = [
+      const operations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",
@@ -442,7 +442,7 @@ describe("ReducerGenerator Integration", () => {
 
     it("should update existing reducer when forceUpdate is true", async () => {
       // First, create a reducer with default implementation
-      const initialOperations: Operation[] = [
+      const initialOperations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",
@@ -481,7 +481,7 @@ describe("ReducerGenerator Integration", () => {
       );
 
       // Now update with custom reducer code and forceUpdate = true
-      const updatedOperations: Operation[] = [
+      const updatedOperations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",
@@ -518,7 +518,7 @@ describe("ReducerGenerator Integration", () => {
 
     it("should not update existing reducer when forceUpdate is false", async () => {
       // First, create a reducer with default implementation
-      const initialOperations: Operation[] = [
+      const initialOperations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",
@@ -547,7 +547,7 @@ describe("ReducerGenerator Integration", () => {
       await generator.generate(context);
 
       // Now try to update with custom reducer code but forceUpdate = false
-      const updatedOperations: Operation[] = [
+      const updatedOperations: CodegenOperation[] = [
         {
           id: "1",
           name: "SET_VALUE",

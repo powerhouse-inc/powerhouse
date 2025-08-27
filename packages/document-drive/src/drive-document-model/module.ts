@@ -6,10 +6,10 @@ import { documentModel } from "./gen/document-model.js";
 import { actions as DocumentDriveActions } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
 import { type DocumentDriveDocument } from "./gen/types.js";
-import genUtils, { type DocumentDriveUtils } from "./gen/utils.js";
+import { DriveUtils, type DocumentDriveUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 
-const utils = { ...genUtils, ...customUtils } satisfies DocumentDriveUtils;
+const utils = { ...DriveUtils, ...customUtils } satisfies DocumentDriveUtils;
 
 const actions = { ...BaseActions, ...DocumentDriveActions };
 

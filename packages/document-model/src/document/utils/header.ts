@@ -1,5 +1,5 @@
-import { type PHDocumentHeader } from "#document/ph-types.js";
-import { generateUUID } from "#utils/env";
+import { type PHDocumentHeader } from "#document";
+import { generateUUID } from "#utils";
 
 /**
  * Parameters used in a document signature.

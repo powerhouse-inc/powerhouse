@@ -1,4 +1,4 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import { type DocumentDriveDocument } from "#drive-document-model";
 import { type PHDocument } from "document-model";
 import { type ICache } from "./types.js";
 import { trimResultingState } from "./util.js";
@@ -48,7 +48,7 @@ export class CacheStorageManager implements ICacheStorageManager {
   }
 }
 
-class InMemoryCache implements ICache {
+export class InMemoryCache implements ICache {
   private cacheStorageManager: ICacheStorageManager;
   private idToDocument: ICacheStorage<PHDocument>;
   private idToDrive: ICacheStorage<DocumentDriveDocument>;
@@ -137,5 +137,3 @@ class InMemoryCache implements ICache {
     return this.deleteDrive(driveId);
   }
 }
-
-export default InMemoryCache;

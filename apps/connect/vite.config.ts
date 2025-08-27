@@ -3,7 +3,7 @@ import {
   generateImportMapPlugin,
   viteConnectDevStudioPlugin,
   viteLoadExternalPackages,
-} from "@powerhousedao/builder-tools/connect-studio";
+} from "@powerhousedao/builder-tools";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";

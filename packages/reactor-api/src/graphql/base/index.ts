@@ -1,9 +1,8 @@
-import { type GraphQLManager } from "#graphql/graphql-manager.js";
-import { type ISubgraph, type SubgraphArgs } from "#graphql/types.js";
-import { type IDocumentDriveServer } from "document-drive";
-import { type IRelationalDb } from "document-drive/processors/types";
+import { type IDocumentDriveServer, type IRelationalDb } from "document-drive";
 import { type DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import type { GraphQLManager } from "../graphql-manager.js";
+import type { ISubgraph, SubgraphArgs } from "../types.js";
 
 export class Subgraph implements ISubgraph {
   name = "example";

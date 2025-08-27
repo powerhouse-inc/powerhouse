@@ -1,12 +1,12 @@
-import { actionSigner } from "#document/ph-factories.js";
 import {
   type Action,
+  actionSigner,
   type ActionSigner,
   type PHReducer,
   type ReducerOptions,
   type SignalDispatch,
-} from "#document/types.js";
-import { generateUUID } from "#utils/env";
+} from "#document";
+import { generateUUID } from "#utils";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   baseCreateDocument,

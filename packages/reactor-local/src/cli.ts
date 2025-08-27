@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config";
 import path from "path";
 import { startServer } from "./server.js";
 

@@ -1,4 +1,4 @@
-import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config";
 import { exec, execSync } from "node:child_process";
 import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";

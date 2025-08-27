@@ -1,9 +1,9 @@
 import {
-  createDocumentStory,
   type DocumentStory,
+  createDocumentStory,
   type EditorStoryArgs,
   type EditorStoryProps,
-} from "@powerhousedao/builder-tools/editor-utils";
+} from "@powerhousedao/builder-tools";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import { type Decorator, type Meta } from "@storybook/react";
 import { driveDocumentModelModule } from "document-drive";

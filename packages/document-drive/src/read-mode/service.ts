@@ -1,11 +1,13 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { DocumentModelNotFoundError } from "#server/error";
+import {
+  type DocumentDriveDocument,
+  driveDocumentModelModule,
+} from "#drive-document-model";
+import { DocumentModelNotFoundError } from "#server";
 import {
   type DocumentGraphQLResult,
   fetchDocument,
   requestPublicDrive,
-} from "#utils/graphql";
+} from "#utils";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { type GraphQLError } from "graphql";
 import { driveDocumentType } from "../drive-document-model/constants.js";

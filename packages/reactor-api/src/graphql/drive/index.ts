@@ -1,28 +1,18 @@
-import { Subgraph } from "#graphql/base/index.js";
-import { type Context, type SubgraphArgs } from "#graphql/types.js";
-import {
-  type InternalStrandUpdate,
-  processAcknowledge,
-  processGetStrands,
-  processPushUpdate,
-} from "#sync/utils.js";
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { pascalCase } from "change-case";
 import {
   childLogger,
   type DocumentDriveDocument,
+  type DriveInfo,
   type FileNode,
+  type Listener,
   type ListenerFilter,
   type ListenerRevision,
   PullResponderTransmitter,
-  type StrandUpdateGraphQL,
-} from "document-drive";
-import { type Listener } from "document-drive/server/types";
-import {
   responseForDocument,
   responseForDrive,
-} from "document-drive/utils/gql-transformations";
-import { type DriveInfo } from "document-drive/utils/graphql";
+  type StrandUpdateGraphQL,
+} from "document-drive";
 import {
   type DocumentModelInput,
   generateId,
@@ -31,6 +21,14 @@ import {
 } from "document-model";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
+import {
+  type InternalStrandUpdate,
+  processAcknowledge,
+  processGetStrands,
+  processPushUpdate,
+} from "../../sync/utils.js";
+import { Subgraph } from "../base/index.js";
+import type { Context, SubgraphArgs } from "../types.js";
 import { type Asset } from "./temp-hack-rwa-type-defs.js";
 
 const driveKindTypeNames: Record<string, string> = {

@@ -1,4 +1,4 @@
-import { driveDocumentType } from "#drive-document-model/constants";
+import { driveDocumentType } from "#drive-document-model";
 import {
   type CreateDocument,
   type CreateState,
@@ -70,4 +70,4 @@ export const createDocument: CreateDocument<DocumentDriveDocument> =
 export const createState: CreateState<DocumentDriveDocument> =
   utils.createState;
 
-export default utils;
+export { utils as DriveUtils };

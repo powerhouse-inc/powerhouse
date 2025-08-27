@@ -1,7 +1,4 @@
-import {
-  responseForDocument,
-  responseForDrive,
-} from "#utils/gql-transformations";
+import { responseForDocument, responseForDrive } from "#utils";
 import {
   createDocument as createDocumentModelDocument,
   createState as createDocumentModelState,
@@ -23,7 +20,6 @@ import {
   vitest,
 } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { createBaseState } from "./utils.js";
 import {
   addFile,
   updateNode,
@@ -46,6 +42,7 @@ import {
 import { ReadModeService } from "../src/read-mode/service.js";
 import { type ReadDriveContext } from "../src/read-mode/types.js";
 import { type DocumentModelNotFoundError } from "../src/server/error.js";
+import { createBaseState } from "./utils.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();

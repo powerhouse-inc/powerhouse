@@ -1,4 +1,4 @@
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { type InternalTransmitterUpdate } from "document-drive";
 import { type DocumentModelDocument } from "document-model";
 import { type Config } from "./types.js";
 

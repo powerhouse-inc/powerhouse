@@ -9,7 +9,6 @@ import tseslint from "typescript-eslint";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
-  // build artifacts
   "**/node_modules/",
   "**/dist/",
   "**/.ph/",
@@ -136,13 +135,6 @@ const filesWithUnsafeRules = [
 /** Typescript rules that we have chosen to opt out of in general */
 /** @type {import("eslint").Linter.RulesRecord} */
 const typescriptRules = {
-  "@typescript-eslint/consistent-type-imports": [
-    "error",
-    {
-      prefer: "type-imports",
-      fixStyle: "inline-type-imports",
-    },
-  ],
   // we need to use `any` in our over zealous generics
   "@typescript-eslint/no-explicit-any": "off",
   // we use things like _ as a placeholder for unused variables

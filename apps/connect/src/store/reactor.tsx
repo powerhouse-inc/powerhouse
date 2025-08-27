@@ -1,30 +1,29 @@
 import connectConfig from "#connect-config";
 import { createBrowserDocumentDriveServer, createBrowserStorage } from "#utils";
 import {
-  addPHEventHandlers,
-  dispatchSetAppConfigEvent,
-  dispatchSetConnectCryptoEvent,
-  dispatchSetDidEvent,
-  dispatchSetDocumentsEvent,
-  dispatchSetDrivesEvent,
-  dispatchSetProcessorManagerEvent,
-  dispatchSetReactorEvent,
-  dispatchSetRenownEvent,
-  dispatchSetSelectedDriveIdEvent,
-  dispatchSetSelectedNodeIdEvent,
-  dispatchSetVetraPackagesEvent,
-  extractDriveSlugFromPath,
-  extractNodeSlugFromPath,
-  getDocuments,
-  getDrives,
-  initConnectCrypto,
-  initReactor,
-  login,
-  refreshReactorData,
+    addPHEventHandlers,
+    dispatchSetAppConfigEvent,
+    dispatchSetConnectCryptoEvent,
+    dispatchSetDidEvent,
+    dispatchSetDocumentsEvent,
+    dispatchSetDrivesEvent,
+    dispatchSetProcessorManagerEvent,
+    dispatchSetReactorEvent,
+    dispatchSetRenownEvent,
+    dispatchSetSelectedDriveIdEvent,
+    dispatchSetSelectedNodeIdEvent,
+    dispatchSetVetraPackagesEvent,
+    extractDriveSlugFromPath,
+    extractNodeSlugFromPath,
+    getDocuments,
+    getDrives,
+    initConnectCrypto,
+    initReactor,
+    login,
+    refreshReactorData,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
-import { logger } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
+import { logger, ProcessorManager } from "document-drive";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
 

@@ -1,4 +1,4 @@
-import { type ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
+import { type ConnectStudioOptions } from "@powerhousedao/builder-tools";
 import { blue, green, red } from "colorette";
 import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
 import path, { dirname } from "node:path";

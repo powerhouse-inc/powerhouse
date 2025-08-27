@@ -3,8 +3,10 @@ import {
   type LiveNamespace,
   type PGliteWithLive,
 } from "@electric-sql/pglite/live";
-import { type IRelationalDb as _IRelationalDb } from "document-drive/processors/types";
-import { createRelationalDb } from "document-drive/processors/utils";
+import {
+  createRelationalDb,
+  type IRelationalDb as _IRelationalDb,
+} from "document-drive";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";

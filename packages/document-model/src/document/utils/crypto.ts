@@ -1,5 +1,5 @@
-import { actionSigner, operationWithContext } from "#document/ph-factories.js";
-import { generateUUID, hash } from "#utils/env";
+import { actionSigner, operationWithContext } from "#document";
+import { generateUUID, hash } from "#utils";
 import stringifyJson from "safe-stable-stringify";
 import {
   type Action,

@@ -1,7 +1,8 @@
+import { InMemoryCache } from "#cache";
 import {
   type DocumentAlreadyExistsError,
   type DocumentNotFoundError,
-} from "#server/error";
+} from "#server";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { describe, it } from "vitest";
@@ -10,7 +11,6 @@ import {
   type DocumentModelDocument,
   generateId,
 } from "../../document-model/index.js";
-import InMemoryCache from "../src/cache/memory.js";
 import { type DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
 import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
 import { BrowserStorage } from "../src/storage/browser.js";

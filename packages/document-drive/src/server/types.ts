@@ -6,11 +6,9 @@ import {
   type ListenerCallInfo,
   type ListenerFilter,
   type Trigger,
-} from "#drive-document-model/gen/types";
-import { type IReadModeDriveServer } from "#read-mode/types";
-import { type IDefaultDrivesManager } from "#utils/default-drives-manager";
-import { type DriveInfo } from "#utils/graphql";
-import { type RunAsap } from "#utils/run-asap";
+} from "#drive-document-model";
+import { type IReadModeDriveServer } from "#read-mode";
+import { type DriveInfo, type RunAsap } from "#utils";
 import {
   type Action,
   type ActionContext,
@@ -23,7 +21,7 @@ import {
   type SignalResult,
 } from "document-model";
 import { type Unsubscribe } from "nanoevents";
-import { type BaseDocumentDriveServer } from "./base-server.js";
+import type { IDefaultDrivesManager } from "../utils/default-drives-manager.js";
 import {
   type OperationError,
   type SynchronizationUnitNotFoundError,
@@ -39,11 +37,6 @@ export type Constructor<T = object> = new (...args: any[]) => T;
 // Mixin type that returns a type extending both the base class and the interface
 export type Mixin<T extends Constructor, I> = T &
   Constructor<InstanceType<T> & I>;
-
-export type DocumentDriveServerMixin<I> = Mixin<
-  typeof BaseDocumentDriveServer,
-  I
->;
 
 export type DriveInput = {
   global: {

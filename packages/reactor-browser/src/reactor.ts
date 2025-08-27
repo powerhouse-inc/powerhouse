@@ -1,13 +1,13 @@
 import { type IRenown } from "@renown/sdk";
 import {
   BaseQueueManager,
+  BrowserStorage,
   InMemoryCache,
   ReactorBuilder,
   type DefaultRemoteDriveInput,
   type DocumentDriveServerOptions,
   type IDocumentDriveServer,
 } from "document-drive";
-import { BrowserStorage } from "document-drive/storage/browser";
 import { generateId, type DocumentModelModule } from "document-model";
 import {
   BrowserKeyStorage,

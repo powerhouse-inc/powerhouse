@@ -4,10 +4,11 @@ import {
   type PHDocument,
 } from "document-model";
 
-import { driveDocumentType } from "#drive-document-model/constants";
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { OperationError } from "#server/error";
-import { type ListenerRevision } from "#server/types";
+import {
+  driveDocumentType,
+  type DocumentDriveDocument,
+} from "#drive-document-model";
+import { OperationError, type ListenerRevision } from "#server";
 import { pascalCase } from "change-case";
 import { RunAsap } from "./run-asap.js";
 

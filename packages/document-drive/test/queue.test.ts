@@ -1,3 +1,4 @@
+import { InMemoryCache } from "#cache";
 import { setTimeout } from "node:timers/promises";
 import { describe, it } from "vitest";
 import {
@@ -8,7 +9,6 @@ import { setModelName } from "../../document-model/src/document-model/gen/creato
 import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
 import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
 import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
-import InMemoryCache from "../src/cache/memory.js";
 import { addListener } from "../src/drive-document-model/gen/creators.js";
 import {
   addFile,

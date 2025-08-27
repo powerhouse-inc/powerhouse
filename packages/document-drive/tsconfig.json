@@ -2,6 +2,16 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "paths": {
+      "#drive-document-model": ["./src/drive-document-model/index.ts"],
+      "#cache": ["./src/cache/index.ts"],
+      "#processors": ["./src/processors/index.ts"],
+      "#queue": ["./src/queue/index.ts"],
+      "#read-mode": ["./src/read-mode/index.ts"],
+      "#server": ["./src/server/index.ts"],
+      "#storage": ["./src/storage/index.ts"],
+      "#utils": ["./src/utils/index.ts"]
+    }
   },
   "include": ["**/*", "**/*.json"],
   "exclude": ["dist", "node_modules", "coverage", "test/flaky/**", "package.json", "tsconfig.json"],

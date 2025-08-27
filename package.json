@@ -3,8 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "pnpm nx run-many --target=clean --all",
-    "clean:node_modules": "pnpm nx run-many --target=clean:node_modules --all && rimraf node_modules",
     "prepare": "husky",
     "tsc": "tsc --build",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --cache --cache-strategy content",

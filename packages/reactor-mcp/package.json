@@ -3,17 +3,11 @@
   "version": "4.1.0-dev.33",
   "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
   "type": "module",
-  "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
-  "exports": {
-    "./*": "./dist/src/*.js"
-  },
-  "imports": {
-    "#*": "./dist/src/*"
-  },
+  "exports": "./dist/src/index.js",
   "bin": {
     "reactor-mcp": "./dist/src/cli.js"
   },

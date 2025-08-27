@@ -1,3 +1,4 @@
+import { InMemoryCache } from "#cache";
 import {
   type ActionContext,
   createPresignedHeader,
@@ -10,7 +11,6 @@ import {
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import InMemoryCache from "../src/cache/memory.js";
 import * as actions from "../src/drive-document-model/gen/creators.js";
 import { reducer } from "../src/drive-document-model/gen/reducer.js";
 import { driveDocumentModelModule } from "../src/drive-document-model/module.js";

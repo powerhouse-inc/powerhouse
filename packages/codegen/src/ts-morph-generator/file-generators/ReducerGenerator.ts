@@ -1,4 +1,5 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
+import type { OperationError } from "document-model";
 import {
   SyntaxKind,
   VariableDeclarationKind,
@@ -8,9 +9,8 @@ import {
 } from "ts-morph";
 import { FileGenerator } from "../core/FileGenerator.js";
 import {
+  type CodegenOperation,
   type GenerationContext,
-  type Operation,
-  type OperationError,
 } from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
@@ -140,7 +140,7 @@ export class ReducerGenerator extends FileGenerator {
   private createReducerObject(
     sourceFile: SourceFile,
     typeName: string,
-    operations: Operation[],
+    operations: CodegenOperation[],
     forceUpdate = false,
   ): void {
     let reducerVar = sourceFile.getVariableDeclaration("reducer");
@@ -177,7 +177,7 @@ export class ReducerGenerator extends FileGenerator {
 
   private addReducerMethod(
     objectLiteral: ObjectLiteralExpression,
-    operation: Operation,
+    operation: CodegenOperation,
     forceUpdate = false,
   ): void {
     const actionName = camelCase(operation.name ?? "");

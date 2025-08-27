@@ -1,7 +1,7 @@
 import {
   type IProcessorHostModule,
   type ProcessorRecord,
-} from "document-drive/processors/types";
+} from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 import { CodegenProcessor } from "./index.js";
 

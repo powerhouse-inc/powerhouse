@@ -1,3 +1,4 @@
+import { InMemoryCache } from "#cache";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 import {
@@ -5,7 +6,6 @@ import {
   generateId,
 } from "../../document-model/index.js";
 import { documentModelDocumentModelModule as DocumentModel } from "../../document-model/src/document-model/module.js";
-import InMemoryCache from "../src/cache/memory.js";
 import * as DriveActions from "../src/drive-document-model/gen/creators.js";
 import { driveDocumentModelModule as DocumentDrive } from "../src/drive-document-model/module.js";
 import { SynchronizationUnitNotFoundError } from "../src/server/error.js";

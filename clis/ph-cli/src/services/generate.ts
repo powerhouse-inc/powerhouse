@@ -8,7 +8,7 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config";
 import path from "path";
 
 export type GenerateOptions = {

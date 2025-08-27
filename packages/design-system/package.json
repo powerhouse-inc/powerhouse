@@ -25,15 +25,6 @@
     },
     "./style.css": "./dist/style.css"
   },
-  "imports": {
-    "#assets": "./dist/src/assets/index.js",
-    "#assets/*": "./dist/src/assets/*",
-    "#connect": "./dist/src/connect/index.js",
-    "#powerhouse": "./dist/src/powerhouse/index.js",
-    "#rwa": "./dist/src/rwa/index.js",
-    "#ui": "./dist/src/ui/index.js",
-    "#services": "./dist/src/services/index.js"
-  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

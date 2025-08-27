@@ -1,5 +1,5 @@
 import { generateProcessor } from "@powerhousedao/codegen";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { type InternalTransmitterUpdate } from "document-drive";
 import { type DocumentModelDocument } from "document-model";
 import { type ProcessorModuleState } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";

@@ -32,12 +32,6 @@ export type Scalars = {
   DateTime: { input: string; output: string };
   Unknown: { input: unknown; output: unknown };
 };
-
-export type Action = IAction & {
-  __typename?: "Action";
-  type: Scalars["String"]["output"];
-};
-
 export type UndoRedoAction = RedoAction | UndoAction;
 
 export type DocumentFile = {
@@ -115,14 +109,6 @@ export type MutationSetNameArgs = {
 
 export type MutationUndoArgs = {
   input: UndoAction;
-};
-
-export type Operation = IOperation & {
-  __typename?: "Operation";
-  hash: Scalars["String"]["output"];
-  index: Scalars["Int"]["output"];
-  timestamp: Scalars["DateTime"]["output"];
-  type: Scalars["String"]["output"];
 };
 
 export type Prune = "PRUNE";

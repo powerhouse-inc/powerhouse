@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config";
 import {
   type StartServerOptions,
   startSwitchboard as startSwitchboardServer,

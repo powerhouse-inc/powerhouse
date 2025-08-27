@@ -1,10 +1,10 @@
 import { addExternalPackage, removeExternalPackage } from "#services";
-import { PH_PACKAGES } from "@powerhousedao/config/packages";
+import { PH_PACKAGES } from "@powerhousedao/config";
 import { PackageManager as BasePackageManager } from "@powerhousedao/design-system";
 import {
-  makeVetraPackageManifest,
-  useDrives,
-  useVetraPackages,
+    makeVetraPackageManifest,
+    useDrives,
+    useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import { type Manifest } from "document-model";
 import type React from "react";

@@ -1,5 +1,5 @@
 import { kebabCase } from "change-case";
-import { generateDocumentStateQueryFields } from "document-drive/utils/graphql";
+import { generateDocumentStateQueryFields } from "document-drive";
 import { type DocumentModelState } from "document-model";
 import { compressToEncodedURIComponent } from "lz-string";
 

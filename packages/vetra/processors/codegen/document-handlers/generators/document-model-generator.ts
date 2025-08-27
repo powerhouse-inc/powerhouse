@@ -4,7 +4,7 @@ import {
   generateSubgraphFromDocumentModel,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { type InternalTransmitterUpdate } from "document-drive";
 import {
   type DocumentModelDocument,
   type DocumentModelState,

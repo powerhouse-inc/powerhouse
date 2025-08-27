@@ -2,7 +2,7 @@ import config from "#connect-config";
 
 import type { BrowserOptions } from "@sentry/react";
 
-import { childLogger } from "document-drive/utils/logger";
+import { childLogger } from "document-drive";
 import React, { useEffect } from "react";
 import {
   createRoutesFromChildren,
