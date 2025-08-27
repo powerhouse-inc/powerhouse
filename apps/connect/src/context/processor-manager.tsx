@@ -2,6 +2,7 @@ import connectConfig from '#connect-config';
 import {
     useProcessorManager,
     useProcessors,
+    useRelationalDb,
     type Processors,
 } from '@powerhousedao/reactor-browser';
 import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
@@ -15,7 +16,6 @@ import {
     type PGlite,
     type PGliteWithLive,
 } from '@powerhousedao/reactor-browser/pglite';
-import { useRelationalDb } from '@powerhousedao/reactor-browser/relational';
 import { childLogger } from 'document-drive';
 import type { ProcessorManager } from 'document-drive/processors/processor-manager';
 import { type IRelationalDb } from 'document-drive/processors/types';
@@ -156,7 +156,7 @@ export function ExternalProcessors() {
             !store.data ||
             !manager ||
             hasRegistered.current ||
-            processors?.length === 0 ||
+            processors.length === 0 ||
             !relationalDb.db
         ) {
             return;
@@ -164,9 +164,6 @@ export function ExternalProcessors() {
 
         hasRegistered.current = true;
 
-        if (!processors) {
-            return;
-        }
         for (const processor of processors) {
             registerExternalProcessors(
                 manager,
@@ -176,7 +173,7 @@ export function ExternalProcessors() {
                 processor,
             ).catch(logger.error);
         }
-    }, [store.data, manager, relationalDb]);
+    }, [store.data, manager, relationalDb, processors]);
 
     return null;
 }
@@ -220,21 +217,6 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
             });
     }, []);
 
-    const content = (
-        <>
-            {connectConfig.analytics.diffProcessorEnabled && (
-                <DiffAnalyzerProcessor />
-            )}
-            {connectConfig.analytics.driveAnalyticsEnabled && (
-                <DriveAnalyticsProcessor />
-            )}
-            {connectConfig.analytics.externalProcessorsEnabled && (
-                <ExternalProcessors />
-            )}
-            {children}
-        </>
-    );
-
     return (
         <AnalyticsProvider
             options={{
@@ -242,7 +224,18 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
                 pgLiteFactory,
             }}
         >
-            {content}
+            <>
+                {connectConfig.analytics.diffProcessorEnabled && (
+                    <DiffAnalyzerProcessor />
+                )}
+                {connectConfig.analytics.driveAnalyticsEnabled && (
+                    <DriveAnalyticsProcessor />
+                )}
+                {connectConfig.analytics.externalProcessorsEnabled && (
+                    <ExternalProcessors />
+                )}
+                {children}
+            </>
         </AnalyticsProvider>
     );
 }

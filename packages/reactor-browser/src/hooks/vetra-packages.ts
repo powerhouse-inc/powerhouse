@@ -13,10 +13,12 @@ import {
   type VetraProcessorModule,
 } from "../types/vetra.js";
 
+const defaultVetraPackages: VetraPackage[] = [];
+
 export function useVetraPackages(): VetraPackage[] {
   return useSyncExternalStore(
     subscribeToVetraPackages,
-    () => window.vetraPackages || [],
+    () => window.vetraPackages || defaultVetraPackages,
   );
 }
 
