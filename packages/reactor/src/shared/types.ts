@@ -1,22 +1,94 @@
 /**
- * Basic Operation type for the queue
- * This is a simplified version that includes the essential fields needed for queuing
+ * Describes the status of a shutdown operation.
  */
-export type Operation = {
-  /** Position of the operation in the history */
-  index: number;
-  /** Timestamp of when the operation was added */
-  timestampUtcMs: string;
-  /** Hash of the resulting document data after the operation */
-  hash: string;
-  /** The number of operations skipped with this Operation */
-  skip: number;
-  /** The type/name of the operation */
-  type: string;
-  /** The input data for the operation */
-  input: any;
-  /** Error message for a failed action */
+export type ShutdownStatus = {
+  /**
+   * True if and only if the system has been shutdown.
+   *
+   * This value is meant to be polled to determine if the system has been shutdown.
+   *
+   * In the case of a browser process, the `kill` method should be able to synchronously set this to true.
+   *
+   * In the case of a server process, a graceful shutdown period should be allowed for the system to finish its work.
+   */
+  get isShutdown(): boolean;
+};
+
+/**
+ * Enum that determines deletion propagation.
+ */
+export enum PropagationMode {
+  None = "none",
+  Cascade = "cascade",
+}
+
+/**
+ * Enum that describes the type of relationship change.
+ */
+export enum RelationshipChangeType {
+  Added = "added",
+  Removed = "removed",
+}
+
+/**
+ * Describes the current state of a job.
+ */
+export type JobInfo = {
+  id: string;
+  status: JobStatus;
   error?: string;
-  /** Unique operation id */
-  id?: string;
+};
+
+/**
+ * Job execution statuses
+ */
+export enum JobStatus {
+  /** Job is queued but not yet started */
+  PENDING = "PENDING",
+  /** Job is currently being executed */
+  RUNNING = "RUNNING",
+  /** Job completed successfully */
+  COMPLETED = "COMPLETED",
+  /** Job failed (may be retried) */
+  FAILED = "FAILED",
+}
+
+/**
+ * Describe the view of a set of documents. That is, what pieces of the
+ * documents are populated.
+ */
+export type ViewFilter = {
+  branch?: string;
+  scopes?: string[];
+  revision?: number;
+  headerOnly?: boolean;
+};
+
+/**
+ * Describes filter options for searching documents.
+ */
+export type SearchFilter = {
+  type?: string;
+  parentId?: string;
+  ids?: string[];
+  slugs?: string[];
+};
+
+/**
+ * Describes the options for paging.
+ */
+export type PagingOptions = {
+  cursor: string;
+  limit: number;
+};
+
+/**
+ * The paged result.
+ */
+export type PagedResults<T> = {
+  results: T[];
+  options: PagingOptions;
+
+  next?: () => Promise<PagedResults<T>>;
+  nextCursor?: string;
 };

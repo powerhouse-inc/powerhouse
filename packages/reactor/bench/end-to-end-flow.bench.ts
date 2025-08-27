@@ -17,8 +17,13 @@ function createSimpleJob(
     scope,
     branch,
     operation: {
-      type: "CREATE",
-      input: { data: `simple data ${id}` },
+      action: {
+        id: `action-${id}`,
+        type: "CREATE",
+        timestampUtcMs: new Date().toISOString(),
+        input: { data: `simple data ${id}` },
+        scope: scope,
+      },
       index: 0,
       timestampUtcMs: new Date().toISOString(),
       hash: `hash-${Date.now()}`,
@@ -41,14 +46,19 @@ function createComplexJob(
     scope,
     branch,
     operation: {
-      type: "UPDATE",
-      input: {
-        data: Array.from({ length: 100 }, (_, i) => `complex data item ${i}`),
-        metadata: {
-          timestampUtcMs: Date.now(),
-          user: "test-user",
-          version: "1.0.0",
+      action: {
+        id: `action-${id}`,
+        type: "UPDATE",
+        timestampUtcMs: new Date().toISOString(),
+        input: {
+          data: Array.from({ length: 100 }, (_, i) => `complex data item ${i}`),
+          metadata: {
+            timestampUtcMs: Date.now(),
+            user: "test-user",
+            version: "1.0.0",
+          },
         },
+        scope: scope,
       },
       index: Math.floor(Math.random() * 1000),
       timestampUtcMs: new Date().toISOString(),

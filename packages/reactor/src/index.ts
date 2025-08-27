@@ -1,3 +1,17 @@
+// Reactor Interface
+export { type IReactor } from "./interfaces/reactor.js";
+export {
+  JobStatus,
+  PropagationMode,
+  RelationshipChangeType,
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type SearchFilter,
+  type ShutdownStatus,
+  type ViewFilter,
+} from "./shared/types.js";
+
 // Event Bus
 export { EventBus } from "./events/event-bus.js";
 export { type IEventBus } from "./events/interfaces.js";
@@ -25,6 +39,3 @@ export {
   type JobResult,
   type JobStartedEvent,
 } from "./executor/job-executor.js";
-
-// Shared Types
-export { type Operation } from "./shared/types.js";

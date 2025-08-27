@@ -1,3 +1,4 @@
+import { type Operation } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { type IEventBus } from "../src/events/interfaces.js";
@@ -8,7 +9,6 @@ import {
   type Job,
   type JobAvailableEvent,
 } from "../src/queue/types.js";
-import { type Operation } from "../src/shared/types.js";
 
 describe("InMemoryQueue", () => {
   let queue: IQueue;
@@ -22,8 +22,14 @@ describe("InMemoryQueue", () => {
     timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
-    type: "test-operation",
-    input: { test: "data" },
+    action: {
+      id: "action-1",
+      type: "test-operation",
+      timestampUtcMs: new Date().toISOString(),
+      input: { test: "data" },
+      scope: "global",
+      ...overrides.action,
+    },
     id: "op-1",
     ...overrides,
   });
@@ -504,8 +510,13 @@ describe("InMemoryQueue", () => {
         timestampUtcMs: "2023-01-01T00:00:00.000Z",
         hash: "custom-hash",
         skip: 5,
-        type: "custom-operation",
-        input: { custom: "input" },
+        action: {
+          id: "action-1",
+          type: "custom-operation",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: { custom: "input" },
+          scope: "global",
+        },
         error: "test error",
         id: "custom-op-id",
       });

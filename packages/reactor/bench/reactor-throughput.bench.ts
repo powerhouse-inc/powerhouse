@@ -21,8 +21,13 @@ function createSimpleJob(): Job {
     scope: "default",
     branch: "main",
     operation: {
-      type: "CREATE",
-      input: { data: "simple data" },
+      action: {
+        id: `action-${jobCounter}`,
+        type: "CREATE",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        input: { data: "simple data" },
+        scope: "default",
+      },
       index: 0,
       timestampUtcMs: "2023-01-01T00:00:00.000Z",
       hash: "hash-123",
@@ -40,10 +45,15 @@ function createComplexJob(): Job {
     scope: "default",
     branch: "main",
     operation: {
-      type: "UPDATE",
-      input: {
-        data: Array.from({ length: 100 }, (_, i) => `item ${i}`),
-        metadata: { timestampUtcMs: Date.now(), user: "test" },
+      action: {
+        id: `action-${jobCounter}`,
+        type: "UPDATE",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        input: {
+          data: Array.from({ length: 100 }, (_, i) => `item ${i}`),
+          metadata: { timestampUtcMs: Date.now(), user: "test" },
+        },
+        scope: "default",
       },
       index: Math.floor(Math.random() * 1000),
       timestampUtcMs: "2023-01-01T00:00:00.000Z",

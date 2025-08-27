@@ -1,4 +1,4 @@
-import { Operation } from "#shared/types.js";
+import { type Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { type IEventBus } from "../src/events/interfaces.js";
@@ -30,8 +30,14 @@ describe("InMemoryJobExecutor", () => {
     timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
-    type: "test-operation",
-    input: { test: "data" },
+    action: {
+      id: "action-1",
+      type: "test-operation",
+      timestampUtcMs: new Date().toISOString(),
+      input: { test: "data" },
+      scope: "global",
+      ...overrides.action,
+    },
     id: "op-1",
     ...overrides,
   });

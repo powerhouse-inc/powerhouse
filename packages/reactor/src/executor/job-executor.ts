@@ -1,20 +1,20 @@
-import { IEventBus } from "../events/interfaces.js";
-import { IQueue } from "../queue/interfaces.js";
+import { type IEventBus } from "../events/interfaces.js";
+import { type IQueue } from "../queue/interfaces.js";
 import {
-  Job,
   QueueEventTypes,
+  type Job,
   type JobAvailableEvent,
 } from "../queue/types.js";
-import { IJobExecutor } from "./interfaces.js";
+import { type IJobExecutor } from "./interfaces.js";
 import {
-  ExecutorStartedEvent,
-  ExecutorStoppedEvent,
-  JobCompletedEvent,
-  JobExecutorConfig,
   JobExecutorEventTypes,
-  JobFailedEvent,
-  JobResult,
-  JobStartedEvent,
+  type ExecutorStartedEvent,
+  type ExecutorStoppedEvent,
+  type JobCompletedEvent,
+  type JobExecutorConfig,
+  type JobFailedEvent,
+  type JobResult,
+  type JobStartedEvent,
 } from "./types.js";
 
 /**
@@ -414,7 +414,7 @@ export class InMemoryJobExecutor implements IJobExecutor {
     // Always succeed unless explicitly mocked in tests
     return {
       metadata: {
-        operationType: job.operation.type,
+        operationType: job.operation.action.type,
         documentId: job.documentId,
         executedAt: new Date().toISOString(),
       },

@@ -1,4 +1,4 @@
-import { Operation } from "#shared/types.js";
+import type { Operation } from "document-model";
 
 /**
  * Represents a job to be executed by the job executor

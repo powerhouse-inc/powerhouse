@@ -16,8 +16,13 @@ function createMinimalJob(): Job {
     scope: "default",
     branch: "main",
     operation: {
-      type: "CREATE",
-      input: { data: "test" },
+      action: {
+        id: `action-${jobCounter}`,
+        type: "CREATE",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        input: { data: "test" },
+        scope: "default",
+      },
       index: 0,
       timestampUtcMs: "2023-01-01T00:00:00.000Z",
       hash: "hash-123",
