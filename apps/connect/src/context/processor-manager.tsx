@@ -16,7 +16,7 @@ import {
   type PGliteWithLive,
 } from "@powerhousedao/reactor-browser/pglite";
 import { useRelationalDb } from "@powerhousedao/reactor-browser/relational";
-import type { ProcessorManager } from "document-drive";
+import type { ProcessorManager, ProcessorRecord } from "document-drive";
 import { childLogger, type IRelationalDb } from "document-drive";
 import { generateId, type PHDocumentHeader } from "document-model";
 import { useEffect, useRef, type PropsWithChildren } from "react";
@@ -81,13 +81,15 @@ async function registerDiffAnalyzer(
     "@powerhousedao/diff-analyzer/processors"
   );
 
-  const wrappedFactory = (driveHeader: PHDocumentHeader) => {
-    return processorFactory({ analyticsStore })(driveHeader.id);
+  const unsafeWrappedFactory = (driveHeader: PHDocumentHeader) => {
+    return processorFactory({ analyticsStore })(
+      driveHeader.id,
+    ) as ProcessorRecord[];
   };
 
   return manager.registerFactory(
     "@powerhousedao/diff-analyzer",
-    wrappedFactory,
+    unsafeWrappedFactory,
   );
 }
 

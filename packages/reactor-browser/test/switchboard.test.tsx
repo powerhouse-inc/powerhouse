@@ -1,11 +1,14 @@
 // test suite for the switchboard hooks
 
-import { driveDocumentModelModule, generateDocumentStateQueryFields } from "document-drive";
+import {
+  driveDocumentModelModule,
+  generateDocumentStateQueryFields,
+} from "document-drive";
 import { describe, it } from "vitest";
 import {
-    buildDocumentSubgraphUrl,
-    getDocumentGraphqlQuery,
-    getSwitchboardGatewayUrlFromDriveUrl,
+  buildDocumentSubgraphUrl,
+  getDocumentGraphqlQuery,
+  getSwitchboardGatewayUrlFromDriveUrl,
 } from "../src/utils/switchboard.js";
 
 describe("Switchboard hooks", () => {

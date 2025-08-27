@@ -9,8 +9,8 @@ export type CodegenOperation = {
   id: string;
   name: string | null;
   description: string | null;
-  examples: any[];
-  reducer: any;
+  examples: string[];
+  reducer: string | null;
   schema: string | null;
   template: string | null;
   hasInput: boolean;
