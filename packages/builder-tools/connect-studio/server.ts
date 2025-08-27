@@ -1,14 +1,3 @@
-import {
-  backupIndexHtml,
-  copyConnect,
-  ensureNodeVersion,
-  resolveConnect,
-  runShellScriptPlugin,
-  viteConnectDevStudioPlugin,
-  viteDocumentModelsHMR,
-  viteEditorsHMR,
-  viteLoadExternalPackages,
-} from "#connect-utils";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import viteReact from "@vitejs/plugin-react";
@@ -23,6 +12,19 @@ import {
 } from "vite";
 import { viteEnvs } from "vite-envs";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import {
+  backupIndexHtml,
+  copyConnect,
+  ensureNodeVersion,
+  resolveConnect,
+  runShellScriptPlugin,
+} from "../connect-utils/helpers.js";
+import {
+  viteConnectDevStudioPlugin,
+  viteDocumentModelsHMR,
+  viteEditorsHMR,
+  viteLoadExternalPackages,
+} from "../connect-utils/index.js";
 import { type StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings

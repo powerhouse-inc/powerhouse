@@ -4,7 +4,6 @@
     "outDir": "./dist",
     "types": ["vite/client"],
     "paths": {
-      "#connect-utils": ["./connect-utils/index.ts"],
       "#editor-utils": ["./editor-utils/index.ts"],
       "#document-model-editor": ["./document-model-editor/index.ts"],
       "#connect-studio": ["./connect-studio/index.ts"],

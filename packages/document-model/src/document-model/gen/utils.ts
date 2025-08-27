@@ -1,27 +1,27 @@
-import {
-  defaultBaseState,
-  type CreateDocument,
-  type CreateState,
-  type LoadFromFile,
-  type LoadFromInput,
-  type SaveToFile,
-  type SaveToFileHandle,
-} from "#document";
+import type {
+  CreateDocument,
+  CreateState,
+  LoadFromFile,
+  LoadFromInput,
+  SaveToFile,
+  SaveToFileHandle,
+} from "document-model";
 import {
   baseCreateDocument,
   baseLoadFromFile,
   baseLoadFromInput,
   baseSaveToFile,
   baseSaveToFileHandle,
-} from "#utils";
+  defaultBaseState,
+} from "document-model";
 import {
   documentModelState,
   documentType,
   fileExtension,
   initialLocalState,
 } from "./constants.js";
-import { reducer } from "./reducer.js";
-import { type DocumentModelDocument } from "./types.js";
+import { documentModelReducer } from "document-model";
+import type { DocumentModelDocument } from "./types.js";
 
 export { fileExtension } from "./constants.js";
 
@@ -51,9 +51,9 @@ export const saveToFileHandle: SaveToFileHandle = (document, input) => {
 };
 
 export const loadFromFile: LoadFromFile<DocumentModelDocument> = (path) => {
-  return baseLoadFromFile(path, reducer);
+  return baseLoadFromFile(path, documentModelReducer);
 };
 
 export const loadFromInput: LoadFromInput<DocumentModelDocument> = (input) => {
-  return baseLoadFromInput(input, reducer);
+  return baseLoadFromInput(input, documentModelReducer);
 };

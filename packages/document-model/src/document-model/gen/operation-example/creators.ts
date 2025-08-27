@@ -1,16 +1,16 @@
-import { createAction } from "../../../document/utils/base.js";
-import {
-  z,
-  type AddOperationExampleInput,
-  type DeleteOperationExampleInput,
-  type ReorderOperationExamplesInput,
-  type UpdateOperationExampleInput,
+import { createAction } from "document-model";
+import type {
+  AddOperationExampleInput,
+  DeleteOperationExampleInput,
+  ReorderOperationExamplesInput,
+  UpdateOperationExampleInput,
 } from "../schema/index.js";
-import {
-  type AddOperationExampleAction,
-  type DeleteOperationExampleAction,
-  type ReorderOperationExamplesAction,
-  type UpdateOperationExampleAction,
+import { z } from "../schema/index.js";
+import type {
+  AddOperationExampleAction,
+  DeleteOperationExampleAction,
+  ReorderOperationExamplesAction,
+  UpdateOperationExampleAction,
 } from "./actions.js";
 
 export const addOperationExample = (input: AddOperationExampleInput) =>

@@ -1,20 +1,20 @@
-import { createAction } from "../../../document/utils/base.js";
-import {
-  z,
-  type AddStateExampleInput,
-  type DeleteStateExampleInput,
-  type ReorderStateExamplesInput,
-  type SetInitialStateInput,
-  type SetStateSchemaInput,
-  type UpdateStateExampleInput,
+import { createAction } from "document-model";
+import type {
+  AddStateExampleInput,
+  DeleteStateExampleInput,
+  ReorderStateExamplesInput,
+  SetInitialStateInput,
+  SetStateSchemaInput,
+  UpdateStateExampleInput,
 } from "../schema/index.js";
-import {
-  type AddStateExampleAction,
-  type DeleteStateExampleAction,
-  type ReorderStateExamplesAction,
-  type SetInitialStateAction,
-  type SetStateSchemaAction,
-  type UpdateStateExampleAction,
+import { z } from "../schema/index.js";
+import type {
+  AddStateExampleAction,
+  DeleteStateExampleAction,
+  ReorderStateExamplesAction,
+  SetInitialStateAction,
+  SetStateSchemaAction,
+  UpdateStateExampleAction,
 } from "./actions.js";
 
 export const setStateSchema = (input: SetStateSchemaInput) =>

@@ -1,10 +1,10 @@
-import {
-  type AddOperationExampleAction,
-  type UpdateOperationExampleAction,
-  type DeleteOperationExampleAction,
-  type ReorderOperationExamplesAction,
+import type {
+  AddOperationExampleAction,
+  UpdateOperationExampleAction,
+  DeleteOperationExampleAction,
+  ReorderOperationExamplesAction,
 } from "./actions.js";
-import { type DocumentModelState } from "../types.js";
+import type { DocumentModelState } from "../types.js";
 
 export interface DocumentModelOperationExampleOperations {
   addOperationExampleOperation: (

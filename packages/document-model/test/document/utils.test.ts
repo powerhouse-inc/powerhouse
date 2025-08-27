@@ -1,22 +1,18 @@
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   baseCreateDocument,
   createReducer,
+  generateUUIDBrowser,
+  generateUUIDNode,
+  getLocalFile,
+  hashBrowser,
+  hashNode,
   replayDocument,
-} from "../../src/document/utils/base.js";
+  validateOperations,
+} from "document-model";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
-  generateUUID as generateUUIDBrowser,
-  hash as hashBrowser,
-} from "../../src/document/utils/browser.js";
-import { getLocalFile } from "../../src/document/utils/file.js";
-import {
-  generateUUID as generateUUIDNode,
-  hash as hashNode,
-} from "../../src/document/utils/node.js";
-import { validateOperations } from "../../src/document/utils/validation.js";
-import {
-  type CountDocument,
   countReducer,
   createBaseState,
   createCountDocumentState,

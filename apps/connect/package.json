@@ -14,6 +14,17 @@
         "nginx.sh",
         "scripts"
     ],
+    "imports": {
+            "PH:EXTERNAL_PACKAGES": "./dist/src/custom.d.ts",
+            "#assets/*": "./dist/src/assets/*",
+            "#connect-config": "./dist/src/connect.config.js",
+            "#services": "./dist/src/services/index.js",
+            "#hooks": "./dist/src/hooks/index.js",
+            "#store": "./dist/src/store/index.js",
+            "#utils": "./dist/src/utils/index.js",
+            "#components": "./dist/src/components/index.js",
+            "#context": "./dist/src/context/index.js"
+        },
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
     "repository": {

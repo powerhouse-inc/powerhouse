@@ -89,6 +89,7 @@ export default defineConfig(({ mode }) => {
   };
 
   const plugins: PluginOption[] = [
+    tsconfigPaths(),
     nodeResolve(),
     tailwind(),
     nodePolyfills({
@@ -105,7 +106,6 @@ export default defineConfig(({ mode }) => {
       phPackages,
       path.resolve(__dirname, "./public"),
     ),
-    tsconfigPaths(),
     react({
       include: "./src/**/*.tsx",
       babel: {

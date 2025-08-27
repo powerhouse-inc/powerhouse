@@ -1,6 +1,9 @@
 import { pascalCase } from "change-case";
-import { type ValidationError } from "../../document/types.js";
-import { type Module, type Operation } from "../gen/schema/types.js";
+import type {
+  ModuleSpecification,
+  OperationSpecification,
+} from "document-model";
+import type { ValidationError } from "../../document/types.js";
 
 export function validateInitialState(
   initialState: string,
@@ -68,7 +71,9 @@ export function validateStateSchemaName(
   return errors;
 }
 
-export function validateModules(modules: Module[]): ValidationError[] {
+export function validateModules(
+  modules: ModuleSpecification[],
+): ValidationError[] {
   const errors: ValidationError[] = [];
   if (!modules.length) {
     errors.push({
@@ -87,7 +92,7 @@ export function validateModules(modules: Module[]): ValidationError[] {
   return [...errors, ...modulesError];
 }
 
-export function validateModule(mod: Module): ValidationError[] {
+export function validateModule(mod: ModuleSpecification): ValidationError[] {
   const errors: ValidationError[] = [];
 
   if (!mod.name) {
@@ -117,7 +122,7 @@ export function validateModule(mod: Module): ValidationError[] {
 }
 
 export function validateModuleOperation(
-  operation: Operation,
+  operation: OperationSpecification,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 

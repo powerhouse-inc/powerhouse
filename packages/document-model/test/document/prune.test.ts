@@ -1,15 +1,14 @@
-import { describe, expect, it } from "vitest";
-
 import {
+  baseCreateDocument,
   loadState,
   prune,
   redo,
   setName,
   undo,
-} from "../../src/document/actions/creators.js";
-import { baseCreateDocument } from "../../src/document/utils/base.js";
+} from "document-model";
+import { describe, expect, it } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
-  type CountDocument,
   countReducer,
   createBaseState,
   createCountDocumentState,

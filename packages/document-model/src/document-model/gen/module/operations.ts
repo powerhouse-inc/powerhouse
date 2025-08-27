@@ -1,11 +1,11 @@
-import {
-  type AddModuleAction,
-  type SetModuleNameAction,
-  type SetModuleDescriptionAction,
-  type DeleteModuleAction,
-  type ReorderModulesAction,
+import type {
+  AddModuleAction,
+  SetModuleNameAction,
+  SetModuleDescriptionAction,
+  DeleteModuleAction,
+  ReorderModulesAction,
 } from "./actions.js";
-import { type DocumentModelState } from "../types.js";
+import type { DocumentModelState } from "../types.js";
 
 export interface DocumentModelModuleOperations {
   addModuleOperation: (

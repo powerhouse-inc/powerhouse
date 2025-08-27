@@ -1,9 +1,5 @@
-import {
-  type BinaryLike,
-  type RandomUUIDOptions,
-  createHash,
-  randomUUID,
-} from "node:crypto";
+import type { BinaryLike, RandomUUIDOptions } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
@@ -15,11 +11,11 @@ import { join } from "node:path";
  *
  * Generates a secure UUID.
  */
-export function generateUUID(options?: RandomUUIDOptions) {
+export function generateUUIDNode(options?: RandomUUIDOptions) {
   return randomUUID(options);
 }
 
-export function writeFile(
+export function writeFileNode(
   path: string,
   name: string,
   data: Uint8Array,
@@ -46,11 +42,11 @@ export function writeFile(
   });
 }
 
-export function readFile(path: string) {
+export function readFileNode(path: string) {
   return fs.readFileSync(path);
 }
 
-export function fetchFile(
+export function fetchFileNode(
   url: string,
 ): Promise<{ buffer: Buffer; mimeType?: string }> {
   return new Promise((resolve, reject) => {
@@ -72,10 +68,10 @@ export function fetchFile(
   });
 }
 
-export const getFile = async (file: string) => {
-  return readFile(file);
+export const getFileNode = async (file: string) => {
+  return readFileNode(file);
 };
 
-export const hash = (data: BinaryLike, algorithm = "sha1") => {
+export const hashNode = (data: BinaryLike, algorithm = "sha1") => {
   return createHash(algorithm).update(data).digest("base64");
 };

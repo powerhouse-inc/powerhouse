@@ -1,9 +1,9 @@
-import { type Action } from "../../../document/types.js";
-import {
-  type AddOperationExampleInput,
-  type DeleteOperationExampleInput,
-  type ReorderOperationExamplesInput,
-  type UpdateOperationExampleInput,
+import type { Action } from "../../../document/types.js";
+import type {
+  AddOperationExampleInput,
+  DeleteOperationExampleInput,
+  ReorderOperationExamplesInput,
+  UpdateOperationExampleInput,
 } from "../schema/types.js";
 
 export type AddOperationExampleAction = Action & {

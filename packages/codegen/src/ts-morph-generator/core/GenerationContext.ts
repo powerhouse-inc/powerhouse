@@ -9,7 +9,10 @@ export type CodegenOperation = {
   id: string;
   name: string | null;
   description: string | null;
-  examples: string[];
+  examples: {
+    id: string;
+    value: string;
+  }[];
   reducer: string | null;
   schema: string | null;
   template: string | null;

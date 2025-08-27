@@ -1,4 +1,4 @@
-import { type DocumentModelHeaderOperations } from "../../gen/header/operations.js";
+import type { DocumentModelHeaderOperations } from "../../gen/header/operations.js";
 
 export const reducer: DocumentModelHeaderOperations = {
   setModelNameOperation(state, action) {

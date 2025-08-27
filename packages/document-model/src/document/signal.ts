@@ -1,4 +1,4 @@
-import { type PHDocument } from "./types.js";
+import type { PHDocument } from "./types.js";
 
 export interface ISignal<TType extends string, TInput> {
   type: TType;

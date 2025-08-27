@@ -20,7 +20,6 @@
     // we have decided to say "yes" to both in all cases
     // "noUncheckedIndexedAccess": true,
     // "exactOptionalPropertyTypes": true,
-
     // required configs for monorepo
     "composite": true,
     "incremental": true,

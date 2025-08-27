@@ -5,15 +5,15 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { type Action, type BaseState } from "../types.js";
-import { createAction } from "../utils/base.js";
-import {
-  type LoadStateAction,
-  type NOOPAction,
-  type PruneAction,
-  type RedoAction,
-  type SetNameAction,
-  type UndoAction,
+import type { Action, BaseState } from "../types.js";
+import { createAction } from "./create-action.js";
+import type {
+  LoadStateAction,
+  NOOPAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
 } from "./types.js";
 
 /**
@@ -72,11 +72,7 @@ export const redo = (count = 1, scope = "global") =>
  * @param end - Index of the last operation to prune
  * @category Actions
  */
-export const prune = (
-  start?: number | undefined,
-  end?: number | undefined,
-  scope = "global",
-) =>
+export const prune = (start?: number, end?: number, scope = "global") =>
   createAction<PruneAction>(
     "PRUNE",
     { start, end },

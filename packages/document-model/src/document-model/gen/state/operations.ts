@@ -1,12 +1,12 @@
-import {
-  type SetStateSchemaAction,
-  type SetInitialStateAction,
-  type AddStateExampleAction,
-  type UpdateStateExampleAction,
-  type DeleteStateExampleAction,
-  type ReorderStateExamplesAction,
+import type {
+  SetStateSchemaAction,
+  SetInitialStateAction,
+  AddStateExampleAction,
+  UpdateStateExampleAction,
+  DeleteStateExampleAction,
+  ReorderStateExamplesAction,
 } from "./actions.js";
-import { type DocumentModelState } from "../types.js";
+import type { DocumentModelState } from "../types.js";
 
 export interface DocumentModelStateOperations {
   setStateSchemaOperation: (

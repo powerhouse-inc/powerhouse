@@ -1,17 +1,21 @@
-import { actionSigner, operationWithContext } from "#document";
-import { generateUUID, hash } from "#utils";
-import stringifyJson from "safe-stable-stringify";
+import type {
+  Action,
+  ActionContext,
+  ActionSignatureContext,
+  ActionSigningHandler,
+  ActionVerificationHandler,
+  ActionSigner,
+  PHDocument,
+  Reducer,
+  Signature,
+} from "document-model";
 import {
-  type Action,
-  type ActionContext,
-  type ActionSignatureContext,
-  type ActionSigner,
-  type ActionSigningHandler,
-  type ActionVerificationHandler,
-  type PHDocument,
-  type Reducer,
-  type Signature,
-} from "../types.js";
+  actionSigner,
+  generateUUIDBrowser,
+  hashBrowser,
+  operationWithContext,
+} from "document-model";
+import stringifyJson from "safe-stable-stringify";
 
 export function generateId(method?: "UUIDv4"): string {
   if (method && method.toString() !== "UUIDv4") {
@@ -20,7 +24,7 @@ export function generateId(method?: "UUIDv4"): string {
     );
   }
 
-  return generateUUID();
+  return generateUUIDBrowser();
 }
 
 export function getUnixTimestamp(date: Date | string): string {
@@ -37,7 +41,7 @@ export function buildOperationSignatureParams({
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    hash(
+    hashBrowser(
       [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
     ),
     previousStateHash,

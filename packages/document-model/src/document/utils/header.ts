@@ -1,5 +1,5 @@
-import { type PHDocumentHeader } from "#document";
-import { generateUUID } from "#utils";
+import type { PHDocumentHeader } from "document-model";
+import { generateUUIDBrowser } from "document-model";
 
 /**
  * Parameters used in a document signature.
@@ -212,8 +212,8 @@ export const validateHeader = async (
  *
  * @returns An unsigned header for a document.
  */
-export const createUnsignedHeader = (
-  id: string = generateUUID(),
+export const createPresignedHeader = (
+  id: string = generateUUIDBrowser(),
   documentType = "",
 ): PHDocumentHeader => {
   return {
@@ -253,7 +253,7 @@ export const createSignedHeader = async (
   const parameters: SigningParameters = {
     documentType,
     createdAtUtcIso: unsignedHeader.createdAtUtcIso,
-    nonce: generateUUID(),
+    nonce: generateUUIDBrowser(),
   };
 
   const signature = await sign(parameters, signer);
@@ -295,7 +295,7 @@ export const createSignedHeaderForSigner = async (
   documentType: string,
   signer: ISigner,
 ): Promise<PHDocumentHeader> => {
-  const unsignedHeader = createUnsignedHeader();
+  const unsignedHeader = createPresignedHeader();
   const signedHeader = await createSignedHeader(
     unsignedHeader,
     documentType,

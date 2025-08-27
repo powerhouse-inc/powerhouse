@@ -1,17 +1,17 @@
 import { z } from "zod";
 
-import {
-  type DocumentFile,
-  type LoadStateAction,
-  type LoadStateActionInput,
-  type LoadStateActionStateInput,
-  type IOperation as Operation,
-  type PruneAction,
-  type PruneActionInput,
-  type RedoAction,
-  type SetNameAction,
+import type {
+  DocumentFile,
+  LoadStateAction,
+  LoadStateActionInput,
+  LoadStateActionStateInput,
+  IOperation as Operation,
+  PruneAction,
+  PruneActionInput,
+  RedoAction,
+  SetNameAction,
   // type SetNameOperation,
-  type UndoAction,
+  UndoAction,
 } from "./types.js";
 
 type Properties<T> = Required<{

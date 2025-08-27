@@ -1,14 +1,20 @@
-import { castDraft, create, type Draft } from "mutative";
-import { type PruneActionInput } from "../schema/types.js";
+import type {
+  Action,
+  BaseState,
+  PHDocument,
+  PruneActionInput,
+  StateReducer,
+} from "document-model";
 import {
-  type Action,
-  type BaseState,
-  type PHDocument,
-  type StateReducer,
-} from "../types.js";
-import { hashDocumentStateForScope, replayOperations } from "../utils/base.js";
-import { nextSkipNumber, sortOperations } from "../utils/document-helpers.js";
-import { loadState, noop } from "./creators.js";
+  hashDocumentStateForScope,
+  loadState,
+  nextSkipNumber,
+  noop,
+  replayOperations,
+  sortOperations,
+} from "document-model";
+import type { Draft } from "mutative";
+import { castDraft, create } from "mutative";
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(

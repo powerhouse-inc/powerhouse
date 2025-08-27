@@ -1,13 +1,13 @@
-import { type BaseStateFromDocument } from "#document";
+import type { BaseStateFromDocument } from "document-model";
 import {
   baseCreateDocument,
   garbageCollectDocumentOperations,
   replayOperations,
-} from "#utils";
+} from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
   baseCountReducer,
-  type CountDocument,
   countReducer,
   createBaseState,
   createCountDocumentState,

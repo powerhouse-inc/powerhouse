@@ -5,7 +5,7 @@ import {
   setModelId,
   setModelName,
 } from "../../src/document-model/gen/creators.js";
-import { reducer } from "../../src/document-model/gen/reducer.js";
+import { documentModelReducer } from "../../src/document-model/gen/reducer.js";
 import {
   createDocument,
   loadFromFile,
@@ -29,7 +29,7 @@ describe("DocumentModel", () => {
 
   it("should save to zip", async () => {
     let documentModel = createDocument();
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
     );
@@ -59,19 +59,19 @@ describe("DocumentModel", () => {
 
   it("should not include resultingState param in operations when exporting to zip", async () => {
     let documentModel = createDocument();
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
       undefined,
       { reuseOperationResultingState: true },
     );
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelDescription({ description: "desc-test" }),
       undefined,
       { reuseOperationResultingState: true },
     );
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelName({ name: "name-test" }),
       undefined,
@@ -97,11 +97,11 @@ describe("DocumentModel", () => {
 
   it("should keep undo state when loading from zip", async () => {
     let documentModel = createDocument();
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
     );
-    documentModel = reducer(documentModel, undo());
+    documentModel = documentModelReducer(documentModel, undo());
     expect(documentModel.state.global.id).toBe("");
 
     await saveToFile(documentModel, tempDir, "test2");

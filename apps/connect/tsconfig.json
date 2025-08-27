@@ -1,13 +1,12 @@
 {
     "extends": "../../tsconfig.options.json",
     "compilerOptions": {
-        "noEmit": true,
         "outDir": "./dist",
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "paths": {
             "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
             "#assets/*": ["./assets/*"],
-            "#connect-config": ["./src/connect.config.js"],
+            "#connect-config": ["./src/connect.config.ts"],
             "#services": ["./src/services/index.ts"],
             "#hooks": ["./src/hooks/index.ts"],
             "#store": ["./src/store/index.ts"],

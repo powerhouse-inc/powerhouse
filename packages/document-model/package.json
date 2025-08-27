@@ -12,6 +12,7 @@
   },
   "type": "module",
   "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

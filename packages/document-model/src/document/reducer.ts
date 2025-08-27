@@ -12,18 +12,17 @@ import {
   operationFromAction,
   operationFromOperation,
 } from "./ph-factories.js";
-import { type PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
-import { type SignalDispatch } from "./signal.js";
-import {
-  type Action,
-  type Operation,
-  type PHDocument,
-  type ReducerOptions,
-  type StateReducer,
+import type { SignalDispatch } from "./signal.js";
+import type {
+  Action,
+  Operation,
+  PHDocument,
+  Reducer,
+  ReducerOptions,
+  StateReducer,
 } from "./types.js";
 import {
-  getDocumentLastModified,
   hashDocumentStateForScope,
   isDocumentAction,
   isUndo,
@@ -38,46 +37,7 @@ import {
   skipHeaderOperations,
   sortOperations,
 } from "./utils/document-helpers.js";
-
-/**
- * Gets the next revision number based on the provided scope.
- *
- * @param state The current state of the document.
- * @param scope The scope of the operation.
- * @returns The next revision number.
- */
-function getNextRevision(document: PHDocument, scope: string) {
-  const latestOperationIndex = document.operations[scope].at(-1)?.index ?? -1;
-
-  return (latestOperationIndex ?? -1) + 1;
-}
-
-/**
- * Updates the document header with the latest revision number and
- * date of last modification.
- *
- * @param state The current state of the document.
- * @param operation The action being applied to the document.
- * @returns The updated document state.
- */
-export function updateHeaderRevision(
-  document: PHDocument,
-  scope: string,
-): PHDocument {
-  const header: PHDocumentHeader = {
-    ...document.header,
-    revision: {
-      ...document.header.revision,
-      [scope]: getNextRevision(document, scope),
-    },
-    lastModifiedAtUtcIso: getDocumentLastModified(document),
-  };
-
-  return {
-    ...document,
-    header,
-  };
-}
+import { updateHeaderRevision } from "./utils/revisions.js";
 
 /**
  * Updates the operations history of the document based on the provided action.
@@ -550,4 +510,39 @@ export function baseReducer<TDocument extends PHDocument>(
   }
 
   return newDocument;
+}
+
+/**
+ * Helper function to create a document model reducer.
+ *
+ * @remarks
+ * This function creates a new reducer that wraps the provided `reducer` with
+ * `documentReducer`, adding support for document actions:
+ *   - `SET_NAME`
+ *   - `UNDO`
+ *   - `REDO`
+ *   - `PRUNE`
+ *
+ * It also updates the document-related attributes on every operation.
+ *
+ * @param reducer - The custom reducer to wrap.
+ * @param documentReducer - The document reducer to use.
+ *
+ * @returns The new reducer.
+ */
+export function createReducer<TDocument extends PHDocument>(
+  stateReducer: StateReducer<TDocument>,
+  documentReducer = baseReducer,
+): Reducer<TDocument> {
+  console.log("createReducer", stateReducer, documentReducer);
+  const reducer: Reducer<TDocument> = (
+    document: TDocument,
+    action: Action,
+    dispatch?: SignalDispatch,
+    options?: ReducerOptions,
+  ) => {
+    return documentReducer(document, action, stateReducer, dispatch, options);
+  };
+  console.log("reducer", reducer);
+  return reducer;
 }

@@ -1,4 +1,4 @@
-import { type DocumentOperations, type ValidationError } from "../types.js";
+import type { DocumentOperations, ValidationError } from "../types.js";
 
 export function validateOperations(operations: DocumentOperations) {
   const errors: ValidationError[] = [];

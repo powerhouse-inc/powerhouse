@@ -1,17 +1,17 @@
-import { createAction } from "../../../document/utils/base.js";
-import {
-  z,
-  type AddChangeLogItemInput,
-  type DeleteChangeLogItemInput,
-  type ReorderChangeLogItemsInput,
-  type UpdateChangeLogItemInput,
+import { createAction } from "document-model";
+import type {
+  AddChangeLogItemInput,
+  DeleteChangeLogItemInput,
+  ReorderChangeLogItemsInput,
+  UpdateChangeLogItemInput,
 } from "../schema/index.js";
-import {
-  type AddChangeLogItemAction,
-  type DeleteChangeLogItemAction,
-  type ReleaseNewVersionAction,
-  type ReorderChangeLogItemsAction,
-  type UpdateChangeLogItemAction,
+import { z } from "../schema/index.js";
+import type {
+  AddChangeLogItemAction,
+  DeleteChangeLogItemAction,
+  ReleaseNewVersionAction,
+  ReorderChangeLogItemsAction,
+  UpdateChangeLogItemAction,
 } from "./actions.js";
 
 export const addChangeLogItem = (input: AddChangeLogItemInput) =>

@@ -4,11 +4,6 @@
     "outDir": "./dist",
     "types": ["node", "vitest/globals", "jest"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "paths": {
-      "#document": ["./src/document/index.ts"],
-      "#document-model": ["./src/document-model/index.ts"],
-      "#utils": ["./src/document/utils/index.ts"]
-    }
   },
   "include": ["**/*"]
 }

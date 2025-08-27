@@ -175,17 +175,17 @@ export type DocumentModelLocalState = {};
 export type DocumentSpecification = {
   __typename?: "DocumentSpecification";
   changeLog: Array<Scalars["String"]["output"]>;
-  modules: Array<Module>;
+  modules: Array<ModuleSpecification>;
   state: ScopeState;
   version: Scalars["Int"]["output"];
 };
 
-export type Module = {
-  __typename?: "Module";
+export type ModuleSpecification = {
+  __typename?: "ModuleSpecification";
   description: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];
-  operations: Array<Operation>;
+  operations: Array<OperationSpecification>;
 };
 
 export type MoveOperationInput = {
@@ -403,10 +403,10 @@ export type MutationUpdateStateExampleArgs = {
   input: UpdateStateExampleInput;
 };
 
-export type Operation = {
-  __typename?: "Operation";
+export type OperationSpecification = {
+  __typename?: "OperationSpecification";
   description: Maybe<Scalars["String"]["output"]>;
-  errors: Array<OperationError>;
+  errors: Array<OperationErrorSpecification>;
   examples: Array<CodeExample>;
   id: Scalars["ID"]["output"];
   name: Maybe<Scalars["String"]["output"]>;
@@ -416,8 +416,8 @@ export type Operation = {
   scope: string;
 };
 
-export type OperationError = {
-  __typename?: "OperationError";
+export type OperationErrorSpecification = {
+  __typename?: "OperationErrorSpecification";
   code: Maybe<Scalars["String"]["output"]>;
   description: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];

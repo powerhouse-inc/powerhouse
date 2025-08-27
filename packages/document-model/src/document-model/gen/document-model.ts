@@ -1,4 +1,4 @@
-import { type DocumentModelState } from "./types.js";
+import type { DocumentModelState } from "./types.js";
 
 export const documentModelState: DocumentModelState = {
   id: "powerhouse/document-model",

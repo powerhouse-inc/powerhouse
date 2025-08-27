@@ -1,18 +1,18 @@
-import {
-  type AddOperationAction,
-  type SetOperationNameAction,
-  type SetOperationSchemaAction,
-  type SetOperationDescriptionAction,
-  type SetOperationTemplateAction,
-  type SetOperationReducerAction,
-  type MoveOperationAction,
-  type DeleteOperationAction,
-  type ReorderModuleOperationsAction,
-  type SetOperationScopeAction,
+import type { DocumentModelState } from "../types.js";
+import type {
+  AddOperationAction,
+  DeleteOperationAction,
+  MoveOperationAction,
+  ReorderModuleOperationsAction,
+  SetOperationDescriptionAction,
+  SetOperationNameAction,
+  SetOperationReducerAction,
+  SetOperationSchemaAction,
+  SetOperationScopeAction,
+  SetOperationTemplateAction,
 } from "./actions.js";
-import { type DocumentModelState } from "../types.js";
 
-export interface DocumentModelOperationOperations {
+export type DocumentModelOperationOperations = {
   addOperationOperation: (
     state: DocumentModelState,
     action: AddOperationAction,
@@ -53,4 +53,4 @@ export interface DocumentModelOperationOperations {
     state: DocumentModelState,
     action: ReorderModuleOperationsAction,
   ) => void;
-}
+};

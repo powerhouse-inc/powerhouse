@@ -1,5 +1,5 @@
+import { DocumentModelClass } from "document-model";
 import { expect, it } from "vitest";
-import { DocumentModelClass } from "../../src/document-model/gen/object.js";
 
 it("should return a read only object on toDocument", () => {
   const model = new DocumentModelClass();

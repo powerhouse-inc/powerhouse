@@ -10,7 +10,7 @@ const FileSystemError = new Error("File system not available.");
  *
  * Generates a secure UUID.
  */
-export function generateUUID() {
+export function generateUUIDBrowser() {
   if (typeof crypto === "undefined" || !crypto.randomUUID) {
     throw new Error("generateUUID is not available in unsecure contexts.");
   }
@@ -18,7 +18,7 @@ export function generateUUID() {
   return crypto.randomUUID();
 }
 
-export function writeFile(
+export function writeFileBrowser(
   path: string,
   name: string,
   stream: Uint8Array,
@@ -26,21 +26,21 @@ export function writeFile(
   throw FileSystemError;
 }
 
-export function readFile(path: string) {
+export function readFileBrowser(path: string) {
   throw FileSystemError;
 }
 
-export function fetchFile(
+export function fetchFileBrowser(
   url: string,
 ): Promise<{ data: Buffer; mimeType?: string }> {
   throw FileSystemError;
 }
 
-export const getFile = async (file: string) => {
-  return readFile(file);
+export const getFileBrowser = async (file: string) => {
+  return readFileBrowser(file);
 };
 
-export const hash = (
+export const hashBrowser = (
   data: string | Uint8Array | ArrayBufferView | DataView,
   algorithm = "sha1",
 ) => {

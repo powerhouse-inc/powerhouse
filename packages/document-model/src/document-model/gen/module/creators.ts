@@ -1,18 +1,18 @@
-import { createAction } from "../../../document/utils/base.js";
-import {
-  z,
-  type AddModuleInput,
-  type DeleteModuleInput,
-  type ReorderModulesInput,
-  type SetModuleDescriptionInput,
-  type SetModuleNameInput,
+import { createAction } from "document-model";
+import type {
+  AddModuleInput,
+  DeleteModuleInput,
+  ReorderModulesInput,
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
 } from "../schema/index.js";
-import {
-  type AddModuleAction,
-  type DeleteModuleAction,
-  type ReorderModulesAction,
-  type SetModuleDescriptionAction,
-  type SetModuleNameAction,
+import { z } from "../schema/index.js";
+import type {
+  AddModuleAction,
+  DeleteModuleAction,
+  ReorderModulesAction,
+  SetModuleDescriptionAction,
+  SetModuleNameAction,
 } from "./actions.js";
 
 export const addModule = (input: AddModuleInput) =>

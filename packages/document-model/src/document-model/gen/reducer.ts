@@ -1,6 +1,8 @@
-import { type DocumentModelDocument } from "../../document-model/gen/types.js";
-import { type StateReducer as TStateReducer } from "../../document/types.js";
-import { createReducer, isDocumentAction } from "../../document/utils/base.js";
+import type {
+  DocumentModelDocument,
+  StateReducer as TStateReducer,
+} from "document-model";
+import { createReducer, isDocumentAction } from "document-model";
 import { reducer as HeaderReducer } from "../custom/reducers/header.js";
 import { reducer as ModuleReducer } from "../custom/reducers/module.js";
 import { reducer as OperationErrorReducer } from "../custom/reducers/operation-error.js";
@@ -53,7 +55,7 @@ import {
   UpdateStateExampleInputSchema,
 } from "./schema/zod.js";
 
-export const stateReducer: TStateReducer<DocumentModelDocument> = (
+export const documentModelStateReducer: TStateReducer<DocumentModelDocument> = (
   state,
   action,
 ) => {
@@ -337,4 +339,6 @@ export const stateReducer: TStateReducer<DocumentModelDocument> = (
   }
 };
 
-export const reducer = createReducer<DocumentModelDocument>(stateReducer);
+export const documentModelReducer = createReducer<DocumentModelDocument>(
+  documentModelStateReducer,
+);

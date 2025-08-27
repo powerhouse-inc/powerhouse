@@ -1,8 +1,5 @@
+import { attachBranch, checkCleanedOperationsIntegrity } from "document-model";
 import { describe, expect, it } from "vitest";
-import {
-  attachBranch,
-  checkCleanedOperationsIntegrity,
-} from "../../src/document/utils/document-helpers.js";
 import { buildOperations } from "./utils.js";
 
 describe("attachBranch", () => {

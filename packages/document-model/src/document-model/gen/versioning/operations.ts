@@ -1,11 +1,11 @@
-import {
-  type AddChangeLogItemAction,
-  type UpdateChangeLogItemAction,
-  type DeleteChangeLogItemAction,
-  type ReorderChangeLogItemsAction,
-  type ReleaseNewVersionAction,
+import type {
+  AddChangeLogItemAction,
+  UpdateChangeLogItemAction,
+  DeleteChangeLogItemAction,
+  ReorderChangeLogItemsAction,
+  ReleaseNewVersionAction,
 } from "./actions.js";
-import { type DocumentModelState } from "../types.js";
+import type { DocumentModelState } from "../types.js";
 
 export interface DocumentModelVersioningOperations {
   addChangeLogItemOperation: (

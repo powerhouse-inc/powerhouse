@@ -1,15 +1,15 @@
+import { getConfig } from "@powerhousedao/config";
+import { mkdir, rm, writeFile } from "fs/promises";
+import { join } from "path";
+import { PH_DIR_NAME } from "../connect-utils/constants.js";
 import {
   appendToHtmlHead,
   copyConnect,
   makeImportScriptFromPackages,
-  PH_DIR_NAME,
   prependToHtmlHead,
   resolveConnect,
   runTsc,
-} from "#connect-utils";
-import { getConfig } from "@powerhousedao/config";
-import { mkdir, rm, writeFile } from "fs/promises";
-import { join } from "path";
+} from "../connect-utils/helpers.js";
 import {
   CONNECT_BUILD_ASSETS_DIR_NAME,
   CONNECT_BUILD_DIR_NAME,

@@ -1,39 +1,25 @@
-import { type PHBaseState, type PHDocumentHeader } from "#document";
-import { hash } from "#utils";
+import type {
+  Action,
+  BaseStateFromDocument,
+  CreateState,
+  DocumentAction,
+  DocumentOperations,
+  DocumentOperationsIgnoreMap,
+  MappedOperation,
+  Operation,
+  PHBaseState,
+  PHDocument,
+  PHDocumentHeader,
+  Reducer,
+  SignalDispatch,
+  StateReducer,
+  UndoAction,
+  UndoRedoAction,
+} from "document-model";
+import { baseReducer, createReducer, hashBrowser } from "document-model";
 import stringifyJson from "safe-stable-stringify";
-import { ZodError } from "zod";
-import {
-  LOAD_STATE,
-  NOOP,
-  PRUNE,
-  REDO,
-  SET_NAME,
-  UNDO,
-  type DocumentAction,
-} from "../actions/types.js";
-import { baseReducer, updateHeaderRevision } from "../reducer.js";
-import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
-import { type SignalDispatch } from "../signal.js";
-import {
-  type Action,
-  type BaseStateFromDocument,
-  type CreateState,
-  type DocumentOperations,
-  type DocumentOperationsIgnoreMap,
-  type MappedOperation,
-  type Operation,
-  type PHDocument,
-  type Reducer,
-  type ReducerOptions,
-  type StateReducer,
-} from "../types.js";
-import { generateId } from "./crypto.js";
-import { sortOperations } from "./document-helpers.js";
-import {
-  InvalidActionInputError,
-  InvalidActionInputZodError,
-} from "./errors.js";
-import { createUnsignedHeader } from "./header.js";
+import { createPresignedHeader } from "./header.js";
+import { updateHeaderRevision } from "./revisions.js";
 
 export function isNoopOperation<
   TOp extends {
@@ -43,7 +29,7 @@ export function isNoopOperation<
   },
 >(op: Partial<TOp>): boolean {
   return (
-    op.type === NOOP &&
+    op.type === "NOOP" &&
     op.skip !== undefined &&
     op.skip > 0 &&
     op.hash !== undefined
@@ -51,108 +37,17 @@ export function isNoopOperation<
 }
 
 export function isUndoRedo(action: Action): action is UndoRedoAction {
-  return [UNDO, REDO].includes(action.type);
+  return ["UNDO", "REDO"].includes(action.type);
 }
 
 export function isUndo(action: Action): action is UndoAction {
-  return action.type === UNDO;
+  return action.type === "UNDO";
 }
 
 export function isDocumentAction(action: Action): action is DocumentAction {
-  return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
-}
-
-/**
- * Helper function to be used by action creators.
- *
- * @remarks
- * Creates an action with the given type and input properties. The input
- * properties default to an empty object.
- *
- * @typeParam A - Type of the action to be returned.
- *
- * @param type - The type of the action.
- * @param input - The input properties of the action.
- * @param attachments - The attachments included in the action.
- * @param validator - The validator to use for the input properties.
- * @param scope - The scope of the action, can either be 'global' or 'local'.
- * @param skip - The number of operations to skip before this new action is applied.
- *
- * @throws Error if the type is empty or not a string.
- *
- * @returns The new action.
- */
-export function createAction<TAction extends Action>(
-  type: TAction["type"],
-  input?: TAction["input"],
-  attachments?: TAction["attachments"],
-  validator?: () => { parse(v: unknown): TAction["input"] },
-  scope = "global",
-): TAction {
-  if (!type) {
-    throw new Error("Empty action type");
-  }
-
-  if (typeof type !== "string") {
-    throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
-  }
-
-  const action: Action = {
-    id: generateId(),
-    timestampUtcMs: new Date().toISOString(),
-    type,
-    input,
-    scope,
-  };
-
-  if (attachments) {
-    action.attachments = attachments;
-  }
-
-  try {
-    validator?.().parse(action.input);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      throw new InvalidActionInputZodError(error.issues);
-    } else {
-      throw new InvalidActionInputError(error);
-    }
-  }
-
-  return action as TAction;
-}
-
-/**
- * Helper function to create a document model reducer.
- *
- * @remarks
- * This function creates a new reducer that wraps the provided `reducer` with
- * `documentReducer`, adding support for document actions:
- *   - `SET_NAME`
- *   - `UNDO`
- *   - `REDO`
- *   - `PRUNE`
- *
- * It also updates the document-related attributes on every operation.
- *
- * @param reducer - The custom reducer to wrap.
- * @param documentReducer - The document reducer to use.
- *
- * @returns The new reducer.
- */
-export function createReducer<TDocument extends PHDocument>(
-  stateReducer: StateReducer<TDocument>,
-  documentReducer = baseReducer,
-): Reducer<TDocument> {
-  const reducer: Reducer<TDocument> = (
-    document: TDocument,
-    action: Action,
-    dispatch?: SignalDispatch,
-    options?: ReducerOptions,
-  ) => {
-    return documentReducer(document, action, stateReducer, dispatch, options);
-  };
-  return reducer;
+  return ["SET_NAME", "UNDO", "REDO", "PRUNE", "LOAD_STATE"].includes(
+    action.type,
+  );
 }
 
 /**
@@ -164,7 +59,7 @@ export function baseCreateDocument<TDocument extends PHDocument>(
   initialState?: Partial<PHBaseState>,
 ): TDocument {
   const state = createState(initialState);
-  const header = createUnsignedHeader();
+  const header = createPresignedHeader();
   const phDocument: PHDocument = {
     header,
     state,
@@ -187,7 +82,7 @@ export function hashDocumentStateForScope(
   scope = "global",
 ) {
   const stateString = stringifyJson(document.state[scope] || "");
-  return hash(stateString);
+  return hashBrowser(stateString);
 }
 
 export function readOnly<T>(value: T): Readonly<T> {
@@ -255,19 +150,6 @@ export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
         new Date(a.operation.timestampUtcMs).getTime() -
         new Date(b.operation.timestampUtcMs).getTime(),
     );
-}
-
-// gets the last modified timestamp of a document from§
-// it's operations, falling back to the initial state
-export function getDocumentLastModified(document: PHDocument) {
-  const sortedOperations = sortOperations(
-    Object.values(document.operations).flat(),
-  );
-
-  return (
-    sortedOperations.at(-1)!.timestampUtcMs ||
-    document.header.lastModifiedAtUtcIso
-  );
 }
 
 // Default createState function that just returns the state as-is

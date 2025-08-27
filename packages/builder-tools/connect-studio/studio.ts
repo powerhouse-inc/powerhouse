@@ -1,5 +1,5 @@
-import { readJsonFile } from "#connect-utils";
 import { dirname, isAbsolute, join } from "path";
+import { readJsonFile } from "../connect-utils/helpers.js";
 import { startServer } from "./server.js";
 import { type ConnectStudioOptions, type StartServerOptions } from "./types.js";
 

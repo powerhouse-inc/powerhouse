@@ -1,10 +1,10 @@
-import { type Action } from "../../../document/types.js";
-import {
-  type AddModuleInput,
-  type DeleteModuleInput,
-  type ReorderModulesInput,
-  type SetModuleDescriptionInput,
-  type SetModuleNameInput,
+import type { Action } from "../../../document/types.js";
+import type {
+  AddModuleInput,
+  DeleteModuleInput,
+  ReorderModulesInput,
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
 } from "../schema/types.js";
 
 export type AddModuleAction = Action & {

@@ -1,10 +1,10 @@
-import { type DocumentModelModuleOperations } from "../../gen/module/operations.js";
-import { type Module } from "../../gen/schema/types.js";
+import type { DocumentModelModuleOperations } from "../../gen/module/operations.js";
+import type { ModuleSpecification } from "../../gen/schema/types.js";
 
 const moduleSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};
   order.forEach((key, index) => (mapping[key] = index));
-  return (a: Module, b: Module) =>
+  return (a: ModuleSpecification, b: ModuleSpecification) =>
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 

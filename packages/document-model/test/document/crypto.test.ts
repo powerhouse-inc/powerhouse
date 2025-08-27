@@ -1,33 +1,29 @@
+import type {
+  Action,
+  ActionSigner,
+  PHReducer,
+  ReducerOptions,
+  SignalDispatch,
+  SigningParameters,
+} from "document-model";
 import {
-  type Action,
-  actionSigner,
-  type ActionSigner,
-  type PHReducer,
-  type ReducerOptions,
-  type SignalDispatch,
-} from "#document";
-import { generateUUID } from "#utils";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  baseCreateDocument,
-  hashDocumentStateForScope,
-} from "../../src/document/utils/base.js";
-import {
+  PublicKeySigner,
   ab2hex,
+  actionSigner,
+  baseCreateDocument,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
   buildSignedAction,
+  generateUUIDBrowser,
+  hashDocumentStateForScope,
   hex2ab,
-  verifyOperationSignature,
-} from "../../src/document/utils/crypto.js";
-import {
-  PublicKeySigner,
   sign,
-  type SigningParameters,
   verify,
-} from "../../src/document/utils/header.js";
+  verifyOperationSignature,
+} from "document-model";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
-  type CountDocument,
   countReducer,
   createCountDocumentState,
   createCountState,
@@ -373,7 +369,7 @@ describe("Crypto utils", () => {
     const parameters: SigningParameters = {
       documentType: "powerhouse/counter",
       createdAtUtcIso: new Date().toISOString(),
-      nonce: generateUUID(),
+      nonce: generateUUIDBrowser(),
     };
 
     const keyPair = await crypto.subtle.generateKey("Ed25519", true, [

@@ -1,10 +1,10 @@
-import { type DocumentModelHeaderAction } from "./header/actions.js";
-import { type DocumentModelModuleAction } from "./module/actions.js";
-import { type DocumentModelOperationErrorAction } from "./operation-error/actions.js";
-import { type DocumentModelOperationExampleAction } from "./operation-example/actions.js";
-import { type DocumentModelOperationAction } from "./operation/actions.js";
-import { type DocumentModelStateAction } from "./state/actions.js";
-import { type DocumentModelVersioningAction } from "./versioning/actions.js";
+import type { DocumentModelHeaderAction } from "./header/actions.js";
+import type { DocumentModelModuleAction } from "./module/actions.js";
+import type { DocumentModelOperationErrorAction } from "./operation-error/actions.js";
+import type { DocumentModelOperationExampleAction } from "./operation-example/actions.js";
+import type { DocumentModelOperationAction } from "./operation/actions.js";
+import type { DocumentModelStateAction } from "./state/actions.js";
+import type { DocumentModelVersioningAction } from "./versioning/actions.js";
 
 export * from "./header/actions.js";
 export * from "./module/actions.js";

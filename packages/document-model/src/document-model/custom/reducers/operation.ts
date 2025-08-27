@@ -1,10 +1,12 @@
-import { type DocumentModelOperationOperations } from "../../gen/operation/operations.js";
-import { type Operation } from "../../gen/schema/types.js";
+import type {
+  DocumentModelOperationOperations,
+  OperationSpecification,
+} from "document-model";
 
 const operationSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};
   order.forEach((key, index) => (mapping[key] = index));
-  return (a: Operation, b: Operation) =>
+  return (a: OperationSpecification, b: OperationSpecification) =>
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 
@@ -100,7 +102,7 @@ export const reducer: DocumentModelOperationOperations = {
   },
 
   moveOperationOperation(state, action) {
-    const moveOperations: Operation[] = [];
+    const moveOperations: OperationSpecification[] = [];
     const latestSpec = state.specifications[state.specifications.length - 1];
 
     // Filter and collect

@@ -1,10 +1,12 @@
-import { type DocumentModelOperationErrorOperations } from "../../gen/operation-error/operations.js";
-import { type OperationError } from "../../gen/schema/types.js";
+import type {
+  DocumentModelOperationErrorOperations,
+  OperationErrorSpecification,
+} from "document-model";
 
 const errorSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};
   order.forEach((key, index) => (mapping[key] = index));
-  return (a: OperationError, b: OperationError) =>
+  return (a: OperationErrorSpecification, b: OperationErrorSpecification) =>
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 

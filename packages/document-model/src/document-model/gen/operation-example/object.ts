@@ -1,16 +1,13 @@
 import { BaseDocumentClass } from "../../../document/object.js";
-import { type ReducerOptions } from "../../../document/types.js";
-import { type DocumentModelAction } from "../actions.js";
-import {
-  type AddOperationExampleInput,
-  type DeleteOperationExampleInput,
-  type ReorderOperationExamplesInput,
-  type UpdateOperationExampleInput,
+import type { ReducerOptions } from "../../../document/types.js";
+import type { DocumentModelAction } from "../actions.js";
+import type {
+  AddOperationExampleInput,
+  DeleteOperationExampleInput,
+  ReorderOperationExamplesInput,
+  UpdateOperationExampleInput,
 } from "../schema/types.js";
-import {
-  type DocumentModelLocalState,
-  type DocumentModelState,
-} from "../types.js";
+import type { DocumentModelLocalState, DocumentModelState } from "../types.js";
 import {
   addOperationExample,
   deleteOperationExample,

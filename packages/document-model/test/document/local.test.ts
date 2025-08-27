@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { baseCreateDocument } from "../../index.js";
-import { prune, redo, undo } from "../../src/document/actions/creators.js";
+import { baseCreateDocument } from "document-model";
+import { prune, redo, undo } from "document-model";
+import type { CountDocument } from "../helpers.js";
 import {
-  type CountDocument,
   countReducer,
   createCountDocumentState,
   createCountState,

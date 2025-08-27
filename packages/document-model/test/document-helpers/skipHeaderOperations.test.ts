@@ -1,5 +1,5 @@
-import type { Operation } from "#document";
-import { skipHeaderOperations } from "#utils";
+import type { Operation } from "document-model";
+import { skipHeaderOperations } from "document-model";
 import { describe, expect, it } from "vitest";
 
 const fakeOperation = (

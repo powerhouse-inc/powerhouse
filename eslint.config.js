@@ -130,11 +130,21 @@ const filesWithUnsafeRules = [
   "packages/document-model/src/document/reducer.ts",
   "packages/document-drive/src/read-mode/server.ts",
   "packages/document-drive/src/queue/event.ts",
+  "packages/document-model/src/document-model/custom/reducers/operation-error.ts",
+  "packages/document-model/src/document-model/custom/reducers/operation-example.ts",
 ];
 
 /** Typescript rules that we have chosen to opt out of in general */
 /** @type {import("eslint").Linter.RulesRecord} */
 const typescriptRules = {
+  "@typescript-eslint/consistent-type-imports": [
+    "error",
+    {
+      prefer: "type-imports",
+      disallowTypeAnnotations: true,
+      fixStyle: "separate-type-imports",
+    },
+  ],
   // we need to use `any` in our over zealous generics
   "@typescript-eslint/no-explicit-any": "off",
   // we use things like _ as a placeholder for unused variables

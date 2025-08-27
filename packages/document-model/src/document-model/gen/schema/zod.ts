@@ -1,57 +1,57 @@
 import { z } from "zod";
 
-import {
-  type AddChangeLogItemInput,
-  type AddModuleInput,
-  type AddOperationErrorInput,
-  type AddOperationExampleInput,
-  type AddOperationInput,
-  type AddStateExampleInput,
-  type Author,
-  type CodeExample,
-  type DeleteChangeLogItemInput,
-  type DeleteModuleInput,
-  type DeleteOperationErrorInput,
-  type DeleteOperationExampleInput,
-  type DeleteOperationInput,
-  type DeleteStateExampleInput,
-  type DocumentModelState,
-  type DocumentSpecification,
-  type Module,
-  type MoveOperationInput,
-  type Operation,
-  type OperationError,
-  type ReorderChangeLogItemsInput,
-  type ReorderModuleOperationsInput,
-  type ReorderModulesInput,
-  type ReorderOperationErrorsInput,
-  type ReorderOperationExamplesInput,
-  type ReorderStateExamplesInput,
-  type ScopeState,
-  type SetAuthorNameInput,
-  type SetAuthorWebsiteInput,
-  type SetInitialStateInput,
-  type SetModelDescriptionInput,
-  type SetModelExtensionInput,
-  type SetModelIdInput,
-  type SetModelNameInput,
-  type SetModuleDescriptionInput,
-  type SetModuleNameInput,
-  type SetOperationDescriptionInput,
-  type SetOperationErrorCodeInput,
-  type SetOperationErrorDescriptionInput,
-  type SetOperationErrorNameInput,
-  type SetOperationErrorTemplateInput,
-  type SetOperationNameInput,
-  type SetOperationReducerInput,
-  type SetOperationSchemaInput,
-  type SetOperationScopeInput,
-  type SetOperationTemplateInput,
-  type SetStateSchemaInput,
-  type State,
-  type UpdateChangeLogItemInput,
-  type UpdateOperationExampleInput,
-  type UpdateStateExampleInput,
+import type {
+  AddChangeLogItemInput,
+  AddModuleInput,
+  AddOperationErrorInput,
+  AddOperationExampleInput,
+  AddOperationInput,
+  AddStateExampleInput,
+  Author,
+  CodeExample,
+  DeleteChangeLogItemInput,
+  DeleteModuleInput,
+  DeleteOperationErrorInput,
+  DeleteOperationExampleInput,
+  DeleteOperationInput,
+  DeleteStateExampleInput,
+  DocumentModelState,
+  DocumentSpecification,
+  ModuleSpecification,
+  MoveOperationInput,
+  OperationErrorSpecification,
+  OperationSpecification,
+  ReorderChangeLogItemsInput,
+  ReorderModuleOperationsInput,
+  ReorderModulesInput,
+  ReorderOperationErrorsInput,
+  ReorderOperationExamplesInput,
+  ReorderStateExamplesInput,
+  ScopeState,
+  SetAuthorNameInput,
+  SetAuthorWebsiteInput,
+  SetInitialStateInput,
+  SetModelDescriptionInput,
+  SetModelExtensionInput,
+  SetModelIdInput,
+  SetModelNameInput,
+  SetModuleDescriptionInput,
+  SetModuleNameInput,
+  SetOperationDescriptionInput,
+  SetOperationErrorCodeInput,
+  SetOperationErrorDescriptionInput,
+  SetOperationErrorNameInput,
+  SetOperationErrorTemplateInput,
+  SetOperationNameInput,
+  SetOperationReducerInput,
+  SetOperationSchemaInput,
+  SetOperationScopeInput,
+  SetOperationTemplateInput,
+  SetStateSchemaInput,
+  State,
+  UpdateChangeLogItemInput,
+  UpdateOperationExampleInput,
+  UpdateStateExampleInput,
 } from "./types.js";
 
 type Properties<T> = Required<{
@@ -279,9 +279,9 @@ export function DocumentSpecificationSchema(): z.ZodObject<
   });
 }
 
-export function ModuleSchema(): z.ZodObject<Properties<Module>> {
+export function ModuleSchema(): z.ZodObject<Properties<ModuleSpecification>> {
   return z.object({
-    __typename: z.literal("Module").optional(),
+    __typename: z.literal("ModuleSpecification").optional(),
     description: z.string().nullable(),
     id: z.string(),
     name: z.string(),
@@ -298,9 +298,11 @@ export function MoveOperationInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationSchema(): z.ZodObject<Properties<Operation>> {
+export function OperationSchema(): z.ZodObject<
+  Properties<OperationSpecification>
+> {
   return z.object({
-    __typename: z.literal("Operation").optional(),
+    __typename: z.literal("OperationSpecification").optional(),
     description: z.string().nullable(),
     errors: z.array(OperationErrorSchema()),
     examples: z.array(CodeExampleSchema()),
@@ -314,10 +316,10 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
 }
 
 export function OperationErrorSchema(): z.ZodObject<
-  Properties<OperationError>
+  Properties<OperationErrorSpecification>
 > {
   return z.object({
-    __typename: z.literal("OperationError").optional(),
+    __typename: z.literal("OperationErrorSpecification").optional(),
     code: z.string().nullable(),
     description: z.string().nullable(),
     id: z.string(),

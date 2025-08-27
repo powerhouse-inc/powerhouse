@@ -1,13 +1,14 @@
-import { setName } from "../../src/document/actions/creators.js";
 import {
   baseCreateDocument,
+  garbageCollectDocumentOperations,
   mapSkippedOperations,
   replayOperations,
-} from "../../src/document/utils/base.js";
-import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
+  setName,
+} from "document-model";
+import { describe } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
   baseCountReducer,
-  type CountDocument,
   countReducer,
   createBaseState,
   createCountDocumentState,

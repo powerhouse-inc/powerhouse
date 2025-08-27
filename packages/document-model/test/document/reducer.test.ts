@@ -1,16 +1,14 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { generateId } from "../../index.js";
-import { setName } from "../../src/document/actions/creators.js";
-import { SET_NAME } from "../../src/document/actions/types.js";
-import { type CreateChildDocumentInput } from "../../src/document/signal.js";
-import { type Action } from "../../src/document/types.js";
+import type { Action, CreateChildDocumentInput } from "document-model";
 import {
   baseCreateDocument,
   createAction,
   createReducer,
-} from "../../src/document/utils/base.js";
+  generateId,
+  setName,
+} from "document-model";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { CountDocument } from "../helpers.js";
 import {
-  type CountDocument,
   countReducer,
   createBaseState,
   createCountDocumentState,
@@ -101,7 +99,7 @@ describe("Base reducer", () => {
     expect(setNameAction).toStrictEqual({
       id: setNameAction.id,
       timestampUtcMs: setNameAction.timestampUtcMs,
-      type: SET_NAME,
+      type: "SET_NAME",
       input: "Document",
       scope: "global",
     });
