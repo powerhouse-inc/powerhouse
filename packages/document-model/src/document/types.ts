@@ -14,8 +14,8 @@ import type {
   SignalResult,
 } from "./signal.js";
 import { type FileInput } from "./utils/file.js";
-export type { NOOPAction } from "./schema/types.js";
 export type { PHBaseState } from "./ph-types.js";
+export type { NOOPAction } from "./schema/types.js";
 export type {
   CreateChildDocumentInput,
   DocumentAction,
@@ -278,8 +278,7 @@ export type ActionVerificationHandler = (
  * @remarks
  * This type is extended by all Document models.
  *
- * @typeParam Data - The type of the document data attribute.
- * @typeParam A - The type of the actions supported by the Document.
+ * @typeParam TState - The type of the document state.
  */
 export type BaseDocument<TState extends PHBaseState = PHBaseState> = {
   /** The header of the document. */
