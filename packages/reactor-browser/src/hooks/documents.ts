@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { useDispatch } from "./dispatch.js";
 import { useFileNodes, useSelectedNodeId } from "./nodes.js";
+import type { PHDocument } from "document-model";
 
 function getDocumentsSnapshot() {
   const documents = window.phDocuments;
@@ -12,7 +13,7 @@ function subscribeToDocuments(onStoreChange: () => void) {
   return () => window.removeEventListener("ph:setDocuments", onStoreChange);
 }
 
-export function useAllDocuments() {
+export function useAllDocuments(): PHDocument[] | undefined {
   const documents = useSyncExternalStore(
     subscribeToDocuments,
     getDocumentsSnapshot,

@@ -3,6 +3,7 @@ import {
   useBreadcrumbs,
   useDrop,
 } from "@powerhousedao/design-system";
+import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   DriveContextProvider,
   getDriveSharingType,
@@ -16,10 +17,9 @@ import {
   useSelectedNodePath,
   useShowSearchBar,
   useUserPermissions,
-  type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentDriveDocument } from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import type React from "react";
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";

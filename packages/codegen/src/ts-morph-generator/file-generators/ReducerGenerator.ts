@@ -1,5 +1,5 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
-import type { OperationError } from "document-model";
+import type { OperationErrorSpecification } from "document-model";
 import {
   SyntaxKind,
   VariableDeclarationKind,
@@ -61,7 +61,7 @@ export class ReducerGenerator extends FileGenerator {
     context: GenerationContext,
   ): void {
     // Collect all errors from all operations
-    const allErrors: OperationError[] = [];
+    const allErrors: OperationErrorSpecification[] = [];
 
     context.operations.forEach((operation) => {
       if (Array.isArray(operation.errors)) {

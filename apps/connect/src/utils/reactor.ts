@@ -1,5 +1,5 @@
 import {
-  BaseQueueManager,
+  EventQueueManager,
   BrowserStorage,
   type DefaultRemoteDriveInput,
   type DocumentDriveServerOptions,
@@ -80,7 +80,7 @@ export function createBrowserDocumentDriveServer(
   return new ReactorBuilder(documentModels)
     .withStorage(storage)
     .withCache(new InMemoryCache())
-    .withQueueManager(new BaseQueueManager())
+    .withQueueManager(new EventQueueManager())
     .withOptions({ ...getReactorDefaultDrivesConfig() })
     .build();
 }

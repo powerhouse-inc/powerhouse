@@ -14,14 +14,20 @@ import {
   getDriveSharingType,
 } from "../utils/drives.js";
 import { useDispatch } from "./dispatch.js";
+import type { PHDocument, Action } from "document-model";
 
 /** Returns the drives for a reactor. */
-export function useDrives() {
+export function useDrives(): DocumentDriveDocument[] | undefined {
   const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
   return drives;
 }
 
-export function useDriveById(driveId: string | undefined | null) {
+export function useDriveById(
+  driveId: string | undefined | null,
+): readonly [
+  DocumentDriveDocument | undefined,
+  (actionOrActions: Action[] | Action | undefined) => void,
+] {
   const drives = useDrives();
   const drive = drives?.find((drive) => drive.header.id === driveId);
   const [document, dispatch] = useDispatch(drive);

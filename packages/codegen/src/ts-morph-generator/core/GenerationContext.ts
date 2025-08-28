@@ -1,7 +1,7 @@
 import {
   type DocumentModelState,
-  type Module,
-  type OperationError,
+  type ModuleSpecification,
+  type OperationErrorSpecification,
 } from "document-model";
 import { type Project } from "ts-morph";
 
@@ -20,13 +20,13 @@ export type CodegenOperation = {
   hasAttachment: boolean | undefined;
   scope: string;
   state: string;
-  errors?: OperationError[];
+  errors?: OperationErrorSpecification[];
 };
 
 export interface GenerationContext {
   rootDir: string;
   docModel: DocumentModelState;
-  module: Module;
+  module: ModuleSpecification;
   project: Project;
   operations: CodegenOperation[];
   forceUpdate: boolean;

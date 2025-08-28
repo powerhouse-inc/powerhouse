@@ -1,5 +1,6 @@
+import { isLogLevel } from "@powerhousedao/config";
 import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
-import { isLogLevel, logger, setLogLevel } from "document-drive";
+import { logger, setLogLevel } from "document-drive";
 import pkg from "../package.json" with { type: "json" };
 import { getBasePath } from "./utils/browser.js";
 

@@ -8,6 +8,6 @@ const meta = {
   ..._meta,
   title: "Generic Drive Explorer",
 } as Meta<typeof Editor>;
-export const Empty = CreateDocumentStory;
+export const Empty: any = CreateDocumentStory;
 
 export default meta;
