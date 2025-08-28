@@ -1,4 +1,4 @@
-import { createDocumentStory } from "#editor-utils";
+import { createDocumentStory } from "@powerhousedao/builder-tools";
 import { type Meta, type StoryObj } from "@storybook/react";
 import {
   defaultBaseState,
