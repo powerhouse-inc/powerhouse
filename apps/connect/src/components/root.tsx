@@ -1,4 +1,4 @@
-import { ModalManager } from "#components";
+import { ModalManager } from "@powerhousedao/connect";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./sidebar.js";

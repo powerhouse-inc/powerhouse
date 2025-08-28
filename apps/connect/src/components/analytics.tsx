@@ -1,4 +1,4 @@
-import connectConfig from "#connect-config";
+import { connectConfig } from "@powerhousedao/connect";
 import { useEffect } from "react";
 import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
 

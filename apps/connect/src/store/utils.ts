@@ -1,4 +1,4 @@
-// import connectConfig from '#connect-config';
+// import { connectConfig }from '#connect-config';
 
 // import { atomWithStorage as _atomWithStorage } from 'jotai/utils';
 // import type { SyncStorage } from 'jotai/vanilla/utils/atomWithStorage';

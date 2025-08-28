@@ -1,4 +1,4 @@
-import config from "#connect-config";
+import { connectConfig } from "@powerhousedao/connect";
 
 import type { BrowserOptions } from "@sentry/react";
 
@@ -30,7 +30,7 @@ async function initSentry() {
     Sentry.replayIntegration(),
     Sentry.captureConsoleIntegration({ levels: ["error"] }),
   ];
-  if (config.sentry.tracing) {
+  if (connectConfig.sentry.tracing) {
     integrations.push(
       Sentry.reactRouterV6BrowserTracingIntegration({
         useEffect: React.useEffect,
@@ -44,8 +44,8 @@ async function initSentry() {
 
   Sentry.init({
     release,
-    dsn: config.sentry.dsn,
-    environment: config.sentry.env,
+    dsn: connectConfig.sentry.dsn,
+    environment: connectConfig.sentry.env,
     integrations,
     ignoreErrors: [
       "User is not allowed to create files",
@@ -92,7 +92,11 @@ export function useInitSentry() {
       return;
     }
 
-    if (clientStarted || !config.sentry.dsn || config.sentry.dsn === "") {
+    if (
+      clientStarted ||
+      !connectConfig.sentry.dsn ||
+      connectConfig.sentry.dsn === ""
+    ) {
       return;
     }
 

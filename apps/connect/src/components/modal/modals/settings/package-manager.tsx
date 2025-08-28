@@ -1,5 +1,5 @@
-import { addExternalPackage, removeExternalPackage } from "#services";
 import { PH_PACKAGES } from "@powerhousedao/config";
+import { addExternalPackage, removeExternalPackage } from "@powerhousedao/connect";
 import { PackageManager as BasePackageManager } from "@powerhousedao/design-system";
 import {
   makeVetraPackageManifest,

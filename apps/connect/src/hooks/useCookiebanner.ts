@@ -1,4 +1,4 @@
-import connectConfig from "#connect-config";
+import { connectConfig } from "@powerhousedao/connect";
 import { useSyncExternalStore } from "react";
 
 const namespace = connectConfig.routerBasename;

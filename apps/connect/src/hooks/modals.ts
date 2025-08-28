@@ -1,4 +1,4 @@
-import { useModal } from "#components";
+import { useModal } from "@powerhousedao/connect";
 import {
   toast,
   type AddLocalDriveInput,

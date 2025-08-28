@@ -1,5 +1,5 @@
-import { useUndoRedoShortcuts } from "#hooks";
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
+import { useUndoRedoShortcuts } from "@powerhousedao/connect";
 import {
   Button,
   DocumentToolbar,

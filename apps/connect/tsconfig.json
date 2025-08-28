@@ -5,14 +5,7 @@
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "paths": {
             "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
-            "#assets/*": ["./assets/*"],
-            "#connect-config": ["./src/connect.config.ts"],
-            "#services": ["./src/services/index.ts"],
-            "#hooks": ["./src/hooks/index.ts"],
-            "#store": ["./src/store/index.ts"],
-            "#utils": ["./src/utils/index.ts"],
-            "#components": ["./src/components/index.ts"],
-            "#context": ["./src/context/index.ts"]
+            "#assets/*": ["./assets/*"]
         },
         "types": [
             "node",
@@ -22,8 +15,8 @@
             "vite-envs"
         ],
     },
-    "include": ["**/*", "**/*.json"],
-    "exclude": ["dist", "node_modules", "storybook-static", "./tsconfig.json"],
+    "include": ["**/*", "./package.copy.json", "src/i18n/locales/en.json"],
+    "exclude": ["dist", "node_modules", "storybook-static"],
     "references": [
         {
             "path": "../../packages/document-model"

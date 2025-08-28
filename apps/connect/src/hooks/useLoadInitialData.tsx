@@ -1,5 +1,4 @@
-import { ReloadConnectToast } from "#components";
-import connectConfig from "#connect-config";
+import { connectConfig, ReloadConnectToast } from "@powerhousedao/connect";
 import { logger } from "document-drive";
 import { useEffect } from "react";
 import { toast } from "../services/toast.js";

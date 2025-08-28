@@ -1,5 +1,4 @@
-import connectConfig from "#connect-config";
-import { serviceWorkerManager } from "#utils";
+import { connectConfig, serviceWorkerManager } from "@powerhousedao/connect";
 import {
   Button,
   Combobox,

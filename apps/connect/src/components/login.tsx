@@ -1,5 +1,5 @@
 import IconRenown from "#assets/icons/renown.svg?react";
-import { DotsLoader } from "#components";
+import { DotsLoader } from "@powerhousedao/connect";
 import { Button } from "@powerhousedao/design-system";
 import {
   openRenown,

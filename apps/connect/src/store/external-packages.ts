@@ -1,4 +1,4 @@
-import connectConfig from "#connect-config";
+import { connectConfig } from "@powerhousedao/connect";
 import { convertLegacyLibToVetraPackage } from "@powerhousedao/reactor-browser";
 import { type DocumentModelLib } from "document-model";
 

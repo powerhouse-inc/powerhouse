@@ -1,5 +1,6 @@
-import { openUrl } from "#utils";
+import { openUrl } from "@powerhousedao/connect";
 import {
+  buildDocumentSubgraphUrl,
   exportFile,
   setSelectedNode,
   useDocumentModelModuleById,
@@ -9,7 +10,6 @@ import {
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser";
 import { type PHDocument } from "document-model";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";

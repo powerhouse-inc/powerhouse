@@ -1,5 +1,8 @@
-import { useSubscribeToVetraPackages } from "#services";
-import { createReactor, useSetSentryUser } from "#store";
+import {
+  createReactor,
+  useSetSentryUser,
+  useSubscribeToVetraPackages,
+} from "@powerhousedao/connect";
 import { logger } from "document-drive";
 import { useEffect } from "react";
 

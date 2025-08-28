@@ -1,5 +1,5 @@
-import connectConfig from "../connect.config.js";
-import { type ServiceWorkerMessage } from "../service-worker.js";
+import type { ServiceWorkerMessage } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect";
 
 const VERSION_CHECK_INTERVAL =
   parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL) || 60 * 60 * 1000; // 1 hour;

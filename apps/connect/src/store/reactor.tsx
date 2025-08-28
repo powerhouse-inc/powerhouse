@@ -1,5 +1,8 @@
-import connectConfig from "#connect-config";
-import { createBrowserDocumentDriveServer, createBrowserStorage } from "#utils";
+import {
+  connectConfig,
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+} from "@powerhousedao/connect";
 import {
   addPHEventHandlers,
   dispatchSetAppConfigEvent,

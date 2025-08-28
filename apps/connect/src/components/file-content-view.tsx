@@ -1,4 +1,4 @@
-import { useNodeActions, useShowDeleteNodeModal, useWindowSize } from "#hooks";
+import { useNodeActions, useShowDeleteNodeModal, useWindowSize } from "@powerhousedao/connect";
 import { FileItem } from "@powerhousedao/design-system";
 import {
   getSyncStatusSync,

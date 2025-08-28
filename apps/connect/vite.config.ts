@@ -21,7 +21,7 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
 import clientConfig from "./client.config.js";
-import pkg from "./package.json" with { type: "json" };
+import pkg from "./package.copy.json" with { type: "json" };
 
 const staticFiles = ["./src/service-worker.ts", "./src/hmr.ts"];
 const staticInputs = staticFiles.reduce(

@@ -1,6 +1,6 @@
 /// <reference lib="WebWorker" />
 
-import { type ServiceWorkerEvent } from "./utils/registerServiceWorker.js";
+import { type ServiceWorkerEvent } from "@powerhousedao/connect";
 
 const _self = self as unknown as ServiceWorkerGlobalScope;
 

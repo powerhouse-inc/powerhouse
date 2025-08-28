@@ -1,4 +1,4 @@
-import connectConfig from "#connect-config";
+import { connectConfig } from "@powerhousedao/connect";
 import { Breadcrumbs, useBreadcrumbs } from "@powerhousedao/design-system";
 import {
   addFolder,

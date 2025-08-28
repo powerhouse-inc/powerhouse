@@ -1,12 +1,12 @@
-import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
+import { useNodeActions, useShowDeleteNodeModal } from "@powerhousedao/connect";
 import { FolderItem, useDrop } from "@powerhousedao/design-system";
 import {
+  getSyncStatusSync,
   setSelectedNode,
   useFileChildNodes,
   useFolderChildNodes,
   useSelectedDriveSharingType,
   useSelectedFolder,
-  getSyncStatusSync,
 } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";

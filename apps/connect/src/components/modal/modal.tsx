@@ -9,7 +9,7 @@ import {
   type ModalPropsMapping,
   type ModalType,
   modals,
-} from "./modals/index.js";
+} from "@powerhousedao/connect";
 
 type MapModalProps<T> = {
   [K in keyof T]: Omit<T[K], "open" | "onClose"> & { onClose?: () => void };

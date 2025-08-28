@@ -1,5 +1,4 @@
-import { useCookieBanner } from "#hooks";
-import { openUrl } from "#utils";
+import { openUrl, useCookieBanner } from "@powerhousedao/connect";
 import {
   Footer as DesignSystemFooter,
   FooterLink,
