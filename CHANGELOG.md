@@ -1,3 +1,14 @@
+## 4.1.0-dev.36 (2025-08-28)
+
+### 🩹 Fixes
+
+- **reactor-browser:** root issue is creating a new array every time getSnapshot was called, plus some cleanup ([d7b5c5636](https://github.com/powerhouse-inc/powerhouse/commit/d7b5c5636))
+- **reactor-browser:** we need to better handle errors in the IDB implementation, this is throwing ([42fcaf7a8](https://github.com/powerhouse-inc/powerhouse/commit/42fcaf7a8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.35 (2025-08-27)
 
 ### 🚀 Features
