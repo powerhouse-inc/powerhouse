@@ -17,6 +17,7 @@
   "files": [
     "dist"
   ],
+  "exports": "./dist/src/index.js",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

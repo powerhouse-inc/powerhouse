@@ -1,12 +1,12 @@
+import type { DocumentTypesMap } from "@powerhousedao/codegen";
+import { TSMorphCodeGenerator } from "@powerhousedao/codegen";
 import { pascalCase } from "change-case";
-import { type DocumentModelState } from "document-model";
+import type { DocumentModelState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
-import { type DocumentTypesMap } from "./index.js";
 import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
