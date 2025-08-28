@@ -1,8 +1,7 @@
-import {
-  calculateCashBalanceChange,
-  type GroupTransactionFormInputs,
-} from "@powerhousedao/design-system";
-import { type Control, useWatch } from "react-hook-form";
+import type { GroupTransactionFormInputs } from "@powerhousedao/design-system";
+import { calculateCashBalanceChange } from "@powerhousedao/design-system";
+import type { Control } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { FormattedNumber } from "../base/index.js";
 
 export function CashBalanceChange(props: {

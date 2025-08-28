@@ -1,7 +1,6 @@
+import type { TableItemType, TableName } from "@powerhousedao/design-system";
 import {
   makeTableData,
-  type TableItemType,
-  type TableName,
   useEditorContext,
   useSortTableItems,
 } from "@powerhousedao/design-system";

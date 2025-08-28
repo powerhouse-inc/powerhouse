@@ -1,4 +1,5 @@
-import { Icon, type IconName } from "@powerhousedao/design-system";
+import type { IconName } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import { cn } from "@powerhousedao/design-system/ui";
 import React from "react";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";

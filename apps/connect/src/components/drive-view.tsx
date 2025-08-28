@@ -8,7 +8,7 @@ import {
   useSelectedNodePath,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { useCallback } from "react";
 import Button from "./button.js";
 import FolderView from "./folder-view.js";

@@ -1,21 +1,18 @@
-import { type IEventBus } from "../events/interfaces.js";
-import { type IQueue } from "../queue/interfaces.js";
-import {
-  type Job,
-  QueueEventTypes,
-  type JobAvailableEvent,
-} from "../queue/types.js";
-import { type IJobExecutor } from "./interfaces.js";
-import {
-  type ExecutorStartedEvent,
-  type ExecutorStoppedEvent,
-  type JobCompletedEvent,
-  type JobExecutorConfig,
-  JobExecutorEventTypes,
-  type JobFailedEvent,
-  type JobResult,
-  type JobStartedEvent,
+import type { IEventBus } from "../events/interfaces.js";
+import type { IQueue } from "../queue/interfaces.js";
+import type { Job, JobAvailableEvent } from "../queue/types.js";
+import { QueueEventTypes } from "../queue/types.js";
+import type { IJobExecutor } from "./interfaces.js";
+import type {
+  ExecutorStartedEvent,
+  ExecutorStoppedEvent,
+  JobCompletedEvent,
+  JobExecutorConfig,
+  JobFailedEvent,
+  JobResult,
+  JobStartedEvent,
 } from "./types.js";
+import { JobExecutorEventTypes } from "./types.js";
 
 /**
  * Default configuration for the job executor

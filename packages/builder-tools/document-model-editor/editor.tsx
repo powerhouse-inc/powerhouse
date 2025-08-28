@@ -1,3 +1,4 @@
+import type { DocumentModelDocument, EditorProps } from "document-model";
 import {
   addModule,
   addOperation,
@@ -5,8 +6,6 @@ import {
   deleteModule,
   deleteOperation,
   deleteOperationError,
-  type DocumentModelDocument,
-  type EditorProps,
   generateId,
   setAuthorName,
   setAuthorWebsite,
@@ -28,7 +27,7 @@ import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
 import { StateSchemas } from "./components/state-schemas.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
-import { type Scope } from "./types/documents.js";
+import type { Scope } from "./types/documents.js";
 import {
   compareStringsWithoutWhitespace,
   initializeModelSchema,

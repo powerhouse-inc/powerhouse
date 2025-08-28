@@ -2,6 +2,10 @@ import type {
   FieldErrorHandling,
   InputBaseProps,
 } from "@powerhousedao/design-system/ui";
+import type {
+  SelectOption,
+  SelectProps,
+} from "@powerhousedao/design-system/ui";
 import {
   Button,
   cn,
@@ -14,8 +18,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   withFieldValidation,
-  type SelectOption,
-  type SelectProps,
 } from "@powerhousedao/design-system/ui";
 import React, { useCallback, useId } from "react";
 import { Content } from "./content.js";

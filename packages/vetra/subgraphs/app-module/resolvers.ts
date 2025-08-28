@@ -1,11 +1,11 @@
-import { type Subgraph } from "@powerhousedao/reactor-api";
+import type { Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
-import {
-  actions,
-  type SetAppNameInput,
-  type SetAppStatusInput,
+import type {
+  SetAppNameInput,
+  SetAppStatusInput,
 } from "../../document-models/app-module/index.js";
+import { actions } from "../../document-models/app-module/index.js";
 
 export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
   const reactor = subgraph.reactor;

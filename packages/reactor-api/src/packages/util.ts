@@ -1,9 +1,6 @@
-import {
-  childLogger,
-  type IProcessorHostModule,
-  type ProcessorFactory,
-} from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
+import { childLogger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import { resolveLinkedPackage } from "./import-resolver.js";

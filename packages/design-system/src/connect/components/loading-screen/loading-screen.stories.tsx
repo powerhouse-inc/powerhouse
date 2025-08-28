@@ -1,4 +1,4 @@
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { LoadingScreen } from "./loading-screen.js";
 
 const meta: Meta = {

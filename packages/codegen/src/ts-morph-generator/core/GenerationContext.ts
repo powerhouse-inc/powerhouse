@@ -1,9 +1,9 @@
-import {
-  type DocumentModelState,
-  type ModuleSpecification,
-  type OperationErrorSpecification,
+import type {
+  DocumentModelState,
+  ModuleSpecification,
+  OperationErrorSpecification,
 } from "document-model";
-import { type Project } from "ts-morph";
+import type { Project } from "ts-morph";
 
 export type CodegenOperation = {
   id: string;

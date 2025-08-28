@@ -1,4 +1,5 @@
-import { Icon, type IconName } from "@powerhousedao/design-system";
+import type { IconName } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,

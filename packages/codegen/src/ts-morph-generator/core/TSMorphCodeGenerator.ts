@@ -1,18 +1,15 @@
-import {
-  type DocumentModelState,
-  type ModuleSpecification,
-} from "document-model";
+import type { DocumentModelState, ModuleSpecification } from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
 import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
 import { DirectoryManager } from "../utilities/DirectoryManager.js";
 import { ImportManager } from "../utilities/ImportManager.js";
-import { type FileGenerator } from "./FileGenerator.js";
-import {
-  type CodeGeneratorOptions,
-  type CodegenOperation,
-  type GenerationContext,
-  type PHProjectDirectories,
+import type { FileGenerator } from "./FileGenerator.js";
+import type {
+  CodeGeneratorOptions,
+  CodegenOperation,
+  GenerationContext,
+  PHProjectDirectories,
 } from "./GenerationContext.js";
 
 export class TSMorphCodeGenerator {

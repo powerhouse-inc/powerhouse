@@ -1,9 +1,9 @@
+import type { TableName } from "@powerhousedao/design-system";
 import {
   FormInputs,
   Icon,
   RWAButton,
   tableLabels,
-  type TableName,
   useDependentItemProps,
   useEditorContext,
   useModal,

@@ -1,5 +1,6 @@
 import { Button, Icon } from "@powerhousedao/design-system";
-import { SettingsRow, type SettingsRowProps } from "./row.js";
+import type { SettingsRowProps } from "./row.js";
+import { SettingsRow } from "./row.js";
 
 export interface ClearStorageSettingsRowProps extends SettingsRowProps {
   onClearStorage: () => void;

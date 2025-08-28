@@ -3,7 +3,6 @@ import type {
   AppModuleState,
   SetAppNameInput,
   SetAppStatusInput,
-  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{

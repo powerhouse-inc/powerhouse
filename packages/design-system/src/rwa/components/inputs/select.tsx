@@ -1,12 +1,12 @@
 import { Combobox } from "@powerhousedao/design-system";
-import { type ComponentPropsWithoutRef } from "react";
-import {
-  type Control,
-  Controller,
-  type ControllerProps,
-  type FieldValues,
-  type Path,
+import type { ComponentPropsWithoutRef } from "react";
+import type {
+  Control,
+  ControllerProps,
+  FieldValues,
+  Path,
 } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 export type RWATableSelectProps<ControlInputs extends FieldValues> = Omit<

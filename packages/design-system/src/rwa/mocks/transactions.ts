@@ -1,7 +1,9 @@
+import type {
+  BaseTransaction,
+  GroupTransaction,
+} from "@powerhousedao/design-system";
 import {
-  type BaseTransaction,
   FEES_PAYMENT,
-  type GroupTransaction,
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,

@@ -1,8 +1,8 @@
-import {
-  type VetraDocumentModelModule,
-  type VetraPackage,
-  COMMON_PACKAGE_ID,
+import type {
+  VetraDocumentModelModule,
+  VetraPackage,
 } from "@powerhousedao/reactor-browser";
+import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
 import {
   loadDocumentModelEditor,
   loadGenericDriveExplorerEditorModule,

@@ -1,17 +1,16 @@
-import {
-  buildConnect,
-  previewConnect,
-  type ConnectBuildOptions,
-  type ConnectPreviewOptions,
+import type {
+  ConnectBuildOptions,
+  ConnectPreviewOptions,
 } from "@powerhousedao/builder-tools";
+import { buildConnect, previewConnect } from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,
   connectPreviewHelp,
   connectStudioHelp,
 } from "../help.js";
-import { type ConnectOptions } from "../services/connect.js";
-import { type CommandActionType } from "../types.js";
+import type { ConnectOptions } from "../services/connect.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startConnect(options: ConnectOptions) {

@@ -1,13 +1,13 @@
 import { logger } from "document-drive";
-import {
-  buildSignedAction,
-  type Action,
-  type ActionSigner,
-  type Operation,
-  type PHDocument,
-  type Reducer,
-  type User,
+import type {
+  Action,
+  ActionSigner,
+  Operation,
+  PHDocument,
+  Reducer,
+  User,
 } from "document-model";
+import { buildSignedAction } from "document-model";
 
 export async function signOperation<TDocument extends PHDocument>(
   operation: Operation,

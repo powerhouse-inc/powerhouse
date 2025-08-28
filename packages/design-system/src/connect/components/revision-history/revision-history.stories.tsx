@@ -1,5 +1,5 @@
-import { type Meta, type StoryObj } from "@storybook/react";
-import { type Operation } from "document-model";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { Operation } from "document-model";
 import { globalOperations, localOperations } from "./mocks.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import nsOperations from "./ns-operations.json";

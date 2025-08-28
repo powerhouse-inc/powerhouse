@@ -1,16 +1,12 @@
-import {
-  applyMixins,
-  BaseDocumentClass,
-  type BaseStateFromDocument,
-  type SignalDispatch,
-} from "document-model";
-import { type SubgraphModuleAction } from "./actions.js";
+import type { BaseStateFromDocument, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocumentClass } from "document-model";
+import type { SubgraphModuleAction } from "./actions.js";
 import SubgraphModule_BaseOperations from "./base-operations/object.js";
 import { reducer } from "./reducer.js";
-import {
-  type SubgraphModuleDocument,
-  type SubgraphModuleLocalState,
-  type SubgraphModuleState,
+import type {
+  SubgraphModuleDocument,
+  SubgraphModuleLocalState,
+  SubgraphModuleState,
 } from "./types.js";
 import utils from "./utils.js";
 

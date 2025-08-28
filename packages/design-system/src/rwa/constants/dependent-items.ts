@@ -1,10 +1,10 @@
-import {
-  type FixedIncome,
-  type GroupTransaction,
-  type ServiceProviderFeeType,
-  type TableName,
-  useEditorContext,
+import type {
+  FixedIncome,
+  GroupTransaction,
+  ServiceProviderFeeType,
+  TableName,
 } from "@powerhousedao/design-system";
+import { useEditorContext } from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export type DependentItemProps = {

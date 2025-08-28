@@ -1,14 +1,13 @@
+import type {
+  AnalyticsSeriesInput,
+  IAnalyticsStore,
+} from "@powerhousedao/reactor-browser/analytics";
 import {
   AnalyticsPath,
   DateTime,
-  type AnalyticsSeriesInput,
-  type IAnalyticsStore,
 } from "@powerhousedao/reactor-browser/analytics";
-import {
-  childLogger,
-  type InternalTransmitterUpdate,
-  type IProcessor,
-} from "document-drive";
+import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import { childLogger } from "document-drive";
 import type { PHDocument } from "document-model";
 
 const CREATE_NODE_ACTIONS = ["ADD_FILE", "ADD_FOLDER"];

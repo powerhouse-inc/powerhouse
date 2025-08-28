@@ -1,4 +1,4 @@
-import { type Subgraph } from "@powerhousedao/reactor-api";
+import type { Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { actions } from "../../document-models/vetra-package/index.js";
 import { generateId } from "document-model";

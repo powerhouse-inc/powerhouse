@@ -1,3 +1,4 @@
+import type { IconName, SyncStatus } from "@powerhousedao/design-system";
 import {
   CONFLICT,
   ERROR,
@@ -6,11 +7,9 @@ import {
   MISSING,
   SUCCESS,
   SYNCING,
-  type IconName,
-  type SyncStatus,
 } from "@powerhousedao/design-system";
 
-import { type ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 const syncIcons: Record<SyncStatus, IconName> = {

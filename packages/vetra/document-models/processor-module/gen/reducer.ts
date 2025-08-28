@@ -1,9 +1,7 @@
-import {
-  type StateReducer,
-  isDocumentAction,
-  createReducer,
-} from "document-model";
-import { type ProcessorModuleDocument, z } from "./types.js";
+import type { StateReducer } from "document-model";
+import { isDocumentAction, createReducer } from "document-model";
+import type { ProcessorModuleDocument } from "./types.js";
+import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 

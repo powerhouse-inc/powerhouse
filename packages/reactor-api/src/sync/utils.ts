@@ -1,11 +1,11 @@
-import {
-  operationsToRevision,
-  type IDocumentDriveServer,
-  type ListenerRevision,
-  type PullResponderTransmitter,
-  type StrandUpdate,
+import type {
+  IDocumentDriveServer,
+  ListenerRevision,
+  PullResponderTransmitter,
+  StrandUpdate,
 } from "document-drive";
-import { type Operation } from "document-model";
+import { operationsToRevision } from "document-drive";
+import type { Operation } from "document-model";
 
 // define types
 export type InternalStrandUpdate = {

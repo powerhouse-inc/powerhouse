@@ -1,4 +1,8 @@
-import { DocumentEditorDebugTools, SentryProvider, serviceWorkerManager } from "@powerhousedao/connect";
+import {
+  DocumentEditorDebugTools,
+  SentryProvider,
+  serviceWorkerManager,
+} from "@powerhousedao/connect";
 import { ToastContainer, WagmiContext } from "@powerhousedao/design-system";
 import ProcessorManagerProvider from "../context/processor-manager.js";
 import Analytics from "./analytics.js";

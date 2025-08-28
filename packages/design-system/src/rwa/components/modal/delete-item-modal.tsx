@@ -1,11 +1,10 @@
-import {
-  type DependentItemProps,
-  Icon,
-  Modal,
-  tableLabels,
-  type TableName,
+import type {
+  DependentItemProps,
+  TableName,
 } from "@powerhousedao/design-system";
-import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
+import { Icon, Modal, tableLabels } from "@powerhousedao/design-system";
+import type { ComponentPropsWithoutRef } from "react";
+import { memo, useCallback } from "react";
 
 export type RWADeleteItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly tableName: TableName;

@@ -1,16 +1,12 @@
-import {
-  applyMixins,
-  BaseDocumentClass,
-  type BaseStateFromDocument,
-  type SignalDispatch,
-} from "document-model";
-import { type VetraPackageAction } from "./actions.js";
+import type { BaseStateFromDocument, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocumentClass } from "document-model";
+import type { VetraPackageAction } from "./actions.js";
 import VetraPackage_BaseOperations from "./base-operations/object.js";
 import { reducer } from "./reducer.js";
-import {
-  type VetraPackageDocument,
-  type VetraPackageLocalState,
-  type VetraPackageState,
+import type {
+  VetraPackageDocument,
+  VetraPackageLocalState,
+  VetraPackageState,
 } from "./types.js";
 import utils from "./utils.js";
 

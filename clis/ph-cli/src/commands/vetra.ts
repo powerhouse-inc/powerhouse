@@ -1,7 +1,7 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { vetraHelp } from "../help.js";
-import { type DevOptions } from "../services/vetra.js";
-import { type CommandActionType } from "../types.js";
+import type { DevOptions } from "../services/vetra.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startVetraEnv(options: DevOptions) {

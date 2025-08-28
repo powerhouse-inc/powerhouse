@@ -1,6 +1,6 @@
-import { type PowerhouseConfig } from "@powerhousedao/config";
-import { type InternalTransmitterUpdate } from "document-drive";
-import { type DocumentModelDocument } from "document-model";
+import type { PowerhouseConfig } from "@powerhousedao/config";
+import type { InternalTransmitterUpdate } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
 
 export interface DocumentHandler {
   documentType: string;

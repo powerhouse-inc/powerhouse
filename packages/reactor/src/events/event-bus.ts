@@ -1,9 +1,6 @@
-import { type IEventBus } from "./interfaces.js";
-import {
-  EventBusAggregateError,
-  type Subscriber,
-  type Unsubscribe,
-} from "./types.js";
+import type { IEventBus } from "./interfaces.js";
+import type { Subscriber, Unsubscribe } from "./types.js";
+import { EventBusAggregateError } from "./types.js";
 
 export class EventBus implements IEventBus {
   private eventTypeToSubscribers = new Map<number, Subscriber[]>();

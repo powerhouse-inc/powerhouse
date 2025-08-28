@@ -1,5 +1,5 @@
 import { TooltipProvider } from "@powerhousedao/design-system";
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { HDivider } from "./h-divider.js";
 
 // Get a timestamp from the past (3 months ago)

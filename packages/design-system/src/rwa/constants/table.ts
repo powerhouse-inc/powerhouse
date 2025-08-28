@@ -1,9 +1,9 @@
-import {
-  type EditorAction,
-  type GroupTransactionType,
-  type RealWorldAssetsState,
-  type TableName,
-  type TableNameFor,
+import type {
+  EditorAction,
+  GroupTransactionType,
+  RealWorldAssetsState,
+  TableName,
+  TableNameFor,
 } from "@powerhousedao/design-system";
 
 export const defaultColumnCountByTableWidth = {

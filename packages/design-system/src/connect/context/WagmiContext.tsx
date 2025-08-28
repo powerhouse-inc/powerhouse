@@ -1,11 +1,9 @@
 import { wagmiConfig as defaultWagmiConfig } from "@powerhousedao/design-system";
-import {
-  QueryClient,
-  QueryClientProvider,
-  type QueryClientProviderProps,
-} from "@tanstack/react-query";
-import { type ReactNode } from "react";
-import { WagmiProvider, type WagmiProviderProps } from "wagmi";
+import type { QueryClientProviderProps } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import type { WagmiProviderProps } from "wagmi";
+import { WagmiProvider } from "wagmi";
 
 const defaultQueryClient = new QueryClient();
 

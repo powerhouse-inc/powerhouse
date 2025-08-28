@@ -1,12 +1,12 @@
+import type { TooltipProps } from "@radix-ui/react-tooltip";
 import {
   Content,
   Portal,
   Provider,
   Root,
-  type TooltipProps,
   Trigger,
 } from "@radix-ui/react-tooltip";
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 type Props = TooltipProps & {

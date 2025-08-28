@@ -1,6 +1,6 @@
 import { LOCAL } from "@powerhousedao/design-system";
 import { useArgs } from "@storybook/preview-api";
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { AddRemoteDriveModal } from "./add-remote-drive-modal.js";
 
 const meta = {

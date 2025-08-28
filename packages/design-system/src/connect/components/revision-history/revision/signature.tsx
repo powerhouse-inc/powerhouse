@@ -1,5 +1,5 @@
 import { Icon, Tooltip } from "@powerhousedao/design-system";
-import { type Signature } from "../types.js";
+import type { Signature } from "../types.js";
 
 export type SignatureProps = {
   readonly signatures: Signature[] | undefined;

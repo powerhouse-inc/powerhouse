@@ -1,5 +1,5 @@
-import { type FileNode } from "document-drive";
-import type React from "react";
+import type { FileNode } from "document-drive";
+import React from "react";
 
 import { DOCUMENT_TYPES } from "../document-types.js";
 import { ModuleAccordion } from "./ModuleAccordion.js";

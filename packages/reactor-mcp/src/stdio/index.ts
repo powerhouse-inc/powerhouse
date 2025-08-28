@@ -1,10 +1,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  generateId,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import { logger } from "../logger.js";
 import { createServer } from "../server.js";
 import { VitePackageLoader } from "./loader.js";

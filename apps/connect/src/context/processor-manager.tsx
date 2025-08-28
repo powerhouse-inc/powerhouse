@@ -1,25 +1,27 @@
 import { connectConfig } from "@powerhousedao/connect";
+import type { Processors } from "@powerhousedao/reactor-browser";
 import {
   useProcessorManager,
   useProcessors,
-  type Processors,
 } from "@powerhousedao/reactor-browser";
 import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
 import {
   AnalyticsProvider,
   useAnalyticsStoreAsync,
 } from "@powerhousedao/reactor-browser/analytics";
-import {
-  live,
-  useSetPGliteDB,
-  type PGlite,
-  type PGliteWithLive,
+import type {
+  PGlite,
+  PGliteWithLive,
 } from "@powerhousedao/reactor-browser/pglite";
+import { live, useSetPGliteDB } from "@powerhousedao/reactor-browser/pglite";
 import { useRelationalDb } from "@powerhousedao/reactor-browser/relational";
 import type { ProcessorManager, ProcessorRecord } from "document-drive";
-import { childLogger, type IRelationalDb } from "document-drive";
-import { generateId, type PHDocumentHeader } from "document-model";
-import { useEffect, useRef, type PropsWithChildren } from "react";
+import type { IRelationalDb } from "document-drive";
+import { childLogger } from "document-drive";
+import type { PHDocumentHeader } from "document-model";
+import { generateId } from "document-model";
+import type { PropsWithChildren } from "react";
+import { useEffect, useRef } from "react";
 
 const logger = childLogger(["reactor-analytics"]);
 

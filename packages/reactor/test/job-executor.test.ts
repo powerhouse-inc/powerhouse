@@ -1,21 +1,23 @@
-import { type Operation } from "../src/shared/types.js";
+import type { Operation } from "../src/shared/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
-import { type IEventBus } from "../src/events/interfaces.js";
+import type { IEventBus } from "../src/events/interfaces.js";
+import type {
+  ExecutorStartedEvent,
+  ExecutorStoppedEvent,
+  IJobExecutor,
+  JobCompletedEvent,
+  JobExecutorConfig,
+  JobFailedEvent,
+  JobStartedEvent,
+} from "../src/executor/job-executor.js";
 import {
   InMemoryJobExecutor,
   JobExecutorEventTypes,
-  type ExecutorStartedEvent,
-  type ExecutorStoppedEvent,
-  type IJobExecutor,
-  type JobCompletedEvent,
-  type JobExecutorConfig,
-  type JobFailedEvent,
-  type JobStartedEvent,
 } from "../src/executor/job-executor.js";
-import { type IQueue } from "../src/queue/interfaces.js";
+import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
-import { type Job } from "../src/queue/types.js";
+import type { Job } from "../src/queue/types.js";
 
 describe("InMemoryJobExecutor", () => {
   let executor: IJobExecutor;

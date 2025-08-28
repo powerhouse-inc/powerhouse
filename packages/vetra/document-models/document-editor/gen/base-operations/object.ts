@@ -1,11 +1,11 @@
 import { BaseDocumentClass } from "document-model";
-import {
-  type SetEditorNameInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetEditorStatusInput,
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
+import type {
+  SetEditorNameInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetEditorStatusInput,
+  DocumentEditorState,
+  DocumentEditorLocalState,
 } from "../types.js";
 import {
   setEditorName,
@@ -13,7 +13,7 @@ import {
   removeDocumentType,
   setEditorStatus,
 } from "./creators.js";
-import { type DocumentEditorAction } from "../actions.js";
+import type { DocumentEditorAction } from "../actions.js";
 
 export default class DocumentEditor_BaseOperations extends BaseDocumentClass<
   DocumentEditorState,

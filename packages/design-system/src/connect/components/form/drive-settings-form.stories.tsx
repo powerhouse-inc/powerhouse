@@ -1,5 +1,5 @@
-import { type Meta, type StoryObj } from "@storybook/react";
-import { type DocumentDriveDocument } from "document-drive";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { DocumentDriveDocument } from "document-drive";
 import { DriveSettingsForm } from "./index.js";
 
 const meta = {

@@ -1,8 +1,8 @@
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type CodegenOperation,
-  type GenerationContext,
+import type {
+  CodegenOperation,
+  GenerationContext,
 } from "../core/GenerationContext.js";
 import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
 import { DirectoryManager } from "../utilities/DirectoryManager.js";

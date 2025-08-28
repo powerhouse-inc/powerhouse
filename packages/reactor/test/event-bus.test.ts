@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
-import { type IEventBus } from "../src/events/interfaces.js";
+import type { IEventBus } from "../src/events/interfaces.js";
 import { EventBusAggregateError } from "../src/events/types.js";
 
 describe("EventBus", () => {

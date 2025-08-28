@@ -1,9 +1,7 @@
-import {
-  type StateReducer,
-  isDocumentAction,
-  createReducer,
-} from "document-model";
-import { type VetraPackageDocument, z } from "./types.js";
+import type { StateReducer } from "document-model";
+import { isDocumentAction, createReducer } from "document-model";
+import type { VetraPackageDocument } from "./types.js";
+import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 

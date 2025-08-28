@@ -1,6 +1,6 @@
-import {
-  type JsonWebKeyPairStorage,
-  type JwkKeyPair,
+import type {
+  JsonWebKeyPairStorage,
+  JwkKeyPair,
 } from "@powerhousedao/reactor-browser";
 
 export class BrowserKeyStorage implements JsonWebKeyPairStorage {

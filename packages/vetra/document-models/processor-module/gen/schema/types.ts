@@ -69,7 +69,7 @@ export type DocumentTypeItem = {
 export type ProcessorModuleState = {
   documentTypes: Array<DocumentTypeItem>;
   name: Scalars["String"]["output"];
-  status: StatusType | StatusType;
+  status: StatusType;
   type: Scalars["String"]["output"];
 };
 
@@ -82,7 +82,7 @@ export type SetProcessorNameInput = {
 };
 
 export type SetProcessorStatusInput = {
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type SetProcessorTypeInput = {

@@ -1,8 +1,5 @@
-import {
-  Button,
-  type ButtonProps,
-  mergeClassNameProps,
-} from "@powerhousedao/design-system";
+import type { ButtonProps } from "@powerhousedao/design-system";
+import { Button, mergeClassNameProps } from "@powerhousedao/design-system";
 
 import { twMerge } from "tailwind-merge";
 

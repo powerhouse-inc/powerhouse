@@ -1,8 +1,8 @@
-import {
-  type GroupTransactionType,
-  type Operation,
-  type TableItemType,
-  type TableName,
+import type {
+  GroupTransactionType,
+  Operation,
+  TableItemType,
+  TableName,
 } from "@powerhousedao/design-system";
 
 export type AssetFormInputs = {

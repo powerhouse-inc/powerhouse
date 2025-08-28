@@ -1,7 +1,9 @@
-import { Icon, Select, type SelectItem } from "@powerhousedao/design-system";
-import { type App } from "document-model";
-import { type ComponentPropsWithRef } from "react";
-import { type Control, Controller, type Path } from "react-hook-form";
+import type { SelectItem } from "@powerhousedao/design-system";
+import { Icon, Select } from "@powerhousedao/design-system";
+import type { App } from "document-model";
+import type { ComponentPropsWithRef } from "react";
+import type { Control, Path } from "react-hook-form";
+import { Controller } from "react-hook-form";
 
 export function appToInputOption(app: App): SelectItem<string> {
   return {

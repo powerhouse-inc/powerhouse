@@ -1,9 +1,11 @@
+import type {
+  GraphQLDataSourceProcessOptions,
+  ServiceDefinition,
+} from "@apollo/gateway";
 import {
   ApolloGateway,
   LocalCompose,
   RemoteGraphQLDataSource,
-  type GraphQLDataSourceProcessOptions,
-  type ServiceDefinition,
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";

@@ -1,4 +1,4 @@
-import { type PowerhouseConfig } from "@powerhousedao/config";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { describe, expect, it } from "vitest";
 import { buildInstallCommand } from "../src/commands/install.js";
 import { updatePackagesArray } from "../src/utils.js";

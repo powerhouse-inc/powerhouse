@@ -1,7 +1,7 @@
-import { type McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { type IDocumentDriveServer } from "document-drive";
-import { type Express, type Request, type Response } from "express";
+import type { IDocumentDriveServer } from "document-drive";
+import type { Express, Request, Response } from "express";
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 

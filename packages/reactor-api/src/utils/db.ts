@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
-import knex, { type Knex } from "knex";
+import type { Knex } from "knex";
+import knex from "knex";
 import ClientPgLite from "knex-pglite";
 import { Kysely } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";

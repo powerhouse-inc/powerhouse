@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  type Address,
-  createPublicClient,
-  http,
-  type PublicClient,
-} from "viem";
+import type { Address, PublicClient } from "viem";
+import { createPublicClient, http } from "viem";
 import { getEnsAvatar, getEnsName } from "viem/actions";
 import * as chains from "viem/chains";
 export type { Address } from "viem";

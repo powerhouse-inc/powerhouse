@@ -9,7 +9,7 @@ import {
   PUBLIC,
   SWITCHBOARD,
 } from "@powerhousedao/design-system";
-import { type SharingType } from "document-drive";
+import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";

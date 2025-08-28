@@ -1,29 +1,21 @@
 import { useReactor, useUserPermissions } from "@powerhousedao/reactor-browser";
-import {
-  type DocumentModelNotFoundError,
-  type IDocumentDriveServer,
-  type IReadModeDriveServer,
-  logger,
-  type ReadDocumentNotFoundError,
-  type ReadDrive,
-  type ReadDriveContext,
-  ReadDriveNotFoundError,
-  type ReadDrivesListener,
-  type ReadDrivesListenerUnsubscribe,
-  type ReadDriveSlugNotFoundError,
-  type RemoteDriveOptions,
+import type {
+  DocumentModelNotFoundError,
+  IDocumentDriveServer,
+  IReadModeDriveServer,
+  ReadDocumentNotFoundError,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDrivesListener,
+  ReadDrivesListenerUnsubscribe,
+  ReadDriveSlugNotFoundError,
+  RemoteDriveOptions,
 } from "document-drive";
-import { type PHDocument } from "document-model";
+import { logger, ReadDriveNotFoundError } from "document-drive";
+import type { PHDocument } from "document-model";
 import isEqual from "fast-deep-equal";
-import {
-  createContext,
-  type FC,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import type { FC, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export interface IReadModeContext extends IReadModeDriveServer {
   readDrives: ReadDrive[];

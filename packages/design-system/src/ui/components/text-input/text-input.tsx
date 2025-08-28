@@ -3,6 +3,7 @@ import type {
   InputBaseProps,
   WithDifference,
 } from "@powerhousedao/design-system/ui";
+import type { TransformerType } from "@powerhousedao/design-system/ui";
 import {
   CharacterCounter,
   cn,
@@ -13,7 +14,6 @@ import {
   Input,
   sharedValueTransformers,
   ValueTransformer,
-  type TransformerType,
 } from "@powerhousedao/design-system/ui";
 import { forwardRef, useId, useMemo } from "react";
 import TextInputDiff from "./text-input-diff.js";

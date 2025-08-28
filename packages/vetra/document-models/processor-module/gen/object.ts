@@ -1,16 +1,12 @@
-import {
-  applyMixins,
-  BaseDocumentClass,
-  type BaseStateFromDocument,
-  type SignalDispatch,
-} from "document-model";
-import { type ProcessorModuleAction } from "./actions.js";
+import type { BaseStateFromDocument, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocumentClass } from "document-model";
+import type { ProcessorModuleAction } from "./actions.js";
 import ProcessorModule_BaseOperations from "./base-operations/object.js";
 import { reducer } from "./reducer.js";
-import {
-  type ProcessorModuleDocument,
-  type ProcessorModuleLocalState,
-  type ProcessorModuleState,
+import type {
+  ProcessorModuleDocument,
+  ProcessorModuleLocalState,
+  ProcessorModuleState,
 } from "./types.js";
 import utils from "./utils.js";
 

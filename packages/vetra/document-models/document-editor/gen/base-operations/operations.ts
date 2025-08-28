@@ -1,11 +1,11 @@
-import { type SignalDispatch } from "document-model";
-import {
-  type SetEditorNameAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetEditorStatusAction,
+import type { SignalDispatch } from "document-model";
+import type {
+  SetEditorNameAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetEditorStatusAction,
 } from "./actions.js";
-import { type DocumentEditorState } from "../types.js";
+import type { DocumentEditorState } from "../types.js";
 
 export interface DocumentEditorBaseOperationsOperations {
   setEditorNameOperation: (

@@ -1,9 +1,10 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { updateHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
+import type { PackageManager } from "../utils/index.js";
 import {
   findContainerDirectory,
   getPackageManagerFromLockfile,
@@ -11,14 +12,9 @@ import {
   packageManagers,
   resolvePackageManagerOptions,
   withCustomHelp,
-  type PackageManager,
 } from "../utils/index.js";
-import {
-  ENV_MAP,
-  PH_PROJECT_DEPENDENCIES,
-  updatePackageJson,
-  type Environment,
-} from "./use.js";
+import type { Environment } from "./use.js";
+import { ENV_MAP, PH_PROJECT_DEPENDENCIES, updatePackageJson } from "./use.js";
 
 type PackageJson = {
   dependencies?: Record<string, string>;

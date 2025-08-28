@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { preview } from "vite";
 import { PH_DIR_NAME } from "../connect-utils/constants.js";
 import { CONNECT_BUILD_DIR_NAME } from "./constants.js";
-import { type ConnectPreviewOptions } from "./types.js";
+import type { ConnectPreviewOptions } from "./types.js";
 
 export async function previewConnect(options: ConnectPreviewOptions) {
   const {

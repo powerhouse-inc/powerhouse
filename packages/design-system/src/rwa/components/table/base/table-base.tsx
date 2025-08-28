@@ -1,9 +1,9 @@
-import {
-  Icon,
-  type SortDirection,
-  type TableBaseProps,
+import type {
+  SortDirection,
+  TableBaseProps,
 } from "@powerhousedao/design-system";
-import { type Order } from "natural-orderby";
+import { Icon } from "@powerhousedao/design-system";
+import type { Order } from "natural-orderby";
 
 import { forwardRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";

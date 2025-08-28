@@ -1,16 +1,16 @@
-import { type DriveEditorProps } from "@powerhousedao/reactor-browser";
+import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
-import { type Decorator, type Meta, type StoryObj } from "@storybook/react";
-import {
-  baseCreateDocument,
-  type Action,
-  type ActionContext,
-  type BaseStateFromDocument,
-  type CreateState,
-  type EditorProps,
-  type PHDocument,
-  type Reducer,
+import type { Decorator, Meta, StoryObj } from "@storybook/react";
+import type {
+  Action,
+  ActionContext,
+  BaseStateFromDocument,
+  CreateState,
+  EditorProps,
+  PHDocument,
+  Reducer,
 } from "document-model";
+import { baseCreateDocument } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 import { useDocumentReducer } from "./reducer.js";

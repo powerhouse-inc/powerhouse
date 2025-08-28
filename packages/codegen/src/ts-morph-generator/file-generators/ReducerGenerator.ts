@@ -1,16 +1,15 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
-import {
-  SyntaxKind,
-  VariableDeclarationKind,
-  type MethodDeclaration,
-  type ObjectLiteralExpression,
-  type SourceFile,
+import type {
+  MethodDeclaration,
+  ObjectLiteralExpression,
+  SourceFile,
 } from "ts-morph";
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import { FileGenerator } from "../core/FileGenerator.js";
-import {
-  type CodegenOperation,
-  type GenerationContext,
+import type {
+  CodegenOperation,
+  GenerationContext,
 } from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {

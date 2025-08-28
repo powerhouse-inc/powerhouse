@@ -1,3 +1,4 @@
+import type { TransformerType } from "@powerhousedao/design-system/ui";
 import {
   cn,
   Command,
@@ -10,7 +11,6 @@ import {
   PopoverAnchor,
   PopoverContent,
   sharedValueTransformers,
-  type TransformerType,
   ValueTransformer,
 } from "@powerhousedao/design-system/ui";
 import React, { useId, useMemo, useRef } from "react";

@@ -3,7 +3,8 @@ import {
   TooltipProvider,
   usePagination,
 } from "@powerhousedao/design-system";
-import { garbageCollect, type Operation, sortOperations } from "document-model";
+import type { Operation } from "document-model";
+import { garbageCollect, sortOperations } from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header/index.js";
 import { Timeline } from "./timeline/index.js";

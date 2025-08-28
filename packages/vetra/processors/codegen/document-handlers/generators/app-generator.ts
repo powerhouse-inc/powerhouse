@@ -1,8 +1,8 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
-import { type InternalTransmitterUpdate } from "document-drive";
-import { type DocumentModelDocument } from "document-model";
-import { type AppModuleState } from "../../../../document-models/app-module/index.js";
+import type { InternalTransmitterUpdate } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
+import type { AppModuleState } from "../../../../document-models/app-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 

@@ -1,12 +1,12 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  type AddDocumentTypeInput,
-  type DocumentEditorDocument,
-  type RemoveDocumentTypeInput,
-  actions,
+import type {
+  AddDocumentTypeInput,
+  DocumentEditorDocument,
+  RemoveDocumentTypeInput,
 } from "../../document-models/document-editor/index.js";
+import { actions } from "../../document-models/document-editor/index.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 
 export type IProps = EditorProps;

@@ -1,9 +1,9 @@
-import { type SignalDispatch } from "document-model";
-import {
-  type SetSubgraphNameAction,
-  type SetSubgraphStatusAction,
+import type { SignalDispatch } from "document-model";
+import type {
+  SetSubgraphNameAction,
+  SetSubgraphStatusAction,
 } from "./actions.js";
-import { type SubgraphModuleState } from "../types.js";
+import type { SubgraphModuleState } from "../types.js";
 
 export interface SubgraphModuleBaseOperationsOperations {
   setSubgraphNameOperation: (

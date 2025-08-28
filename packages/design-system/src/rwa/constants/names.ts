@@ -1,4 +1,4 @@
-import { type TableName } from "@powerhousedao/design-system";
+import type { TableName } from "@powerhousedao/design-system";
 
 const SERVICE_PROVIDER_FEE_TYPE = "SERVICE_PROVIDER_FEE_TYPE";
 const FIXED_INCOME_TYPE = "FIXED_INCOME_TYPE";

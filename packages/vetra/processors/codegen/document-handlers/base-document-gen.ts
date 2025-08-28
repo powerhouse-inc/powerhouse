@@ -1,6 +1,6 @@
-import { type InternalTransmitterUpdate } from "document-drive";
-import { type DocumentModelDocument } from "document-model";
-import { type Config } from "./types.js";
+import type { InternalTransmitterUpdate } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
+import type { Config } from "./types.js";
 
 /**
  * Abstract base class for document generators

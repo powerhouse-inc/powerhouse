@@ -5,11 +5,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import {
-  type ModalPropsMapping,
-  type ModalType,
-  modals,
-} from "@powerhousedao/connect";
+import type { ModalPropsMapping, ModalType } from "@powerhousedao/connect";
+import { modals } from "@powerhousedao/connect";
 
 type MapModalProps<T> = {
   [K in keyof T]: Omit<T[K], "open" | "onClose"> & { onClose?: () => void };

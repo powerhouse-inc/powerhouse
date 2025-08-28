@@ -1,8 +1,5 @@
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
-} from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 
 export interface IPackageLoader {

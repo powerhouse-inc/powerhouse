@@ -1,9 +1,6 @@
-import {
-  type DivProps,
-  Modal,
-  mergeClassNameProps,
-} from "@powerhousedao/design-system";
-import { type ComponentPropsWithoutRef } from "react";
+import type { DivProps } from "@powerhousedao/design-system";
+import { Modal, mergeClassNameProps } from "@powerhousedao/design-system";
+import type { ComponentPropsWithoutRef } from "react";
 
 import { twMerge } from "tailwind-merge";
 

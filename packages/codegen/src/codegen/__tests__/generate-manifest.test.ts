@@ -1,6 +1,6 @@
-import {
-  type PartialPowerhouseManifest,
-  type PowerhouseManifest,
+import type {
+  PartialPowerhouseManifest,
+  PowerhouseManifest,
 } from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";

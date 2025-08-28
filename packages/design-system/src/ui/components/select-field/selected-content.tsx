@@ -1,5 +1,7 @@
-import { Icon, type IconName } from "@powerhousedao/design-system";
-import { cn, type SelectProps } from "@powerhousedao/design-system/ui";
+import type { IconName } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
+import type { SelectProps } from "@powerhousedao/design-system/ui";
+import { cn } from "@powerhousedao/design-system/ui";
 import React from "react";
 
 interface SelectedContentProps {

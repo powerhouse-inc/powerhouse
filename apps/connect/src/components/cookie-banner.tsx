@@ -1,7 +1,5 @@
-import {
-  type CookieInput,
-  CookieBanner as PHCookieBanner,
-} from "@powerhousedao/design-system";
+import type { CookieInput } from "@powerhousedao/design-system";
+import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system";
 import { Trans, useTranslation } from "react-i18next";
 import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
 import { useCookieBanner } from "../hooks/useCookiebanner.js";

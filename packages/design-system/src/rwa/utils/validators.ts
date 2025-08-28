@@ -1,11 +1,11 @@
-import {
-  type Asset,
-  assetGroupTransactions,
-  type AssetGroupTransactionType,
-  type CashAsset,
-  type FixedIncome,
-  type GroupTransactionType,
+import type {
+  Asset,
+  AssetGroupTransactionType,
+  CashAsset,
+  FixedIncome,
+  GroupTransactionType,
 } from "@powerhousedao/design-system";
+import { assetGroupTransactions } from "@powerhousedao/design-system";
 
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,

@@ -1,4 +1,3 @@
-import type { hash } from "crypto";
 import type {
   BaseStateFromDocument,
   PHDocumentHeader,

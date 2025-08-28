@@ -2,10 +2,10 @@ import type {
   FieldErrorHandling,
   WithDifference,
 } from "@powerhousedao/design-system/ui";
+import type { TextInputProps } from "@powerhousedao/design-system/ui";
 import {
   TextInput,
   withFieldValidation,
-  type TextInputProps,
 } from "@powerhousedao/design-system/ui";
 
 export type TextFieldProps = TextInputProps &

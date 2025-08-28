@@ -1,12 +1,12 @@
 import { Icon } from "@powerhousedao/design-system";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import {
-  DocumentTimeline,
-  type DocumentTimelineProps,
-  type TimelineBarItem,
-  type TimelineDividerItem,
+import type {
+  DocumentTimelineProps,
+  TimelineBarItem,
+  TimelineDividerItem,
 } from "../document-timeline/document-timeline.js";
+import { DocumentTimeline } from "../document-timeline/document-timeline.js";
 
 export type DocumentToolbarProps = {
   title?: string;

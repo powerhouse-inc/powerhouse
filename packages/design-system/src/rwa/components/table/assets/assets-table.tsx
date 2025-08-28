@@ -1,7 +1,7 @@
+import type { TableColumn } from "@powerhousedao/design-system";
 import {
   RWATableCell,
   RWATableRow,
-  type TableColumn,
   TableWithForm,
   handleTableDatum,
   sumTotalForProperty,

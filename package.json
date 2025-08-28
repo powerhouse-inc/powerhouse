@@ -6,6 +6,7 @@
     "prepare": "husky",
     "tsc": "tsc --build",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --cache --cache-strategy content",
+    "lint:types": "eslint clis/ph-cmd --fix --rule 'all:off' --rule \"{@typescript-eslint/consistent-type-imports:[error,{prefer:no-type-imports,disallowTypeAnnotations:true,fixStyle:separate-type-imports}]}\" && eslint clis/ph-cmd --fix --rule 'all:off' --rule \"{@typescript-eslint/consistent-type-imports:[error,{prefer:type-imports,disallowTypeAnnotations:true,fixStyle:separate-type-imports}]}\"",
     "generate-document-drive-prisma": "pnpm --filter document-drive prisma-generate",
     "build:misc": "pnpm --filter !academy -r --no-bail build",
     "build:css": "pnpm -r --no-bail build:css",

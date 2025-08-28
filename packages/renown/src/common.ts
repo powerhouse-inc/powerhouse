@@ -1,12 +1,12 @@
-import { type Issuer } from "did-jwt-vc";
+import type { Issuer } from "did-jwt-vc";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
-import {
-  type IRenown,
-  type PowerhouseVerifiableCredential,
-  type RenownEventEmitter,
-  type RenownEvents,
-  type RenownStorage,
-  type User,
+import type {
+  IRenown,
+  PowerhouseVerifiableCredential,
+  RenownEventEmitter,
+  RenownEvents,
+  RenownStorage,
+  User,
 } from "./types.js";
 import {
   createAuthBearerToken,

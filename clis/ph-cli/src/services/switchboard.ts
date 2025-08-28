@@ -1,8 +1,6 @@
 import { getConfig } from "@powerhousedao/config";
-import {
-  type StartServerOptions,
-  startSwitchboard as startSwitchboardServer,
-} from "@powerhousedao/switchboard/server";
+import type { StartServerOptions } from "@powerhousedao/switchboard/server";
+import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import path from "node:path";
 
 const defaultSwitchboardOptions: Partial<StartServerOptions> = {

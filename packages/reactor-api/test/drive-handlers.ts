@@ -1,5 +1,6 @@
-import { type IDocumentDriveServer } from "document-drive";
-import { graphql, type GraphQLQuery, HttpResponse } from "msw";
+import type { IDocumentDriveServer } from "document-drive";
+import type { GraphQLQuery } from "msw";
+import { graphql, HttpResponse } from "msw";
 import { DriveSubgraph } from "@powerhousedao/reactor-api";
 
 export const createDriveHandlers = (

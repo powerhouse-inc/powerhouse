@@ -1,17 +1,17 @@
-import { type SignalDispatch } from "document-model";
-import {
-  type SetPackageNameAction,
-  type SetPackageDescriptionAction,
-  type SetPackageCategoryAction,
-  type SetPackageAuthorAction,
-  type SetPackageAuthorNameAction,
-  type SetPackageAuthorWebsiteAction,
-  type AddPackageKeywordAction,
-  type RemovePackageKeywordAction,
-  type SetPackageGithubUrlAction,
-  type SetPackageNpmUrlAction,
+import type { SignalDispatch } from "document-model";
+import type {
+  SetPackageNameAction,
+  SetPackageDescriptionAction,
+  SetPackageCategoryAction,
+  SetPackageAuthorAction,
+  SetPackageAuthorNameAction,
+  SetPackageAuthorWebsiteAction,
+  AddPackageKeywordAction,
+  RemovePackageKeywordAction,
+  SetPackageGithubUrlAction,
+  SetPackageNpmUrlAction,
 } from "./actions.js";
-import { type VetraPackageState } from "../types.js";
+import type { VetraPackageState } from "../types.js";
 
 export interface VetraPackageBaseOperationsOperations {
   setPackageNameOperation: (

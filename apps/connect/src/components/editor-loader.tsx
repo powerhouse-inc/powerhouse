@@ -1,10 +1,6 @@
 import { DefaultEditorLoader } from "@powerhousedao/design-system";
-import {
-  type ComponentProps,
-  type ReactNode,
-  useEffect,
-  useState,
-} from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 type Props = ComponentProps<typeof DefaultEditorLoader> & {
   loadingTimeout?: number;

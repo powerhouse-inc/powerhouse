@@ -1,14 +1,16 @@
+import type {
+  AddPublicDriveFormProps,
+  AddRemoteDriveInput,
+  DivProps,
+} from "@powerhousedao/design-system";
 import {
-  type AddPublicDriveFormProps,
   AddRemoteDriveForm,
-  type AddRemoteDriveInput,
   Divider,
-  type DivProps,
   Icon,
   Modal,
 } from "@powerhousedao/design-system";
-import { type SharingType } from "document-drive";
-import { type ComponentPropsWithoutRef } from "react";
+import type { SharingType } from "document-drive";
+import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;

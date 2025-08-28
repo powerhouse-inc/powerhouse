@@ -1,4 +1,4 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { helpCommand } from "./help.js";
 import { initCommand } from "./init.js";
 import { setupGlobalsCommand } from "./setup-globals.js";

@@ -1,5 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item/index.js";
 import { HomeScreenItem } from "./home-screen-item/index.js";
 import { HomeScreen } from "./home-screen.js";

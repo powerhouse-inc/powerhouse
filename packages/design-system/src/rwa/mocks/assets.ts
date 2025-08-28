@@ -1,8 +1,8 @@
-import {
-  type Asset,
-  type CashAsset,
-  type FixedIncomeType,
-  type SPV,
+import type {
+  Asset,
+  CashAsset,
+  FixedIncomeType,
+  SPV,
 } from "@powerhousedao/design-system";
 
 export const mockPrincipalLenderAccountId = "principal-lender-account-id";

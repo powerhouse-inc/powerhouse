@@ -1,13 +1,13 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
 import { uninstallHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
+import type { PackageManager } from "../utils.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-  type PackageManager,
   packageManagers,
   removeStylesImports,
   setCustomHelp,

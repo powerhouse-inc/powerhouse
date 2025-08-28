@@ -1,7 +1,5 @@
-import {
-  type ConnectStudioOptions,
-  startConnectStudio,
-} from "@powerhousedao/builder-tools";
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import { startConnectStudio } from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config";
 import { readFileSync } from "fs";
 

@@ -1,5 +1,6 @@
 import { Icon, fixedForwardRef } from "@powerhousedao/design-system";
-import { type CSSProperties, type ForwardedRef, useState } from "react";
+import type { CSSProperties, ForwardedRef } from "react";
+import { useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 export type SelectItem<TValue extends string> = {

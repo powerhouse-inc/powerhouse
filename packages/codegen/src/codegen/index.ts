@@ -1,14 +1,11 @@
-import {
-  type PartialPowerhouseManifest,
-  type PowerhouseConfig,
-  type PowerhouseManifest,
+import type {
+  PartialPowerhouseManifest,
+  PowerhouseConfig,
+  PowerhouseManifest,
 } from "@powerhousedao/config";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
-import {
-  type DocumentModelModule,
-  type DocumentModelState,
-} from "document-model";
+import type { DocumentModelModule, DocumentModelState } from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";

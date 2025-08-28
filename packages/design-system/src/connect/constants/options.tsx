@@ -1,10 +1,10 @@
-import {
-  Icon,
-  type DebugNodeOption,
-  type NodeOption,
-  type NormalNodeOption,
-  type OptionMetadata,
+import type {
+  DebugNodeOption,
+  NodeOption,
+  NormalNodeOption,
+  OptionMetadata,
 } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";

@@ -1,8 +1,8 @@
-import {
-  type AddLocalDriveInput,
-  type AddRemoteDriveInput,
-  AddDriveModal as ConnectAddLocalDriveModal,
+import type {
+  AddLocalDriveInput,
+  AddRemoteDriveInput,
 } from "@powerhousedao/design-system";
+import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system";
 import {
   useConnectCrypto,
   useDriveEditorModules,

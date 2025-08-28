@@ -1,9 +1,9 @@
 import { useModal } from "@powerhousedao/connect";
-import {
-  toast,
-  type AddLocalDriveInput,
-  type AddRemoteDriveInput,
+import type {
+  AddLocalDriveInput,
+  AddRemoteDriveInput,
 } from "@powerhousedao/design-system";
+import { toast } from "@powerhousedao/design-system";
 import {
   addDrive,
   addRemoteDrive,
@@ -19,11 +19,7 @@ import {
   useSelectedDrive,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
-import {
-  type DocumentDriveDocument,
-  type Node,
-  type SharingType,
-} from "document-drive";
+import type { DocumentDriveDocument, Node, SharingType } from "document-drive";
 import { t } from "i18next";
 import { useCallback } from "react";
 

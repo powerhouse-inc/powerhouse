@@ -1,4 +1,4 @@
-import { type Manifest } from "document-model";
+import type { Manifest } from "document-model";
 import fs from "node:fs";
 import { getProjectInfo } from "../utils.js";
 

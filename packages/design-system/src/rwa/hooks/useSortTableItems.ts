@@ -1,5 +1,6 @@
-import { type Item, type TableItem } from "@powerhousedao/design-system";
-import { type Identifier, type Order, orderBy } from "natural-orderby";
+import type { Item, TableItem } from "@powerhousedao/design-system";
+import type { Identifier, Order } from "natural-orderby";
+import { orderBy } from "natural-orderby";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**

@@ -1,7 +1,7 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { devHelp } from "../help.js";
-import { type DevOptions } from "../services/dev.js";
-import { type CommandActionType } from "../types.js";
+import type { DevOptions } from "../services/dev.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startDev(options: DevOptions) {

@@ -1,17 +1,19 @@
+import type {
+  DefaultRemoteDriveInput,
+  DocumentDriveServerOptions,
+  IDocumentAdminStorage,
+  IDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+} from "document-drive";
 import {
   EventQueueManager,
   BrowserStorage,
-  type DefaultRemoteDriveInput,
-  type DocumentDriveServerOptions,
-  type IDocumentAdminStorage,
-  type IDocumentDriveServer,
-  type IDocumentOperationStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
   InMemoryCache,
   ReactorBuilder,
 } from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
 const DEFAULT_DRIVES_URL =

@@ -1,17 +1,17 @@
 import { useMemo } from "react";
 import { allGroupTransactionTypes, tableNames } from "../constants/index.js";
-import {
-  type Account,
-  type AccountFormInputs,
-  type AssetFormInputs,
-  type FixedIncomeType,
-  type FixedIncomeTypeFormInputs,
-  type GroupTransactionFormInputs,
-  type ServiceProviderFeeTypeFormInputs,
-  type SPV,
-  type SPVFormInputs,
-  type TableItemType,
-  type TableName,
+import type {
+  Account,
+  AccountFormInputs,
+  AssetFormInputs,
+  FixedIncomeType,
+  FixedIncomeTypeFormInputs,
+  GroupTransactionFormInputs,
+  ServiceProviderFeeTypeFormInputs,
+  SPV,
+  SPVFormInputs,
+  TableItemType,
+  TableName,
 } from "../types/index.js";
 import { isoDateStringToDateInput } from "../utils/index.js";
 

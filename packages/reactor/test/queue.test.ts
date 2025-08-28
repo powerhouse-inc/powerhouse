@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
-import { type IEventBus } from "../src/events/interfaces.js";
-import { type IQueue } from "../src/queue/interfaces.js";
+import type { IEventBus } from "../src/events/interfaces.js";
+import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
-import {
-  QueueEventTypes,
-  type Job,
-  type JobAvailableEvent,
-} from "../src/queue/types.js";
-import { type Operation } from "../src/shared/types.js";
+import type { Job, JobAvailableEvent } from "../src/queue/types.js";
+import { QueueEventTypes } from "../src/queue/types.js";
+import type { Operation } from "../src/shared/types.js";
 
 describe("InMemoryQueue", () => {
   let queue: IQueue;

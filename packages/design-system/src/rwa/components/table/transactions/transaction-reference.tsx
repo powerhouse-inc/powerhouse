@@ -1,16 +1,14 @@
+import type { GroupTransactionFormInputs } from "@powerhousedao/design-system";
 import {
   getIsTransaction,
-  type GroupTransactionFormInputs,
   RWATableTextInput,
   Tooltip,
   TooltipProvider,
 } from "@powerhousedao/design-system";
-import {
-  type ComponentPropsWithRef,
-  type ForwardedRef,
-  forwardRef,
-} from "react";
-import { type Control, useWatch } from "react-hook-form";
+import type { ComponentPropsWithRef, ForwardedRef } from "react";
+import { forwardRef } from "react";
+import type { Control } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
 export const TransactionReference = forwardRef(function TransactionReference(
   props: ComponentPropsWithRef<typeof RWATableTextInput> & {

@@ -1,10 +1,12 @@
-import { build, type BuildResult } from "esbuild";
+import type { BuildResult } from "esbuild";
+import { build } from "esbuild";
 import fg from "fast-glob";
 import fs from "node:fs/promises";
 import { builtinModules } from "node:module";
 import path from "node:path";
-import { exports, type Package } from "resolve.exports";
-import { type PluginOption } from "vite";
+import type { Package } from "resolve.exports";
+import { exports } from "resolve.exports";
+import type { PluginOption } from "vite";
 import { findPackageJson } from "./base.js";
 
 export type Provider = "node_modules" | "esm.sh";

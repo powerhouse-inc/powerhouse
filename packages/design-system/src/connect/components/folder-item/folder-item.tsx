@@ -1,3 +1,8 @@
+import type {
+  NodeOption,
+  SyncStatus,
+  TNodeActions,
+} from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
   defaultFolderOptions,
@@ -5,18 +10,15 @@ import {
   DUPLICATE,
   Icon,
   NodeInput,
-  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  type SyncStatus,
   SyncStatusIcon,
-  type TNodeActions,
   useDrag,
   useDrop,
   WRITE,
 } from "@powerhousedao/design-system";
-import { type FolderNode, type Node, type SharingType } from "document-drive";
+import type { FolderNode, Node, SharingType } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 

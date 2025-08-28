@@ -1,5 +1,5 @@
-import { type InternalTransmitterUpdate } from "document-drive";
-import { type DocumentModelDocument } from "document-model";
+import type { InternalTransmitterUpdate } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
 import { createInterface } from "readline";
 import { logger } from "./logger.js";
 

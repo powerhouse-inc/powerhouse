@@ -9,12 +9,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import {
-  defineConfig,
-  type HtmlTagDescriptor,
-  loadEnv,
-  type PluginOption,
-} from "vite";
+import type { HtmlTagDescriptor, PluginOption } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { viteEnvs } from "vite-envs";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";

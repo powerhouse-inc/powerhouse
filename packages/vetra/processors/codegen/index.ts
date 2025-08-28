@@ -1,9 +1,9 @@
 import { getConfig } from "@powerhousedao/config";
-import { type IProcessor } from "document-drive";
-import { type InternalTransmitterUpdate } from "document-drive";
-import { type DocumentModelDocument } from "document-model";
+import type { IProcessor } from "document-drive";
+import type { InternalTransmitterUpdate } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
-import { type DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
+import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { logger } from "./logger.js";
 
 const PH_CONFIG = getConfig();

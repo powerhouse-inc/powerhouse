@@ -1,5 +1,5 @@
+import type { DocumentModelUtils } from "document-model";
 import {
-  type DocumentModelUtils,
   baseCreateDocument,
   baseSaveToFile,
   baseSaveToFileHandle,
@@ -8,10 +8,10 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model";
-import {
-  type DocumentEditorDocument,
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
+import type {
+  DocumentEditorDocument,
+  DocumentEditorState,
+  DocumentEditorLocalState,
 } from "./types.js";
 import { reducer } from "./reducer.js";
 

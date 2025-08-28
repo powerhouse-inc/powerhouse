@@ -1,6 +1,6 @@
 import type { ModuleSpecification } from "document-model";
 import { useCallback } from "react";
-import { type DocumentActionHandlers } from "../types/documents.js";
+import type { DocumentActionHandlers } from "../types/documents.js";
 import { ensureValidOperationSchemaInputName } from "../utils/linting.js";
 import { GraphqlEditor } from "./code-editors/graphql-editor.js";
 import { OperationDescriptionForm } from "./operation-description-form.js";

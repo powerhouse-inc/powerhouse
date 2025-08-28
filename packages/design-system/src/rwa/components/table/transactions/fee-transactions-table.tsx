@@ -1,16 +1,14 @@
+import type {
+  GroupTransactionFormInputs,
+  ServiceProviderFeeType,
+} from "@powerhousedao/design-system";
 import {
-  type GroupTransactionFormInputs,
   Icon,
   RWANumberInput,
   RWATableSelect,
-  type ServiceProviderFeeType,
 } from "@powerhousedao/design-system";
-import {
-  type Control,
-  type FieldErrors,
-  type Path,
-  useFieldArray,
-} from "react-hook-form";
+import type { Control, FieldErrors, Path } from "react-hook-form";
+import { useFieldArray } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 type Props = {

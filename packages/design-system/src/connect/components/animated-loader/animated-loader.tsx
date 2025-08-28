@@ -1,6 +1,7 @@
 import ConnectLoaderVideo from "#assets/connect-loader.mp4";
-import { getDimensions, type Size } from "@powerhousedao/design-system";
-import { type ComponentPropsWithoutRef, type CSSProperties } from "react";
+import type { Size } from "@powerhousedao/design-system";
+import { getDimensions } from "@powerhousedao/design-system";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
 type Props = ComponentPropsWithoutRef<"video"> & {
   readonly size?: Size;

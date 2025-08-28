@@ -10,7 +10,7 @@ import {
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { type PHDocument } from "document-model";
+import type { PHDocument } from "document-model";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useModal } from "../components/modal/index.js";

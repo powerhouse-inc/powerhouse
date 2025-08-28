@@ -1,4 +1,4 @@
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { DependencyVersions } from "./dependency-versions.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import mockPackageJson from "./mock-package-json.json";

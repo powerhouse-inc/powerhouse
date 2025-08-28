@@ -26,7 +26,7 @@ import {
   bundleExternalPackages,
   copyAssets,
 } from "./helpers.js";
-import { type ConnectBuildOptions } from "./types.js";
+import type { ConnectBuildOptions } from "./types.js";
 
 /** Builds Connect with a given project's local and external packages included
  * @see {@link ConnectBuildOptions} for options

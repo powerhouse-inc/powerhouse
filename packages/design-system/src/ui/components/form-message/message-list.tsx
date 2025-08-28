@@ -1,6 +1,7 @@
 import { cn } from "@powerhousedao/design-system/ui";
 
-import { FormMessage, type FormMessageType } from "./form-message.js";
+import type { FormMessageType } from "./form-message.js";
+import { FormMessage } from "./form-message.js";
 
 interface FormMessageListProps {
   messages: string[];

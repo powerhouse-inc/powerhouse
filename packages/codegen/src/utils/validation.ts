@@ -1,4 +1,4 @@
-import { type DocumentModelState } from "document-model";
+import type { DocumentModelState } from "document-model";
 
 /**
  * Validation result for DocumentModelState code generation requirements

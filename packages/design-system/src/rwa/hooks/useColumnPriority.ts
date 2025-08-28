@@ -1,6 +1,6 @@
-import {
-  type ColumnCountByTableWidth,
-  type TableColumn,
+import type {
+  ColumnCountByTableWidth,
+  TableColumn,
 } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useState } from "react";
 

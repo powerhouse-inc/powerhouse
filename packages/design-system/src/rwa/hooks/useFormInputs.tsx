@@ -1,32 +1,35 @@
+import type {
+  Account,
+  FormInputsByTableName,
+  Operation,
+  TableItemType,
+  TableName,
+} from "@powerhousedao/design-system";
 import {
-  type Account,
   allGroupTransactionTypes,
   assetGroupTransactions,
   feesTransactions,
   FeeTransactionsTable,
   formatDateForDisplay,
-  type FormInputsByTableName,
   groupTransactionTypeLabels,
   handleTableDatum,
   makeFixedIncomeOptionLabel,
-  type Operation,
   RWANumberInput,
   RWATableSelect,
   RWATableTextInput,
-  type TableItemType,
-  type TableName,
   tableNames,
   TransactionReference,
   UnitPrice,
   useEditorContext,
   useModal,
 } from "@powerhousedao/design-system";
-import { type ReactElement, type ReactNode, useCallback, useMemo } from "react";
-import {
-  type Control,
-  type FormState,
-  type UseFormRegister,
-  type UseFormWatch,
+import type { ReactElement, ReactNode } from "react";
+import { useCallback, useMemo } from "react";
+import type {
+  Control,
+  FormState,
+  UseFormRegister,
+  UseFormWatch,
 } from "react-hook-form";
 import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
 import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";

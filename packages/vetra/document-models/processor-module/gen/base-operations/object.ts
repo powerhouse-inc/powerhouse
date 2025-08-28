@@ -1,12 +1,12 @@
 import { BaseDocumentClass } from "document-model";
-import {
-  type SetProcessorNameInput,
-  type SetProcessorTypeInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetProcessorStatusInput,
-  type ProcessorModuleState,
-  type ProcessorModuleLocalState,
+import type {
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetProcessorStatusInput,
+  ProcessorModuleState,
+  ProcessorModuleLocalState,
 } from "../types.js";
 import {
   setProcessorName,
@@ -15,7 +15,7 @@ import {
   removeDocumentType,
   setProcessorStatus,
 } from "./creators.js";
-import { type ProcessorModuleAction } from "../actions.js";
+import type { ProcessorModuleAction } from "../actions.js";
 
 export default class ProcessorModule_BaseOperations extends BaseDocumentClass<
   ProcessorModuleState,

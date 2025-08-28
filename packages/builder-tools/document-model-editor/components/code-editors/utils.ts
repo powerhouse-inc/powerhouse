@@ -18,14 +18,11 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language";
-import {
-  type Diagnostic,
-  forceLinting,
-  linter,
-  lintKeymap,
-} from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
+import { forceLinting, linter, lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
+import type { ViewUpdate } from "@codemirror/view";
 import {
   crosshairCursor,
   drawSelection,
@@ -36,10 +33,10 @@ import {
   highlightSpecialChars,
   lineNumbers,
   rectangularSelection,
-  type ViewUpdate,
 } from "@codemirror/view";
 import { filterSchema } from "@graphql-tools/utils";
-import { GraphQLError, type GraphQLSchema, locatedError } from "graphql";
+import type { GraphQLSchema } from "graphql";
+import { GraphQLError, locatedError } from "graphql";
 import { validateSDL } from "graphql/validation/validate.js";
 import { useEffect, useRef } from "react";
 import { updateTimeout } from "../../constants/documents.js";

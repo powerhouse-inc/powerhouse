@@ -1,4 +1,5 @@
-import { getEnsInfo, type ENSInfo } from "@powerhousedao/connect";
+import type { ENSInfo } from "@powerhousedao/connect";
+import { getEnsInfo } from "@powerhousedao/connect";
 import { useEffect, useMemo, useState } from "react";
 
 export function useENSInfo(

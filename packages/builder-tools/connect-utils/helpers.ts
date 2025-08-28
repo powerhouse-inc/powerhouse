@@ -1,10 +1,10 @@
-import { type PowerhouseConfig } from "@powerhousedao/config";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { exec, execSync } from "node:child_process";
 import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import { type Plugin } from "vite";
+import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
 export function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation

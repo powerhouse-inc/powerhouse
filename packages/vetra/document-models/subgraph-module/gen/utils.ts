@@ -1,5 +1,5 @@
+import type { DocumentModelUtils } from "document-model";
 import {
-  type DocumentModelUtils,
   baseCreateDocument,
   baseSaveToFile,
   baseSaveToFileHandle,
@@ -8,10 +8,10 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model";
-import {
-  type SubgraphModuleDocument,
-  type SubgraphModuleState,
-  type SubgraphModuleLocalState,
+import type {
+  SubgraphModuleDocument,
+  SubgraphModuleState,
+  SubgraphModuleLocalState,
 } from "./types.js";
 import { reducer } from "./reducer.js";
 

@@ -1,12 +1,12 @@
-import { type SignalDispatch } from "document-model";
-import {
-  type SetProcessorNameAction,
-  type SetProcessorTypeAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetProcessorStatusAction,
+import type { SignalDispatch } from "document-model";
+import type {
+  SetProcessorNameAction,
+  SetProcessorTypeAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetProcessorStatusAction,
 } from "./actions.js";
-import { type ProcessorModuleState } from "../types.js";
+import type { ProcessorModuleState } from "../types.js";
 
 export interface ProcessorModuleBaseOperationsOperations {
   setProcessorNameOperation: (

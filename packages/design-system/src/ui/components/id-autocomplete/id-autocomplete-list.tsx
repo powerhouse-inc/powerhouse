@@ -6,7 +6,7 @@ import {
   CommandList,
 } from "@powerhousedao/design-system/ui";
 import { useCommandState } from "cmdk";
-import type React from "react";
+import React from "react";
 import { useEffect } from "react";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";

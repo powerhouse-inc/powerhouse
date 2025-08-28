@@ -9,11 +9,8 @@ import {
   useDrives,
 } from "@powerhousedao/reactor-browser";
 import { getDriveIdBySlug } from "@powerhousedao/reactor-browser";
-import {
-  logger,
-  type PullResponderTrigger,
-  type Trigger,
-} from "document-drive";
+import type { PullResponderTrigger, Trigger } from "document-drive";
+import { logger } from "document-drive";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 export type ClientErrorHandler = {

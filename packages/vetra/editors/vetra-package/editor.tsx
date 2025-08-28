@@ -1,10 +1,8 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  type VetraPackageDocument,
-  actions,
-} from "../../document-models/vetra-package/index.js";
+import type { VetraPackageDocument } from "../../document-models/vetra-package/index.js";
+import { actions } from "../../document-models/vetra-package/index.js";
 import { MetaForm } from "./components/MetaForm.js";
 
 export type IProps = EditorProps;

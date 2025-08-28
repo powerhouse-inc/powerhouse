@@ -3,6 +3,7 @@ import type {
   SharingType,
   Trigger,
 } from "document-drive";
+import type { Action } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedDriveIdEvent,
@@ -14,7 +15,6 @@ import {
   getDriveSharingType,
 } from "../utils/drives.js";
 import { useDispatch } from "./dispatch.js";
-import type { PHDocument, Action } from "document-model";
 
 /** Returns the drives for a reactor. */
 export function useDrives(): DocumentDriveDocument[] | undefined {

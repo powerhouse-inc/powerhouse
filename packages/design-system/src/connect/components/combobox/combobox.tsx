@@ -1,11 +1,11 @@
 import { Icon } from "@powerhousedao/design-system";
-import { type ComponentPropsWithoutRef, type ReactNode } from "react";
-import Select, {
-  type ClearIndicatorProps,
-  type DropdownIndicatorProps,
-  type MenuListProps,
-  components,
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type {
+  ClearIndicatorProps,
+  DropdownIndicatorProps,
+  MenuListProps,
 } from "react-select";
+import Select, { components } from "react-select";
 
 type SelectProps = ComponentPropsWithoutRef<typeof Select>;
 

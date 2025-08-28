@@ -2,7 +2,7 @@ import { Kind } from "graphql";
 import { useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
-import { type Scope } from "../types/documents.js";
+import type { Scope } from "../types/documents.js";
 import {
   makeInitialSchemaDoc,
   makeMinimalObjectForStateType,

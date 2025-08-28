@@ -1,6 +1,6 @@
 import { ConnectDeleteItemModal } from "@powerhousedao/design-system";
 import { useNodeKind, useNodeName } from "@powerhousedao/reactor-browser";
-import type React from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 
 export interface DeleteItemModalProps {

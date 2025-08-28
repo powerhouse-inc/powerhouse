@@ -58,7 +58,7 @@ export type Scalars = {
 
 export type AppModuleState = {
   name: Scalars["String"]["output"];
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type SetAppNameInput = {
@@ -66,7 +66,7 @@ export type SetAppNameInput = {
 };
 
 export type SetAppStatusInput = {
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type StatusType = "CONFIRMED" | "DRAFT";

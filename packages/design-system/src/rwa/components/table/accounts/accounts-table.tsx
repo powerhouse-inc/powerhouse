@@ -1,8 +1,8 @@
+import type { TableColumn } from "@powerhousedao/design-system";
 import {
   Icon,
   tableNames,
   useEditorContext,
-  type TableColumn,
 } from "@powerhousedao/design-system";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";

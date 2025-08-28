@@ -3,7 +3,7 @@ import {
   useDriveAvailableOffline,
   useDriveSharingType,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentDriveDocument, type SharingType } from "document-drive";
+import type { DocumentDriveDocument, SharingType } from "document-drive";
 
 type Props = {
   drive: DocumentDriveDocument;

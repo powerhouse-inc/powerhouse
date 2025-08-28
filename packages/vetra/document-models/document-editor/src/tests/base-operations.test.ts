@@ -7,12 +7,12 @@ import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import {
-  z,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetEditorNameInput,
+import type {
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetEditorNameInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import type { DocumentEditorDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 

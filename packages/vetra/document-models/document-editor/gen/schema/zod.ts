@@ -6,7 +6,6 @@ import type {
   RemoveDocumentTypeInput,
   SetEditorNameInput,
   SetEditorStatusInput,
-  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{

@@ -1,15 +1,17 @@
+import type {
+  SortDirection,
+  TableColumn,
+  TableItemType,
+  TableName,
+  TableProps,
+} from "@powerhousedao/design-system";
 import {
   Icon,
   ItemNumberCell,
   MoreDetailsCell,
   RWATableCell,
   RWATableRow,
-  type SortDirection,
   TableBase,
-  type TableColumn,
-  type TableItemType,
-  type TableName,
-  type TableProps,
   columnsByTableName,
   defaultColumnCountByTableWidth,
   handleTableDatum,

@@ -1,11 +1,7 @@
 import { getAuthenticatedDID } from "@didtools/key-did";
 import { EdDSASigner } from "did-jwt";
-import {
-  createVerifiableCredentialJwt,
-  verifyCredential,
-  type Issuer,
-  type JwtCredentialPayload,
-} from "did-jwt-vc";
+import type { Issuer, JwtCredentialPayload } from "did-jwt-vc";
+import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
 export type PKHDid = {

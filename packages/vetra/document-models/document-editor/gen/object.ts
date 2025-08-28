@@ -1,16 +1,12 @@
-import {
-  applyMixins,
-  BaseDocumentClass,
-  type BaseStateFromDocument,
-  type SignalDispatch,
-} from "document-model";
-import { type DocumentEditorAction } from "./actions.js";
+import type { BaseStateFromDocument, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocumentClass } from "document-model";
+import type { DocumentEditorAction } from "./actions.js";
 import DocumentEditor_BaseOperations from "./base-operations/object.js";
 import { reducer } from "./reducer.js";
-import {
-  type DocumentEditorDocument,
-  type DocumentEditorLocalState,
-  type DocumentEditorState,
+import type {
+  DocumentEditorDocument,
+  DocumentEditorLocalState,
+  DocumentEditorState,
 } from "./types.js";
 import utils from "./utils.js";
 

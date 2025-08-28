@@ -1,8 +1,5 @@
-import {
-  type FormHookProps,
-  useFormInputs,
-  useSubmit,
-} from "@powerhousedao/design-system";
+import type { FormHookProps } from "@powerhousedao/design-system";
+import { useFormInputs, useSubmit } from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export function useTableForm(props: FormHookProps) {

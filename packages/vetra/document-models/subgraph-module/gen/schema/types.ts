@@ -61,12 +61,12 @@ export type SetSubgraphNameInput = {
 };
 
 export type SetSubgraphStatusInput = {
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type StatusType = "CONFIRMED" | "DRAFT";
 
 export type SubgraphModuleState = {
   name: Scalars["String"]["output"];
-  status: StatusType | StatusType;
+  status: StatusType;
 };

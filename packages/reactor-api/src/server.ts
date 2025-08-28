@@ -1,39 +1,42 @@
-import { type PGlite } from "@electric-sql/pglite";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { PGlite } from "@electric-sql/pglite";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   GraphQLManager,
   renderGraphqlPlayground,
-  type SubgraphClass,
 } from "@powerhousedao/reactor-api";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  IProcessorHostModule,
+  IProcessorManager,
+  IRelationalDb,
+  ProcessorFactory,
+} from "document-drive";
 import {
   childLogger,
   createRelationalDb,
   ProcessorManager,
-  type DocumentDriveDocument,
-  type IDocumentDriveServer,
-  type IProcessorHostModule,
-  type IProcessorManager,
-  type IRelationalDb,
-  type ProcessorFactory,
 } from "document-drive";
-import express, { type Express } from "express";
+import type { Express } from "express";
+import express from "express";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
-import { type TlsOptions } from "node:tls";
-import { type Pool } from "pg";
+import type { TlsOptions } from "node:tls";
+import type { Pool } from "pg";
 import { config } from "./config.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
   PackageManager,
 } from "./packages/package-manager.js";
-import { type API, type IPackageLoader, type Processor } from "./types.js";
+import type { API, IPackageLoader, Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);

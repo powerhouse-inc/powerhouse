@@ -4,16 +4,18 @@ import {
   MemoryStorage,
 } from "document-drive";
 
+import type {
+  DriveInput,
+  ICache,
+  IDocumentDriveServer,
+  IDriveOperationStorage,
+} from "document-drive";
 import {
   BrowserStorage,
   FilesystemStorage,
   PrismaStorageFactory,
-  type DriveInput,
-  type ICache,
-  type IDocumentDriveServer,
-  type IDriveOperationStorage,
 } from "document-drive";
-import { type StorageOptions } from "./types.js";
+import type { StorageOptions } from "./types.js";
 
 export const createStorage = (
   options: StorageOptions,

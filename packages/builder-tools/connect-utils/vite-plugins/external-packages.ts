@@ -2,7 +2,7 @@ import { getConfig } from "@powerhousedao/config";
 import { exec } from "node:child_process";
 import fs from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { type PluginOption, type ViteDevServer } from "vite";
+import type { PluginOption, ViteDevServer } from "vite";
 import { IMPORT_SCRIPT_FILE } from "../constants.js";
 import { makeImportScriptFromPackages } from "../helpers.js";
 

@@ -1,17 +1,17 @@
 import { BaseDocumentClass } from "document-model";
-import {
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
-  type SetPackageAuthorInput,
-  type SetPackageAuthorNameInput,
-  type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
-  type SetPackageGithubUrlInput,
-  type SetPackageNpmUrlInput,
-  type VetraPackageState,
-  type VetraPackageLocalState,
+import type {
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
+  VetraPackageState,
+  VetraPackageLocalState,
 } from "../types.js";
 import {
   setPackageName,
@@ -25,7 +25,7 @@ import {
   setPackageGithubUrl,
   setPackageNpmUrl,
 } from "./creators.js";
-import { type VetraPackageAction } from "../actions.js";
+import type { VetraPackageAction } from "../actions.js";
 
 export default class VetraPackage_BaseOperations extends BaseDocumentClass<
   VetraPackageState,

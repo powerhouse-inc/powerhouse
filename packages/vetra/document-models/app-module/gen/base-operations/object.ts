@@ -1,12 +1,12 @@
 import { BaseDocumentClass } from "document-model";
-import {
-  type SetAppNameInput,
-  type SetAppStatusInput,
-  type AppModuleState,
-  type AppModuleLocalState,
+import type {
+  SetAppNameInput,
+  SetAppStatusInput,
+  AppModuleState,
+  AppModuleLocalState,
 } from "../types.js";
 import { setAppName, setAppStatus } from "./creators.js";
-import { type AppModuleAction } from "../actions.js";
+import type { AppModuleAction } from "../actions.js";
 
 export default class AppModule_BaseOperations extends BaseDocumentClass<
   AppModuleState,

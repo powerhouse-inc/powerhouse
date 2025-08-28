@@ -1,10 +1,8 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  actions,
-  type ProcessorModuleDocument,
-} from "../../document-models/processor-module/index.js";
+import type { ProcessorModuleDocument } from "../../document-models/processor-module/index.js";
+import { actions } from "../../document-models/processor-module/index.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 
 export type IProps = EditorProps;

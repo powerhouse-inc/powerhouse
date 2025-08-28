@@ -1,4 +1,4 @@
-import { type TNodeActions } from "@powerhousedao/design-system";
+import type { TNodeActions } from "@powerhousedao/design-system";
 import {
   addFile,
   addFolder,
@@ -13,7 +13,7 @@ import {
   useSelectedFolder,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
-import { type Node } from "document-drive";
+import type { Node } from "document-drive";
 import { useCallback, useMemo } from "react";
 export function useDebugHandlers() {
   const onAddTrigger = useCallback(

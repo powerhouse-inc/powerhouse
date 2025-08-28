@@ -1,9 +1,8 @@
+import type { TableColumn, TableName } from "@powerhousedao/design-system";
 import {
   ItemDetails,
   Pagination,
   Table,
-  type TableColumn,
-  type TableName,
   useEditorContext,
   usePagination,
   useTableData,

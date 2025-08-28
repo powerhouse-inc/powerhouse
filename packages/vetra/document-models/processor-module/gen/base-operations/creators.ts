@@ -1,18 +1,18 @@
 import { createAction } from "document-model";
-import {
-  z,
-  type SetProcessorNameInput,
-  type SetProcessorTypeInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetProcessorStatusInput,
+import type {
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetProcessorStatusInput,
 } from "../types.js";
-import {
-  type SetProcessorNameAction,
-  type SetProcessorTypeAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetProcessorStatusAction,
+import { z } from "../types.js";
+import type {
+  SetProcessorNameAction,
+  SetProcessorTypeAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetProcessorStatusAction,
 } from "./actions.js";
 
 export const setProcessorName = (input: SetProcessorNameInput) =>

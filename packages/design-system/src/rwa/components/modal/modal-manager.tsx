@@ -1,8 +1,8 @@
-import {
-  type ModalPropsMapping,
-  modals,
-  type ModalType,
+import type {
+  ModalPropsMapping,
+  ModalType,
 } from "@powerhousedao/design-system";
+import { modals } from "@powerhousedao/design-system";
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
 type MapModalProps<T> = {

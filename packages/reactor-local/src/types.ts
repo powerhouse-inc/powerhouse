@@ -1,8 +1,8 @@
-import { type LogLevel } from "@powerhousedao/config";
-import {
-  type DefaultRemoteDriveInput,
-  type DriveInput,
-  type IDocumentDriveServer,
+import type { LogLevel } from "@powerhousedao/config";
+import type {
+  DefaultRemoteDriveInput,
+  DriveInput,
+  IDocumentDriveServer,
 } from "document-drive";
 import path from "node:path";
 

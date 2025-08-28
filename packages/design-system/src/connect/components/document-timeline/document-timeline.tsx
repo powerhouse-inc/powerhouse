@@ -1,10 +1,7 @@
 import { TooltipProvider } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  HDivider,
-  TimelineBar,
-  type TimelineBarProps,
-} from "./components/index.js";
+import type { TimelineBarProps } from "./components/index.js";
+import { HDivider, TimelineBar } from "./components/index.js";
 
 export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
   id: string;

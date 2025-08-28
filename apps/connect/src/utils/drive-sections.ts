@@ -12,14 +12,13 @@ import {
   LOCAL,
   PUBLIC,
 } from "@powerhousedao/design-system";
-import { type SharingType } from "document-drive";
-import { type ReactNode } from "react";
+import type { SharingType } from "document-drive";
+import type { ReactNode } from "react";
 
 type AllNodeOptions =
   | (typeof debugNodeOptions)[number]
   | (typeof defaultDriveOptions)[number]
-  | (typeof defaultFileOptions)[number]
-  | (typeof defaultFolderOptions)[number];
+  | (typeof defaultFileOptions)[number];
 
 // Enables debug options for the drive
 const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";

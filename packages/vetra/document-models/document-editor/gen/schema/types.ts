@@ -64,7 +64,7 @@ export type AddDocumentTypeInput = {
 export type DocumentEditorState = {
   documentTypes: Array<DocumentTypeItem>;
   name: Scalars["String"]["output"];
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type DocumentTypeItem = {
@@ -81,7 +81,7 @@ export type SetEditorNameInput = {
 };
 
 export type SetEditorStatusInput = {
-  status: StatusType | StatusType;
+  status: StatusType;
 };
 
 export type StatusType = "CONFIRMED" | "DRAFT";

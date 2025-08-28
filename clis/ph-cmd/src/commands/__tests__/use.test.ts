@@ -2,10 +2,10 @@ import { Command } from "commander";
 import * as fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProjectInfo } from "../../utils/index.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-  type ProjectInfo,
 } from "../../utils/index.js";
 import { useCommand } from "../use.js";
 

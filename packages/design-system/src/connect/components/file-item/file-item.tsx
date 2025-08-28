@@ -1,3 +1,4 @@
+import type { NodeOption, TNodeActions } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
   defaultFileOptions,
@@ -6,20 +7,13 @@ import {
   getDocumentIconSrc,
   Icon,
   NodeInput,
-  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  type TNodeActions,
   useDrag,
   WRITE,
 } from "@powerhousedao/design-system";
-import {
-  type FileNode,
-  type Node,
-  type SharingType,
-  type SyncStatus,
-} from "document-drive";
+import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { SyncStatusIcon } from "../status-icon/index.js";

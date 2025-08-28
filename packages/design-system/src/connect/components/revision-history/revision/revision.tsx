@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { type Revision as RevisionProps } from "../types.js";
+import type { Revision as RevisionProps } from "../types.js";
 import { Address } from "./address.js";
 import { Errors } from "./errors.js";
 import { Operation } from "./operation.js";

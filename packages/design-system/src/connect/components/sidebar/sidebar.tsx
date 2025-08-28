@@ -1,16 +1,9 @@
-import {
-  Sidebar,
-  SidebarPanel,
-  type SidebarProps,
-} from "@powerhousedao/design-system";
-import {
-  ConnectSidebarFooter,
-  type ConnectSidebarFooterProps,
-} from "./sidebar-footer.js";
-import {
-  ConnectSidebarHeader,
-  type ConnectSidebarHeaderProps,
-} from "./sidebar-header.js";
+import type { SidebarProps } from "@powerhousedao/design-system";
+import { Sidebar, SidebarPanel } from "@powerhousedao/design-system";
+import type { ConnectSidebarFooterProps } from "./sidebar-footer.js";
+import { ConnectSidebarFooter } from "./sidebar-footer.js";
+import type { ConnectSidebarHeaderProps } from "./sidebar-header.js";
+import { ConnectSidebarHeader } from "./sidebar-header.js";
 
 export interface ConnectSidebarProps
   extends Omit<SidebarProps, "maxWidth" | "minWidth">,

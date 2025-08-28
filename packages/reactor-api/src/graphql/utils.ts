@@ -6,7 +6,7 @@ export function isSubgraphClass(
 ): candidate is SubgraphClass {
   if (typeof candidate !== "function") return false;
 
-  let proto = Object.getPrototypeOf(candidate);
+  let proto: unknown = Object.getPrototypeOf(candidate);
   while (proto) {
     if (Object.prototype.isPrototypeOf.call(proto, Subgraph)) return true;
 
