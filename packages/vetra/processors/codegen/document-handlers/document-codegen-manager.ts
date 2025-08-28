@@ -152,9 +152,12 @@ export class DocumentCodegenManager {
       // Store the timer reference using 'interactive' key
       this.debounceTimers.set("interactive", debounceTimer);
     } else {
-      // Non-interactive mode: use debouncing per document type
-      // Clear any existing debounce timer for this document type
-      const existingTimer = this.debounceTimers.get(documentType);
+      // Non-interactive mode: use debouncing per document instance
+      // Create unique key for this specific document instance
+      const timerKey = `${documentType}:${strand.documentId}`;
+      
+      // Clear any existing debounce timer for this document instance
+      const existingTimer = this.debounceTimers.get(timerKey);
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
@@ -179,12 +182,12 @@ export class DocumentCodegenManager {
           // Don't throw - let codegen continue with other documents
         } finally {
           // Clean up the timer reference
-          this.debounceTimers.delete(documentType);
+          this.debounceTimers.delete(timerKey);
         }
       }, DEFAULT_DEBOUNCE_TIME);
 
       // Store the timer reference
-      this.debounceTimers.set(documentType, debounceTimer);
+      this.debounceTimers.set(timerKey, debounceTimer);
     }
   }
 
