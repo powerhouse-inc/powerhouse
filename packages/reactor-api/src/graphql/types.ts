@@ -1,8 +1,10 @@
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { type IDocumentDriveServer, type IRelationalDb } from "document-drive";
-import { type DocumentNode } from "graphql";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { GraphQLManager, Subgraph } from "@powerhousedao/reactor-api";
+import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
-import { type GraphQLManager } from "./graphql-manager.js";
+
+export type SubgraphClass = typeof Subgraph;
 
 export type Context = {
   driveServer: IDocumentDriveServer;

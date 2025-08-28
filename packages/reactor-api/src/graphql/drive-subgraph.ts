@@ -1,4 +1,5 @@
 import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { Subgraph } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import {
   childLogger,
@@ -21,15 +22,14 @@ import {
 } from "document-model";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
+import type { InternalStrandUpdate } from "../sync/utils.js";
 import {
-  type InternalStrandUpdate,
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
-} from "../../sync/utils.js";
-import { Subgraph } from "../base/index.js";
-import type { Context, SubgraphArgs } from "../types.js";
-import { type Asset } from "./temp-hack-rwa-type-defs.js";
+} from "../sync/utils.js";
+import type { Asset } from "./temp-hack-rwa-type-defs.js";
+import type { Context, SubgraphArgs } from "./types.js";
 
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",

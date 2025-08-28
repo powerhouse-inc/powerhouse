@@ -2,6 +2,11 @@ import { type PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config";
+import {
+  GraphQLManager,
+  renderGraphqlPlayground,
+  type SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
@@ -23,19 +28,12 @@ import path from "node:path";
 import { type TlsOptions } from "node:tls";
 import { type Pool } from "pg";
 import { config } from "./config.js";
-import { GraphQLManager } from "./graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
   PackageManager,
 } from "./packages/package-manager.js";
-import {
-  type API,
-  type IPackageLoader,
-  type Processor,
-  type SubgraphClass,
-} from "./types.js";
+import { type API, type IPackageLoader, type Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);

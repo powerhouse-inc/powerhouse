@@ -5,8 +5,8 @@ import {
 } from "document-drive";
 import { type DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import { resolveLinkedPackage } from "./import-resolver.js";
-import type { SubgraphClass } from "../types.js";
 
 // Define the expected module export structures
 type DocumentModelsExport = Record<string, DocumentModelModule>;

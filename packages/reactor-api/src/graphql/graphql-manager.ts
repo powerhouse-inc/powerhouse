@@ -9,29 +9,29 @@ import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import bodyParser from "body-parser";
-import cors from "cors";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type {
+  Context,
+  Subgraph,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import {
-  childLogger,
-  debounce,
-  type IDocumentDriveServer,
-  type IRelationalDb,
-} from "document-drive";
-import type express from "express";
-import { Router, type IRouter } from "express";
-import { type GraphQLSchema } from "graphql";
-import path from "node:path";
-import { setTimeout } from "node:timers/promises";
-import {
+  AnalyticsSubgraph,
   buildSubgraphSchemaModule,
   createSchema,
-} from "../utils/create-schema.js";
-import { AnalyticsSubgraph } from "./analytics/index.js";
-import { DriveSubgraph } from "./drive/index.js";
-import { type Subgraph, type SubgraphClass } from "./index.js";
-import { SystemSubgraph } from "./system/index.js";
-import { type Context } from "./types.js";
+  DriveSubgraph,
+  SystemSubgraph,
+} from "@powerhousedao/reactor-api";
+import bodyParser from "body-parser";
+import cors from "cors";
+import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import { childLogger, debounce } from "document-drive";
+import type express from "express";
+import type { IRouter } from "express";
+import { Router } from "express";
+import type { GraphQLSchema } from "graphql";
+import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,

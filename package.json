@@ -11,7 +11,7 @@
     "build:css": "pnpm -r --no-bail build:css",
     "build:vite": "pnpm -r --no-bail build:vite",
     "test:all": "pnpm -r --no-bail test",
-    "test:all:ci": "pnpm --filter !document-drive --filter !reactor-api --filter !reactor-mcp -r --no-bail test",
+    "test:all:ci": "pnpm --filter !document-drive -r --no-bail test",
     "storybook:all": "pnpm -r --no-bail run build-storybook",
     "check:all": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm storybook:all && pnpm test:all",
     "check:all:ci": "pnpm generate-document-drive-prisma && pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm storybook:all && pnpm test:all:ci",

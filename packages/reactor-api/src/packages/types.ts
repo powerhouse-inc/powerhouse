@@ -3,7 +3,7 @@ import {
   type ProcessorFactory,
 } from "document-drive";
 import { type DocumentModelModule } from "document-model";
-import type { SubgraphClass } from "../types.js";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 
 export interface IPackageLoader {
   loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;

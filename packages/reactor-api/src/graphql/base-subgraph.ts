@@ -1,8 +1,11 @@
-import { type IDocumentDriveServer, type IRelationalDb } from "document-drive";
-import { type DocumentNode } from "graphql";
+import type {
+  GraphQLManager,
+  ISubgraph,
+  SubgraphArgs,
+} from "@powerhousedao/reactor-api";
+import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
-import type { GraphQLManager } from "../graphql-manager.js";
-import type { ISubgraph, SubgraphArgs } from "../types.js";
 
 export class Subgraph implements ISubgraph {
   name = "example";

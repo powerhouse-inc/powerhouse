@@ -1,15 +1,16 @@
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   childLogger,
   type IProcessorHostModule,
   type ProcessorFactory,
 } from "document-drive";
 import { type DocumentModelModule } from "document-model";
+import type { IPackageLoader } from "../types.js";
 import {
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,
   loadSubgraphs as loadSubgraphsUtil,
 } from "./util.js";
-import type { IPackageLoader, SubgraphClass } from "../types.js";
 
 /**
  * This class is used to load packages using the import keyword.

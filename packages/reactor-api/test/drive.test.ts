@@ -1,7 +1,7 @@
 import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
 import { documentModelDocumentModelModule, generateId } from "document-model";
 import { describe, expect, it, vi } from "vitest";
-import { DriveSubgraph } from "../src/graphql/drive/index.js";
+import { DriveSubgraph } from "@powerhousedao/reactor-api";
 
 describe("DriveSubgraph", () => {
   it("should be able to instantiate", () => {

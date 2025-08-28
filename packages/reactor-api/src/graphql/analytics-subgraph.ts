@@ -8,9 +8,9 @@ import {
   AnalyticsResolvers,
   typedefs,
 } from "@powerhousedao/analytics-engine-graphql";
+import type { Context, SubgraphArgs } from "@powerhousedao/reactor-api";
+import { Subgraph } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
-import { Subgraph } from "../base/index.js";
-import { type Context, type SubgraphArgs } from "../index.js";
 
 export class AnalyticsSubgraph extends Subgraph {
   analyticsStore: IAnalyticsStore;

@@ -1,15 +1,13 @@
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import {
-  type IProcessorHostModule,
-  type IProcessorManager,
-  type IRelationalDb,
-  type ProcessorFactory,
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { GraphQLManager } from "@powerhousedao/reactor-api";
+import type {
+  IProcessorHostModule,
+  IProcessorManager,
+  IRelationalDb,
+  ProcessorFactory,
 } from "document-drive";
-import { type Express } from "express";
-import { type GraphQLManager } from "./graphql/graphql-manager.js";
-import { type IPackageManager } from "./packages/types.js";
-
-export type { SubgraphClass } from "./graphql/index.js";
+import type { Express } from "express";
+import type { IPackageManager } from "./packages/types.js";
 export type { IPackageLoader } from "./packages/types.js";
 
 export type API = {
