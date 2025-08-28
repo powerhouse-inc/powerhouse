@@ -1,3 +1,4 @@
+import { type BaseDocumentDriveServer } from "document-drive";
 import type { Action, DocumentOperations, PHDocument } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../src/reactor.js";
@@ -15,10 +16,12 @@ const mockDriveServer = {
 };
 
 // Helper to create a valid PHDocument
-function createMockDocument(overrides: {
-  header?: Partial<PHDocument['header']>;
-  state?: Partial<PHDocument['state']>;
-} = {}): PHDocument {
+function createMockDocument(
+  overrides: {
+    header?: Partial<PHDocument["header"]>;
+    state?: Partial<PHDocument["state"]>;
+  } = {},
+): PHDocument {
   const baseDoc = {
     header: {
       id: "doc1",
@@ -55,7 +58,9 @@ describe("Reactor", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    reactor = new Reactor(mockDriveServer as any);
+    reactor = new Reactor(
+      mockDriveServer as unknown as BaseDocumentDriveServer,
+    );
   });
 
   describe("kill", () => {
@@ -154,7 +159,7 @@ describe("Reactor", () => {
       (mockDocument.state as any).global = { someData: "global" };
       (mockDocument.state as any).local = { someData: "local" };
       (mockDocument.state as any).private = { someData: "private" };
-      
+
       mockDriveServer.getDocument.mockResolvedValue(mockDocument);
       mockDriveServer.getDocuments.mockResolvedValue([]);
 
@@ -176,10 +181,10 @@ describe("Reactor", () => {
 
   describe("getBySlug", () => {
     it("should retrieve a document by slug", async () => {
-      const mockDocument = createMockDocument({ 
-        header: { slug: "test-slug" } 
+      const mockDocument = createMockDocument({
+        header: { slug: "test-slug" },
       });
-      
+
       mockDriveServer.getDrives.mockResolvedValue(["drive1"]);
       mockDriveServer.getDocuments
         .mockResolvedValueOnce(["doc1"]) // documents in drive1
@@ -235,7 +240,7 @@ describe("Reactor", () => {
           },
         ],
       };
-      
+
       const mockDocument = { operations: mockOperations };
       mockDriveServer.getDocument.mockResolvedValue(mockDocument);
 
@@ -296,11 +301,13 @@ describe("Reactor", () => {
           },
         ],
       };
-      
+
       const mockDocument = { operations: mockOperations };
       mockDriveServer.getDocument.mockResolvedValue(mockDocument);
 
-      const result = await reactor.getOperations("doc1", { scopes: ["global", "local"] });
+      const result = await reactor.getOperations("doc1", {
+        scopes: ["global", "local"],
+      });
 
       expect(result).toHaveProperty("global");
       expect(result).toHaveProperty("local");
@@ -316,7 +323,7 @@ describe("Reactor", () => {
       const mockDocument2 = createMockDocument({
         header: { id: "doc2", documentType: "type2" },
       });
-      
+
       mockDriveServer.getDrives.mockResolvedValue(["drive1"]);
       mockDriveServer.getDocuments.mockResolvedValue(["doc1", "doc2"]);
       mockDriveServer.getDocument
@@ -333,19 +340,22 @@ describe("Reactor", () => {
       const mockDocuments = Array.from({ length: 5 }, (_, i) =>
         createMockDocument({ header: { id: `doc${i}` } }),
       );
-      
+
+      // Reset mock to ensure clean state
+      mockDriveServer.getDocument.mockReset();
+
       mockDriveServer.getDrives.mockResolvedValue(["drive1"]);
       mockDriveServer.getDocuments.mockResolvedValue(
-        mockDocuments.map(d => d.header.id),
+        mockDocuments.map((d) => d.header.id),
       );
-      for (const doc of mockDocuments) {
-        mockDriveServer.getDocument.mockResolvedValueOnce(doc);
-      }
+      mockDriveServer.getDocument.mockImplementation(async (id: string) => {
+        return mockDocuments.find((d) => d.header.id === id) || null;
+      });
 
       const result = await reactor.find({ ids: ["doc1", "doc3"] });
 
       expect(result.results).toHaveLength(2);
-      expect(result.results.map(d => d.header.id)).toEqual(["doc1", "doc3"]);
+      expect(result.results.map((d) => d.header.id)).toEqual(["doc1", "doc3"]);
     });
 
     it("should filter documents by scopes when view filter is provided", async () => {
@@ -354,7 +364,7 @@ describe("Reactor", () => {
       (mockDocument.state as any).global = { someData: "global" };
       (mockDocument.state as any).local = { someData: "local" };
       (mockDocument.state as any).private = { someData: "private" };
-      
+
       mockDriveServer.getDrives.mockResolvedValue(["drive1"]);
       mockDriveServer.getDocuments.mockResolvedValue(["doc1"]);
       mockDriveServer.getDocument.mockResolvedValue(mockDocument);
@@ -401,7 +411,9 @@ describe("Reactor", () => {
     });
 
     it("should return failed job info on error", async () => {
-      mockDriveServer.deleteDocument.mockRejectedValue(new Error("Delete failed"));
+      mockDriveServer.deleteDocument.mockRejectedValue(
+        new Error("Delete failed"),
+      );
 
       const jobInfo = await reactor.deleteDocument("doc1");
 
@@ -470,7 +482,9 @@ describe("Reactor", () => {
           scope: "global",
         },
       ];
-      mockDriveServer.addOperations.mockRejectedValue(new Error("Mutation failed"));
+      mockDriveServer.addOperations.mockRejectedValue(
+        new Error("Mutation failed"),
+      );
 
       const jobInfo = await reactor.mutate("doc1", actions);
 
@@ -483,7 +497,7 @@ describe("Reactor", () => {
     it("should verify parent and children exist", async () => {
       const parentDoc = createMockDocument({ header: { id: "parent" } });
       const childDoc = createMockDocument({ header: { id: "child1" } });
-      
+
       mockDriveServer.getDocument
         .mockResolvedValueOnce(parentDoc)
         .mockResolvedValueOnce(childDoc);
@@ -512,7 +526,10 @@ describe("Reactor", () => {
       const parentDoc = createMockDocument({ header: { id: "parent" } });
       mockDriveServer.getDocument.mockResolvedValue(parentDoc);
 
-      const jobInfo = await reactor.removeChildren("parent", ["child1", "child2"]);
+      const jobInfo = await reactor.removeChildren("parent", [
+        "child1",
+        "child2",
+      ]);
 
       expect(mockDriveServer.getDocument).toHaveBeenCalledWith("parent");
       expect(jobInfo.status).toBe(JobStatus.COMPLETED);
