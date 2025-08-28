@@ -1,7 +1,7 @@
-import {
-  type DocumentDriveDocument,
-  type SharingType,
-  type Trigger,
+import type {
+  DocumentDriveDocument,
+  SharingType,
+  Trigger,
 } from "document-drive";
 import { useSyncExternalStore } from "react";
 import {

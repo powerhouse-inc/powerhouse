@@ -1,22 +1,22 @@
-import { type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
+import type {
+  DefaultRemoteDriveInput,
+  DocumentDriveServerOptions,
+  IDocumentDriveServer,
+} from "document-drive";
 import {
-  BaseQueueManager,
   BrowserStorage,
+  EventQueueManager,
   InMemoryCache,
   ReactorBuilder,
-  type DefaultRemoteDriveInput,
-  type DocumentDriveServerOptions,
-  type IDocumentDriveServer,
 } from "document-drive";
-import { generateId, type DocumentModelModule } from "document-model";
-import {
-  BrowserKeyStorage,
-  ConnectCrypto,
-  type IConnectCrypto,
-} from "./crypto/index.js";
+import type { DocumentModelModule } from "document-model";
+import { generateId } from "document-model";
+import type { IConnectCrypto } from "./crypto/index.js";
+import { BrowserKeyStorage, ConnectCrypto } from "./crypto/index.js";
 import { dispatchSetDocumentsEvent } from "./events/documents.js";
 import { dispatchSetDrivesEvent } from "./events/drives.js";
-import { type Reactor } from "./types/reactor.js";
+import type { Reactor } from "./types/reactor.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
@@ -80,7 +80,7 @@ export function createBrowserDocumentDriveServer(
   const builder = new ReactorBuilder(documentModelModules)
     .withStorage(new BrowserStorage(routerBasename))
     .withCache(new InMemoryCache())
-    .withQueueManager(new BaseQueueManager());
+    .withQueueManager(new EventQueueManager());
 
   if (documentDriveServerOptions) {
     builder.withOptions(documentDriveServerOptions);

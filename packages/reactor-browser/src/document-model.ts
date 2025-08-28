@@ -1,7 +1,5 @@
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 
 export const baseDocumentModelsMap: Record<string, DocumentModelModule> = {
   DocumentModel: documentModelDocumentModelModule as DocumentModelModule,

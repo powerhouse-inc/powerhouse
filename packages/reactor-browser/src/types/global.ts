@@ -1,44 +1,44 @@
-import { type IRenown, type User } from "@renown/sdk";
-import {
-  type DocumentDriveDocument,
-  type IDocumentAdminStorage,
-  type IDocumentDriveServer,
-  type IDocumentOperationStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-  type ProcessorManager,
+import type { IRenown, User } from "@renown/sdk";
+import type {
+  DocumentDriveDocument,
+  IDocumentAdminStorage,
+  IDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  ProcessorManager,
 } from "document-drive";
-import { type PHDocument } from "document-model";
-import { type DID, type IConnectCrypto } from "../crypto/index.js";
-import {
-  type AppConfigUpdatedEvent,
-  type ConnectCryptoUpdatedEvent,
-  type DidUpdatedEvent,
-  type DocumentsUpdatedEvent,
-  type DrivesUpdatedEvent,
-  type LoginStatusUpdatedEvent,
-  type ProcessorManagerUpdatedEvent,
-  type ReactorUpdatedEvent,
-  type RenownUpdatedEvent,
-  type SelectedDriveIdUpdatedEvent,
-  type SelectedNodeIdUpdatedEvent,
-  type SetAppConfigEvent,
-  type SetConnectCryptoEvent,
-  type SetDidEvent,
-  type SetDocumentsEvent,
-  type SetDrivesEvent,
-  type SetLoginStatusEvent,
-  type SetProcessorManagerEvent,
-  type SetReactorEvent,
-  type SetRenownEvent,
-  type SetSelectedDriveIdEvent,
-  type SetSelectedNodeIdEvent,
-  type SetUserEvent,
-  type SetVetraPackagesEvent,
-  type UserUpdatedEvent,
-  type VetraPackagesUpdatedEvent,
+import type { PHDocument } from "document-model";
+import type { DID, IConnectCrypto } from "../crypto/index.js";
+import type {
+  AppConfigUpdatedEvent,
+  ConnectCryptoUpdatedEvent,
+  DidUpdatedEvent,
+  DocumentsUpdatedEvent,
+  DrivesUpdatedEvent,
+  LoginStatusUpdatedEvent,
+  ProcessorManagerUpdatedEvent,
+  ReactorUpdatedEvent,
+  RenownUpdatedEvent,
+  SelectedDriveIdUpdatedEvent,
+  SelectedNodeIdUpdatedEvent,
+  SetAppConfigEvent,
+  SetConnectCryptoEvent,
+  SetDidEvent,
+  SetDocumentsEvent,
+  SetDrivesEvent,
+  SetLoginStatusEvent,
+  SetProcessorManagerEvent,
+  SetReactorEvent,
+  SetRenownEvent,
+  SetSelectedDriveIdEvent,
+  SetSelectedNodeIdEvent,
+  SetUserEvent,
+  SetVetraPackagesEvent,
+  UserUpdatedEvent,
+  VetraPackagesUpdatedEvent,
 } from "../events/types.js";
-import { type VetraPackage } from "./vetra.js";
+import type { VetraPackage } from "./vetra.js";
 
 export type UserPermissions = {
   isAllowedToCreateDocuments: boolean;

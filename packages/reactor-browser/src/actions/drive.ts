@@ -1,20 +1,22 @@
+import type {
+  DocumentDriveDocument,
+  DriveInput,
+  PullResponderTrigger,
+  RemoteDriveOptions,
+  ServerListener,
+  SharingType,
+  SyncStatus,
+  Trigger,
+} from "document-drive";
 import {
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
   createDriveState,
-  type DocumentDriveDocument,
-  type DriveInput,
   PullResponderTransmitter,
-  type PullResponderTrigger,
-  type RemoteDriveOptions,
-  type ServerListener,
   setAvailableOffline,
   setDriveName,
   setSharingType,
-  type SharingType,
   SynchronizationUnitNotFoundError,
-  type SyncStatus,
-  type Trigger,
 } from "document-drive";
 import { generateId } from "document-model";
 import { getUserPermissions } from "../utils/user.js";

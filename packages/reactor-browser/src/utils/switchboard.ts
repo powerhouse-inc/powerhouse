@@ -1,6 +1,6 @@
 import { kebabCase } from "change-case";
 import { generateDocumentStateQueryFields } from "document-drive";
-import { type DocumentModelState } from "document-model";
+import type { DocumentModelState } from "document-model";
 import { compressToEncodedURIComponent } from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {

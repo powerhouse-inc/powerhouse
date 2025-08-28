@@ -1,6 +1,6 @@
-import { type DocumentModelModule } from "document-model";
-import { type VetraPackage } from "../types/vetra.js";
-import { type SetVetraPackagesEvent } from "./types.js";
+import type { DocumentModelModule } from "document-model";
+import type { VetraPackage } from "../types/vetra.js";
+import type { SetVetraPackagesEvent } from "./types.js";
 
 export function dispatchSetVetraPackagesEvent(
   vetraPackages: VetraPackage[] | undefined,

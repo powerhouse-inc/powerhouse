@@ -1,4 +1,4 @@
-import { type ProcessorManager } from "document-drive";
+import type { ProcessorManager } from "document-drive";
 import { useSyncExternalStore } from "react";
 import { subscribeToProcessorManager } from "../events/index.js";
 

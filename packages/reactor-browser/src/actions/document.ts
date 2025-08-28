@@ -1,6 +1,5 @@
+import type { DocumentDriveDocument, Node } from "document-drive";
 import {
-  type DocumentDriveDocument,
-  type Node,
   addFile as baseAddFile,
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
@@ -13,8 +12,8 @@ import {
   logger,
   updateNode,
 } from "document-drive";
+import type { PHDocument } from "document-model";
 import {
-  type PHDocument,
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,

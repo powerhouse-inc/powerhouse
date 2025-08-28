@@ -1,5 +1,5 @@
 import { logger } from "document-drive";
-import { type Action, type PHDocument } from "document-model";
+import type { Action, PHDocument } from "document-model";
 import { queueActions } from "./queue.js";
 import { makeSignedActionsWithContext } from "./sign.js";
 

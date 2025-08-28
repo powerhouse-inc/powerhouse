@@ -1,5 +1,5 @@
-import { type IRenown } from "@renown/sdk";
-import { type SetRenownEvent } from "./types.js";
+import type { IRenown } from "@renown/sdk";
+import type { SetRenownEvent } from "./types.js";
 import { dispatchSetUserEvent } from "./user.js";
 
 export function dispatchSetRenownEvent(renown: IRenown | undefined) {

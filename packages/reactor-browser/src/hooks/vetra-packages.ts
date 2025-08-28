@@ -4,7 +4,7 @@ import {
   dispatchSetVetraPackagesEvent,
   subscribeToVetraPackages,
 } from "../events/vetra-packages.js";
-import { type VetraPackage } from "../types/vetra.js";
+import type { VetraPackage } from "../types/vetra.js";
 
 export function useVetraPackages(): VetraPackage[] | undefined {
   return useSyncExternalStore(
