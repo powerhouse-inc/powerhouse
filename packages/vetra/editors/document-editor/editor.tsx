@@ -13,8 +13,7 @@ export type IProps = EditorProps;
 export default function Editor(props: IProps) {
   const { document: initialDocument } = props;
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
- const unsafeCastOfDocument = document as DocumentEditorDocument
-  console.log(">>>>> document:", unsafeCastOfDocument.state.global);
+ const unsafeCastOfDocument = document as DocumentEditorDocument;
 
   const onEditorNameChange = useCallback((name: string) => {
     if (!unsafeCastOfDocument.state.global.name && !name) return;

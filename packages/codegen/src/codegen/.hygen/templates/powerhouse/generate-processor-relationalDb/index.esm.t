@@ -34,7 +34,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
         await this.relationalDb
           .insertInto("todo")
           .values({
-            task: `${strand.documentId}-${operation.index}: ${operation.type}`,
+            task: `${strand.documentId}-${operation.index}: ${operation.action.type}`,
             status: true,
           })
           .onConflict((oc) => oc.column("task").doNothing())

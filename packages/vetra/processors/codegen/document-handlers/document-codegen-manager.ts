@@ -16,6 +16,7 @@ const DEFAULT_DEBOUNCE_TIME = 1000; // 1 second
 export class DocumentCodegenManager {
   private generators = new Map<string, BaseDocumentGen>();
   private debounceTimers = new Map<string, NodeJS.Timeout>();
+  private processingQueue: Promise<void> = Promise.resolve();
   private interactiveManager: InteractiveManager;
 
   constructor(
@@ -152,39 +153,50 @@ export class DocumentCodegenManager {
       // Store the timer reference using 'interactive' key
       this.debounceTimers.set("interactive", debounceTimer);
     } else {
-      // Non-interactive mode: use debouncing per document type
-      // Clear any existing debounce timer for this document type
-      const existingTimer = this.debounceTimers.get(documentType);
+      // Non-interactive mode: use debouncing per document instance
+      // Create unique key for this specific document instance
+      const timerKey = `${documentType}:${strand.documentId}`;
+      
+      // Clear any existing debounce timer for this document instance
+      const existingTimer = this.debounceTimers.get(timerKey);
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
 
       // Set up new debounced generation (no interactive confirmation)
-      const debounceTimer = setTimeout(async () => {
-        try {
-          logger.info(
-            `🔄 Routing document type "${documentType}" to generator (debounced)`,
-          );
+      const debounceTimer = setTimeout(() => {
+        // Queue this operation to run after previous ones complete
+        this.processingQueue = this.processingQueue
+          .then(async () => {
+            try {
+              logger.info(
+                `🔄 Routing document type "${documentType}" to generator (debounced)`,
+              );
 
-          // Direct generation, no interactive confirmation
-          await generator.generate(strand);
-          logger.info(
-            `✅ Successfully generated code for document type: ${documentType}`,
-          );
-        } catch (error) {
-          logger.error(
-            `❌ Error generating code for document type "${documentType}":`,
-            error,
-          );
-          // Don't throw - let codegen continue with other documents
-        } finally {
-          // Clean up the timer reference
-          this.debounceTimers.delete(documentType);
-        }
+              // Direct generation, no interactive confirmation
+              await generator.generate(strand);
+              logger.info(
+                `✅ Successfully generated code for document type: ${documentType}`,
+              );
+            } catch (error) {
+              logger.error(
+                `❌ Error generating code for document type "${documentType}":`,
+                error,
+              );
+              // Don't throw - let codegen continue with other documents
+            } finally {
+              // Clean up the timer reference
+              this.debounceTimers.delete(timerKey);
+            }
+          })
+          .catch((error) => {
+            // Ensure queue continues even if previous operation failed
+            logger.error(`❌ Queue processing error:`, error);
+          });
       }, DEFAULT_DEBOUNCE_TIME);
 
       // Store the timer reference
-      this.debounceTimers.set(documentType, debounceTimer);
+      this.debounceTimers.set(timerKey, debounceTimer);
     }
   }
 
