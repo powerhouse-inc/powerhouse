@@ -65,6 +65,8 @@ export type ViewFilter = {
 
 /**
  * Describes filter options for searching documents.
+ *
+ * Each parameter is treated as an AND condition.
  */
 export type SearchFilter = {
   type?: string;
