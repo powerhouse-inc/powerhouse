@@ -1,3 +1,8 @@
+import {
+  useDrives,
+  useSelectedDocument,
+  useSelectedDrive,
+} from "@powerhousedao/reactor-browser";
 import type { FileNode, FolderNode, Node } from "document-drive";
 import { useSyncExternalStore } from "react";
 import {
@@ -12,8 +17,6 @@ import {
   sortNodesByName,
 } from "../utils/nodes.js";
 import { makeNodeSlug } from "../utils/url.js";
-import { useSelectedDocument } from "./documents.js";
-import { useDrives, useSelectedDrive } from "./drives.js";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {

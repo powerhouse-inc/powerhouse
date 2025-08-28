@@ -1,5 +1,6 @@
 export * from "./config.js";
 export * from "./crypto.js";
+export * from "./dispatch.js";
 export * from "./documents.js";
 export * from "./drive-context.js";
 export * from "./drives.js";

@@ -1,7 +1,10 @@
-import { useSyncExternalStore } from "react";
-import { useDispatch } from "./dispatch.js";
-import { useFileNodes, useSelectedNodeId } from "./nodes.js";
+import {
+  useDispatch,
+  useFileNodes,
+  useSelectedNodeId,
+} from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
+import { useSyncExternalStore } from "react";
 
 function getDocumentsSnapshot() {
   const documents = window.phDocuments;
