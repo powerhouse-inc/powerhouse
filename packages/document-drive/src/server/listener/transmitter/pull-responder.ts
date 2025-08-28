@@ -16,7 +16,7 @@ import {
 } from "#drive-document-model/gen/types";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
-import { type GraphQLResult, requestGraphql } from "#utils/graphql";
+import { requestGraphql, type GraphQLResult } from "#utils/graphql";
 import { childLogger, type ILogger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { generateId } from "document-model";
@@ -298,6 +298,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                 branch
                 operations {
                   id
+                  actionId
                   timestampUtcMs
                   skip
                   type
@@ -347,6 +348,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     branch
                     operations {
                       id
+                      actionId
                       timestampUtcMs
                       skip
                       type

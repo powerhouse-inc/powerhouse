@@ -413,17 +413,19 @@ export class DriveSubgraph extends Subgraph {
         const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
           return {
             operations: strandGql.operations.map((op) => ({
-              ...op,
-              input: JSON.parse(op.input) as DocumentModelInput,
+              index: op.index,
               skip: op.skip ?? 0,
-              scope: strandGql.scope,
-              branch: "main",
+              timestampUtcMs: op.timestampUtcMs,
+              hash: op.hash,
+              id: op.id,
+              // Map GraphQL context to Action.context (only signer is defined in schema)
               action: {
                 id: op.actionId,
+                type: op.type,
                 timestampUtcMs: op.timestampUtcMs,
                 scope: strandGql.scope,
-                type: op.type,
                 input: JSON.parse(op.input) as DocumentModelInput,
+                context: op.context,
               },
             })) as Operation[],
             documentId: strandGql.documentId,
@@ -512,7 +514,7 @@ export class DriveSubgraph extends Subgraph {
           operations: update.operations.map((op) => ({
             index: op.index,
             skip: op.skip,
-            name: op.type,
+            // no extra name field; GraphQL schema exposes `type`
             input: JSON.stringify(op.input),
             hash: op.hash,
             timestampUtcMs: op.timestampUtcMs,
