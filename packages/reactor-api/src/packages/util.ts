@@ -76,7 +76,7 @@ async function loadDependency<T = unknown>(
     if (
       e instanceof Error &&
       "code" in e &&
-      e.code === "ERR_MODULE_NOT_FOUND"
+      (e.code === "ERR_MODULE_NOT_FOUND" || e.code === "ERR_UNSUPPORTED_DIR_IMPORT")
     ) {
       const result = await resolveLinkedPackage<T>(packageName, subPath);
       if (result) return result;
