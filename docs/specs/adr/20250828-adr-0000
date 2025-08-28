@@ -1,0 +1,17 @@
+# ADR 0000: Introduce ADR Process with DailyBot + Zapier
+
+- **Date:** 2025-08-28  
+
+## Context
+We want a consistent, lightweight way to capture and share important architectural decisions. Relying on chat threads (e.g. Discord) made it difficult to discover and reference decisions later.  
+
+## Decision
+We will maintain an **Architecture Decision Record (ADR) log** inside the repository at `/docs/specs/adr/`. Each ADR is a markdown file with a unique identifier and follows a simple template.  
+
+To reduce manual overhead, we connected **DailyBot** to **Zapier**. Team members can submit an ADR through a DailyBot form, and Zapier will automatically create a markdown file in `/docs/adr/` (via a GitHub pull request).  
+
+## Consequences
+- ADRs are version-controlled and reviewed alongside code.  
+- The process is integrated into our existing workflows (Discord + GitHub).  
+- Minimal manual work is required to keep the decision log up to date.  
+- Future contributors will have a clear record of why key decisions were made.
