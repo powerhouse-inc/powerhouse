@@ -1,5 +1,8 @@
-import { TooltipProvider } from "#connect";
-import { Pagination, usePagination } from "#powerhouse";
+import {
+  Pagination,
+  TooltipProvider,
+  usePagination,
+} from "@powerhousedao/design-system";
 import { garbageCollect, type Operation, sortOperations } from "document-model";
 import { useMemo, useState } from "react";
 import { Header } from "./header/index.js";

@@ -13,7 +13,7 @@ import {
   type RealWorldAssetsState,
   type TableItemType,
   type TableName,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   createContext,
   type ReactNode,

@@ -1,4 +1,4 @@
-import { TooltipProvider } from "#connect";
+import { TooltipProvider } from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { HDivider } from "./h-divider.js";
 

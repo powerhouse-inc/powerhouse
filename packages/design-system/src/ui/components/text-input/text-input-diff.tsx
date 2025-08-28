@@ -1,7 +1,9 @@
-import type { WithDifference } from "../../types.js";
-import { FormGroup } from "../form-group/index.js";
-import { FormLabel } from "../form-label/index.js";
-import { SplittedInputDiff } from "../input/splitted-input-diff.js";
+import type { WithDifference } from "@powerhousedao/design-system/ui";
+import {
+  FormGroup,
+  FormLabel,
+  SplittedInputDiff,
+} from "@powerhousedao/design-system/ui";
 interface TextInputDiffProps extends WithDifference<string> {
   value: string;
   label?: React.ReactNode;

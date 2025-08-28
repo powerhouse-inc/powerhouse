@@ -1,16 +1,16 @@
-import { Icon } from "#powerhouse";
-import { useCommandState } from "cmdk";
-import type React from "react";
-import { useEffect } from "react";
-import { cn } from "../../lib/index.js";
+import { Icon } from "@powerhousedao/design-system";
 import {
+  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "../command/command.js";
-import { type SelectProps } from "../enum-field/types.js";
+  type SelectProps,
+} from "@powerhousedao/design-system/ui";
+import { useCommandState } from "cmdk";
+import type React from "react";
+import { useEffect } from "react";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;

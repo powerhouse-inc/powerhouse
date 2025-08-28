@@ -1,5 +1,9 @@
-import { ENSAvatar, formatEthAddress, Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import {
+  ENSAvatar,
+  formatEthAddress,
+  Icon,
+  Tooltip,
+} from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
 
 export type AddressProps = {

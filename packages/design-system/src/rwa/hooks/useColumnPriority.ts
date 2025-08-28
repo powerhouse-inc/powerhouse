@@ -1,4 +1,7 @@
-import { type ColumnCountByTableWidth, type TableColumn } from "#rwa";
+import {
+  type ColumnCountByTableWidth,
+  type TableColumn,
+} from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Props<TColumn extends TableColumn> = {

@@ -1,4 +1,4 @@
-import { type TableColumn, type TableName } from "#rwa";
+import { type TableColumn, type TableName } from "@powerhousedao/design-system";
 
 export type ColumnsByTableName = {
   [K in TableName]: TableColumn[];

@@ -1,5 +1,5 @@
+import type { SelectProps } from "@powerhousedao/design-system/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SelectProps } from "../enum-field/types.js";
 
 interface UseSelectFieldProps {
   options?: SelectProps["options"];

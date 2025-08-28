@@ -1,7 +1,7 @@
+import { cn } from "@powerhousedao/design-system/ui";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import React from "react";
-import { cn } from "../../lib/index.js";
 
 const buttonVariants = cva(
   cn(

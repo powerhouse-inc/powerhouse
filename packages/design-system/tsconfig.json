@@ -17,13 +17,7 @@
       "@testing-library/jest-dom",
     ],
     "paths": {
-        "#assets": ["./src/assets/index.ts"],
         "#assets/*": ["./src/assets/*"],
-        "#connect": ["./src/connect/index.ts"],
-        "#powerhouse": ["./src/powerhouse/index.ts"],
-        "#rwa": ["./src/rwa/index.ts"],
-        "#ui": ["./src/ui/index.ts"],
-        "#services": ["./src/services/index.ts"]
     }
   },
   "references": [
@@ -38,14 +32,11 @@
     }
   ],
   "include": [
-    "**/*",
-    "**/*.json"
+    "**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "storybook-static",
-    "package.json",
-    "tsconfig.json"
+    "storybook-static"
   ]
 }

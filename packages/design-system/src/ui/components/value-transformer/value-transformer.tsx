@@ -1,6 +1,6 @@
+import { deepEqual } from "@powerhousedao/design-system/ui";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { deepEqual } from "../../lib/index.js";
 
 export type ValueTransformer = (value?: any) => any;
 
@@ -114,7 +114,10 @@ function _applyTransformers(
  *   <Input />
  * </ValueTransformer>
  */
-function ValueTransformer({ transformers, children }: ValueTransformerProps) {
+export function ValueTransformer({
+  transformers,
+  children,
+}: ValueTransformerProps) {
   const formContext = useFormContext();
   const setValue = formContext?.setValue;
 
@@ -204,5 +207,3 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
     },
   });
 }
-
-export default ValueTransformer;

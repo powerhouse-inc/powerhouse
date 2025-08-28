@@ -1,5 +1,4 @@
-import { FormInput } from "#connect";
-import { Button, Icon, Modal } from "#powerhouse";
+import { Button, FormInput, Icon, Modal } from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import { type ComponentPropsWithoutRef, useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";

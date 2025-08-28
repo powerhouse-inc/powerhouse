@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Tooltip } from "@powerhousedao/design-system";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";

@@ -1,4 +1,8 @@
-import { Popover, PopoverContent, PopoverTrigger } from "#ui";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@powerhousedao/design-system/ui";
 import type { ReactNode } from "react";
 
 export interface AccountPopoverProps {

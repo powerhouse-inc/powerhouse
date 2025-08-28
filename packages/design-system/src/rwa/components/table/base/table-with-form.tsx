@@ -1,12 +1,13 @@
-import { Pagination, usePagination } from "#powerhouse";
 import {
   ItemDetails,
+  Pagination,
   Table,
   type TableColumn,
   type TableName,
   useEditorContext,
+  usePagination,
   useTableData,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 
 type Props = {
   readonly tableName: TableName;

@@ -5,7 +5,7 @@ import {
   type FOLDER,
   type nodeOptions,
   type normalNodeOptions,
-} from "#connect";
+} from "@powerhousedao/design-system";
 import { type Node, type SharingType } from "document-drive";
 import { type ReactNode } from "react";
 

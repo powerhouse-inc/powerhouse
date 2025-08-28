@@ -1,6 +1,10 @@
-import { Tooltip, TooltipProvider } from "#connect";
-import { type GroupTransactionFormInputs, RWATableTextInput } from "#rwa";
-import { getIsTransaction } from "#services";
+import {
+  getIsTransaction,
+  type GroupTransactionFormInputs,
+  RWATableTextInput,
+  Tooltip,
+  TooltipProvider,
+} from "@powerhousedao/design-system";
 import {
   type ComponentPropsWithRef,
   type ForwardedRef,

@@ -1,12 +1,12 @@
 import {
   AppFormInput,
   AvailableOfflineToggle,
+  Button,
   FormInput,
   Label,
   LOCAL,
   SharingTypeFormInput,
-} from "#connect";
-import { Button } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type SharingType } from "document-drive";
 import { type App } from "document-model";
 import { type SubmitHandler, useForm } from "react-hook-form";

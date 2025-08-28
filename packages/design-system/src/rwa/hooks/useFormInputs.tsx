@@ -20,7 +20,7 @@ import {
   UnitPrice,
   useEditorContext,
   useModal,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type ReactElement, type ReactNode, useCallback, useMemo } from "react";
 import {
   type Control,

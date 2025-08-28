@@ -1,16 +1,17 @@
 import {
   AvailableOfflineToggle,
+  Button,
   DeleteDrive,
   Disclosure,
   Divider,
   DriveNameInput,
+  Icon,
   Label,
   LocationInfo,
   PUBLIC,
   SharingTypeFormInput,
   SWITCHBOARD,
-} from "#connect";
-import { Button, Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type DocumentDriveDocument, type SharingType } from "document-drive";
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";

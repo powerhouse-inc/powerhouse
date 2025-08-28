@@ -1,4 +1,4 @@
-import { type documentTypes } from "#connect";
+import { type documentTypes } from "@powerhousedao/design-system";
 
 export type DocumentTypes = typeof documentTypes;
 

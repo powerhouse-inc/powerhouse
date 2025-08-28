@@ -1,5 +1,5 @@
-import { Icon } from "#powerhouse";
 import {
+  Icon,
   ItemNumberCell,
   MoreDetailsCell,
   RWATableCell,
@@ -17,7 +17,7 @@ import {
   useColumnPriority,
   useEditorContext,
   useTableHeight,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { useCallback, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 

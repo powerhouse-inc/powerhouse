@@ -6,7 +6,7 @@ import {
   type ServiceProviderFeeType,
   type SPV,
   type tableNames,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type Identifier, type Order } from "natural-orderby";
 import { type ReactNode, type RefObject } from "react";
 

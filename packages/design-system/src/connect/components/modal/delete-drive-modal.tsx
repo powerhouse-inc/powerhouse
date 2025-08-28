@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 
 import { useState } from "react";
 import { FormInput } from "../form-input/index.js";

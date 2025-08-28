@@ -1,6 +1,6 @@
-import { UI_NODE } from "#connect";
-import { type DragEvent, useCallback, useMemo, useState } from "react";
+import { UI_NODE } from "@powerhousedao/design-system";
 import { type Node } from "document-drive";
+import { type DragEvent, useCallback, useMemo, useState } from "react";
 
 type Props = {
   node: Node;

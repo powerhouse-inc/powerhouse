@@ -1,7 +1,11 @@
-import { Button, Icon, type IconName } from "#powerhouse";
+import { Button, Icon, type IconName } from "@powerhousedao/design-system";
 
-import { IdAutocomplete, Input, type IdAutocompleteProps } from "#ui";
 import type { PowerhousePackage } from "@powerhousedao/config";
+import {
+  IdAutocomplete,
+  Input,
+  type IdAutocompleteProps,
+} from "@powerhousedao/design-system/ui";
 import { useCallback, useMemo, useState } from "react";
 
 export type PackageManagerInputProps = {

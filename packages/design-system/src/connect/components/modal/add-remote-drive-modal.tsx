@@ -3,8 +3,10 @@ import {
   AddRemoteDriveForm,
   type AddRemoteDriveInput,
   Divider,
-} from "#connect";
-import { type DivProps, Icon, Modal } from "#powerhouse";
+  type DivProps,
+  Icon,
+  Modal,
+} from "@powerhousedao/design-system";
 import { type SharingType } from "document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

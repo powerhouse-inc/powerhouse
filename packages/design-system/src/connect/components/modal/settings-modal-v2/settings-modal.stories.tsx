@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type DocumentDriveDocument } from "document-drive";
 import React from "react";

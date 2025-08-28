@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Tooltip } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 export type ErrorsProps = {

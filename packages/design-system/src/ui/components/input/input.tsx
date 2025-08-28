@@ -1,4 +1,4 @@
-import { cn } from "#powerhouse";
+import { cn } from "@powerhousedao/design-system";
 import * as React from "react";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;

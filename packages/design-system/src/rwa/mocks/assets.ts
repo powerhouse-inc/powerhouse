@@ -3,7 +3,7 @@ import {
   type CashAsset,
   type FixedIncomeType,
   type SPV,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 
 export const mockPrincipalLenderAccountId = "principal-lender-account-id";
 

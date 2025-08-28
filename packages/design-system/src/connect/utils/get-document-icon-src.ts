@@ -1,4 +1,9 @@
-import { DEFAULT, documentTypes, iconMap, type TDocumentType } from "#connect";
+import {
+  DEFAULT,
+  documentTypes,
+  iconMap,
+  type TDocumentType,
+} from "@powerhousedao/design-system";
 
 export function getDocumentIconSrc(
   documentType: TDocumentType,

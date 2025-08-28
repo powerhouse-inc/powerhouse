@@ -3,7 +3,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 

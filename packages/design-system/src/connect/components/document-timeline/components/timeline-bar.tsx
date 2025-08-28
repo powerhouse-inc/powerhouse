@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Tooltip } from "@powerhousedao/design-system";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";

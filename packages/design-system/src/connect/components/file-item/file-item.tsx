@@ -4,6 +4,7 @@ import {
   DELETE,
   DUPLICATE,
   getDocumentIconSrc,
+  Icon,
   NodeInput,
   type NodeOption,
   nodeOptionsMap,
@@ -12,8 +13,7 @@ import {
   type TNodeActions,
   useDrag,
   WRITE,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import {
   type FileNode,
   type Node,

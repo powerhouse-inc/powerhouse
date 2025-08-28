@@ -1,5 +1,4 @@
-import { DriveNameInput } from "#connect";
-import { Button, Icon } from "#powerhouse";
+import { Button, DriveNameInput, Icon } from "@powerhousedao/design-system";
 import { type DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 

@@ -5,7 +5,7 @@ import {
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   mockAccounts,
   mockFixedIncomes,

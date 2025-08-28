@@ -1,7 +1,7 @@
+import { renderWithForm } from "@powerhousedao/design-system/ui";
 import { screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithForm } from "../../lib/index.js";
 import { EnumField } from "./enum-field.js";
 
 describe("EnumField Component", () => {

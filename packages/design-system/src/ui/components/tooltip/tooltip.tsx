@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "#powerhouse";
+import { cn } from "@powerhousedao/design-system";
 import {
   Content,
   Portal,

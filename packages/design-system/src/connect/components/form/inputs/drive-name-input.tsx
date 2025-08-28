@@ -1,5 +1,4 @@
-import { FormInput } from "#connect";
-import { Icon } from "#powerhouse";
+import { FormInput, Icon } from "@powerhousedao/design-system";
 import {
   type ComponentPropsWithRef,
   type ForwardedRef,

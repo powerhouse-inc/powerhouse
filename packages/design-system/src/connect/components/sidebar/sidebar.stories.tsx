@@ -1,5 +1,5 @@
 import connectLogo from "#assets/connect.png";
-import { WagmiContext } from "#connect";
+import { WagmiContext } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { type DocumentDriveDocument } from "document-drive";

@@ -1,5 +1,9 @@
-import { Icon } from "#powerhouse";
-import { type TableItemType, type TableName, useEditorContext } from "#rwa";
+import {
+  Icon,
+  type TableItemType,
+  type TableName,
+  useEditorContext,
+} from "@powerhousedao/design-system";
 
 import { type ComponentPropsWithoutRef, useCallback } from "react";
 import { twMerge } from "tailwind-merge";

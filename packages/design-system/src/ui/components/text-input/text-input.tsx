@@ -1,16 +1,21 @@
-import { forwardRef, useId, useMemo } from "react";
-import { cn } from "../../lib/index.js";
-import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
-import type { DiffMode, InputBaseProps, WithDifference } from "../../types.js";
-import { CharacterCounter } from "../character-counter/index.js";
-import { FormDescription } from "../form-description/index.js";
-import { FormGroup } from "../form-group/form-group.js";
-import { FormLabel } from "../form-label/form-label.js";
-import { FormMessageList } from "../form-message/message-list.js";
-import { Input } from "../input/index.js";
-import ValueTransformer, {
+import type {
+  DiffMode,
+  InputBaseProps,
+  WithDifference,
+} from "@powerhousedao/design-system/ui";
+import {
+  CharacterCounter,
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  Input,
+  sharedValueTransformers,
+  ValueTransformer,
   type TransformerType,
-} from "../value-transformer/value-transformer.js";
+} from "@powerhousedao/design-system/ui";
+import { forwardRef, useId, useMemo } from "react";
 import TextInputDiff from "./text-input-diff.js";
 import type { CommonTextProps } from "./types.js";
 

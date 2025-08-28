@@ -18,7 +18,7 @@ import {
   type TableItemType,
   type TableName,
   type TransactionFeeInput,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type InputMaybe } from "document-model";
 
 export function handleDateInTable(

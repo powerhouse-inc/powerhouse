@@ -1,4 +1,4 @@
-import { documentTypes } from "#connect";
+import { documentTypes } from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { type FileNode } from "document-drive";
 import { FileItem } from "./file-item.js";

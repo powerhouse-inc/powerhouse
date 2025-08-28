@@ -1,4 +1,4 @@
-import { TooltipProvider } from "#connect";
+import { TooltipProvider } from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { Errors } from "./errors.js";
 

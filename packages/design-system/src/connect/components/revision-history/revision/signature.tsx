@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Tooltip } from "@powerhousedao/design-system";
 import { type Signature } from "../types.js";
 
 export type SignatureProps = {

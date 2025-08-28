@@ -5,7 +5,7 @@ import {
   type CashAsset,
   type FixedIncome,
   type GroupTransactionType,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,

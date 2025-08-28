@@ -4,7 +4,7 @@ import {
   type TableItemType,
   type TableName,
   useEditorContext,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   type DefaultValues,

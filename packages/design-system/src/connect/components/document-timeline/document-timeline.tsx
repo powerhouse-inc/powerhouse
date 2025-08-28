@@ -1,4 +1,4 @@
-import { TooltipProvider } from "#connect";
+import { TooltipProvider } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HDivider,

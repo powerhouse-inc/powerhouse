@@ -1,7 +1,7 @@
 import {
   calculateCashBalanceChange,
   type GroupTransactionFormInputs,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type Control, useWatch } from "react-hook-form";
 import { FormattedNumber } from "../base/index.js";
 

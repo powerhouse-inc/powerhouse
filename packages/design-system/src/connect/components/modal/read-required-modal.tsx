@@ -1,4 +1,8 @@
-import { type DivProps, Modal, mergeClassNameProps } from "#powerhouse";
+import {
+  type DivProps,
+  Modal,
+  mergeClassNameProps,
+} from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef } from "react";
 
 import { useEffect, useRef, useState } from "react";

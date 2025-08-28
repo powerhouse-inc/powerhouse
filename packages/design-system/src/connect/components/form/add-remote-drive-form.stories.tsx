@@ -1,4 +1,4 @@
-import { PUBLIC } from "#connect";
+import { PUBLIC } from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { AddRemoteDriveForm } from "./add-remote-drive-form.js";
 

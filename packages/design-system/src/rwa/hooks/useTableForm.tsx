@@ -1,4 +1,8 @@
-import { type FormHookProps, useFormInputs, useSubmit } from "#rwa";
+import {
+  type FormHookProps,
+  useFormInputs,
+  useSubmit,
+} from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export function useTableForm(props: FormHookProps) {

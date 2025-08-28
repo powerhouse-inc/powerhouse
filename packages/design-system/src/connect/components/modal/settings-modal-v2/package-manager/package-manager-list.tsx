@@ -1,5 +1,4 @@
-import { ConnectDropdownMenu } from "#connect";
-import { Icon } from "#powerhouse";
+import { ConnectDropdownMenu, Icon } from "@powerhousedao/design-system";
 
 import { useCallback, useState, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";

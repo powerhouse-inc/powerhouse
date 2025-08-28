@@ -1,4 +1,8 @@
-import { Sidebar, SidebarPanel, type SidebarProps } from "#powerhouse";
+import {
+  Sidebar,
+  SidebarPanel,
+  type SidebarProps,
+} from "@powerhousedao/design-system";
 import {
   ConnectSidebarFooter,
   type ConnectSidebarFooterProps,

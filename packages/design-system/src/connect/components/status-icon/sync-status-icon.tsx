@@ -1,13 +1,14 @@
 import {
   CONFLICT,
   ERROR,
+  Icon,
   INITIAL_SYNC,
   MISSING,
   SUCCESS,
   SYNCING,
+  type IconName,
   type SyncStatus,
-} from "#connect";
-import { Icon, type IconName } from "#powerhouse";
+} from "@powerhousedao/design-system";
 
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

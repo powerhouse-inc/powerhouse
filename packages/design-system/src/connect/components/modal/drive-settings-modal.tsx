@@ -1,9 +1,11 @@
 import {
   Divider,
   DriveSettingsForm,
+  Icon,
+  Modal,
+  type DivProps,
   type DriveSettingsFormSubmitHandler,
-} from "#connect";
-import { Icon, Modal, type DivProps } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type DocumentDriveDocument, type SharingType } from "document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

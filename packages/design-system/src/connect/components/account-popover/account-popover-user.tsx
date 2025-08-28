@@ -1,4 +1,4 @@
-import { Button, Icon } from "#powerhouse";
+import { Button, Icon } from "@powerhousedao/design-system";
 import type { FC } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";

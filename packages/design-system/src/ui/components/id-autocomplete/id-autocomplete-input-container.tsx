@@ -1,15 +1,19 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
+import type {
+  InputBaseProps,
+  TransformerType,
+} from "@powerhousedao/design-system/ui";
+import {
+  cn,
+  Input,
+  sharedValueTransformers,
+  Tooltip,
+  TooltipProvider,
+  ValueTransformer,
+} from "@powerhousedao/design-system/ui";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { cn } from "../../lib/index.js";
-import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
-import type { InputBaseProps } from "../../types.js";
-import { Input } from "../input/index.js";
-import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
-import ValueTransformer, {
-  type TransformerType,
-} from "../value-transformer/value-transformer.js";
 import type { IdAutocompleteOption } from "./types.js";
 
 interface IdAutocompleteInputContainerProps

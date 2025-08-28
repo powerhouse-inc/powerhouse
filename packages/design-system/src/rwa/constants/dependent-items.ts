@@ -4,7 +4,7 @@ import {
   type ServiceProviderFeeType,
   type TableName,
   useEditorContext,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export type DependentItemProps = {

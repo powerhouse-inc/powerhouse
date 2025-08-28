@@ -1,5 +1,4 @@
-import { AnimatedLoader } from "#connect";
-import { type DivProps } from "#powerhouse";
+import { AnimatedLoader, type DivProps } from "@powerhousedao/design-system";
 
 type DefaultEditorLoaderProps = DivProps & {
   readonly message?: string;

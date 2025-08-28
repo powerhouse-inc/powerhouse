@@ -1,4 +1,4 @@
-import { Icon, type IconName } from "#powerhouse";
+import { Icon, type IconName } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 
 import {
@@ -6,7 +6,7 @@ import {
   getValidationArgTypes,
   StorybookControlCategory,
   withForm,
-} from "../../lib/index.js";
+} from "@powerhousedao/design-system/ui";
 import { EnumField } from "./enum-field.js";
 
 const meta: Meta<typeof EnumField> = {

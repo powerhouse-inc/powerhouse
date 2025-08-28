@@ -1,4 +1,7 @@
-import { formatDateForDisplay, type GroupTransactionFormInputs } from "#rwa";
+import {
+  formatDateForDisplay,
+  type GroupTransactionFormInputs,
+} from "@powerhousedao/design-system";
 import { type Control, useWatch } from "react-hook-form";
 
 export function EntryTimeLabel({

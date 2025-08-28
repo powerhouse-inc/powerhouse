@@ -3,10 +3,11 @@ import {
   type AddLocalDriveInput,
   AddRemoteDriveForm,
   type AddRemoteDriveInput,
+  type DivProps,
+  Modal,
   TabContent,
   Tabs,
-} from "#connect";
-import { type DivProps, Modal } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type App } from "document-model";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

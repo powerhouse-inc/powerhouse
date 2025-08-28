@@ -1,7 +1,6 @@
-import { NodeInput } from "#connect";
-import { Icon } from "#powerhouse";
-import { Fragment, useCallback, useState } from "react";
+import { Icon, NodeInput } from "@powerhousedao/design-system";
 import { type Node } from "document-drive";
+import { Fragment, useCallback, useState } from "react";
 
 export type BreadcrumbsProps<T extends boolean = boolean> = {
   breadcrumbs: Node[];

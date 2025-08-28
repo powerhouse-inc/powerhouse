@@ -1,4 +1,8 @@
-import { type Color, getDimensions, type Size } from "#powerhouse";
+import {
+  type Color,
+  getDimensions,
+  type Size,
+} from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef, Suspense } from "react";
 import { iconComponents, type IconName } from "../icon-components/index.js";
 

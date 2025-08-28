@@ -1,6 +1,6 @@
-import type { IconName } from "#powerhouse";
+import type { IconName } from "@powerhousedao/design-system";
+import type { InputBaseProps } from "@powerhousedao/design-system/ui";
 import type React from "react";
-import type { InputBaseProps } from "../../types.js";
 
 interface IdAutocompleteBaseConfigProps {
   onChange?: (value: string) => void;

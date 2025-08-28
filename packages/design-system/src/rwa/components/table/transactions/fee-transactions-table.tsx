@@ -1,10 +1,10 @@
-import { Icon } from "#powerhouse";
 import {
   type GroupTransactionFormInputs,
+  Icon,
   RWANumberInput,
   RWATableSelect,
   type ServiceProviderFeeType,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   type Control,
   type FieldErrors,

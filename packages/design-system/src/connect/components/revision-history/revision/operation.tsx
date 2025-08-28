@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Tooltip } from "@powerhousedao/design-system";
 
 export type OperationProps = {
   readonly operationType: string;

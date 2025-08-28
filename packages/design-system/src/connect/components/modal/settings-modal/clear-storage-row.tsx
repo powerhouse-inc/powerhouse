@@ -1,4 +1,4 @@
-import { Button, Icon } from "#powerhouse";
+import { Button, Icon } from "@powerhousedao/design-system";
 import { SettingsRow, type SettingsRowProps } from "./row.js";
 
 export interface ClearStorageSettingsRowProps extends SettingsRowProps {

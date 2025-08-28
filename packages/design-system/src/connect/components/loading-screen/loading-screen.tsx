@@ -1,4 +1,4 @@
-import { type Size } from "#powerhouse";
+import { type Size } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 import { AnimatedLoader } from "../animated-loader/index.js";

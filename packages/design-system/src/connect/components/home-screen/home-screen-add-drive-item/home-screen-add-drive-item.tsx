@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import { HomeScreenItem } from "../home-screen-item/index.js";
 
 type HomeScreenAddDriveItemProps = {

@@ -1,4 +1,4 @@
-import { Modal } from "#powerhouse";
+import { Modal } from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef } from "react";
 
 import { twMerge } from "tailwind-merge";

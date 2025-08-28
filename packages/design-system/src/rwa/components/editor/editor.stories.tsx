@@ -10,7 +10,7 @@ import {
   mockStateWithData,
   RWAEditor,
   RWAEditorContextProvider,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { type ComponentPropsWithoutRef, useState } from "react";
 import { useInterval } from "usehooks-ts";

@@ -1,4 +1,4 @@
-import { Icon, Modal } from "#powerhouse";
+import { Icon, Modal } from "@powerhousedao/design-system";
 import { type ComponentProps } from "react";
 
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { Combobox } from "#connect";
+import { Combobox } from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef } from "react";
 import {
   type Control,

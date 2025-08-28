@@ -1,10 +1,11 @@
-import { Icon, Modal } from "#powerhouse";
 import {
+  Icon,
+  Modal,
   ModalFormInputs,
   tableLabels,
   type TableName,
   useTableForm,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
 import { twMerge } from "tailwind-merge";
 

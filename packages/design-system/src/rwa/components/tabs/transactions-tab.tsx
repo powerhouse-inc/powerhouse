@@ -1,4 +1,7 @@
-import { GroupTransactionsTable, RwaTabContent } from "#rwa";
+import {
+  GroupTransactionsTable,
+  RwaTabContent,
+} from "@powerhousedao/design-system";
 
 export function TransactionsTab() {
   return (

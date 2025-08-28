@@ -1,4 +1,8 @@
-import { Button, type ButtonProps, mergeClassNameProps } from "#powerhouse";
+import {
+  Button,
+  type ButtonProps,
+  mergeClassNameProps,
+} from "@powerhousedao/design-system";
 
 export const RWAButton: React.FC<ButtonProps> = (props) => {
   return (

@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "../../lib/storybook-arg-types.js";
+} from "@powerhousedao/design-system/ui";
+import type { Meta, StoryObj } from "@storybook/react";
 import { Checkbox } from "./checkbox.js";
 
 /**

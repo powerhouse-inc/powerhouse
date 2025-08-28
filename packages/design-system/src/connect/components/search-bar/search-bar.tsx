@@ -4,8 +4,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Icon,
-} from "#powerhouse";
-import { cn } from "#ui";
+} from "@powerhousedao/design-system";
+import { cn } from "@powerhousedao/design-system/ui";
 import { type ChangeEvent, useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import { FilterItem, type FilterItemType } from "./filter-item.js";

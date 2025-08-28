@@ -1,4 +1,4 @@
-import { type FixedIncome } from "#rwa";
+import { type FixedIncome } from "@powerhousedao/design-system";
 
 export function makeFixedIncomeOptionLabel(fixedIncome: FixedIncome) {
   let label = fixedIncome.name;

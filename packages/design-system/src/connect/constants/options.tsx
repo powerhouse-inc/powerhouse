@@ -1,10 +1,10 @@
 import {
+  Icon,
   type DebugNodeOption,
   type NodeOption,
   type NormalNodeOption,
   type OptionMetadata,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";

@@ -1,5 +1,4 @@
-import { Select, type SelectItem } from "#connect";
-import { Icon } from "#powerhouse";
+import { Icon, Select, type SelectItem } from "@powerhousedao/design-system";
 import { type App } from "document-model";
 import { type ComponentPropsWithRef } from "react";
 import { type Control, Controller, type Path } from "react-hook-form";

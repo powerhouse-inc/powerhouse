@@ -1,4 +1,4 @@
-import { Toggle } from "#connect";
+import { Toggle } from "@powerhousedao/design-system";
 import {
   type ComponentPropsWithRef,
   type ForwardedRef,

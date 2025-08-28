@@ -3,6 +3,7 @@ import {
   defaultFolderOptions,
   DELETE,
   DUPLICATE,
+  Icon,
   NodeInput,
   type NodeOption,
   nodeOptionsMap,
@@ -14,8 +15,7 @@ import {
   useDrag,
   useDrop,
   WRITE,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import { type FolderNode, type Node, type SharingType } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";

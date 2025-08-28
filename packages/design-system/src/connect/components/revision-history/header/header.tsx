@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import { type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { Branch } from "./branch.js";

@@ -1,7 +1,6 @@
-import { Icon, type IconName } from "#powerhouse";
+import { Icon, type IconName } from "@powerhousedao/design-system";
+import { cn, type SelectProps } from "@powerhousedao/design-system/ui";
 import React from "react";
-import { cn } from "../../lib/index.js";
-import { type SelectProps } from "../enum-field/types.js";
 
 interface SelectedContentProps {
   selectedValues: string[];

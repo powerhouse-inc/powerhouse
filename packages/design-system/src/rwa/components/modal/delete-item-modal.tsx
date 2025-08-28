@@ -1,5 +1,10 @@
-import { Icon, Modal } from "#powerhouse";
-import { type DependentItemProps, tableLabels, type TableName } from "#rwa";
+import {
+  type DependentItemProps,
+  Icon,
+  Modal,
+  tableLabels,
+  type TableName,
+} from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
 
 export type RWADeleteItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
