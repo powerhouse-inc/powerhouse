@@ -1,19 +1,23 @@
 // @ts-nocheck
 // TODO fix interface errors
-import {
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-} from "#drive-document-model";
+import { mfs, type MFS } from "@helia/mfs";
+import type {
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
+  isValidDocumentId,
+  isValidSlug,
+  mergeOperations,
+  type DocumentDriveAction,
+  type DocumentDriveDocument,
   type SynchronizationUnitQuery,
-} from "#server";
-import { mergeOperations } from "#utils";
-import { mfs, type MFS } from "@helia/mfs";
+} from "document-drive";
 import {
   type Operation,
   type PHDocument,
@@ -21,8 +25,6 @@ import {
 } from "document-model";
 import { type Helia } from "helia";
 import stringify from "json-stringify-deterministic";
-import type { IDocumentOperationStorage, IDocumentStorage } from "./types.js";
-import { isValidDocumentId, isValidSlug } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {

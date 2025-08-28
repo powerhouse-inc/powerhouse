@@ -1,9 +1,5 @@
-import { type DocumentDriveDocument } from "document-drive";
-import {
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-} from "document-model";
+import type { DocumentDriveDocument, PHDocumentGQL } from "document-drive";
+import type { Operation, PHDocument } from "document-model";
 
 type ResponseForDrive = {
   id: string;
@@ -22,20 +18,6 @@ export function responseForDrive(drive: DocumentDriveDocument) {
   };
   return response;
 }
-
-export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
-  id: string;
-  revision: number;
-  // @deprecated
-  createdAt: string;
-  // @deprecated
-  lastModified: string;
-  __typename: string;
-  state: unknown;
-  initialState: unknown;
-  stateJSON: unknown;
-  operations: Operation[];
-};
 
 export function responseForDocument(
   document: PHDocument,

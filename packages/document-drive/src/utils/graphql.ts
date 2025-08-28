@@ -1,40 +1,36 @@
-import {
-  type DocumentDriveLocalState,
-  type FileNode,
-  type FolderNode,
-} from "#drive-document-model";
-import { type IBaseDocumentDriveServer } from "#server";
 import { pascalCase } from "change-case";
-import {
-  type DocumentModelModule,
-  type DocumentModelState,
-  type GlobalStateFromDocument,
-  type Operation,
-  type PHDocument,
+import type {
+  DocumentGraphQLResult,
+  DriveInfo,
+  GraphQLResult,
+  IBaseDocumentDriveServer,
+} from "document-drive";
+import { logger } from "document-drive";
+import type {
+  DocumentModelModule,
+  DocumentModelState,
+  PHDocument,
 } from "document-model";
+import type {
+  BuildSchemaOptions,
+  GraphQLOutputType,
+  ParseOptions,
+} from "graphql";
 import {
-  type BuildSchemaOptions,
   GraphQLError,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
-  type GraphQLOutputType,
   GraphQLScalarType,
   GraphQLUnionType,
-  type ParseOptions,
   buildSchema,
 } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
-import { logger } from "./logger.js";
 
 export { gql } from "graphql-request";
 
 type ReqGraphQLError = {
   message: string;
-};
-
-export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
-  errors?: GraphQLError[];
 };
 
 // replaces fetch so it can be used in Node and Browser envs
@@ -60,16 +56,6 @@ export async function requestGraphql<T>(
   }
   return result;
 }
-
-export type DriveInfo = {
-  id: string;
-  name: string;
-  slug: string;
-  icon?: string;
-  meta?: {
-    preferredEditor?: string;
-  };
-};
 
 function getFields(type: GraphQLOutputType, prefix: string): string {
   if (type instanceof GraphQLObjectType) {
@@ -192,20 +178,6 @@ export async function requestPublicDrive(
 
   return drive;
 }
-
-export type DriveState = DriveInfo &
-  Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {
-    nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
-  };
-
-export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
-  revision: number;
-  state: GlobalStateFromDocument<TDocument>;
-  initialState: GlobalStateFromDocument<TDocument>;
-  operations: (Operation & {
-    inputText: string;
-  })[];
-};
 
 export async function fetchDocument<TDocument extends PHDocument>(
   url: string,

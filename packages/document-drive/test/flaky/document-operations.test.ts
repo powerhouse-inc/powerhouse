@@ -1,7 +1,12 @@
 import {
+  buildOperation,
+  buildOperations,
+  DocumentDriveAction,
   driveDocumentModelModule,
   generateAddNodeAction,
-} from "#drive-document-model";
+  ReactorBuilder,
+  reducer,
+} from "document-drive";
 import {
   BaseAction,
   DocumentModelAction,
@@ -13,10 +18,6 @@ import {
   setStateSchema,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
   const documentModels = [

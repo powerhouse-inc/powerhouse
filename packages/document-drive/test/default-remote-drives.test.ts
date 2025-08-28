@@ -1,18 +1,17 @@
+import type {
+  DefaultRemoteDriveInput,
+  DocumentDriveDocument,
+  DocumentDriveServerOptions,
+  DriveInfo,
+} from "document-drive";
 import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  generateId,
-} from "document-model";
+  driveDocumentModelModule,
+  MemoryStorage,
+  ReactorBuilder,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import {
-  type DefaultRemoteDriveInput,
-  type DocumentDriveServerOptions,
-} from "../src/server/types.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { type DriveInfo } from "../src/utils/graphql.js";
 
 type DriveInput = {
   url: string;

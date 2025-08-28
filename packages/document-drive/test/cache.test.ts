@@ -1,16 +1,18 @@
-import { InMemoryCache } from "#cache";
+import type { ICache } from "document-drive";
+import {
+  createBaseState,
+  createDocument as createDriveDocument,
+  InMemoryCache,
+  LRUCacheStorage,
+} from "document-drive";
+import type { DocumentModelState } from "document-model";
+import {
+  createDocument as createDocumentModelDocument,
+  generateId,
+} from "document-model";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
-import {
-  createDocument as createDocumentModelDocument,
-  type DocumentModelState,
-  generateId,
-} from "../../document-model/index.js";
-import { LRUCacheStorage } from "../src/cache/lru.js";
-import { type ICache } from "../src/cache/types.js";
-import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
-import { createBaseState } from "./utils.js";
 
 const initRedis = async () => {
   const redisClient = createClient({

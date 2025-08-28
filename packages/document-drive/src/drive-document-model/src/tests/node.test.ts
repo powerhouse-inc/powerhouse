@@ -3,23 +3,29 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "./generate-mock.js";
-import { beforeEach, describe, expect, it } from "vitest";
-import * as creators from "../../gen/node/creators.js";
-import { reducer } from "../../gen/reducer.js";
+import type { DocumentDriveDocument } from "document-drive";
 import {
+  addFile,
   AddFileInputSchema,
+  addFolder,
   AddFolderInputSchema,
+  copyNode,
   CopyNodeInputSchema,
+  createDocument,
+  deleteNode,
   DeleteNodeInputSchema,
+  driveDocumentReducer,
   FileNodeSchema,
+  moveNode,
   MoveNodeInputSchema,
   NodeSchema,
+  updateFile,
   UpdateFileInputSchema,
+  updateNode,
   UpdateNodeInputSchema,
-} from "../../gen/schema/zod.js";
-import { type DocumentDriveDocument } from "../../gen/types.js";
-import { createDocument } from "../../gen/utils.js";
+} from "document-drive";
+import { beforeEach, describe, expect, it } from "vitest";
+import { generateMock } from "./generate-mock.js";
 import { createDocumentWithNodes } from "./test-factories.js";
 
 describe("Node Operations", () => {
@@ -31,7 +37,7 @@ describe("Node Operations", () => {
 
   it("should handle addFile operation", () => {
     const input = generateMock(AddFileInputSchema());
-    const updatedDocument = reducer(document, creators.addFile(input));
+    const updatedDocument = driveDocumentReducer(document, addFile(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe("ADD_FILE");
@@ -49,14 +55,17 @@ describe("Node Operations", () => {
     thirdInput.name = "test (copy) 1";
     secondInput.parentFolder = firstInput.parentFolder;
     thirdInput.parentFolder = firstInput.parentFolder;
-    const updatedDocument = reducer(document, creators.addFile(secondInput));
-    const secondUpdatedDocument = reducer(
-      updatedDocument,
-      creators.addFile(firstInput),
+    const updatedDocument = driveDocumentReducer(
+      document,
+      addFile(secondInput),
     );
-    const thirdUpdatedDocument = reducer(
+    const secondUpdatedDocument = driveDocumentReducer(
+      updatedDocument,
+      addFile(firstInput),
+    );
+    const thirdUpdatedDocument = driveDocumentReducer(
       secondUpdatedDocument,
-      creators.addFile(thirdInput),
+      addFile(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -76,14 +85,17 @@ describe("Node Operations", () => {
     firstInput.parentFolder = null;
     secondInput.parentFolder = null;
     thirdInput.parentFolder = null;
-    const updatedDocument = reducer(document, creators.addFile(secondInput));
-    const secondUpdatedDocument = reducer(
-      updatedDocument,
-      creators.addFile(firstInput),
+    const updatedDocument = driveDocumentReducer(
+      document,
+      addFile(secondInput),
     );
-    const thirdUpdatedDocument = reducer(
+    const secondUpdatedDocument = driveDocumentReducer(
+      updatedDocument,
+      addFile(firstInput),
+    );
+    const thirdUpdatedDocument = driveDocumentReducer(
       secondUpdatedDocument,
-      creators.addFile(thirdInput),
+      addFile(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -95,7 +107,7 @@ describe("Node Operations", () => {
   });
   it("should handle addFolder operation", () => {
     const input = generateMock(AddFolderInputSchema());
-    const updatedDocument = reducer(document, creators.addFolder(input));
+    const updatedDocument = driveDocumentReducer(document, addFolder(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe("ADD_FOLDER");
@@ -113,14 +125,17 @@ describe("Node Operations", () => {
     thirdInput.name = "test (copy) 1";
     secondInput.parentFolder = firstInput.parentFolder;
     thirdInput.parentFolder = firstInput.parentFolder;
-    const updatedDocument = reducer(document, creators.addFolder(secondInput));
-    const secondUpdatedDocument = reducer(
-      updatedDocument,
-      creators.addFolder(firstInput),
+    const updatedDocument = driveDocumentReducer(
+      document,
+      addFolder(secondInput),
     );
-    const thirdUpdatedDocument = reducer(
+    const secondUpdatedDocument = driveDocumentReducer(
+      updatedDocument,
+      addFolder(firstInput),
+    );
+    const thirdUpdatedDocument = driveDocumentReducer(
       secondUpdatedDocument,
-      creators.addFolder(thirdInput),
+      addFolder(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -141,14 +156,17 @@ describe("Node Operations", () => {
     firstInput.parentFolder = null;
     secondInput.parentFolder = null;
     thirdInput.parentFolder = null;
-    const updatedDocument = reducer(document, creators.addFolder(secondInput));
-    const secondUpdatedDocument = reducer(
-      updatedDocument,
-      creators.addFolder(firstInput),
+    const updatedDocument = driveDocumentReducer(
+      document,
+      addFolder(secondInput),
     );
-    const thirdUpdatedDocument = reducer(
+    const secondUpdatedDocument = driveDocumentReducer(
+      updatedDocument,
+      addFolder(firstInput),
+    );
+    const thirdUpdatedDocument = driveDocumentReducer(
       secondUpdatedDocument,
-      creators.addFolder(thirdInput),
+      addFolder(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -162,7 +180,7 @@ describe("Node Operations", () => {
   it("should handle deleteNode operation", () => {
     const input = generateMock(DeleteNodeInputSchema());
     const document = createDocumentWithNodes([input]);
-    const updatedDocument = reducer(document, creators.deleteNode(input));
+    const updatedDocument = driveDocumentReducer(document, deleteNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe(
@@ -176,7 +194,7 @@ describe("Node Operations", () => {
 
   it("should handle updateFile operation", () => {
     const input = generateMock(UpdateFileInputSchema());
-    const updatedDocument = reducer(document, creators.updateFile(input));
+    const updatedDocument = driveDocumentReducer(document, updateFile(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe(
@@ -196,7 +214,7 @@ describe("Node Operations", () => {
     input.name = existingFile1.name;
     input.parentFolder = existingFile1.parentFolder;
     document.state.global.nodes = [existingFile1, existingFile2];
-    const updatedDocument = reducer(document, creators.updateFile(input));
+    const updatedDocument = driveDocumentReducer(document, updateFile(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -207,7 +225,7 @@ describe("Node Operations", () => {
   });
   it("should handle updateNode operation", () => {
     const input = generateMock(UpdateNodeInputSchema());
-    const updatedDocument = reducer(document, creators.updateNode(input));
+    const updatedDocument = driveDocumentReducer(document, updateNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe(
@@ -227,7 +245,7 @@ describe("Node Operations", () => {
     input.name = existingNode1.name;
     input.parentFolder = existingNode1.parentFolder;
     document.state.global.nodes = [existingNode1, existingNode2];
-    const updatedDocument = reducer(document, creators.updateNode(input));
+    const updatedDocument = driveDocumentReducer(document, updateNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -248,7 +266,7 @@ describe("Node Operations", () => {
         name: "Node 2",
       },
     ]);
-    const updatedDocument = reducer(document, creators.copyNode(input));
+    const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe("COPY_NODE");
@@ -270,9 +288,9 @@ describe("Node Operations", () => {
       },
     ]);
 
-    const updatedDocument = reducer(
+    const updatedDocument = driveDocumentReducer(
       document,
-      creators.copyNode({
+      copyNode({
         ...input,
         srcId: "1",
         targetId: "1",
@@ -299,7 +317,7 @@ describe("Node Operations", () => {
     input.targetName = existingNode.name;
     input.targetParentFolder = existingNode.parentFolder;
     document.state.global.nodes = [existingNode];
-    const updatedDocument = reducer(document, creators.copyNode(input));
+    const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -316,7 +334,7 @@ describe("Node Operations", () => {
     input.targetName = existingNode.name;
     input.targetParentFolder = null;
     document.state.global.nodes = [existingNode];
-    const updatedDocument = reducer(document, creators.copyNode(input));
+    const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -332,7 +350,7 @@ describe("Node Operations", () => {
     input.targetName = existingNode.name;
     input.targetParentFolder = existingNode.parentFolder;
     document.state.global.nodes = [existingNode];
-    const updatedDocument = reducer(document, creators.copyNode(input));
+    const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -353,7 +371,7 @@ describe("Node Operations", () => {
         name: "Node 2",
       },
     ]);
-    const updatedDocument = reducer(document, creators.moveNode(input));
+    const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe("MOVE_NODE");
@@ -371,7 +389,7 @@ describe("Node Operations", () => {
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = existingNode.parentFolder;
     document.state.global.nodes = [existingNode, existingNode2];
-    const updatedDocument = reducer(document, creators.moveNode(input));
+    const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -390,7 +408,7 @@ describe("Node Operations", () => {
     input.srcFolder = existingNode2.id;
     input.targetParentFolder = null;
     document.state.global.nodes = [existingNode, existingNode2];
-    const updatedDocument = reducer(document, creators.moveNode(input));
+    const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
       (node: any) => node.name,
@@ -410,9 +428,9 @@ describe("Node Operations", () => {
     document.state.global.nodes = nodes;
 
     // move folder to descendent
-    const updatedDocument = reducer(
+    const updatedDocument = driveDocumentReducer(
       document,
-      creators.moveNode({
+      moveNode({
         srcFolder: "1",
         targetParentFolder: "3",
       }),
@@ -440,9 +458,9 @@ describe("Node Operations", () => {
 
     document.state.global.nodes = nodes;
 
-    const updatedDocument = reducer(
+    const updatedDocument = driveDocumentReducer(
       document,
-      creators.moveNode({
+      moveNode({
         srcFolder: "1",
         targetParentFolder: "1",
       }),

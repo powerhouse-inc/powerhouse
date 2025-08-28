@@ -1,18 +1,6 @@
-import { isLogLevel, type LogLevel, LogLevels } from "@powerhousedao/config";
-
-export { isLogLevel, type LogLevel, LogLevels };
-
-export type ILogger = Pick<
-  Console,
-  "log" | "info" | "warn" | "error" | "debug"
-> & {
-  level: LogLevel | "env";
-  errorHandler: LoggerErrorHandler | undefined;
-
-  verbose: (message?: any, ...optionalParams: any[]) => void;
-};
-
-export type LoggerErrorHandler = (...data: any[]) => void;
+import type { LogLevel } from "@powerhousedao/config";
+import { isLogLevel, LogLevels } from "@powerhousedao/config";
+import type { ILogger, LoggerErrorHandler } from "document-drive";
 
 export class ConsoleLogger implements ILogger {
   #tags: string[];

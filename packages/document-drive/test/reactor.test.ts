@@ -1,9 +1,9 @@
-import { type DocumentModelModule } from "document-model";
+import { ReactorBuilder } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { describe, test } from "vitest";
-import { ReactorBuilder } from "../src/server/builder.js";
 
+import { driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 
 describe("Internal Listener", () => {
   const documentModels = [

@@ -1,28 +1,21 @@
+import type { DocumentDriveDocument, DocumentDriveUtils } from "document-drive";
 import {
-  actions as BaseActions,
-  type DocumentModelModule,
-} from "document-model";
-import { documentModel } from "./gen/document-model.js";
-import { actions as DocumentDriveActions } from "./gen/index.js";
-import { reducer } from "./gen/reducer.js";
-import { type DocumentDriveDocument } from "./gen/types.js";
-import { DriveUtils, type DocumentDriveUtils } from "./gen/utils.js";
-import * as customUtils from "./src/utils.js";
+  actions as DocumentDriveActions,
+  driveDocumentModel,
+  driveDocumentReducer,
+  DriveUtils,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import { actions as BaseActions } from "document-model";
 
-const utils = { ...DriveUtils, ...customUtils } satisfies DocumentDriveUtils;
+const utils = { ...DriveUtils } satisfies DocumentDriveUtils;
 
 const actions = { ...BaseActions, ...DocumentDriveActions };
 
-export const module: DocumentModelModule<DocumentDriveDocument> = {
-  reducer,
-  actions,
-  utils,
-  documentModel,
-};
-
-export const driveDocumentModelModule = module;
-
-export { actions, documentModel, reducer };
-
-export * from "./gen/types.js";
-export * from "./src/utils.js";
+export const driveDocumentModelModule: DocumentModelModule<DocumentDriveDocument> =
+  {
+    reducer: driveDocumentReducer,
+    actions,
+    utils,
+    documentModel: driveDocumentModel,
+  };

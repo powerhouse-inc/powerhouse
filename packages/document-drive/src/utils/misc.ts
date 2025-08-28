@@ -1,16 +1,7 @@
-import {
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
-} from "document-model";
-
-import {
-  driveDocumentType,
-  type DocumentDriveDocument,
-} from "#drive-document-model";
-import { OperationError, type ListenerRevision } from "#server";
 import { pascalCase } from "change-case";
-import { RunAsap } from "./run-asap.js";
+import type { DocumentDriveDocument, ListenerRevision } from "document-drive";
+import { driveDocumentType, OperationError, RunAsap } from "document-drive";
+import type { DocumentOperations, Operation, PHDocument } from "document-model";
 
 export const runAsap = RunAsap.runAsap;
 export const runAsapAsync = RunAsap.runAsapAsync;

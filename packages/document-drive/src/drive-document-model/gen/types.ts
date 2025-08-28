@@ -1,20 +1,27 @@
-import type { Action, BaseState, PHDocument } from "document-model";
-import type { DocumentDriveAction } from "./actions.js";
 import type {
   AddFileInput,
+  DocumentDriveDriveAction,
   DocumentDriveLocalState,
+  DocumentDriveNodeAction,
   DocumentDriveState,
   InputMaybe,
   Scalars,
-} from "./schema/types.js";
+} from "document-drive";
+import type {
+  Action,
+  BaseState,
+  DocumentModelUtils,
+  PHDocument,
+} from "document-model";
 
-export { z } from "./schema/index.js";
+export type * from "./drive/types.js";
+export type * from "./node/types.js";
 export type * from "./schema/types.js";
-export type {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-};
+
+export type DocumentDriveAction =
+  | DocumentDriveNodeAction
+  | DocumentDriveDriveAction;
+
 export type ExtendedDocumentDriveState = BaseState<
   DocumentDriveState,
   DocumentDriveLocalState
@@ -39,3 +46,5 @@ export type LegacyAddFileAction = Action & {
   type: "ADD_FILE";
   input: LegacyAddFileInput;
 };
+
+export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;

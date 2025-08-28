@@ -1,20 +1,22 @@
+import type {
+  ListenerRevision,
+  ServerListener,
+  StrandUpdate,
+} from "document-drive";
+import {
+  addFile,
+  driveDocumentModelModule,
+  expectUTCTimestamp,
+  ReactorBuilder,
+  SwitchboardPushTransmitter,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import {
   documentModelDocumentModelModule,
-  type DocumentModelModule,
   generateId,
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import * as DriveActions from "../src/drive-document-model/gen/creators.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { SwitchboardPushTransmitter } from "../src/server/listener/transmitter/switchboard-push.js";
-import {
-  type Listener,
-  type ListenerRevision,
-  type StrandUpdate,
-} from "../src/server/types.js";
-import { expectUTCTimestamp } from "./utils.js";
 
 vi.mock(import("graphql-request"), async (importOriginal) => {
   const originalModule = await importOriginal();
@@ -75,7 +77,7 @@ describe("SwitchboardPush Listener", () => {
 
     // Create the listener and transmitter
     const uuid = generateId();
-    const listener: Listener = {
+    const listener: ServerListener = {
       driveId,
       listenerId: uuid,
       block: false,
@@ -129,7 +131,7 @@ describe("SwitchboardPush Listener", () => {
     const documentId = document.header.id;
     await server.addDocument(document);
 
-    const action = DriveActions.addFile({
+    const action = addFile({
       id: documentId,
       name: "test",
       documentType: "powerhouse/document-model",

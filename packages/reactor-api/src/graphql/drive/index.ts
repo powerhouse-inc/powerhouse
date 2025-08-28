@@ -5,12 +5,12 @@ import {
   type DocumentDriveDocument,
   type DriveInfo,
   type FileNode,
-  type Listener,
   type ListenerFilter,
   type ListenerRevision,
   PullResponderTransmitter,
   responseForDocument,
   responseForDrive,
+  type ServerListener,
   type StrandUpdateGraphQL,
 } from "document-drive";
 import {
@@ -327,7 +327,7 @@ export class DriveSubgraph extends Subgraph {
         _: unknown,
         { filter, listenerId }: { filter: ListenerFilter; listenerId?: string },
         ctx: Context,
-      ): Promise<Listener> => {
+      ): Promise<ServerListener> => {
         this.logger.verbose(
           `registerPullResponderListener(drive: ${ctx.driveId})`,
           filter,
@@ -347,7 +347,7 @@ export class DriveSubgraph extends Subgraph {
 
         // Create the listener and transmitter
         const uuid = listenerId ?? generateId();
-        const listener: Listener = {
+        const listener: ServerListener = {
           driveId: driveId,
           listenerId: uuid,
           block: false,

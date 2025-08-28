@@ -1,16 +1,16 @@
-import { DocumentModelModule, Operation, generateId } from "document-model";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PullResponderTransmitter, ReactorBuilder } from "../../src";
-import InMemoryCache from "../../src/cache/memory";
-import { MemoryStorage } from "../../src/storage/memory";
-import { PrismaStorage } from "../../src/storage/prisma";
-import { PrismaClient } from "../../src/storage/prisma/client";
-import {
+import InMemoryCache, {
+  MemoryStorage,
+  PrismaClient,
+  PrismaStorage,
+  PullResponderTransmitter,
+  ReactorBuilder,
   buildOperation,
   buildOperations,
   expectUTCTimestamp,
   expectUUID,
-} from "../utils.js";
+} from "document-drive";
+import { DocumentModelModule, Operation, generateId } from "document-model";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Synchronization Units", () => {
   const documentModels = [

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type {
   AddFileInput,
   AddFolderInput,
@@ -10,23 +9,22 @@ import type {
   DocumentDriveState,
   FileNode,
   FolderNode,
-  Listener,
   ListenerCallInfo,
   ListenerFilter,
   MoveNodeInput,
   PullResponderTriggerData,
   RemoveListenerInput,
   RemoveTriggerInput,
+  Listener,
   SetAvailableOfflineInput,
   SetDriveIconInput,
   SetDriveNameInput,
   SetSharingTypeInput,
-  TransmitterType,
   Trigger,
-  TriggerType,
   UpdateFileInput,
   UpdateNodeInput,
-} from "./types.js";
+} from "document-drive";
+import { z } from "zod";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

@@ -4,19 +4,17 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { DocumentIdValidationError } from "#server";
-import { isValidDocumentId } from "#storage";
-import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
-import { type FileNode } from "../../gen/types.js";
+import type { DocumentDriveNodeOperations, FileNode } from "document-drive";
+import { DocumentIdValidationError, isValidDocumentId } from "document-drive";
 import {
   getDescendants,
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
   isValidName,
-} from "../utils.js";
+} from "document-drive";
 
-export const reducer: DocumentDriveNodeOperations = {
+export const nodeReducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {
     if (state.nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);

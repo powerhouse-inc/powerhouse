@@ -1,8 +1,12 @@
+import {
+  addFolder,
+  copyNode,
+  createDocument,
+  moveNode,
+  driveDocumentReducer,
+} from "document-drive";
 import { generateId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { addFolder, copyNode, moveNode } from "../../gen/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import { createDocument } from "../../gen/utils.js";
 
 describe("DocumentDrive Actions", () => {
   let documentDrive = createDocument();
@@ -16,7 +20,7 @@ describe("DocumentDrive Actions", () => {
   beforeEach(() => {
     documentDrive = createDocument();
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: folder1Id,
@@ -24,7 +28,7 @@ describe("DocumentDrive Actions", () => {
       }),
     );
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: folder1_1Id,
@@ -33,7 +37,7 @@ describe("DocumentDrive Actions", () => {
       }),
     );
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: folder1_1_1Id,
@@ -42,7 +46,7 @@ describe("DocumentDrive Actions", () => {
       }),
     );
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: folder2Id,
@@ -50,7 +54,7 @@ describe("DocumentDrive Actions", () => {
       }),
     );
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: folder3Id,
@@ -64,7 +68,7 @@ describe("DocumentDrive Actions", () => {
       const srcFolder = folder1_1Id;
       const targetParentFolder = folder2Id;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         moveNode({
           srcFolder,
@@ -82,7 +86,7 @@ describe("DocumentDrive Actions", () => {
     it("should move a node to the root of the drive when parentFolder is not provided", () => {
       const srcFolder = folder1_1Id;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         moveNode({
           srcFolder,
@@ -99,7 +103,7 @@ describe("DocumentDrive Actions", () => {
     it("should move a node to the root of the drive when parentFolder is null", () => {
       const srcFolder = folder1_1Id;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         moveNode({
           srcFolder,
@@ -118,7 +122,7 @@ describe("DocumentDrive Actions", () => {
       const srcFolder = "invalid";
       const targetParentFolder = folder2Id;
 
-      const document = reducer(
+      const document = driveDocumentReducer(
         documentDrive,
         moveNode({
           srcFolder,
@@ -149,7 +153,7 @@ describe("DocumentDrive Actions", () => {
       const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -173,7 +177,7 @@ describe("DocumentDrive Actions", () => {
       const targetId = folder1_1Id + "-copy";
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -196,7 +200,7 @@ describe("DocumentDrive Actions", () => {
       const targetId = folder1_1Id + "-copy";
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -220,7 +224,7 @@ describe("DocumentDrive Actions", () => {
       const targetId = folder1_1Id + "-copy";
       const targetParentFolder = folder2Id;
 
-      const document = reducer(
+      const document = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -255,7 +259,7 @@ describe("DocumentDrive Actions", () => {
       const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -282,7 +286,7 @@ describe("DocumentDrive Actions", () => {
       const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,
@@ -308,7 +312,7 @@ describe("DocumentDrive Actions", () => {
       const targetParentFolder = folder2Id;
       const initialNodesLength = documentDrive.state.global.nodes.length;
 
-      documentDrive = reducer(
+      documentDrive = driveDocumentReducer(
         documentDrive,
         copyNode({
           srcId,

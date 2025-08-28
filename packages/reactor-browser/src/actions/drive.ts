@@ -4,10 +4,10 @@ import {
   createDriveState,
   type DocumentDriveDocument,
   type DriveInput,
-  type Listener,
   PullResponderTransmitter,
   type PullResponderTrigger,
   type RemoteDriveOptions,
+  type ServerListener,
   setAvailableOffline,
   setDriveName,
   setSharingType,
@@ -198,7 +198,7 @@ export async function registerNewPullResponderTrigger(
   }
 
   const uuid = generateId();
-  const listener: Listener = {
+  const listener: ServerListener = {
     driveId,
     listenerId: uuid,
     block: false,

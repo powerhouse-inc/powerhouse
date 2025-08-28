@@ -1,32 +1,33 @@
-import { type ICache } from "#cache";
-import { type DocumentDriveDocument } from "#drive-document-model";
+import type {
+  DocumentDriveDocument,
+  GetStrandsOptions,
+  ICache,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IEventEmitter,
+  IStorageUnit,
+  ISynchronizationManager,
+  OperationUpdate,
+  SyncStatus,
+  SyncUnitStatusObject,
+  SynchronizationUnit,
+  SynchronizationUnitId,
+  SynchronizationUnitQuery,
+} from "document-drive";
 import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-  type IStorageUnit,
-} from "#storage";
-import { childLogger, isBefore, operationsToRevision } from "#utils";
+  SynchronizationUnitNotFoundError,
+  childLogger,
+  isBefore,
+  operationsToRevision,
+} from "document-drive";
+import type { DocumentModelModule, PHDocument } from "document-model";
 import {
-  type DocumentModelModule,
-  type PHDocument,
   garbageCollectDocumentOperations,
   replayDocument,
 } from "document-model";
-import { SynchronizationUnitNotFoundError } from "./error.js";
 import { SyncUnitMap } from "./sync-unit-map.js";
-import {
-  type GetStrandsOptions,
-  type IEventEmitter,
-  type ISynchronizationManager,
-  type OperationUpdate,
-  type SyncStatus,
-  type SyncUnitStatusObject,
-  type SynchronizationUnit,
-  type SynchronizationUnitId,
-  type SynchronizationUnitQuery,
-} from "./types.js";
 
-export default class SynchronizationManager implements ISynchronizationManager {
+export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();
 
   private logger = childLogger(["SynchronizationManager"]);

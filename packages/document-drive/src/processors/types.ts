@@ -1,8 +1,10 @@
-import { type ListenerFilter } from "#drive-document-model";
-import { type InternalTransmitterUpdate } from "#server";
-import { type PHDocument, type PHDocumentHeader } from "document-model";
-import { type Kysely, type QueryCreator } from "kysely";
-import { type ExtractProcessorSchemaOrSelf } from "./relational.js";
+import type {
+  InternalTransmitterUpdate,
+  ListenerFilter,
+  RelationalDbProcessor,
+} from "document-drive";
+import type { PHDocument, PHDocumentHeader } from "document-model";
+import type { Kysely, QueryCreator } from "kysely";
 
 // TODO: Add @powerhousedao/analytics-engine-core dependency when needed
 type IAnalyticsStore = any;
@@ -108,3 +110,25 @@ export interface IProcessorManager {
    */
   registerDrive(driveId: string): Promise<void>;
 }
+
+export type RelationalDbProcessorFilter = ListenerFilter;
+export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
+  extends IProcessor {
+  namespace: string;
+  query: IRelationalQueryBuilder<TDatabaseSchema>;
+  filter: RelationalDbProcessorFilter;
+  initAndUpgrade(): Promise<void>;
+}
+
+export type ExtractProcessorSchema<TProcessor> =
+  TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
+
+export type ExtractProcessorSchemaOrSelf<TProcessor> =
+  TProcessor extends RelationalDbProcessor<infer TSchema>
+    ? TSchema
+    : TProcessor;
+
+export type RelationalDbProcessorClass<TSchema> =
+  typeof RelationalDbProcessor<TSchema>;
+
+export type HashAlgorithms = "fnv1a";

@@ -1,27 +1,27 @@
-import { BaseDocumentClass } from "document-model";
-import {
-  type AddFileInput,
-  type AddFolderInput,
-  type DeleteNodeInput,
-  type UpdateFileInput,
-  type UpdateNodeInput,
-  type CopyNodeInput,
-  type MoveNodeInput,
-  type DocumentDriveState,
-  type DocumentDriveLocalState,
-} from "../types.js";
+import type {
+  AddFileInput,
+  AddFolderInput,
+  CopyNodeInput,
+  DeleteNodeInput,
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  MoveNodeInput,
+  UpdateFileInput,
+  UpdateNodeInput,
+} from "document-drive";
 import {
   addFile,
   addFolder,
+  copyNode,
   deleteNode,
+  moveNode,
   updateFile,
   updateNode,
-  copyNode,
-  moveNode,
-} from "./creators.js";
-import { type DocumentDriveAction } from "../actions.js";
+} from "document-drive";
+import { BaseDocumentClass } from "document-model";
 
-export default class DocumentDrive_Node extends BaseDocumentClass<
+export class DocumentDrive_Node extends BaseDocumentClass<
   DocumentDriveState,
   DocumentDriveLocalState,
   DocumentDriveAction

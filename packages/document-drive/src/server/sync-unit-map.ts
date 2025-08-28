@@ -1,36 +1,4 @@
-import { type SynchronizationUnitId } from "./types.js";
-
-/**
- * Interface for a specialized Map implementation that manages synchronization units.
- * Each unit is identified by a SynchronizationUnitId which consists of documentId, scope, and branch.
- */
-export interface ISyncUnitMap<Value> {
-  set(id: SynchronizationUnitId, state: Value): this;
-  get(id: SynchronizationUnitId): Value | undefined;
-  has(id: SynchronizationUnitId): boolean;
-  delete(id: SynchronizationUnitId): boolean;
-  clear(): void;
-  get size(): number;
-  keys(): IterableIterator<SynchronizationUnitId>;
-  values(): IterableIterator<Value>;
-  entries(): IterableIterator<[SynchronizationUnitId, Value]>;
-  [Symbol.iterator](): IterableIterator<[SynchronizationUnitId, Value]>;
-  forEach(
-    callbackfn: (
-      value: Value,
-      key: SynchronizationUnitId,
-      map: ISyncUnitMap<Value>,
-    ) => void,
-    thisArg?: any,
-  ): void;
-  deleteByDocumentId(documentId: string): void;
-  deleteByDocumentIdAndScope(documentId: string, scope: string): void;
-  getAllByDocumentId(documentId: string): [SynchronizationUnitId, Value][];
-  getAllByDocumentIdAndScope(
-    documentId: string,
-    scope: string,
-  ): [SynchronizationUnitId, Value][];
-}
+import type { ISyncUnitMap, SynchronizationUnitId } from "document-drive";
 
 /** Separator character used to join synchronization unit key parts */
 type SyncUnitKeySeparator = "|";
@@ -135,9 +103,10 @@ export class SyncUnitMap<Value> implements ISyncUnitMap<Value> {
    * Returns an iterator of synchronization unit identifiers
    * @param filter Optional filter by documentId and scope
    */
-  keys(
-    filter?: { documentId: string; scope?: string } | undefined,
-  ): IterableIterator<SynchronizationUnitId> {
+  keys(filter?: {
+    documentId: string;
+    scope?: string;
+  }): IterableIterator<SynchronizationUnitId> {
     const iter = this.internalMap.keys();
     return {
       [Symbol.iterator]() {
@@ -164,9 +133,10 @@ export class SyncUnitMap<Value> implements ISyncUnitMap<Value> {
    * Returns an iterator of stored values
    * @param filter Optional filter by documentId and scope
    */
-  values(
-    filter?: { documentId: string; scope?: string } | undefined,
-  ): IterableIterator<Value> {
+  values(filter?: {
+    documentId: string;
+    scope?: string;
+  }): IterableIterator<Value> {
     const iter = this.internalMap.entries();
     return {
       [Symbol.iterator]() {
@@ -193,9 +163,10 @@ export class SyncUnitMap<Value> implements ISyncUnitMap<Value> {
    * Returns an iterator of [id, value] pairs
    * @param filter Optional filter by documentId and scope
    */
-  entries(
-    filter?: { documentId: string; scope?: string } | undefined,
-  ): IterableIterator<[SynchronizationUnitId, Value]> {
+  entries(filter?: {
+    documentId: string;
+    scope?: string;
+  }): IterableIterator<[SynchronizationUnitId, Value]> {
     const iter = this.internalMap.entries();
     return {
       [Symbol.iterator]() {

@@ -9,35 +9,37 @@
  */
 
 import {
-  DocumentDriveAction,
+  IDocumentDriveServer,
   Listener,
   ListenerFilter,
+  ListenerRevision,
+  PullResponderTransmitter,
+  ReactorBuilder,
+  StrandUpdate,
+  SyncStatus,
   actions,
-  reducer,
+  buildOperation,
+  buildOperations,
+  driveDocumentReducer,
 } from "document-drive";
-import * as DocumentModelLib from "document-model";
-import { DocumentModelModule, Operation, generateId } from "document-model";
-import * as DocumentModelsLibs from "document-model-libs/document-models";
+import {
+  DocumentModelDocument,
+  DocumentModelModule,
+  Operation,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import stringify from "json-stringify-deterministic";
 import { GraphQLQuery, HttpResponse, graphql } from "msw";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { PullResponderTransmitter } from "../../src/server/listener/transmitter/pull-responder.js";
-import {
-  ListenerRevision,
-  ReactorBuilder,
-  StrandUpdate,
-  SyncStatus,
-} from "../../src/server/types.js";
-import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document Drive Server interaction", () => {
   const documentModels = [
-    DocumentModelLib,
-    ...Object.values(DocumentModelsLibs),
+    documentModelDocumentModelModule,
   ] as DocumentModelModule[];
 
-  function setupHandlers(server: DocumentDriveServer) {
+  function setupHandlers(server: IDocumentDriveServer) {
     const handlers = [
       graphql.query("getDrive", async () => {
         const drive = await server.getDrive("1");
@@ -58,22 +60,18 @@ describe("Document Drive Server interaction", () => {
             );
 
             for (const s of sortedStrands) {
-              const operations =
-                s.operations?.map((o) => ({
-                  ...o,
+              const operations = (s.operations?.map((o) => ({
+                ...o,
 
-                  input: JSON.parse(o.input.toString()),
-                  skip: o.skip ?? 0,
-                  scope: s.scope,
-                  branch: "main",
-                })) ?? [];
+                input: JSON.parse(o.input.toString()),
+                skip: o.skip ?? 0,
+                scope: s.scope,
+                branch: "main",
+              })) ?? []) as unknown as Operation[];
 
               const result = await (!s.documentId
-                ? server.addDriveOperations(
-                    s.driveId,
-                    operations as Operation<DocumentDriveAction>[],
-                  )
-                : server.addOperations(s.driveId, s.documentId, operations));
+                ? server.addOperations(s.driveId, operations)
+                : server.addOperations(s.documentId, operations));
 
               if (result.status !== "SUCCESS") console.error(result.error);
 
@@ -87,7 +85,7 @@ describe("Document Drive Server interaction", () => {
                 scope: s.scope,
                 status: result.status,
                 error: result.error?.message,
-              });
+              } as unknown as ListenerRevision);
             }
           }
           return HttpResponse.json({
@@ -119,7 +117,10 @@ describe("Document Drive Server interaction", () => {
             system: false,
           };
           let drive = await server.getDrive(driveId);
-          drive = reducer(drive, actions.addListener({ listener }));
+          drive = driveDocumentReducer(
+            drive,
+            actions.addListener({ listener }),
+          );
           const operation = drive.operations.local.slice(-1);
 
           await server.addDriveOperations(driveId, operation);
@@ -135,6 +136,7 @@ describe("Document Drive Server interaction", () => {
       graphql.query<GraphQLQuery, { listenerId: string }>(
         "strands",
         async ({ variables }) => {
+          // @ts-expect-error - type expected by test is out of date
           const transmitter = await server.getTransmitter(
             "1",
             variables.listenerId,
@@ -178,6 +180,7 @@ describe("Document Drive Server interaction", () => {
         let success = false;
         try {
           const { listenerId, revisions } = variables;
+          // @ts-expect-error - type expected by test is out of date
           const transmitter = await server.getTransmitter("1", listenerId);
           if (
             !transmitter ||
@@ -220,6 +223,7 @@ describe("Document Drive Server interaction", () => {
     const mswServer = setupHandlers(remoteServer);
 
     await remoteServer.addDrive({
+      // @ts-expect-error - type expected by test is out of date
       global: { id: "1", name: "name", icon: "icon", slug: "slug" },
       local: {
         availableOffline: false,
@@ -267,6 +271,7 @@ describe("Document Drive Server interaction", () => {
         },
       ],
     });
+    // @ts-expect-error - type expected by test is out of date
     await connectServer.clearStorage();
     mswServer.close();
   });
@@ -298,7 +303,7 @@ describe("Document Drive Server interaction", () => {
     await remoteServer.addDriveOperation(
       "1",
       buildOperation(
-        reducer,
+        driveDocumentReducer,
         remoteDrive,
         actions.addFolder({ id: "1", name: "test" }),
       ),
@@ -324,6 +329,7 @@ describe("Document Drive Server interaction", () => {
       },
     ]);
 
+    // @ts-expect-error - type expected by test is out of date
     await connectServer.clearStorage();
     mswServer.close();
   });
@@ -347,7 +353,7 @@ describe("Document Drive Server interaction", () => {
     await remoteServer.addDriveOperation(
       "1",
       buildOperation(
-        reducer,
+        driveDocumentReducer,
         remoteDrive,
         actions.addFile({
           id: "1",
@@ -373,9 +379,9 @@ describe("Document Drive Server interaction", () => {
       "1",
       "1",
       buildOperation(
-        DocumentModelLib.reducer,
-        remoteDocument,
-        DocumentModelLib.actions.setModelName({ name: "test" }),
+        documentModelDocumentModelModule.reducer,
+        remoteDocument as DocumentModelDocument,
+        documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
 
@@ -383,7 +389,7 @@ describe("Document Drive Server interaction", () => {
       const connectDocument = (await connectServer.getDocument(
         "1",
         "1",
-      )) as DocumentModelLib.DocumentModelDocument;
+      )) as DocumentModelDocument;
       expect(connectDocument.operations.global.length).toBe(1);
     });
 
@@ -414,9 +420,10 @@ describe("Document Drive Server interaction", () => {
     const connectDocument = (await connectServer.getDocument(
       "1",
       "1",
-    )) as DocumentModelLib.DocumentModelDocument;
+    )) as DocumentModelDocument;
     expect(connectDocument.state.global.name).toBe("test");
 
+    // @ts-expect-error - type expected by test is out of date
     await connectServer.clearStorage();
     mswServer.close();
   });
@@ -427,7 +434,7 @@ describe("Document Drive Server interaction", () => {
     let remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperations(
       "1",
-      buildOperations(reducer, remoteDrive, [
+      buildOperations(driveDocumentReducer, remoteDrive, [
         actions.addFolder({ id: "folder", name: "new folder" }),
         actions.addFile({
           id: "1",
@@ -453,16 +460,16 @@ describe("Document Drive Server interaction", () => {
       "1",
       "1",
       buildOperation(
-        DocumentModelLib.reducer,
-        remoteDocument,
-        DocumentModelLib.actions.setModelName({ name: "test" }),
+        documentModelDocumentModelModule.reducer,
+        remoteDocument as DocumentModelDocument,
+        documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
 
     remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperation(
       "1",
-      buildOperation(reducer, remoteDrive, actions.deleteNode({ id: "1" })),
+      buildOperation(driveDocumentReducer, remoteDrive, actions.deleteNode({ id: "1" })),
     );
 
     const connectServer = new ReactorBuilder(documentModels).build();
@@ -491,6 +498,7 @@ describe("Document Drive Server interaction", () => {
       },
     ]);
 
+    // @ts-expect-error - type expected by test is out of date
     await connectServer.clearStorage();
     mswServer.close();
   });
@@ -501,7 +509,7 @@ describe("Document Drive Server interaction", () => {
     let remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperations(
       "1",
-      buildOperations(reducer, remoteDrive, [
+      buildOperations(driveDocumentReducer, remoteDrive, [
         actions.addFolder({ id: "folder", name: "new folder" }),
         actions.addFile({
           id: "1",
@@ -527,9 +535,9 @@ describe("Document Drive Server interaction", () => {
       "1",
       "1",
       buildOperation(
-        DocumentModelLib.reducer,
-        remoteDocument,
-        DocumentModelLib.actions.setModelName({ name: "test" }),
+        documentModelDocumentModelModule.reducer,
+        remoteDocument as DocumentModelDocument,
+        documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
 
@@ -583,16 +591,16 @@ describe("Document Drive Server interaction", () => {
       "1",
       "1",
       buildOperation(
-        DocumentModelLib.reducer,
-        remoteDocument,
-        DocumentModelLib.actions.setModelName({ name: "test 2" }),
+        documentModelDocumentModelModule.reducer,
+        remoteDocument as DocumentModelDocument,
+        documentModelDocumentModelModule.actions.setModelName({ name: "test 2" }),
       ),
     );
 
     remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperation(
       "1",
-      buildOperation(reducer, remoteDrive, actions.deleteNode({ id: "1" })),
+      buildOperation(driveDocumentReducer, remoteDrive, actions.deleteNode({ id: "1" })),
     );
 
     // wait for pull strands polling
@@ -616,6 +624,7 @@ describe("Document Drive Server interaction", () => {
       },
     ]);
 
+    // @ts-expect-error - type expected by test is out of date
     await connectServer.clearStorage();
     mswServer.close();
   });
@@ -625,7 +634,7 @@ describe("Document Drive Server interaction", () => {
     let remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperations(
       "1",
-      buildOperations(reducer, remoteDrive, [
+      buildOperations(driveDocumentReducer, remoteDrive, [
         actions.addFolder({ id: "folder", name: "new folder" }),
         actions.addFile({
           id: "1",
@@ -651,9 +660,9 @@ describe("Document Drive Server interaction", () => {
       "1",
       "1",
       buildOperation(
-        DocumentModelLib.reducer,
-        remoteDocument,
-        DocumentModelLib.actions.setModelName({ name: "test" }),
+        documentModelDocumentModelModule.reducer,
+        remoteDocument as DocumentModelDocument,
+        documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
 
@@ -661,7 +670,7 @@ describe("Document Drive Server interaction", () => {
     await remoteServer.addDriveOperation(
       "1",
       buildOperation(
-        reducer,
+        driveDocumentReducer,
         remoteDrive,
         actions.addListener({
           listener: {
@@ -688,7 +697,7 @@ describe("Document Drive Server interaction", () => {
     await remoteServer.addDriveOperation(
       "1",
       buildOperation(
-        reducer,
+        driveDocumentReducer,
         remoteDrive,
         actions.addListener({
           listener: {
@@ -712,6 +721,7 @@ describe("Document Drive Server interaction", () => {
       ),
     );
 
+    // @ts-expect-error - type expected by test is out of date
     const transmitterAll = (await remoteServer.getTransmitter(
       "1",
       "all",
@@ -719,6 +729,7 @@ describe("Document Drive Server interaction", () => {
     const strandsAll = await transmitterAll.getStrands();
     expect(strandsAll.length).toBe(2);
 
+    // @ts-expect-error - type expected by test is out of date
     const transmitterDocumentModel = (await remoteServer.getTransmitter(
       "1",
       "documentModel",
@@ -750,7 +761,7 @@ describe("Document Drive Server interaction", () => {
     const result = await connectServer.addDriveOperation(
       "1",
       buildOperation(
-        reducer,
+        driveDocumentReducer,
         connectDrive,
         actions.removeTrigger({ triggerId: trigger!.id }),
       ),

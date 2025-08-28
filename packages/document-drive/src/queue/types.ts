@@ -1,4 +1,4 @@
-import { type AddOperationOptions, type IOperationResult } from "#server";
+import type { AddOperationOptions, IOperationResult } from "document-drive";
 import type { Action, Operation, PHDocument } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
@@ -69,15 +69,3 @@ export interface IQueue<T> {
 }
 
 export type IJobQueue = IQueue<Job>;
-
-export function isDocumentJob(job: Job): job is DocumentJob {
-  return "documentType" in job;
-}
-
-export function isOperationJob(job: Job): job is OperationJob {
-  return "operations" in job;
-}
-
-export function isActionJob(job: Job): job is ActionJob {
-  return "actions" in job;
-}

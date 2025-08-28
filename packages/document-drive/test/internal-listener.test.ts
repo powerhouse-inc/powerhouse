@@ -1,19 +1,20 @@
+import type { IProcessor, ServerListener } from "document-drive";
+import {
+  addFile,
+  driveDocumentModelModule,
+  expectUTCTimestamp,
+  expectUUID,
+  InternalTransmitter,
+  ReactorBuilder,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import {
   createPresignedHeader,
-  type DocumentModelModule,
+  documentModelDocumentModelModule,
   generateId,
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
-import * as DriveActions from "../src/drive-document-model/gen/creators.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { InternalTransmitter } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils.js";
-
-import { type IProcessor } from "#processors";
-import { documentModelDocumentModelModule } from "document-model";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { type Listener } from "../src/server/types.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -45,7 +46,7 @@ describe("Internal Listener", () => {
 
     // Create the listener and transmitter
     const uuid = generateId();
-    const listener: Listener = {
+    const listener: ServerListener = {
       driveId,
       listenerId: uuid,
       block: false,
@@ -109,7 +110,7 @@ describe("Internal Listener", () => {
     document.header = header;
     await server.addDocument(document);
 
-    const action = DriveActions.addFile({
+    const action = addFile({
       id: documentId,
       name: "test",
       documentType: "powerhouse/document-model",

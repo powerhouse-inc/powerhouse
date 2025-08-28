@@ -1,45 +1,79 @@
 // TODO remove this when drive methods are deleted
-import {
-  type AddFileAction,
-  type LegacyAddFileAction,
-  createDocument as createDriveDocument,
-  removeListener,
-  removeTrigger,
-  setSharingType,
-} from "#drive-document-model";
-import {
-  type ActionJob,
-  type DocumentJob,
-  type IQueueManager,
-  type Job,
-  type OperationJob,
-  isActionJob,
-  isDocumentJob,
-  isOperationJob,
-} from "#queue";
-import { ReadModeServer } from "#read-mode";
-import { type IDocumentStorage, type IDriveOperationStorage } from "#storage";
-import {
-  RunAsap,
-  isDocumentDrive,
-  requestPublicDriveWithTokenFromReactor,
-  runAsapAsync,
-} from "#utils";
-import {
-  DocumentAlreadyExistsError,
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-  type Trigger,
-  childLogger,
+import type {
+  ActionJob,
+  AddFileAction,
+  AddOperationOptions,
+  CancelPullLoop,
+  CreateDocumentInput,
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  DocumentDriveServerOptions,
+  DocumentJob,
+  DriveEvents,
+  DriveInput,
+  DriveOperationResult,
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  ICache,
+  IDefaultDrivesManager,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IEventEmitter,
+  IListenerManager,
+  IOperationResult,
+  IQueueManager,
+  ISynchronizationManager,
+  Job,
+  LegacyAddFileAction,
+  ListenerState,
+  OperationJob,
+  OperationUpdate,
+  RemoteDriveAccessLevel,
+  RemoteDriveOptions,
+  ServerListener,
+  StrandUpdate,
+  StrandUpdateSource,
+  SyncStatus,
+  SyncUnitStatusObject,
+  SynchronizationUnit,
+  SynchronizationUnitNotFoundError,
+  Trigger,
 } from "document-drive";
 import {
-  type Action,
-  type DocumentModelModule,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type SignalResult,
+  ConflictOperationError,
+  DefaultDrivesManager,
+  DefaultListenerManagerOptions,
+  DocumentAlreadyExistsError,
+  OperationError,
+  PullResponderTransmitter,
+  ReadModeServer,
+  RunAsap,
+  SwitchboardPushTransmitter,
+  childLogger,
+  createDocument as createDriveDocument,
+  filterOperationsByRevision,
+  isActionJob,
+  isAtRevision,
+  isDocumentDrive,
+  isDocumentJob,
+  isOperationJob,
+  removeListener,
+  removeTrigger,
+  requestPublicDriveWithTokenFromReactor,
+  resolveCreateDocumentInput,
+  runAsapAsync,
+  setSharingType,
+} from "document-drive";
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  SignalResult,
+} from "document-model";
+import {
   attachBranch,
   createPresignedHeader,
   garbageCollect,
@@ -55,54 +89,7 @@ import {
   validateHeader,
 } from "document-model";
 import { ClientError } from "graphql-request";
-import { type Unsubscribe } from "nanoevents";
-import { type ICache } from "../cache/types.js";
-import {
-  DefaultDrivesManager,
-  type IDefaultDrivesManager,
-} from "../utils/default-drives-manager.js";
-import {
-  ConflictOperationError,
-  OperationError,
-  type SynchronizationUnitNotFoundError,
-} from "./error.js";
-import {
-  type CancelPullLoop,
-  PullResponderTransmitter,
-} from "./listener/transmitter/pull-responder.js";
-import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
-import { type StrandUpdateSource } from "./listener/transmitter/types.js";
-import {
-  type AddOperationOptions,
-  type Constructor,
-  type CreateDocumentInput,
-  DefaultListenerManagerOptions,
-  type DocumentDriveServerOptions,
-  type DriveEvents,
-  type DriveInput,
-  type DriveOperationResult,
-  type GetDocumentOptions,
-  type IBaseDocumentDriveServer,
-  type IEventEmitter,
-  type IListenerManager,
-  type IOperationResult,
-  type ISynchronizationManager,
-  type Listener,
-  type ListenerState,
-  type Mixin,
-  type OperationUpdate,
-  type RemoteDriveAccessLevel,
-  type RemoteDriveOptions,
-  type StrandUpdate,
-  type SyncStatus,
-  type SyncUnitStatusObject,
-  type SynchronizationUnit,
-} from "./types.js";
-import {
-  filterOperationsByRevision,
-  isAtRevision,
-  resolveCreateDocumentInput,
-} from "./utils.js";
+import type { Unsubscribe } from "nanoevents";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
@@ -554,7 +541,7 @@ export class BaseDocumentDriveServer
           `[SYNC DEBUG] Setting up PullResponder listener ${zodListener.listenerId} for drive ${driveId}`,
         );
 
-        const pullResponderListener: Listener = {
+        const pullResponderListener: ServerListener = {
           driveId,
           listenerId: zodListener.listenerId,
           block: false,
@@ -2694,13 +2681,5 @@ export class BaseDocumentDriveServer
     this.listenerManager.removeJwtHandler();
   }
 }
-
-export type DocumentDriveServerConstructor =
-  Constructor<BaseDocumentDriveServer>;
-
-export type DocumentDriveServerMixin<I> = Mixin<
-  typeof BaseDocumentDriveServer,
-  I
->;
 
 export const DocumentDriveServer = ReadModeServer(BaseDocumentDriveServer);

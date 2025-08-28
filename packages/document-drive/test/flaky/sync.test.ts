@@ -1,3 +1,17 @@
+import InMemoryCache, {
+  ConflictOperationError,
+  DocumentDriveAction,
+  ListenerRevision,
+  MemoryStorage,
+  PrismaClient,
+  PrismaStorage,
+  ReactorBuilder,
+  reducer,
+  StrandUpdateGraphQL,
+  SyncStatus,
+  Trigger,
+  UpdateStatus,
+} from "document-drive";
 import {
   DocumentModelDocument,
   DocumentModelModule,
@@ -16,21 +30,6 @@ import {
   it,
   vi,
 } from "vitest";
-import {
-  ListenerRevision,
-  ReactorBuilder,
-  SyncStatus,
-  UpdateStatus,
-} from "../../../../src/server/types.js";
-import { MemoryStorage } from "../../../src/storage/memory.js";
-import { PrismaStorage } from "../../../src/storage/prisma.js";
-import InMemoryCache from "../../src/cache/memory.js";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { Trigger } from "../../src/drive-document-model/gen/types.js";
-import { ConflictOperationError } from "../../src/server/error.js";
-import { StrandUpdateGraphQL } from "../../src/server/listener/transmitter/pull-responder.js";
-import { PrismaClient } from "../../src/storage/prisma/client";
 
 describe("Document Drive Server with %s", () => {
   const documentModels = [

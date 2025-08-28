@@ -1,29 +1,29 @@
-import { type DocumentDriveDocument } from "#drive-document-model";
+import type {
+  DocumentDriveDocument,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
+} from "document-drive";
 import {
+  AbortError,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  type SynchronizationUnitQuery,
-} from "#server";
-import { AbortError, mergeOperations, operationsToRevision } from "#utils";
-import { type Operation, type PHDocument } from "document-model";
+  isValidDocumentId,
+  isValidSlug,
+  mergeOperations,
+  operationsToRevision,
+  resolveStorageUnitsFilter,
+} from "document-drive";
+import type { Operation, PHDocument } from "document-model";
 import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
-import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-  type IStorageUnit,
-  type IStorageUnitFilter,
-} from "./types.js";
-import {
-  isValidDocumentId,
-  isValidSlug,
-  resolveStorageUnitsFilter,
-} from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {

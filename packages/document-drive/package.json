@@ -12,16 +12,6 @@
     ".": "./dist/index.js",
     "./storage/prisma": "./dist/src/storage/prisma/prisma.js"
   },
-  "imports": {
-    "#cache": "./dist/src/cache/index.js",
-    "#drive-document-model": "./dist/src/drive-document-model/index.js",
-    "#processors": "./dist/src/processors/index.js",
-    "#queue": "./dist/src/queue/index.js",
-    "#read-mode": "./dist/src/read-mode/index.js",
-    "#server": "./dist/src/server/index.js",
-    "#storage": "./dist/src/storage/index.js",
-    "#utils": "./dist/src/utils/index.js"
-  },
   "files": [
     "./dist"
   ],

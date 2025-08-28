@@ -1,40 +1,14 @@
-import { type ListenerFilter } from "#drive-document-model";
-import { type PHDocument } from "document-model";
-import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import {
-  type IProcessor,
-  type IRelationalDb,
-  type IRelationalQueryBuilder,
-} from "./types.js";
-import { relationalDbToQueryBuilder } from "./utils.js";
-
-export type { IRelationalQueryBuilder } from "./types.js";
-
-export type RelationalDbProcessorFilter = ListenerFilter;
-export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
-  extends IProcessor {
-  namespace: string;
-  query: IRelationalQueryBuilder<TDatabaseSchema>;
-  filter: RelationalDbProcessorFilter;
-  initAndUpgrade(): Promise<void>;
-}
-
-export function isRelationalDbProcessor(
-  p: IProcessor,
-): p is IRelationalDbProcessor {
-  return RelationalDbProcessor.is(p);
-}
-
-export type ExtractProcessorSchema<TProcessor> =
-  TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
-
-export type ExtractProcessorSchemaOrSelf<TProcessor> =
-  TProcessor extends RelationalDbProcessor<infer TSchema>
-    ? TSchema
-    : TProcessor;
-
-export type RelationalDbProcessorClass<TSchema> =
-  typeof RelationalDbProcessor<TSchema>;
+import type {
+  InternalTransmitterUpdate,
+  IProcessor,
+  IRelationalDb,
+  IRelationalDbProcessor,
+  IRelationalQueryBuilder,
+  RelationalDbProcessorClass,
+  RelationalDbProcessorFilter,
+} from "document-drive";
+import { relationalDbToQueryBuilder } from "document-drive";
+import type { PHDocument } from "document-model";
 
 const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
 
@@ -118,4 +92,10 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
    * This method is meant to be overridden by subclasses to clean up resources.
    */
   abstract onDisconnect(): Promise<void>;
+}
+
+export function isRelationalDbProcessor(
+  p: IProcessor,
+): p is IRelationalDbProcessor {
+  return RelationalDbProcessor.is(p);
 }

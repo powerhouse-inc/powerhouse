@@ -4,9 +4,9 @@ import {
   driveDocumentModelModule,
   type IDocumentDriveServer,
   type IListenerManager,
-  type Listener,
   ReactorBuilder,
   requestPublicDrive,
+  type ServerListener,
   SwitchboardPushTransmitter,
 } from "document-drive";
 import {
@@ -44,7 +44,7 @@ describe("Push Transmitter", () => {
 
   async function setupListener(listenerManager: IListenerManager) {
     const uuid = generateId();
-    const listener: Listener = {
+    const listener: ServerListener = {
       driveId: remoteDrive.id,
       listenerId: uuid,
       block: false,

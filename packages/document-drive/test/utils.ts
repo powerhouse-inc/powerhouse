@@ -1,20 +1,22 @@
-import { driveDocumentModelModule } from "#drive-document-model";
+import type {
+  BaseDocumentDriveServer,
+  IDocumentDriveServer,
+} from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
+import type {
+  Action,
+  BaseState,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  PHReducer,
+} from "document-model";
 import {
-  type BaseDocumentDriveServer,
-  type IDocumentDriveServer,
-} from "#server";
-import {
-  type Action,
-  type BaseState,
   defaultBaseState,
   documentModelDocumentModelModule,
-  type DocumentModelModule,
   generateId,
-  type Operation,
-  type PHDocument,
-  type PHReducer,
 } from "document-model";
-import { type ExpectStatic } from "vitest";
+import type { ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [
   driveDocumentModelModule,

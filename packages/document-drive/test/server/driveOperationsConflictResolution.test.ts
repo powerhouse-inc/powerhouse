@@ -1,35 +1,31 @@
+import type {
+  IDocumentDriveServer,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IOperationResult,
+  Node,
+} from "document-drive";
 import {
+  addFolder,
   BrowserStorage,
+  copyNode,
+  createDocument,
+  DriveBasicClient,
+  driveDocumentModelModule,
+  driveDocumentReducer,
   FilesystemStorage,
+  generateNodesCopy,
+  InMemoryCache,
+  MemoryStorage,
+  PrismaClient,
   PrismaStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "#storage";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type Operation,
-} from "document-model";
+  ReactorBuilder,
+} from "document-drive";
+import type { DocumentModelModule, Operation } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { InMemoryCache, MemoryStorage } from "../../index.js";
-import {
-  addFolder,
-  copyNode,
-} from "../../src/drive-document-model/gen/node/creators.js";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import { type Node } from "../../src/drive-document-model/gen/types.js";
-import { createDocument } from "../../src/drive-document-model/gen/utils.js";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
-import { generateNodesCopy } from "../../src/drive-document-model/src/utils.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import {
-  type IDocumentDriveServer,
-  type IOperationResult,
-} from "../../src/server/types.js";
-import { PrismaClient } from "../../src/storage/prisma/client/index.js";
-import { DriveBasicClient } from "../utils.js";
 
 function sortNodes(nodes: Node[]) {
   return nodes.sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -147,14 +143,14 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client2 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       client1.dispatchDriveAction(addFolder({ id: "1", name: "test1" }));
@@ -214,35 +210,35 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client2 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client3 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client4 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client5 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       // Client1 Add folder and push to server
@@ -372,7 +368,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const addFolderAction = addFolder({
@@ -442,14 +438,14 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
           server,
           driveId,
           initialDriveDocument,
-          documentDriveReducer,
+          driveDocumentReducer,
         );
 
         const client2 = new DriveBasicClient(
           server,
           driveId,
           initialDriveDocument,
-          documentDriveReducer,
+          driveDocumentReducer,
         );
 
         client1.dispatchDriveAction(
@@ -545,14 +541,14 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const client2 = new DriveBasicClient(
         server,
         driveId,
         initialDriveDocument,
-        documentDriveReducer,
+        driveDocumentReducer,
       );
 
       const idFolder1 = generateId();

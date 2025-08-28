@@ -1,37 +1,45 @@
-import { InMemoryCache } from "#cache";
+import type {
+  DocumentAlreadyExistsError,
+  IDocumentStorage,
+  IDriveOperationStorage,
+} from "document-drive";
 import {
-  type ActionContext,
+  addFile,
+  addFolder,
+  baseDocumentModels,
+  BrowserStorage,
+  copyNode,
+  deleteNode,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+  expectUUID,
+  FilesystemStorage,
+  InMemoryCache,
+  MemoryStorage,
+  PrismaClient,
+  PrismaStorage,
+  ReactorBuilder,
+  setDriveName,
+  SynchronizationManager,
+} from "document-drive";
+import type {
+  ActionContext,
+  DocumentModelDocument,
+  PHDocument,
+} from "document-model";
+import {
   createPresignedHeader,
-  type DocumentModelDocument,
   documentModelDocumentModelModule,
   generateId,
-  type PHDocument,
   setModelName,
 } from "document-model";
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import * as actions from "../src/drive-document-model/gen/creators.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import * as DriveUtils from "../src/drive-document-model/src/utils.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { type DocumentAlreadyExistsError } from "../src/server/error.js";
-import SynchronizationManager from "../src/server/sync-manager.js";
-import { BrowserStorage } from "../src/storage/browser.js";
-import { FilesystemStorage } from "../src/storage/filesystem.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { PrismaClient } from "../src/storage/prisma/client/index.js";
-import { PrismaStorage } from "../src/storage/prisma/prisma.js";
-import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "../src/storage/types.js";
-import { baseDocumentModels, expectUUID } from "./utils.js";
 
 const documentModels = baseDocumentModels;
 
-const DocumentDriveUtils = { ...driveDocumentModelModule.utils, ...DriveUtils };
+const DocumentDriveUtils = { ...driveDocumentModelModule.utils };
 const DocumentModelUtils = documentModelDocumentModelModule.utils;
 
 const FileStorageDir = path.join(__dirname, "./file-storage");
@@ -173,9 +181,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
     // performs ADD_FILE operation locally
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -241,9 +249,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       (storage as IDocumentStorage).getChildren(driveId),
     ).resolves.toStrictEqual([]);
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -299,9 +307,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       (storage as IDocumentStorage).getChildren(driveId),
     ).resolves.toStrictEqual([]);
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -356,9 +364,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     let drive = await server.getDrive(driveId);
 
     // adds file
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -372,9 +380,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     ).resolves.toStrictEqual([documentId]);
 
     // removes file
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.deleteNode({
+      deleteNode({
         id: documentId,
       }),
     );
@@ -413,17 +421,17 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.deleteNode({
+      deleteNode({
         id: documentId,
       }),
     );
@@ -470,25 +478,25 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     await server.addDocument(document);
 
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFolder({
+      addFolder({
         id: folderId,
         name: "document 1",
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
         parentFolder: folderId,
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.deleteNode({
+      deleteNode({
         id: folderId,
       }),
     );
@@ -564,9 +572,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.addDocument(document);
 
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -610,9 +618,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.setDriveName({
+      setDriveName({
         name: "new name",
       }),
     );
@@ -656,32 +664,32 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     });
     let drive = await server.getDrive(driveId);
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFolder({
+      addFolder({
         id: folder1Id,
         name: "1",
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFolder({
+      addFolder({
         id: folder2Id,
         name: "2",
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: document1Id,
         name: "1.1",
         documentType: "powerhouse/document-model",
         parentFolder: folder1Id,
       }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.copyNode({
+      copyNode({
         srcId: document1Id,
         targetId: document2Id,
         targetName: "2.2",
@@ -743,9 +751,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -834,13 +842,13 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFolder({ id: generateId(), name: "folder 1" }),
+      addFolder({ id: generateId(), name: "folder 1" }),
     );
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFolder({ id: generateId(), name: "folder 2" }),
+      addFolder({ id: generateId(), name: "folder 2" }),
     );
 
     const operations = drive.operations.global;
@@ -894,8 +902,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       },
     };
 
-    drive = reducer(drive, {
-      ...actions.addFile({
+    drive = driveDocumentReducer(drive, {
+      ...addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -988,7 +996,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ...file!,
       header: createPresignedHeader(documentId, file!.header.documentType),
     });
-    const action = actions.addFile({
+    const action = addFile({
       id: documentId,
       name: "name",
       parentFolder: null,
@@ -1035,9 +1043,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
-    drive = reducer(
+    drive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -1118,8 +1126,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     };
 
     // adds file
-    drive = reducer(drive, {
-      ...actions.addFile({
+    drive = driveDocumentReducer(drive, {
+      ...addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",
@@ -1158,9 +1166,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const drive = await server.getDrive(driveId);
 
     // adds file
-    const newDrive = reducer(
+    const newDrive = driveDocumentReducer(
       drive,
-      actions.addFile({
+      addFile({
         id: documentId,
         name: "document 1",
         documentType: "powerhouse/document-model",

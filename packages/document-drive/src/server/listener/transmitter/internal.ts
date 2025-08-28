@@ -1,40 +1,21 @@
-import { type IProcessor } from "#processors";
-import {
-  type GetDocumentOptions,
-  type IBaseDocumentDriveServer,
-  type IDocumentDriveServer,
-  type ListenerRevision,
-  type StrandUpdate,
-} from "#server";
-import { logger, operationsToRevision, RunAsap } from "#utils";
-import {
-  type Action,
-  type GlobalStateFromDocument,
-  type LocalStateFromDocument,
-  type Operation,
-  type PHDocument,
+import type {
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  IDocumentDriveServer,
+  InternalOperationUpdate,
+  IProcessor,
+  ITransmitter,
+  ListenerRevision,
+  StrandUpdate,
+  StrandUpdateSource,
+} from "document-drive";
+import { logger, operationsToRevision, RunAsap } from "document-drive";
+import type {
+  Action,
+  GlobalStateFromDocument,
+  LocalStateFromDocument,
+  PHDocument,
 } from "document-model";
-import { type ITransmitter, type StrandUpdateSource } from "./types.js";
-
-export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
-  Operation,
-  "scope"
-> & {
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
-  previousState:
-    | GlobalStateFromDocument<TDocument>
-    | LocalStateFromDocument<TDocument>;
-};
-
-export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
-  driveId: string;
-  documentId: string;
-  documentType: string;
-  scope: string;
-  branch: string;
-  operations: InternalOperationUpdate<TDocument>[];
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
-};
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;

@@ -1,15 +1,13 @@
+import type { DocumentDriveDocument } from "document-drive";
 import {
-  type StateReducer,
-  createReducer,
-  isDocumentAction,
-  type Reducer,
-} from "document-model";
-import { type DocumentDriveDocument, z } from "./types.js";
+  documentDriveSchemas,
+  driveReducer,
+  nodeReducer,
+} from "document-drive";
+import type { Reducer, StateReducer } from "document-model";
+import { createReducer, isDocumentAction } from "document-model";
 
-import { reducer as DriveReducer } from "../src/reducers/drive.js";
-import { reducer as NodeReducer } from "../src/reducers/node.js";
-
-const stateReducer: StateReducer<DocumentDriveDocument> = (
+const driveStateReducer: StateReducer<DocumentDriveDocument> = (
   state,
   action,
   dispatch,
@@ -21,8 +19,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
   const typedAction = action as any;
   switch (typedAction.type) {
     case "ADD_FILE":
-      z.AddFileInputSchema().parse(typedAction.input);
-      NodeReducer.addFileOperation(
+      documentDriveSchemas.AddFileInputSchema().parse(typedAction.input);
+      nodeReducer.addFileOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -30,8 +28,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "ADD_FOLDER":
-      z.AddFolderInputSchema().parse(typedAction.input);
-      NodeReducer.addFolderOperation(
+      documentDriveSchemas.AddFolderInputSchema().parse(typedAction.input);
+      nodeReducer.addFolderOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -39,8 +37,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "DELETE_NODE":
-      z.DeleteNodeInputSchema().parse(typedAction.input);
-      NodeReducer.deleteNodeOperation(
+      documentDriveSchemas.DeleteNodeInputSchema().parse(typedAction.input);
+      nodeReducer.deleteNodeOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -48,8 +46,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "UPDATE_FILE":
-      z.UpdateFileInputSchema().parse(typedAction.input);
-      NodeReducer.updateFileOperation(
+      documentDriveSchemas.UpdateFileInputSchema().parse(typedAction.input);
+      nodeReducer.updateFileOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -57,8 +55,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "UPDATE_NODE":
-      z.UpdateNodeInputSchema().parse(typedAction.input);
-      NodeReducer.updateNodeOperation(
+      documentDriveSchemas.UpdateNodeInputSchema().parse(typedAction.input);
+      nodeReducer.updateNodeOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -66,8 +64,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "COPY_NODE":
-      z.CopyNodeInputSchema().parse(typedAction.input);
-      NodeReducer.copyNodeOperation(
+      documentDriveSchemas.CopyNodeInputSchema().parse(typedAction.input);
+      nodeReducer.copyNodeOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -75,8 +73,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "MOVE_NODE":
-      z.MoveNodeInputSchema().parse(typedAction.input);
-      NodeReducer.moveNodeOperation(
+      documentDriveSchemas.MoveNodeInputSchema().parse(typedAction.input);
+      nodeReducer.moveNodeOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -84,8 +82,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "SET_DRIVE_NAME":
-      z.SetDriveNameInputSchema().parse(typedAction.input);
-      DriveReducer.setDriveNameOperation(
+      documentDriveSchemas.SetDriveNameInputSchema().parse(typedAction.input);
+      driveReducer.setDriveNameOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -93,8 +91,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "SET_DRIVE_ICON":
-      z.SetDriveIconInputSchema().parse(typedAction.input);
-      DriveReducer.setDriveIconOperation(
+      documentDriveSchemas.SetDriveIconInputSchema().parse(typedAction.input);
+      driveReducer.setDriveIconOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -102,8 +100,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "SET_SHARING_TYPE":
-      z.SetSharingTypeInputSchema().parse(typedAction.input);
-      DriveReducer.setSharingTypeOperation(
+      documentDriveSchemas.SetSharingTypeInputSchema().parse(typedAction.input);
+      driveReducer.setSharingTypeOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -111,8 +109,10 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "SET_AVAILABLE_OFFLINE":
-      z.SetAvailableOfflineInputSchema().parse(typedAction.input);
-      DriveReducer.setAvailableOfflineOperation(
+      documentDriveSchemas
+        .SetAvailableOfflineInputSchema()
+        .parse(typedAction.input);
+      driveReducer.setAvailableOfflineOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -120,8 +120,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "ADD_LISTENER":
-      z.AddListenerInputSchema().parse(typedAction.input);
-      DriveReducer.addListenerOperation(
+      documentDriveSchemas.AddListenerInputSchema().parse(typedAction.input);
+      driveReducer.addListenerOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -129,8 +129,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "REMOVE_LISTENER":
-      z.RemoveListenerInputSchema().parse(typedAction.input);
-      DriveReducer.removeListenerOperation(
+      documentDriveSchemas.RemoveListenerInputSchema().parse(typedAction.input);
+      driveReducer.removeListenerOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -138,8 +138,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "ADD_TRIGGER":
-      z.AddTriggerInputSchema().parse(typedAction.input);
-      DriveReducer.addTriggerOperation(
+      documentDriveSchemas.AddTriggerInputSchema().parse(typedAction.input);
+      driveReducer.addTriggerOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -147,8 +147,8 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
       break;
 
     case "REMOVE_TRIGGER":
-      z.RemoveTriggerInputSchema().parse(typedAction.input);
-      DriveReducer.removeTriggerOperation(
+      documentDriveSchemas.RemoveTriggerInputSchema().parse(typedAction.input);
+      driveReducer.removeTriggerOperation(
         (state as any)[typedAction.scope],
         action as any,
         dispatch,
@@ -160,5 +160,5 @@ const stateReducer: StateReducer<DocumentDriveDocument> = (
   }
 };
 
-export const reducer: Reducer<DocumentDriveDocument> =
-  createReducer<DocumentDriveDocument>(stateReducer);
+export const driveDocumentReducer: Reducer<DocumentDriveDocument> =
+  createReducer<DocumentDriveDocument>(driveStateReducer);

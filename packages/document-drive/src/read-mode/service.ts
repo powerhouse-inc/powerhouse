@@ -1,29 +1,25 @@
+import type {
+  DocumentDriveDocument,
+  DocumentGraphQLResult,
+  GetDocumentModelModule,
+  IReadModeDriveService,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveOptions,
+} from "document-drive";
 import {
-  type DocumentDriveDocument,
+  DocumentModelNotFoundError,
   driveDocumentModelModule,
-} from "#drive-document-model";
-import { DocumentModelNotFoundError } from "#server";
-import {
-  type DocumentGraphQLResult,
+  driveDocumentType,
   fetchDocument,
-  requestPublicDrive,
-} from "#utils";
-import type { DocumentModelModule, PHDocument } from "document-model";
-import { type GraphQLError } from "graphql";
-import { driveDocumentType } from "../drive-document-model/constants.js";
-import {
   ReadDocumentNotFoundError,
   ReadDriveError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
-} from "./errors.js";
-import {
-  type GetDocumentModelModule,
-  type IReadModeDriveService,
-  type ReadDrive,
-  type ReadDriveContext,
-  type ReadDriveOptions,
-} from "./types.js";
+  requestPublicDrive,
+} from "document-drive";
+import type { DocumentModelModule, PHDocument } from "document-model";
+import type { GraphQLError } from "graphql";
 
 export class ReadModeService implements IReadModeDriveService {
   #getDocumentModelModule: GetDocumentModelModule;

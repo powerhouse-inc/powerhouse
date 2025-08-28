@@ -4,6 +4,6 @@ export * from "./constants.js";
 export * from "./error.js";
 export * from "./event-emitter.js";
 export * from "./listener/index.js";
+export * from "./sync-manager.js";
 export * from "./sync-unit-map.js";
-export * from "./types.js";
 export * from "./utils.js";

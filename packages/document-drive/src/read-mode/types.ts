@@ -1,19 +1,15 @@
-import {
-  type DocumentDriveDocument,
-  type ListenerFilter,
-} from "#drive-document-model";
-import {
-  type DocumentDriveServerMixin,
-  type DocumentModelNotFoundError,
-  type RemoteDriveOptions,
-} from "#server";
-import { type DriveInfo } from "#utils";
-import { type DocumentModelModule, type PHDocument } from "document-model";
-import {
-  type ReadDocumentNotFoundError,
-  type ReadDriveNotFoundError,
-  type ReadDriveSlugNotFoundError,
-} from "./errors.js";
+import type {
+  DocumentDriveDocument,
+  DocumentDriveServerMixin,
+  DocumentModelNotFoundError,
+  DriveInfo,
+  ListenerFilter,
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+  RemoteDriveOptions,
+} from "document-drive";
+import type { DocumentModelModule, PHDocument } from "document-model";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;

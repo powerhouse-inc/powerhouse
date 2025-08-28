@@ -1,8 +1,8 @@
-import {
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
-  type Signature,
+import type {
+  DocumentOperations,
+  Operation,
+  PHDocument,
+  Signature,
 } from "document-model";
 
 export function migrateDocumentOperationSignatures(

@@ -1,22 +1,22 @@
-import { type Signal } from "document-model";
-import { describe, expect, it, vi } from "vitest";
 import {
   addFolder,
+  createDocument,
   deleteNode,
+  DocumentDrive as DocumentDriveClass,
+  driveDocumentReducer,
   setAvailableOffline,
   setDriveName,
   setSharingType,
-} from "../../gen/creators.js";
-import { DocumentDrive as DocumentDriveClass } from "../../gen/object.js";
-import { reducer } from "../../gen/reducer.js";
-import { createDocument } from "../../gen/utils.js";
+} from "document-drive";
+import type { Signal } from "document-model";
+import { describe, expect, it, vi } from "vitest";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {
     let documentDrive = createDocument();
 
     expect(documentDrive.state.global.name).toBe("");
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       setDriveName({
         name: "new name",
@@ -28,14 +28,14 @@ describe("DocumentDrive Class", () => {
 
   it("should delete children when node is deleted", () => {
     let documentDrive = createDocument();
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: "1",
         name: "1",
       }),
     );
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
         id: "1.1",
@@ -44,7 +44,7 @@ describe("DocumentDrive Class", () => {
       }),
     );
 
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       deleteNode({
         id: "1",
@@ -97,7 +97,7 @@ describe("DocumentDrive Class", () => {
 
   it("should set local sharing type", () => {
     let documentDrive = createDocument();
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       setSharingType({
         type: "public",
@@ -111,7 +111,7 @@ describe("DocumentDrive Class", () => {
     let documentDrive = createDocument();
 
     expect(documentDrive.state.local.availableOffline).toBe(false);
-    documentDrive = reducer(
+    documentDrive = driveDocumentReducer(
       documentDrive,
       setAvailableOffline({
         availableOffline: true,

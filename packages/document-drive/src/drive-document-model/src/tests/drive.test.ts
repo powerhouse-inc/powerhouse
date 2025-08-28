@@ -3,16 +3,18 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
-import * as creators from "../../gen/drive/creators.js";
-import { reducer } from "../../gen/reducer.js";
+import type { DocumentDriveDocument } from "document-drive";
 import {
+  createDocument,
+  driveDocumentReducer,
+  setAvailableOffline,
   SetAvailableOfflineInputSchema,
+  setDriveName,
   SetDriveNameInputSchema,
+  setSharingType,
   SetSharingTypeInputSchema,
-} from "../../gen/schema/zod.js";
-import { type DocumentDriveDocument } from "../../gen/types.js";
-import { createDocument } from "../../gen/utils.js";
+} from "document-drive";
+import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";
 
 describe("Drive Operations", () => {
@@ -24,7 +26,7 @@ describe("Drive Operations", () => {
 
   it("should handle setDriveName operation", () => {
     const input = generateMock(SetDriveNameInputSchema());
-    const updatedDocument = reducer(document, creators.setDriveName(input));
+    const updatedDocument = driveDocumentReducer(document, setDriveName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe(
@@ -38,7 +40,10 @@ describe("Drive Operations", () => {
 
   it("should handle setSharingType operation", () => {
     const input = generateMock(SetSharingTypeInputSchema());
-    const updatedDocument = reducer(document, creators.setSharingType(input));
+    const updatedDocument = driveDocumentReducer(
+      document,
+      setSharingType(input),
+    );
 
     expect(updatedDocument.operations.local).toHaveLength(1);
     expect(updatedDocument.operations.local[0].action.type).toBe(
@@ -52,9 +57,9 @@ describe("Drive Operations", () => {
 
   it("should handle setAvailableOffline operation", () => {
     const input = generateMock(SetAvailableOfflineInputSchema());
-    const updatedDocument = reducer(
+    const updatedDocument = driveDocumentReducer(
       document,
-      creators.setAvailableOffline(input),
+      setAvailableOffline(input),
     );
 
     expect(updatedDocument.operations.local).toHaveLength(1);

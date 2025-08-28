@@ -2,19 +2,15 @@
  * Factory methods for creating DocumentDriveDocument instances
  */
 
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 import type {
   DocumentDriveDocument,
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "./gen/types.js";
 import { createDocument } from "./gen/utils.js";
+import type { DocumentDrivePHState } from "./types.js";
 
 export function defaultGlobalState(): DocumentDriveState {
   return {
@@ -70,11 +66,6 @@ export function createState(
     local: createLocalState(localState),
   };
 }
-
-export type DocumentDrivePHState = PHBaseState & {
-  global: DocumentDriveState;
-  local: DocumentDriveLocalState;
-};
 
 /**
  * Creates a DocumentDriveDocument with custom global and local state

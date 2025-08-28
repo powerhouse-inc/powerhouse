@@ -1,22 +1,16 @@
+import type {
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+} from "document-drive";
 import {
-  applyMixins,
-  BaseDocumentClass,
-  type BaseState,
-  type PartialState,
-  type SignalDispatch,
-} from "document-model";
-import { type DocumentDriveAction } from "./actions.js";
-import DocumentDrive_Drive from "./drive/object.js";
-import DocumentDrive_Node from "./node/object.js";
-import { reducer } from "./reducer.js";
-import {
-  type DocumentDriveLocalState,
-  type DocumentDriveState,
-} from "./types.js";
-import * as utils from "./utils.js";
-
-export * from "./drive/object.js";
-export * from "./node/object.js";
+  DocumentDrive_Drive,
+  DocumentDrive_Node,
+  driveDocumentReducer,
+  DriveUtils,
+} from "document-drive";
+import type { BaseState, PartialState, SignalDispatch } from "document-model";
+import { applyMixins, BaseDocumentClass } from "document-model";
 
 interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}
 
@@ -36,7 +30,11 @@ class DocumentDrive extends BaseDocumentClass<
     >,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(
+      driveDocumentReducer,
+      DriveUtils.createDocument(initialState),
+      dispatch,
+    );
   }
 
   public saveToFile(path: string, name?: string) {
@@ -53,7 +51,6 @@ class DocumentDrive extends BaseDocumentClass<
     return document;
   }
 }
-
 applyMixins(DocumentDrive, [DocumentDrive_Node, DocumentDrive_Drive]);
 
 export { DocumentDrive };

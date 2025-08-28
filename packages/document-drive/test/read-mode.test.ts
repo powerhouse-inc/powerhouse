@@ -1,13 +1,35 @@
-import { responseForDocument, responseForDrive } from "#utils";
+import type {
+  DocumentDriveDocument,
+  DocumentDriveState,
+  DocumentModelNotFoundError,
+  ReadDriveContext,
+} from "document-drive";
+import {
+  addFile,
+  createBaseState,
+  createDocument,
+  createState,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+  ReadModeService,
+  responseForDocument,
+  responseForDrive,
+  updateNode,
+} from "document-drive";
+import type {
+  DocumentModelDocument,
+  DocumentModelModule,
+  DocumentModelState,
+  PHDocument,
+} from "document-model";
 import {
   createDocument as createDocumentModelDocument,
   createState as createDocumentModelState,
-  type DocumentModelDocument,
   documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type DocumentModelState,
   generateId,
-  type PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
 import {
@@ -20,29 +42,6 @@ import {
   vitest,
 } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import {
-  addFile,
-  updateNode,
-} from "../src/drive-document-model/gen/creators.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import {
-  type DocumentDriveDocument,
-  type DocumentDriveState,
-} from "../src/drive-document-model/gen/types.js";
-import {
-  createDocument,
-  createState,
-} from "../src/drive-document-model/gen/utils.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import {
-  ReadDocumentNotFoundError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-} from "../src/read-mode/errors.js";
-import { ReadModeService } from "../src/read-mode/service.js";
-import { type ReadDriveContext } from "../src/read-mode/types.js";
-import { type DocumentModelNotFoundError } from "../src/server/error.js";
-import { createBaseState } from "./utils.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
@@ -366,8 +365,8 @@ describe.skip("Read mode methods", () => {
       id: documentId,
     });
 
-    drive = reducer(drive, addNodeAction);
-    document = reducer(
+    drive = driveDocumentReducer(drive, addNodeAction);
+    document = driveDocumentReducer(
       document,
       updateNode({
         name: "bar",

@@ -1,8 +1,17 @@
-import { driveDocumentType } from "#drive-document-model";
+import type {
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  DocumentDriveUtils,
+} from "document-drive";
+import { driveDocumentReducer } from "document-drive";
+import type {
+  BaseState,
+  CreateDocument,
+  CreateState,
+  PartialState,
+} from "document-model";
 import {
-  type CreateDocument,
-  type CreateState,
-  type DocumentModelUtils,
   baseCreateDocument,
   baseLoadFromFile,
   baseLoadFromInput,
@@ -11,12 +20,7 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model";
-import { reducer } from "./reducer.js";
-import {
-  type DocumentDriveDocument,
-  type DocumentDriveLocalState,
-  type DocumentDriveState,
-} from "./types.js";
+import { driveDocumentType } from "document-drive";
 
 export const initialGlobalState: DocumentDriveState = {
   name: "",
@@ -30,17 +34,26 @@ export const initialLocalState: DocumentDriveLocalState = {
   availableOffline: false,
 };
 
-export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;
+export function createDriveState(
+  state:
+    | PartialState<
+        BaseState<
+          PartialState<DocumentDriveState>,
+          PartialState<DocumentDriveLocalState>
+        >
+      >
+    | undefined,
+) {
+  return {
+    ...defaultBaseState(),
+    global: { ...initialGlobalState, ...state?.global },
+    local: { ...initialLocalState, ...state?.local },
+  };
+}
 
 const utils: DocumentDriveUtils = {
   fileExtension: "phdd",
-  createState(state) {
-    return {
-      ...defaultBaseState(),
-      global: { ...initialGlobalState, ...state?.global },
-      local: { ...initialLocalState, ...state?.local },
-    };
-  },
+  createState: createDriveState,
   createDocument(state) {
     const document = baseCreateDocument(utils.createState, state);
 
@@ -58,10 +71,10 @@ const utils: DocumentDriveUtils = {
     return baseSaveToFileHandle(document, input);
   },
   loadFromFile(path) {
-    return baseLoadFromFile(path, reducer);
+    return baseLoadFromFile(path, driveDocumentReducer);
   },
   loadFromInput(input) {
-    return baseLoadFromInput(input, reducer);
+    return baseLoadFromInput(input, driveDocumentReducer);
   },
 };
 

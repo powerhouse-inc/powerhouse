@@ -1,14 +1,16 @@
+import type {
+  IBaseDocumentDriveServer,
+  IListenerManager,
+  ITransmitter,
+  ITransmitterFactory,
+  ServerListener,
+} from "document-drive";
 import {
-  type IBaseDocumentDriveServer,
-  type IListenerManager,
-  type ITransmitterFactory,
-  type Listener,
-} from "#server";
-import { PullResponderTransmitter } from "./pull-responder.js";
-import { SwitchboardPushTransmitter } from "./switchboard-push.js";
-import { type ITransmitter } from "./types.js";
+  PullResponderTransmitter,
+  SwitchboardPushTransmitter,
+} from "document-drive";
 
-export default class TransmitterFactory implements ITransmitterFactory {
+export class TransmitterFactory implements ITransmitterFactory {
   private readonly listenerManager: IListenerManager;
 
   constructor(listenerManager: IListenerManager) {
@@ -17,7 +19,7 @@ export default class TransmitterFactory implements ITransmitterFactory {
 
   instance(
     transmitterType: string,
-    listener: Listener,
+    listener: ServerListener,
     driveServer: IBaseDocumentDriveServer,
   ): ITransmitter {
     switch (transmitterType) {

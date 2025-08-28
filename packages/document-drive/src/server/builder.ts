@@ -1,27 +1,27 @@
-import { type DocumentModelModule } from "document-model";
-import { InMemoryCache } from "../cache/memory.js";
-import { type ICache } from "../cache/types.js";
-import { EventQueueManager } from "../queue/event.js";
-import { type IQueueManager } from "../queue/types.js";
-import { MemoryStorage } from "../storage/memory.js";
+import type {
+  DocumentDriveServerOptions,
+  ICache,
+  IDocumentDriveServer,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IEventEmitter,
+  IListenerManager,
+  IQueueManager,
+  ISynchronizationManager,
+  ITransmitterFactory,
+} from "document-drive";
 import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "../storage/types.js";
-import { DocumentDriveServer } from "./base-server.js";
-import { DefaultEventEmitter } from "./event-emitter.js";
-import { ListenerManager } from "./listener/listener-manager.js";
-import TransmitterFactory from "./listener/transmitter/factory.js";
-import SynchronizationManager from "./sync-manager.js";
-import {
+  SynchronizationManager,
+  DefaultEventEmitter,
   DefaultListenerManagerOptions,
-  type DocumentDriveServerOptions,
-  type IDocumentDriveServer,
-  type IEventEmitter,
-  type IListenerManager,
-  type ISynchronizationManager,
-  type ITransmitterFactory,
-} from "./types.js";
+  DocumentDriveServer,
+  EventQueueManager,
+  InMemoryCache,
+  ListenerManager,
+  MemoryStorage,
+  TransmitterFactory,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
 
 /**
  * Builder class for constructing Reactor instances with proper configuration

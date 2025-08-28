@@ -1,13 +1,17 @@
-import { type DocumentDriveDocument } from "#drive-document-model";
-import { type ActionContext, type Operation, generateId } from "document-model";
+import type { DocumentDriveDocument } from "document-drive";
+import {
+  addFile,
+  BrowserStorage,
+  buildOperation,
+  createBaseState,
+  createDocument,
+  migrateLegacyOperationSignature,
+  PrismaClient,
+  driveDocumentReducer,
+} from "document-drive";
+import type { ActionContext, Operation } from "document-model";
+import { generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
-import { addFile } from "../src/drive-document-model/gen/creators.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import { createDocument } from "../src/drive-document-model/gen/utils.js";
-import { BrowserStorage } from "../src/storage/browser.js";
-import { PrismaClient } from "../src/storage/prisma/client/index.js";
-import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
-import { buildOperation, createBaseState } from "./utils.js";
 
 const prismaClient = new PrismaClient();
 
@@ -133,7 +137,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",
@@ -183,7 +187,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",
@@ -259,7 +263,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",

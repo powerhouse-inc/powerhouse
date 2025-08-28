@@ -1,14 +1,11 @@
+import type { CopyNodeInput, DocumentDriveState } from "document-drive";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type CopyNodeInput,
-  type DocumentDriveState,
-} from "../../gen/types.js";
 
 import {
   generateNodesCopy,
   getNextCopyNumber,
   handleTargetNameCollisions,
-} from "../utils.js";
+} from "document-drive";
 
 const baseNodes: DocumentDriveState["nodes"] = [
   {

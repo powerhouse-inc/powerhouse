@@ -227,11 +227,11 @@ export abstract class BaseDocumentClass<
 
 export function applyMixins(derivedCtor: any, constructors: any[]) {
   constructors.forEach((baseCtor) => {
-    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+    Object.getOwnPropertyNames(baseCtor?.prototype).forEach((name) => {
       Object.defineProperty(
-        derivedCtor.prototype,
+        derivedCtor?.prototype,
         name,
-        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
+        Object.getOwnPropertyDescriptor(baseCtor?.prototype, name) ||
           Object.create(null),
       );
     });

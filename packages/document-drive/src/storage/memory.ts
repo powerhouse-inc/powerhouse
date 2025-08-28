@@ -1,26 +1,26 @@
-import { type DocumentDriveDocument } from "#drive-document-model";
+import type {
+  DocumentDriveDocument,
+  IDocumentAdminStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
+} from "document-drive";
 import {
+  AbortError,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  type SynchronizationUnitQuery,
-} from "#server";
-import { AbortError, mergeOperations, operationsToRevision } from "#utils";
-import { type Operation, type PHDocument } from "document-model";
-import {
-  type IDocumentAdminStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-  type IStorageUnit,
-  type IStorageUnitFilter,
-} from "./types.js";
-import {
   isValidDocumentId,
   isValidSlug,
+  mergeOperations,
+  operationsToRevision,
   resolveStorageUnitsFilter,
-} from "./utils.js";
+} from "document-drive";
+import type { Operation, PHDocument } from "document-model";
 
 type DriveManifest = {
   documentIds: Set<string>;

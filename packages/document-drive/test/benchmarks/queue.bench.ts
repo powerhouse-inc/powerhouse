@@ -1,7 +1,12 @@
-import { addFolder, driveDocumentModelModule } from "#drive-document-model";
-import { EventQueueManager, type IQueueManager } from "#queue";
-import { ReactorBuilder } from "#server";
-import { MemoryStorage } from "#storage";
+import {
+  addFolder,
+  buildOperations,
+  driveDocumentModelModule,
+  EventQueueManager,
+  type IQueueManager,
+  MemoryStorage,
+  ReactorBuilder,
+} from "document-drive";
 import {
   createPresignedHeader,
   documentModelDocumentModelModule,
@@ -9,7 +14,6 @@ import {
   generateId,
 } from "document-model";
 import { bench, type BenchOptions, describe } from "vitest";
-import { buildOperations } from "../utils.js";
 
 const documentModels = [
   driveDocumentModelModule,

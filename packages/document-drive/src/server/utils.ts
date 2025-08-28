@@ -1,15 +1,10 @@
 import type {
-  Action,
-  DocumentOperations,
-  Operation,
-  PHDocument,
-} from "document-model";
-import {
-  type CreateDocumentInput,
-  type RevisionsFilter,
-  type StrandUpdate,
-  type SynchronizationUnitId,
-} from "./types.js";
+  CreateDocumentInput,
+  RevisionsFilter,
+  StrandUpdate,
+  SynchronizationUnitId,
+} from "document-drive";
+import type { DocumentOperations, Operation, PHDocument } from "document-model";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],

@@ -11,7 +11,7 @@ import {
   InternalTransmitter,
   type InternalTransmitterUpdate,
   type IProcessor,
-  type Listener,
+  type ServerListener,
 } from "document-drive";
 import { type DocumentModelDocument } from "document-model";
 import { readFileSync } from "node:fs";
@@ -116,7 +116,7 @@ async function addGenerateTransmitter(
   const listenerManager = reactor.server.listeners;
 
   // todo: simplify
-  const listener: Listener = {
+  const listener: ServerListener = {
     driveId: "powerhouse",
     listenerId: "reactor-local-document-model-generator",
     label: "reactor-local-document-model-generator",

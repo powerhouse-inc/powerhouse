@@ -1,18 +1,11 @@
-import { type DocumentDriveDocument } from "#drive-document-model";
-import { type PHDocument } from "document-model";
-import { type ICache } from "./types.js";
-import { trimResultingState } from "./util.js";
-
-export interface ICacheStorage<Value = unknown> {
-  get(key: string): Value | undefined;
-  set(key: string, value: Value): this;
-  delete(key: string): boolean;
-  clear(): void;
-}
-
-export interface ICacheStorageManager {
-  createStorage<Value extends {}>(): ICacheStorage<Value>;
-}
+import type {
+  DocumentDriveDocument,
+  ICache,
+  ICacheStorage,
+  ICacheStorageManager,
+} from "document-drive";
+import { trimResultingState } from "document-drive";
+import type { PHDocument } from "document-model";
 
 export class CacheStorageManager implements ICacheStorageManager {
   private index = 0;

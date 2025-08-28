@@ -1,6 +1,6 @@
 import type { DocumentModelState } from "document-model";
 
-export const documentModel: DocumentModelState = {
+export const driveDocumentModel: DocumentModelState = {
   id: "powerhouse/document-drive",
   name: "DocumentDrive",
   extension: "phdd",

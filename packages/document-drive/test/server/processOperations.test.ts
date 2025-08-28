@@ -1,27 +1,31 @@
+import type {
+  Action,
+  DocumentModelDocument,
+  DocumentModelModule,
+  Operation,
+} from "document-model";
 import {
-  type Action,
-  type DocumentModelDocument,
   documentModelDocumentModelModule,
-  type DocumentModelModule,
   documentModelReducer,
   garbageCollect,
   generateId,
-  type Operation,
   setModelExtension,
   setModelId,
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { addFile } from "#drive-document-model";
-import { type BaseDocumentDriveServer } from "#server";
-import { createPresignedHeader } from "document-model";
-import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { type IOperationResult } from "../../src/server/types.js";
-import { BasicClient, buildOperation, buildOperations } from "../utils.js";
+import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
+import {
+  addFile,
+  BasicClient,
+  buildOperation,
+  buildOperations,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+  ReactorBuilder,
+} from "document-drive";
+import { createPresignedHeader, undo } from "document-model";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -75,7 +79,7 @@ describe("processOperations", () => {
     await server.addDriveOperation(
       driveId,
       buildOperation(
-        documentDriveReducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: documentId,

@@ -1,9 +1,11 @@
-import {
-  type CopyNodeInput,
-  type FileNode,
-  type FolderNode,
-  type Node,
-} from "../gen/types.js";
+import type {
+  CopyNodeInput,
+  FileNode,
+  FolderNode,
+  GenerateNodesCopyIdGenerator,
+  GenerateNodesCopySrc,
+  Node,
+} from "document-drive";
 
 export function isFileNode(node: Node): node is FileNode {
   return node.kind === "file";
@@ -30,14 +32,6 @@ export function getDescendants(node: Node, allNodes: Node[]): Node[] {
   const descendants = children.map((child) => getDescendants(child, allNodes));
   return [...children, ...descendants.flat()];
 }
-
-export type GenerateNodesCopySrc = {
-  srcId: Node["id"];
-  targetName?: Node["name"];
-  targetParentFolder?: Node["parentFolder"];
-};
-
-export type GenerateNodesCopyIdGenerator = (nodeToCopy: Node) => Node["id"];
 
 /**
  * Generates a copy of nodes based on the provided source and target information.

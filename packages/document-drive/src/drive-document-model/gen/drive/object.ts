@@ -1,29 +1,29 @@
-import { BaseDocumentClass } from "document-model";
+import type {
+  AddListenerInput,
+  AddTriggerInput,
+  DocumentDriveAction,
+  DocumentDriveLocalState,
+  DocumentDriveState,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
+} from "document-drive";
 import {
-  type SetDriveNameInput,
-  type SetDriveIconInput,
-  type SetSharingTypeInput,
-  type SetAvailableOfflineInput,
-  type AddListenerInput,
-  type RemoveListenerInput,
-  type AddTriggerInput,
-  type RemoveTriggerInput,
-  type DocumentDriveState,
-  type DocumentDriveLocalState,
-} from "../types.js";
-import {
-  setDriveName,
-  setDriveIcon,
-  setSharingType,
-  setAvailableOffline,
   addListener,
-  removeListener,
   addTrigger,
+  removeListener,
   removeTrigger,
-} from "./creators.js";
-import { type DocumentDriveAction } from "../actions.js";
+  setAvailableOffline,
+  setDriveIcon,
+  setDriveName,
+  setSharingType,
+} from "document-drive";
+import { BaseDocumentClass } from "document-model";
 
-export default class DocumentDrive_Drive extends BaseDocumentClass<
+export class DocumentDrive_Drive extends BaseDocumentClass<
   DocumentDriveState,
   DocumentDriveLocalState,
   DocumentDriveAction

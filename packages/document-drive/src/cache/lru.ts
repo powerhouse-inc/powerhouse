@@ -1,20 +1,9 @@
-import { childLogger } from "#utils";
-import { LRUCache as BaseLRUCache, type LRUCache } from "lru-cache";
+import type { LRUCacheStorageOptions } from "document-drive";
+import { childLogger } from "document-drive";
+import type { LRUCache } from "lru-cache";
+import { LRUCache as BaseLRUCache } from "lru-cache";
 import sizeof from "object-sizeof";
-import { type ICacheStorage } from "./memory.js";
-
-/**
- * Options for configuring an LRU (Least Recently Used) cache storage.
- *
- * @property maxSize - The maximum size of the cache in bytes. This defines the upper limit
- * on the total size of objects that can be stored in the cache.
- * @property sizeCalculation - An optional function to calculate the size of an object in bytes.
- * If not provided, a default method will be used to determine the size.
- */
-export interface LRUCacheStorageOptions {
-  maxSize: number;
-  sizeCalculation?: (object: unknown) => number;
-}
+import type { ICacheStorage } from "document-drive";
 
 /**
  * An implementation of a Least Recently Used (LRU) cache storage that evicts items

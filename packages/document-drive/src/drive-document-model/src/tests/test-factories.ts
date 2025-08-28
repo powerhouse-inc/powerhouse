@@ -2,8 +2,7 @@
  * Test factory methods for creating DocumentDriveDocument instances with custom state
  */
 
-import type { Node } from "../../gen/schema/types.js";
-import type { DocumentDriveDocument } from "../../gen/types.js";
+import type { DocumentDriveDocument, Node } from "document-drive";
 import { createDriveDocument } from "../../ph-factories.js";
 
 /**

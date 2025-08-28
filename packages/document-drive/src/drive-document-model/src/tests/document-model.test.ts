@@ -3,12 +3,12 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, expect, it } from "vitest";
 import {
   createDocument,
   initialGlobalState,
   initialLocalState,
-} from "../../gen/utils.js";
+} from "document-drive";
+import { describe, expect, it } from "vitest";
 
 describe("Document Drive Document Model", () => {
   it("should create a new Document Drive document", () => {

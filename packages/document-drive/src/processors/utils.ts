@@ -1,15 +1,14 @@
 import type { Options } from "@sindresorhus/fnv1a";
 import fnv1a from "@sindresorhus/fnv1a";
-import {
-  type IBaseRelationalDb,
-  type IRelationalDb,
-  type IRelationalQueryBuilder,
-} from "./types.js";
+import type {
+  HashAlgorithms,
+  IBaseRelationalDb,
+  IRelationalDb,
+  IRelationalQueryBuilder,
+} from "document-drive";
 
 const SUPPORTED_SIZES: Options["size"][] = [32, 64, 128, 256, 512, 1024];
 const LOG2_26 = Math.log2(26); //
-export type HashAlgorithms = "fnv1a";
-
 /**
  * Hashes a string to a lowercase base-26 string.
  * @param str The string to hash.

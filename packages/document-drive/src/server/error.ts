@@ -1,5 +1,5 @@
+import type { ErrorStatus, SynchronizationUnitId } from "document-drive";
 import type { Operation } from "document-model";
-import { type ErrorStatus, type SynchronizationUnitId } from "./types.js";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(
