@@ -231,7 +231,9 @@ export async function generateEditor(
     (type) => !Object.keys(documentTypesMap).includes(type),
   );
   if (invalidType) {
-    throw new Error(`Document model for ${invalidType} not found`);
+    throw new Error(
+      `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
+    );
   }
   return _generateEditor(
     name,
@@ -283,7 +285,9 @@ export async function generateProcessor(
     (type) => !Object.keys(documentTypesMap).includes(type),
   );
   if (invalidType) {
-    throw new Error(`Document model for ${invalidType} not found`);
+    throw new Error(
+      `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
+    );
   }
 
   return _generateProcessor(
