@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { AnalyticsPath, AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/reactor-api";
-import { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import { type InternalTransmitterUpdate, type IProcessor } from "document-drive";
 
 export class <%= pascalName %>Processor implements IProcessor {
   private readonly NAMESPACE = "<%= pascalName %>";
