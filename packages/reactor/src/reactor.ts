@@ -1,4 +1,5 @@
 import type { BaseDocumentDriveServer } from "document-drive";
+import type { IDocumentStorage } from "document-drive/storage/types";
 import { AbortError } from "document-drive/utils/errors";
 import type {
   Action,
@@ -39,11 +40,16 @@ import { filterByParentId, filterByType } from "./utils.js";
  */
 export class Reactor implements IReactor {
   private driveServer: BaseDocumentDriveServer;
+  private documentStorage: IDocumentStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
 
-  constructor(driveServer: BaseDocumentDriveServer) {
+  constructor(
+    driveServer: BaseDocumentDriveServer,
+    documentStorage: IDocumentStorage,
+  ) {
     this.driveServer = driveServer;
+    this.documentStorage = documentStorage;
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -136,14 +142,13 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
-    const document = await this.driveServer.getDocument<TDocument>(id);
+    const document = await this.documentStorage.get<TDocument>(id);
 
-    // this should be thrown by the storage layer
-    if (!document) {
-      throw new Error(`Document not found: ${id}`);
+    if (signal?.aborted) {
+      throw new AbortError();
     }
 
-    const childIds = await this.driveServer.getDocuments(id);
+    const childIds = await this.documentStorage.getChildren(id);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -175,41 +180,25 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
-
-    // Search through drives to find a document with the matching slug
-    for (const driveId of drives) {
-      if (signal?.aborted) {
-        throw new AbortError();
+    // Use the storage layer to resolve slug to ID
+    let ids: string[];
+    try {
+      ids = await this.documentStorage.resolveIds([slug], signal);
+    } catch (error) {
+      // If the error is from resolveIds (document not found), wrap it with our message
+      if (error instanceof Error && error.message.includes("not found")) {
+        throw new Error(`Document not found with slug: ${slug}`);
       }
 
-      const documentIds = await this.driveServer.getDocuments(driveId);
-
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<TDocument>(docId);
-        if (document.header.slug === slug) {
-          const childIds = await this.driveServer.getDocuments(docId);
-
-          if (signal?.aborted) {
-            throw new AbortError();
-          }
-
-          // Apply view filter - This will be removed when we pass the viewfilter along
-          // to the underlying store, but is here now for the interface.
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          return { document, childIds };
-        }
-      }
+      throw error;
     }
 
-    throw new Error(`Document not found with slug: ${slug}`);
+    if (ids.length === 0 || !ids[0]) {
+      throw new Error(`Document not found with slug: ${slug}`);
+    }
+
+    // Now get the document by its resolved ID
+    return await this.get<TDocument>(ids[0], view, signal);
   }
 
   /**
