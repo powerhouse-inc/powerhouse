@@ -14,13 +14,34 @@
     "/dist"
   ],
   "exports": {
-    ".": "./dist/index.js",
-    "./document-models": "./dist/document-models/index.js",
-    "./editors": "./dist/editors/index.js",
-    "./subgraphs": "./dist/subgraphs/index.js",
-    "./processors": "./dist/processors/index.js",
-    "./manifest": "./dist/manifest.js",
-    "./vetra-drive-app": "./dist/editors/vetra-drive-app/index.js",
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./document-models": {
+      "import": "./dist/document-models/index.js",
+      "types": "./dist/document-models/index.d.ts"
+    },
+    "./editors": {
+      "import": "./dist/editors/index.js",
+      "types": "./dist/editors/index.d.ts"
+    },
+    "./subgraphs": {
+      "import": "./dist/subgraphs/index.js",
+      "types": "./dist/subgraphs/index.d.ts"
+    },
+    "./processors": {
+      "import": "./dist/processors/index.js",
+      "types": "./dist/processors/index.d.ts"
+    },
+    "./manifest": {
+      "import": "./dist/manifest.js",
+      "types": "./dist/manifest.d.ts"
+    },
+    "./vetra-drive-app": {
+      "import": "./dist/editors/vetra-drive-app/index.js",
+      "types": "./dist/editors/vetra-drive-app/index.d.ts"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {

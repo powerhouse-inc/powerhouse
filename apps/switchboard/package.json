@@ -3,8 +3,14 @@
   "type": "module",
   "version": "4.1.0-dev.34",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./server": "./dist/src/server.js"
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/src/server.js",
+      "types": "./dist/src/server.d.ts"
+    }
   },
   "bin": {
     "switchboard": "dist/src/index.js"

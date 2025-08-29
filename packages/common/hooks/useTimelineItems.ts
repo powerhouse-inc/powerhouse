@@ -1,13 +1,13 @@
 import type {
   GroupedPeriodResults,
   UseAnalyticsQueryResult,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
   useAnalyticsQuery,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
 
 const getBarSize = (value: number) => {
   if (value <= 0) return 0;

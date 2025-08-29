@@ -2,13 +2,13 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
+  AnalyticsProvider,
   DriveContextProvider,
   setSelectedNode,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useDriveContext,
 } from "@powerhousedao/reactor-browser";
-import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics";
 import type { DocumentDriveDocument, FileNode } from "document-drive";
 import { useCallback } from "react";
 import { DriveExplorer } from "./DriveExplorer.js";

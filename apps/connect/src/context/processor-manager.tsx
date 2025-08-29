@@ -1,22 +1,15 @@
 import { connectConfig } from "@powerhousedao/connect";
-import type { Processors } from "@powerhousedao/reactor-browser";
-import {
-  useProcessorManager,
-  useProcessors,
-} from "@powerhousedao/reactor-browser";
-import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
+import type { IAnalyticsStore, PGlite, PGliteWithLive, Processors } from "@powerhousedao/reactor-browser";
 import {
   AnalyticsProvider,
+  live,
   useAnalyticsStoreAsync,
-} from "@powerhousedao/reactor-browser/analytics";
-import type {
-  PGlite,
-  PGliteWithLive,
-} from "@powerhousedao/reactor-browser/pglite";
-import { live, useSetPGliteDB } from "@powerhousedao/reactor-browser/pglite";
-import { useRelationalDb } from "@powerhousedao/reactor-browser/relational";
-import type { ProcessorManager, ProcessorRecord } from "document-drive";
-import type { IRelationalDb } from "document-drive";
+  useProcessorManager,
+  useProcessors,
+  useRelationalDb,
+  useSetPGliteDB,
+} from "@powerhousedao/reactor-browser";
+import type { IRelationalDb, ProcessorManager, ProcessorRecord } from "document-drive";
 import { childLogger } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { generateId } from "document-model";
@@ -30,9 +23,7 @@ function createPgLiteFactoryWorker(databaseName: string) {
     const PGWorker = (await import("../workers/pglite-worker.js?worker"))
       .default;
 
-    const { PGliteWorker } = await import(
-      "@powerhousedao/reactor-browser/pglite"
-    );
+    const { PGliteWorker } = await import("@powerhousedao/reactor-browser");
 
     const worker = new PGWorker({
       name: "pglite-worker",

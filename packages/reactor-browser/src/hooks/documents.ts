@@ -3,23 +3,17 @@ import {
   useFileNodes,
   useSelectedNodeId,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
-
-function getDocumentsSnapshot() {
-  const documents = window.phDocuments;
-  return documents;
-}
 
 function subscribeToDocuments(onStoreChange: () => void) {
   window.addEventListener("ph:setDocuments", onStoreChange);
   return () => window.removeEventListener("ph:setDocuments", onStoreChange);
 }
 
-export function useAllDocuments(): PHDocument[] | undefined {
+export function useAllDocuments() {
   const documents = useSyncExternalStore(
     subscribeToDocuments,
-    getDocumentsSnapshot,
+    () => window.phDocuments,
   );
   return documents;
 }

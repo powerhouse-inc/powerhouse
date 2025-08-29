@@ -5,8 +5,6 @@
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.browser.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
@@ -15,6 +13,7 @@
     "access": "public"
   },
   "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist"
   ],

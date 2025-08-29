@@ -3,7 +3,6 @@ import type {
   SharingType,
   Trigger,
 } from "document-drive";
-import type { Action } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedDriveIdEvent,
@@ -17,17 +16,12 @@ import {
 import { useDispatch } from "./dispatch.js";
 
 /** Returns the drives for a reactor. */
-export function useDrives(): DocumentDriveDocument[] | undefined {
+export function useDrives() {
   const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
   return drives;
 }
 
-export function useDriveById(
-  driveId: string | undefined | null,
-): readonly [
-  DocumentDriveDocument | undefined,
-  (actionOrActions: Action[] | Action | undefined) => void,
-] {
+export function useDriveById(driveId: string | undefined | null) {
   const drives = useDrives();
   const drive = drives?.find((drive) => drive.header.id === driveId);
   const [document, dispatch] = useDispatch(drive);

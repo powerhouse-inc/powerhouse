@@ -11,6 +11,7 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
     "tsc": "tsc",

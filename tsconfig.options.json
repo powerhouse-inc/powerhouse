@@ -2,8 +2,8 @@
   "compilerOptions": {
     // Environment Settings
     // See also https://aka.ms/tsconfig_modules
-    "module": "nodenext",
-    "target": "esnext",
+    "module": "NodeNext",
+    "target": "ESNext",
 
     // Other Outputs
     "sourceMap": true,

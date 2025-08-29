@@ -8,6 +8,7 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],

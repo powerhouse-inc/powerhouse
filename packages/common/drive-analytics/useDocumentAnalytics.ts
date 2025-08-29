@@ -1,10 +1,10 @@
-import type { AnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
+import type { AnalyticsQuery } from "@powerhousedao/reactor-browser";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
   useAnalyticsQuery,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
 import type { NodeTarget } from "./processor/index.js";
 
 export type UseDocumentAnalyticsOptions = {

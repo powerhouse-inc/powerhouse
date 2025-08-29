@@ -17,6 +17,8 @@
   "files": [
     "dist"
   ],
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

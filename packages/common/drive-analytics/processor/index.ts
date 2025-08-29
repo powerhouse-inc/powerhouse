@@ -1,4 +1,4 @@
-import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
+import type { IAnalyticsStore } from "@powerhousedao/reactor-browser";
 import type { ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 

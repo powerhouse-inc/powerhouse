@@ -8,6 +8,7 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "bin": {
     "reactor-mcp": "./dist/src/cli.js"
   },

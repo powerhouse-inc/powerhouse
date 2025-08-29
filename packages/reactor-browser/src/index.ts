@@ -1,5 +1,6 @@
 export * from "./actions/index.js";
 export * from "./analytics/index.js";
+export type * from "./analytics/types.js";
 export * from "./constants.js";
 export * from "./context/index.js";
 export * from "./crypto/index.js";

@@ -1,11 +1,8 @@
 import type {
   AnalyticsSeriesInput,
   IAnalyticsStore,
-} from "@powerhousedao/reactor-browser/analytics";
-import {
-  AnalyticsPath,
-  DateTime,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
+import { AnalyticsPath, DateTime } from "@powerhousedao/reactor-browser";
 import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 import { childLogger } from "document-drive";
 import type { PHDocument } from "document-model";

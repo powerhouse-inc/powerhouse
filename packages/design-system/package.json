@@ -15,8 +15,14 @@
   },
   "sideEffects": false,
   "exports": {
-    ".": "./dist/src/index.js",
-    "./ui": "./dist/src/ui/index.js",
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./ui": {
+      "import": "./dist/src/ui/index.js",
+      "types": "./dist/src/ui/index.d.ts"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
