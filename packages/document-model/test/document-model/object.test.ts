@@ -51,7 +51,7 @@ describe("DocumentModel Class", () => {
       .addModule({ id: generateId(), name: "header" });
 
     expect(
-      model.state.global.specifications[0].modules.map((m) => m.name),
+      model.state.global.specifications[0].modules.map((m: any) => m.name),
     ).toStrictEqual(["state", "header"]);
 
     expect(model.state.global.specifications[0].modules[0].id).toMatch(
@@ -73,7 +73,7 @@ describe("DocumentModel Class", () => {
     });
 
     expect(
-      model.state.global.specifications[0].modules.map((m) => m.name),
+      model.state.global.specifications[0].modules.map((m: any) => m.name),
     ).toStrictEqual(["header", "state"]);
 
     const headerModuleId = model.state.global.specifications[0].modules[0].id;

@@ -5,7 +5,7 @@ import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
 type Props = ComponentPropsWithoutRef<"video"> & {
   readonly size?: Size;
-}; 
+};
 export function AnimatedLoader(props: Props) {
   const { style, size = 100, ...delegatedProps } = props;
 

@@ -12,12 +12,12 @@ import {
 } from "@powerhousedao/design-system/ui";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import * as React from "react";
+import { createRef, forwardRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped
-const TextFieldTesting = React.forwardRef<
+const TextFieldTesting = forwardRef<
   HTMLInputElement,
   Omit<TextFieldProps, "autoComplete">
 >(
@@ -249,7 +249,7 @@ describe("withFieldValidation", () => {
   });
 
   it("should forward refs to the wrapped component", () => {
-    const inputRef = React.createRef<HTMLInputElement>();
+    const inputRef = createRef<HTMLInputElement>();
 
     renderWithForm(<WrappedComponent name="test" ref={inputRef} />);
 

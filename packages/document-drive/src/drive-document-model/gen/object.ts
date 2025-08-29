@@ -1,56 +1,21 @@
-import type {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "document-drive";
+import type { AugmentConstructor } from "document-model";
+import { DocumentDriveCore } from "./document-drive-core.js";
 import {
   DocumentDrive_Drive,
+  type DocumentDrive_Drive_Augment,
+} from "./drive/object.js";
+import {
   DocumentDrive_Node,
-  driveDocumentReducer,
-  DriveUtils,
-} from "document-drive";
-import type { BaseState, PartialState, SignalDispatch } from "document-model";
-import { applyMixins, BaseDocumentClass } from "document-model";
+  type DocumentDrive_Node_Augment,
+} from "./node/object.js";
+import type { DocumentDriveAction } from "./types.js";
 
-interface DocumentDrive extends DocumentDrive_Node, DocumentDrive_Drive {}
+type AnyCtor = abstract new (...a: any[]) => any;
+const BaseAny = DocumentDriveCore as unknown as AnyCtor;
 
-class DocumentDrive extends BaseDocumentClass<
-  DocumentDriveState,
-  DocumentDriveLocalState,
-  DocumentDriveAction
-> {
-  static fileExtension = "phdd";
+const Mixed: AugmentConstructor<
+  AugmentConstructor<AnyCtor, DocumentDrive_Drive_Augment<DocumentDriveAction>>,
+  DocumentDrive_Node_Augment<DocumentDriveAction>
+> = DocumentDrive_Node(DocumentDrive_Drive(BaseAny));
 
-  constructor(
-    initialState?: Partial<
-      BaseState<
-        PartialState<DocumentDriveState>,
-        PartialState<DocumentDriveLocalState>
-      >
-    >,
-    dispatch?: SignalDispatch,
-  ) {
-    super(
-      driveDocumentReducer,
-      DriveUtils.createDocument(initialState),
-      dispatch,
-    );
-  }
-
-  public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, DocumentDrive.fileExtension, name);
-  }
-
-  public loadFromFile(path: string) {
-    return super.loadFromFile(path);
-  }
-
-  static async fromFile(path: string) {
-    const document = new this();
-    await document.loadFromFile(path);
-    return document;
-  }
-}
-applyMixins(DocumentDrive, [DocumentDrive_Node, DocumentDrive_Drive]);
-
-export { DocumentDrive };
+export class DocumentDrive extends Mixed {}

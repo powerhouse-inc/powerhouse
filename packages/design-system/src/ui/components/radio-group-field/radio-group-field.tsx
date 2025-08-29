@@ -4,15 +4,11 @@ import type {
   InputBaseProps,
   RadioGroupProps,
 } from "@powerhousedao/design-system/ui";
-import {
-  FormLabel,
-  FormMessageList,
-  withFieldValidation,
-} from "@powerhousedao/design-system/ui";
+import { FormLabel, FormMessageList } from "@powerhousedao/design-system/ui";
 import * as React from "react";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { RadioGroup } from "./radio-group.js";
 import { Radio } from "./radio.js";
-
 type RadioGroupFieldBaseProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,
   | keyof InputBaseProps<string>

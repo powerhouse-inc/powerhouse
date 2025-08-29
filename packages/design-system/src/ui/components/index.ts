@@ -21,4 +21,4 @@ export * from "./text-input/index.js";
 export * from "./text-input/text-input-diff.js";
 export * from "./tooltip/index.js";
 export * from "./value-transformer/index.js";
-export * from "./with-field-validation/index.js";
+export * from "./with-field-validation/with-field-validation.js";

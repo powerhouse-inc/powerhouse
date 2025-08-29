@@ -1,12 +1,10 @@
+import { cn } from "@powerhousedao/design-system";
 import type {
   FieldErrorHandling,
   InputBaseProps,
-} from "@powerhousedao/design-system/ui";
-import type {
   SelectOption,
   SelectProps,
 } from "@powerhousedao/design-system/ui";
-import { cn } from "@powerhousedao/design-system";
 import {
   Button,
   Command,
@@ -17,9 +15,9 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  withFieldValidation,
 } from "@powerhousedao/design-system/ui";
 import React, { useCallback, useId } from "react";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { Content } from "./content.js";
 import { SelectedContent } from "./selected-content.js";
 import { useSelectField } from "./use-select-field.js";

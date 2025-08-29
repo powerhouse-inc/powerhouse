@@ -76,7 +76,6 @@ describe("DocumentDrive Class", () => {
   it("should trigger create child document signal", () => {
     function dispatch(_signal: Signal) {}
     const documentDrive = new DocumentDriveClass(undefined, dispatch);
-    // @ts-expect-error spying on private method
     const spy = vi.spyOn(documentDrive, "_signalDispatch");
     documentDrive.addFile({
       id: "1",
