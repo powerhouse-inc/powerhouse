@@ -1,7 +1,7 @@
 import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
-} from "../utils/url.js";
+} from "@powerhousedao/reactor-browser";
 import type { SetSelectedNodeIdEvent } from "./types.js";
 
 export function dispatchSetSelectedNodeIdEvent(nodeSlug: string | undefined) {

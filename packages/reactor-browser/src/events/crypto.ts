@@ -1,4 +1,4 @@
-import type { DID, IConnectCrypto } from "../crypto/index.js";
+import type { DID, IConnectCrypto } from "@powerhousedao/reactor-browser";
 import type { SetConnectCryptoEvent, SetDidEvent } from "./types.js";
 
 export function dispatchSetConnectCryptoEvent(

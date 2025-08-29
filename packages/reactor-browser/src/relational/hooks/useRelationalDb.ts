@@ -1,11 +1,11 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
+import { usePGliteDB } from "@powerhousedao/reactor-browser";
 import type { IRelationalDb as _IRelationalDb } from "document-drive";
 import { createRelationalDb } from "document-drive";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";
-import { usePGliteDB } from "../../pglite/hooks/usePGlite.js";
 
 // Type for Relational DB instance enhanced with live capabilities
 export type RelationalDbWithLive<Schema> = _IRelationalDb<Schema> & {

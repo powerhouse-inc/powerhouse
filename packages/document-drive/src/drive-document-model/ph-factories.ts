@@ -3,7 +3,11 @@
  */
 
 import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
-import { defaultBaseState, testCreateBaseState } from "document-model";
+import {
+  createBaseState,
+  defaultBaseState,
+  testCreateBaseState,
+} from "document-model";
 import type {
   DocumentDriveDocument,
   DocumentDriveLocalState,
@@ -61,7 +65,7 @@ export function createState(
   localState?: Partial<DocumentDriveLocalState>,
 ): DocumentDrivePHState {
   return {
-    ...testCreateBaseState(baseState),
+    ...createBaseState(baseState),
     global: createGlobalState(globalState),
     local: createLocalState(localState),
   };

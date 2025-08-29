@@ -6,6 +6,7 @@ export * from "./context/index.js";
 export * from "./crypto/index.js";
 export * from "./document-model.js";
 export * from "./events/index.js";
+export * from "./global/index.js";
 export * from "./hooks/index.js";
 export * from "./pglite/index.js";
 export * from "./reactor.js";

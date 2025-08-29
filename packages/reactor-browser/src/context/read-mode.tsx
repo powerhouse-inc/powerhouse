@@ -1,3 +1,4 @@
+import { useUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   BaseDocumentDriveServer,
   IDocumentDriveServer,
@@ -15,7 +16,6 @@ import type { PHDocument } from "document-model";
 import fastIsDeepEqual from "fast-deep-equal";
 import type { FC, ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useUserPermissions } from "../hooks/user.js";
 
 const logger = {
   error: console.error,

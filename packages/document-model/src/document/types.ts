@@ -9,7 +9,7 @@ import type {
   PHBaseState,
   PHDocumentHeader,
   PHDocumentHistory,
-} from "./ph-types.js";
+} from "document-model";
 
 export type * from "./actions/types.js";
 export type * from "./ph-types.js";

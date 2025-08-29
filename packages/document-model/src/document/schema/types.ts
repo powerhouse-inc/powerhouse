@@ -161,12 +161,10 @@ export type SchemaUndoAction = {
   scope: string;
 };
 
-export type NOOP = "NOOP";
-
 export type SchemaNOOPAction = {
   id: Scalars["String"]["output"];
-  timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Unknown"]["input"];
-  type: NOOP;
   scope: string;
+  timestampUtcMs: Scalars["DateTime"]["output"];
+  type: "NOOP";
 };

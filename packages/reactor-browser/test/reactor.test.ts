@@ -1,7 +1,7 @@
+import { createBrowserDocumentDriveServer } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
-import { createBrowserDocumentDriveServer } from "../src/reactor.js";
 
 describe("reactor", () => {
   it("should create a reactor instance with minimal config", async () => {

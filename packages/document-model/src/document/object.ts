@@ -1,5 +1,3 @@
-import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
-import type { SignalDispatch } from "./signal.js";
 import type {
   Action,
   AttachmentRef,
@@ -7,9 +5,18 @@ import type {
   BaseState,
   Reducer,
   ReducerOptions,
-} from "./types.js";
-import { readOnly } from "./utils/base.js";
-import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";
+  SignalDispatch,
+} from "document-model";
+import {
+  baseLoadFromFile,
+  baseSaveToFile,
+  loadState,
+  prune,
+  readOnly,
+  redo,
+  setName,
+  undo,
+} from "document-model";
 
 /**
  * This is an abstract class representing a document and provides methods
@@ -227,11 +234,11 @@ export abstract class BaseDocumentClass<
 
 export function applyMixins(derivedCtor: any, constructors: any[]) {
   constructors.forEach((baseCtor) => {
-    Object.getOwnPropertyNames(baseCtor?.prototype).forEach((name) => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
       Object.defineProperty(
-        derivedCtor?.prototype,
+        derivedCtor.prototype,
         name,
-        Object.getOwnPropertyDescriptor(baseCtor?.prototype, name) ||
+        Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
           Object.create(null),
       );
     });

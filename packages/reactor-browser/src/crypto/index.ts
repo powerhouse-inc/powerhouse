@@ -8,8 +8,11 @@ import {
 } from "did-key-creator";
 import { fromString } from "uint8arrays";
 
+import {
+  RENOWN_CHAIN_ID,
+  RENOWN_NETWORK_ID,
+} from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-drive";
-import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID } from "../renown/constants.js";
 
 const logger = childLogger(["connect", "crypto"]);
 export type JwkKeyPair = {

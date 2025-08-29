@@ -1,4 +1,4 @@
-import type { Reactor } from "../types/reactor.js";
+import type { Reactor } from "@powerhousedao/reactor-browser";
 import type { SetReactorEvent } from "./types.js";
 
 export function dispatchSetReactorEvent(reactor: Reactor | undefined) {

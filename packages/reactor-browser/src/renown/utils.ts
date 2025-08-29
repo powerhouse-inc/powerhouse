@@ -1,11 +1,10 @@
-import type { IRenown } from "@renown/sdk";
-import { logger } from "document-drive";
-import type { IConnectCrypto } from "../crypto/index.js";
+import type { IConnectCrypto, Reactor } from "@powerhousedao/reactor-browser";
 import {
   dispatchSetLoginStatusEvent,
   dispatchSetUserEvent,
-} from "../events/user.js";
-import type { Reactor } from "../types/reactor.js";
+} from "@powerhousedao/reactor-browser";
+import type { IRenown } from "@renown/sdk";
+import { logger } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {

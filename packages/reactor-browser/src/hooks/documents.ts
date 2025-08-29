@@ -3,6 +3,7 @@ import {
   useFileNodes,
   useSelectedNodeId,
 } from "@powerhousedao/reactor-browser";
+import type { PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 
 function subscribeToDocuments(onStoreChange: () => void) {
@@ -10,7 +11,7 @@ function subscribeToDocuments(onStoreChange: () => void) {
   return () => window.removeEventListener("ph:setDocuments", onStoreChange);
 }
 
-export function useAllDocuments() {
+export function useAllDocuments(): PHDocument[] | undefined {
   const documents = useSyncExternalStore(
     subscribeToDocuments,
     () => window.phDocuments,
@@ -19,7 +20,7 @@ export function useAllDocuments() {
 }
 
 /** Returns the documents for the selected drive. */
-export function useSelectedDriveDocuments() {
+export function useSelectedDriveDocuments(): PHDocument[] | undefined {
   const documents = useAllDocuments();
   const fileNodes = useFileNodes();
   const fileNodeIds = fileNodes?.map((node) => node.id);

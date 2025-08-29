@@ -1,16 +1,16 @@
 import type { LiveQueryResults } from "@electric-sql/pglite/live";
 import type {
+  QueryCallbackReturnType,
+  useRelationalQueryOptions,
+} from "@powerhousedao/reactor-browser";
+import { useRelationalQuery } from "@powerhousedao/reactor-browser";
+import type {
   IRelationalQueryBuilder,
   RelationalDbProcessorClass,
 } from "document-drive";
 import type { CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
-import type {
-  QueryCallbackReturnType,
-  useRelationalQueryOptions,
-} from "../hooks/useRelationalQuery.js";
-import { useRelationalQuery } from "../hooks/useRelationalQuery.js";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {

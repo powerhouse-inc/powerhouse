@@ -1,3 +1,4 @@
+import { getUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   DriveInput,
@@ -19,7 +20,6 @@ import {
   SynchronizationUnitNotFoundError,
 } from "document-drive";
 import { generateId } from "document-model";
-import { getUserPermissions } from "../utils/user.js";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(drive: DriveInput, preferredEditor?: string) {

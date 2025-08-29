@@ -1,5 +1,10 @@
 import { connectConfig } from "@powerhousedao/connect";
-import type { IAnalyticsStore, PGlite, PGliteWithLive, Processors } from "@powerhousedao/reactor-browser";
+import type {
+  IAnalyticsStore,
+  PGlite,
+  PGliteWithLive,
+  Processors,
+} from "@powerhousedao/reactor-browser";
 import {
   AnalyticsProvider,
   live,
@@ -9,7 +14,11 @@ import {
   useRelationalDb,
   useSetPGliteDB,
 } from "@powerhousedao/reactor-browser";
-import type { IRelationalDb, ProcessorManager, ProcessorRecord } from "document-drive";
+import type {
+  IRelationalDb,
+  ProcessorManager,
+  ProcessorRecord,
+} from "document-drive";
 import { childLogger } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { generateId } from "document-model";

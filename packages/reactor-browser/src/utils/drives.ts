@@ -1,10 +1,10 @@
+import type { Reactor } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   FolderNode,
   SharingType,
 } from "document-drive";
 import type { PHDocument } from "document-model";
-import type { Reactor } from "../types/reactor.js";
 
 /** Returns the sharing type for a drive. */
 export function getDriveSharingType(

@@ -1,3 +1,9 @@
+import {
+  getUserPermissions,
+  queueActions,
+  queueOperations,
+  uploadOperations,
+} from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, Node } from "document-drive";
 import {
   addFile as baseAddFile,
@@ -16,17 +22,11 @@ import type { PHDocument } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
-  defaultBaseState,
   createPresignedHeader,
   createZip,
+  defaultBaseState,
   generateId,
 } from "document-model";
-import {
-  queueActions,
-  queueOperations,
-  uploadOperations,
-} from "../actions/queue.js";
-import { getUserPermissions } from "../utils/user.js";
 
 export function downloadFile(document: PHDocument) {
   const zip = createZip(document);

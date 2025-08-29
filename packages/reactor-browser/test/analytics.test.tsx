@@ -1,25 +1,27 @@
 import type { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { PropsWithChildren } from "react";
-import { describe, expect, it, vi } from "vitest";
-import { renderHook } from "vitest-browser-react";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,
-} from "../src/analytics/analytics.js";
+} from "@powerhousedao/reactor-browser";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   AnalyticsProvider,
   AnalyticsQueryEngine,
+  clearGlobal,
   DateTime,
+  getGlobal,
+  MemoryAnalyticsStore,
+  setGlobal,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
   useGetDimensions,
-} from "../src/analytics/analytics.js";
-import { MemoryAnalyticsStore } from "../src/analytics/store/memory.js";
-import { clearGlobal, getGlobal, setGlobal } from "../src/global/core.js";
+} from "@powerhousedao/reactor-browser";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { PropsWithChildren } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
