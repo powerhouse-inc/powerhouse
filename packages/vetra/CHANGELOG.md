@@ -1,3 +1,13 @@
+## 4.1.0-dev.37 (2025-08-29)
+
+### 🩹 Fixes
+
+- enhance codegen processor reliability and error handling ([8baef31d6](https://github.com/powerhouse-inc/powerhouse/commit/8baef31d6))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.36 (2025-08-28)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
