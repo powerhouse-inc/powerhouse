@@ -6,6 +6,12 @@ import {
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import { EventBus } from "../src/events/event-bus.js";
+import type { IEventBus } from "../src/events/interfaces.js";
+import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import type { IJobExecutor } from "../src/executor/interfaces.js";
+import type { IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
 import { Reactor } from "../src/reactor.js";
 
 // Helper to create a valid PHDocument using the document model utils
@@ -40,6 +46,9 @@ describe("Reactor Read Interface", () => {
   let reactor: Reactor;
   let driveServer: any;
   let storage: MemoryStorage;
+  let eventBus: IEventBus;
+  let queue: IQueue;
+  let jobExecutor: IJobExecutor;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -56,9 +65,13 @@ describe("Reactor Read Interface", () => {
     driveServer = builder.build();
     await driveServer.initialize();
 
-    // Create reactor facade with the same drive server and storage
-    // Per phase 2.5 of the implementation plan, the facade needs direct access to storage
-    reactor = new Reactor(driveServer, storage);
+    // Create event bus, queue, and executor
+    eventBus = new EventBus();
+    queue = new InMemoryQueue(eventBus);
+    jobExecutor = new InMemoryJobExecutor(eventBus, queue);
+
+    // Create reactor facade with all required dependencies
+    reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
   });
 
   describe("getDocumentModels", () => {

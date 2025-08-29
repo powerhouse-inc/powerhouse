@@ -9,13 +9,10 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import { EventBus } from "./events/event-bus.js";
 import type { IEventBus } from "./events/interfaces.js";
 import type { IJobExecutor } from "./executor/interfaces.js";
-import { InMemoryJobExecutor } from "./executor/job-executor.js";
 import type { IReactor } from "./interfaces/reactor.js";
 import type { IQueue } from "./queue/interfaces.js";
-import { InMemoryQueue } from "./queue/queue.js";
 import type { Job } from "./queue/types.js";
 import { createMutableShutdownStatus } from "./shared/factories.js";
 import {
@@ -55,51 +52,24 @@ export class Reactor implements IReactor {
   private jobExecutor: IJobExecutor;
   private jobExecutorStarted = false;
 
-  // For testing purposes only - provides access to internal components
-  // This is a cleaner approach than using 'any' type assertions in tests
-  public get _testInternals() {
-    if (process.env.NODE_ENV !== "test") {
-      throw new Error(
-        "Test internals should only be accessed in test environment",
-      );
-    }
-    return {
-      queue: this.queue,
-      eventBus: this.eventBus,
-      jobExecutor: this.jobExecutor,
-    };
-  }
-
   constructor(
     driveServer: BaseDocumentDriveServer,
     documentStorage: IDocumentStorage,
+    eventBus: IEventBus,
+    queue: IQueue,
+    jobExecutor: IJobExecutor,
   ) {
+    // Store required dependencies
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
+    this.eventBus = eventBus;
+    this.queue = queue;
+    this.jobExecutor = jobExecutor;
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
-
-    // Initialize the event bus, queue, and executor
-    this.eventBus = new EventBus();
-    this.queue = new InMemoryQueue(this.eventBus);
-    this.jobExecutor = new InMemoryJobExecutor(this.eventBus, this.queue);
-  }
-
-  /**
-   * Starts the job executor if not already running.
-   * Called automatically when the first job is enqueued.
-   */
-  private async ensureJobExecutorRunning(): Promise<void> {
-    if (!this.jobExecutorStarted) {
-      await this.jobExecutor.start({
-        maxConcurrency: 5,
-        jobTimeout: 30000,
-      });
-      this.jobExecutorStarted = true;
-    }
   }
 
   /**
@@ -558,6 +528,20 @@ export class Reactor implements IReactor {
       status: JobStatus.FAILED,
       error: "Job tracking not yet implemented",
     };
+  }
+
+  /**
+   * Starts the job executor if not already running.
+   * Called automatically when the first job is enqueued.
+   */
+  private async ensureJobExecutorRunning(): Promise<void> {
+    if (!this.jobExecutorStarted) {
+      await this.jobExecutor.start({
+        maxConcurrency: 5,
+        jobTimeout: 30000,
+      });
+      this.jobExecutorStarted = true;
+    }
   }
 
   /**

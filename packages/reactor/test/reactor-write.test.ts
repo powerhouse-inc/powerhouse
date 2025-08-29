@@ -8,6 +8,12 @@ import type { Action, DocumentModelModule, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EventBus } from "../src/events/event-bus.js";
+import type { IEventBus } from "../src/events/interfaces.js";
+import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import type { IJobExecutor } from "../src/executor/interfaces.js";
+import type { IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import { Reactor } from "../src/reactor.js";
 import { JobStatus } from "../src/shared/types.js";
@@ -47,6 +53,9 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
+  let eventBus: IEventBus;
+  let queue: IQueue;
+  let jobExecutor: IJobExecutor;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -54,9 +63,6 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
   ] as DocumentModelModule<any>[];
 
   beforeEach(async () => {
-    // Set NODE_ENV to test to enable test internals access
-    process.env.NODE_ENV = "test";
-
     // Create shared storage
     storage = new MemoryStorage();
 
@@ -66,8 +72,13 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    // Create reactor with the drive server and storage
-    reactor = new Reactor(driveServer, storage);
+    // Create event bus, queue, and executor
+    eventBus = new EventBus();
+    queue = new InMemoryQueue(eventBus);
+    jobExecutor = new InMemoryJobExecutor(eventBus, queue);
+
+    // Create reactor with all dependencies
+    reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
   });
 
   describe("mutate", () => {
@@ -90,9 +101,8 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
         timestampUtcMs: String(Date.now()),
       } as Action;
 
-      // Spy on the internal queue's enqueue method
-      const internals = reactor._testInternals;
-      const enqueueSpy = vi.spyOn(internals.queue, "enqueue");
+      // Spy on the queue's enqueue method
+      const enqueueSpy = vi.spyOn(queue, "enqueue");
 
       const result = await reactor.mutate(testDoc.header.id, [action]);
 
@@ -142,8 +152,7 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
 
       // Capture the jobs that are enqueued
       const enqueuedJobs: Job[] = [];
-      const internals = reactor._testInternals;
-      vi.spyOn(internals.queue, "enqueue").mockImplementation((job: Job) => {
+      vi.spyOn(queue, "enqueue").mockImplementation((job: Job) => {
         enqueuedJobs.push(job);
         return Promise.resolve();
       });
@@ -174,9 +183,8 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       // Add the document to the drive server
       await driveServer.addDocument(testDoc);
 
-      // Spy on the internal executor's start method
-      const internals = reactor._testInternals;
-      const executorStartSpy = vi.spyOn(internals.jobExecutor, "start");
+      // Spy on the executor's start method
+      const executorStartSpy = vi.spyOn(jobExecutor, "start");
 
       const action: Action = {
         id: uuidv4(),
@@ -258,8 +266,7 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
 
       // Track enqueued jobs
       const enqueuedJobs: Job[] = [];
-      const internals = reactor._testInternals;
-      vi.spyOn(internals.queue, "enqueue").mockImplementation((job: Job) => {
+      vi.spyOn(queue, "enqueue").mockImplementation((job: Job) => {
         enqueuedJobs.push(job);
         return Promise.resolve();
       });
