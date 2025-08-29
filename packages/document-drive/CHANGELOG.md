@@ -1,3 +1,13 @@
+## 4.1.0-dev.37 (2025-08-29)
+
+### 🩹 Fixes
+
+- fixing synchronization post-refactor ([a4ad046e0](https://github.com/powerhouse-inc/powerhouse/commit/a4ad046e0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.36 (2025-08-28)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

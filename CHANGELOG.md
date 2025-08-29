@@ -1,3 +1,17 @@
+## 4.1.0-dev.37 (2025-08-29)
+
+### 🩹 Fixes
+
+- fixing synchronization post-refactor ([a4ad046e0](https://github.com/powerhouse-inc/powerhouse/commit/a4ad046e0))
+- enhance codegen processor reliability and error handling ([8baef31d6](https://github.com/powerhouse-inc/powerhouse/commit/8baef31d6))
+- **reactor-api:** loading local modules ([26e3e30a6](https://github.com/powerhouse-inc/powerhouse/commit/26e3e30a6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.36 (2025-08-28)
 
 ### 🩹 Fixes
