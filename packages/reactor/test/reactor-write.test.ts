@@ -2,7 +2,7 @@ import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
-  type IDocumentDriveServer,
+  type BaseDocumentDriveServer,
 } from "document-drive";
 import type { Action, DocumentModelModule, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
@@ -34,7 +34,10 @@ function createMockDocument(
     baseDocument.header.documentType = overrides.documentType;
   }
   if (overrides.state) {
-    baseDocument.state = { ...baseDocument.state, ...overrides.state };
+    baseDocument.state = {
+      ...baseDocument.state,
+      ...(overrides.state as typeof baseDocument.state),
+    };
   }
 
   return baseDocument;
@@ -42,7 +45,7 @@ function createMockDocument(
 
 describe("Reactor Write Interface - Mutate with Queue Integration", () => {
   let reactor: Reactor;
-  let driveServer: IDocumentDriveServer;
+  let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
 
   const documentModels = [
@@ -60,13 +63,11 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
     // Create real drive server with the storage
     const builder = new ReactorBuilder(documentModels);
     builder.withStorage(storage);
-    driveServer = builder.build();
+    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
     // Create reactor with the drive server and storage
-    // Note: Reactor expects BaseDocumentDriveServer but ReactorBuilder returns IDocumentDriveServer
-    // This cast is safe because the implementation is BaseDocumentDriveServer
-    reactor = new Reactor(driveServer as any, storage);
+    reactor = new Reactor(driveServer, storage);
   });
 
   describe("mutate", () => {
@@ -142,8 +143,9 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       // Capture the jobs that are enqueued
       const enqueuedJobs: Job[] = [];
       const internals = reactor._testInternals;
-      vi.spyOn(internals.queue, "enqueue").mockImplementation(async (job: Job) => {
+      vi.spyOn(internals.queue, "enqueue").mockImplementation((job: Job) => {
         enqueuedJobs.push(job);
+        return Promise.resolve();
       });
 
       const result = await reactor.mutate(testDoc.header.id, actions);
@@ -257,8 +259,9 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       // Track enqueued jobs
       const enqueuedJobs: Job[] = [];
       const internals = reactor._testInternals;
-      vi.spyOn(internals.queue, "enqueue").mockImplementation(async (job: Job) => {
+      vi.spyOn(internals.queue, "enqueue").mockImplementation((job: Job) => {
         enqueuedJobs.push(job);
+        return Promise.resolve();
       });
 
       const result = await reactor.mutate(testDoc.header.id, actions);
@@ -272,7 +275,9 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       // Verify jobs maintain order
       enqueuedJobs.forEach((job, index) => {
         expect(job.operation.index).toBe(index);
-        const actionInput = (job.operation.action as Action).input as { name: string };
+        const actionInput = (job.operation.action as Action).input as {
+          name: string;
+        };
         expect(actionInput.name).toBe(`Name ${index + 1}`);
       });
     });

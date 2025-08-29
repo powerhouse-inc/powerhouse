@@ -59,7 +59,9 @@ export class Reactor implements IReactor {
   // This is a cleaner approach than using 'any' type assertions in tests
   public get _testInternals() {
     if (process.env.NODE_ENV !== "test") {
-      throw new Error("Test internals should only be accessed in test environment");
+      throw new Error(
+        "Test internals should only be accessed in test environment",
+      );
     }
     return {
       queue: this.queue,
@@ -201,7 +203,6 @@ export class Reactor implements IReactor {
     // to the underlying store, but is here now for the interface.
     for (const scope in document.state) {
       if (!matchesScope(view, scope)) {
-        // eslint-disable-next-line
         delete document.state[scope as keyof PHBaseState];
       }
     }
@@ -353,14 +354,18 @@ export class Reactor implements IReactor {
       // BaseDocumentDriveServer uses addDocument, not createDocument
       // addDocument adds an existing document to a drive
       await this.driveServer.addDocument(document);
-
-      // Return success status
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return JobStatus.COMPLETED;
-    } catch (error) {
+    } catch {
       // TODO: Phase 4 - This will return a job that can be retried
       return JobStatus.FAILED;
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Return success status
+    // TODO: Phase 4 - This will return a job that goes through the queue
+    return JobStatus.COMPLETED;
   }
 
   /**
@@ -378,13 +383,6 @@ export class Reactor implements IReactor {
       await this.driveServer.deleteDocument(id);
 
       // TODO: Implement cascade deletion when propagate mode is CASCADE
-
-      // Return success job info
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       // TODO: Phase 4 - This will return a job that can be retried
       return {
@@ -393,6 +391,17 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Return success job info
+    // TODO: Phase 4 - This will return a job that goes through the queue
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -443,25 +452,17 @@ export class Reactor implements IReactor {
   ): Promise<JobInfo> {
     const jobId = uuidv4();
 
+    // Check abort signal before starting
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Implement when drive server supports hierarchical documents
+    // For now, this is a placeholder implementation
+
+    // Verify parent exists
     try {
-      // TODO: Implement when drive server supports hierarchical documents
-      // For now, this is a placeholder implementation
-
-      // Verify parent exists
       await this.driveServer.getDocument(parentId);
-
-      // Verify all children exist
-      for (const childId of documentIds) {
-        await this.driveServer.getDocument(childId);
-      }
-
-      // TODO: Actually establish parent-child relationships
-
-      // Return success job info
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       return {
         id: jobId,
@@ -469,6 +470,37 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    // Check abort signal after parent verification
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Verify all children exist
+    for (const childId of documentIds) {
+      try {
+        await this.driveServer.getDocument(childId);
+      } catch (error) {
+        return {
+          id: jobId,
+          status: JobStatus.FAILED,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+
+      // Check abort signal after each child verification
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+    }
+
+    // TODO: Actually establish parent-child relationships
+
+    // Return success job info
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -482,20 +514,17 @@ export class Reactor implements IReactor {
   ): Promise<JobInfo> {
     const jobId = uuidv4();
 
+    // Check abort signal before starting
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Implement when drive server supports hierarchical documents
+    // For now, this is a placeholder implementation
+
+    // Verify parent exists
     try {
-      // TODO: Implement when drive server supports hierarchical documents
-      // For now, this is a placeholder implementation
-
-      // Verify parent exists
       await this.driveServer.getDocument(parentId);
-
-      // TODO: Actually remove parent-child relationships
-
-      // Return success job info
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       return {
         id: jobId,
@@ -503,6 +532,19 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    // Check abort signal after parent verification
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Actually remove parent-child relationships
+
+    // Return success job info
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -548,7 +590,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -619,7 +660,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -694,7 +734,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -771,7 +810,6 @@ export class Reactor implements IReactor {
       // Apply view filter
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line
           delete document.state[scope as keyof PHBaseState];
         }
       }
