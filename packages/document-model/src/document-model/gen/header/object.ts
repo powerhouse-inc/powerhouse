@@ -1,26 +1,26 @@
-import { BaseDocumentClass } from "../../../document/object.js";
-import type { ReducerOptions } from "../../../document/types.js";
-import type { DocumentModelAction } from "../actions.js";
 import type {
+  DocumentModelAction,
   DocumentModelLocalState,
   DocumentModelState,
+  ReducerOptions,
   SetAuthorNameInput,
   SetAuthorWebsiteInput,
   SetModelDescriptionInput,
   SetModelExtensionInput,
   SetModelIdInput,
   SetModelNameInput,
-} from "../schema/types.js";
+} from "document-model";
 import {
+  BaseDocumentClass,
   setAuthorName,
   setAuthorWebsite,
   setModelDescription,
   setModelExtension,
   setModelId,
   setModelName,
-} from "./creators.js";
+} from "document-model";
 
-export default class DocumentModel_Header extends BaseDocumentClass<
+export class DocumentModel_Header extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction

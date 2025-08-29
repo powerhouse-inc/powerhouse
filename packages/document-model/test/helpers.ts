@@ -44,7 +44,7 @@ export const wrappedEmptyReducer = createReducer(emptyReducer);
  * @param global - The global state (defaults to empty object)
  * @param local - The local state (defaults to empty object)
  */
-export function createBaseState<TGlobal, TLocal>(
+export function testCreateBaseState<TGlobal, TLocal>(
   global: TGlobal,
   local: TLocal,
 ): BaseState<TGlobal, TLocal> {
@@ -62,7 +62,7 @@ export function createCountState(
   count = 0,
   name = "",
 ): BaseState<CountState, CountLocalState> {
-  return createBaseState({ count }, { name });
+  return testCreateBaseState({ count }, { name });
 }
 
 /**

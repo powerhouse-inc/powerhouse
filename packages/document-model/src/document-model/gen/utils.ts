@@ -13,6 +13,7 @@ import {
   baseSaveToFile,
   baseSaveToFileHandle,
   defaultBaseState,
+  documentModelReducer,
 } from "document-model";
 import {
   documentModelState,
@@ -20,7 +21,6 @@ import {
   fileExtension,
   initialLocalState,
 } from "./constants.js";
-import { documentModelReducer } from "document-model";
 import type { DocumentModelDocument } from "./types.js";
 
 export { fileExtension } from "./constants.js";
@@ -50,7 +50,9 @@ export const saveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const loadFromFile: LoadFromFile<DocumentModelDocument> = (path) => {
+export const documentModelLoadFromFile: LoadFromFile<DocumentModelDocument> = (
+  path,
+) => {
   return baseLoadFromFile(path, documentModelReducer);
 };
 

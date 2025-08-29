@@ -10,7 +10,7 @@ const operationSorter = (order: string[]) => {
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 
-export const reducer: DocumentModelOperationOperations = {
+export const documentModelOperationReducer: DocumentModelOperationOperations = {
   addOperationOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
     for (let i = 0; i < latestSpec.modules.length; i++) {

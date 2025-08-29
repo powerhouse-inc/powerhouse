@@ -2,8 +2,8 @@ import { pascalCase } from "change-case";
 import type {
   ModuleSpecification,
   OperationSpecification,
+  ValidationError,
 } from "document-model";
-import type { ValidationError } from "../../document/types.js";
 
 export function validateInitialState(
   initialState: string,

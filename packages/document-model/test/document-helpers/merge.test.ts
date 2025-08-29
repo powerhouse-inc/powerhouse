@@ -5,7 +5,7 @@ import {
   merge,
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
-} from "../../src/document/utils/document-helpers.js";
+} from "document-model";
 import { buildOperations } from "./utils.js";
 
 describe("merge", () => {

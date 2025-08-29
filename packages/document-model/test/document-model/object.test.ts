@@ -1,5 +1,4 @@
-import { generateId } from "../../../document-model/src/document/utils/crypto.js";
-import { DocumentModelClass } from "../../src/document-model/gen/object.js";
+import { DocumentModelClass, generateId } from "document-model";
 
 describe("DocumentModel Class", () => {
   it("should create an empty document", () => {

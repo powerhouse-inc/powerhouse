@@ -1,28 +1,32 @@
-import { createAction } from "document-model";
-import type {
-  SetAuthorNameInput,
-  SetAuthorWebsiteInput,
-  SetModelDescriptionInput,
-  SetModelExtensionInput,
-  SetModelIdInput,
-  SetModelNameInput,
-} from "../schema/index.js";
-import { z } from "../schema/index.js";
 import type {
   SetAuthorNameAction,
+  SetAuthorNameInput,
   SetAuthorWebsiteAction,
+  SetAuthorWebsiteInput,
   SetModelDescriptionAction,
+  SetModelDescriptionInput,
   SetModelExtensionAction,
+  SetModelExtensionInput,
   SetModelIdAction,
+  SetModelIdInput,
   SetModelNameAction,
-} from "./actions.js";
-
+  SetModelNameInput,
+} from "document-model";
+import {
+  createAction,
+  SetAuthorNameInputSchema,
+  SetAuthorWebsiteInputSchema,
+  SetModelDescriptionInputSchema,
+  SetModelExtensionInputSchema,
+  SetModelIdInputSchema,
+  SetModelNameInputSchema,
+} from "document-model";
 export const setModelName = (input: SetModelNameInput) =>
   createAction<SetModelNameAction>(
     "SET_MODEL_NAME",
     { ...input },
     undefined,
-    z.SetModelNameInputSchema,
+    SetModelNameInputSchema,
     "global",
   );
 
@@ -31,7 +35,7 @@ export const setModelId = (input: SetModelIdInput) =>
     "SET_MODEL_ID",
     { ...input },
     undefined,
-    z.SetModelIdInputSchema,
+    SetModelIdInputSchema,
     "global",
   );
 
@@ -40,7 +44,7 @@ export const setModelExtension = (input: SetModelExtensionInput) =>
     "SET_MODEL_EXTENSION",
     { ...input },
     undefined,
-    z.SetModelExtensionInputSchema,
+    SetModelExtensionInputSchema,
     "global",
   );
 
@@ -49,7 +53,7 @@ export const setModelDescription = (input: SetModelDescriptionInput) =>
     "SET_MODEL_DESCRIPTION",
     { ...input },
     undefined,
-    z.SetModelDescriptionInputSchema,
+    SetModelDescriptionInputSchema,
     "global",
   );
 
@@ -58,7 +62,7 @@ export const setAuthorName = (input: SetAuthorNameInput) =>
     "SET_AUTHOR_NAME",
     { ...input },
     undefined,
-    z.SetAuthorNameInputSchema,
+    SetAuthorNameInputSchema,
     "global",
   );
 
@@ -67,6 +71,6 @@ export const setAuthorWebsite = (input: SetAuthorWebsiteInput) =>
     "SET_AUTHOR_WEBSITE",
     { ...input },
     undefined,
-    z.SetAuthorWebsiteInputSchema,
+    SetAuthorWebsiteInputSchema,
     "global",
   );

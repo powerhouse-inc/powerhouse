@@ -1,11 +1,11 @@
-import type { Action } from "../../../document/types.js";
 import type {
+  Action,
   AddModuleInput,
   DeleteModuleInput,
   ReorderModulesInput,
   SetModuleDescriptionInput,
   SetModuleNameInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type AddModuleAction = Action & {
   type: "ADD_MODULE";

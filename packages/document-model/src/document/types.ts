@@ -1,4 +1,8 @@
-import type { DocumentModelState } from "document-model";
+import type {
+  DocumentModelState,
+  FileInput,
+  SignalDispatch,
+} from "document-model";
 import type { Draft } from "mutative";
 import type { FC } from "react";
 import type {
@@ -6,8 +10,11 @@ import type {
   PHDocumentHeader,
   PHDocumentHistory,
 } from "./ph-types.js";
-import type { SignalDispatch } from "./signal.js";
-import type { FileInput } from "./utils/file.js";
+
+export type * from "./actions/types.js";
+export type * from "./ph-types.js";
+export type * from "./schema/types.js";
+export type * from "./signal.js";
 
 //  [
 //     signerAddress,

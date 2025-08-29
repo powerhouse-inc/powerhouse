@@ -1,12 +1,18 @@
-import type { BaseDocument } from "document-model";
-import { createReducer, noop, replayDocument } from "document-model";
-import type { CountDocument, CountLocalState, CountState } from "../helpers.js";
+import type {
+  BaseDocument,
+  CountDocument,
+  CountLocalState,
+  CountState,
+} from "document-model";
 import {
   baseCountReducer,
   countReducer,
   createCountState,
+  createReducer,
   increment,
-} from "../helpers.js";
+  noop,
+  replayDocument,
+} from "document-model";
 describe("DocumentModel Class", () => {
   const initialState = createCountState();
   const initialDocument: BaseDocument<CountState, CountLocalState> = {

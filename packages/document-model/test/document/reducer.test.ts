@@ -1,23 +1,24 @@
-import type { Action, CreateChildDocumentInput } from "document-model";
+import type {
+  Action,
+  CountDocument,
+  CreateChildDocumentInput,
+} from "document-model";
 import {
   baseCreateDocument,
-  createAction,
-  createReducer,
-  generateId,
-  setName,
-} from "document-model";
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { CountDocument } from "../helpers.js";
-import {
   countReducer,
-  createBaseState,
+  createAction,
   createCountDocumentState,
+  createReducer,
   defaultPHDocumentCreateState,
   error,
   fakeAction,
+  generateId,
   increment,
+  setName,
+  testCreateBaseState,
   wrappedEmptyReducer,
-} from "../helpers.js";
+} from "document-model";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Base reducer", () => {
   beforeAll(() => {
@@ -302,7 +303,7 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer", () => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountDocument>(
       createCountDocumentState,
@@ -318,7 +319,7 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountDocument>(
       createCountDocumentState,
@@ -334,7 +335,7 @@ describe("Base reducer", () => {
   });
 
   it("should include error message into error operation prop", () => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountDocument>(
       createCountDocumentState,
@@ -371,7 +372,7 @@ describe("Base reducer", () => {
   });
 
   it("should not include error message in successful operations", () => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountDocument>(
       createCountDocumentState,

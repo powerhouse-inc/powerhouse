@@ -1,16 +1,14 @@
 import type {
+  Attachment,
+  AttachmentInput,
   BaseStateFromDocument,
+  DocumentOperations,
+  PHDocument,
   PHDocumentHeader,
   Reducer,
 } from "document-model";
 import JSZip from "jszip";
 import mime from "mime/lite";
-import type {
-  Attachment,
-  AttachmentInput,
-  DocumentOperations,
-  PHDocument,
-} from "../types.js";
 import type { ReplayDocumentOptions } from "./base.js";
 import { replayDocument } from "./base.js";
 import {

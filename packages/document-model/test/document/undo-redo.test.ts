@@ -1,25 +1,27 @@
-import type { Action, Operation } from "document-model";
+import type {
+  Action,
+  CountAction,
+  CountDocument,
+  Operation,
+} from "document-model";
 import {
   baseCreateDocument,
+  countReducer,
+  createCountDocumentState,
+  increment,
   noop,
   processUndoRedo,
   redo,
+  testCreateBaseState,
   undo,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { CountAction, CountDocument } from "../helpers.js";
-import {
-  countReducer,
-  createBaseState,
-  createCountDocumentState,
-  increment,
-} from "../helpers.js";
 
 describe("UNDO/REDO", () => {
   let document: CountDocument;
 
   beforeEach(() => {
-    const initialState = createBaseState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -90,7 +92,7 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = createBaseState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -106,7 +108,7 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = createBaseState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 

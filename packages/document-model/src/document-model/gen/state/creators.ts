@@ -1,28 +1,33 @@
-import { createAction } from "document-model";
-import type {
-  AddStateExampleInput,
-  DeleteStateExampleInput,
-  ReorderStateExamplesInput,
-  SetInitialStateInput,
-  SetStateSchemaInput,
-  UpdateStateExampleInput,
-} from "../schema/index.js";
-import { z } from "../schema/index.js";
 import type {
   AddStateExampleAction,
+  AddStateExampleInput,
   DeleteStateExampleAction,
+  DeleteStateExampleInput,
   ReorderStateExamplesAction,
+  ReorderStateExamplesInput,
   SetInitialStateAction,
+  SetInitialStateInput,
   SetStateSchemaAction,
+  SetStateSchemaInput,
   UpdateStateExampleAction,
-} from "./actions.js";
+  UpdateStateExampleInput,
+} from "document-model";
+import {
+  AddStateExampleInputSchema,
+  createAction,
+  DeleteStateExampleInputSchema,
+  ReorderStateExamplesInputSchema,
+  SetInitialStateInputSchema,
+  SetStateSchemaInputSchema,
+  UpdateStateExampleInputSchema,
+} from "document-model";
 
 export const setStateSchema = (input: SetStateSchemaInput) =>
   createAction<SetStateSchemaAction>(
     "SET_STATE_SCHEMA",
     { ...input },
     undefined,
-    z.SetStateSchemaInputSchema,
+    SetStateSchemaInputSchema,
     "global",
   );
 
@@ -31,7 +36,7 @@ export const setInitialState = (input: SetInitialStateInput) =>
     "SET_INITIAL_STATE",
     { ...input },
     undefined,
-    z.SetInitialStateInputSchema,
+    SetInitialStateInputSchema,
     "global",
   );
 
@@ -40,7 +45,7 @@ export const addStateExample = (input: AddStateExampleInput) =>
     "ADD_STATE_EXAMPLE",
     { ...input },
     undefined,
-    z.AddStateExampleInputSchema,
+    AddStateExampleInputSchema,
     "global",
   );
 
@@ -49,7 +54,7 @@ export const updateStateExample = (input: UpdateStateExampleInput) =>
     "UPDATE_STATE_EXAMPLE",
     { ...input },
     undefined,
-    z.UpdateStateExampleInputSchema,
+    UpdateStateExampleInputSchema,
     "global",
   );
 
@@ -58,7 +63,7 @@ export const deleteStateExample = (input: DeleteStateExampleInput) =>
     "DELETE_STATE_EXAMPLE",
     { ...input },
     undefined,
-    z.DeleteStateExampleInputSchema,
+    DeleteStateExampleInputSchema,
     "global",
   );
 
@@ -67,6 +72,6 @@ export const reorderStateExamples = (input: ReorderStateExamplesInput) =>
     "REORDER_STATE_EXAMPLES",
     { ...input },
     undefined,
-    z.ReorderStateExamplesInputSchema,
+    ReorderStateExamplesInputSchema,
     "global",
   );

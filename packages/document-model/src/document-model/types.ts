@@ -1,4 +1,7 @@
-import type { DocumentModelModule } from "../document/types.js";
-import type { DocumentModelDocument } from "./gen/types.js";
+import type {
+  DocumentModelDocument,
+  DocumentModelModule,
+} from "document-model";
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelDocument>;
+export type * from "./gen/types.js";

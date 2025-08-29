@@ -52,20 +52,12 @@ import type {
   UpdateChangeLogItemInput,
   UpdateOperationExampleInput,
   UpdateStateExampleInput,
-} from "./types.js";
+} from "document-model";
+import { OperationScopeSchema } from "document-model";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
 }>;
-
-type definedNonNullAny = {};
-
-export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
-  v !== undefined && v !== null;
-
-export const definedNonNullAnySchema = z
-  .any()
-  .refine((v) => isDefinedNonNullAny(v));
 
 export function AddChangeLogItemInputSchema(): z.ZodObject<
   Properties<AddChangeLogItemInput>
@@ -203,10 +195,6 @@ export function DeleteStateExampleInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationScopeSchema(): z.ZodString {
-  return z.string();
-}
-
 export function DocumentModelInputSchema() {
   return z.union([
     AddChangeLogItemInputSchema(),
@@ -285,7 +273,7 @@ export function ModuleSchema(): z.ZodObject<Properties<ModuleSpecification>> {
     description: z.string().nullable(),
     id: z.string(),
     name: z.string(),
-    operations: z.array(OperationSchema()),
+    operations: z.array(OperationSpecificationSchema()),
   });
 }
 
@@ -298,7 +286,7 @@ export function MoveOperationInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationSchema(): z.ZodObject<
+export function OperationSpecificationSchema(): z.ZodObject<
   Properties<OperationSpecification>
 > {
   return z.object({

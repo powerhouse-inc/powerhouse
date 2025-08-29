@@ -1,25 +1,28 @@
-import { createAction } from "document-model";
-import type {
-  AddChangeLogItemInput,
-  DeleteChangeLogItemInput,
-  ReorderChangeLogItemsInput,
-  UpdateChangeLogItemInput,
-} from "../schema/index.js";
-import { z } from "../schema/index.js";
 import type {
   AddChangeLogItemAction,
+  AddChangeLogItemInput,
   DeleteChangeLogItemAction,
+  DeleteChangeLogItemInput,
   ReleaseNewVersionAction,
   ReorderChangeLogItemsAction,
+  ReorderChangeLogItemsInput,
   UpdateChangeLogItemAction,
-} from "./actions.js";
+  UpdateChangeLogItemInput,
+} from "document-model";
+import {
+  AddChangeLogItemInputSchema,
+  createAction,
+  DeleteChangeLogItemInputSchema,
+  ReorderChangeLogItemsInputSchema,
+  UpdateChangeLogItemInputSchema,
+} from "document-model";
 
 export const addChangeLogItem = (input: AddChangeLogItemInput) =>
   createAction<AddChangeLogItemAction>(
     "ADD_CHANGE_LOG_ITEM",
     { ...input },
     undefined,
-    z.AddChangeLogItemInputSchema,
+    AddChangeLogItemInputSchema,
     "global",
   );
 
@@ -28,7 +31,7 @@ export const updateChangeLogItem = (input: UpdateChangeLogItemInput) =>
     "UPDATE_CHANGE_LOG_ITEM",
     { ...input },
     undefined,
-    z.UpdateChangeLogItemInputSchema,
+    UpdateChangeLogItemInputSchema,
     "global",
   );
 
@@ -37,7 +40,7 @@ export const deleteChangeLogItem = (input: DeleteChangeLogItemInput) =>
     "DELETE_CHANGE_LOG_ITEM",
     { ...input },
     undefined,
-    z.DeleteChangeLogItemInputSchema,
+    DeleteChangeLogItemInputSchema,
     "global",
   );
 
@@ -46,7 +49,7 @@ export const reorderChangeLogItems = (input: ReorderChangeLogItemsInput) =>
     "REORDER_CHANGE_LOG_ITEMS",
     { ...input },
     undefined,
-    z.ReorderChangeLogItemsInputSchema,
+    ReorderChangeLogItemsInputSchema,
     "global",
   );
 

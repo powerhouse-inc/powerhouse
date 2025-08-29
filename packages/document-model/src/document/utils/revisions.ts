@@ -1,7 +1,6 @@
 // gets the last modified timestamp of a document from§
 
-import type { PHDocumentHeader } from "../ph-types.js";
-import type { PHDocument } from "../types.js";
+import type { PHDocument, PHDocumentHeader } from "document-model";
 import { sortOperations } from "./document-helpers.js";
 
 // it's operations, falling back to the initial state

@@ -1,7 +1,7 @@
-import type { DocumentModelState } from "../types.js";
 import type {
   AddOperationAction,
   DeleteOperationAction,
+  DocumentModelState,
   MoveOperationAction,
   ReorderModuleOperationsAction,
   SetOperationDescriptionAction,
@@ -10,7 +10,8 @@ import type {
   SetOperationSchemaAction,
   SetOperationScopeAction,
   SetOperationTemplateAction,
-} from "./actions.js";
+} from "document-model";
+export type * from "./actions.js";
 
 export type DocumentModelOperationOperations = {
   addOperationOperation: (

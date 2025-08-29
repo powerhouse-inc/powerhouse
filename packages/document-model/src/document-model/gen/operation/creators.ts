@@ -1,36 +1,45 @@
-import { createAction } from "document-model";
-import type {
-  AddOperationInput,
-  DeleteOperationInput,
-  MoveOperationInput,
-  ReorderModuleOperationsInput,
-  SetOperationDescriptionInput,
-  SetOperationNameInput,
-  SetOperationReducerInput,
-  SetOperationSchemaInput,
-  SetOperationScopeInput,
-  SetOperationTemplateInput,
-} from "../schema/index.js";
-import { z } from "../schema/index.js";
 import type {
   AddOperationAction,
+  AddOperationInput,
   DeleteOperationAction,
+  DeleteOperationInput,
   MoveOperationAction,
+  MoveOperationInput,
   ReorderModuleOperationsAction,
+  ReorderModuleOperationsInput,
   SetOperationDescriptionAction,
+  SetOperationDescriptionInput,
   SetOperationNameAction,
+  SetOperationNameInput,
   SetOperationReducerAction,
+  SetOperationReducerInput,
   SetOperationSchemaAction,
+  SetOperationSchemaInput,
   SetOperationScopeAction,
+  SetOperationScopeInput,
   SetOperationTemplateAction,
-} from "./actions.js";
+  SetOperationTemplateInput,
+} from "document-model";
+import {
+  AddOperationInputSchema,
+  createAction,
+  DeleteOperationInputSchema,
+  MoveOperationInputSchema,
+  ReorderModuleOperationsInputSchema,
+  SetOperationDescriptionInputSchema,
+  SetOperationNameInputSchema,
+  SetOperationReducerInputSchema,
+  SetOperationSchemaInputSchema,
+  SetOperationScopeInputSchema,
+  SetOperationTemplateInputSchema,
+} from "document-model";
 
 export const addOperation = (input: AddOperationInput) =>
   createAction<AddOperationAction>(
     "ADD_OPERATION",
     { ...input },
     undefined,
-    z.AddOperationInputSchema,
+    AddOperationInputSchema,
     "global",
   );
 
@@ -39,7 +48,7 @@ export const setOperationName = (input: SetOperationNameInput) =>
     "SET_OPERATION_NAME",
     { ...input },
     undefined,
-    z.SetOperationNameInputSchema,
+    SetOperationNameInputSchema,
     "global",
   );
 
@@ -48,7 +57,7 @@ export const setOperationScope = (input: SetOperationScopeInput) =>
     "SET_OPERATION_SCOPE",
     { ...input },
     undefined,
-    z.SetOperationScopeInputSchema,
+    SetOperationScopeInputSchema,
     "global",
   );
 
@@ -57,7 +66,7 @@ export const setOperationSchema = (input: SetOperationSchemaInput) =>
     "SET_OPERATION_SCHEMA",
     { ...input },
     undefined,
-    z.SetOperationSchemaInputSchema,
+    SetOperationSchemaInputSchema,
     "global",
   );
 
@@ -66,7 +75,7 @@ export const setOperationDescription = (input: SetOperationDescriptionInput) =>
     "SET_OPERATION_DESCRIPTION",
     { ...input },
     undefined,
-    z.SetOperationDescriptionInputSchema,
+    SetOperationDescriptionInputSchema,
     "global",
   );
 
@@ -75,7 +84,7 @@ export const setOperationTemplate = (input: SetOperationTemplateInput) =>
     "SET_OPERATION_TEMPLATE",
     { ...input },
     undefined,
-    z.SetOperationTemplateInputSchema,
+    SetOperationTemplateInputSchema,
     "global",
   );
 
@@ -84,7 +93,7 @@ export const setOperationReducer = (input: SetOperationReducerInput) =>
     "SET_OPERATION_REDUCER",
     { ...input },
     undefined,
-    z.SetOperationReducerInputSchema,
+    SetOperationReducerInputSchema,
     "global",
   );
 
@@ -93,7 +102,7 @@ export const moveOperation = (input: MoveOperationInput) =>
     "MOVE_OPERATION",
     { ...input },
     undefined,
-    z.MoveOperationInputSchema,
+    MoveOperationInputSchema,
     "global",
   );
 
@@ -102,7 +111,7 @@ export const deleteOperation = (input: DeleteOperationInput) =>
     "DELETE_OPERATION",
     { ...input },
     undefined,
-    z.DeleteOperationInputSchema,
+    DeleteOperationInputSchema,
     "global",
   );
 
@@ -111,6 +120,6 @@ export const reorderModuleOperations = (input: ReorderModuleOperationsInput) =>
     "REORDER_MODULE_OPERATIONS",
     { ...input },
     undefined,
-    z.ReorderModuleOperationsInputSchema,
+    ReorderModuleOperationsInputSchema,
     "global",
   );

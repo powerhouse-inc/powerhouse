@@ -1,19 +1,12 @@
 import type {
+  Action,
   LoadStateActionInput,
   PruneActionInput,
-  RedoAction as _RedoAction,
-  SetNameAction as _SetNameAction,
-  UndoAction as _UndoAction,
-  NOOPAction as _NOOPAction,
-} from "../schema/types.js";
-import type { Action } from "../types.js";
-
-export const SET_NAME = "SET_NAME";
-export const UNDO = "UNDO";
-export const REDO = "REDO";
-export const PRUNE = "PRUNE";
-export const LOAD_STATE = "LOAD_STATE";
-export const NOOP = "NOOP";
+  SchemaNOOPAction as _NOOPAction,
+  SchemaRedoAction as _RedoAction,
+  SchemaSetNameAction as _SetNameAction,
+  SchemaUndoAction as _UndoAction,
+} from "document-model";
 
 export type LoadStateAction = Action & {
   type: "LOAD_STATE";

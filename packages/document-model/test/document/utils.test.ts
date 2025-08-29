@@ -1,26 +1,24 @@
+import type { CountDocument } from "document-model";
 import {
   baseCreateDocument,
+  countReducer,
+  createCountDocumentState,
   createReducer,
+  fakeAction,
   generateUUIDBrowser,
   generateUUIDNode,
   getLocalFile,
   hashBrowser,
   hashNode,
+  increment,
+  mutableCountReducer,
   replayDocument,
+  setLocalName,
+  testCreateBaseState,
   validateOperations,
 } from "document-model";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { CountDocument } from "../helpers.js";
-import {
-  countReducer,
-  createBaseState,
-  createCountDocumentState,
-  fakeAction,
-  increment,
-  mutableCountReducer,
-  setLocalName,
-} from "../helpers.js";
 
 describe("Base utils", () => {
   const tempDir = "./test/document/temp/utils/";
@@ -176,7 +174,7 @@ describe("Base utils", () => {
   it("should replay document and keep lastModified timestamp", async () => {
     const document = baseCreateDocument<CountDocument>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      testCreateBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = countReducer(document, setLocalName("test"));
 
@@ -202,7 +200,7 @@ describe("Base utils", () => {
     const reducer = createReducer<CountDocument>(mutableCountReducer);
     const document = baseCreateDocument<CountDocument>(
       createCountDocumentState,
-      createBaseState({ count: 0 }, { name: "" }),
+      testCreateBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = reducer(document, increment());
     expect(newDocument.state.global.count).toBe(1);

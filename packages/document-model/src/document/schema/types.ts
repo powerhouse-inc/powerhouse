@@ -32,7 +32,7 @@ export type Scalars = {
   DateTime: { input: string; output: string };
   Unknown: { input: unknown; output: unknown };
 };
-export type UndoRedoAction = RedoAction | UndoAction;
+export type UndoRedoAction = SchemaRedoAction | SchemaUndoAction;
 
 export type DocumentFile = {
   __typename?: "DocumentFile";
@@ -64,7 +64,7 @@ export type IOperation = {
 
 export type Load_State = "LOAD_STATE";
 
-export type LoadStateAction = {
+export type SchemaLoadStateAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: LoadStateActionInput;
@@ -82,38 +82,29 @@ export type LoadStateActionStateInput = {
   name: Scalars["String"]["input"];
 };
 
-export type Mutation = {
-  __typename?: "Mutation";
-  loadState: Maybe<IDocument>;
-  prune: Maybe<IDocument>;
-  redo: Maybe<IDocument>;
-  setName: Maybe<IDocument>;
-  undo: Maybe<IDocument>;
-};
-
 export type MutationLoadStateArgs = {
-  input: LoadStateAction;
+  input: SchemaLoadStateAction;
 };
 
 export type MutationPruneArgs = {
-  input: PruneAction;
+  input: SchemaPruneAction;
 };
 
 export type MutationRedoArgs = {
-  input: RedoAction;
+  input: SchemaRedoAction;
 };
 
 export type MutationSetNameArgs = {
-  input: SetNameAction;
+  input: SchemaSetNameAction;
 };
 
 export type MutationUndoArgs = {
-  input: UndoAction;
+  input: SchemaUndoAction;
 };
 
 export type Prune = "PRUNE";
 
-export type PruneAction = {
+export type SchemaPruneAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: PruneActionInput;
@@ -133,7 +124,7 @@ export type Query = {
 
 export type Redo = "REDO";
 
-export type RedoAction = {
+export type SchemaRedoAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
@@ -143,7 +134,7 @@ export type RedoAction = {
 
 export type Set_Name = "SET_NAME";
 
-export type SetNameAction = {
+export type SchemaSetNameAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["String"]["input"];
@@ -162,7 +153,7 @@ export type SetNameOperation = IOperation & {
 
 export type Undo = "UNDO";
 
-export type UndoAction = {
+export type SchemaUndoAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Int"]["input"];
@@ -172,7 +163,7 @@ export type UndoAction = {
 
 export type NOOP = "NOOP";
 
-export type NOOPAction = {
+export type SchemaNOOPAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["Unknown"]["input"];

@@ -1,26 +1,30 @@
-import { createAction } from "document-model";
-import type {
-  AddModuleInput,
-  DeleteModuleInput,
-  ReorderModulesInput,
-  SetModuleDescriptionInput,
-  SetModuleNameInput,
-} from "../schema/index.js";
-import { z } from "../schema/index.js";
 import type {
   AddModuleAction,
+  AddModuleInput,
   DeleteModuleAction,
+  DeleteModuleInput,
   ReorderModulesAction,
+  ReorderModulesInput,
   SetModuleDescriptionAction,
+  SetModuleDescriptionInput,
   SetModuleNameAction,
-} from "./actions.js";
+  SetModuleNameInput,
+} from "document-model";
+import {
+  AddModuleInputSchema,
+  createAction,
+  DeleteModuleInputSchema,
+  ReorderModulesInputSchema,
+  SetModuleDescriptionInputSchema,
+  SetModuleNameInputSchema,
+} from "document-model";
 
 export const addModule = (input: AddModuleInput) =>
   createAction<AddModuleAction>(
     "ADD_MODULE",
     { ...input },
     undefined,
-    z.AddModuleInputSchema,
+    AddModuleInputSchema,
     "global",
   );
 
@@ -29,7 +33,7 @@ export const setModuleName = (input: SetModuleNameInput) =>
     "SET_MODULE_NAME",
     { ...input },
     undefined,
-    z.SetModuleNameInputSchema,
+    SetModuleNameInputSchema,
     "global",
   );
 
@@ -38,7 +42,7 @@ export const setModuleDescription = (input: SetModuleDescriptionInput) =>
     "SET_MODULE_DESCRIPTION",
     { ...input },
     undefined,
-    z.SetModuleDescriptionInputSchema,
+    SetModuleDescriptionInputSchema,
     "global",
   );
 
@@ -47,7 +51,7 @@ export const deleteModule = (input: DeleteModuleInput) =>
     "DELETE_MODULE",
     { ...input },
     undefined,
-    z.DeleteModuleInputSchema,
+    DeleteModuleInputSchema,
     "global",
   );
 
@@ -56,6 +60,6 @@ export const reorderModules = (input: ReorderModulesInput) =>
     "REORDER_MODULES",
     { ...input },
     undefined,
-    z.ReorderModulesInputSchema,
+    ReorderModulesInputSchema,
     "global",
   );

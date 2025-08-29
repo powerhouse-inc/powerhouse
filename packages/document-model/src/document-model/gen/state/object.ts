@@ -1,26 +1,26 @@
-import { BaseDocumentClass } from "../../../document/object.js";
-import type { ReducerOptions } from "../../../document/types.js";
-import type { DocumentModelAction } from "../actions.js";
 import type {
   AddStateExampleInput,
   DeleteStateExampleInput,
+  DocumentModelAction,
   DocumentModelLocalState,
   DocumentModelState,
+  ReducerOptions,
   ReorderStateExamplesInput,
   SetInitialStateInput,
   SetStateSchemaInput,
   UpdateStateExampleInput,
-} from "../schema/types.js";
+} from "document-model";
 import {
   addStateExample,
+  BaseDocumentClass,
   deleteStateExample,
   reorderStateExamples,
   setInitialState,
   setStateSchema,
   updateStateExample,
-} from "./creators.js";
+} from "document-model";
 
-export default class DocumentModel_State extends BaseDocumentClass<
+export class DocumentModel_State extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction

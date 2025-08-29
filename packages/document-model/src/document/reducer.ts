@@ -1,43 +1,43 @@
-import { castDraft, create, unsafe } from "mutative";
-import {
-  loadStateOperation,
-  pruneOperation,
-  redoOperation,
-  setNameOperation,
-  undoOperation,
-} from "./actions/operations.js";
-import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
-import {
-  actionFromAction,
-  operationFromAction,
-  operationFromOperation,
-} from "./ph-factories.js";
-import { DocumentActionSchema } from "./schema/zod.js";
-import type { SignalDispatch } from "./signal.js";
 import type {
   Action,
   Operation,
   PHDocument,
   Reducer,
   ReducerOptions,
+  SignalDispatch,
   StateReducer,
-} from "./types.js";
+} from "document-model";
 import {
+  actionFromAction,
+  diffOperations,
+  DocumentActionSchema,
+  garbageCollect,
+  garbageCollectDocumentOperations,
   hashDocumentStateForScope,
   isDocumentAction,
   isUndo,
   isUndoRedo,
+  loadStateOperation,
+  operationFromAction,
+  operationFromOperation,
   parseResultingState,
+  pruneOperation,
+  redoOperation,
   replayOperations,
-} from "./utils/base.js";
-import {
-  diffOperations,
-  garbageCollect,
-  garbageCollectDocumentOperations,
+  setNameOperation,
   skipHeaderOperations,
   sortOperations,
-} from "./utils/document-helpers.js";
-import { updateHeaderRevision } from "./utils/revisions.js";
+  undoOperation,
+  updateHeaderRevision,
+} from "document-model";
+import { castDraft, create, unsafe } from "mutative";
+import {
+  LOAD_STATE,
+  PRUNE,
+  REDO,
+  SET_NAME,
+  UNDO,
+} from "./actions/constants.js";
 
 /**
  * Updates the operations history of the document based on the provided action.
@@ -57,7 +57,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
-  if ([UNDO, REDO, PRUNE].includes(action.type)) {
+  if (["UNDO", "REDO", "PRUNE"].includes(action.type)) {
     return document;
   }
 

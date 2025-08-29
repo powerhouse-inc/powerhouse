@@ -1,5 +1,5 @@
-import type { Action } from "../../../document/types.js";
 import type {
+  Action,
   AddOperationInput,
   DeleteOperationInput,
   MoveOperationInput,
@@ -10,7 +10,7 @@ import type {
   SetOperationSchemaInput,
   SetOperationScopeInput,
   SetOperationTemplateInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type AddOperationAction = Action & {
   type: "ADD_OPERATION";

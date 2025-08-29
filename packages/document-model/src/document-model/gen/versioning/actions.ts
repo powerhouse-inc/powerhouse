@@ -1,10 +1,10 @@
-import type { Action } from "../../../document/types.js";
 import type {
+  Action,
   AddChangeLogItemInput,
   DeleteChangeLogItemInput,
   ReorderChangeLogItemsInput,
   UpdateChangeLogItemInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type AddChangeLogItemAction = Action & {
   type: "ADD_CHANGE_LOG_ITEM";

@@ -1,5 +1,5 @@
-import type { Operation } from "../../src/document/types.js";
-import { fakeAction } from "../helpers.js";
+import type { Operation } from "document-model";
+import { fakeAction } from "document-model";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;

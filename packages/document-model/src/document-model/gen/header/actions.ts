@@ -1,12 +1,12 @@
-import type { Action } from "../../../document/types.js";
 import type {
+  Action,
   SetAuthorNameInput,
   SetAuthorWebsiteInput,
   SetModelDescriptionInput,
   SetModelExtensionInput,
   SetModelIdInput,
   SetModelNameInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type SetModelNameAction = Action & {
   type: "SET_MODEL_NAME";

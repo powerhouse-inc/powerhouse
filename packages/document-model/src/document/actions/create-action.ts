@@ -1,10 +1,10 @@
-import { ZodError } from "zod";
-import type { Action } from "../types.js";
-import { generateId } from "../utils/crypto.js";
+import type { Action } from "document-model";
 import {
+  generateId,
   InvalidActionInputError,
   InvalidActionInputZodError,
-} from "../utils/errors.js";
+} from "document-model";
+import { ZodError } from "zod";
 
 /**
  * Helper function to be used by action creators.

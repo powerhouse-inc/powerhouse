@@ -1,24 +1,24 @@
-import { BaseDocumentClass } from "../../../document/object.js";
-import type { ReducerOptions } from "../../../document/types.js";
-import type { DocumentModelAction } from "../actions.js";
 import type {
   AddModuleInput,
   DeleteModuleInput,
+  DocumentModelAction,
   DocumentModelLocalState,
   DocumentModelState,
+  ReducerOptions,
   ReorderModulesInput,
   SetModuleDescriptionInput,
   SetModuleNameInput,
-} from "../schema/types.js";
+} from "document-model";
+import { BaseDocumentClass } from "document-model";
 import {
   addModule,
   deleteModule,
   reorderModules,
   setModuleDescription,
   setModuleName,
-} from "./creators.js";
+} from "document-model";
 
-export default class DocumentModel_Module extends BaseDocumentClass<
+export class DocumentModel_Module extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction

@@ -10,129 +10,134 @@ const errorSorter = (order: string[]) => {
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 
-export const reducer: DocumentModelOperationErrorOperations = {
-  addOperationErrorOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (
-          latestSpec.modules[i].operations[j].id == action.input.operationId
-        ) {
-          latestSpec.modules[i].operations[j].errors.push({
-            id: action.input.id,
-            name: action.input.errorName || "",
-            code: action.input.errorCode || "",
-            description: action.input.errorDescription || "",
-            template: action.input.errorTemplate || "",
-          });
-        }
-      }
-    }
-  },
-
-  setOperationErrorCodeOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        for (
-          let k = 0;
-          k < latestSpec.modules[i].operations[j].errors.length;
-          k++
-        ) {
+export const documentModelOperationErrorReducer: DocumentModelOperationErrorOperations =
+  {
+    addOperationErrorOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
           if (
-            latestSpec.modules[i].operations[j].errors[k].id == action.input.id
+            latestSpec.modules[i].operations[j].id == action.input.operationId
           ) {
-            latestSpec.modules[i].operations[j].errors[k].code =
-              action.input.errorCode || "";
+            latestSpec.modules[i].operations[j].errors.push({
+              id: action.input.id,
+              name: action.input.errorName || "",
+              code: action.input.errorCode || "",
+              description: action.input.errorDescription || "",
+              template: action.input.errorTemplate || "",
+            });
           }
         }
       }
-    }
-  },
+    },
 
-  setOperationErrorNameOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        for (
-          let k = 0;
-          k < latestSpec.modules[i].operations[j].errors.length;
-          k++
-        ) {
-          if (
-            latestSpec.modules[i].operations[j].errors[k].id == action.input.id
+    setOperationErrorCodeOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          for (
+            let k = 0;
+            k < latestSpec.modules[i].operations[j].errors.length;
+            k++
           ) {
-            latestSpec.modules[i].operations[j].errors[k].name =
-              action.input.errorName || "";
+            if (
+              latestSpec.modules[i].operations[j].errors[k].id ==
+              action.input.id
+            ) {
+              latestSpec.modules[i].operations[j].errors[k].code =
+                action.input.errorCode || "";
+            }
           }
         }
       }
-    }
-  },
+    },
 
-  setOperationErrorDescriptionOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        for (
-          let k = 0;
-          k < latestSpec.modules[i].operations[j].errors.length;
-          k++
-        ) {
-          if (
-            latestSpec.modules[i].operations[j].errors[k].id == action.input.id
+    setOperationErrorNameOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          for (
+            let k = 0;
+            k < latestSpec.modules[i].operations[j].errors.length;
+            k++
           ) {
-            latestSpec.modules[i].operations[j].errors[k].description =
-              action.input.errorDescription || "";
+            if (
+              latestSpec.modules[i].operations[j].errors[k].id ==
+              action.input.id
+            ) {
+              latestSpec.modules[i].operations[j].errors[k].name =
+                action.input.errorName || "";
+            }
           }
         }
       }
-    }
-  },
+    },
 
-  setOperationErrorTemplateOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        for (
-          let k = 0;
-          k < latestSpec.modules[i].operations[j].errors.length;
-          k++
-        ) {
-          if (
-            latestSpec.modules[i].operations[j].errors[k].id == action.input.id
+    setOperationErrorDescriptionOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          for (
+            let k = 0;
+            k < latestSpec.modules[i].operations[j].errors.length;
+            k++
           ) {
-            latestSpec.modules[i].operations[j].errors[k].template =
-              action.input.errorTemplate || "";
+            if (
+              latestSpec.modules[i].operations[j].errors[k].id ==
+              action.input.id
+            ) {
+              latestSpec.modules[i].operations[j].errors[k].description =
+                action.input.errorDescription || "";
+            }
           }
         }
       }
-    }
-  },
+    },
 
-  deleteOperationErrorOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        latestSpec.modules[i].operations[j].errors = latestSpec.modules[
-          i
-        ].operations[j].errors.filter((e) => e.id != action.input.id);
-      }
-    }
-  },
-
-  reorderOperationErrorsOperation(state, action) {
-    const latestSpec = state.specifications[state.specifications.length - 1];
-    for (let i = 0; i < latestSpec.modules.length; i++) {
-      for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
-        if (
-          latestSpec.modules[i].operations[j].id == action.input.operationId
-        ) {
-          latestSpec.modules[i].operations[j].errors.sort(
-            errorSorter(action.input.order),
-          );
+    setOperationErrorTemplateOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          for (
+            let k = 0;
+            k < latestSpec.modules[i].operations[j].errors.length;
+            k++
+          ) {
+            if (
+              latestSpec.modules[i].operations[j].errors[k].id ==
+              action.input.id
+            ) {
+              latestSpec.modules[i].operations[j].errors[k].template =
+                action.input.errorTemplate || "";
+            }
+          }
         }
       }
-    }
-  },
-};
+    },
+
+    deleteOperationErrorOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          latestSpec.modules[i].operations[j].errors = latestSpec.modules[
+            i
+          ].operations[j].errors.filter((e) => e.id != action.input.id);
+        }
+      }
+    },
+
+    reorderOperationErrorsOperation(state, action) {
+      const latestSpec = state.specifications[state.specifications.length - 1];
+      for (let i = 0; i < latestSpec.modules.length; i++) {
+        for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {
+          if (
+            latestSpec.modules[i].operations[j].id == action.input.operationId
+          ) {
+            latestSpec.modules[i].operations[j].errors.sort(
+              errorSorter(action.input.order),
+            );
+          }
+        }
+      }
+    },
+  };

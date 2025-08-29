@@ -1,17 +1,17 @@
-import { BaseDocumentClass } from "../../../document/object.js";
-import type { ReducerOptions } from "../../../document/types.js";
-import type { DocumentModelAction } from "../actions.js";
 import type {
   AddOperationErrorInput,
   DeleteOperationErrorInput,
+  DocumentModelAction,
   DocumentModelLocalState,
+  DocumentModelState,
+  ReducerOptions,
   ReorderOperationErrorsInput,
   SetOperationErrorCodeInput,
   SetOperationErrorDescriptionInput,
   SetOperationErrorNameInput,
   SetOperationErrorTemplateInput,
-} from "../schema/types.js";
-import type { DocumentModelState } from "../types.js";
+} from "document-model";
+import { BaseDocumentClass } from "document-model";
 import {
   addOperationError,
   deleteOperationError,
@@ -20,9 +20,9 @@ import {
   setOperationErrorDescription,
   setOperationErrorName,
   setOperationErrorTemplate,
-} from "./creators.js";
+} from "document-model";
 
-export default class DocumentModel_OperationError extends BaseDocumentClass<
+export class DocumentModel_OperationError extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction

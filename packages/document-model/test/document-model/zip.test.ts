@@ -1,17 +1,15 @@
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  createDocument,
+  documentModelLoadFromFile,
+  documentModelReducer,
+  saveToFile,
   setModelDescription,
   setModelId,
   setModelName,
-} from "../../src/document-model/gen/creators.js";
-import { documentModelReducer } from "../../src/document-model/gen/reducer.js";
-import {
-  createDocument,
-  loadFromFile,
-  saveToFile,
-} from "../../src/document-model/gen/utils.js";
-import { undo } from "../../src/document/actions/creators.js";
+  undo,
+} from "document-model";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("DocumentModel", () => {
   const tempDir = "./test/document/temp/document-model/zip";
@@ -41,7 +39,9 @@ describe("DocumentModel", () => {
   });
 
   it("should load from zip", async () => {
-    const documentModel = await loadFromFile(`${tempDir}/test.phdm.zip`);
+    const documentModel = await documentModelLoadFromFile(
+      `${tempDir}/test.phdm.zip`,
+    );
     expect(documentModel.state.global.id).toBe("powerhouse/test");
     expect(documentModel.operations.global).toMatchObject([
       {
@@ -85,7 +85,7 @@ describe("DocumentModel", () => {
 
     await saveToFile(documentModel, tempDir, "test-document-resulting-state");
 
-    const loadedDocumentModel = await loadFromFile(
+    const loadedDocumentModel = await documentModelLoadFromFile(
       `${tempDir}/test-document-resulting-state.phdm.zip`,
     );
 
@@ -106,7 +106,9 @@ describe("DocumentModel", () => {
 
     await saveToFile(documentModel, tempDir, "test2");
 
-    const loadedDocumentModel = await loadFromFile(`${tempDir}/test2.phdm.zip`);
+    const loadedDocumentModel = await documentModelLoadFromFile(
+      `${tempDir}/test2.phdm.zip`,
+    );
     expect(loadedDocumentModel.state.global.id).toBe("");
     expect(loadedDocumentModel.operations.global).toMatchObject([
       {

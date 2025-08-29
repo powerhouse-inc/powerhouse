@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
   checkCleanedOperationsIntegrity,
   IntegrityIssueSubType,
   IntegrityIssueType,
-} from "../../src/document/utils/document-helpers.js";
+} from "document-model";
+import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 
 describe("checkCleanedOperationsIntegrity", () => {

@@ -2,17 +2,17 @@ import { z } from "zod";
 
 import type {
   DocumentFile,
-  LoadStateAction,
   LoadStateActionInput,
   LoadStateActionStateInput,
   IOperation as Operation,
-  PruneAction,
   PruneActionInput,
-  RedoAction,
-  SetNameAction,
+  SchemaLoadStateAction,
+  SchemaPruneAction,
+  SchemaRedoAction,
+  SchemaSetNameAction,
   // type SetNameOperation,
-  UndoAction,
-} from "./types.js";
+  SchemaUndoAction,
+} from "document-model";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -62,7 +62,7 @@ export function DocumentFileSchema(): z.ZodObject<Properties<DocumentFile>> {
 }
 
 export function LoadStateActionSchema(): z.ZodObject<
-  Properties<LoadStateAction>
+  Properties<SchemaLoadStateAction>
 > {
   return z.object({
     id: z.string(),
@@ -101,7 +101,9 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
   });
 }
 
-export function PruneActionSchema(): z.ZodObject<Properties<PruneAction>> {
+export function PruneActionSchema(): z.ZodObject<
+  Properties<SchemaPruneAction>
+> {
   return z.object({
     id: z.string(),
     timestampUtcMs: z.string(),
@@ -122,7 +124,7 @@ export function PruneActionInputSchema(): z.ZodObject<
 
 export const RedoActionInputSchema = z.number;
 
-export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
+export function RedoActionSchema(): z.ZodObject<Properties<SchemaRedoAction>> {
   return z.object({
     id: z.string(),
     timestampUtcMs: z.string().datetime(),
@@ -134,7 +136,9 @@ export function RedoActionSchema(): z.ZodObject<Properties<RedoAction>> {
 
 export const SetNameActionInputSchema = z.string;
 
-export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
+export function SetNameActionSchema(): z.ZodObject<
+  Properties<SchemaSetNameAction>
+> {
   return z.object({
     id: z.string(),
     timestampUtcMs: z.string().datetime(),
@@ -159,7 +163,7 @@ export function SetNameActionSchema(): z.ZodObject<Properties<SetNameAction>> {
 
 export const UndoActionInputSchema = z.number;
 
-export function UndoActionSchema(): z.ZodObject<Properties<UndoAction>> {
+export function UndoActionSchema(): z.ZodObject<Properties<SchemaUndoAction>> {
   return z.object({
     id: z.string(),
     timestampUtcMs: z.string().datetime(),

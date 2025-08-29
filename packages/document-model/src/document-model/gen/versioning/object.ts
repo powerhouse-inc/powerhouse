@@ -1,22 +1,23 @@
-import { BaseDocumentClass } from "../../../document/object.js";
-import type { ReducerOptions } from "../../../document/types.js";
-import type { DocumentModelAction } from "../actions.js";
 import type {
   AddChangeLogItemInput,
   DeleteChangeLogItemInput,
+  DocumentModelAction,
+  DocumentModelLocalState,
+  DocumentModelState,
+  ReducerOptions,
   ReorderChangeLogItemsInput,
   UpdateChangeLogItemInput,
-} from "../schema/types.js";
-import type { DocumentModelLocalState, DocumentModelState } from "../types.js";
+} from "document-model";
+import { BaseDocumentClass } from "document-model";
 import {
   addChangeLogItem,
   deleteChangeLogItem,
   releaseNewVersion,
   reorderChangeLogItems,
   updateChangeLogItem,
-} from "./creators.js";
+} from "document-model";
 
-export default class DocumentModel_Versioning extends BaseDocumentClass<
+export class DocumentModel_Versioning extends BaseDocumentClass<
   DocumentModelState,
   DocumentModelLocalState,
   DocumentModelAction
