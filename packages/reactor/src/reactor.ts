@@ -366,12 +366,7 @@ export class Reactor implements IReactor {
   /**
    * Applies a list of actions to a document
    */
-  async mutate(
-    id: string,
-    actions: Action[],
-    view?: ViewFilter,
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
+  async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     const jobId = uuidv4();
 
     try {

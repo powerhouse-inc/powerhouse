@@ -137,16 +137,9 @@ export interface IReactor {
    *
    * @param id - Document id
    * @param actions - List of actions to apply
-   * @param view - Optional filter containing branch and scopes information
-   * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  mutate(
-    id: string,
-    actions: Action[],
-    view?: ViewFilter,
-    signal?: AbortSignal,
-  ): Promise<JobInfo>;
+  mutate(id: string, actions: Action[]): Promise<JobInfo>;
 
   /**
    * Adds multiple documents as children to another
