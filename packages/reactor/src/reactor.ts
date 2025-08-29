@@ -210,7 +210,8 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
-    const document = await this.driveServer.getDocument(documentId);
+    // Use storage directly to get the document
+    const document = await this.documentStorage.get(documentId);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -291,8 +292,7 @@ export class Reactor implements IReactor {
     } else if (search.type) {
       results = await this.findByType(search.type, view, paging, signal);
     } else {
-      // Empty search filter - return all documents
-      results = await this.findAll(view, paging, signal);
+      throw new Error("No search criteria provided");
     }
 
     if (signal?.aborted) {
@@ -485,34 +485,31 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Fetch each document by ID
+    // Fetch each document by ID using storage directly
     for (const id of ids) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        const document = await this.driveServer.getDocument<PHDocument>(id);
-
-        if (!document) {
-          continue; // Skip if document not found
-        }
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            // eslint-disable-next-line
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
+        document = await this.documentStorage.get<PHDocument>(id);
       } catch {
         // Skip documents that don't exist or can't be accessed
         // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
@@ -550,54 +547,48 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Fetch each document by slug
-    for (const slug of slugs) {
+    // Use storage to resolve slugs to IDs
+    let ids: string[];
+    try {
+      ids = await this.documentStorage.resolveIds(slugs, signal);
+    } catch {
+      // If slug resolution fails, return empty results
+      // This matches the behavior expected from a search operation
+      ids = [];
+    }
+
+    // Fetch each document by resolved ID
+    for (const id of ids) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        // Search through drives to find a document with the matching slug
-        const drives = await this.driveServer.getDrives();
-        let found = false;
-
-        for (const driveId of drives) {
-          const documentIds = await this.driveServer.getDocuments(driveId);
-
-          for (const docId of documentIds) {
-            const document =
-              await this.driveServer.getDocument<PHDocument>(docId);
-
-            if (document && document.header.slug === slug) {
-              // Apply view filter - This will be removed when we pass the viewfilter along
-              // to the underlying store, but is here now for the interface.
-              for (const scope in document.state) {
-                if (!matchesScope(view, scope)) {
-                  // eslint-disable-next-line
-                  delete document.state[scope as keyof PHBaseState];
-                }
-              }
-
-              documents.push(document);
-              found = true;
-              break;
-            }
-          }
-
-          if (found) break;
-        }
+        document = await this.documentStorage.get<PHDocument>(id);
       } catch {
         // Skip documents that don't exist or can't be accessed
-        // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Apply paging
+    // Apply paging - this will be removed when we pass the paging along
+    // to the underlying store, but is here now for the interface.
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || documents.length;
     const pagedDocuments = documents.slice(startIndex, startIndex + limit);
@@ -623,66 +614,6 @@ export class Reactor implements IReactor {
   }
 
   /**
-   * Finds all documents
-   */
-  private async findAll(
-    view?: ViewFilter,
-    paging?: PagingOptions,
-    signal?: AbortSignal,
-  ): Promise<PagedResults<PHDocument>> {
-    const documents: PHDocument[] = [];
-
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
-
-    for (const driveId of drives) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const documentIds = await this.driveServer.getDocuments(driveId);
-
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<PHDocument>(docId);
-
-        if (document) {
-          // Apply view filter
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          documents.push(document);
-        }
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? async () => this.findAll(view, { cursor: nextCursor!, limit }, signal)
-        : undefined,
-    };
-  }
-
-  /**
    * Finds documents by parent ID
    */
   private async findByParentId(
@@ -691,8 +622,8 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    // Get child document IDs from the drive server
-    const childIds = await this.driveServer.getDocuments(parentId);
+    // Get child document IDs from storage
+    const childIds = await this.documentStorage.getChildren(parentId);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -706,25 +637,25 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        const document =
-          await this.driveServer.getDocument<PHDocument>(childId);
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            // eslint-disable-next-line
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
+        document = await this.documentStorage.get<PHDocument>(childId);
       } catch {
         // Skip documents that don't exist or can't be accessed
         // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
@@ -767,53 +698,55 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
+    // Use storage's findByType method directly
+    const cursor = paging?.cursor;
+    const limit = paging?.limit || 100;
 
-    for (const driveId of drives) {
+    // Get document IDs of the specified type
+    const { documents: documentIds, nextCursor } =
+      await this.documentStorage.findByType(type, limit, cursor);
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Fetch each document by its ID
+    for (const documentId of documentIds) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      const documentIds = await this.driveServer.getDocuments(driveId);
+      let document: PHDocument;
+      try {
+        document = await this.documentStorage.get<PHDocument>(documentId);
+      } catch {
+        // Skip documents that can't be retrieved
+        continue;
+      }
 
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<PHDocument>(docId);
-
-        if (document && document.header.documentType === type) {
-          // Apply view filter
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          documents.push(document);
+      // Apply view filter
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line
+          delete document.state[scope as keyof PHBaseState];
         }
       }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
+    // Results are already paged from the storage layer
     return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
+      results: documents,
+      options: paging || { cursor: cursor || "0", limit },
       nextCursor,
-      next: hasMore
+      next: nextCursor
         ? async () =>
-            this.findByType(type, view, { cursor: nextCursor!, limit }, signal)
+            this.findByType(type, view, { cursor: nextCursor, limit }, signal)
         : undefined,
     };
   }
