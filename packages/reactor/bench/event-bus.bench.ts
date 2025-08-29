@@ -23,7 +23,7 @@ function createSyncSubscriber(id: string) {
 /**
  * Creates an asynchronous subscriber with configurable delay
  */
-function createAsyncSubscriber(id: string, delayMs: number = 0) {
+function createAsyncSubscriber(id: string, delayMs = 0) {
   return async (type: number, data: any) => {
     // Simulate async work
     if (delayMs > 0) {
@@ -36,7 +36,7 @@ function createAsyncSubscriber(id: string, delayMs: number = 0) {
 /**
  * Creates a subscriber that randomly decides to be sync or async
  */
-function createMixedSubscriber(id: string, asyncProbability: number = 0.5) {
+function createMixedSubscriber(id: string, asyncProbability = 0.5) {
   return async (type: number, data: any) => {
     if (Math.random() < asyncProbability) {
       // Async path with minimal delay
@@ -65,10 +65,7 @@ function setupSyncEventBus(subscriberCount: number): EventBus {
 /**
  * Sets up an EventBus with multiple async subscribers
  */
-function setupAsyncEventBus(
-  subscriberCount: number,
-  delayMs: number = 0,
-): EventBus {
+function setupAsyncEventBus(subscriberCount: number, delayMs = 0): EventBus {
   const eventBus = new EventBus();
 
   for (let i = 0; i < subscriberCount; i++) {
@@ -86,7 +83,7 @@ function setupAsyncEventBus(
  */
 function setupMixedEventBus(
   subscriberCount: number,
-  asyncProbability: number = 0.5,
+  asyncProbability = 0.5,
 ): EventBus {
   const eventBus = new EventBus();
 

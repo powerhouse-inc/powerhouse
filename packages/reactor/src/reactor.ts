@@ -9,7 +9,14 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import { EventBus } from "./events/event-bus.js";
+import type { IEventBus } from "./events/interfaces.js";
+import type { IJobExecutor } from "./executor/interfaces.js";
+import { InMemoryJobExecutor } from "./executor/job-executor.js";
 import type { IReactor } from "./interfaces/reactor.js";
+import type { IQueue } from "./queue/interfaces.js";
+import { InMemoryQueue } from "./queue/queue.js";
+import type { Job } from "./queue/types.js";
 import { createMutableShutdownStatus } from "./shared/factories.js";
 import {
   JobStatus,
@@ -43,6 +50,23 @@ export class Reactor implements IReactor {
   private documentStorage: IDocumentStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
+  private eventBus: IEventBus;
+  private queue: IQueue;
+  private jobExecutor: IJobExecutor;
+  private jobExecutorStarted = false;
+
+  // For testing purposes only - provides access to internal components
+  // This is a cleaner approach than using 'any' type assertions in tests
+  public get _testInternals() {
+    if (process.env.NODE_ENV !== "test") {
+      throw new Error("Test internals should only be accessed in test environment");
+    }
+    return {
+      queue: this.queue,
+      eventBus: this.eventBus,
+      jobExecutor: this.jobExecutor,
+    };
+  }
 
   constructor(
     driveServer: BaseDocumentDriveServer,
@@ -55,6 +79,25 @@ export class Reactor implements IReactor {
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
+
+    // Initialize the event bus, queue, and executor
+    this.eventBus = new EventBus();
+    this.queue = new InMemoryQueue(this.eventBus);
+    this.jobExecutor = new InMemoryJobExecutor(this.eventBus, this.queue);
+  }
+
+  /**
+   * Starts the job executor if not already running.
+   * Called automatically when the first job is enqueued.
+   */
+  private async ensureJobExecutorRunning(): Promise<void> {
+    if (!this.jobExecutorStarted) {
+      await this.jobExecutor.start({
+        maxConcurrency: 5,
+        jobTimeout: 30000,
+      });
+      this.jobExecutorStarted = true;
+    }
   }
 
   /**
@@ -356,36 +399,37 @@ export class Reactor implements IReactor {
    * Applies a list of actions to a document
    */
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
-    const jobId = uuidv4();
+    // Ensure the job executor is running
+    await this.ensureJobExecutorRunning();
 
-    try {
-      // BaseDocumentDriveServer expects Operations, not Actions
-      // We need to convert Actions to Operations
-      const operations: Operation[] = actions.map((action, index) => ({
+    // Create jobs for each action/operation
+    const jobs: Job[] = actions.map((action, index) => ({
+      id: uuidv4(),
+      documentId: id,
+      scope: action.scope || "global",
+      branch: "main", // Default to main branch
+      operation: {
         index: index,
-        timestampUtcMs: action.timestampUtcMs,
-        hash: "", // Will be computed by the server
+        timestampUtcMs: String(action.timestampUtcMs || Date.now()),
+        hash: "", // Will be computed by the executor
         skip: 0,
         action: action,
-      }));
+      },
+      createdAt: new Date().toISOString(),
+      maxRetries: 3,
+    }));
 
-      // Apply operations to document
-      await this.driveServer.addOperations(id, operations);
-
-      // Return success job info
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
-    } catch (error) {
-      // TODO: Phase 4 - This will return a job that can be retried
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+    // Enqueue all jobs
+    for (const job of jobs) {
+      await this.queue.enqueue(job);
     }
+
+    // Return job info for the batch (using the first job's ID as the batch ID)
+    const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
+    return {
+      id: batchJobId,
+      status: JobStatus.PENDING,
+    };
   }
 
   /**
