@@ -1,15 +1,15 @@
+import { cn } from "@powerhousedao/design-system";
 import type {
   FieldErrorHandling,
   InputBaseProps,
   RadioGroupProps,
 } from "@powerhousedao/design-system/ui";
 import {
-  cn,
   FormLabel,
   FormMessageList,
   withFieldValidation,
 } from "@powerhousedao/design-system/ui";
-import React, { useId } from "react";
+import * as React from "react";
 import { RadioGroup } from "./radio-group.js";
 import { Radio } from "./radio.js";
 
@@ -54,7 +54,7 @@ const RadioGroupFieldRaw = React.forwardRef<
   ) => {
     const hasLabel = label !== undefined;
     const hasError = errors.length > 0;
-    const prefix = useId();
+    const prefix = React.useId();
     const id = propId ?? `${prefix}-radio-group`;
 
     return (

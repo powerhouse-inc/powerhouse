@@ -1,5 +1,12 @@
-import { Icon, fixedForwardRef } from "@powerhousedao/design-system";
-import type { CSSProperties, ForwardedRef } from "react";
+import { Icon } from "@powerhousedao/design-system";
+import type {
+  CSSProperties,
+  ForwardedRef,
+  ReactNode,
+  Ref,
+  RefAttributes,
+} from "react";
+import { forwardRef } from "react";
 import { useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
@@ -22,6 +29,14 @@ export type SelectProps<TValue extends string> = {
   borderRadius?: CSSProperties["borderRadius"];
   absolutePositionMenu?: boolean;
 };
+
+function fixedForwardRef<T, P = {}>(
+  render: (props: P, ref: Ref<T>) => ReactNode,
+): (props: P & RefAttributes<T>) => ReactNode {
+  // @ts-expect-error - This is a hack to make the types work
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return forwardRef(render) as any;
+}
 
 export const Select = fixedForwardRef(function Select<TValue extends string>(
   props: SelectProps<TValue>,

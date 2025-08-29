@@ -1,5 +1,5 @@
+import { cn } from "@powerhousedao/design-system";
 import type { WithDifference } from "@powerhousedao/design-system/ui";
-import { cn } from "@powerhousedao/design-system/ui";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
 

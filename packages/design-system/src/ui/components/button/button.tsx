@@ -1,8 +1,13 @@
-import { cn } from "@powerhousedao/design-system/ui";
 import { Slot } from "@radix-ui/react-slot";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
+import clsx, { type ClassValue } from "clsx";
 import React from "react";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const buttonVariants = cva(
   cn(

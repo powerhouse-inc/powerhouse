@@ -4,9 +4,9 @@ import type {
   WithDifference,
 } from "@powerhousedao/design-system/ui";
 import type { TransformerType } from "@powerhousedao/design-system/ui";
+import { cn } from "@powerhousedao/design-system";
 import {
   CharacterCounter,
-  cn,
   FormDescription,
   FormGroup,
   FormLabel,

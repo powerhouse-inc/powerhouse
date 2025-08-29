@@ -1,51 +1,80 @@
 import type {
+  AbstractConstructor,
+  Action,
   AddOperationExampleInput,
+  AugmentConstructor,
+  BaseDocumentClass,
   DeleteOperationExampleInput,
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
   ReducerOptions,
   ReorderOperationExamplesInput,
   UpdateOperationExampleInput,
 } from "document-model";
 import {
   addOperationExample,
-  BaseDocumentClass,
   deleteOperationExample,
   reorderOperationExamples,
   updateOperationExample,
 } from "document-model";
 
-export class DocumentModel_OperationExample extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
+export interface DocumentModel_OperationExample_Augment<
+  TAction extends Action,
 > {
-  public addOperationExample(
+  addOperationExample(
     input: AddOperationExampleInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(addOperationExample(input), options);
-  }
-
-  public updateOperationExample(
+  ): this;
+  updateOperationExample(
     input: UpdateOperationExampleInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(updateOperationExample(input), options);
-  }
-
-  public deleteOperationExample(
+  ): this;
+  deleteOperationExample(
     input: DeleteOperationExampleInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(deleteOperationExample(input), options);
-  }
-
-  public reorderOperationExamples(
+  ): this;
+  reorderOperationExamples(
     input: ReorderOperationExamplesInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(reorderOperationExamples(input), options);
+  ): this;
+}
+
+export function DocumentModel_OperationExample<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action,
+  TBase extends AbstractConstructor<
+    BaseDocumentClass<TGlobalState, TLocalState, TAction>
+  >,
+>(
+  Base: TBase,
+): AugmentConstructor<TBase, DocumentModel_OperationExample_Augment<TAction>> {
+  abstract class DocumentModel_OperationExampleClass extends Base {
+    public addOperationExample(
+      input: AddOperationExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(addOperationExample(input) as TAction, options);
+    }
+    public updateOperationExample(
+      input: UpdateOperationExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(updateOperationExample(input) as TAction, options);
+    }
+    public deleteOperationExample(
+      input: DeleteOperationExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(deleteOperationExample(input) as TAction, options);
+    }
+    public reorderOperationExamples(
+      input: ReorderOperationExamplesInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(reorderOperationExamples(input) as TAction, options);
+    }
   }
+  return DocumentModel_OperationExampleClass as unknown as AugmentConstructor<
+    TBase,
+    DocumentModel_OperationExample_Augment<TAction>
+  >;
 }

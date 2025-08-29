@@ -1,72 +1,27 @@
-import type {
-  BaseStateFromDocument,
-  DocumentModelAction,
-  DocumentModelDocument,
-  DocumentModelLocalState,
-  DocumentModelState,
-  SignalDispatch,
-} from "document-model";
-import {
-  applyMixins,
-  BaseDocumentClass,
-  createDocument,
-  DocumentModel_Header,
-  DocumentModel_Module,
-  DocumentModel_Operation,
-  DocumentModel_OperationError,
-  DocumentModel_OperationExample,
-  DocumentModel_State,
-  DocumentModel_Versioning,
-  documentModelReducer,
-  fileExtension,
-} from "document-model";
+import type { AbstractConstructor, BaseDocumentClass } from "document-model";
+import { DocumentModelCore } from "./document-model-core.js";
+import { DocumentModel_State } from "./state/object.js";
+import { DocumentModel_Operation } from "./operation/object.js";
+import { DocumentModel_OperationExample } from "./operation-example/object.js";
+import { DocumentModel_OperationError } from "./operation-error/object.js";
+import { DocumentModel_Module } from "./module/object.js";
+import { DocumentModel_Versioning } from "./versioning/object.js";
+import { DocumentModel_Header } from "./header/object.js";
 
-interface DocumentModelClass
-  extends DocumentModel_Header,
-    DocumentModel_Versioning,
-    DocumentModel_Module,
-    DocumentModel_OperationError,
-    DocumentModel_OperationExample,
-    DocumentModel_Operation,
-    DocumentModel_State {}
+// widen the base constructor so inference doesn’t fight the specialized generics
+type AnyDocCtor = AbstractConstructor<BaseDocumentClass<any, any, any>>;
+const BaseAny = DocumentModelCore as unknown as AnyDocCtor;
 
-class DocumentModelClass extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
-  static fileExtension = fileExtension;
+const DocumentModelMixed = DocumentModel_State(
+  DocumentModel_Operation(
+    DocumentModel_OperationExample(
+      DocumentModel_OperationError(
+        DocumentModel_Module(
+          DocumentModel_Versioning(DocumentModel_Header(BaseAny)),
+        ),
+      ),
+    ),
+  ),
+);
 
-  constructor(
-    initialState?: Partial<BaseStateFromDocument<DocumentModelDocument>>,
-    dispatch?: SignalDispatch,
-  ) {
-    super(documentModelReducer, createDocument(initialState), dispatch);
-  }
-
-  public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, DocumentModelClass.fileExtension, name);
-  }
-
-  public loadFromFile(path: string) {
-    return super.loadFromFile(path);
-  }
-
-  static async fromFile(path: string) {
-    const document = new this();
-    await document.loadFromFile(path);
-    return document;
-  }
-}
-
-applyMixins(DocumentModelClass, [
-  DocumentModel_Header,
-  DocumentModel_Versioning,
-  DocumentModel_Module,
-  DocumentModel_OperationError,
-  DocumentModel_OperationExample,
-  DocumentModel_Operation,
-  DocumentModel_State,
-]);
-
-export { DocumentModelClass };
+export class DocumentModelClass extends DocumentModelMixed {}

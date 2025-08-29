@@ -1,10 +1,9 @@
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import type {
   InputBaseProps,
   TransformerType,
 } from "@powerhousedao/design-system/ui";
 import {
-  cn,
   Input,
   sharedValueTransformers,
   Tooltip,

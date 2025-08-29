@@ -1,7 +1,8 @@
 import type {
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
+  AbstractConstructor,
+  Action,
+  AugmentConstructor,
+  BaseDocumentClass,
   ReducerOptions,
   SetAuthorNameInput,
   SetAuthorWebsiteInput,
@@ -11,7 +12,6 @@ import type {
   SetModelNameInput,
 } from "document-model";
 import {
-  BaseDocumentClass,
   setAuthorName,
   setAuthorWebsite,
   setModelDescription,
@@ -20,41 +20,66 @@ import {
   setModelName,
 } from "document-model";
 
-export class DocumentModel_Header extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
-  public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
-    return this.dispatch(setModelName(input), options);
-  }
-
-  public setModelId(input: SetModelIdInput, options?: ReducerOptions) {
-    return this.dispatch(setModelId(input), options);
-  }
-
-  public setModelExtension(
+// The interface of methods this mixin adds
+export interface DocumentModel_Header_Augment<TAction extends Action> {
+  setModelName(input: SetModelNameInput, options?: ReducerOptions): this;
+  setModelId(input: SetModelIdInput, options?: ReducerOptions): this;
+  setModelExtension(
     input: SetModelExtensionInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setModelExtension(input), options);
-  }
-
-  public setModelDescription(
+  ): this;
+  setModelDescription(
     input: SetModelDescriptionInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setModelDescription(input), options);
-  }
-
-  public setAuthorName(input: SetAuthorNameInput, options?: ReducerOptions) {
-    return this.dispatch(setAuthorName(input), options);
-  }
-
-  public setAuthorWebsite(
+  ): this;
+  setAuthorName(input: SetAuthorNameInput, options?: ReducerOptions): this;
+  setAuthorWebsite(
     input: SetAuthorWebsiteInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setAuthorWebsite(input), options);
+  ): this;
+}
+
+export function DocumentModel_Header<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action,
+  TBase extends AbstractConstructor<
+    BaseDocumentClass<TGlobalState, TLocalState, TAction>
+  >,
+>(
+  Base: TBase,
+): AugmentConstructor<TBase, DocumentModel_Header_Augment<TAction>> {
+  abstract class DocumentModel_HeaderClass extends Base {
+    public setModelName(input: SetModelNameInput, options?: ReducerOptions) {
+      return this.dispatch(setModelName(input) as TAction, options);
+    }
+    public setModelId(input: SetModelIdInput, options?: ReducerOptions) {
+      return this.dispatch(setModelId(input) as TAction, options);
+    }
+    public setModelExtension(
+      input: SetModelExtensionInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setModelExtension(input) as TAction, options);
+    }
+    public setModelDescription(
+      input: SetModelDescriptionInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setModelDescription(input) as TAction, options);
+    }
+    public setAuthorName(input: SetAuthorNameInput, options?: ReducerOptions) {
+      return this.dispatch(setAuthorName(input) as TAction, options);
+    }
+    public setAuthorWebsite(
+      input: SetAuthorWebsiteInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setAuthorWebsite(input) as TAction, options);
+    }
   }
+  return DocumentModel_HeaderClass as unknown as AugmentConstructor<
+    TBase,
+    DocumentModel_Header_Augment<TAction>
+  >;
 }

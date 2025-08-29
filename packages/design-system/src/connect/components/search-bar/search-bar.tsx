@@ -1,11 +1,11 @@
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Icon,
+    cn,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    Icon,
 } from "@powerhousedao/design-system";
-import { cn } from "@powerhousedao/design-system/ui";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";

@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system/ui";
+import { cn } from "@powerhousedao/design-system";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 

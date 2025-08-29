@@ -1,7 +1,6 @@
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import type { SelectProps } from "@powerhousedao/design-system/ui";
 import {
-  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -9,8 +8,7 @@ import {
   CommandList,
 } from "@powerhousedao/design-system/ui";
 import { useCommandState } from "cmdk";
-import React from "react";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;

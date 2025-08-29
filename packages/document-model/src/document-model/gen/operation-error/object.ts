@@ -1,9 +1,10 @@
 import type {
+  AbstractConstructor,
+  Action,
   AddOperationErrorInput,
+  AugmentConstructor,
+  BaseDocumentClass,
   DeleteOperationErrorInput,
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
   ReducerOptions,
   ReorderOperationErrorsInput,
   SetOperationErrorCodeInput,
@@ -11,7 +12,6 @@ import type {
   SetOperationErrorNameInput,
   SetOperationErrorTemplateInput,
 } from "document-model";
-import { BaseDocumentClass } from "document-model";
 import {
   addOperationError,
   deleteOperationError,
@@ -22,57 +22,99 @@ import {
   setOperationErrorTemplate,
 } from "document-model";
 
-export class DocumentModel_OperationError extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
-  public addOperationError(
+export interface DocumentModel_OperationError_Augment<TAction extends Action> {
+  addOperationError(
     input: AddOperationErrorInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(addOperationError(input), options);
-  }
-
-  public setOperationErrorCode(
+  ): this;
+  setOperationErrorCode(
     input: SetOperationErrorCodeInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setOperationErrorCode(input), options);
-  }
-
-  public setOperationErrorName(
+  ): this;
+  setOperationErrorName(
     input: SetOperationErrorNameInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setOperationErrorName(input), options);
-  }
-
-  public setOperationErrorDescription(
+  ): this;
+  setOperationErrorDescription(
     input: SetOperationErrorDescriptionInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setOperationErrorDescription(input), options);
-  }
-
-  public setOperationErrorTemplate(
+  ): this;
+  setOperationErrorTemplate(
     input: SetOperationErrorTemplateInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(setOperationErrorTemplate(input), options);
-  }
-
-  public deleteOperationError(
+  ): this;
+  deleteOperationError(
     input: DeleteOperationErrorInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(deleteOperationError(input), options);
-  }
-
-  public reorderOperationErrors(
+  ): this;
+  reorderOperationErrors(
     input: ReorderOperationErrorsInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(reorderOperationErrors(input), options);
+  ): this;
+}
+
+export function DocumentModel_OperationError<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action,
+  TBase extends AbstractConstructor<
+    BaseDocumentClass<TGlobalState, TLocalState, TAction>
+  >,
+>(
+  Base: TBase,
+): AugmentConstructor<TBase, DocumentModel_OperationError_Augment<TAction>> {
+  abstract class DocumentModel_OperationErrorClass extends Base {
+    public addOperationError(
+      input: AddOperationErrorInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(addOperationError(input) as TAction, options);
+    }
+    public setOperationErrorCode(
+      input: SetOperationErrorCodeInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setOperationErrorCode(input) as TAction, options);
+    }
+    public setOperationErrorName(
+      input: SetOperationErrorNameInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setOperationErrorName(input) as TAction, options);
+    }
+    public setOperationErrorDescription(
+      input: SetOperationErrorDescriptionInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(
+        setOperationErrorDescription(input) as TAction,
+        options,
+      );
+    }
+    public setOperationErrorTemplate(
+      input: SetOperationErrorTemplateInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(
+        setOperationErrorTemplate(input) as TAction,
+        options,
+      );
+    }
+    public deleteOperationError(
+      input: DeleteOperationErrorInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(deleteOperationError(input) as TAction, options);
+    }
+    public reorderOperationErrors(
+      input: ReorderOperationErrorsInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(reorderOperationErrors(input) as TAction, options);
+    }
   }
+  return DocumentModel_OperationErrorClass as unknown as AugmentConstructor<
+    TBase,
+    DocumentModel_OperationError_Augment<TAction>
+  >;
 }

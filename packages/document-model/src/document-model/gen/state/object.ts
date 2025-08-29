@@ -1,9 +1,10 @@
 import type {
+  AbstractConstructor,
+  Action,
   AddStateExampleInput,
+  AugmentConstructor,
+  BaseDocumentClass,
   DeleteStateExampleInput,
-  DocumentModelAction,
-  DocumentModelLocalState,
-  DocumentModelState,
   ReducerOptions,
   ReorderStateExamplesInput,
   SetInitialStateInput,
@@ -12,7 +13,6 @@ import type {
 } from "document-model";
 import {
   addStateExample,
-  BaseDocumentClass,
   deleteStateExample,
   reorderStateExamples,
   setInitialState,
@@ -20,47 +20,74 @@ import {
   updateStateExample,
 } from "document-model";
 
-export class DocumentModel_State extends BaseDocumentClass<
-  DocumentModelState,
-  DocumentModelLocalState,
-  DocumentModelAction
-> {
-  public setStateSchema(input: SetStateSchemaInput, options?: ReducerOptions) {
-    return this.dispatch(setStateSchema(input), options);
-  }
-
-  public setInitialState(
-    input: SetInitialStateInput,
-    options?: ReducerOptions,
-  ) {
-    return this.dispatch(setInitialState(input), options);
-  }
-
-  public addStateExample(
-    input: AddStateExampleInput,
-    options?: ReducerOptions,
-  ) {
-    return this.dispatch(addStateExample(input), options);
-  }
-
-  public updateStateExample(
+export interface DocumentModel_State_Augment<TAction extends Action> {
+  setStateSchema(input: SetStateSchemaInput, options?: ReducerOptions): this;
+  setInitialState(input: SetInitialStateInput, options?: ReducerOptions): this;
+  addStateExample(input: AddStateExampleInput, options?: ReducerOptions): this;
+  updateStateExample(
     input: UpdateStateExampleInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(updateStateExample(input), options);
-  }
-
-  public deleteStateExample(
+  ): this;
+  deleteStateExample(
     input: DeleteStateExampleInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(deleteStateExample(input), options);
-  }
-
-  public reorderStateExamples(
+  ): this;
+  reorderStateExamples(
     input: ReorderStateExamplesInput,
     options?: ReducerOptions,
-  ) {
-    return this.dispatch(reorderStateExamples(input), options);
+  ): this;
+}
+
+export function DocumentModel_State<
+  TGlobalState,
+  TLocalState,
+  TAction extends Action,
+  TBase extends AbstractConstructor<
+    BaseDocumentClass<TGlobalState, TLocalState, TAction>
+  >,
+>(
+  Base: TBase,
+): AugmentConstructor<TBase, DocumentModel_State_Augment<TAction>> {
+  abstract class DocumentModel_StateClass extends Base {
+    public setStateSchema(
+      input: SetStateSchemaInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setStateSchema(input) as TAction, options);
+    }
+    public setInitialState(
+      input: SetInitialStateInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(setInitialState(input) as TAction, options);
+    }
+    public addStateExample(
+      input: AddStateExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(addStateExample(input) as TAction, options);
+    }
+    public updateStateExample(
+      input: UpdateStateExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(updateStateExample(input) as TAction, options);
+    }
+    public deleteStateExample(
+      input: DeleteStateExampleInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(deleteStateExample(input) as TAction, options);
+    }
+    public reorderStateExamples(
+      input: ReorderStateExamplesInput,
+      options?: ReducerOptions,
+    ) {
+      return this.dispatch(reorderStateExamples(input) as TAction, options);
+    }
   }
+  return DocumentModel_StateClass as unknown as AugmentConstructor<
+    TBase,
+    DocumentModel_State_Augment<TAction>
+  >;
 }

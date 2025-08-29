@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system/ui";
+import { cn } from "@powerhousedao/design-system";
 
 export type FormMessageType = "error" | "info" | "warning";
 

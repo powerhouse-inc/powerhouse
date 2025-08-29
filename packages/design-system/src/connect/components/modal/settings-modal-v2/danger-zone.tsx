@@ -1,5 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
-import { cn } from "@powerhousedao/design-system/ui";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { capitalCase } from "change-case";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";

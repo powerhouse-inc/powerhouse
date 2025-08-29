@@ -9,7 +9,6 @@ import {
   AddOperationExampleInputSchema,
   AddOperationInputSchema,
   AddStateExampleInputSchema,
-  createReducer,
   DeleteChangeLogItemInputSchema,
   DeleteModuleInputSchema,
   DeleteOperationErrorInputSchema,
@@ -55,6 +54,7 @@ import {
   UpdateOperationExampleInputSchema,
   UpdateStateExampleInputSchema,
 } from "document-model";
+import { createReducer } from "../../document/reducer.js";
 
 export const documentModelStateReducer: TStateReducer<DocumentModelDocument> = (
   state,

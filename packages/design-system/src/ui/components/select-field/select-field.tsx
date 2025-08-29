@@ -6,9 +6,9 @@ import type {
   SelectOption,
   SelectProps,
 } from "@powerhousedao/design-system/ui";
+import { cn } from "@powerhousedao/design-system";
 import {
   Button,
-  cn,
   Command,
   FormDescription,
   FormGroup,

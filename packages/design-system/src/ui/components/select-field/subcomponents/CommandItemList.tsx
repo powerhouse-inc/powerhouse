@@ -1,7 +1,7 @@
 import type { IconName } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import type { SelectProps } from "@powerhousedao/design-system/ui";
-import { cn, CommandItem } from "@powerhousedao/design-system/ui";
+import { CommandItem } from "@powerhousedao/design-system/ui";
 import React from "react";
 
 interface FavoriteOptionsProps {

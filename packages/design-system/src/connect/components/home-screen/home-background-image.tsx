@@ -1,5 +1,5 @@
-import HomeBgAvif from "#assets/home-bg.avif";
-import HomeBg from "#assets/home-bg.png";
+import HomeBgAvif from "../../../assets/home-bg.avif";
+import HomeBg from "../../../assets/home-bg.png";
 
 export function HomeBackgroundImage() {
   return (

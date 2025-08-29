@@ -3,7 +3,7 @@ import type {
   InputBaseProps,
   ValidatorHandler,
 } from "@powerhousedao/design-system/ui";
-import React, { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 
 interface PossibleProps extends InputBaseProps<unknown>, FieldErrorHandling {
@@ -33,7 +33,7 @@ export const withFieldValidation = <
 ): React.ForwardRefExoticComponent<
   React.PropsWithoutRef<T> & React.RefAttributes<R>
 > => {
-  return React.forwardRef<R, T>(
+  return forwardRef<R, T>(
     (
       {
         value,

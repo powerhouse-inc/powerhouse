@@ -1,5 +1,6 @@
 export * from "./constants.js";
 export * from "./creators.js";
+export * from "./document-model-core.js";
 export * from "./header/index.js";
 export * from "./module/index.js";
 export * from "./object.js";

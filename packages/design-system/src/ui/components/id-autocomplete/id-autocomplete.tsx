@@ -1,6 +1,6 @@
+import { cn } from "@powerhousedao/design-system";
 import type { TransformerType } from "@powerhousedao/design-system/ui";
 import {
-  cn,
   Command,
   FormDescription,
   FormGroup,

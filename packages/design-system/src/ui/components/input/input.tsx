@@ -1,6 +1,9 @@
-import { cn } from "@powerhousedao/design-system";
+import clsx, { type ClassValue } from "clsx";
 import * as React from "react";
-
+import { twMerge } from "tailwind-merge";
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const inputBaseStyles = cn(
