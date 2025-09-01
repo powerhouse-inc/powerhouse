@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { TimelineBar } from "./timeline-bar.js";
 
@@ -7,9 +7,9 @@ const meta = {
   component: TimelineBar,
   decorators: [
     (Story) => (
-      <TooltipProvider>
+      <ConnectTooltipProvider>
         <Story />
-      </TooltipProvider>
+      </ConnectTooltipProvider>
     ),
   ],
 } satisfies Meta<typeof TimelineBar>;

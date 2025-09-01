@@ -1,7 +1,7 @@
 import type {
   TextFieldProps,
   ValidatorHandler,
-} from "@powerhousedao/design-system/ui";
+} from "@powerhousedao/design-system";
 import {
   Form,
   FormGroup,
@@ -9,7 +9,7 @@ import {
   FormMessageList,
   Input,
   renderWithForm,
-} from "@powerhousedao/design-system/ui";
+} from "@powerhousedao/design-system";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { createRef, forwardRef } from "react";

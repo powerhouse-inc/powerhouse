@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "./index.js";
 import { Icon } from "../index.js";
+import { PowerhouseButton } from "./index.js";
 
 const meta = {
   title: "Powerhouse/Components/Button",
-  component: Button,
-} satisfies Meta<typeof Button>;
+  component: PowerhouseButton,
+} satisfies Meta<typeof PowerhouseButton>;
 
 export default meta;
 

@@ -4,7 +4,11 @@ import {
   type DocumentDriveServerOptions,
   driveDocumentModelModule,
   ReactorBuilder,
-  RunAsap,
+  type RunAsap,
+  useMessageChannel,
+  usePostMessage,
+  useSetImmediate,
+  useSetTimeout,
 } from "document-drive";
 import {
   documentModelDocumentModelModule,
@@ -149,52 +153,40 @@ describe("Process Operations", () => {
     BENCH_OPTIONS,
   );
 
-  const setImmediate = RunAsap.useSetImmediate;
+  const setImmediate = useSetImmediate;
   bench.skipIf(setImmediate instanceof Error)(
     "setImmediate",
     () => {
       return new Promise<void>((resolve, reject) => {
-        processStrands(
-          setImmediate as RunAsap.RunAsap<unknown>,
-          resolve,
-          reject,
-        );
+        processStrands(setImmediate as RunAsap<unknown>, resolve, reject);
       });
     },
     BENCH_OPTIONS,
   );
 
-  const messageChannel = RunAsap.useMessageChannel;
+  const messageChannel = useMessageChannel;
   bench.skipIf(messageChannel instanceof Error)(
     "MessageChannel",
     () => {
       return new Promise<void>((resolve, reject) => {
-        processStrands(
-          messageChannel as RunAsap.RunAsap<unknown>,
-          resolve,
-          reject,
-        );
+        processStrands(messageChannel as RunAsap<unknown>, resolve, reject);
       });
     },
     BENCH_OPTIONS,
   );
 
-  const postMessage = RunAsap.usePostMessage;
+  const postMessage = usePostMessage;
   bench.skipIf(postMessage instanceof Error)(
     "window.postMessage",
     () => {
       return new Promise<void>((resolve, reject) => {
-        processStrands(
-          postMessage as RunAsap.RunAsap<unknown>,
-          resolve,
-          reject,
-        );
+        processStrands(postMessage as RunAsap<unknown>, resolve, reject);
       });
     },
     BENCH_OPTIONS,
   );
 
-  const setTimeout = RunAsap.useSetTimeout;
+  const setTimeout = useSetTimeout;
   bench.skipIf(setTimeout instanceof Error)(
     "setTimeout",
     () => {

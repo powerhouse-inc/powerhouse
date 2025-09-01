@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Tooltip, TooltipProvider } from "./tooltip.js";
+import { ConnectTooltip, ConnectTooltipProvider } from "./tooltip.js";
 
-const meta: Meta<typeof Tooltip> = {
+const meta: Meta<typeof ConnectTooltip> = {
   title: "Connect/Components/Tooltip",
-  component: Tooltip,
+  component: ConnectTooltip,
 };
 
 export default meta;
@@ -19,11 +19,11 @@ export const Default: Story = {
       </div>
     );
     return (
-      <TooltipProvider>
-        <Tooltip {...args} content={tooltipContent}>
+      <ConnectTooltipProvider>
+        <ConnectTooltip {...args} content={tooltipContent}>
           <a id="tooltip">hover me</a>
-        </Tooltip>
-      </TooltipProvider>
+        </ConnectTooltip>
+      </ConnectTooltipProvider>
     );
   },
 };

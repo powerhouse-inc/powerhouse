@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 
 import { describe, expect, it } from "vitest";
-import { Tooltip, TooltipProvider } from "./tooltip.js";
+import { Tooltip, TooltipProvider } from "@powerhousedao/design-system";
 
 const TooltipTest = ({
   content = "Test tooltip" as React.ReactNode,

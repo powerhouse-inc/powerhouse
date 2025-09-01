@@ -1,4 +1,4 @@
-import { Icon, Tooltip } from "@powerhousedao/design-system";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 export type ErrorsProps = {
@@ -39,7 +39,7 @@ export function Errors(props: ErrorsProps) {
     </p>
   ));
 
-  if (hasErrors) return <Tooltip content={tooltipContent}>{content}</Tooltip>;
+  if (hasErrors) return <ConnectTooltip content={tooltipContent}>{content}</ConnectTooltip>;
 
   return content;
 }

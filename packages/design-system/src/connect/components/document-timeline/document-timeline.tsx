@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimelineBarProps } from "./components/index.js";
 import { HDivider, TimelineBar } from "./components/index.js";
@@ -118,7 +118,7 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
   }, []);
 
   return (
-    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+    <ConnectTooltipProvider delayDuration={0} skipDelayDuration={0}>
       <div className="relative h-[36px] w-full">
         <div className="absolute left-[0px] z-[20] h-[17px] w-[6px] bg-white">
           <div className="mt-[11px] h-[6px] w-[6px] rounded-tl-md bg-slate-50" />
@@ -145,6 +145,6 @@ export const DocumentTimeline = (props: DocumentTimelineProps) => {
         <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-[25px] w-2 rounded-l-md bg-slate-50" />
         <div className="pointer-events-none absolute bottom-0 right-0 z-10 h-[25px] w-2 rounded-r-md bg-slate-50" />
       </div>
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   );
 };

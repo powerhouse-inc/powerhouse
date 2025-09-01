@@ -1,6 +1,6 @@
 import AtlasIcon from "#assets/icons/Atlas-Logomark.svg?react";
 import RefreshIcon from "#assets/icons/refresh.svg?react";
-import { Button } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import { addRemoteDrive, useReactor } from "@powerhousedao/reactor-browser";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -149,7 +149,7 @@ export function AtlasImport() {
                 Forking Atlas scope...
               </div>
             )}
-            <Button
+            <PowerhouseButton
               onClick={
                 hasError
                   ? window.location.reload.bind(window.location)
@@ -169,7 +169,7 @@ export function AtlasImport() {
               ) : (
                 "Continue"
               )}
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
       </div>

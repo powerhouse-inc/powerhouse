@@ -1,16 +1,16 @@
 import {
-  AvailableOfflineToggle,
-  Button,
-  DeleteDrive,
-  Disclosure,
-  Divider,
-  DriveNameInput,
-  Icon,
-  Label,
-  LocationInfo,
-  PUBLIC,
-  SharingTypeFormInput,
-  SWITCHBOARD,
+    AvailableOfflineToggle,
+    DeleteDrive,
+    Disclosure,
+    Divider,
+    DriveNameInput,
+    Icon,
+    Label,
+    LocationInfo,
+    PowerhouseButton,
+    PUBLIC,
+    SharingTypeFormInput,
+    SWITCHBOARD,
 } from "@powerhousedao/design-system";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";
@@ -93,9 +93,9 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
       ) : (
         <>
           <Divider className="my-3" />
-          <Button className="mb-4 w-full" type="submit">
+          <PowerhouseButton className="mb-4 w-full" type="submit">
             Confirm
-          </Button>
+          </PowerhouseButton>
         </>
       )}
     </form>

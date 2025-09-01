@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Address } from "./address.js";
 
@@ -17,8 +17,8 @@ export const Default: Story = {
     chainId: 1,
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Address {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

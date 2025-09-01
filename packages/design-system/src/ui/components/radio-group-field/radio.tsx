@@ -1,5 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
-import { FormLabel } from "@powerhousedao/design-system/ui";
+import { cn, FormLabel } from "@powerhousedao/design-system";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import React, { useId } from "react";
 

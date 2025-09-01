@@ -1,9 +1,9 @@
 import type { IconName } from "@powerhousedao/design-system";
-import { Button, Icon } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 
 import type { PowerhousePackage } from "@powerhousedao/config";
-import type { IdAutocompleteProps } from "@powerhousedao/design-system/ui";
-import { IdAutocomplete, Input } from "@powerhousedao/design-system/ui";
+import type { IdAutocompleteProps } from "@powerhousedao/design-system";
+import { IdAutocomplete, Input } from "@powerhousedao/design-system";
 import { useCallback, useMemo, useState } from "react";
 
 export type PackageManagerInputProps = {
@@ -105,13 +105,13 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
         ) : (
           <IdAutocomplete {...autoCompleteOptions} onChange={setValue} />
         )}
-        <Button
+        <PowerhouseButton
           className="h-9 rounded-md text-sm"
           onClick={handleSubmit}
           disabled={loading}
         >
           Install
-        </Button>
+        </PowerhouseButton>
       </div>
       <p className="mb-3 ml-2 h-3 text-sm text-red-800">{errorMessage}</p>
     </div>

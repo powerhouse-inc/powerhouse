@@ -1,7 +1,7 @@
 import {
-  Pagination,
-  TooltipProvider,
-  usePagination,
+    ConnectTooltipProvider,
+    Pagination,
+    usePagination,
 } from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
 import { garbageCollect, sortOperations } from "document-model";
@@ -82,7 +82,7 @@ export function RevisionHistory(props: Props) {
   );
 
   return (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Header
         docId={documentId}
         onChangeScope={onChangeScope}
@@ -107,6 +107,6 @@ export function RevisionHistory(props: Props) {
         )}
       </div>
       {PaginationComponent}
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   );
 }

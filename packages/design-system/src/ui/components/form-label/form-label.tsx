@@ -1,5 +1,9 @@
-import { Icon, cn } from "@powerhousedao/design-system";
-import { Tooltip, TooltipProvider } from "@powerhousedao/design-system/ui";
+import {
+  Icon,
+  Tooltip,
+  TooltipProvider,
+  cn,
+} from "@powerhousedao/design-system";
 
 export interface FormLabelProps
   extends React.PropsWithChildren,

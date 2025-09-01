@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Signature } from "./signature.js";
 
@@ -31,9 +31,9 @@ export const NotVerified: Story = {
     ],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Signature {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };
 
@@ -57,9 +57,9 @@ export const PartiallyVerified: Story = {
     ],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Signature {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };
 
@@ -83,8 +83,8 @@ export const Verified: Story = {
     ],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Signature {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

@@ -2,16 +2,16 @@ import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
-  Button,
-  DocumentToolbar,
-  RevisionHistory,
+    DocumentToolbar,
+    PowerhouseButton,
+    RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
-  useDocumentById,
-  useDocumentModelModuleById,
-  useEditorModuleById,
-  useFallbackEditorModule,
-  useUserPermissions,
+    useDocumentById,
+    useDocumentModelModuleById,
+    useEditorModuleById,
+    useFallbackEditorModule,
+    useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model";
@@ -214,17 +214,17 @@ export const DocumentEditor: React.FC<Props> = (props) => {
         )}
       {!disableExternalControls && (
         <div className="mb-4 flex justify-end gap-10">
-          <Button onClick={onExport}>Export</Button>
+          <PowerhouseButton onClick={onExport}>Export</PowerhouseButton>
           <div className="flex gap-4">
-            <Button onClick={addUndoAction} disabled={!canUndo}>
+            <PowerhouseButton onClick={addUndoAction} disabled={!canUndo}>
               Undo
-            </Button>
-            <Button onClick={addRedoAction} disabled={!canRedo}>
+            </PowerhouseButton>
+            <PowerhouseButton onClick={addRedoAction} disabled={!canRedo}>
               Redo
-            </Button>
+            </PowerhouseButton>
           </div>
           <div className="flex gap-4">
-            <Button onClick={onClose}>Close</Button>
+            <PowerhouseButton onClick={onClose}>Close</PowerhouseButton>
           </div>
         </div>
       )}

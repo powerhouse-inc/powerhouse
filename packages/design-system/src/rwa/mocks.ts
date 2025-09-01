@@ -1,9 +1,56 @@
 import type {
   Asset,
+  BaseTransaction,
   CashAsset,
   FixedIncomeType,
+  GroupTransaction,
+  GroupTransactionType,
+  RealWorldAssetsState,
   SPV,
+  TransactionFeeInput,
 } from "@powerhousedao/design-system";
+import type { InputMaybe } from "document-model";
+
+const cashTransactionSignByTransactionType: Record<
+  GroupTransactionType,
+  -1 | 1
+> = {
+  AssetSale: 1,
+  PrincipalDraw: 1,
+  AssetPurchase: -1,
+  PrincipalReturn: -1,
+  FeesIncome: 1,
+  FeesPayment: -1,
+  InterestIncome: 1,
+  InterestPayment: -1,
+} as const;
+const allGroupTransactionTypes = [
+  "AssetPurchase",
+  "AssetSale",
+  "PrincipalDraw",
+  "PrincipalReturn",
+  "InterestIncome",
+  "InterestPayment",
+  "FeesIncome",
+  "FeesPayment",
+] as const;
+
+function calculateCashBalanceChange(
+  transactionType: InputMaybe<GroupTransactionType>,
+  cashAmount: InputMaybe<number>,
+  fees: InputMaybe<TransactionFeeInput[]>,
+) {
+  if (!cashAmount || !transactionType) return 0;
+
+  const sign = cashTransactionSignByTransactionType[transactionType];
+
+  const feeAmounts = (fees?.map((fee) => fee.amount).filter(Boolean) ??
+    []) as number[];
+
+  const totalFees = feeAmounts.reduce((acc, fee) => acc + fee, 0);
+
+  return cashAmount * sign - totalFees;
+}
 
 export const mockPrincipalLenderAccountId = "principal-lender-account-id";
 
@@ -271,3 +318,122 @@ export const mockServiceProviderFeeTypes = [
     accountId: mockAccounts[3].id,
   },
 ];
+
+export const mockFixedIncomeTransaction: BaseTransaction = {
+  id: "fixed-income-transaction-1",
+  assetId: mockFixedIncomes[1].id,
+  accountId: mockAccounts[1].id,
+  amount: 1000,
+  entryTime: "2023-06-01T00:00:00.000Z",
+  assetType: "FixedIncome",
+  counterPartyAccountId: null,
+  settlementTime: null,
+  tradeTime: null,
+};
+
+export const mockCashTransaction: BaseTransaction = {
+  id: "cash-transaction-1",
+  assetId: "cash-asset-1",
+  amount: 1000,
+  entryTime: "2023-06-01T00:00:00.000Z",
+  counterPartyAccountId: mockPrincipalLenderAccountId,
+  accountId: mockPrincipalLenderAccountId,
+  assetType: "Cash",
+  settlementTime: null,
+  tradeTime: null,
+};
+
+export const mockGroupTransaction: GroupTransaction = {
+  id: "group-transaction-0",
+  type: allGroupTransactionTypes?.[0] ?? "PrincipalDraw",
+  entryTime: "2023-06-01T00:00:00.000Z",
+  txRef: "0x99f19e36b83f59159b917fa67282f913f6c85ecdee5f49d427048d5ed9508b0b",
+  unitPrice: 1,
+  fees: [
+    {
+      id: "fee-transaction-1",
+      amount: 100,
+      serviceProviderFeeTypeId: "1",
+    },
+    {
+      id: "fee-transaction-2",
+      amount: 200,
+      serviceProviderFeeTypeId: "2",
+    },
+    {
+      id: "fee-transaction-3",
+      amount: 300,
+      serviceProviderFeeTypeId: "3",
+    },
+  ],
+  cashTransaction: mockCashTransaction,
+  fixedIncomeTransaction: mockFixedIncomeTransaction,
+  serviceProviderFeeTypeId: null,
+  cashBalanceChange: 10,
+};
+
+export const mockGroupTransactions: () => GroupTransaction[] = () =>
+  (
+    [
+      "AssetPurchase",
+      "AssetSale",
+      "PrincipalDraw",
+      "PrincipalReturn",
+      "InterestIncome",
+      "InterestPayment",
+      "FeesIncome",
+      "FeesPayment",
+    ] as const
+  ).map((type, i) => {
+    const fees = type !== "FeesPayment" ? mockGroupTransaction.fees : null;
+    const cashTransaction = mockCashTransaction;
+    const fixedIncomeTransaction = type.includes("Asset")
+      ? mockFixedIncomeTransaction
+      : null;
+    const cashBalanceChange = calculateCashBalanceChange(
+      type,
+      cashTransaction.amount,
+      fees,
+    );
+    return {
+      ...mockGroupTransaction,
+      type,
+      fees,
+      cashBalanceChange,
+      fixedIncomeTransaction,
+      id: `group-transaction-${i}`,
+    };
+  });
+
+export const manyMockGroupTransactions: () => GroupTransaction[] = () =>
+  [
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+    ...mockGroupTransactions(),
+  ].map((transaction, i) => ({
+    ...transaction,
+    id: `group-transaction-${i}`,
+  }));
+export const mockStateInitial: RealWorldAssetsState = {
+  accounts: [],
+  principalLenderAccountId: mockPrincipalLenderAccountId,
+  serviceProviderFeeTypes: [],
+  transactions: [],
+  fixedIncomeTypes: [],
+  portfolio: [mockCashAsset],
+  spvs: [],
+};
+
+export const mockStateWithData: RealWorldAssetsState = {
+  accounts: mockAccounts,
+  principalLenderAccountId: mockPrincipalLenderAccountId,
+  serviceProviderFeeTypes: mockServiceProviderFeeTypes,
+  transactions: mockGroupTransactions(),
+  fixedIncomeTypes: mockFixedIncomeTypes,
+  portfolio: [mockCashAsset, ...mockFixedIncomes],
+  spvs: mockSPVs,
+};

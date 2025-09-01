@@ -6,10 +6,16 @@ import type {
   IProcessor,
   ITransmitter,
   ListenerRevision,
+  RunAsap,
   StrandUpdate,
   StrandUpdateSource,
 } from "document-drive";
-import { logger, operationsToRevision, RunAsap } from "document-drive";
+import {
+  logger,
+  operationsToRevision,
+  runAsap,
+  runAsapAsync,
+} from "document-drive";
 import type {
   Action,
   GlobalStateFromDocument,
@@ -20,18 +26,18 @@ import type {
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
   protected processor: IProcessor;
-  protected taskQueueMethod: RunAsap.RunAsap<unknown> | null;
+  protected taskQueueMethod: RunAsap<unknown> | null;
   protected transmitQueue: Promise<ListenerRevision[]> | undefined;
 
   constructor(
     drive: IDocumentDriveServer,
     processor: IProcessor,
-    taskQueueMethod?: RunAsap.RunAsap<unknown> | null,
+    taskQueueMethod?: RunAsap<unknown> | null,
   ) {
     this.drive = drive;
     this.processor = processor;
     this.taskQueueMethod =
-      taskQueueMethod === undefined ? RunAsap.runAsap : taskQueueMethod;
+      taskQueueMethod === undefined ? runAsap : taskQueueMethod;
   }
 
   async #buildInternalOperationUpdate<TDocument extends PHDocument>(
@@ -72,12 +78,12 @@ export class InternalTransmitter implements ITransmitter {
     for (const operation of strand.operations) {
       const stateTask = () => getStateByIndex(operation.index);
       const state = await (this.taskQueueMethod
-        ? RunAsap.runAsapAsync(stateTask, this.taskQueueMethod)
+        ? runAsapAsync(stateTask, this.taskQueueMethod)
         : stateTask());
 
       const previousStateTask = () => getStateByIndex(operation.index - 1);
       const previousState = await (this.taskQueueMethod
-        ? RunAsap.runAsapAsync(previousStateTask, this.taskQueueMethod)
+        ? runAsapAsync(previousStateTask, this.taskQueueMethod)
         : previousStateTask());
 
       const action: Action = {

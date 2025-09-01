@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Errors } from "./errors.js";
 
@@ -24,9 +24,9 @@ export const WithOneError: Story = {
     ],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Errors {...props} />,
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };
 
@@ -39,8 +39,8 @@ export const WithMultipleErrors: Story = {
     ],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Errors {...props} />,
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

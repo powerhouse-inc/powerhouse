@@ -1,18 +1,17 @@
-import { cn } from "@powerhousedao/design-system";
-import type { TransformerType } from "@powerhousedao/design-system/ui";
+import type { TransformerType } from "@powerhousedao/design-system";
 import {
-  Command,
-  FormDescription,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  Input,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  sharedValueTransformers,
-  ValueTransformer,
-} from "@powerhousedao/design-system/ui";
+    cn, Command,
+    FormDescription,
+    FormGroup,
+    FormLabel,
+    FormMessageList,
+    Input,
+    Popover,
+    PopoverAnchor,
+    PopoverContent,
+    sharedValueTransformers,
+    ValueTransformer
+} from "@powerhousedao/design-system";
 import React, { useId, useMemo, useRef } from "react";
 import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";

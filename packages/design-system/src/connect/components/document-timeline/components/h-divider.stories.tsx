@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { HDivider } from "./h-divider.js";
 
@@ -14,9 +14,9 @@ const meta = {
   component: HDivider,
   decorators: [
     (Story) => (
-      <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      <ConnectTooltipProvider delayDuration={0} skipDelayDuration={0}>
         <Story />
-      </TooltipProvider>
+      </ConnectTooltipProvider>
     ),
   ],
 } satisfies Meta<typeof HDivider>;

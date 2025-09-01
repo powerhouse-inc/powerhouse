@@ -1,19 +1,19 @@
 import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import type { SelectItem } from "./index.js";
-import { Select } from "./index.js";
+import type { ConnectSelectItem } from "./index.js";
+import { ConnectSelect } from "./index.js";
 
-const meta: Meta<typeof Select> = {
+const meta: Meta<typeof ConnectSelect> = {
   title: "Connect/Components/Select",
-  component: Select,
+  component: ConnectSelect,
 };
 
 export default meta;
 
 type Story = StoryObj<{
   id: string;
-  items: SelectItem<string>[];
+  items: ConnectSelectItem<string>[];
 }>;
 
 const Template: Story = {
@@ -52,6 +52,6 @@ export const Default: Story = {
   render: function Wrapper(args) {
     const [value, setValue] = useState(args.items[0].value);
 
-    return <Select {...args} onChange={setValue} value={value} />;
+    return <ConnectSelect {...args} onChange={setValue} value={value} />;
   },
 };

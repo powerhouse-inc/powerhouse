@@ -1,4 +1,4 @@
-import { Button, Icon } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import type { FC } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -37,7 +37,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
       <div className="px-3 py-2">
         {username && <div className="text-sm font-medium">{username}</div>}
         <div className="mt-1 flex items-center gap-2">
-          <Button
+          <PowerhouseButton
             size="small"
             color="light"
             onClick={copyToClipboard.bind(null, address)}
@@ -57,7 +57,7 @@ export const AccountPopoverUser: FC<AccountPopoverUserProps> = ({
                 Copied to clipboard!
               </div>
             </div>
-          </Button>
+          </PowerhouseButton>
         </div>
       </div>
       {etherscanUrl && (

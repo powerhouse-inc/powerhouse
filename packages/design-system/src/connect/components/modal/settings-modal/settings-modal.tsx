@@ -1,4 +1,4 @@
-import { Button, Icon, Modal } from "@powerhousedao/design-system";
+import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { twMerge } from "tailwind-merge";
@@ -53,14 +53,14 @@ export const SettingsModalOld: React.FC<SettingsModalOldProps> = (props) => {
         </div>
         <div className="mt-4 flex flex-col gap-y-4">{children}</div>
         <div className="mt-4 flex justify-end gap-x-4">
-          <Button
+          <PowerhouseButton
             className="text-gray-900"
             color="light"
             onClick={() => onOpenChange?.(false)}
           >
             {cancelLabel}
-          </Button>
-          <Button onClick={onSave}>{saveLabel}</Button>
+          </PowerhouseButton>
+          <PowerhouseButton onClick={onSave}>{saveLabel}</PowerhouseButton>
         </div>
       </div>
     </Modal>

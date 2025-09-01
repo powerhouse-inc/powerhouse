@@ -1,13 +1,13 @@
 import {
-  AvailableOfflineToggle,
-  Button,
-  Disclosure,
-  Divider,
-  DriveName,
-  FormInput,
-  LocationInfo,
-  PUBLIC,
-  SWITCHBOARD,
+    AvailableOfflineToggle,
+    Disclosure,
+    Divider,
+    DriveName,
+    FormInput,
+    LocationInfo,
+    PowerhouseButton,
+    PUBLIC,
+    SWITCHBOARD,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
@@ -108,9 +108,9 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             <LocationInfo location={SWITCHBOARD} />
             <AvailableOfflineToggle {...register("availableOffline")} />
           </Disclosure>
-          <Button className="mt-4 w-full" color="dark" type="submit">
+          <PowerhouseButton className="mt-4 w-full" color="dark" type="submit">
             Add new drive
-          </Button>
+          </PowerhouseButton>
         </>
       ) : (
         <>
@@ -122,7 +122,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             type="url"
             value={url}
           />
-          <Button
+          <PowerhouseButton
             className="mt-4 w-full py-2 text-base"
             color="dark"
             size="small"
@@ -134,7 +134,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             type="button"
           >
             Add drive
-          </Button>
+          </PowerhouseButton>
         </>
       )}
     </form>

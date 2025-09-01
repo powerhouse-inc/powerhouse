@@ -1,4 +1,4 @@
-import { Icon, Tooltip } from "@powerhousedao/design-system";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -74,7 +74,7 @@ export const HDivider = (props: HDividerProps) => {
           className="absolute top-[-11px] z-40"
         />
       )}
-      <Tooltip
+      <ConnectTooltip
         className="rounded-md bg-gray-900 text-white"
         content={tooltipContent}
         open={open && hasContent}
@@ -96,7 +96,7 @@ export const HDivider = (props: HDividerProps) => {
         >
           <div className="h-0.5 w-1 rounded-full bg-gray-500" />
         </div>
-      </Tooltip>
+      </ConnectTooltip>
     </div>
   );
 };

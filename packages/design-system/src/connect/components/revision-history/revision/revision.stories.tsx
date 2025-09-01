@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Revision } from "./revision.js";
 
@@ -49,9 +49,9 @@ export const Verified: Story = {
     errors: [],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Revision {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };
 
@@ -93,9 +93,9 @@ export const PartiallyVerified: Story = {
     errors: ["Data mismatch detected"],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Revision {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };
 
@@ -137,8 +137,8 @@ export const NotVerified: Story = {
     errors: ["Data mismatch detected"],
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Revision {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

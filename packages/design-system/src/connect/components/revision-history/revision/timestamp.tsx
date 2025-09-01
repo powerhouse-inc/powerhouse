@@ -1,4 +1,4 @@
-import { Tooltip } from "@powerhousedao/design-system";
+import { ConnectTooltip } from "@powerhousedao/design-system";
 import { format } from "date-fns";
 
 export type TimestampProps = {
@@ -19,8 +19,8 @@ export function Timestamp(props: TimestampProps) {
   const tooltipContent = <div>{longDate}</div>;
 
   return (
-    <Tooltip content={tooltipContent}>
+    <ConnectTooltip content={tooltipContent}>
       <span className="cursor-pointer text-xs">committed at {shortDate}</span>
-    </Tooltip>
+    </ConnectTooltip>
   );
 }

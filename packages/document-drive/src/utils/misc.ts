@@ -1,10 +1,7 @@
 import { pascalCase } from "change-case";
 import type { DocumentDriveDocument, ListenerRevision } from "document-drive";
-import { driveDocumentType, OperationError, RunAsap } from "document-drive";
+import { driveDocumentType, OperationError } from "document-drive";
 import type { DocumentOperations, Operation, PHDocument } from "document-model";
-
-export const runAsap = RunAsap.runAsap;
-export const runAsapAsync = RunAsap.runAsapAsync;
 
 export function isDocumentDrive(
   document: PHDocument,

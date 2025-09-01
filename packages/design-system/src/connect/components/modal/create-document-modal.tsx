@@ -1,4 +1,4 @@
-import { Button, FormInput, Icon, Modal } from "@powerhousedao/design-system";
+import { FormInput, Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
@@ -81,13 +81,13 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
           >
             Cancel
           </button>
-          <Button
+          <PowerhouseButton
             className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
             onClick={handleCreate}
             disabled={!isValid}
           >
             Create
-          </Button>
+          </PowerhouseButton>
         </div>
       </div>
     </Modal>

@@ -1,8 +1,8 @@
 import type {
-  RadioGroupFieldProps,
-  SelectFieldProps,
-} from "@powerhousedao/design-system/ui";
-import { RadioGroupField, SelectField } from "@powerhousedao/design-system/ui";
+    RadioGroupFieldProps,
+    SelectFieldProps,
+} from "@powerhousedao/design-system";
+import { RadioGroupField, SelectField } from "@powerhousedao/design-system";
 import React from "react";
 
 export type EnumFieldProps =

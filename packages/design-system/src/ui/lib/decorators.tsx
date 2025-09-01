@@ -1,5 +1,4 @@
-import { Button } from "@powerhousedao/design-system";
-import { Checkbox, Form } from "@powerhousedao/design-system/ui";
+import { Button, Checkbox, Form } from "@powerhousedao/design-system";
 import type { Decorator } from "@storybook/react";
 import type { Args, DecoratorFunction } from "@storybook/types";
 import { format } from "date-fns";

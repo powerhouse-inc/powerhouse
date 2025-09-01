@@ -1,11 +1,11 @@
 import {
-  AppFormInput,
-  AvailableOfflineToggle,
-  Button,
-  FormInput,
-  Label,
-  LOCAL,
-  SharingTypeFormInput,
+    AppFormInput,
+    AvailableOfflineToggle,
+    FormInput,
+    Label,
+    LOCAL,
+    PowerhouseButton,
+    SharingTypeFormInput,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { App } from "document-model";
@@ -84,9 +84,9 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <AvailableOfflineToggle {...register("availableOffline")} />
         </div>
-        <Button className="mt-2 w-full" type="submit">
+        <PowerhouseButton className="mt-2 w-full" type="submit">
           Create new drive
-        </Button>
+        </PowerhouseButton>
       </div>
     </form>
   );

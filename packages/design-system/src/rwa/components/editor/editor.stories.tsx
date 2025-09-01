@@ -68,7 +68,7 @@ export const WithoutData: Story = {
           transactions: [
             ...prev.transactions,
             {
-              ...mockGroupTransactions[0],
+              ...mockGroupTransactions()[0],
               id: `new-${Date.now()}`,
             },
           ],
@@ -155,7 +155,7 @@ export const WithManyItems: Story = {
       transactions: [
         ...mockStateWithData.transactions,
         ...Array.from({ length: 100 }, (_, i) => ({
-          ...mockGroupTransactions[0],
+          ...mockGroupTransactions()[0],
           id: `new-${i}`,
         })),
       ],

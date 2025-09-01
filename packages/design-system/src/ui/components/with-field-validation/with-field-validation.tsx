@@ -2,7 +2,16 @@ import type {
   FieldErrorHandling,
   InputBaseProps,
   ValidatorHandler,
-} from "@powerhousedao/design-system/ui";
+} from "@powerhousedao/design-system";
+import type {
+  ChangeEvent,
+  ComponentType,
+  ElementRef,
+  FocusEvent,
+  ForwardRefExoticComponent,
+  PropsWithoutRef,
+  RefAttributes,
+} from "react";
 import { forwardRef, useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 
@@ -15,8 +24,8 @@ interface PossibleProps extends InputBaseProps<unknown>, FieldErrorHandling {
 }
 
 interface PossibleEventsProps {
-  onChange?: (event: React.ChangeEvent<unknown>) => unknown;
-  onBlur?: (event: React.FocusEvent<unknown>) => unknown;
+  onChange?: (event: ChangeEvent<unknown>) => unknown;
+  onBlur?: (event: FocusEvent<unknown>) => unknown;
 }
 
 export interface ValidationOptions<T> {
@@ -26,13 +35,11 @@ export interface ValidationOptions<T> {
 
 export const withFieldValidation = <
   T extends PossibleProps,
-  R extends React.ElementRef<any> = React.ElementRef<any>,
+  R extends ElementRef<any> = ElementRef<any>,
 >(
-  Component: React.ComponentType<T>,
+  Component: ComponentType<T>,
   options?: ValidationOptions<T>,
-): React.ForwardRefExoticComponent<
-  React.PropsWithoutRef<T> & React.RefAttributes<R>
-> => {
+): ForwardRefExoticComponent<PropsWithoutRef<T> & RefAttributes<R>> => {
   return forwardRef<R, T>(
     (
       {
@@ -125,7 +132,7 @@ export const withFieldValidation = <
             // React Hooks must be called in a React function component or a custom React Hook function.
 
             const onBlurCallback = useCallback(
-              (event: React.FocusEvent<HTMLInputElement>) => {
+              (event: FocusEvent<HTMLInputElement>) => {
                 if (showErrorOnBlur) {
                   void trigger(name);
                 } else {
@@ -145,7 +152,7 @@ export const withFieldValidation = <
             // React Hooks must be called in a React function component or a custom React Hook function.
 
             const onChangeCallback = useCallback(
-              (event: React.ChangeEvent<HTMLInputElement>) => {
+              (event: ChangeEvent<HTMLInputElement>) => {
                 // update value state
                 if (onChangeProp) {
                   if (Object.hasOwn(event, "target")) {

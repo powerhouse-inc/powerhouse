@@ -1,4 +1,4 @@
-import { Button, mergeClassNameProps } from "@powerhousedao/design-system";
+import { PowerhouseButton, mergeClassNameProps } from "@powerhousedao/design-system";
 import { useState } from "react";
 
 export type CookieInput = {
@@ -61,7 +61,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
         ))}
       </div>
       <div className="flex gap-x-8">
-        <Button
+        <PowerhouseButton
           className={buttonStyles}
           color="light"
           onClick={() => onReject()}
@@ -69,15 +69,15 @@ export const CookieBanner: React.FC<CookieBannerProps> = (props) => {
           key={"button-reject"}
         >
           {rejectLabel}
-        </Button>
-        <Button
+        </PowerhouseButton>
+        <PowerhouseButton
           className={buttonStyles}
           onClick={() => onSubmit(cookiesValue)}
           size="small"
           key={"button-submit"}
         >
           {submitLabel}
-        </Button>
+        </PowerhouseButton>
       </div>
     </div>
   );

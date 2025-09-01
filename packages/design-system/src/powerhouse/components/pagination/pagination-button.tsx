@@ -1,9 +1,9 @@
-import type { ButtonProps } from "@powerhousedao/design-system";
-import { Button, mergeClassNameProps } from "@powerhousedao/design-system";
+import type { PowerhouseButtonProps } from "@powerhousedao/design-system";
+import { PowerhouseButton, mergeClassNameProps } from "@powerhousedao/design-system";
 
 import { twMerge } from "tailwind-merge";
 
-export interface PaginationButtonProps extends ButtonProps {
+export interface PaginationButtonProps extends PowerhouseButtonProps {
   readonly active?: boolean;
 }
 
@@ -17,12 +17,12 @@ export const PaginationButton: React.FC<PaginationButtonProps> = ({
   );
 
   return (
-    <Button
+    <PowerhouseButton
       color="light"
       size="small"
       {...mergeClassNameProps(props, className)}
     >
       {props.children}
-    </Button>
+    </PowerhouseButton>
   );
 };

@@ -1,10 +1,10 @@
 import IconRenown from "#assets/icons/renown.svg?react";
 import { DotsLoader } from "@powerhousedao/connect";
-import { Button } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import {
-  openRenown,
-  useLoginStatus,
-  useUser,
+    openRenown,
+    useLoginStatus,
+    useUser,
 } from "@powerhousedao/reactor-browser";
 
 export const Login: React.FC = () => {
@@ -28,14 +28,14 @@ export const Login: React.FC = () => {
             Click on the button below to start signing messages in Connect on
             behalf of your Ethereum identity
           </p>
-          <Button
+          <PowerhouseButton
             onClick={() => openRenown()}
             className="mb-3 w-full p-0 text-white shadow-none transition-colors"
           >
             <p className="block h-10 px-7 leading-10 text-slate-50">
               Authorize Connect
             </p>
-          </Button>
+          </PowerhouseButton>
         </div>
       ) : (
         <p className="p-4 pb-5">Logged in with address: {user?.address}</p>

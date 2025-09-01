@@ -1,12 +1,13 @@
-import { cn, Icon } from "@powerhousedao/design-system";
-import type { SelectProps } from "@powerhousedao/design-system/ui";
+import type { SelectProps } from "@powerhousedao/design-system";
 import {
+  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@powerhousedao/design-system/ui";
+  Icon,
+} from "@powerhousedao/design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";

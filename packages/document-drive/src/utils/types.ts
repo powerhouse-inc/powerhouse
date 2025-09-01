@@ -82,3 +82,7 @@ export interface IDefaultDrivesManager {
   ): Promise<void>;
   setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel): Promise<void>;
 }
+
+export type Task<T = void> = () => T;
+export type AbortTask = () => void;
+export type RunAsap<T> = (task: Task<T>) => AbortTask;

@@ -1,6 +1,6 @@
-import BudgetStatementImg from "#assets/icons/budget.png";
-import MakerdaoRWAPortfolioImg from "#assets/icons/rwa-report.png";
-import DefaultImg from "#assets/icons/template.png";
+import BudgetStatementImg from "../../assets/icons/budget.png";
+import MakerdaoRWAPortfolioImg from "../../assets/icons/rwa-report.png";
+import DefaultImg from "../../assets/icons/template.png";
 import type { TDocumentType } from "@powerhousedao/design-system";
 import {
   BUDGET,

@@ -1,9 +1,9 @@
 import type { GroupTransactionFormInputs } from "@powerhousedao/design-system";
 import {
-  getIsTransaction,
-  RWATableTextInput,
-  Tooltip,
-  TooltipProvider,
+    ConnectTooltip,
+    ConnectTooltipProvider,
+    getIsTransaction,
+    RWATableTextInput,
 } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";
@@ -44,11 +44,11 @@ export const TransactionReference = forwardRef(function TransactionReference(
 
   if (disabled)
     return (
-      <TooltipProvider>
-        <Tooltip content={tooltipContent}>
+      <ConnectTooltipProvider>
+        <ConnectTooltip content={tooltipContent}>
           <span>{maybeShortenedValue}</span>
-        </Tooltip>
-      </TooltipProvider>
+        </ConnectTooltip>
+      </ConnectTooltipProvider>
     );
 
   return <RWATableTextInput {...props} ref={ref} />;

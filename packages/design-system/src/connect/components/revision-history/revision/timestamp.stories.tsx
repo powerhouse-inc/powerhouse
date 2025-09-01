@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Timestamp } from "./timestamp.js";
 
@@ -16,8 +16,8 @@ export const Default: Story = {
     timestampUtcMs: 1719232415114,
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Timestamp {...props} />
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

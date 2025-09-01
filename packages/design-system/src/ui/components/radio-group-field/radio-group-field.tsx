@@ -1,16 +1,19 @@
-import { cn } from "@powerhousedao/design-system";
 import type {
   FieldErrorHandling,
   InputBaseProps,
   RadioGroupProps,
-} from "@powerhousedao/design-system/ui";
-import { FormLabel, FormMessageList } from "@powerhousedao/design-system/ui";
-import * as React from "react";
-import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
-import { RadioGroup } from "./radio-group.js";
-import { Radio } from "./radio.js";
+} from "@powerhousedao/design-system";
+import {
+  cn,
+  FormLabel,
+  FormMessageList,
+  Radio,
+  RadioGroup,
+  withFieldValidation,
+} from "@powerhousedao/design-system";
+import { type HTMLAttributes, type Ref, forwardRef, useId } from "react";
 type RadioGroupFieldBaseProps = Omit<
-  React.HTMLAttributes<HTMLDivElement>,
+  HTMLAttributes<HTMLDivElement>,
   | keyof InputBaseProps<string>
   | keyof FieldErrorHandling
   | keyof RadioGroupProps
@@ -24,10 +27,7 @@ export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
   FieldErrorHandling &
   RadioGroupProps;
 
-const RadioGroupFieldRaw = React.forwardRef<
-  HTMLDivElement,
-  RadioGroupFieldProps
->(
+const RadioGroupFieldRaw = forwardRef<HTMLDivElement, RadioGroupFieldProps>(
   (
     {
       autoFocus,
@@ -50,7 +50,7 @@ const RadioGroupFieldRaw = React.forwardRef<
   ) => {
     const hasLabel = label !== undefined;
     const hasError = errors.length > 0;
-    const prefix = React.useId();
+    const prefix = useId();
     const id = propId ?? `${prefix}-radio-group`;
 
     return (
@@ -107,7 +107,13 @@ const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-export const RadioGroupField =
-  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
+export const RadioGroupField = forwardRef(function RadioGroupField(
+  props: RadioGroupFieldProps,
+  ref: Ref<HTMLDivElement>,
+) {
+  const Component =
+    withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
+  return <Component {...props} ref={ref} />;
+});
 
 RadioGroupField.displayName = "RadioGroupField";

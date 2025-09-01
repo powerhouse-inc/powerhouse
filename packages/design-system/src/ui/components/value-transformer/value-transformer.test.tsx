@@ -1,4 +1,4 @@
-import { withFieldValidation } from "@powerhousedao/design-system/ui";
+import { withFieldValidation } from "@powerhousedao/design-system";
 import { fireEvent, render } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";

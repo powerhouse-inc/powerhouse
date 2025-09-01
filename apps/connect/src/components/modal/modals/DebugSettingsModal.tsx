@@ -1,16 +1,16 @@
 import { connectConfig, serviceWorkerManager } from "@powerhousedao/connect";
 import {
-  Button,
-  Combobox,
-  FormInput,
-  Icon,
-  Modal,
+    Combobox,
+    FormInput,
+    Icon,
+    Modal,
+    PowerhouseButton,
 } from "@powerhousedao/design-system";
 import {
-  addTrigger,
-  registerNewPullResponderTrigger,
-  removeTrigger,
-  useDrives,
+    addTrigger,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    useDrives,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
@@ -196,14 +196,14 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div>
-            <Button
+            <PowerhouseButton
               onClick={removeTriggerHandler}
               color={!selectedDriveTrigger ? "light" : "red"}
               disabled={!selectedDriveTrigger}
               size="small"
             >
               Remove Trigger
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
 
@@ -224,7 +224,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div className="mb-1 flex items-center justify-center">
-            <Button
+            <PowerhouseButton
               className="mr-2"
               color={disableUrlButtons ? "light" : "blue"}
               size="small"
@@ -232,15 +232,15 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
               onClick={() => addTriggerHandler()}
             >
               Add Trigger
-            </Button>
-            <Button
+            </PowerhouseButton>
+            <PowerhouseButton
               color={disableUrlButtons ? "light" : "red"}
               size="small"
               disabled={disableUrlButtons}
               onClick={() => addTriggerHandler(true)}
             >
               Add Invalid Trigger
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
 
@@ -287,7 +287,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div className="mb-1 flex items-center justify-center">
-            <Button
+            <PowerhouseButton
               color={appVersion === "" ? "light" : "red"}
               size="small"
               disabled={appVersion === ""}
@@ -301,7 +301,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
               }}
             >
               Add Invalid App Version
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
       </div>

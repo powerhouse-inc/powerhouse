@@ -6,11 +6,10 @@ import type {
   Ref,
   RefAttributes,
 } from "react";
-import { forwardRef } from "react";
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
-export type SelectItem<TValue extends string> = {
+export type ConnectSelectItem<TValue extends string> = {
   readonly value: TValue;
   readonly displayValue?: React.ReactNode;
   readonly description?: React.ReactNode;
@@ -18,8 +17,8 @@ export type SelectItem<TValue extends string> = {
   readonly disabled?: boolean;
 };
 
-export type SelectProps<TValue extends string> = {
-  items: readonly SelectItem<TValue>[];
+export type ConnectSelectProps<TValue extends string> = {
+  items: readonly ConnectSelectItem<TValue>[];
   value: TValue;
   id: string;
   onChange: (value: TValue) => void;
@@ -38,10 +37,9 @@ function fixedForwardRef<T, P = {}>(
   return forwardRef(render) as any;
 }
 
-export const Select = fixedForwardRef(function Select<TValue extends string>(
-  props: SelectProps<TValue>,
-  ref: ForwardedRef<HTMLDivElement>,
-) {
+export const ConnectSelect = fixedForwardRef(function Select<
+  TValue extends string,
+>(props: ConnectSelectProps<TValue>, ref: ForwardedRef<HTMLDivElement>) {
   const {
     items,
     value,
@@ -55,7 +53,7 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
   } = props;
   const [showItems, setShowItems] = useState(false);
   const selectedItem = getItemByValue(value) ?? items[0];
-  function onItemClick(item: SelectItem<TValue>) {
+  function onItemClick(item: ConnectSelectItem<TValue>) {
     if (item.disabled) return;
     onChange(item.value);
     setShowItems(false);
@@ -117,7 +115,7 @@ export const Select = fixedForwardRef(function Select<TValue extends string>(
 });
 
 function ItemContainer<TValue extends string>(
-  props: SelectItem<TValue> & {
+  props: ConnectSelectItem<TValue> & {
     readonly onItemClick?: () => void;
     readonly className?: string;
   },

@@ -1,4 +1,4 @@
-import { deepEqual } from "@powerhousedao/design-system/ui";
+import { deepEqual } from "@powerhousedao/design-system";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 

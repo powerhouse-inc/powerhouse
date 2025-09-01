@@ -5,18 +5,15 @@ import {
   filterOperationsByRevision,
   isAfterRevision,
   isAtRevision,
-  RunAsap,
   runAsapAsync,
+  useSetTimeout,
 } from "document-drive";
 import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {
-    const result = await runAsapAsync(
-      () => Promise.resolve(1),
-      RunAsap.useSetTimeout,
-    );
+    const result = await runAsapAsync(() => Promise.resolve(1), useSetTimeout);
     expect(result).toBe(1);
   });
 

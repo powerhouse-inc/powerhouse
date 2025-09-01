@@ -1,4 +1,3 @@
-// TODO remove this when drive methods are deleted
 import type {
   ActionJob,
   AddFileAction,
@@ -47,7 +46,6 @@ import {
   OperationError,
   PullResponderTransmitter,
   ReadModeServer,
-  RunAsap,
   SwitchboardPushTransmitter,
   childLogger,
   createDocument as createDriveDocument,
@@ -61,6 +59,7 @@ import {
   removeTrigger,
   requestPublicDriveWithTokenFromReactor,
   resolveCreateDocumentInput,
+  runAsap,
   runAsapAsync,
   setSharingType,
 } from "document-drive";
@@ -236,7 +235,7 @@ export class BaseDocumentDriveServer
           : options.jwtHandler,
       taskQueueMethod:
         options?.taskQueueMethod === undefined
-          ? RunAsap.runAsap
+          ? runAsap
           : options.taskQueueMethod,
     };
 

@@ -1,9 +1,9 @@
-import type { WithDifference } from "@powerhousedao/design-system/ui";
+import type { WithDifference } from "@powerhousedao/design-system";
 import {
-  FormGroup,
-  FormLabel,
-  SplittedInputDiff,
-} from "@powerhousedao/design-system/ui";
+    FormGroup,
+    FormLabel,
+    SplittedInputDiff,
+} from "@powerhousedao/design-system";
 interface TextInputDiffProps extends WithDifference<string> {
   value: string;
   label?: React.ReactNode;

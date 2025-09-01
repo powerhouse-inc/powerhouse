@@ -1,5 +1,4 @@
-import type { IconName } from "@powerhousedao/design-system";
-import type { InputBaseProps } from "@powerhousedao/design-system/ui";
+import type { IconName, InputBaseProps } from "@powerhousedao/design-system";
 import type React from "react";
 
 interface IdAutocompleteBaseConfigProps {

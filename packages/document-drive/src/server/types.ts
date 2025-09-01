@@ -335,7 +335,7 @@ export type DocumentDriveServerOptions = {
    * If set to null then it will queued as micro task.
    * Defaults to the most appropriate method according to the system
    */
-  taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
+  taskQueueMethod?: RunAsap<unknown> | null;
   listenerManager?: ListenerManagerOptions;
   jwtHandler?: (
     driveUrl: string,

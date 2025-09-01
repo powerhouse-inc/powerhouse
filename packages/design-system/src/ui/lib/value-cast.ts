@@ -1,10 +1,10 @@
+import type { AmountValue } from "@powerhousedao/design-system";
 import {
   getDateFormat,
   getDateFromValue,
   normalizeMonthFormat,
   parseInputString,
-} from "@powerhousedao/design-system/ui";
-import type { AmountValue } from "@powerhousedao/design-system/ui";
+} from "@powerhousedao/design-system";
 import { format, parse } from "date-fns";
 
 export type ValueCast =

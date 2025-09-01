@@ -1,4 +1,4 @@
-import type { SelectProps } from "@powerhousedao/design-system/ui";
+import type { SelectProps } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseSelectFieldProps {

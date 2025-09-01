@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Operation } from "./operation.js";
 
@@ -24,8 +24,8 @@ export const Default: Story = {
     },
   },
   render: (props) => (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Operation {...props} />,
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   ),
 };

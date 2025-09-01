@@ -1,15 +1,15 @@
-import { cn, Icon } from "@powerhousedao/design-system";
 import type {
-  InputBaseProps,
-  TransformerType,
-} from "@powerhousedao/design-system/ui";
+    InputBaseProps,
+    TransformerType,
+} from "@powerhousedao/design-system";
 import {
-  Input,
-  sharedValueTransformers,
-  Tooltip,
-  TooltipProvider,
-  ValueTransformer,
-} from "@powerhousedao/design-system/ui";
+    cn,
+    Icon, Input,
+    sharedValueTransformers,
+    Tooltip,
+    TooltipProvider,
+    ValueTransformer
+} from "@powerhousedao/design-system";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";

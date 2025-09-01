@@ -1,4 +1,4 @@
-import { Select } from "../../select/index.js";
+import { ConnectSelect } from "../../select/index.js";
 
 type Props = {
   readonly value: string;
@@ -12,7 +12,7 @@ export function Scope(props: Props) {
   ] as const;
 
   return (
-    <Select
+    <ConnectSelect
       absolutePositionMenu
       containerClassName="bg-slate-50 text-gray-500 rounded-lg w-fit text-xs z-10"
       id="scope select"
