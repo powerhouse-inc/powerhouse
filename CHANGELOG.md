@@ -1,3 +1,14 @@
+## 4.1.0-dev.42 (2025-09-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** use proper issuer field ([a1e36efe0](https://github.com/powerhouse-inc/powerhouse/commit/a1e36efe0))
+- **reactor-api:** use issuer field ([495a93337](https://github.com/powerhouse-inc/powerhouse/commit/495a93337))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.41 (2025-09-02)
 
 ### 🚀 Features
