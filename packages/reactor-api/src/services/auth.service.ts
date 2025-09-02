@@ -134,6 +134,7 @@ export class AuthService {
           };
         };
       };
+
       if (!verified) {
         res.status(401).json({ error: "Verification failed" });
         return;
@@ -201,7 +202,7 @@ export class AuthService {
       }
 
       return {
-        address: address.toLowerCase(),
+        address,
         chainId,
         networkId,
       };
@@ -219,7 +220,7 @@ export class AuthService {
       ...this.config.users,
       ...this.config.guests,
     ];
-    return all.includes(address);
+    return all.includes(address.toLocaleLowerCase());
   }
 
   /**
@@ -270,31 +271,35 @@ export class AuthService {
     chainId: number,
     connectId: string,
   ): Promise<boolean> {
+    const url = `https://auth.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
     try {
-      const url = `https://auth.renown.id/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${chainId}&connectId=${encodeURIComponent(connectId)}`;
+      const response = await fetch(url, {
+        method: "GET",
+      });
+      const body = (await response.json()) as unknown;
+      const credential = (
+        body as {
+          credential: {
+            credentialSubject: { id: { id: string } };
+            issuer: { id: string };
+          };
+        }
+      ).credential;
 
-      const response = await fetch(url);
+      const connectIdVerfied = credential.credentialSubject.id.id;
+      const addressVerfied = credential.issuer.id.split(":")[4];
+      const chainIdVerfied = credential.issuer.id.split(":")[3];
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         return false;
       }
 
-      const data = (await response.json()) as {
-        credential?: {
-          id?: string;
-          issuer?: unknown;
-          credentialSubject?: unknown;
-        };
-      };
-
-      // Check if the credential exists and is valid
-      return !!(
-        data.credential?.id &&
-        data.credential?.issuer &&
-        data.credential?.credentialSubject
+      return (
+        connectIdVerfied === connectId &&
+        addressVerfied.toLocaleLowerCase() === address.toLocaleLowerCase() &&
+        chainIdVerfied === chainId.toString()
       );
     } catch (error) {
-      // If there's any error (network, parsing, etc.), consider the credential invalid
       return false;
     }
   }
