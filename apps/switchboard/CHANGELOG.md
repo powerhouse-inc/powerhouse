@@ -1,3 +1,13 @@
+## 4.1.0-dev.40 (2025-09-02)
+
+### 🩹 Fixes
+
+- **switchboard:** added openssl to dockerfile ([a10230c60](https://github.com/powerhouse-inc/powerhouse/commit/a10230c60))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.39 (2025-09-02)
 
 ### 🩹 Fixes
