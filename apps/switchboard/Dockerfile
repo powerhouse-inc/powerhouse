@@ -37,7 +37,7 @@ ENV PH_SWITCHBOARD_PORT=$PORT
 ARG TAG=latest
 ENV TAG=$TAG
 
-RUN pnpm add -g ph-cmd@$TAG
+RUN pnpm add -g ph-cmd@$TAG prisma
 RUN if [[ "$TAG" == *"dev"* ]]; then \
         ph init project --dev --package-manager pnpm; \
     elif [[ "$TAG" == *"staging"* ]]; then \
