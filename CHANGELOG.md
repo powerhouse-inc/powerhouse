@@ -1,3 +1,13 @@
+## 4.1.0-dev.39 (2025-09-02)
+
+### 🩹 Fixes
+
+- **switchboard:** added db push to switchboard entrypoint ([d109e4afb](https://github.com/powerhouse-inc/powerhouse/commit/d109e4afb))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.38 (2025-08-30)
 
 ### 🚀 Features
