@@ -17,6 +17,12 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Install openssl1.1-compat for prisma build
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: openssl1.1-compat
+          version: 1.0
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
