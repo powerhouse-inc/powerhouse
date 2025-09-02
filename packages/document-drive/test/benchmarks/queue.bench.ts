@@ -1,6 +1,7 @@
 import {
   addFolder,
   buildOperations,
+  driveCreateDocument,
   driveDocumentModelModule,
   EventQueueManager,
   type IQueueManager,
@@ -28,12 +29,12 @@ const BENCH_OPTIONS: BenchOptions = {
 
 describe("Process Operations", () => {
   const driveId = generateId();
-  const driveDocument = driveDocumentModelModule.utils.createDocument();
+  const driveDocument = driveCreateDocument();
   const header = createPresignedHeader(
     driveId,
     driveDocument.header.documentType,
   );
-  const drive = driveDocumentModelModule.utils.createDocument();
+  const drive = driveCreateDocument();
   drive.header = header;
   const operations = buildOperations(
     driveDocumentModelModule.reducer,

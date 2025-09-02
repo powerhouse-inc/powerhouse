@@ -1,5 +1,5 @@
-import renownShortHover from "../../../assets/renown-short-hover.png";
-import renownShort from "../../../assets/renown-short.png";
+import renownShortHover from "@powerhousedao/design-system/assets/renown-short-hover.png";
+import renownShort from "@powerhousedao/design-system/assets/renown-short.png";
 import { twMerge } from "tailwind-merge";
 import {
   AccountPopover,

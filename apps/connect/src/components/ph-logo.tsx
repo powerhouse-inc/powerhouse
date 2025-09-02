@@ -1,5 +1,5 @@
-import LogoMain from "#assets/icons/BBP-logo-hover-light.svg?react";
 import { openUrl } from "@powerhousedao/connect";
+import LogoMain from "@powerhousedao/connect/assets/icons/BBP-logo-hover-light.svg?react";
 
 export const PHLogo = () => {
   return (

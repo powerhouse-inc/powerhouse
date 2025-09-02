@@ -3,7 +3,8 @@
   "version": "4.1.0-dev.33",
   "description": "",
   "files": [
-    "/dist"
+    "dist",
+    "assets"
   ],
   "type": "module",
   "repository": {
@@ -19,13 +20,21 @@
       "import": "./dist/src/index.js",
       "types": "./dist/src/index.d.ts"
     },
+    "./assets/*.mp4": "./assets/*.mp4",
+    "./assets/*.png": "./assets/*.png",
+    "./assets/*.svg": "./assets/*.svg",
+    "./assets/*.jpg": "./assets/*.jpg",
+    "./assets/*.jpeg": "./assets/*.jpeg",
+    "./assets/*.gif": "./assets/*.gif",
+    "./assets/*.webp": "./assets/*.webp",
+    "./assets/*.avif": "./assets/*.avif",
     "./style.css": "./dist/style.css"
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src",
+    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",

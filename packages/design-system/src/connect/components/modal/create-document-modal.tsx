@@ -1,4 +1,9 @@
-import { FormInput, Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
+import {
+  FormInput,
+  Icon,
+  Modal,
+  PowerhouseButton,
+} from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";

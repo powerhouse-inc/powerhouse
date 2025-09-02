@@ -5,8 +5,10 @@ import type {
   Operation,
 } from "document-model";
 import {
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   documentModelReducer,
+  documentModelState,
   garbageCollect,
   generateId,
   setModelExtension,
@@ -53,11 +55,8 @@ describe("processOperations", () => {
   const documentId = generateId();
   function createDocumentModel() {
     return {
-      ...documentModelDocumentModelModule.utils.createDocument(),
-      header: createPresignedHeader(
-        documentId,
-        documentModelDocumentModelModule.documentModel.id,
-      ),
+      ...documentModelCreateDocument(),
+      header: createPresignedHeader(documentId, documentModelState.id),
     };
   }
 

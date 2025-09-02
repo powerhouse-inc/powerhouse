@@ -37,11 +37,7 @@ const config: StorybookConfig = {
           external: ["node:crypto"],
         },
       },
-      resolve: {
-        alias: {
-          "#assets": path.join(srcPath, "assets"),
-        },
-      },
+      
     });
   },
 };

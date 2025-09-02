@@ -7,7 +7,7 @@ import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 
-export class Subgraph implements ISubgraph {
+export class BaseSubgraph implements ISubgraph {
   name = "example";
   path = "";
   resolvers: Record<string, any> = {

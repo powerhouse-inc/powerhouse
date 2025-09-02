@@ -1,7 +1,9 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
+import {
+  buildInstallCommand,
+  updatePackagesArray,
+} from "@powerhousedao/ph-cli";
 import { describe, expect, it } from "vitest";
-import { buildInstallCommand } from "../src/commands/install.js";
-import { updatePackagesArray } from "../src/utils.js";
 
 describe("updatePackagesArray", () => {
   it("should add new packages when installing", () => {

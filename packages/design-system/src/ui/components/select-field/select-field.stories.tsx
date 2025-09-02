@@ -1,9 +1,11 @@
 import type { IconName } from "@powerhousedao/design-system";
 import {
-    getDefaultArgTypes,
-    getValidationArgTypes, Icon, PrebuiltArgTypes,
-    StorybookControlCategory,
-    withForm
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  Icon,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
+  withForm,
 } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { SelectField } from "./select-field.js";

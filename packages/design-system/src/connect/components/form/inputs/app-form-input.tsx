@@ -32,7 +32,12 @@ export function AppFormInput<T extends { appId: string }>(
       control={control}
       name={"appId" as Path<T>}
       render={({ field }) => (
-        <ConnectSelect {...delegatedProps} {...field} id="appId" items={items} />
+        <ConnectSelect
+          {...delegatedProps}
+          {...field}
+          id="appId"
+          items={items}
+        />
       )}
     />
   );

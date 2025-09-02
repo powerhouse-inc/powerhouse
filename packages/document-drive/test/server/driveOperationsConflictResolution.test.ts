@@ -9,7 +9,7 @@ import {
   addFolder,
   BrowserStorage,
   copyNode,
-  createDocument,
+  driveCreateDocument,
   DriveBasicClient,
   driveDocumentModelModule,
   driveDocumentReducer,
@@ -204,7 +204,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       const initialDriveDocument = await buildDrive();
       let pushOperationResult: IOperationResult;
 
-      createDocument();
+      driveCreateDocument();
 
       const client1 = new DriveBasicClient(
         server,
@@ -362,7 +362,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       const initialDriveDocument = await buildDrive();
       let pushOperationResult: IOperationResult;
 
-      createDocument();
+      driveCreateDocument();
 
       const client1 = new DriveBasicClient(
         server,
@@ -432,7 +432,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         const initialDriveDocument = await buildDrive();
         let pushOperationResult: IOperationResult;
 
-        createDocument();
+        driveCreateDocument();
 
         const client1 = new DriveBasicClient(
           server,
@@ -535,7 +535,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       const initialDriveDocument = await buildDrive();
       let pushOperationResult: IOperationResult;
 
-      createDocument();
+      driveCreateDocument();
 
       const client1 = new DriveBasicClient(
         server,

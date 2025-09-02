@@ -1,21 +1,30 @@
-import type { DocumentDriveDocument, DocumentDriveUtils } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import {
-  actions as DocumentDriveActions,
+  driveCreateDocument,
+  driveCreateState,
+  driveDocumentFileExtension,
   driveDocumentModel,
   driveDocumentReducer,
-  DriveUtils,
+  driveLoadFromFile,
+  driveLoadFromInput,
+  driveSaveToFile,
+  driveSaveToFileHandle,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { actions as BaseActions } from "document-model";
-
-const utils = { ...DriveUtils } satisfies DocumentDriveUtils;
-
-const actions = { ...BaseActions, ...DocumentDriveActions };
+import * as actions from "./gen/creators.js";
 
 export const driveDocumentModelModule: DocumentModelModule<DocumentDriveDocument> =
   {
-    reducer: driveDocumentReducer,
     actions,
-    utils,
+    reducer: driveDocumentReducer,
     documentModel: driveDocumentModel,
+    utils: {
+      fileExtension: driveDocumentFileExtension,
+      createState: driveCreateState,
+      createDocument: driveCreateDocument,
+      loadFromFile: driveLoadFromFile,
+      loadFromInput: driveLoadFromInput,
+      saveToFile: driveSaveToFile,
+      saveToFileHandle: driveSaveToFileHandle,
+    },
   };

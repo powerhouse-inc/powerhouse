@@ -1,14 +1,15 @@
 import type {
-    InputBaseProps,
-    TransformerType,
+  InputBaseProps,
+  TransformerType,
 } from "@powerhousedao/design-system";
 import {
-    cn,
-    Icon, Input,
-    sharedValueTransformers,
-    Tooltip,
-    TooltipProvider,
-    ValueTransformer
+  cn,
+  Icon,
+  Input,
+  sharedValueTransformers,
+  Tooltip,
+  TooltipProvider,
+  ValueTransformer,
 } from "@powerhousedao/design-system";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";

@@ -39,7 +39,8 @@ export function Errors(props: ErrorsProps) {
     </p>
   ));
 
-  if (hasErrors) return <ConnectTooltip content={tooltipContent}>{content}</ConnectTooltip>;
+  if (hasErrors)
+    return <ConnectTooltip content={tooltipContent}>{content}</ConnectTooltip>;
 
   return content;
 }

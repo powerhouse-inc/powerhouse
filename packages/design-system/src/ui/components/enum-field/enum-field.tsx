@@ -1,6 +1,6 @@
 import type {
-    RadioGroupFieldProps,
-    SelectFieldProps,
+  RadioGroupFieldProps,
+  SelectFieldProps,
 } from "@powerhousedao/design-system";
 import { RadioGroupField, SelectField } from "@powerhousedao/design-system";
 import React from "react";

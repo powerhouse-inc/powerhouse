@@ -5,7 +5,6 @@
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "paths": {
             "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
-            "#assets/*": ["./assets/*"]
         },
         "types": [
             "node",

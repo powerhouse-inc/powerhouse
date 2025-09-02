@@ -1,18 +1,18 @@
 import {
   addFolder,
-  createDocument,
   deleteNode,
   DocumentDrive as DocumentDriveClass,
+  driveCreateDocument,
   driveDocumentReducer,
   setAvailableOffline,
   setDriveName,
   setSharingType,
 } from "document-drive";
-import type { Signal } from "document-model";
+import { type Signal } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {
-    let documentDrive = createDocument();
+    let documentDrive = driveCreateDocument();
 
     expect(documentDrive.state.global.name).toBe("");
 
@@ -27,7 +27,7 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should delete children when node is deleted", () => {
-    let documentDrive = createDocument();
+    let documentDrive = driveCreateDocument();
     documentDrive = driveDocumentReducer(
       documentDrive,
       addFolder({
@@ -95,7 +95,7 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should set local sharing type", () => {
-    let documentDrive = createDocument();
+    let documentDrive = driveCreateDocument();
     documentDrive = driveDocumentReducer(
       documentDrive,
       setSharingType({
@@ -107,7 +107,7 @@ describe("DocumentDrive Class", () => {
   });
 
   it("should set available offline", () => {
-    let documentDrive = createDocument();
+    let documentDrive = driveCreateDocument();
 
     expect(documentDrive.state.local.availableOffline).toBe(false);
     documentDrive = driveDocumentReducer(

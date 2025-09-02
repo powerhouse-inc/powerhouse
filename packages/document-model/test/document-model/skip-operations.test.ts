@@ -1,8 +1,10 @@
 import type { DocumentModelDocument } from "document-model";
 import {
-  createDocument,
+  documentModelCreateDocument,
   documentModelReducer,
+  documentModelStateReducer,
   garbageCollectDocumentOperations,
+  replayOperations,
   setAuthorName,
   setAuthorWebsite,
   setModelDescription,
@@ -11,13 +13,11 @@ import {
   setModelName,
 } from "document-model";
 import { expect } from "vitest";
-import { documentModelStateReducer } from "document-model";
-import { replayOperations } from "document-model";
 
 describe("Document Operations", () => {
   describe("Skip header operations", () => {
     it("should include skip param in base operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -48,7 +48,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in base operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -99,7 +99,7 @@ describe("Document Operations", () => {
 
   describe("Skip module operations", () => {
     it("should include skip param in module operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -126,7 +126,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in module operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -171,7 +171,7 @@ describe("Document Operations", () => {
 
   describe("Skip operation-error operations", () => {
     it("should include skip param in operation-error operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -203,7 +203,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation-error operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -263,7 +263,7 @@ describe("Document Operations", () => {
 
   describe("Skip operation-example operations", () => {
     it("should include skip param in operation-example operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -290,7 +290,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation-example operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -335,7 +335,7 @@ describe("Document Operations", () => {
 
   describe("Skip operation operations", () => {
     it("should include skip param in operation operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -366,7 +366,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -417,7 +417,7 @@ describe("Document Operations", () => {
 
   describe("Skip object operations", () => {
     it("should include skip param in object operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
       document = documentModelReducer(
@@ -448,7 +448,7 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in object operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,
@@ -499,7 +499,7 @@ describe("Document Operations", () => {
 
   describe("state replayOperations", () => {
     it("skipped operations should be ignored when re-calculate document state", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
       document = documentModelReducer(
         document,

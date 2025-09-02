@@ -5,7 +5,7 @@
   "scripts": {
     "prepare": "husky",
     "tsc": "tsc --build",
-    "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --cache --cache-strategy content",
+    "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "generate-document-drive-prisma": "pnpm --filter document-drive prisma-generate",
     "build:misc": "pnpm --filter !academy -r --no-bail build",
     "build:css": "pnpm -r --no-bail build:css",

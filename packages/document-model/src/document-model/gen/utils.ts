@@ -1,6 +1,7 @@
 import type {
   CreateDocument,
   CreateState,
+  DocumentModelDocument,
   LoadFromFile,
   LoadFromInput,
   SaveToFile,
@@ -13,19 +14,16 @@ import {
   baseSaveToFile,
   baseSaveToFileHandle,
   defaultBaseState,
+  documentModelFileExtension,
   documentModelReducer,
-} from "document-model";
-import {
   documentModelState,
   documentType,
-  fileExtension,
   initialLocalState,
-} from "./constants.js";
-import type { DocumentModelDocument } from "./types.js";
+} from "document-model";
 
-export { fileExtension } from "./constants.js";
-
-export const createState: CreateState<DocumentModelDocument> = (state) => {
+export const documentModelCreateState: CreateState<DocumentModelDocument> = (
+  state,
+) => {
   return {
     ...defaultBaseState(),
     global: { ...documentModelState, ...(state?.global ?? {}) },
@@ -33,20 +31,23 @@ export const createState: CreateState<DocumentModelDocument> = (state) => {
   };
 };
 
-export const createDocument: CreateDocument<DocumentModelDocument> = (
-  state,
-) => {
-  const document = baseCreateDocument(createState, state);
+export const documentModelCreateDocument: CreateDocument<
+  DocumentModelDocument
+> = (state) => {
+  const document = baseCreateDocument(documentModelCreateState, state);
   document.header.documentType = documentType;
 
   return document;
 };
 
-export const saveToFile: SaveToFile = (document, path, name) => {
-  return baseSaveToFile(document, path, fileExtension, name);
+export const documentModelSaveToFile: SaveToFile = (document, path, name) => {
+  return baseSaveToFile(document, path, documentModelFileExtension, name);
 };
 
-export const saveToFileHandle: SaveToFileHandle = (document, input) => {
+export const documentModelSaveToFileHandle: SaveToFileHandle = (
+  document,
+  input,
+) => {
   return baseSaveToFileHandle(document, input);
 };
 
@@ -56,6 +57,8 @@ export const documentModelLoadFromFile: LoadFromFile<DocumentModelDocument> = (
   return baseLoadFromFile(path, documentModelReducer);
 };
 
-export const loadFromInput: LoadFromInput<DocumentModelDocument> = (input) => {
+export const documentModelLoadFromInput: LoadFromInput<
+  DocumentModelDocument
+> = (input) => {
   return baseLoadFromInput(input, documentModelReducer);
 };

@@ -1,8 +1,9 @@
 import {
-    cn, CommandEmpty,
-    CommandGroup,
-    CommandItem,
-    CommandList
+  cn,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
 } from "@powerhousedao/design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";

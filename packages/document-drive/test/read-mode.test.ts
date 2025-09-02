@@ -7,10 +7,10 @@ import type {
 import {
   addFile,
   createBaseState,
-  createDocument,
-  createState,
+  driveCreateDocument,
   driveDocumentModelModule,
   driveDocumentReducer,
+  phFactoryDriveCreateDocument,
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
@@ -26,8 +26,8 @@ import type {
   PHDocument,
 } from "document-model";
 import {
-  createDocument as createDocumentModelDocument,
-  createState as createDocumentModelState,
+  documentModelCreateDocument,
+  documentModelCreateState,
   documentModelDocumentModelModule,
   generateId,
 } from "document-model";
@@ -65,11 +65,9 @@ function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
   state: Partial<DocumentDriveState>,
 ): DocumentDriveDocument {
-  const doc = createDocument(
-    createState({
-      global: state,
-    }),
-  );
+  const doc = phFactoryDriveCreateDocument({
+    global: state,
+  });
   doc.header.id = id;
   doc.header.slug = slug;
 
@@ -79,8 +77,8 @@ function buildDriveDocument(
 function buildModelDocument(
   state: Partial<DocumentModelState>,
 ): DocumentModelDocument {
-  return createDocumentModelDocument(
-    createDocumentModelState({
+  return documentModelCreateDocument(
+    documentModelCreateState({
       global: state,
     }),
   );
@@ -344,7 +342,7 @@ describe.skip("Read mode methods", () => {
     const readDriveId = generateId();
     const documentId = generateId();
 
-    let drive = createDocument(
+    let drive = driveCreateDocument(
       createBaseState(
         {
           name: "Read drive",
@@ -358,7 +356,7 @@ describe.skip("Read mode methods", () => {
     drive.header.id = readDriveId;
     drive.header.slug = "read-drive";
 
-    let document = createDocument();
+    let document = driveCreateDocument();
     const addNodeAction = addFile({
       name: "Document 1",
       documentType: documentModelDocumentModelModule.documentModel.id,

@@ -1,16 +1,16 @@
 import { connectConfig, serviceWorkerManager } from "@powerhousedao/connect";
 import {
-    Combobox,
-    FormInput,
-    Icon,
-    Modal,
-    PowerhouseButton,
+  Combobox,
+  FormInput,
+  Icon,
+  Modal,
+  PowerhouseButton,
 } from "@powerhousedao/design-system";
 import {
-    addTrigger,
-    registerNewPullResponderTrigger,
-    removeTrigger,
-    useDrives,
+  addTrigger,
+  registerNewPullResponderTrigger,
+  removeTrigger,
+  useDrives,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";

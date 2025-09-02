@@ -20,8 +20,8 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
-  createDocument as createDocumentModelDocument,
   createPresignedHeader,
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   generateId,
   setModelName,
@@ -131,7 +131,7 @@ describe.each(queueLayers)(
         }),
       ]);
 
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
       const header = createPresignedHeader(documentId, documentType);
       document.header = header;
       await server.addDocument(document);
@@ -206,7 +206,7 @@ describe.each(queueLayers)(
         }),
       ]);
 
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
       const header = createPresignedHeader(fileId, documentType);
       await server.addDocument({ ...document, header });
       const mutation = buildOperation(
@@ -299,7 +299,7 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
       const driveId = drive.header.id;
 
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
 
       await server.addDocument(document);
 

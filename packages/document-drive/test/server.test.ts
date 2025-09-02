@@ -29,6 +29,7 @@ import type {
 } from "document-model";
 import {
   createPresignedHeader,
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   generateId,
   setModelName,
@@ -108,7 +109,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
   function createDocumentModelWithId(id: string): DocumentModelDocument {
     return {
-      ...documentModelDocumentModelModule.utils.createDocument(),
+      ...documentModelCreateDocument(),
       header: createPresignedHeader(
         id,
         documentModelDocumentModelModule.documentModel.id,
@@ -787,7 +788,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       .withStorage(await buildStorage())
       .build();
 
-    let document = documentModelDocumentModelModule.utils.createDocument();
+    let document = documentModelCreateDocument();
     const documentId = document.header.id;
 
     // adds document

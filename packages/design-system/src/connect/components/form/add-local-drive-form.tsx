@@ -1,11 +1,11 @@
 import {
-    AppFormInput,
-    AvailableOfflineToggle,
-    FormInput,
-    Label,
-    LOCAL,
-    PowerhouseButton,
-    SharingTypeFormInput,
+  AppFormInput,
+  AvailableOfflineToggle,
+  FormInput,
+  Label,
+  LOCAL,
+  PowerhouseButton,
+  SharingTypeFormInput,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { App } from "document-model";

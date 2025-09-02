@@ -5,7 +5,7 @@
 
 import type { DocumentDriveDocument } from "document-drive";
 import {
-  createDocument,
+  driveCreateDocument,
   driveDocumentReducer,
   setAvailableOffline,
   SetAvailableOfflineInputSchema,
@@ -21,7 +21,7 @@ describe("Drive Operations", () => {
   let document: DocumentDriveDocument;
 
   beforeEach(() => {
-    document = createDocument();
+    document = driveCreateDocument();
   });
 
   it("should handle setDriveName operation", () => {

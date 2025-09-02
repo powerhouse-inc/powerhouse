@@ -1,4 +1,4 @@
-import connectLogo from "#assets/connect.png";
+import connectLogo from "@powerhousedao/connect/connect.png";
 import { WagmiContext } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";

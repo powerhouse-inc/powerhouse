@@ -1,14 +1,14 @@
+import type { Context } from "@powerhousedao/reactor-api";
 import { childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { Subgraph } from "@powerhousedao/reactor-api";
-import type { Context } from "../types.js";
+import { BaseSubgraph } from "../base-subgraph.js";
 
 type SystemContext = Context;
 
 const logger = childLogger(["reactor", "system-subgraph"]);
 
-export class SystemSubgraph extends Subgraph {
+export class SystemSubgraph extends BaseSubgraph {
   name = "system";
 
   typeDefs = gql`

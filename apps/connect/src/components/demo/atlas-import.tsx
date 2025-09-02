@@ -1,5 +1,5 @@
-import AtlasIcon from "#assets/icons/Atlas-Logomark.svg?react";
-import RefreshIcon from "#assets/icons/refresh.svg?react";
+import AtlasIcon from "@powerhousedao/connect/assets/icons/Atlas-Logomark.svg?react";
+import RefreshIcon from "@powerhousedao/connect/assets/icons/refresh.svg?react";
 import { PowerhouseButton } from "@powerhousedao/design-system";
 import { addRemoteDrive, useReactor } from "@powerhousedao/reactor-browser";
 import { gql, request } from "graphql-request";

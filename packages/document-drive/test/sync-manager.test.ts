@@ -12,6 +12,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import {
   documentModelDocumentModelModule as DocumentModel,
+  documentModelCreateDocument,
   generateId,
 } from "document-model";
 import { createNanoEvents } from "nanoevents";
@@ -293,7 +294,7 @@ describe("Synchronization Manager with memory adapters", () => {
       });
     }).rejects.toThrowError("Document with id non-existent not found");
 
-    const document = DocumentModel.utils.createDocument();
+    const document = documentModelCreateDocument();
     await storage.create(document);
 
     // Getting sync unit for non-existent document scope should return undefined

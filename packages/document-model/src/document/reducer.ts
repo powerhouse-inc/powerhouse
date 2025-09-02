@@ -534,7 +534,6 @@ export function createReducer<TDocument extends PHDocument>(
   stateReducer: StateReducer<TDocument>,
   documentReducer = baseReducer,
 ): Reducer<TDocument> {
-  console.log("createReducer", stateReducer, documentReducer);
   const reducer: Reducer<TDocument> = (
     document: TDocument,
     action: Action,
@@ -543,6 +542,5 @@ export function createReducer<TDocument extends PHDocument>(
   ) => {
     return documentReducer(document, action, stateReducer, dispatch, options);
   };
-  console.log("reducer", reducer);
   return reducer;
 }

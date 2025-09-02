@@ -1,8 +1,8 @@
 import {
-    ConnectTooltip,
-    ENSAvatar,
-    formatEthAddress,
-    Icon,
+  ConnectTooltip,
+  ENSAvatar,
+  formatEthAddress,
+  Icon,
 } from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
 

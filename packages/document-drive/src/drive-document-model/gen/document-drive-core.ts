@@ -3,7 +3,7 @@ import type {
   DocumentDriveLocalState,
   DocumentDriveState,
 } from "document-drive";
-import { driveDocumentReducer, DriveUtils } from "document-drive";
+import { driveCreateDocument, driveDocumentReducer } from "document-drive";
 import type { BaseState, PartialState, SignalDispatch } from "document-model";
 import { BaseDocumentClass } from "document-model";
 
@@ -23,11 +23,7 @@ export abstract class DocumentDriveCore extends BaseDocumentClass<
     >,
     dispatch?: SignalDispatch,
   ) {
-    super(
-      driveDocumentReducer,
-      DriveUtils.createDocument(initialState),
-      dispatch,
-    );
+    super(driveDocumentReducer, driveCreateDocument(initialState), dispatch);
   }
 
   public saveToFile(path: string, name?: string) {

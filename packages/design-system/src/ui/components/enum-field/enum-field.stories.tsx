@@ -3,10 +3,10 @@ import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 
 import {
-    getDefaultArgTypes,
-    getValidationArgTypes,
-    StorybookControlCategory,
-    withForm,
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  StorybookControlCategory,
+  withForm,
 } from "@powerhousedao/design-system";
 import { EnumField } from "./enum-field.js";
 

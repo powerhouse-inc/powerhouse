@@ -1,7 +1,7 @@
 import {
-    ConnectTooltipProvider,
-    Pagination,
-    usePagination,
+  ConnectTooltipProvider,
+  Pagination,
+  usePagination,
 } from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
 import { garbageCollect, sortOperations } from "document-model";

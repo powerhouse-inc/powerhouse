@@ -1,15 +1,15 @@
 import {
   addFolder,
   copyNode,
-  createDocument,
-  moveNode,
+  driveCreateDocument,
   driveDocumentReducer,
+  moveNode,
 } from "document-drive";
 import { generateId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("DocumentDrive Actions", () => {
-  let documentDrive = createDocument();
+  let documentDrive = driveCreateDocument();
 
   const folder1Id = generateId();
   const folder1_1Id = generateId();
@@ -18,7 +18,7 @@ describe("DocumentDrive Actions", () => {
   const folder3Id = generateId();
 
   beforeEach(() => {
-    documentDrive = createDocument();
+    documentDrive = driveCreateDocument();
 
     documentDrive = driveDocumentReducer(
       documentDrive,

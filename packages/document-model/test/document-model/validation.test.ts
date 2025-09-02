@@ -6,7 +6,7 @@ import type {
   ValidationError,
 } from "document-model";
 import {
-  createDocument,
+  documentModelCreateDocument,
   documentModelReducer,
   setStateSchema,
   validateInitialState,
@@ -18,10 +18,10 @@ import {
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";
-  let doc = createDocument();
+  let doc = documentModelCreateDocument();
 
   beforeEach(() => {
-    doc = createDocument({
+    doc = documentModelCreateDocument({
       id: "test-id",
       name: documentName,
       description: "test description",

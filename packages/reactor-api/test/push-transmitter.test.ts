@@ -1,3 +1,9 @@
+import {
+  createDriveHandlers,
+  expectUTCTimestamp,
+  getDocumentScopeIndexes,
+  testSetupReactor,
+} from "@powerhousedao/reactor-api";
 import type {
   IDocumentDriveServer,
   IListenerManager,
@@ -6,17 +12,16 @@ import type {
 import {
   addFile,
   addFolder,
-  driveDocumentModelModule,
-  ReactorBuilder,
   requestPublicDrive,
   SwitchboardPushTransmitter,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import {
+  documentModelCreateDocument,
+  generateId,
+  setAuthorName,
+} from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDriveHandlers } from "./drive-handlers.js";
-import { expectUTCTimestamp, getDocumentScopeIndexes } from "./utils.js";
 
 const remoteUrl = "http://test.com/d/test";
 
@@ -30,16 +35,6 @@ describe("Push Transmitter", () => {
       name: "Test Drive",
     },
   };
-
-  async function setupReactor() {
-    const builder = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as DocumentModelModule[]);
-    const reactor = await builder.build();
-    await reactor.initialize();
-    return { reactor, listenerManager: builder.listenerManager! };
-  }
 
   async function setupListener(listenerManager: IListenerManager) {
     const uuid = generateId();
@@ -64,16 +59,16 @@ describe("Push Transmitter", () => {
 
     // TODO: circular reference
     listener.transmitter = new SwitchboardPushTransmitter(remoteUrl);
-    await listenerManager?.setListener(remoteDrive.id, listener);
+    await listenerManager.setListener(remoteDrive.id, listener);
 
     return listener;
   }
 
   beforeEach(async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
-
+    console.log({ reactor, remoteReactor });
     server = setupServer(...createDriveHandlers(reactor, drive.header.id));
     server.listen({ onUnhandledRequest: "error" });
   });
@@ -94,7 +89,7 @@ describe("Push Transmitter", () => {
   });
 
   it("should push drive operation to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
@@ -141,12 +136,12 @@ describe("Push Transmitter", () => {
   });
 
   it("should push new document to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
     const listener = await setupListener(listenerManager);
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await reactor.addDocument(newDocument);
 
@@ -204,17 +199,17 @@ describe("Push Transmitter", () => {
   });
 
   it("should push new document with operations to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
     const listener = await setupListener(listenerManager);
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await reactor.addDocument(newDocument);
     const result = await reactor.queueAction(
       documentId,
-      documentModelDocumentModelModule.actions.setAuthorName({
+      setAuthorName({
         authorName: "test",
       }),
     );

@@ -12,7 +12,7 @@ import type {
 import {
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
-  createDriveState,
+  driveCreateState,
   PullResponderTransmitter,
   setAvailableOffline,
   setDriveName,
@@ -33,7 +33,7 @@ export async function addDrive(drive: DriveInput, preferredEditor?: string) {
     throw new Error("User is not allowed to create drives");
   }
   const id = drive.id || generateId();
-  const driveInput = createDriveState(drive);
+  const driveInput = driveCreateState(drive);
   const newDrive = await reactor.addDrive(
     {
       global: driveInput.global,

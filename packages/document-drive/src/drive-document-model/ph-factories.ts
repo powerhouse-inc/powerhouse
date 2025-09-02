@@ -2,19 +2,19 @@
  * Factory methods for creating DocumentDriveDocument instances
  */
 
+import {
+  driveCreateDocument,
+  type DocumentDriveDocument,
+  type DocumentDriveLocalState,
+  type DocumentDrivePHState,
+  type DocumentDriveState,
+} from "document-drive";
 import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
 import {
   createBaseState,
   defaultBaseState,
   testCreateBaseState,
 } from "document-model";
-import type {
-  DocumentDriveDocument,
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "./gen/types.js";
-import { createDocument } from "./gen/utils.js";
-import type { DocumentDrivePHState } from "./types.js";
 
 export function defaultGlobalState(): DocumentDriveState {
   return {
@@ -76,7 +76,7 @@ export function createState(
  * This properly handles the PHBaseState requirements while allowing
  * document-specific state to be set.
  */
-export function createDriveDocument(
+export function phFactoryDriveCreateDocument(
   state: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
@@ -84,7 +84,7 @@ export function createDriveDocument(
     local?: Partial<DocumentDriveLocalState>;
   }>,
 ): DocumentDriveDocument {
-  const document = createDocument(
+  const document = driveCreateDocument(
     createState(
       testCreateBaseState(state.auth, state.document),
       state.global,

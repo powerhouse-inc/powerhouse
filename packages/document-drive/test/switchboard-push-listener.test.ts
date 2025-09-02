@@ -12,6 +12,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   generateId,
   setModelName,
@@ -127,7 +128,7 @@ describe("SwitchboardPush Listener", () => {
       ],
     ]);
 
-    const document = documentModelDocumentModelModule.utils.createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await server.addDocument(document);
 

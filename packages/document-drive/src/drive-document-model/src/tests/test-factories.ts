@@ -3,7 +3,7 @@
  */
 
 import type { DocumentDriveDocument, Node } from "document-drive";
-import { createDriveDocument } from "../../ph-factories.js";
+import { phFactoryDriveCreateDocument } from "../../ph-factories.js";
 
 /**
  * Creates a DocumentDriveDocument with custom nodes in the global state
@@ -11,7 +11,7 @@ import { createDriveDocument } from "../../ph-factories.js";
 export function createDocumentWithNodes(
   nodes: Partial<Node>[],
 ): DocumentDriveDocument {
-  return createDriveDocument({
+  return phFactoryDriveCreateDocument({
     global: {
       nodes: nodes as Node[],
     },
@@ -25,7 +25,7 @@ export function createDocumentWithState(
   globalState?: Partial<DocumentDriveDocument["state"]["global"]>,
   localState?: Partial<DocumentDriveDocument["state"]["local"]>,
 ): DocumentDriveDocument {
-  return createDriveDocument({
+  return phFactoryDriveCreateDocument({
     global: globalState,
     local: localState,
   });

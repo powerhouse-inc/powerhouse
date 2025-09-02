@@ -1,9 +1,9 @@
 import type { WithDifference } from "@powerhousedao/design-system";
 import {
-    cn,
-    Icon,
-    Tooltip,
-    TooltipProvider,
+  cn,
+  Icon,
+  Tooltip,
+  TooltipProvider,
 } from "@powerhousedao/design-system";
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";

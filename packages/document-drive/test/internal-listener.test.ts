@@ -10,6 +10,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import {
   createPresignedHeader,
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   generateId,
   setModelName,
@@ -102,7 +103,7 @@ describe("Internal Listener", () => {
     ]);
 
     const documentId = generateId();
-    const document = documentModelDocumentModelModule.utils.createDocument();
+    const document = documentModelCreateDocument();
     const header = createPresignedHeader(
       documentId,
       document.header.documentType,

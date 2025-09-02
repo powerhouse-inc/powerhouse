@@ -48,13 +48,13 @@ import {
   ReadModeServer,
   SwitchboardPushTransmitter,
   childLogger,
-  createDocument as createDriveDocument,
   filterOperationsByRevision,
   isActionJob,
   isAtRevision,
   isDocumentDrive,
   isDocumentJob,
   isOperationJob,
+  phFactoryDriveCreateDocument,
   removeListener,
   removeTrigger,
   requestPublicDriveWithTokenFromReactor,
@@ -75,6 +75,7 @@ import type {
 import {
   attachBranch,
   createPresignedHeader,
+  documentModelCreateDocument,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -142,9 +143,7 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelModule.utils.createDocument(
-        initialState?.state,
-      );
+      const document = documentModelCreateDocument(initialState?.state);
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
@@ -264,7 +263,7 @@ export class BaseDocumentDriveServer
 
     await this.queueManager.init(this.queueDelegate, (error) => {
       this.logger.error(`Error initializing queue manager`, error);
-      errors.push(error);
+      // errors.push(error);
     });
 
     try {
@@ -575,6 +574,7 @@ export class BaseDocumentDriveServer
     const documentModelModule = this.documentModelModules.find(
       (module) => module.documentModel.id === documentType,
     );
+
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
@@ -609,8 +609,7 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
-    const document = createDriveDocument({
-      // @ts-expect-error TODO: fix this
+    const document = phFactoryDriveCreateDocument({
       global: input.global,
       local: input.local,
     });

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import type { DocumentSpecification } from "document-model";
 import {
   defaultBaseState,
-  createState as documentModelCreateState,
+  documentModelCreateState,
   documentModelReducer,
   generateId,
 } from "document-model";

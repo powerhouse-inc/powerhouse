@@ -1,5 +1,5 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import { Subgraph } from "@powerhousedao/reactor-api";
+import { BaseSubgraph } from "./base-subgraph.js";
 
 export function isSubgraphClass(
   candidate: unknown,
@@ -8,7 +8,7 @@ export function isSubgraphClass(
 
   let proto: unknown = Object.getPrototypeOf(candidate);
   while (proto) {
-    if (Object.prototype.isPrototypeOf.call(proto, Subgraph)) return true;
+    if (Object.prototype.isPrototypeOf.call(proto, BaseSubgraph)) return true;
 
     proto = Object.getPrototypeOf(proto);
   }

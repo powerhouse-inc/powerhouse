@@ -1,4 +1,3 @@
-export * from "@powerhousedao/reactor-api";
 export * from "./analytics-subgraph.js";
 export * from "./base-subgraph.js";
 export * from "./drive-subgraph.js";

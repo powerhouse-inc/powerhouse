@@ -1,13 +1,13 @@
 import {
-    AvailableOfflineToggle,
-    Disclosure,
-    Divider,
-    DriveName,
-    FormInput,
-    LocationInfo,
-    PowerhouseButton,
-    PUBLIC,
-    SWITCHBOARD,
+  AvailableOfflineToggle,
+  Disclosure,
+  Divider,
+  DriveName,
+  FormInput,
+  LocationInfo,
+  PowerhouseButton,
+  PUBLIC,
+  SWITCHBOARD,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";

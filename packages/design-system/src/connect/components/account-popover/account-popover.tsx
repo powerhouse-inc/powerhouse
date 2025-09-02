@@ -1,7 +1,7 @@
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 

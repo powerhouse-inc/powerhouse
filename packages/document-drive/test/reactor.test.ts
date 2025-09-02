@@ -3,7 +3,10 @@ import type { DocumentModelModule } from "document-model";
 import { describe, test } from "vitest";
 
 import { driveDocumentModelModule } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
+} from "document-model";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -21,8 +24,7 @@ describe("Internal Listener", () => {
   test("should add document", async ({ expect }) => {
     const reactor = await buildReactor();
 
-    const documentToCreate =
-      documentModelDocumentModelModule.utils.createDocument();
+    const documentToCreate = documentModelCreateDocument();
     const createdDocument = await reactor.addDocument(documentToCreate);
     expect(createdDocument).toMatchObject(documentToCreate);
 

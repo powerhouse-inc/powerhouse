@@ -1,4 +1,4 @@
-import ImgPowerhouse from "../../../assets/powerhouse-rounded.png";
+import ImgPowerhouse from "@powerhousedao/design-system/assets/powerhouse-rounded.png";
 import type { CSSProperties } from "react";
 import { useEnsAvatar, useEnsName } from "wagmi";
 

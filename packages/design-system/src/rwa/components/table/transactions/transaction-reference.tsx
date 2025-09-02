@@ -1,9 +1,9 @@
 import type { GroupTransactionFormInputs } from "@powerhousedao/design-system";
 import {
-    ConnectTooltip,
-    ConnectTooltipProvider,
-    getIsTransaction,
-    RWATableTextInput,
+  ConnectTooltip,
+  ConnectTooltipProvider,
+  getIsTransaction,
+  RWATableTextInput,
 } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";

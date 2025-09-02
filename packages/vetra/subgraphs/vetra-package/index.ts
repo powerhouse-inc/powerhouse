@@ -1,9 +1,9 @@
-import { Subgraph } from "@powerhousedao/reactor-api";
+import { BaseSubgraph } from "@powerhousedao/reactor-api";
 
-import { schema } from "./schema.js";
 import { getResolvers } from "./resolvers.js";
+import { schema } from "./schema.js";
 
-export class VetraPackageSubgraph extends Subgraph {
+export class VetraPackageSubgraph extends BaseSubgraph {
   name = "vetra-package";
 
   typeDefs = schema;

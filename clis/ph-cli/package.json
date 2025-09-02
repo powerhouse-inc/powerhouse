@@ -42,7 +42,6 @@
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "colorette": "^2.0.20",

@@ -7,9 +7,9 @@ import type {
   SignalDispatch,
 } from "document-model";
 import {
-  createDocument,
+  documentModelCreateDocument,
+  documentModelFileExtension,
   documentModelReducer,
-  fileExtension,
 } from "document-model";
 
 import { BaseDocumentClass } from "../../document/object.js";
@@ -19,13 +19,17 @@ export abstract class DocumentModelCore extends BaseDocumentClass<
   DocumentModelLocalState,
   DocumentModelAction
 > {
-  static fileExtension = fileExtension;
+  static fileExtension = documentModelFileExtension;
 
   constructor(
     initialState?: Partial<BaseStateFromDocument<DocumentModelDocument>>,
     dispatch?: SignalDispatch,
   ) {
-    super(documentModelReducer, createDocument(initialState), dispatch);
+    super(
+      documentModelReducer,
+      documentModelCreateDocument(initialState),
+      dispatch,
+    );
   }
 
   public saveToFile(path: string, name?: string) {

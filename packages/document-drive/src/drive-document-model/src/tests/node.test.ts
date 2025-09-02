@@ -11,7 +11,7 @@ import {
   AddFolderInputSchema,
   copyNode,
   CopyNodeInputSchema,
-  createDocument,
+  driveCreateDocument,
   deleteNode,
   DeleteNodeInputSchema,
   driveDocumentReducer,
@@ -32,7 +32,7 @@ describe("Node Operations", () => {
   let document: DocumentDriveDocument;
 
   beforeEach(() => {
-    document = createDocument();
+    document = driveCreateDocument();
   });
 
   it("should handle addFile operation", () => {

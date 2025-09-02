@@ -1,4 +1,9 @@
-import type { PHDocument } from "document-model";
+import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+  type PHDocument,
+} from "document-model";
 import type { ExpectStatic } from "vitest";
 
 export function expectUTCTimestamp(expect: ExpectStatic): unknown {
@@ -19,4 +24,13 @@ export function getDocumentScopeIndexes(document: PHDocument) {
     }),
     {} as Record<string, number>,
   );
+}
+
+export async function testSetupReactor() {
+  const reactor = new ReactorBuilder([
+    documentModelDocumentModelModule,
+    driveDocumentModelModule,
+  ] as DocumentModelModule[]).build();
+  await reactor.initialize();
+  return { reactor, listenerManager: reactor.listeners };
 }

@@ -22,19 +22,7 @@
       "path": "../../packages/reactor-local"
     },
     {
-      "path": "../../packages/design-system"
-    },
-    {
-      "path": "../../packages/reactor-api"
-    },
-    {
       "path": "../../packages/builder-tools"
-    },
-    {
-      "path": "../../packages/builder-tools"
-    },
-    {
-      "path": "../../packages/reactor-browser"
     },
     {
       "path": "../../apps/switchboard"

@@ -14,6 +14,9 @@
     },
     {
       "path": "../design-system"
+    },
+    {
+      "path": "../reactor-browser"
     }
   ],
 }

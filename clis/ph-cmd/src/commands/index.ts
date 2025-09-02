@@ -5,7 +5,14 @@ import { setupGlobalsCommand } from "./setup-globals.js";
 import { updateCommand } from "./update.js";
 import { useCommand } from "./use.js";
 import { versionOption } from "./version.js";
-
+export {
+  helpCommand,
+  initCommand,
+  setupGlobalsCommand,
+  updateCommand,
+  useCommand,
+  versionOption,
+};
 export const commands = [
   setupGlobalsCommand,
   initCommand,

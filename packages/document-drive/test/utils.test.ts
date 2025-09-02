@@ -1,6 +1,6 @@
 import {
   buildDocumentRevisionsFilter,
-  createDocument,
+  driveCreateDocument,
   driveDocumentReducer,
   filterOperationsByRevision,
   isAfterRevision,
@@ -18,7 +18,7 @@ describe("utils", () => {
   });
 
   it("should build document revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(buildDocumentRevisionsFilter(document)).toStrictEqual({
       global: -1,
@@ -34,7 +34,7 @@ describe("utils", () => {
   });
 
   it("should check revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(isAtRevision(document)).toBe(true);
     expect(isAtRevision(document, { global: -1, local: -1 })).toBe(true);
@@ -54,7 +54,7 @@ describe("utils", () => {
   });
 
   it("should check document is at least at revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(isAfterRevision(document)).toBe(true);
     expect(isAfterRevision(document, { global: -1, local: -1 })).toBe(false);
@@ -74,7 +74,7 @@ describe("utils", () => {
   });
 
   it("should filter operations by revision", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(filterOperationsByRevision(document.operations)).toStrictEqual({
       global: [],

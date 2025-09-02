@@ -1,17 +1,19 @@
 import type {
-    DiffMode,
-    InputBaseProps,
-    TransformerType,
-    WithDifference,
+  DiffMode,
+  InputBaseProps,
+  TransformerType,
+  WithDifference,
 } from "@powerhousedao/design-system";
 import {
-    CharacterCounter, cn, FormDescription,
-    FormGroup,
-    FormLabel,
-    FormMessageList,
-    Input,
-    sharedValueTransformers,
-    ValueTransformer
+  CharacterCounter,
+  cn,
+  FormDescription,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  Input,
+  sharedValueTransformers,
+  ValueTransformer,
 } from "@powerhousedao/design-system";
 import { forwardRef, useId, useMemo } from "react";
 import TextInputDiff from "./text-input-diff.js";

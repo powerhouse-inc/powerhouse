@@ -7,12 +7,7 @@ import type {
   InputMaybe,
   Scalars,
 } from "document-drive";
-import type {
-  Action,
-  BaseState,
-  DocumentModelUtils,
-  PHDocument,
-} from "document-model";
+import type { Action, BaseState, PHDocument } from "document-model";
 
 export type * from "./drive/types.js";
 export type * from "./node/types.js";
@@ -46,5 +41,3 @@ export type LegacyAddFileAction = Action & {
   type: "ADD_FILE";
   input: LegacyAddFileInput;
 };
-
-export type DocumentDriveUtils = DocumentModelUtils<DocumentDriveDocument>;

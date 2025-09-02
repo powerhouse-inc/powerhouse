@@ -1,26 +1,30 @@
-import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import {
+  DriveSubgraph,
+  testSetupReactor,
+  type SubgraphArgs,
+} from "@powerhousedao/reactor-api";
+import {
+  driveCreateDocument,
+  driveDocumentModelModule,
+  ReactorBuilder,
+} from "document-drive";
+import {
+  documentModelDocumentModelModule,
+  generateId,
+  type DocumentModelModule,
+} from "document-model";
 import { describe, expect, it, vi } from "vitest";
-import { DriveSubgraph } from "@powerhousedao/reactor-api";
 
 describe("DriveSubgraph", () => {
-  it("should be able to instantiate", () => {
-    const reactor = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as any).build();
-
-    const driveSubgraph = new DriveSubgraph({ reactor } as any);
+  it("should be able to instantiate", async () => {
+    const { reactor } = await testSetupReactor();
+    const driveSubgraph = new DriveSubgraph({ reactor } as SubgraphArgs);
 
     expect(driveSubgraph).toBeInstanceOf(DriveSubgraph);
   });
 
   it("should return drive data", async () => {
-    const reactor = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as any).build();
-
+    const { reactor } = await testSetupReactor();
     const reactorSpy = vi.spyOn(reactor, "getDrive");
 
     const driveId = generateId();
@@ -37,7 +41,7 @@ describe("DriveSubgraph", () => {
 
     const createdDrive = await reactor.addDrive(mockDriveData);
 
-    const driveSubgraph = new DriveSubgraph({ reactor } as any);
+    const driveSubgraph = new DriveSubgraph({ reactor } as SubgraphArgs);
 
     const context = {
       driveId,
@@ -60,14 +64,10 @@ describe("DriveSubgraph", () => {
   });
 
   it("should return drive data with slug", async () => {
-    const reactor = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as any).build();
-
+    const { reactor } = await testSetupReactor();
     const getBySlugSpy = vi.spyOn(reactor, "getDriveBySlug");
     const getByIdSpy = vi.spyOn(reactor, "getDrive");
-    const driveSubgraph = new DriveSubgraph({ reactor } as any);
+    const driveSubgraph = new DriveSubgraph({ reactor } as SubgraphArgs);
 
     const driveId = generateId();
     const createdDrive = await reactor.addDrive({
@@ -135,7 +135,7 @@ describe("DriveSubgraph", () => {
   });
 
   it("should return document data", async () => {
-    const mockDocumentData = driveDocumentModelModule.utils.createDocument({});
+    const mockDocumentData = driveCreateDocument({});
     mockDocumentData.header.slug = "test-document-id";
 
     // {

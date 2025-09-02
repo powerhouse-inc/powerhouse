@@ -2,14 +2,21 @@ import type {
   DocumentDriveDocument,
   DocumentDriveLocalState,
   DocumentDriveState,
-  DocumentDriveUtils,
 } from "document-drive";
-import { driveDocumentReducer } from "document-drive";
+import {
+  driveDocumentFileExtension,
+  driveDocumentReducer,
+  driveDocumentType,
+} from "document-drive";
 import type {
   BaseState,
   CreateDocument,
   CreateState,
+  LoadFromFile,
+  LoadFromInput,
   PartialState,
+  SaveToFile,
+  SaveToFileHandle,
 } from "document-model";
 import {
   baseCreateDocument,
@@ -20,7 +27,6 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model";
-import { driveDocumentType } from "document-drive";
 
 export const initialGlobalState: DocumentDriveState = {
   name: "",
@@ -34,7 +40,7 @@ export const initialLocalState: DocumentDriveLocalState = {
   availableOffline: false,
 };
 
-export function createDriveState(
+export const driveCreateState: CreateState<DocumentDriveDocument> = (
   state:
     | PartialState<
         BaseState<
@@ -43,44 +49,43 @@ export function createDriveState(
         >
       >
     | undefined,
-) {
+) => {
   return {
     ...defaultBaseState(),
     global: { ...initialGlobalState, ...state?.global },
     local: { ...initialLocalState, ...state?.local },
   };
-}
-
-const utils: DocumentDriveUtils = {
-  fileExtension: "phdd",
-  createState: createDriveState,
-  createDocument(state) {
-    const document = baseCreateDocument(utils.createState, state);
-
-    document.header.documentType = driveDocumentType;
-
-    // for backward compatibility -- but this is NOT a valid document id
-    document.header.id = generateId();
-
-    return document;
-  },
-  saveToFile(document, path, name) {
-    return baseSaveToFile(document, path, "phdd", name);
-  },
-  saveToFileHandle(document, input) {
-    return baseSaveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return baseLoadFromFile(path, driveDocumentReducer);
-  },
-  loadFromInput(input) {
-    return baseLoadFromInput(input, driveDocumentReducer);
-  },
 };
 
-export const createDocument: CreateDocument<DocumentDriveDocument> =
-  utils.createDocument;
-export const createState: CreateState<DocumentDriveDocument> =
-  utils.createState;
+export const driveCreateDocument: CreateDocument<DocumentDriveDocument> = (
+  state,
+) => {
+  const document = baseCreateDocument(driveCreateState, state);
 
-export { utils as DriveUtils };
+  document.header.documentType = driveDocumentType;
+
+  // for backward compatibility -- but this is NOT a valid document id
+  document.header.id = generateId();
+
+  return document;
+};
+
+export const driveSaveToFile: SaveToFile = (document, path, name) => {
+  return baseSaveToFile(document, path, driveDocumentFileExtension, name);
+};
+
+export const driveSaveToFileHandle: SaveToFileHandle = (document, input) => {
+  return baseSaveToFileHandle(document, input);
+};
+
+export const driveLoadFromFile: LoadFromFile<DocumentDriveDocument> = (
+  path,
+) => {
+  return baseLoadFromFile(path, driveDocumentReducer);
+};
+
+export const driveLoadFromInput: LoadFromInput<DocumentDriveDocument> = (
+  input,
+) => {
+  return baseLoadFromInput(input, driveDocumentReducer);
+};

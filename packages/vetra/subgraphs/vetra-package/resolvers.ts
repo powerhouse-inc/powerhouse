@@ -1,11 +1,11 @@
-import type { Subgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { actions } from "../../document-models/vetra-package/index.js";
 import { generateId } from "document-model";
+import { actions } from "../../document-models/vetra-package/index.js";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
 
-export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
+export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
   const reactor = subgraph.reactor;
 
   return {

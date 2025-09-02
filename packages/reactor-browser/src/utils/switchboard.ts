@@ -1,7 +1,7 @@
 import { kebabCase } from "change-case";
 import { generateDocumentStateQueryFields } from "document-drive";
 import type { DocumentModelState } from "document-model";
-import { compressToEncodedURIComponent } from "lz-string";
+import lzString from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
   if (!driveUrl) {
@@ -79,7 +79,7 @@ export function buildDocumentSubgraphQuery(
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery(documentModel);
   const variables = { documentId, driveId: driveSlug };
-  return compressToEncodedURIComponent(
+  return lzString.compressToEncodedURIComponent(
     JSON.stringify({
       document: query.trim(),
       variables: JSON.stringify(variables, null, 2),

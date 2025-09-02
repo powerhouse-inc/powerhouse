@@ -12,9 +12,20 @@
         "dist",
         "nginx.conf",
         "nginx.sh",
-        "scripts"
+        "scripts",
+        "assets"
     ],
-    "exports": "./dist/src/index.js",
+    "exports": {
+        ".": "./dist/src/index.js",
+        "./assets/*.mp4": "./assets/*.mp4",
+        "./assets/*.png": "./assets/*.png",
+        "./assets/*.svg": "./assets/*.svg",
+        "./assets/*.jpg": "./assets/*.jpg",
+        "./assets/*.jpeg": "./assets/*.jpeg",
+        "./assets/*.gif": "./assets/*.gif",
+        "./assets/*.webp": "./assets/*.webp",
+        "./assets/*.avif": "./assets/*.avif"
+    },
     "types": "./dist/src/index.d.ts",
     "imports": {
             "PH:EXTERNAL_PACKAGES": "./dist/src/custom.d.ts",

@@ -4,7 +4,7 @@ import {
   BrowserStorage,
   buildOperation,
   createBaseState,
-  createDocument,
+  driveCreateDocument,
   migrateLegacyOperationSignature,
   PrismaClient,
   driveDocumentReducer,
@@ -117,7 +117,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,
@@ -167,7 +167,7 @@ describe.each(storageLayers)(
       expect,
     }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,
@@ -243,7 +243,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,

@@ -12,11 +12,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  Context,
-  Subgraph,
-  SubgraphClass,
-} from "@powerhousedao/reactor-api";
+import type { Context, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   AnalyticsSubgraph,
   buildSubgraphSchemaModule,
@@ -34,6 +30,7 @@ import { Router } from "express";
 import type { GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import type { BaseSubgraph } from "./base-subgraph.js";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,
@@ -54,7 +51,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
 
 export class GraphQLManager {
   private coreRouter: IRouter = Router();
-  private coreSubgraphsMap = new Map<string, Subgraph[]>();
+  private coreSubgraphsMap = new Map<string, BaseSubgraph[]>();
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
@@ -65,7 +62,7 @@ export class GraphQLManager {
     private readonly reactor: IDocumentDriveServer,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
-    private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
+    private readonly subgraphs: Map<string, BaseSubgraph[]> = new Map(),
     private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
   ) {}
 
@@ -171,7 +168,7 @@ export class GraphQLManager {
     this.contextFields = { ...this.contextFields, ...fields };
   }
 
-  setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
+  setSupergraph(supergraph: string, subgraphs: BaseSubgraph[]) {
     this.subgraphs.set(supergraph, subgraphs);
     const globalSubgraphs = this.subgraphs.get("graphql");
     if (globalSubgraphs) {
@@ -204,12 +201,12 @@ export class GraphQLManager {
     });
   }
 
-  #getSubgraphPath(subgraph: Subgraph, supergraph: string) {
+  #getSubgraphPath(subgraph: BaseSubgraph, supergraph: string) {
     return path.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
   async #setupSubgraphs(
-    subgraphsMap: Map<string, Subgraph[]>,
+    subgraphsMap: Map<string, BaseSubgraph[]>,
     router: IRouter,
   ) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
@@ -237,7 +234,7 @@ export class GraphQLManager {
   }
 
   #getAllSubgraphs() {
-    const subgraphsMap = new Map<string, Subgraph>();
+    const subgraphsMap = new Map<string, BaseSubgraph>();
     for (const [supergraph, subgraphs] of [
       ...this.coreSubgraphsMap.entries(),
       ...this.subgraphs.entries(),
@@ -254,7 +251,7 @@ export class GraphQLManager {
     return subgraphsMap;
   }
 
-  #buildSubgraphSchemaModule(subgraph: Subgraph) {
+  #buildSubgraphSchemaModule(subgraph: BaseSubgraph) {
     return buildSubgraphSchemaModule(
       this.reactor,
       subgraph.resolvers,
@@ -337,8 +334,8 @@ export class GraphQLManager {
 
   #getLocalSubgraphConfig(
     subgraphName: string,
-    subgraphsMap: Map<string, Subgraph[]>,
-  ): Subgraph | undefined {
+    subgraphsMap: Map<string, BaseSubgraph[]>,
+  ): BaseSubgraph | undefined {
     for (const [_, subgraphs] of subgraphsMap) {
       const entry = subgraphs.find((it) => it.name === subgraphName);
       if (entry) return entry;

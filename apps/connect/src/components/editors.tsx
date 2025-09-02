@@ -2,16 +2,16 @@ import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
-    DocumentToolbar,
-    PowerhouseButton,
-    RevisionHistory,
+  DocumentToolbar,
+  PowerhouseButton,
+  RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
-    useDocumentById,
-    useDocumentModelModuleById,
-    useEditorModuleById,
-    useFallbackEditorModule,
-    useUserPermissions,
+  useDocumentById,
+  useDocumentModelModuleById,
+  useEditorModuleById,
+  useFallbackEditorModule,
+  useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model";

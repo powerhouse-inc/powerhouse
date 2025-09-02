@@ -1,8 +1,8 @@
 import type { WithDifference } from "@powerhousedao/design-system";
 import {
-    FormGroup,
-    FormLabel,
-    SplittedInputDiff,
+  FormGroup,
+  FormLabel,
+  SplittedInputDiff,
 } from "@powerhousedao/design-system";
 interface TextInputDiffProps extends WithDifference<string> {
   value: string;
