@@ -149,7 +149,7 @@ export class AuthService {
       const credentialExists = await this.verifyCredentialExists(
         user.address,
         user.chainId,
-        verified.issuer.id,
+        verified.issuer,
       );
       if (!credentialExists) {
         res.status(401).json({ error: "Credentials no longer valid" });
