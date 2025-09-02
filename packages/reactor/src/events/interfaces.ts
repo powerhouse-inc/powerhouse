@@ -1,4 +1,4 @@
-import { Unsubscribe } from "./types.js";
+import { type Unsubscribe } from "./types.js";
 
 /**
  * Describes an object that manages event subscriptions and emissions.

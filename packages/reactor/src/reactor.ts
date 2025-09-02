@@ -1,4 +1,5 @@
 import type { BaseDocumentDriveServer } from "document-drive";
+import type { IDocumentStorage } from "document-drive/storage/types";
 import { AbortError } from "document-drive/utils/errors";
 import type {
   Action,
@@ -8,7 +9,11 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { IEventBus } from "./events/interfaces.js";
+import type { IJobExecutor } from "./executor/interfaces.js";
 import type { IReactor } from "./interfaces/reactor.js";
+import type { IQueue } from "./queue/interfaces.js";
+import type { Job } from "./queue/types.js";
 import { createMutableShutdownStatus } from "./shared/factories.js";
 import {
   JobStatus,
@@ -39,11 +44,27 @@ import { filterByParentId, filterByType } from "./utils.js";
  */
 export class Reactor implements IReactor {
   private driveServer: BaseDocumentDriveServer;
+  private documentStorage: IDocumentStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
+  private eventBus: IEventBus;
+  private queue: IQueue;
+  private jobExecutor: IJobExecutor;
+  private jobExecutorStarted = false;
 
-  constructor(driveServer: BaseDocumentDriveServer) {
+  constructor(
+    driveServer: BaseDocumentDriveServer,
+    documentStorage: IDocumentStorage,
+    eventBus: IEventBus,
+    queue: IQueue,
+    jobExecutor: IJobExecutor,
+  ) {
+    // Store required dependencies
     this.driveServer = driveServer;
+    this.documentStorage = documentStorage;
+    this.eventBus = eventBus;
+    this.queue = queue;
+    this.jobExecutor = jobExecutor;
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -136,14 +157,13 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
-    const document = await this.driveServer.getDocument<TDocument>(id);
+    const document = await this.documentStorage.get<TDocument>(id);
 
-    // this should be thrown by the storage layer
-    if (!document) {
-      throw new Error(`Document not found: ${id}`);
+    if (signal?.aborted) {
+      throw new AbortError();
     }
 
-    const childIds = await this.driveServer.getDocuments(id);
+    const childIds = await this.documentStorage.getChildren(id);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -153,7 +173,6 @@ export class Reactor implements IReactor {
     // to the underlying store, but is here now for the interface.
     for (const scope in document.state) {
       if (!matchesScope(view, scope)) {
-        // eslint-disable-next-line
         delete document.state[scope as keyof PHBaseState];
       }
     }
@@ -175,41 +194,25 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
-
-    // Search through drives to find a document with the matching slug
-    for (const driveId of drives) {
-      if (signal?.aborted) {
-        throw new AbortError();
+    // Use the storage layer to resolve slug to ID
+    let ids: string[];
+    try {
+      ids = await this.documentStorage.resolveIds([slug], signal);
+    } catch (error) {
+      // If the error is from resolveIds (document not found), wrap it with our message
+      if (error instanceof Error && error.message.includes("not found")) {
+        throw new Error(`Document not found with slug: ${slug}`);
       }
 
-      const documentIds = await this.driveServer.getDocuments(driveId);
-
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<TDocument>(docId);
-        if (document.header.slug === slug) {
-          const childIds = await this.driveServer.getDocuments(docId);
-
-          if (signal?.aborted) {
-            throw new AbortError();
-          }
-
-          // Apply view filter - This will be removed when we pass the viewfilter along
-          // to the underlying store, but is here now for the interface.
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          return { document, childIds };
-        }
-      }
+      throw error;
     }
 
-    throw new Error(`Document not found with slug: ${slug}`);
+    if (ids.length === 0 || !ids[0]) {
+      throw new Error(`Document not found with slug: ${slug}`);
+    }
+
+    // Now get the document by its resolved ID
+    return await this.get<TDocument>(ids[0], view, signal);
   }
 
   /**
@@ -221,7 +224,8 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
-    const document = await this.driveServer.getDocument(documentId);
+    // Use storage directly to get the document
+    const document = await this.documentStorage.get(documentId);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -302,8 +306,7 @@ export class Reactor implements IReactor {
     } else if (search.type) {
       results = await this.findByType(search.type, view, paging, signal);
     } else {
-      // Empty search filter - return all documents
-      results = await this.findAll(view, paging, signal);
+      throw new Error("No search criteria provided");
     }
 
     if (signal?.aborted) {
@@ -321,14 +324,18 @@ export class Reactor implements IReactor {
       // BaseDocumentDriveServer uses addDocument, not createDocument
       // addDocument adds an existing document to a drive
       await this.driveServer.addDocument(document);
-
-      // Return success status
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return JobStatus.COMPLETED;
-    } catch (error) {
+    } catch {
       // TODO: Phase 4 - This will return a job that can be retried
       return JobStatus.FAILED;
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Return success status
+    // TODO: Phase 4 - This will return a job that goes through the queue
+    return JobStatus.COMPLETED;
   }
 
   /**
@@ -346,13 +353,6 @@ export class Reactor implements IReactor {
       await this.driveServer.deleteDocument(id);
 
       // TODO: Implement cascade deletion when propagate mode is CASCADE
-
-      // Return success job info
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       // TODO: Phase 4 - This will return a job that can be retried
       return {
@@ -361,42 +361,54 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Return success job info
+    // TODO: Phase 4 - This will return a job that goes through the queue
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
    * Applies a list of actions to a document
    */
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
-    const jobId = uuidv4();
+    // Ensure the job executor is running
+    await this.ensureJobExecutorRunning();
 
-    try {
-      // BaseDocumentDriveServer expects Operations, not Actions
-      // We need to convert Actions to Operations
-      const operations: Operation[] = actions.map((action, index) => ({
+    // Create jobs for each action/operation
+    const jobs: Job[] = actions.map((action, index) => ({
+      id: uuidv4(),
+      documentId: id,
+      scope: action.scope || "global",
+      branch: "main", // Default to main branch
+      operation: {
         index: index,
-        timestampUtcMs: action.timestampUtcMs,
-        hash: "", // Will be computed by the server
+        timestampUtcMs: String(action.timestampUtcMs || Date.now()),
+        hash: "", // Will be computed by the executor
         skip: 0,
         action: action,
-      }));
+      },
+      createdAt: new Date().toISOString(),
+      maxRetries: 3,
+    }));
 
-      // Apply operations to document
-      await this.driveServer.addOperations(id, operations);
-
-      // Return success job info
-      // TODO: Phase 4 - This will return a job that goes through the queue
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
-    } catch (error) {
-      // TODO: Phase 4 - This will return a job that can be retried
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+    // Enqueue all jobs
+    for (const job of jobs) {
+      await this.queue.enqueue(job);
     }
+
+    // Return job info for the batch (using the first job's ID as the batch ID)
+    const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
+    return {
+      id: batchJobId,
+      status: JobStatus.PENDING,
+    };
   }
 
   /**
@@ -410,25 +422,17 @@ export class Reactor implements IReactor {
   ): Promise<JobInfo> {
     const jobId = uuidv4();
 
+    // Check abort signal before starting
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Implement when drive server supports hierarchical documents
+    // For now, this is a placeholder implementation
+
+    // Verify parent exists
     try {
-      // TODO: Implement when drive server supports hierarchical documents
-      // For now, this is a placeholder implementation
-
-      // Verify parent exists
       await this.driveServer.getDocument(parentId);
-
-      // Verify all children exist
-      for (const childId of documentIds) {
-        await this.driveServer.getDocument(childId);
-      }
-
-      // TODO: Actually establish parent-child relationships
-
-      // Return success job info
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       return {
         id: jobId,
@@ -436,6 +440,37 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    // Check abort signal after parent verification
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Verify all children exist
+    for (const childId of documentIds) {
+      try {
+        await this.driveServer.getDocument(childId);
+      } catch (error) {
+        return {
+          id: jobId,
+          status: JobStatus.FAILED,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+
+      // Check abort signal after each child verification
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+    }
+
+    // TODO: Actually establish parent-child relationships
+
+    // Return success job info
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -449,20 +484,17 @@ export class Reactor implements IReactor {
   ): Promise<JobInfo> {
     const jobId = uuidv4();
 
+    // Check abort signal before starting
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Implement when drive server supports hierarchical documents
+    // For now, this is a placeholder implementation
+
+    // Verify parent exists
     try {
-      // TODO: Implement when drive server supports hierarchical documents
-      // For now, this is a placeholder implementation
-
-      // Verify parent exists
       await this.driveServer.getDocument(parentId);
-
-      // TODO: Actually remove parent-child relationships
-
-      // Return success job info
-      return {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-      };
     } catch (error) {
       return {
         id: jobId,
@@ -470,6 +502,19 @@ export class Reactor implements IReactor {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+
+    // Check abort signal after parent verification
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // TODO: Actually remove parent-child relationships
+
+    // Return success job info
+    return {
+      id: jobId,
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -486,6 +531,20 @@ export class Reactor implements IReactor {
   }
 
   /**
+   * Starts the job executor if not already running.
+   * Called automatically when the first job is enqueued.
+   */
+  private async ensureJobExecutorRunning(): Promise<void> {
+    if (!this.jobExecutorStarted) {
+      await this.jobExecutor.start({
+        maxConcurrency: 5,
+        jobTimeout: 30000,
+      });
+      this.jobExecutorStarted = true;
+    }
+  }
+
+  /**
    * Finds documents by their IDs
    */
   private async findByIds(
@@ -496,34 +555,30 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Fetch each document by ID
+    // Fetch each document by ID using storage directly
     for (const id of ids) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        const document = await this.driveServer.getDocument<PHDocument>(id);
-
-        if (!document) {
-          continue; // Skip if document not found
-        }
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            // eslint-disable-next-line
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
+        document = await this.documentStorage.get<PHDocument>(id);
       } catch {
         // Skip documents that don't exist or can't be accessed
         // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
@@ -561,54 +616,47 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Fetch each document by slug
-    for (const slug of slugs) {
+    // Use storage to resolve slugs to IDs
+    let ids: string[];
+    try {
+      ids = await this.documentStorage.resolveIds(slugs, signal);
+    } catch {
+      // If slug resolution fails, return empty results
+      // This matches the behavior expected from a search operation
+      ids = [];
+    }
+
+    // Fetch each document by resolved ID
+    for (const id of ids) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        // Search through drives to find a document with the matching slug
-        const drives = await this.driveServer.getDrives();
-        let found = false;
-
-        for (const driveId of drives) {
-          const documentIds = await this.driveServer.getDocuments(driveId);
-
-          for (const docId of documentIds) {
-            const document =
-              await this.driveServer.getDocument<PHDocument>(docId);
-
-            if (document && document.header.slug === slug) {
-              // Apply view filter - This will be removed when we pass the viewfilter along
-              // to the underlying store, but is here now for the interface.
-              for (const scope in document.state) {
-                if (!matchesScope(view, scope)) {
-                  // eslint-disable-next-line
-                  delete document.state[scope as keyof PHBaseState];
-                }
-              }
-
-              documents.push(document);
-              found = true;
-              break;
-            }
-          }
-
-          if (found) break;
-        }
+        document = await this.documentStorage.get<PHDocument>(id);
       } catch {
         // Skip documents that don't exist or can't be accessed
-        // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Apply paging
+    // Apply paging - this will be removed when we pass the paging along
+    // to the underlying store, but is here now for the interface.
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || documents.length;
     const pagedDocuments = documents.slice(startIndex, startIndex + limit);
@@ -634,66 +682,6 @@ export class Reactor implements IReactor {
   }
 
   /**
-   * Finds all documents
-   */
-  private async findAll(
-    view?: ViewFilter,
-    paging?: PagingOptions,
-    signal?: AbortSignal,
-  ): Promise<PagedResults<PHDocument>> {
-    const documents: PHDocument[] = [];
-
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
-
-    for (const driveId of drives) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const documentIds = await this.driveServer.getDocuments(driveId);
-
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<PHDocument>(docId);
-
-        if (document) {
-          // Apply view filter
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          documents.push(document);
-        }
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? async () => this.findAll(view, { cursor: nextCursor!, limit }, signal)
-        : undefined,
-    };
-  }
-
-  /**
    * Finds documents by parent ID
    */
   private async findByParentId(
@@ -702,8 +690,8 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    // Get child document IDs from the drive server
-    const childIds = await this.driveServer.getDocuments(parentId);
+    // Get child document IDs from storage
+    const childIds = await this.documentStorage.getChildren(parentId);
 
     if (signal?.aborted) {
       throw new AbortError();
@@ -717,25 +705,24 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
+      let document: PHDocument;
       try {
-        const document =
-          await this.driveServer.getDocument<PHDocument>(childId);
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            // eslint-disable-next-line
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
+        document = await this.documentStorage.get<PHDocument>(childId);
       } catch {
         // Skip documents that don't exist or can't be accessed
         // This matches the behavior expected from a search operation
         continue;
       }
+
+      // Apply view filter - This will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
@@ -778,53 +765,54 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     const documents: PHDocument[] = [];
 
-    // Get all drives
-    const drives = await this.driveServer.getDrives();
+    // Use storage's findByType method directly
+    const cursor = paging?.cursor;
+    const limit = paging?.limit || 100;
 
-    for (const driveId of drives) {
+    // Get document IDs of the specified type
+    const { documents: documentIds, nextCursor } =
+      await this.documentStorage.findByType(type, limit, cursor);
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Fetch each document by its ID
+    for (const documentId of documentIds) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      const documentIds = await this.driveServer.getDocuments(driveId);
+      let document: PHDocument;
+      try {
+        document = await this.documentStorage.get<PHDocument>(documentId);
+      } catch {
+        // Skip documents that can't be retrieved
+        continue;
+      }
 
-      for (const docId of documentIds) {
-        const document = await this.driveServer.getDocument<PHDocument>(docId);
-
-        if (document && document.header.documentType === type) {
-          // Apply view filter
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              // eslint-disable-next-line
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-
-          documents.push(document);
+      // Apply view filter
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          delete document.state[scope as keyof PHBaseState];
         }
       }
+
+      documents.push(document);
     }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
+    // Results are already paged from the storage layer
     return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
+      results: documents,
+      options: paging || { cursor: cursor || "0", limit },
       nextCursor,
-      next: hasMore
+      next: nextCursor
         ? async () =>
-            this.findByType(type, view, { cursor: nextCursor!, limit }, signal)
+            this.findByType(type, view, { cursor: nextCursor, limit }, signal)
         : undefined,
     };
   }

@@ -28,6 +28,25 @@ With the `PHDocument` structure stabilized, we can now create the `IReactor` int
     *   Internally, this class will wrap the newly-refactored `BaseDocumentDriveServer`.
     *   **Crucially**: No complex data translation is needed. The facade is now a simple pass-through for `PHDocument` objects, as the underlying server already speaks v2.
 
+## Phase 2.5: Shift Facade Reads to Legacy Storage Directly
+
+Before building the async write pipeline, decouple the facade's read-path from `BaseDocumentDriveServer` by calling existing legacy storage interfaces directly (no new abstractions).
+
+1.  **Identify read interfaces**:
+    *   Depend on the legacy read contracts from `document-drive` (e.g., `IDocumentStorage`, `IDriveOperationStorage`, and any model/metadata readers used by `getDocumentModels`).
+2.  **Wire legacy storages into the facade**:
+    *   Update the `Reactor` constructor to accept the necessary legacy storage dependencies.
+    *   Do not add new adapter interfaces or Reactor-specific wrappers in this phase.
+3.  **Refactor `Reactor` facade reads**:
+    *   Rework `getDocumentModels`, `get`, `getBySlug`, `getOperations`, and all `find*` methods to use the injected legacy storage directly rather than `BaseDocumentDriveServer`.
+    *   Optionally keep a temporary fallback to the server while dependencies are plumbed, but the goal is to remove read-time server calls.
+4.  **Limit server usage to mutations only (temporarily)**:
+    *   Until the write path is implemented, keep `BaseDocumentDriveServer` only where strictly necessary for create/mutate/delete behavior.
+5.  **Update tests**:
+    *   Add unit tests for the read-path logic and adjust `Reactor` tests to use fakes/mocks of the legacy storage interfaces.
+
+Outcome: The facade no longer depends on `BaseDocumentDriveServer` for reads, making Phase 3 simpler and reducing churn later when repointing to `IDocumentView`.
+
 ## Phase 3: Implement Core Write Path Components
 
 This phase proceeds as before: building the new asynchronous pipeline for handling mutations.
@@ -79,9 +98,9 @@ This is the official switchover, where the new system becomes the authoritative 
 
 With legacy systems supported by the adapter, we can fully decouple the primary `Reactor` interface.
 
-1.  **Shift Facade Reads**:
-    *   Update the `Reactor` facade's read methods to source data from `IDocumentView`.
-    *   Remove the internal instance of `BaseDocumentDriveServer` from the facade.
+1.  **Repoint Facade Reads to `IDocumentView`**:
+    *   Update the `Reactor` facade's read methods to call `IDocumentView` directly instead of legacy storage.
+    *   Remove any remaining `BaseDocumentDriveServer` usage in the facade.
 
 ## Phase 9 & 10: Implement and Migrate New Managers
 

@@ -226,6 +226,11 @@ type Subscription {
     search: SearchFilterInput!
     view: ViewFilterInput
   ): DocumentChangeEvent!
+
+  # Subscribe to job changes
+  jobChanges(
+    jobId: String!
+  ): JobChangeEvent!
 }
 ```
 

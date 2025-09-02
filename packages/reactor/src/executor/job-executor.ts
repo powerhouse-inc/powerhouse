@@ -244,7 +244,7 @@ export class InMemoryJobExecutor implements IJobExecutor {
       jobPromise.finally(() => {
         this.jobPromises.delete(job.id);
         // Try to process more jobs when this one completes
-        this.processAvailableJobs().catch(console.error);
+        void this.processAvailableJobs().catch(console.error);
       });
     }
   }

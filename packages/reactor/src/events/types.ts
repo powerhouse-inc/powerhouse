@@ -22,11 +22,11 @@ export type Subscriber = (type: number, data: any) => void | Promise<void>;
 export class EventBusAggregateError extends Error {
   public readonly errors: any[];
 
-  constructor(errors: any[]) {
+  constructor(errors: unknown[]) {
     const message = `EventBus emit failed with ${errors.length} error(s): ${errors
       .map((e) => {
         if (e && typeof e === "object" && "message" in e) {
-          return e.message;
+          return (e as Error).message;
         }
         return String(e);
       })
