@@ -10,14 +10,17 @@ export type JobResult = {
   /** Whether the job executed successfully */
   success: boolean;
 
-  /** Error message if the job failed */
-  error?: string;
+  /** Error if the job failed */
+  error?: Error;
+
+  /** The operation generated from the action (if successful) */
+  operation?: any;
 
   /** Timestamp when the job execution completed */
-  completedAt: string;
+  completedAt?: string;
 
   /** Duration of job execution in milliseconds */
-  duration: number;
+  duration?: number;
 
   /** Any additional metadata from the execution */
   metadata?: Record<string, any>;

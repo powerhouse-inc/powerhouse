@@ -536,10 +536,9 @@ export class Reactor implements IReactor {
    */
   private async ensureJobExecutorRunning(): Promise<void> {
     if (!this.jobExecutorStarted) {
-      await this.jobExecutor.start({
-        maxConcurrency: 5,
-        jobTimeoutMs: 30000,
-      });
+      // For new simplified executor, no start method needed
+      // The executor just executes jobs when called
+      // The manager (if used) handles listening to queue events
       this.jobExecutorStarted = true;
     }
   }

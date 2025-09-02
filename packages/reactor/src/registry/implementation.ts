@@ -36,7 +36,7 @@ export class InvalidModuleError extends Error {
  * Manages document model modules and provides centralized access to their reducers, utils, and specifications.
  */
 export class DocumentModelRegistry implements IDocumentModelRegistry {
-  private modules = new Map<string, DocumentModelModule>();
+  private modules = new Map<string, DocumentModelModule<any>>();
 
   /**
    * Register multiple modules at once.
@@ -45,7 +45,7 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
    * @throws DuplicateModuleError if a module with the same document type is already registered
    * @throws InvalidModuleError if a module is malformed
    */
-  registerModules(...modules: DocumentModelModule[]): void {
+  registerModules(...modules: DocumentModelModule<any>[]): void {
     for (const module of modules) {
       const documentType = module.documentModel.id;
 
@@ -83,7 +83,7 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
    * @returns The document model module
    * @throws ModuleNotFoundError if the document type is not registered
    */
-  getModule(documentType: string): DocumentModelModule {
+  getModule(documentType: string): DocumentModelModule<any> {
     const module = this.modules.get(documentType);
 
     if (module) {
@@ -99,7 +99,7 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
    *
    * @returns Array of all registered modules
    */
-  getAllModules(): DocumentModelModule[] {
+  getAllModules(): DocumentModelModule<any>[] {
     return Array.from(this.modules.values());
   }
 

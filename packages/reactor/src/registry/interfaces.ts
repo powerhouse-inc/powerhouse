@@ -11,7 +11,7 @@ export interface IDocumentModelRegistry {
    * @param modules Document model modules to register
    * @throws Error if a module with the same document type is already registered
    */
-  registerModules(...modules: DocumentModelModule[]): void;
+  registerModules(...modules: DocumentModelModule<any>[]): void;
 
   /**
    * Unregister multiple document model modules at once.
@@ -28,13 +28,13 @@ export interface IDocumentModelRegistry {
    * @returns The document model module
    * @throws Error if the document type is not registered
    */
-  getModule(documentType: string): DocumentModelModule;
+  getModule(documentType: string): DocumentModelModule<any>;
 
   /**
    * Get all registered document model modules
    * @returns Array of all registered modules
    */
-  getAllModules(): DocumentModelModule[];
+  getAllModules(): DocumentModelModule<any>[];
 
   /**
    * Clear all registered modules

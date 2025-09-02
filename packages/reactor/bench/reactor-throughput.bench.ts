@@ -1,16 +1,34 @@
 import { bench, describe } from "vitest";
+import { documentModelDocumentModelModule } from "document-model";
 import { EventBus } from "../src/events/event-bus.js";
-import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import { type Job } from "../src/queue/types.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
+import { DocumentModelRegistry } from "../src/registry/implementation.js";
 
 // Pre-create shared components to avoid setup overhead
 const eventBus = new EventBus();
 const queue = new InMemoryQueue(eventBus);
-const executor = new InMemoryJobExecutor(eventBus, queue);
 
-// Initialize executor once
-await executor.start({ maxConcurrency: 5, jobTimeoutMs: 10000 });
+// Create registry and mock storage for executor
+const registry = new DocumentModelRegistry();
+registry.registerModules(documentModelDocumentModelModule);
+
+const mockDocStorage = {
+  get: async () => ({
+    header: { documentType: 'powerhouse/document-model' },
+    operations: { global: [] },
+    state: {},
+  }),
+  set: async () => {},
+  delete: async () => {},
+  exists: async () => false,
+  getChildren: async () => [],
+  findByType: async () => [],
+  resolveIds: async () => [],
+} as any;
+
+const executor = new SimpleJobExecutor(registry, mockDocStorage);
 
 let jobCounter = 0;
 
@@ -105,13 +123,7 @@ describe("Job Executor Throughput", () => {
     await executor.executeJob(job);
   });
 
-  bench("executor status check", async () => {
-    await executor.getStatus();
-  });
-
-  bench("executor stats check", async () => {
-    await executor.getStats();
-  });
+  // Status and stats checks are now on the manager, not individual executors
 });
 
 describe("End-to-End Throughput", () => {

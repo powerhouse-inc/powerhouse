@@ -30,25 +30,32 @@ export {
 
 // Job Executor
 export {
+  type IJobExecutor,
+  type IJobExecutorManager,
+} from "./executor/interfaces.js";
+export {
+  SimpleJobExecutorManager,
+  type JobExecutorFactory,
+} from "./executor/simple-job-executor-manager.js";
+export { SimpleJobExecutor } from "./executor/simple-job-executor.js";
+export { type JobExecutorConfig, type JobResult } from "./executor/types.js";
+
+// Backwards compatibility exports (deprecated)
+export {
   InMemoryJobExecutor,
   JobExecutorEventTypes,
   type ExecutorStartedEvent,
   type ExecutorStoppedEvent,
-  type IJobExecutor,
   type JobCompletedEvent,
-  type JobExecutorConfig,
   type JobFailedEvent,
-  type JobResult,
   type JobStartedEvent,
-} from "./executor/job-executor.js";
-export { JobExecutorManager, type JobExecutorFactory } from "./executor/job-executor-manager.js";
-export { type IJobExecutorManager } from "./executor/interfaces.js";
+} from "./executor/in-memory-job-executor-shim.js";
 
 // Document Model Registry
 export {
   DocumentModelRegistry,
-  ModuleNotFoundError,
   DuplicateModuleError,
   InvalidModuleError,
+  ModuleNotFoundError,
   type IDocumentModelRegistry,
 } from "./registry/index.js";

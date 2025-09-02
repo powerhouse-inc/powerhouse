@@ -27,6 +27,9 @@ export type Job = {
 
   /** Maximum number of retries allowed */
   maxRetries?: number;
+
+  /** Last error message if job failed */
+  lastError?: string;
 };
 
 /**

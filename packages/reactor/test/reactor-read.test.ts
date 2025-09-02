@@ -8,7 +8,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import { InMemoryJobExecutor } from "../src/executor/in-memory-job-executor-shim.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import {
-  JobExecutorManager,
+  SimpleJobExecutorManager as JobExecutorManager,
   type JobExecutorFactory,
-} from "../src/executor/job-executor-manager.js";
+} from "../src/executor/simple-job-executor-manager.js";
 import type { IJobExecutorManager } from "../src/executor/interfaces.js";
 import type { JobExecutorConfig, JobResult } from "../src/executor/types.js";
 import type { Job } from "../src/queue/types.js";

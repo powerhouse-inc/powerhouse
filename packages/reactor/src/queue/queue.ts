@@ -181,4 +181,58 @@ export class InMemoryQueue implements IQueue {
     // Clear all queues
     this.queues.clear();
   }
+
+  async hasJobs(): Promise<boolean> {
+    return (
+      this.queues.size > 0 &&
+      Array.from(this.queues.values()).some((q) => q.length > 0)
+    );
+  }
+
+  async completeJob(jobId: string): Promise<void> {
+    // For in-memory queue, completing just removes the job
+    // In a persistent queue, this would update the job status
+    await this.remove(jobId);
+  }
+
+  async failJob(jobId: string, error?: string): Promise<void> {
+    // For in-memory queue, failing just removes the job
+    // In a persistent queue, this would update the job status and store the error
+    await this.remove(jobId);
+  }
+
+  async retryJob(jobId: string, error?: string): Promise<void> {
+    // For in-memory queue, we need to find the job and re-enqueue it
+    // In a real implementation, this would update retry count and delay
+    const queueKey = this.jobIndex.get(jobId);
+    if (!queueKey) {
+      return;
+    }
+
+    const queue = this.queues.get(queueKey);
+    if (!queue) {
+      return;
+    }
+
+    const jobIndex = queue.findIndex((job) => job.id === jobId);
+    if (jobIndex === -1) {
+      return;
+    }
+
+    const job = queue[jobIndex];
+
+    // Update retry count
+    const updatedJob: Job = {
+      ...job,
+      retryCount: (job.retryCount || 0) + 1,
+      lastError: error,
+    };
+
+    // Remove old job
+    queue.splice(jobIndex, 1);
+    this.jobIndex.delete(jobId);
+
+    // Re-enqueue with updated retry count
+    await this.enqueue(updatedJob);
+  }
 }
