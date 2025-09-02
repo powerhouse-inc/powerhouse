@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { InMemoryJobExecutor } from "../src/executor/in-memory-job-executor-shim.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
@@ -75,21 +75,21 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
     // Create event bus, queue, and executor
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    
+
     // Create a mock registry for the executor
     const registry = {
       getModule: vi.fn().mockReturnValue({
         reducer: vi.fn((doc, action) => ({
           ...doc,
-          operations: { global: [{ index: 0, hash: 'test-hash' }] }
-        }))
-      })
+          operations: { global: [{ index: 0, hash: "test-hash" }] },
+        })),
+      }),
     } as any;
-    
+
     // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
     const mockDocStorage = {
       get: vi.fn().mockResolvedValue({
-        header: { documentType: 'test' },
+        header: { documentType: "test" },
         operations: { global: [] },
         history: [],
         state: {},
@@ -102,8 +102,8 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       findByType: vi.fn(),
       resolveIds: vi.fn(),
     } as any;
-    
-    jobExecutor = new InMemoryJobExecutor(eventBus, queue, registry, mockDocStorage);
+
+    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage);
 
     // Create reactor with all dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);

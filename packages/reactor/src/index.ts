@@ -37,19 +37,20 @@ export {
   SimpleJobExecutorManager,
   type JobExecutorFactory,
 } from "./executor/simple-job-executor-manager.js";
-export { SimpleJobExecutor } from "./executor/simple-job-executor.js";
-export { type JobExecutorConfig, type JobResult } from "./executor/types.js";
-
-// Backwards compatibility exports (deprecated)
 export {
-  InMemoryJobExecutor,
+  SimpleJobExecutor as InMemoryJobExecutor,
+  SimpleJobExecutor,
+} from "./executor/simple-job-executor.js";
+export {
   JobExecutorEventTypes,
   type ExecutorStartedEvent,
   type ExecutorStoppedEvent,
   type JobCompletedEvent,
+  type JobExecutorConfig,
   type JobFailedEvent,
+  type JobResult,
   type JobStartedEvent,
-} from "./executor/in-memory-job-executor-shim.js";
+} from "./executor/types.js";
 
 // Document Model Registry
 export {

@@ -68,7 +68,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (graceful) {
       // Wait for active jobs to complete
       while (this.activeJobs > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
 
@@ -130,7 +130,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       console.error("Error processing job:", error);
     } finally {
       this.activeJobs--;
-      
+
       // Check if there are more jobs to process
       if (this.isRunning) {
         const hasMore = await this.queue.hasJobs();

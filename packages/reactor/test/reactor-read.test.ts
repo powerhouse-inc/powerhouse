@@ -8,7 +8,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { InMemoryJobExecutor } from "../src/executor/in-memory-job-executor-shim.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
@@ -95,7 +95,7 @@ describe("Reactor Read Interface", () => {
       resolveIds: vi.fn(),
     } as any;
     
-    jobExecutor = new InMemoryJobExecutor(eventBus, queue, registry, mockDocStorage);
+    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage);
 
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
