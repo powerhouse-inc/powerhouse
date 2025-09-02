@@ -1,3 +1,19 @@
+## 4.1.0-dev.41 (2025-09-02)
+
+### 🚀 Features
+
+- **reactor-api:** added auth service ([a0863f6e3](https://github.com/powerhouse-inc/powerhouse/commit/a0863f6e3))
+
+### 🩹 Fixes
+
+- **document-drive:** install openssl ([89f21529e](https://github.com/powerhouse-inc/powerhouse/commit/89f21529e))
+- **document-drive:** prisma build ([7884368a2](https://github.com/powerhouse-inc/powerhouse/commit/7884368a2))
+- **switchboard, connect:** fetch proper tag ([79a0bc967](https://github.com/powerhouse-inc/powerhouse/commit/79a0bc967))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.40 (2025-09-02)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

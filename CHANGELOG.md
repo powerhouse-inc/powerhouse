@@ -1,3 +1,20 @@
+## 4.1.0-dev.41 (2025-09-02)
+
+### 🚀 Features
+
+- **reactor-api:** added auth service ([a0863f6e3](https://github.com/powerhouse-inc/powerhouse/commit/a0863f6e3))
+
+### 🩹 Fixes
+
+- **document-drive:** add linux-musl binary target for prisma ([079b0cf04](https://github.com/powerhouse-inc/powerhouse/commit/079b0cf04))
+- **document-drive:** prisma build ([7884368a2](https://github.com/powerhouse-inc/powerhouse/commit/7884368a2))
+- **document-drive:** install openssl ([89f21529e](https://github.com/powerhouse-inc/powerhouse/commit/89f21529e))
+- **switchboard, connect:** fetch proper tag ([79a0bc967](https://github.com/powerhouse-inc/powerhouse/commit/79a0bc967))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.40 (2025-09-02)
 
 ### 🩹 Fixes
