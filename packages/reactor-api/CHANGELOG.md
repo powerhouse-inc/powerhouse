@@ -1,3 +1,13 @@
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- **reactor-api:** added renown credential auth check ([af266ae5b](https://github.com/powerhouse-inc/powerhouse/commit/af266ae5b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 ### 🩹 Fixes

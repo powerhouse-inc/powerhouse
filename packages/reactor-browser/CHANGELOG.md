@@ -1,3 +1,13 @@
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

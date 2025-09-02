@@ -1,3 +1,16 @@
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- first mutation queued... ([a678882a3](https://github.com/powerhouse-inc/powerhouse/commit/a678882a3))
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+- **reactor-api:** added renown credential auth check ([af266ae5b](https://github.com/powerhouse-inc/powerhouse/commit/af266ae5b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 ### 🩹 Fixes

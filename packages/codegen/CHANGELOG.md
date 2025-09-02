@@ -1,3 +1,7 @@
+## 4.1.0-dev.43 (2025-09-02)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

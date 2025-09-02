@@ -1,3 +1,13 @@
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- first mutation queued... ([a678882a3](https://github.com/powerhouse-inc/powerhouse/commit/a678882a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
