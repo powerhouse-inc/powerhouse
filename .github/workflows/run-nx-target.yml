@@ -13,15 +13,12 @@ on:
 jobs:
   run-nx:
     name: Nx ${{ inputs.target }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - name: Install openssl1.1-compat for prisma build
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: openssl1.1-compat
-          version: 1.0
+      - name: Install openssl
+        run: sudo apt install -y openssl
 
       - uses: actions/checkout@v4
         with:
