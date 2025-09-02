@@ -52,6 +52,7 @@ export async function createAuthBearerToken(
   networkId: string,
   address: string,
   issuer: Issuer,
+  expiresIn?: number,
 ) {
   const vcPayload: JwtCredentialPayload = {
     sub: issuer.did,
@@ -66,7 +67,9 @@ export async function createAuthBearerToken(
     },
   };
 
-  const jwt = await createVerifiableCredentialJwt(vcPayload, issuer);
+  const jwt = await createVerifiableCredentialJwt(vcPayload, issuer, {
+    expiresIn,
+  });
   return jwt;
 }
 export const getResolver = () => {

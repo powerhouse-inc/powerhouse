@@ -39,6 +39,7 @@ export interface IConnectCrypto {
     driveUrl: string,
     address: string | undefined,
     refresh?: boolean,
+    expiresIn?: number,
   ) => Promise<string>;
 }
 
@@ -110,6 +111,7 @@ export class ConnectCrypto implements IConnectCrypto {
     driveUrl: string,
     address: string | undefined,
     refresh = false,
+    expiresIn?: number,
   ) {
     const issuer = await this.getIssuer();
     if (refresh || !this.#bearerToken) {
@@ -118,6 +120,7 @@ export class ConnectCrypto implements IConnectCrypto {
         RENOWN_NETWORK_ID,
         address || (await this.#did),
         issuer,
+        expiresIn,
       );
     }
 
