@@ -125,9 +125,7 @@ export class AuthService {
       }
 
       const verified = (await this.verifyToken(token)) as {
-        issuer: {
-          id: string;
-        };
+        issuer: string;
         verifiableCredential?: {
           credentialSubject?: {
             address: string;
