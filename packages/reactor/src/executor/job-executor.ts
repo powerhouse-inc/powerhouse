@@ -1,3 +1,5 @@
+import type { IDocumentStorage } from "document-drive/storage/types";
+import type { PHDocument } from "document-model";
 import { type IEventBus } from "../events/interfaces.js";
 import { type IQueue } from "../queue/interfaces.js";
 import {
@@ -5,6 +7,7 @@ import {
   type Job,
   type JobAvailableEvent,
 } from "../queue/types.js";
+import { type IDocumentModelRegistry } from "../registry/interfaces.js";
 import { type IJobExecutor } from "./interfaces.js";
 import {
   JobExecutorEventTypes,
@@ -22,9 +25,9 @@ import {
  */
 const DEFAULT_CONFIG: Required<JobExecutorConfig> = {
   maxConcurrency: 5,
-  jobTimeout: 30000, // 30 seconds
-  retryBaseDelay: 1000, // 1 second
-  retryMaxDelay: 30000, // 30 seconds
+  jobTimeoutMs: 30000, // 30 seconds
+  retryBaseDelayMs: 1000, // 1 second
+  retryMaxDelayMs: 30000, // 30 seconds
 };
 
 /**
@@ -53,6 +56,8 @@ export class InMemoryJobExecutor implements IJobExecutor {
   constructor(
     private eventBus: IEventBus,
     private queue: IQueue,
+    private registry: IDocumentModelRegistry,
+    private documentStorage: IDocumentStorage,
   ) {}
 
   async start(config?: JobExecutorConfig): Promise<void> {
@@ -372,10 +377,10 @@ export class InMemoryJobExecutor implements IJobExecutor {
       const timeout = setTimeout(() => {
         reject(
           new Error(
-            `Job ${job.id} timed out after ${this.config.jobTimeout}ms`,
+            `Job ${job.id} timed out after ${this.config.jobTimeoutMs}ms`,
           ),
         );
-      }, this.config.jobTimeout);
+      }, this.config.jobTimeoutMs);
 
       // Clear timeout if aborted
       signal.addEventListener("abort", () => {
@@ -395,27 +400,51 @@ export class InMemoryJobExecutor implements IJobExecutor {
     job: Job,
     signal: AbortSignal,
   ): Promise<{ metadata?: Record<string, any> }> {
-    // This is where the actual job execution logic would go
-    // For now, we'll simulate job execution
-
     // Check if aborted
     if (signal.aborted) {
       throw new Error("Job was aborted");
     }
 
-    // Simulate some work
-    await this.sleep(Math.random() * 100 + 50); // 50-150ms (reduced for faster tests)
+    // 1. Load document from storage
+    const document = await this.documentStorage.get<PHDocument>(job.documentId);
 
-    // Check if aborted again
+    // 2. Get the document model module and reducer
+    const module = this.registry.getModule(document.header.documentType);
+    const { reducer } = module;
+
+    // Check if aborted after loading
     if (signal.aborted) {
       throw new Error("Job was aborted");
     }
 
-    // Always succeed unless explicitly mocked in tests
+    // 3. Apply the action through the reducer
+    const updatedDocument = reducer(document, job.operation.action);
+
+    // 4. Extract the generated operation
+    const operations = updatedDocument.operations[job.scope];
+    const newOperation = operations[operations.length - 1];
+
+    if (!newOperation) {
+      throw new Error(`Failed to generate operation for job ${job.id}`);
+    }
+
+    // 5. Store the updated document
+    // Note: IDocumentStorage doesn't have a set method, we need to handle this differently
+    // For now, we'll just return the operation metadata without storing
+    // TODO: Integrate with proper storage mechanism
+
+    // Check if aborted after storing
+    if (signal.aborted) {
+      throw new Error("Job was aborted");
+    }
+
+    // Return execution metadata
     return {
       metadata: {
         operationType: job.operation.action.type,
         documentId: job.documentId,
+        operationHash: newOperation.hash,
+        operationIndex: newOperation.index,
         executedAt: new Date().toISOString(),
       },
     };
@@ -430,11 +459,11 @@ export class InMemoryJobExecutor implements IJobExecutor {
   private calculateRetryDelay(retryCount: number): number {
     // Exponential backoff with jitter
     const exponentialDelay =
-      this.config.retryBaseDelay * Math.pow(2, retryCount - 1);
+      this.config.retryBaseDelayMs * Math.pow(2, retryCount - 1);
     const jitter = Math.random() * 0.1 * exponentialDelay; // 10% jitter
     const delay = Math.min(
       exponentialDelay + jitter,
-      this.config.retryMaxDelay,
+      this.config.retryMaxDelayMs,
     );
     return Math.floor(delay);
   }

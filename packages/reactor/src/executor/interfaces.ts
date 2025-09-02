@@ -85,3 +85,81 @@ export interface IJobExecutor {
     handler: (data: any) => void,
   ): () => void;
 }
+
+/**
+ * Interface for managing multiple job executors.
+ * Coordinates the distribution of jobs across multiple executor instances (workers/processes).
+ */
+export interface IJobExecutorManager {
+  /**
+   * Start the executor manager with specified number of executors.
+   *
+   * @param numExecutors - Number of executor instances to create
+   * @param config - Configuration for each executor
+   * @returns Promise that resolves when all executors are started
+   */
+  start(numExecutors: number, config?: JobExecutorConfig): Promise<void>;
+
+  /**
+   * Stop all managed executors.
+   *
+   * @param graceful - Whether to wait for current jobs to complete
+   * @returns Promise that resolves when all executors are stopped
+   */
+  stop(graceful?: boolean): Promise<void>;
+
+  /**
+   * Get all managed executor instances.
+   *
+   * @returns Array of executor instances
+   */
+  getExecutors(): IJobExecutor[];
+
+  /**
+   * Get a specific executor by index.
+   *
+   * @param index - The executor index
+   * @returns The executor instance or undefined if not found
+   */
+  getExecutor(index: number): IJobExecutor | undefined;
+
+  /**
+   * Scale the number of executors up or down.
+   *
+   * @param numExecutors - Target number of executors
+   * @returns Promise that resolves when scaling is complete
+   */
+  scale(numExecutors: number): Promise<void>;
+
+  /**
+   * Get aggregate status across all executors.
+   *
+   * @returns Promise that resolves to aggregate status
+   */
+  getStatus(): Promise<{
+    numExecutors: number;
+    totalActiveJobs: number;
+    totalJobsProcessed: number;
+    totalJobsSucceeded: number;
+    totalJobsFailed: number;
+    executorStatuses: Array<{
+      index: number;
+      isRunning: boolean;
+      activeJobs: number;
+    }>;
+  }>;
+
+  /**
+   * Pause all executors.
+   *
+   * @returns Promise that resolves when all executors are paused
+   */
+  pauseAll(): Promise<void>;
+
+  /**
+   * Resume all executors.
+   *
+   * @returns Promise that resolves when all executors are resumed
+   */
+  resumeAll(): Promise<void>;
+}

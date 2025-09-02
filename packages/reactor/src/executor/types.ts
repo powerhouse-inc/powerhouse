@@ -31,13 +31,13 @@ export type JobExecutorConfig = {
   maxConcurrency?: number;
 
   /** Maximum time in milliseconds a job can run before being considered timed out */
-  jobTimeout?: number;
+  jobTimeoutMs?: number;
 
   /** Base delay in milliseconds for exponential backoff retries */
-  retryBaseDelay?: number;
+  retryBaseDelayMs?: number;
 
   /** Maximum delay in milliseconds for exponential backoff retries */
-  retryMaxDelay?: number;
+  retryMaxDelayMs?: number;
 };
 
 /**

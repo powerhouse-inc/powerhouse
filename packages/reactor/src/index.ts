@@ -41,6 +41,8 @@ export {
   type JobResult,
   type JobStartedEvent,
 } from "./executor/job-executor.js";
+export { JobExecutorManager, type JobExecutorFactory } from "./executor/job-executor-manager.js";
+export { type IJobExecutorManager } from "./executor/interfaces.js";
 
 // Document Model Registry
 export {

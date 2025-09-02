@@ -75,7 +75,35 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
     // Create event bus, queue, and executor
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    jobExecutor = new InMemoryJobExecutor(eventBus, queue);
+    
+    // Create a mock registry for the executor
+    const registry = {
+      getModule: vi.fn().mockReturnValue({
+        reducer: vi.fn((doc, action) => ({
+          ...doc,
+          operations: { global: [{ index: 0, hash: 'test-hash' }] }
+        }))
+      })
+    } as any;
+    
+    // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
+    const mockDocStorage = {
+      get: vi.fn().mockResolvedValue({
+        header: { documentType: 'test' },
+        operations: { global: [] },
+        history: [],
+        state: {},
+        initialState: {},
+        clipboard: [],
+      }),
+      delete: vi.fn(),
+      exists: vi.fn(),
+      getChildren: vi.fn(),
+      findByType: vi.fn(),
+      resolveIds: vi.fn(),
+    } as any;
+    
+    jobExecutor = new InMemoryJobExecutor(eventBus, queue, registry, mockDocStorage);
 
     // Create reactor with all dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
@@ -200,7 +228,7 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
       expect(executorStartSpy).toHaveBeenCalledTimes(1);
       expect(executorStartSpy).toHaveBeenCalledWith({
         maxConcurrency: 5,
-        jobTimeout: 30000,
+        jobTimeoutMs: 30000,
       });
     });
 

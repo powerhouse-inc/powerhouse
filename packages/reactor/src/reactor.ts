@@ -538,7 +538,7 @@ export class Reactor implements IReactor {
     if (!this.jobExecutorStarted) {
       await this.jobExecutor.start({
         maxConcurrency: 5,
-        jobTimeout: 30000,
+        jobTimeoutMs: 30000,
       });
       this.jobExecutorStarted = true;
     }

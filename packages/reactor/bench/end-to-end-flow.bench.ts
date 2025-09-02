@@ -157,7 +157,7 @@ describe("Job Executor Performance", () => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
     executor = new InMemoryJobExecutor(eventBus, queue);
-    await executor.start({ maxConcurrency: 1, jobTimeout: 5000 });
+    await executor.start({ maxConcurrency: 1, jobTimeoutMs: 5000 });
   });
 
   afterEach(async () => {
@@ -321,7 +321,7 @@ describe("Mixed Workload Performance", () => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
     executor = new InMemoryJobExecutor(eventBus, queue);
-    await executor.start({ maxConcurrency: 3, jobTimeout: 5000 });
+    await executor.start({ maxConcurrency: 3, jobTimeoutMs: 5000 });
   });
 
   afterEach(async () => {

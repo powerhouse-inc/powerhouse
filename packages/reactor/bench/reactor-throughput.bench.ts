@@ -10,7 +10,7 @@ const queue = new InMemoryQueue(eventBus);
 const executor = new InMemoryJobExecutor(eventBus, queue);
 
 // Initialize executor once
-await executor.start({ maxConcurrency: 5, jobTimeout: 10000 });
+await executor.start({ maxConcurrency: 5, jobTimeoutMs: 10000 });
 
 let jobCounter = 0;
 
