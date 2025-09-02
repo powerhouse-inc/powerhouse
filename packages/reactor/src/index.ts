@@ -41,3 +41,12 @@ export {
   type JobResult,
   type JobStartedEvent,
 } from "./executor/job-executor.js";
+
+// Document Model Registry
+export {
+  DocumentModelRegistry,
+  ModuleNotFoundError,
+  DuplicateModuleError,
+  InvalidModuleError,
+  type IDocumentModelRegistry,
+} from "./registry/index.js";
