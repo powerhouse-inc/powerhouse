@@ -32,9 +32,11 @@ export function AddDriveModal(props: Props) {
         onClose();
     }
 
+    const ready = driveEditorModules.length > 0;
+
     return (
         <ConnectAddLocalDriveModal
-            open={open}
+            open={open && ready}
             onAddLocalDrive={onAddLocalDriveSubmit}
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
