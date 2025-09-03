@@ -10,12 +10,13 @@ import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import { Reactor } from "../src/reactor.js";
+import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import { JobStatus } from "../src/shared/types.js";
 
 // Helper to create a valid PHDocument using the document model utils
@@ -63,47 +64,22 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
   ] as DocumentModelModule<any>[];
 
   beforeEach(async () => {
-    // Create shared storage
+    // Create dependencies
     storage = new MemoryStorage();
-
-    // Create real drive server with the storage
-    const builder = new ReactorBuilder(documentModels);
-    builder.withStorage(storage);
-    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
-    // Create event bus, queue, and executor
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
 
-    // Create a mock registry for the executor
-    const registry = {
-      getModule: vi.fn().mockReturnValue({
-        reducer: vi.fn((doc, action) => ({
-          ...doc,
-          operations: { global: [{ index: 0, hash: "test-hash" }] },
-        })),
-      }),
-    } as any;
+    // Create real drive server
+    const builder = new ReactorBuilder(documentModels).withStorage(storage);
+    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+    await driveServer.initialize();
 
-    // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
-    const mockDocStorage = {
-      get: vi.fn().mockResolvedValue({
-        header: { documentType: "test" },
-        operations: { global: [] },
-        history: [],
-        state: {},
-        initialState: {},
-        clipboard: [],
-      }),
-      delete: vi.fn(),
-      exists: vi.fn(),
-      getChildren: vi.fn(),
-      findByType: vi.fn(),
-      resolveIds: vi.fn(),
-    } as any;
+    // Create a real DocumentModelRegistry and register the document model
+    const registry = new DocumentModelRegistry();
+    registry.registerModules(documentModelDocumentModelModule);
 
-    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage);
+    // Use the same storage instance that's used by the drive server and reactor
+    jobExecutor = new SimpleJobExecutor(registry, storage);
 
     // Create reactor with all dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
