@@ -22,10 +22,19 @@ export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEdito
     return vetraEditorModule;
 }
 
-export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
+async function loadDocumentModelEditorModule() {
+    // Import styles dynamically when the editor is loaded
+    await import('@powerhousedao/builder-tools/style.css');
+
     const { documentModelEditorModule } = await import(
         '@powerhousedao/builder-tools/document-model-editor'
     );
+
+    return documentModelEditorModule;
+}
+
+export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
+    const documentModelEditorModule = await loadDocumentModelEditorModule();
     const config = documentModelEditorModule.config;
     const unsafeIdFromConfig = config.id;
     const name = 'Document Model Editor';
