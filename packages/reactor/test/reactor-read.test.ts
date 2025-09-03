@@ -73,15 +73,15 @@ describe("Reactor Read Interface", () => {
       getModule: vi.fn().mockReturnValue({
         reducer: vi.fn((doc, action) => ({
           ...doc,
-          operations: { global: [{ index: 0, hash: 'test-hash' }] }
-        }))
-      })
+          operations: { global: [{ index: 0, hash: "test-hash" }] },
+        })),
+      }),
     } as any;
-    
+
     // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
     const mockDocStorage = {
       get: vi.fn().mockResolvedValue({
-        header: { documentType: 'test' },
+        header: { documentType: "test" },
         operations: { global: [] },
         history: [],
         state: {},
@@ -94,7 +94,7 @@ describe("Reactor Read Interface", () => {
       findByType: vi.fn(),
       resolveIds: vi.fn(),
     } as any;
-    
+
     jobExecutor = new SimpleJobExecutor(registry, mockDocStorage);
 
     // Create reactor facade with all required dependencies

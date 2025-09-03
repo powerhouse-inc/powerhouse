@@ -3,20 +3,20 @@ import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { Job } from "../src/queue/types.js";
-import { DocumentModelRegistry } from "../src/registry/implementation.js";
+import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
+import { createMockDocumentStorage, createTestRegistry } from "./factories.js";
 
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;
-  let registry: DocumentModelRegistry;
+  let registry: IDocumentModelRegistry;
   let mockDocStorage: IDocumentStorage;
 
   beforeEach(() => {
     // Setup registry with real document model
-    registry = new DocumentModelRegistry();
-    registry.registerModules(documentModelDocumentModelModule);
+    registry = createTestRegistry([documentModelDocumentModelModule]);
 
-    // Setup mock document storage
-    mockDocStorage = {
+    // Setup mock document storage with additional mock for operations/state structure
+    mockDocStorage = createMockDocumentStorage({
       get: vi.fn().mockResolvedValue({
         header: {
           id: "doc-1",
@@ -32,11 +32,8 @@ describe("SimpleJobExecutor", () => {
         },
       }),
       exists: vi.fn().mockResolvedValue(true),
-      getChildren: vi.fn().mockResolvedValue([]),
-      findByType: vi.fn().mockResolvedValue([]),
-      resolveIds: vi.fn().mockResolvedValue([]),
       resolveSlugs: vi.fn().mockResolvedValue([]),
-    } as unknown as IDocumentStorage;
+    });
 
     executor = new SimpleJobExecutor(registry, mockDocStorage);
   });

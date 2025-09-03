@@ -1,54 +1,22 @@
-import {
-  MemoryStorage,
-  ReactorBuilder,
-  driveDocumentModelModule,
-  type BaseDocumentDriveServer,
-} from "document-drive";
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
-import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../src/events/event-bus.js";
+import type { BaseDocumentDriveServer } from "document-drive";
+import type { DocumentModelModule, Action } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "document-drive";
+import { type MemoryStorage } from "document-drive";
+import { v4 as uuidv4 } from "uuid";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IQueue } from "../src/queue/interfaces.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
-import { Reactor } from "../src/reactor.js";
-import { DocumentModelRegistry } from "../src/registry/implementation.js";
+import { type Reactor } from "../src/reactor.js";
 import { JobStatus } from "../src/shared/types.js";
-
-// Helper to create a valid PHDocument using the document model utils
-function createMockDocument(
-  overrides: {
-    id?: string;
-    slug?: string;
-    documentType?: string;
-    state?: any;
-  } = {},
-): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
-
-  // Apply overrides if provided
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
-  if (overrides.slug) {
-    baseDocument.header.slug = overrides.slug;
-  }
-  if (overrides.documentType) {
-    baseDocument.header.documentType = overrides.documentType;
-  }
-  if (overrides.state) {
-    baseDocument.state = {
-      ...baseDocument.state,
-      ...(overrides.state as typeof baseDocument.state),
-    };
-  }
-
-  return baseDocument;
-}
+import {
+  createMockDocument,
+  createDocumentModelAction,
+  createTestActions,
+  createTestReactorSetup,
+} from "./factories.js";
 
 describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;
@@ -64,25 +32,13 @@ describe("Reactor <> Queue Integration", () => {
   ] as DocumentModelModule<any>[];
 
   beforeEach(async () => {
-    // Create dependencies
-    storage = new MemoryStorage();
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-
-    // Create real drive server
-    const builder = new ReactorBuilder(documentModels).withStorage(storage);
-    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
-    // Create a real DocumentModelRegistry and register the document model
-    const registry = new DocumentModelRegistry();
-    registry.registerModules(documentModelDocumentModelModule);
-
-    // Use the same storage instance that's used by the drive server and reactor
-    jobExecutor = new SimpleJobExecutor(registry, storage);
-
-    // Create reactor with all dependencies
-    reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
+    const setup = await createTestReactorSetup(documentModels);
+    reactor = setup.reactor;
+    driveServer = setup.driveServer;
+    storage = setup.storage;
+    eventBus = setup.eventBus;
+    queue = setup.queue;
+    jobExecutor = setup.jobExecutor;
   });
 
   describe("mutate", () => {
@@ -97,13 +53,9 @@ describe("Reactor <> Queue Integration", () => {
       await driveServer.addDocument(testDoc);
 
       // Create a mock action for the documentmodel document type
-      const action: Action = {
-        id: uuidv4(),
-        type: "SET_NAME",
-        scope: "global",
+      const action = createDocumentModelAction("SET_NAME", {
         input: { name: "Updated Document Model" },
-        timestampUtcMs: String(Date.now()),
-      } as Action;
+      });
 
       // Spy on the queue's enqueue method
       const enqueueSpy = vi.spyOn(queue, "enqueue");
@@ -137,21 +89,14 @@ describe("Reactor <> Queue Integration", () => {
       await driveServer.addDocument(testDoc);
 
       // Create multiple actions
-      const actions: Action[] = [
-        {
-          id: uuidv4(),
-          type: "SET_NAME",
-          scope: "global",
+      const actions = [
+        createDocumentModelAction("SET_NAME", {
           input: { name: "First Update" },
-          timestampUtcMs: String(Date.now()),
-        } as Action,
-        {
-          id: uuidv4(),
-          type: "SET_DESCRIPTION",
-          scope: "global",
+        }),
+        createDocumentModelAction("SET_DESCRIPTION", {
           input: { description: "Test description" },
           timestampUtcMs: String(Date.now() + 1000),
-        } as Action,
+        }),
       ];
 
       // Capture the jobs that are enqueued
@@ -190,13 +135,9 @@ describe("Reactor <> Queue Integration", () => {
       // Spy on the executor's executeJob method (start is called internally)
       const executorSpy = vi.spyOn(jobExecutor, "executeJob");
 
-      const action: Action = {
-        id: uuidv4(),
-        type: "SET_NAME",
-        scope: "global",
+      const action = createDocumentModelAction("SET_NAME", {
         input: { name: "Test Name" },
-        timestampUtcMs: String(Date.now()),
-      } as Action;
+      });
 
       await reactor.mutate(testDoc.header.id, [action]);
 
@@ -215,13 +156,9 @@ describe("Reactor <> Queue Integration", () => {
       // Add the document to the drive server
       await driveServer.addDocument(testDoc);
 
-      const action: Action = {
-        id: uuidv4(),
-        type: "SET_NAME",
-        scope: "global",
+      const action = createDocumentModelAction("SET_NAME", {
         input: { name: "Test Name" },
-        timestampUtcMs: String(Date.now()),
-      } as Action;
+      });
 
       const result = await reactor.mutate(testDoc.header.id, [action]);
 
@@ -241,29 +178,7 @@ describe("Reactor <> Queue Integration", () => {
       // Add the document to the drive server
       await driveServer.addDocument(testDoc);
 
-      const actions: Action[] = [
-        {
-          id: uuidv4(),
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Name 1" },
-          timestampUtcMs: String(Date.now()),
-        } as Action,
-        {
-          id: uuidv4(),
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Name 2" },
-          timestampUtcMs: String(Date.now() + 1000),
-        } as Action,
-        {
-          id: uuidv4(),
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Name 3" },
-          timestampUtcMs: String(Date.now() + 2000),
-        } as Action,
-      ];
+      const actions = createTestActions(3, "SET_NAME");
 
       // Track enqueued jobs
       const enqueuedJobs: Job[] = [];
@@ -286,7 +201,7 @@ describe("Reactor <> Queue Integration", () => {
         const actionInput = (job.operation.action as Action).input as {
           name: string;
         };
-        expect(actionInput.name).toBe(`Name ${index + 1}`);
+        expect(actionInput.name).toBe(`Action ${index + 1}`);
       });
     });
 

@@ -165,7 +165,7 @@ describe("Job Executor Performance", () => {
     // Setup mock storage
     mockDocStorage = {
       get: async () => ({
-        header: { documentType: 'powerhouse/document-model' },
+        header: { documentType: "powerhouse/document-model" },
         operations: { global: [] },
         state: {},
       }),
@@ -332,7 +332,7 @@ describe("Mixed Workload Performance", () => {
     // Setup mock storage
     mockDocStorage = {
       get: async () => ({
-        header: { documentType: 'powerhouse/document-model' },
+        header: { documentType: "powerhouse/document-model" },
         operations: { global: [] },
         state: {},
       }),
