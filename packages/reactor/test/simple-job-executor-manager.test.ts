@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
-import type { IQueue } from "../src/queue/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import {
   SimpleJobExecutorManager,
   type JobExecutorFactory,
 } from "../src/executor/simple-job-executor-manager.js";
 import type { JobResult } from "../src/executor/types.js";
+import type { IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 
 describe("SimpleJobExecutorManager", () => {
@@ -110,8 +110,8 @@ describe("SimpleJobExecutorManager", () => {
   });
 
   describe("getStatus", () => {
-    it("should return status when not running", async () => {
-      const status = await manager.getStatus();
+    it("should return status when not running", () => {
+      const status = manager.getStatus();
       expect(status.isRunning).toBe(false);
       expect(status.numExecutors).toBe(0);
       expect(status.activeJobs).toBe(0);
@@ -120,7 +120,7 @@ describe("SimpleJobExecutorManager", () => {
 
     it("should return status when running", async () => {
       await manager.start(3);
-      const status = await manager.getStatus();
+      const status = manager.getStatus();
       expect(status.isRunning).toBe(true);
       expect(status.numExecutors).toBe(3);
       expect(status.activeJobs).toBe(0);
@@ -157,7 +157,7 @@ describe("SimpleJobExecutorManager", () => {
       await queue.enqueue(job);
 
       // Give the manager time to process
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Check that the executor was called
       expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(job);

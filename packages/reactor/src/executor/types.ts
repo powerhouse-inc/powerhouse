@@ -83,3 +83,20 @@ export type ExecutorStoppedEvent = {
   stoppedAt: string;
   graceful: boolean;
 };
+
+/**
+ * Status information for the job executor manager
+ */
+export type ExecutorManagerStatus = {
+  /** Whether the manager is currently running */
+  isRunning: boolean;
+
+  /** Number of executor instances managed */
+  numExecutors: number;
+
+  /** Number of jobs currently being processed */
+  activeJobs: number;
+
+  /** Total number of jobs processed since start */
+  totalJobsProcessed: number;
+};

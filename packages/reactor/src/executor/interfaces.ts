@@ -1,5 +1,5 @@
 import { type Job } from "../queue/types.js";
-import { type JobResult } from "./types.js";
+import { type ExecutorManagerStatus, type JobResult } from "./types.js";
 
 /**
  * Simple interface for executing a job.
@@ -47,12 +47,7 @@ export interface IJobExecutorManager {
   /**
    * Get the current status of the manager.
    *
-   * @returns Promise that resolves to the manager status
+   * @returns The current manager status
    */
-  getStatus(): Promise<{
-    isRunning: boolean;
-    numExecutors: number;
-    activeJobs: number;
-    totalJobsProcessed: number;
-  }>;
+  getStatus(): ExecutorManagerStatus;
 }
