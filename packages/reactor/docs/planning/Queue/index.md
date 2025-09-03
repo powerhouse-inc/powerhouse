@@ -105,6 +105,7 @@ In the case that a job did resolve but the journal could not be updated, the Job
 
 ### Dependencies
 
+- [Dependency System](dependencies.md)
 - [IEventBus](../Events/index.md)
 - [IQueueJournal](journal.md)
 
