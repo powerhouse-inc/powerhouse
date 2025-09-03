@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "4.1.0-dev.33",
+    "version": "4.1.0-dev.34",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
@@ -10,13 +10,14 @@
     },
     "files": [
         "dist",
+        "ts-build",
         "nginx.conf",
         "nginx.sh",
         "scripts",
         "assets"
     ],
     "exports": {
-        ".": "./dist/src/index.js",
+        ".": "./ts-build/src/index.js",
         "./assets/*.mp4": "./assets/*.mp4",
         "./assets/*.png": "./assets/*.png",
         "./assets/*.svg": "./assets/*.svg",
@@ -26,11 +27,7 @@
         "./assets/*.webp": "./assets/*.webp",
         "./assets/*.avif": "./assets/*.avif"
     },
-    "types": "./dist/src/index.d.ts",
-    "imports": {
-            "PH:EXTERNAL_PACKAGES": "./dist/src/custom.d.ts",
-            "#assets/*": "./dist/src/assets/*"
-        },
+    "types": "./ts-build/src/index.d.ts",
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
     "repository": {
@@ -54,6 +51,10 @@
         "docker:run": "docker run -it -p 4000:4000 -v $(realpath ../../../monorepo):/monorepo -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf.template -e PH_USE_LOCAL=true -e PH_CONNECT_BASE_PATH=/develop/powerhouse/connect -e PORT=4000 connect-test-dev"
     },
     "devDependencies": {
+        "@tailwindcss/vite": "^4.1.12",
+        "tailwindcss": "^4.1.4"
+    },
+    "dependencies": {
         "@didtools/key-webcrypto": "^0.2.0",
         "@playwright/test": "^1.41.2",
         "@powerhousedao/builder-tools": "workspace:*",
@@ -62,12 +63,12 @@
         "@powerhousedao/design-system": "workspace:*",
         "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",
         "@powerhousedao/reactor-browser": "workspace:*",
+        "@electric-sql/pglite": "^0.2.17",
         "@renown/sdk": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
         "@sentry/browser": "^9.1.0",
         "@sentry/react": "^7.109.0",
         "@sentry/vite-plugin": "^2.23.0",
-        "@tailwindcss/vite": "^4.1.4",
         "@tanstack/react-virtual": "^3.8.1",
         "@types/cypress": "^1.1.6",
         "@types/node": "^24.3.0",
@@ -99,7 +100,6 @@
         "react-i18next": "^13.5.0",
         "react-router-dom": "^6.11.2",
         "tailwind-merge": "^3.0.2",
-        "tailwindcss": "^4.1.4",
         "uint8arrays": "^5.1.0",
         "uuid": "^9.0.1",
         "viem": "^2.8.13",

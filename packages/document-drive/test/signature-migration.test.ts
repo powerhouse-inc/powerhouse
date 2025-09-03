@@ -6,12 +6,12 @@ import {
   createBaseState,
   driveCreateDocument,
   migrateLegacyOperationSignature,
-  PrismaClient,
   driveDocumentReducer,
 } from "document-drive";
 import type { ActionContext, Operation } from "document-model";
 import { generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
+import { PrismaClient } from "../src/storage/prisma/client/default.js";
 
 const prismaClient = new PrismaClient();
 

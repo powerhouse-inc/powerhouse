@@ -1,11 +1,8 @@
 {
     "extends": "../../tsconfig.options.json",
     "compilerOptions": {
-        "outDir": "./dist",
+        "outDir": "./ts-build",
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
-        "paths": {
-            "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
-        },
         "types": [
             "node",
             "vite/client",
@@ -15,7 +12,7 @@
         ],
     },
     "include": ["**/*", "./package.copy.json", "src/i18n/locales/en.json"],
-    "exclude": ["dist", "node_modules", "storybook-static"],
+    "exclude": ["dist", "node_modules", "storybook-static", "ts-build"],
     "references": [
         {
             "path": "../../packages/document-model"

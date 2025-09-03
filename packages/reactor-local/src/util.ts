@@ -10,11 +10,8 @@ import type {
   IDocumentDriveServer,
   IDriveOperationStorage,
 } from "document-drive";
-import {
-  BrowserStorage,
-  FilesystemStorage,
-  PrismaStorageFactory,
-} from "document-drive";
+import { BrowserStorage, FilesystemStorage } from "document-drive";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import type { StorageOptions } from "./types.js";
 
 export const createStorage = (

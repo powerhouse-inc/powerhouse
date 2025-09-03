@@ -1,8 +1,7 @@
-import type {
-  IdbFs,
-  PGliteWorkerOptions,
-} from "@powerhousedao/reactor-browser";
-import { live, worker } from "@powerhousedao/reactor-browser";
+import { IdbFs, PGlite } from "@electric-sql/pglite";
+import { live } from "@electric-sql/pglite/live";
+import type { PGliteWorkerOptions } from "@electric-sql/pglite/worker";
+import { worker } from "@electric-sql/pglite/worker";
 
 interface PGLiteWorkerOptions extends PGliteWorkerOptions {
   meta: {
@@ -16,8 +15,6 @@ worker({
     if (!databaseName) {
       throw new Error("Database name not provided");
     }
-
-    const { IdbFs, PGlite } = await import("@powerhousedao/reactor-browser");
 
     const idbFs: IdbFs = new IdbFs(databaseName);
     // Create and return a PGlite instance

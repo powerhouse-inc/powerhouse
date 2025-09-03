@@ -4,7 +4,7 @@ import type {
 } from "document-model";
 
 export const documentModelState: DocumentModelState = {
-  id: "powerhouse/document-model",
+  id: "",
   name: "",
   extension: "",
   description: "",

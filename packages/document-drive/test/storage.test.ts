@@ -10,15 +10,14 @@ import {
   FilesystemStorage,
   InMemoryCache,
   MemoryStorage,
-  PrismaClient,
-  PrismaStorage,
 } from "document-drive";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { DocumentModelDocument } from "document-model";
 import { documentModelCreateDocument, generateId } from "document-model";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { describe, it } from "vitest";
-const SKIP_PRISMA_STORAGE = true;
 const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],
   [
@@ -42,16 +41,7 @@ const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
       return storage;
     },
   ],
-  /*[
-    "IPFSStorage",
-    async () => {
-      const helia = await createHelia();
-      return new IPFSStorage(helia);
-    },
-  ],*/
-] as unknown as [string, () => Promise<IDocumentStorage>][];
-if (!SKIP_PRISMA_STORAGE) {
-  storageImplementations.push([
+  [
     "PrismaStorage",
     async () => {
       const prisma = new PrismaClient();
@@ -63,8 +53,15 @@ if (!SKIP_PRISMA_STORAGE) {
 
       return new PrismaStorage(prisma, new InMemoryCache());
     },
-  ]);
-}
+  ],
+  /*[
+    "IPFSStorage",
+    async () => {
+      const helia = await createHelia();
+      return new IPFSStorage(helia);
+    },
+  ],*/
+] as unknown as [string, () => Promise<IDocumentStorage>][];
 
 describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should correctly check for non-existent document", async ({ expect }) => {

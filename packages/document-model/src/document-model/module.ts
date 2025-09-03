@@ -1,16 +1,5 @@
 import type { DocumentModelDocumentModelModule } from "document-model";
 import {
-  documentModelCreateDocument,
-  documentModelCreateState,
-  documentModelFileExtension,
-  documentModelLoadFromFile,
-  documentModelLoadFromInput,
-  documentModelReducer,
-  documentModelSaveToFile,
-  documentModelSaveToFileHandle,
-  documentModelState,
-} from "document-model";
-import {
   addChangeLogItem,
   addModule,
   addOperation,
@@ -23,6 +12,15 @@ import {
   deleteOperationError,
   deleteOperationExample,
   deleteStateExample,
+  documentModelCreateDocument,
+  documentModelCreateState,
+  documentModelFileExtension,
+  documentModelLoadFromFile,
+  documentModelLoadFromInput,
+  documentModelReducer,
+  documentModelSaveToFile,
+  documentModelSaveToFileHandle,
+  documentModelState,
   moveOperation,
   releaseNewVersion,
   reorderChangeLogItems,
@@ -111,6 +109,10 @@ const utils = {
   saveToFileHandle: documentModelSaveToFileHandle,
   loadFromFile: documentModelLoadFromFile,
 };
+console.log("@@@@@@", {
+  utils,
+  fileExtension: documentModelFileExtension,
+});
 export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
   {
     reducer: documentModelReducer,

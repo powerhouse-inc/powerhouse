@@ -9,18 +9,18 @@ import {
   addFolder,
   BrowserStorage,
   copyNode,
-  driveCreateDocument,
   DriveBasicClient,
+  driveCreateDocument,
   driveDocumentModelModule,
   driveDocumentReducer,
   FilesystemStorage,
   generateNodesCopy,
   InMemoryCache,
   MemoryStorage,
-  PrismaClient,
-  PrismaStorage,
   ReactorBuilder,
 } from "document-drive";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { DocumentModelModule, Operation } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { existsSync, rmSync } from "fs";

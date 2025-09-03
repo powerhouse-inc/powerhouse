@@ -4,7 +4,6 @@ import {
   viteConnectDevStudioPlugin,
   viteLoadExternalPackages,
 } from "@powerhousedao/builder-tools";
-import { nodeResolve } from "@rollup/plugin-node-resolve";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -15,7 +14,6 @@ import { viteEnvs } from "vite-envs";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
-import tsconfigPaths from "vite-tsconfig-paths";
 import clientConfig from "./client.config.js";
 import pkg from "./package.copy.json" with { type: "json" };
 
@@ -85,8 +83,23 @@ export default defineConfig(({ mode }) => {
   };
 
   const plugins: PluginOption[] = [
-    tsconfigPaths(),
-    nodeResolve(),
+    {
+      name: "who-imports-tailwind-oxide",
+      enforce: "pre",
+      async resolveId(source, importer, options) {
+        if (/@tailwindcss\/oxide|tailwindcss(\/.*)?/.test(source)) {
+          console.log(
+            "[tailwind-trace] source:",
+            source,
+            "importer:",
+            importer,
+            "ssr:",
+            options?.ssr,
+          );
+        }
+        return null; // let Vite continue normal resolution
+      },
+    },
     tailwind(),
     nodePolyfills({
       include: ["events"],

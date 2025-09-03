@@ -14,12 +14,17 @@
       "types": "./dist/index.d.ts"
     },
     "./storage/prisma": {
-      "import": "./dist/src/storage/prisma/prisma.js",
-      "types": "./dist/src/storage/prisma/prisma.d.ts"
+      "import": "./src/storage/prisma/prisma.js",
+      "types": "./src/storage/prisma/prisma.d.ts"
+    },
+    "./storage/prisma/client": {
+      "import": "./src/storage/prisma/client/index.js",
+      "types": "./src/storage/prisma/client/index.d.ts"
     }
   },
   "files": [
-    "./dist"
+    "./dist",
+    "./src/storage/prisma/client"
   ],
   "sideEffects": false,
   "scripts": {

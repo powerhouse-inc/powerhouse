@@ -52,6 +52,7 @@ jspm_packages/
 # Vite
 .vite/
 dist/
+ts-build/
 
 # yalc
 yalc.lock

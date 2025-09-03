@@ -34,7 +34,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css",
+    "build:css": "npx @tailwindcss/cli -i style.css -o dist/style.css",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",

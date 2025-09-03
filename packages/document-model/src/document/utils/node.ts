@@ -3,7 +3,6 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-
 /**
  * This should never be linked to directly. Instead, use the `#utils/misc`
  * module. This will automatically pick the correct implementation for the

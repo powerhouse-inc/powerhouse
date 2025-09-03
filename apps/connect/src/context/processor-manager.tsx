@@ -1,39 +1,30 @@
+import type { PGlite } from "@electric-sql/pglite";
+import { live, type PGliteWithLive } from "@electric-sql/pglite/live";
+import { PGliteWorker } from "@electric-sql/pglite/worker";
 import { connectConfig } from "@powerhousedao/connect";
 import type {
   IAnalyticsStore,
-  PGlite,
-  PGliteWithLive,
   Processors,
 } from "@powerhousedao/reactor-browser";
 import {
   AnalyticsProvider,
-  live,
   useAnalyticsStoreAsync,
   useProcessorManager,
   useProcessors,
   useRelationalDb,
   useSetPGliteDB,
 } from "@powerhousedao/reactor-browser";
-import type {
-  IRelationalDb,
-  ProcessorManager,
-  ProcessorRecord,
-} from "document-drive";
+import type { IRelationalDb, ProcessorManager } from "document-drive";
 import { childLogger } from "document-drive";
-import type { PHDocumentHeader } from "document-model";
-import { generateId } from "document-model";
+import { generateUUIDBrowser } from "document-model";
 import type { PropsWithChildren } from "react";
 import { useEffect, useRef } from "react";
-
+import PGWorker from "../workers/pglite-worker.js?worker";
+import { processorFactory } from "@powerhousedao/common";
 const logger = childLogger(["reactor-analytics"]);
 
 function createPgLiteFactoryWorker(databaseName: string) {
   return async () => {
-    const PGWorker = (await import("../workers/pglite-worker.js?worker"))
-      .default;
-
-    const { PGliteWorker } = await import("@powerhousedao/reactor-browser");
-
     const worker = new PGWorker({
       name: "pglite-worker",
     });
@@ -75,32 +66,30 @@ async function registerExternalProcessors(
   );
 }
 
-async function registerDiffAnalyzer(
-  manager: ProcessorManager,
-  analyticsStore: IAnalyticsStore,
-) {
-  const { processorFactory } = await import(
-    "@powerhousedao/diff-analyzer/processors"
-  );
+// async function registerDiffAnalyzer(
+//   manager: ProcessorManager,
+//   analyticsStore: IAnalyticsStore,
+// ) {
+//   const { processorFactory } = await import(
+//     "@powerhousedao/diff-analyzer/processors"
+//   );
 
-  const unsafeWrappedFactory = (driveHeader: PHDocumentHeader) => {
-    return processorFactory({ analyticsStore })(
-      driveHeader.id,
-    ) as ProcessorRecord[];
-  };
+//   const unsafeWrappedFactory = (driveHeader: PHDocumentHeader) => {
+//     return processorFactory({ analyticsStore })(
+//       driveHeader.id,
+//     ) as ProcessorRecord[];
+//   };
 
-  return manager.registerFactory(
-    "@powerhousedao/diff-analyzer",
-    unsafeWrappedFactory,
-  );
-}
+//   return manager.registerFactory(
+//     "@powerhousedao/diff-analyzer",
+//     unsafeWrappedFactory,
+//   );
+// }
 
 async function registerDriveAnalytics(
   manager: ProcessorManager,
   analyticsStore: IAnalyticsStore,
 ) {
-  const { processorFactory } = await import("@powerhousedao/common");
-
   return manager.registerFactory(
     "@powerhousedao/common/drive-analytics",
     processorFactory({ analyticsStore }),
@@ -118,7 +107,7 @@ export function DiffAnalyzerProcessor() {
     }
 
     hasRegistered.current = true;
-    registerDiffAnalyzer(manager, store.data).catch(logger.error);
+    // registerDiffAnalyzer(manager, store.data).catch(logger.error);
   }, [store.data, manager]);
 
   return null;
@@ -173,7 +162,7 @@ export function ExternalProcessors() {
         manager,
         store.data,
         relationalDb.db,
-        generateId(),
+        generateUUIDBrowser(),
         processor,
       ).catch(logger.error);
     }

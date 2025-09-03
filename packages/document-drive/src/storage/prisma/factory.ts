@@ -1,5 +1,6 @@
-import { PrismaStorage, type ICache } from "document-drive";
-import { PrismaClient } from "./client/index.js";
+import { type ICache } from "document-drive";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 
 export class PrismaStorageFactory {
   private readonly prisma: PrismaClient;

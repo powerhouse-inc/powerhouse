@@ -16,8 +16,6 @@ import {
   FilesystemStorage,
   InMemoryCache,
   MemoryStorage,
-  PrismaClient,
-  PrismaStorage,
   ReactorBuilder,
   setDriveName,
   SynchronizationManager,
@@ -37,6 +35,8 @@ import {
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { PrismaClient } from "document-drive/storage/prisma/client";
+import { PrismaStorage } from "document-drive/storage/prisma";
 
 const documentModels = baseDocumentModels;
 

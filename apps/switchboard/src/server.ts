@@ -9,11 +9,11 @@ import {
   DocumentAlreadyExistsError,
   FilesystemStorage,
   InMemoryCache,
-  PrismaStorageFactory,
   ReactorBuilder,
   RedisCache,
   driveDocumentModelModule,
 } from "document-drive";
+import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   type DocumentModelModule,
   documentModelDocumentModelModule,

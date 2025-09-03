@@ -7,6 +7,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
   documentModelReducer,
   generateId,
