@@ -289,5 +289,220 @@ describe("Reactor Write Interface - Mutate with Queue Integration", () => {
         expect(actionInput.name).toBe(`Name ${index + 1}`);
       });
     });
+
+    describe("serial execution per document", () => {
+      it("should not dequeue jobs for a document that has executing jobs", async () => {
+        // Create two test documents
+        const testDoc1 = createMockDocument({
+          id: "test-doc-serial-1",
+          slug: "test-doc-serial-1",
+        });
+        const testDoc2 = createMockDocument({
+          id: "test-doc-serial-2",
+          slug: "test-doc-serial-2",
+        });
+
+        // Add documents to the drive server
+        await driveServer.addDocument(testDoc1);
+        await driveServer.addDocument(testDoc2);
+
+        // Create actions for both documents
+        const action1: Action = {
+          id: uuidv4(),
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "Doc 1 Action 1" },
+          timestampUtcMs: String(Date.now()),
+        } as Action;
+
+        const action2: Action = {
+          id: uuidv4(),
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "Doc 1 Action 2" },
+          timestampUtcMs: String(Date.now() + 1000),
+        } as Action;
+
+        const action3: Action = {
+          id: uuidv4(),
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "Doc 2 Action 1" },
+          timestampUtcMs: String(Date.now() + 2000),
+        } as Action;
+
+        // Enqueue jobs for both documents
+        await reactor.mutate(testDoc1.header.id, [action1, action2]);
+        await reactor.mutate(testDoc2.header.id, [action3]);
+
+        // First dequeue should get a job from document 1
+        const job1 = await queue.dequeueNext();
+        expect(job1).toBeDefined();
+        expect(job1?.documentId).toBe(testDoc1.header.id);
+
+        // Second dequeue should get the job from document 2 (not doc 1's second job)
+        const job2 = await queue.dequeueNext();
+        expect(job2).toBeDefined();
+        expect(job2?.documentId).toBe(testDoc2.header.id);
+
+        // Third dequeue should return null since doc 1 is still executing
+        const job3 = await queue.dequeueNext();
+        expect(job3).toBeNull();
+
+        // Complete the first job
+        if (job1) {
+          await queue.completeJob(job1.id);
+        }
+
+        // Now we should be able to dequeue the second job from document 1
+        const job4 = await queue.dequeueNext();
+        expect(job4).toBeDefined();
+        expect(job4?.documentId).toBe(testDoc1.header.id);
+      });
+
+      it("should allow concurrent execution of jobs from different documents", async () => {
+        // Create three test documents
+        const docs = await Promise.all([
+          createMockDocument({ id: "concurrent-1", slug: "concurrent-1" }),
+          createMockDocument({ id: "concurrent-2", slug: "concurrent-2" }),
+          createMockDocument({ id: "concurrent-3", slug: "concurrent-3" }),
+        ]);
+
+        // Add documents to the drive server
+        for (const doc of docs) {
+          await driveServer.addDocument(doc);
+        }
+
+        // Create actions for each document
+        const actions = docs.map(
+          (doc, index) =>
+            ({
+              id: uuidv4(),
+              type: "SET_NAME",
+              scope: "global",
+              input: { name: `Doc ${index + 1} Action` },
+              timestampUtcMs: String(Date.now() + index * 1000),
+            }) as Action,
+        );
+
+        // Enqueue one job per document
+        for (let i = 0; i < docs.length; i++) {
+          await reactor.mutate(docs[i].header.id, [actions[i]]);
+        }
+
+        // Should be able to dequeue all three jobs since they're from different documents
+        const dequeuedJobs = [];
+        for (let i = 0; i < docs.length; i++) {
+          const job = await queue.dequeueNext();
+          expect(job).toBeDefined();
+          dequeuedJobs.push(job!);
+        }
+
+        // Verify we got one job from each document
+        const documentIds = dequeuedJobs.map((job) => job.documentId).sort();
+        const expectedIds = docs.map((doc) => doc.header.id).sort();
+        expect(documentIds).toEqual(expectedIds);
+
+        // Fourth dequeue should return null since all documents are executing
+        const noMoreJobs = await queue.dequeueNext();
+        expect(noMoreJobs).toBeNull();
+      });
+
+      it("should resume processing after job completion", async () => {
+        // Create a test document
+        const testDoc = createMockDocument({
+          id: "test-resume",
+          slug: "test-resume",
+        });
+
+        await driveServer.addDocument(testDoc);
+
+        // Create multiple actions for the same document
+        const actions: Action[] = [1, 2, 3].map(
+          (i) =>
+            ({
+              id: uuidv4(),
+              type: "SET_NAME",
+              scope: "global",
+              input: { name: `Action ${i}` },
+              timestampUtcMs: String(Date.now() + i * 1000),
+            }) as Action,
+        );
+
+        // Enqueue all actions
+        await reactor.mutate(testDoc.header.id, actions);
+
+        // Dequeue first job
+        const job1 = await queue.dequeueNext();
+        expect(job1).toBeDefined();
+        expect(job1?.operation.index).toBe(0);
+
+        // Should not be able to dequeue another job for this document
+        const blockedJob = await queue.dequeueNext();
+        expect(blockedJob).toBeNull();
+
+        // Complete the first job
+        if (job1) {
+          await queue.completeJob(job1.id);
+        }
+
+        // Now should be able to dequeue the second job
+        const job2 = await queue.dequeueNext();
+        expect(job2).toBeDefined();
+        expect(job2?.operation.index).toBe(1);
+
+        // Complete second job and get third
+        if (job2) {
+          await queue.completeJob(job2.id);
+        }
+
+        const job3 = await queue.dequeueNext();
+        expect(job3).toBeDefined();
+        expect(job3?.operation.index).toBe(2);
+      });
+
+      it("should handle job failure and allow next job to proceed", async () => {
+        // Create a test document
+        const testDoc = createMockDocument({
+          id: "test-failure",
+          slug: "test-failure",
+        });
+
+        await driveServer.addDocument(testDoc);
+
+        // Create two actions
+        const actions: Action[] = [1, 2].map(
+          (i) =>
+            ({
+              id: uuidv4(),
+              type: "SET_NAME",
+              scope: "global",
+              input: { name: `Action ${i}` },
+              timestampUtcMs: String(Date.now() + i * 1000),
+            }) as Action,
+        );
+
+        // Enqueue actions
+        await reactor.mutate(testDoc.header.id, actions);
+
+        // Dequeue first job
+        const job1 = await queue.dequeueNext();
+        expect(job1).toBeDefined();
+
+        // Should not be able to dequeue second job
+        const blockedJob = await queue.dequeueNext();
+        expect(blockedJob).toBeNull();
+
+        // Fail the first job
+        if (job1) {
+          await queue.failJob(job1.id, "Test failure");
+        }
+
+        // Now should be able to dequeue the second job
+        const job2 = await queue.dequeueNext();
+        expect(job2).toBeDefined();
+        expect(job2?.operation.index).toBe(1);
+      });
+    });
   });
 });
