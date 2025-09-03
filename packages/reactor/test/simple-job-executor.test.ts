@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
-import { documentModelDocumentModelModule } from "document-model";
 import type { IDocumentStorage } from "document-drive/storage/types";
+import { documentModelDocumentModelModule } from "document-model";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
-import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { Job } from "../src/queue/types.js";
+import { DocumentModelRegistry } from "../src/registry/implementation.js";
 
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;
@@ -18,17 +18,17 @@ describe("SimpleJobExecutor", () => {
     // Setup mock document storage
     mockDocStorage = {
       get: vi.fn().mockResolvedValue({
-        header: { 
+        header: {
           id: "doc-1",
-          documentType: "powerhouse/document-model" 
+          documentType: "powerhouse/document-model",
         },
-        operations: { 
+        operations: {
           global: [],
-          local: []
+          local: [],
         },
         state: {
           global: {},
-          local: {}
+          local: {},
         },
       }),
       exists: vi.fn().mockResolvedValue(true),
@@ -36,7 +36,7 @@ describe("SimpleJobExecutor", () => {
       findByType: vi.fn().mockResolvedValue([]),
       resolveIds: vi.fn().mockResolvedValue([]),
       resolveSlugs: vi.fn().mockResolvedValue([]),
-    } as any;
+    } as unknown as IDocumentStorage;
 
     executor = new SimpleJobExecutor(registry, mockDocStorage);
   });
@@ -48,7 +48,9 @@ describe("SimpleJobExecutor", () => {
     });
 
     it("should handle document not found", async () => {
-      mockDocStorage.get = vi.fn().mockResolvedValue(null);
+      mockDocStorage.get = vi
+        .fn()
+        .mockRejectedValue(new Error("Document not found"));
 
       const job: Job = {
         id: "job-2",
@@ -81,9 +83,9 @@ describe("SimpleJobExecutor", () => {
     it("should handle missing reducer", async () => {
       // Mock a document with unknown type
       mockDocStorage.get = vi.fn().mockResolvedValue({
-        header: { 
+        header: {
           id: "doc-1",
-          documentType: "unknown/type" 
+          documentType: "unknown/type",
         },
         operations: { global: [] },
         state: {},
@@ -114,11 +116,15 @@ describe("SimpleJobExecutor", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.message).toContain("Document model module not found");
+      expect(result.error?.message).toContain(
+        "Document model module not found",
+      );
     });
 
     it("should handle storage errors", async () => {
-      mockDocStorage.get = vi.fn().mockRejectedValue(new Error("Storage error"));
+      mockDocStorage.get = vi
+        .fn()
+        .mockRejectedValue(new Error("Storage error"));
 
       const job: Job = {
         id: "job-4",

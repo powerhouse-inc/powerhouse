@@ -23,9 +23,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     let document: PHDocument;
     try {
       document = await this.documentStorage.get(job.documentId);
-      if (!document) {
-        throw new Error(`Document not found: ${job.documentId}`);
-      }
     } catch (error) {
       return {
         job,
