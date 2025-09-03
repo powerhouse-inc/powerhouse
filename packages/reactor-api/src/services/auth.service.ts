@@ -6,7 +6,7 @@ export interface AuthConfig {
   guests: string[];
   users: string[];
   admins: string[];
-  cacheTtl?: number; // Cache TTL in milliseconds, defaults to 1 hour
+  cacheTtl?: number; // Cache TTL in milliseconds, defaults to 10 seconds
 }
 
 export interface User {
@@ -29,58 +29,9 @@ interface CacheEntry {
 
 export class AuthService {
   private readonly config: AuthConfig;
-  private tokenCache = new Map<string, CacheEntry>();
-  private static readonly CACHE_TTL = 60 * 60 * 1000; // default to 1 hour
 
   constructor(config: AuthConfig) {
     this.config = config;
-
-    // Clean up expired cache entries every 30 minutes
-    setInterval(() => this.cleanupCache(), 30 * 60 * 1000);
-  }
-
-  /**
-   * Clean up expired cache entries
-   */
-  private cleanupCache(): void {
-    const now = Date.now();
-    for (const [token, entry] of this.tokenCache.entries()) {
-      if (
-        now - entry.timestamp >
-        (this.config.cacheTtl ?? AuthService.CACHE_TTL)
-      ) {
-        this.tokenCache.delete(token);
-      }
-    }
-  }
-
-  /**
-   * Get cached user if token was verified recently
-   */
-  private getCachedUser(token: string): User | null {
-    const entry = this.tokenCache.get(token);
-    if (!entry) return null;
-
-    const now = Date.now();
-    if (
-      now - entry.timestamp >
-      (this.config.cacheTtl ?? AuthService.CACHE_TTL)
-    ) {
-      this.tokenCache.delete(token);
-      return null;
-    }
-
-    return entry.user;
-  }
-
-  /**
-   * Cache a verified token and user
-   */
-  private cacheToken(token: string, user: User): void {
-    this.tokenCache.set(token, {
-      timestamp: Date.now(),
-      user,
-    });
   }
 
   /**
@@ -112,18 +63,6 @@ export class AuthService {
     }
 
     try {
-      const cachedUser = this.getCachedUser(token);
-      if (cachedUser) {
-        req.user = cachedUser;
-        // Check if user is in allowed lists
-        if (!this.isUserAllowed(req.user.address)) {
-          res.status(403).json({ error: "Forbidden" });
-          return;
-        }
-        next();
-        return;
-      }
-
       const verified = (await this.verifyToken(token)) as {
         issuer: string;
         verifiableCredential?: {
@@ -158,7 +97,6 @@ export class AuthService {
       }
 
       req.user = user;
-      this.cacheToken(token, user);
 
       // Check if user is in allowed lists
       if (!this.isUserAllowed(user.address)) {

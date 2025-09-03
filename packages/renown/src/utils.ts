@@ -39,7 +39,18 @@ export function parsePkhDid(did: string): PKHDid {
 
 export async function verifyAuthBearerToken(jwt: string) {
   try {
-    const verified = await verifyCredential(jwt, getResolver());
+    const now = parseInt(String(Date.now() / 1000));
+    const verified = await verifyCredential(jwt, getResolver(), {
+      policies: {
+        now: parseInt(String(Date.now() / 1000)),
+        expirationDate: true,
+        issuanceDate: true,
+      },
+    });
+
+    if (verified.payload.exp && verified.payload.exp! < now) {
+      return false;
+    }
     return verified;
   } catch (e) {
     console.error(e);
