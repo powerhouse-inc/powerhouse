@@ -22,6 +22,9 @@ export type Job = {
   /** Timestamp when the job was created */
   createdAt: string;
 
+  /** The hint for the queue to use for ordering the job */
+  queueHint: string[];
+
   /** Number of retry attempts */
   retryCount?: number;
 

@@ -71,6 +71,7 @@ describe("SimpleJobExecutor", () => {
           skip: 0,
         },
         createdAt: "123",
+        queueHint: [],
       };
 
       const result = await executor.executeJob(job);
@@ -110,6 +111,7 @@ describe("SimpleJobExecutor", () => {
           skip: 0,
         },
         createdAt: "123",
+        queueHint: [],
       };
 
       const result = await executor.executeJob(job);
@@ -145,6 +147,7 @@ describe("SimpleJobExecutor", () => {
           skip: 0,
         },
         createdAt: "123",
+        queueHint: [],
       };
 
       const result = await executor.executeJob(job);

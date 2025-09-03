@@ -33,6 +33,7 @@ function createSimpleJob(
     },
     maxRetries: 0,
     createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 
@@ -69,6 +70,7 @@ function createComplexJob(
     },
     maxRetries: 0,
     createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 

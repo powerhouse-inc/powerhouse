@@ -151,6 +151,7 @@ describe("SimpleJobExecutorManager", () => {
           skip: 0,
         },
         createdAt: "123",
+        queueHint: [],
       };
 
       // Enqueue a job

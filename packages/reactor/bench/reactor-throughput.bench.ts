@@ -1,9 +1,10 @@
-import { bench, describe } from "vitest";
+import { type IDocumentStorage } from "document-drive/storage/types";
 import { documentModelDocumentModelModule } from "document-model";
+import { bench, describe } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import { type Job } from "../src/queue/types.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 
 // Pre-create shared components to avoid setup overhead
@@ -15,18 +16,18 @@ const registry = new DocumentModelRegistry();
 registry.registerModules(documentModelDocumentModelModule);
 
 const mockDocStorage = {
-  get: async () => ({
-    header: { documentType: 'powerhouse/document-model' },
+  get: () => ({
+    header: { documentType: "powerhouse/document-model" },
     operations: { global: [] },
     state: {},
   }),
-  set: async () => {},
-  delete: async () => {},
-  exists: async () => false,
-  getChildren: async () => [],
-  findByType: async () => [],
-  resolveIds: async () => [],
-} as any;
+  set: () => {},
+  delete: () => {},
+  exists: () => false,
+  getChildren: () => [],
+  findByType: () => [],
+  resolveIds: () => [],
+} as unknown as IDocumentStorage;
 
 const executor = new SimpleJobExecutor(registry, mockDocStorage);
 
@@ -53,6 +54,7 @@ function createSimpleJob(): Job {
     },
     maxRetries: 0,
     createdAt: "2023-01-01T00:00:00.000Z",
+    queueHint: [],
   };
 }
 
@@ -80,6 +82,7 @@ function createComplexJob(): Job {
     },
     maxRetries: 0,
     createdAt: "2023-01-01T00:00:00.000Z",
+    queueHint: [],
   };
 }
 

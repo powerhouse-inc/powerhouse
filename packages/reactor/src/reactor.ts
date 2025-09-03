@@ -395,6 +395,7 @@ export class Reactor implements IReactor {
         action: action,
       },
       createdAt: new Date().toISOString(),
+      queueHint: [],
       maxRetries: 3,
     }));
 

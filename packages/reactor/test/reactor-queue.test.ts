@@ -50,7 +50,7 @@ function createMockDocument(
   return baseDocument;
 }
 
-describe("Reactor Write Interface - Mutate with Queue Integration", () => {
+describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
