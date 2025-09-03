@@ -4,7 +4,7 @@ import {
   type BaseDocumentDriveServer,
   driveDocumentModelModule,
 } from "document-drive";
-import type { IDocumentStorage } from "document-drive/storage/types";
+import type { IDocumentOperationStorage, IDocumentStorage } from "document-drive/storage/types";
 import {
   documentModelDocumentModelModule,
   type Action,
@@ -295,6 +295,18 @@ export function createMockDocumentStorage(
 }
 
 /**
+ * Factory for creating mock IDocumentOperationStorage
+ */
+export function createMockOperationStorage(
+  overrides: Partial<IDocumentOperationStorage> = {},
+): IDocumentOperationStorage {
+  return {
+    addDocumentOperations: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  } as unknown as IDocumentOperationStorage;
+}
+
+/**
  * Factory for creating a complete test reactor setup
  */
 export async function createTestReactorSetup(
@@ -317,7 +329,7 @@ export async function createTestReactorSetup(
   registry.registerModules(documentModelDocumentModelModule);
 
   // Create job executor
-  const jobExecutor = new SimpleJobExecutor(registry, storage);
+  const jobExecutor = new SimpleJobExecutor(registry, storage, storage);
 
   // Create reactor
   const reactor = new Reactor(

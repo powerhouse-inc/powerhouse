@@ -1,15 +1,16 @@
-import type { IDocumentStorage } from "document-drive/storage/types";
+import type { IDocumentOperationStorage, IDocumentStorage } from "document-drive/storage/types";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { Job } from "../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
-import { createMockDocumentStorage, createTestRegistry } from "./factories.js";
+import { createMockDocumentStorage, createMockOperationStorage, createTestRegistry } from "./factories.js";
 
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;
   let registry: IDocumentModelRegistry;
   let mockDocStorage: IDocumentStorage;
+  let mockOperationStorage: IDocumentOperationStorage;
 
   beforeEach(() => {
     // Setup registry with real document model
@@ -35,7 +36,10 @@ describe("SimpleJobExecutor", () => {
       resolveSlugs: vi.fn().mockResolvedValue([]),
     });
 
-    executor = new SimpleJobExecutor(registry, mockDocStorage);
+    // Setup mock operation storage
+    mockOperationStorage = createMockOperationStorage();
+
+    executor = new SimpleJobExecutor(registry, mockDocStorage, mockOperationStorage);
   });
 
   describe("executeJob", () => {

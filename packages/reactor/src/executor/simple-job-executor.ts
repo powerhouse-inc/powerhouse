@@ -1,4 +1,4 @@
-import type { IDocumentStorage } from "document-drive/storage/types";
+import type { IDocumentOperationStorage, IDocumentStorage } from "document-drive/storage/types";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -12,6 +12,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   constructor(
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
+    private operationStorage: IDocumentOperationStorage,
   ) {}
 
   /**
@@ -57,7 +58,21 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const newOperation = operations[operations.length - 1];
 
-    // For now, the executor just generates the operation - storage is handled elsewhere
+    // Write the operation to legacy storage
+    try {
+      await this.operationStorage.addDocumentOperations(
+        job.documentId,
+        [newOperation],
+        updatedDocument,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error)),
+        duration: Date.now() - startTime,
+      };
+    }
 
     return {
       job,

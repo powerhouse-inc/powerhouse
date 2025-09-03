@@ -177,7 +177,7 @@ describe("Job Executor Performance", () => {
       resolveIds: async () => [],
     };
 
-    executor = new SimpleJobExecutor(registry, mockDocStorage);
+    executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
   });
 
   bench("execute single simple job", async () => {
@@ -344,7 +344,7 @@ describe("Mixed Workload Performance", () => {
       resolveIds: async () => [],
     };
 
-    executor = new SimpleJobExecutor(registry, mockDocStorage);
+    executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
   });
 
   bench("execute mixed simple and complex jobs", async () => {

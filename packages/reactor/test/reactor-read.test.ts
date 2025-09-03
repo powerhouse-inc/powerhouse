@@ -95,7 +95,7 @@ describe("Reactor Read Interface", () => {
       resolveIds: vi.fn(),
     } as any;
 
-    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage);
+    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
 
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);

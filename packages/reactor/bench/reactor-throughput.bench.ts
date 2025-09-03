@@ -29,7 +29,7 @@ const mockDocStorage = {
   resolveIds: () => [],
 } as unknown as IDocumentStorage;
 
-const executor = new SimpleJobExecutor(registry, mockDocStorage);
+const executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
 
 let jobCounter = 0;
 
