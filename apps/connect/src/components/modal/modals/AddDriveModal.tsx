@@ -42,8 +42,8 @@ export function AddDriveModal(props: Props) {
                     const authToken = await connectCrypto?.getBearerToken?.(
                         url,
                         user?.address,
-                        false,
-                        60 * 10,
+                        true,
+                        10,
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
@@ -53,8 +53,8 @@ export function AddDriveModal(props: Props) {
                     const authToken = await connectCrypto?.getBearerToken?.(
                         url,
                         user?.address,
-                        false,
-                        60 * 10,
+                        true,
+                        10,
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,

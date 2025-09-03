@@ -42,7 +42,7 @@ export async function login(
       dispatchSetLoginStatusEvent("authorized");
       dispatchSetUserEvent(newUser);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, newUser.address),
+        connectCrypto.getBearerToken(driveUrl, newUser.address, true, 10),
       );
     } else {
       dispatchSetLoginStatusEvent("not-authorized");
