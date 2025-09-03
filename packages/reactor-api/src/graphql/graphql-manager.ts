@@ -86,17 +86,23 @@ export class GraphQLManager {
       this.setAdditionalContextFields({
         user: req.user,
         isAdmin: (address: string) =>
-          req.admins
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.admins
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
         isUser: (address: string) =>
-          req.users
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.users
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
         isGuest: (address: string) =>
-          req.guests
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.guests
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
       });
       this.coreRouter(req, res, next);
     });
@@ -104,17 +110,23 @@ export class GraphQLManager {
       this.setAdditionalContextFields({
         user: req.user,
         isAdmin: (address: string) =>
-          req.admins
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.admins
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
         isUser: (address: string) =>
-          req.users
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.users
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
         isGuest: (address: string) =>
-          req.guests
-            ?.map((a) => a.toLowerCase())
-            .includes(address.toLowerCase() ?? "") ?? false,
+          !req.auth_enabled
+            ? true
+            : (req.guests
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
       });
       this.reactorRouter(req, res, next);
     });

@@ -55,6 +55,7 @@ export class AuthService {
     req.admins = this.config.admins;
     req.users = this.config.users;
     req.guests = this.config.guests;
+    req.auth_enabled = this.config.enabled;
 
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
