@@ -1,3 +1,17 @@
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **reactor-api:** disable cache ([7fa75b69f](https://github.com/powerhouse-inc/powerhouse/commit/7fa75b69f))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.43 (2025-09-02)
 
 ### 🚀 Features

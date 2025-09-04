@@ -1,3 +1,13 @@
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.43 (2025-09-02)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
