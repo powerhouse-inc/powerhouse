@@ -1,3 +1,7 @@
+## 5.0.0-staging.1 (2025-09-04)
+
+This was a version bump only, there were no code changes.
+
 ## 4.1.0-dev.44 (2025-09-04)
 
 ### 🚀 Features
