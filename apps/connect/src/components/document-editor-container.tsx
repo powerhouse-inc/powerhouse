@@ -94,7 +94,7 @@ export function DocumentEditorContainer() {
                             remoteUrl,
                             user.address,
                             false,
-                            600,
+                            { expiresIn: 600 },
                         )
                       : undefined;
 

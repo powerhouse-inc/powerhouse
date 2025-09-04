@@ -45,7 +45,7 @@ export function AddDriveModal(props: Props) {
                         url,
                         user?.address,
                         true,
-                        10,
+                        { expiresIn: 10 },
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
@@ -56,7 +56,7 @@ export function AddDriveModal(props: Props) {
                         url,
                         user?.address,
                         true,
-                        10,
+                        { expiresIn: 10 },
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
