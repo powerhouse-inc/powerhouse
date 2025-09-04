@@ -1,3 +1,27 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- first mutation queued... ([a678882a3](https://github.com/powerhouse-inc/powerhouse/commit/a678882a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

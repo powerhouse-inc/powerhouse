@@ -1,3 +1,43 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+
+### 🩹 Fixes
+
+- **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **reactor-api:** auth enabled false ([ff9ddfc58](https://github.com/powerhouse-inc/powerhouse/commit/ff9ddfc58))
+- **reactor-api:** disable cache ([7fa75b69f](https://github.com/powerhouse-inc/powerhouse/commit/7fa75b69f))
+- **reactor-api:** auth flow ([bbda4f2a1](https://github.com/powerhouse-inc/powerhouse/commit/bbda4f2a1))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- **reactor-api:** added renown credential auth check ([af266ae5b](https://github.com/powerhouse-inc/powerhouse/commit/af266ae5b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 ### 🩹 Fixes

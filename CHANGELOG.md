@@ -1,3 +1,54 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+
+### 🩹 Fixes
+
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** reduced jwt expiry time to 10seconds ([a833a71fe](https://github.com/powerhouse-inc/powerhouse/commit/a833a71fe))
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **connect:** only show add drive modal when apps are loaded ([b888806fb](https://github.com/powerhouse-inc/powerhouse/commit/b888806fb))
+- **connect:** import document model editor styles ([#1808](https://github.com/powerhouse-inc/powerhouse/pull/1808))
+- **reactor-api:** auth flow ([bbda4f2a1](https://github.com/powerhouse-inc/powerhouse/commit/bbda4f2a1))
+- **reactor-api:** disable cache ([7fa75b69f](https://github.com/powerhouse-inc/powerhouse/commit/7fa75b69f))
+- **reactor-api:** auth enabled false ([ff9ddfc58](https://github.com/powerhouse-inc/powerhouse/commit/ff9ddfc58))
+- **renown:** automatically login after reload ([f20dc4fcc](https://github.com/powerhouse-inc/powerhouse/commit/f20dc4fcc))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- first mutation queued... ([a678882a3](https://github.com/powerhouse-inc/powerhouse/commit/a678882a3))
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+- **reactor-api:** added renown credential auth check ([af266ae5b](https://github.com/powerhouse-inc/powerhouse/commit/af266ae5b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 ### 🩹 Fixes

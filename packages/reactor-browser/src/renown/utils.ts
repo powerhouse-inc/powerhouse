@@ -33,16 +33,29 @@ export async function login(
     let user = renown.user instanceof Function ? renown.user() : renown.user;
     user = user instanceof Promise ? await user : user;
 
-    if (user?.did === userDid) {
+    if (user?.did && (user.did === userDid || !userDid)) {
       dispatchSetLoginStatusEvent("authorized");
+      dispatchSetUserEvent(user);
+      reactor.setGenerateJwtHandler(async (driveUrl) =>
+        connectCrypto.getBearerToken(driveUrl, user.address, true, {
+          expiresIn: 10,
+        }),
+      );
       return user;
     }
+
+    if (!userDid) {
+      return;
+    }
+
     const newUser = await renown.login(userDid ?? "");
     if (newUser) {
       dispatchSetLoginStatusEvent("authorized");
       dispatchSetUserEvent(newUser);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, newUser.address),
+        connectCrypto.getBearerToken(driveUrl, newUser.address, true, {
+          expiresIn: 10,
+        }),
       );
     } else {
       dispatchSetLoginStatusEvent("not-authorized");

@@ -1,6 +1,9 @@
 /* eslint-disable no-unused-private-class-members */
 
-import { createAuthBearerToken } from "@renown/sdk";
+import {
+  createAuthBearerToken,
+  type CreateBearerTokenOptions,
+} from "@renown/sdk";
 import { bytesToBase64url } from "did-jwt";
 import type { Issuer } from "did-jwt-vc";
 import {
@@ -39,6 +42,7 @@ export interface IConnectCrypto {
     driveUrl: string,
     address: string | undefined,
     refresh?: boolean,
+    options?: CreateBearerTokenOptions,
   ) => Promise<string>;
 }
 
@@ -110,6 +114,7 @@ export class ConnectCrypto implements IConnectCrypto {
     driveUrl: string,
     address: string | undefined,
     refresh = false,
+    options?: CreateBearerTokenOptions,
   ) {
     const issuer = await this.getIssuer();
     if (refresh || !this.#bearerToken) {
@@ -118,6 +123,7 @@ export class ConnectCrypto implements IConnectCrypto {
         RENOWN_NETWORK_ID,
         address || (await this.#did),
         issuer,
+        options,
       );
     }
 

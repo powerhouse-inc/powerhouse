@@ -153,7 +153,9 @@ async function initJwtHandler(
   }
 
   reactor.setGenerateJwtHandler(async (driveUrl) => {
-    return connectCrypto.getBearerToken(driveUrl, user.address);
+    return connectCrypto.getBearerToken(driveUrl, user.address, true, {
+      expiresIn: 10,
+    });
   });
 }
 

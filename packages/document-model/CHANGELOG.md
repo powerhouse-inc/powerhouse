@@ -1,3 +1,27 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.43 (2025-09-02)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

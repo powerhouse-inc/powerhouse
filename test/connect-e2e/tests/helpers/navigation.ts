@@ -1,6 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { CONNECT_URL } from "../../playwright.config.js";
-import { handleCookieConsent } from "./cookie-consent.js";
+import { createLocalDrive } from "./drive.js";
 
 /**
  * Helper function to navigate to a specific drive in Connect
@@ -8,14 +7,11 @@ import { handleCookieConsent } from "./cookie-consent.js";
  * @param driveName Name of the drive to navigate to
  */
 export async function goToConnectDrive(page: Page, driveName: string) {
-  // Navigate to URL
-  await page.goto(CONNECT_URL);
-
-  // Handle cookie consent
-  await handleCookieConsent(page);
+  await createLocalDrive(page, driveName);
 
   // Click on the drive
   await page.click(`text=${driveName}`);
+  await page.isVisible(`text=Documents and files`);
 }
 
 /**

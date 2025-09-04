@@ -294,19 +294,19 @@ export async function startAPI(
   }
 
   const all = [...admins, ...users, ...guests];
-
+  const authService = new AuthService({
+    enabled: authEnabled,
+    guests,
+    users,
+    admins,
+  });
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
-    const authService = new AuthService({
-      enabled: authEnabled,
-      guests,
-      users,
-      admins,
-    });
 
-    app.use(async (req, res, next) => {
-      await authService.authenticate(req as AuthenticatedRequest, res, next);
+    // Apply auth middleware to all routes including GraphQL
+    app.use((req, res, next) => {
+      authService.authenticate(req as AuthenticatedRequest, res, next);
     });
   }
 

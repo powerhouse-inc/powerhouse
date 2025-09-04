@@ -32,9 +32,11 @@ export function AddDriveModal(props: Props) {
         onClose();
     }
 
+    const ready = driveEditorModules.length > 0;
+
     return (
         <ConnectAddLocalDriveModal
-            open={open}
+            open={open && ready}
             onAddLocalDrive={onAddLocalDriveSubmit}
             onAddRemoteDrive={onAddRemoteDriveSubmit}
             requestPublicDrive={async (url: string) => {
@@ -42,6 +44,8 @@ export function AddDriveModal(props: Props) {
                     const authToken = await connectCrypto?.getBearerToken?.(
                         url,
                         user?.address,
+                        true,
+                        { expiresIn: 10 },
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,
@@ -52,6 +56,7 @@ export function AddDriveModal(props: Props) {
                         url,
                         user?.address,
                         true,
+                        { expiresIn: 10 },
                     );
                     return requestPublicDrive(url, {
                         Authorization: `Bearer ${authToken}`,

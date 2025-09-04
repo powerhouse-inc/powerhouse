@@ -15,6 +15,7 @@ import {
   type FileNode,
   type ListenerFilter,
   type ListenerRevision,
+  type Node,
   type StrandUpdateGraphQL,
 } from "document-drive";
 import { type Listener } from "document-drive/server/types";
@@ -312,6 +313,14 @@ export class DriveSubgraph extends Subgraph {
             documentModel.id === document.header.documentType,
         );
 
+        let node: Node | undefined;
+        const driveDocument = await this.reactor.getDrive(driveId);
+        if (driveDocument?.state?.global?.nodes) {
+          node = driveDocument.state.global.nodes.find(
+            (node) => node.id === id,
+          );
+        }
+
         // eslint-disable-next-line
         const globalState = (document.state as any).global;
         if (!globalState)
@@ -321,7 +330,7 @@ export class DriveSubgraph extends Subgraph {
           (dm?.documentModel.name || "").replaceAll("/", " "),
         );
 
-        return responseForDocument(document, typeName);
+        return responseForDocument(document, typeName, node?.name);
       },
       system: () => ({ sync: {} }),
     },

@@ -1,3 +1,37 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🩹 Fixes
+
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **reactor-api:** disable cache ([7fa75b69f](https://github.com/powerhouse-inc/powerhouse/commit/7fa75b69f))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

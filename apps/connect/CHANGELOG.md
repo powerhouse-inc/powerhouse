@@ -1,3 +1,42 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🩹 Fixes
+
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** reduced jwt expiry time to 10seconds ([a833a71fe](https://github.com/powerhouse-inc/powerhouse/commit/a833a71fe))
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **connect:** import document model editor styles ([#1808](https://github.com/powerhouse-inc/powerhouse/pull/1808))
+- **connect:** only show add drive modal when apps are loaded ([b888806fb](https://github.com/powerhouse-inc/powerhouse/commit/b888806fb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.42 (2025-09-02)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

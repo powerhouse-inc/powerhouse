@@ -84,7 +84,7 @@ export async function deleteFolder(page: Page, folderName: string) {
   await page.waitForSelector(`text=${folderName}`);
 
   // Hover over the folder to make options visible
-  await page.hover(`text=${folderName}`);
+  await page.getByText(folderName, { exact: true }).hover();
 
   // Click the options button (three dots)
   await page.click('button[aria-haspopup="menu"]');
@@ -93,8 +93,10 @@ export async function deleteFolder(page: Page, folderName: string) {
   await page.click("text=Delete");
 
   // Press Enter to confirm deletion
-  await page.keyboard.press("Enter");
+  await page.getByText("Delete", { exact: true }).click();
 
   // Verify the folder has been deleted
-  await page.getByText(folderName).waitFor({ state: "detached" });
+  await page
+    .getByText(folderName, { exact: true })
+    .waitFor({ state: "detached" });
 }
