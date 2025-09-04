@@ -1,5 +1,5 @@
 import type { ServiceWorkerMessage } from "@powerhousedao/connect";
-import { connectConfig } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 
 const VERSION_CHECK_INTERVAL =
   parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL) || 60 * 60 * 1000; // 1 hour;

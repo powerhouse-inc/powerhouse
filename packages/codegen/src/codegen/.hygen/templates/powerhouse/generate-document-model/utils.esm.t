@@ -5,9 +5,7 @@ force: true
 import { 
     type DocumentModelUtils,
     baseCreateDocument,
-    baseSaveToFile,
     baseSaveToFileHandle,
-    baseLoadFromFile,
     baseLoadFromInput,
     defaultBaseState,
     generateId,
@@ -40,14 +38,8 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
 
         return document;
     },
-    saveToFile(document, path, name) {
-        return baseSaveToFile(document, path, '<%- fileExtension %>', name);
-    },
     saveToFileHandle(document, input) {
         return baseSaveToFileHandle(document, input);
-    },
-    loadFromFile(path) {
-        return baseLoadFromFile(path, reducer);
     },
     loadFromInput(input) {
         return baseLoadFromInput(input, reducer);
@@ -56,9 +48,7 @@ const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document
 
 export const createDocument = utils.createDocument;
 export const createState = utils.createState;
-export const saveToFile = utils.saveToFile;
 export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromFile = utils.loadFromFile;
 export const loadFromInput = utils.loadFromInput;
 
 export default utils;

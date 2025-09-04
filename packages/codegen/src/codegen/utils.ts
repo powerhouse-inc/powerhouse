@@ -1,8 +1,11 @@
-import type { DocumentModelDocument, DocumentModelState } from "document-model";
-import { documentModelLoadFromFile } from "document-model";
+import {
+  documentModelReducer,
+  type DocumentModelDocument,
+  type DocumentModelState,
+} from "document-model";
+import { baseLoadFromFile } from "document-model/node";
 import fs from "node:fs";
 import { format } from "prettier";
-
 export async function loadDocumentModel(
   path: string,
 ): Promise<DocumentModelState> {
@@ -11,7 +14,7 @@ export async function loadDocumentModel(
     if (!path) {
       throw new Error("Document model file not specified");
     } else if (path.endsWith(".zip")) {
-      const file = await documentModelLoadFromFile(path);
+      const file = await baseLoadFromFile(path, documentModelReducer);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");

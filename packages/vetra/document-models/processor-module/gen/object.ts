@@ -27,20 +27,6 @@ class ProcessorModule extends BaseDocumentClass<
   ) {
     super(reducer, utils.createDocument(initialState), dispatch);
   }
-
-  public saveToFile(path: string, name?: string) {
-    return super.saveToFile(path, ProcessorModule.fileExtension, name);
-  }
-
-  public loadFromFile(path: string) {
-    return super.loadFromFile(path);
-  }
-
-  static async fromFile(path: string) {
-    const document = new this();
-    await document.loadFromFile(path);
-    return document;
-  }
 }
 
 applyMixins(ProcessorModule, [ProcessorModule_BaseOperations]);

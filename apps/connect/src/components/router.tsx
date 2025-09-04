@@ -1,4 +1,4 @@
-import { connectConfig } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import React, { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";

@@ -1,5 +1,4 @@
 export * from "./components/index.js";
-export * from "./connect.config.js";
 export * from "./context/index.js";
 export * from "./hooks/index.js";
 export * from "./service-worker.js";

@@ -1,19 +1,17 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseSaveToFile,
-  baseSaveToFileHandle,
-  baseLoadFromFile,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
 } from "document-model";
+import { reducer } from "./reducer.js";
 import type {
   DocumentEditorDocument,
-  DocumentEditorState,
   DocumentEditorLocalState,
+  DocumentEditorState,
 } from "./types.js";
-import { reducer } from "./reducer.js";
 
 export const initialGlobalState: DocumentEditorState = {
   name: "",
@@ -42,14 +40,8 @@ const utils: DocumentModelUtils<DocumentEditorDocument> = {
 
     return document;
   },
-  saveToFile(document, path, name) {
-    return baseSaveToFile(document, path, ".phdm", name);
-  },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);

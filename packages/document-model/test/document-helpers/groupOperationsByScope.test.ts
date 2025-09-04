@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-
 import type { Operation } from "document-model";
-import { fakeAction, groupOperationsByScope } from "document-model";
+import { groupOperationsByScope } from "document-model";
+import { fakeAction } from "document-model/test";
 
 const fakeOperation = (
   index: number,

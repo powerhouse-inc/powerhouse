@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { fakeAction } from "document-model";
+import { fakeAction } from "document-model/test";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;

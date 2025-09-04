@@ -7,12 +7,12 @@ import {
 import * as Sentry from "@sentry/node";
 import {
   DocumentAlreadyExistsError,
-  FilesystemStorage,
   InMemoryCache,
   ReactorBuilder,
   RedisCache,
   driveDocumentModelModule,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import {
   type DocumentModelModule,

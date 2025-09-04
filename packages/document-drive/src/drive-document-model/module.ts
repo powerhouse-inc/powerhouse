@@ -5,9 +5,7 @@ import {
   driveDocumentFileExtension,
   driveDocumentModel,
   driveDocumentReducer,
-  driveLoadFromFile,
   driveLoadFromInput,
-  driveSaveToFile,
   driveSaveToFileHandle,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
@@ -22,9 +20,7 @@ export const driveDocumentModelModule: DocumentModelModule<DocumentDriveDocument
       fileExtension: driveDocumentFileExtension,
       createState: driveCreateState,
       createDocument: driveCreateDocument,
-      loadFromFile: driveLoadFromFile,
       loadFromInput: driveLoadFromInput,
-      saveToFile: driveSaveToFile,
       saveToFileHandle: driveSaveToFileHandle,
     },
   };

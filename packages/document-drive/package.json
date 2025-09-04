@@ -13,6 +13,14 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./storage/filesystem": {
+      "import": "./src/storage/filesystem.js",
+      "types": "./src/storage/filesystem.d.ts"
+    },
+    "./storage/ipfs": {
+      "import": "./src/storage/ipfs.js",
+      "types": "./src/storage/ipfs.d.ts"
+    },
     "./storage/prisma": {
       "import": "./src/storage/prisma/prisma.js",
       "types": "./src/storage/prisma/prisma.d.ts"

@@ -1,4 +1,4 @@
-import { connectConfig } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import { About as BaseAbout } from "@powerhousedao/design-system";
 import packageJson from "../../../../../package.copy.json" with { type: "json" };
 

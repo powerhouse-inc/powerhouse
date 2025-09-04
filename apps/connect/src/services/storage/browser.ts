@@ -1,4 +1,4 @@
-import { connectConfig } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import type { IStorage } from "./index.js";
 import { BaseStorage } from "./index.js";
 

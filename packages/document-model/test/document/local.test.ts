@@ -1,17 +1,14 @@
-import type { CountDocument } from "document-model";
+import { baseCreateDocument, prune, redo, undo } from "document-model";
+import type { CountDocument } from "document-model/test";
 import {
-  baseCreateDocument,
   countReducer,
   createCountDocumentState,
   createCountState,
   defaultPHDocumentCreateState,
   fakeAction,
-  prune,
-  redo,
   setLocalName,
-  undo,
   wrappedEmptyReducer,
-} from "document-model";
+} from "document-model/test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Local reducer", () => {

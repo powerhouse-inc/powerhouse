@@ -5,6 +5,6 @@ export * from "./document-helpers.js";
 export * from "./errors.js";
 export * from "./file.js";
 export * from "./header.js";
-export * from "./node.js";
 export * from "./revisions.js";
 export * from "./validation.js";
+export * from "./zip.js";

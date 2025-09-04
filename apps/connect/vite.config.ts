@@ -180,19 +180,12 @@ export default defineConfig(({ mode }) => {
     base: "./",
     plugins,
     build: {
-      minify: true,
+      minify: false,
       sourcemap: true,
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "index.html"),
           ...staticInputs,
-        },
-        output: {
-          entryFileNames: (chunk) =>
-            Object.keys(staticInputs).includes(chunk.name)
-              ? `${chunk.name}.js`
-              : "assets/[name].[hash].js",
-          chunkFileNames: "assets/[name].[hash].js",
         },
         external: [...externalAndExclude, ...externalIds],
         treeshake: "smallest",

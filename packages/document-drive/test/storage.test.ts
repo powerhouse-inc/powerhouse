@@ -7,10 +7,10 @@ import type {
 import {
   BrowserStorage,
   driveCreateDocument,
-  FilesystemStorage,
   InMemoryCache,
   MemoryStorage,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { DocumentModelDocument } from "document-model";

@@ -1,4 +1,5 @@
-import { connectConfig, useShowAddDriveModal } from "@powerhousedao/connect";
+import { useShowAddDriveModal } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
   Icon,

@@ -11,6 +11,7 @@ import tseslint from "typescript-eslint";
 const normalIgnoredFiles = [
   "**/node_modules/",
   "**/dist/",
+  "**/ts-build/",
   "**/.ph/",
   "**/storybook-static/",
   "**/.vite/",

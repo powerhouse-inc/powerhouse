@@ -18,8 +18,13 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./editor": {
+      "import": "./dist/document-model-editor/index.js",
+      "types": "./dist/document-model-editor/index.d.ts"
+    },
     "./style.css": "./dist/style.css"
   },
+  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

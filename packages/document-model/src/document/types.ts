@@ -1,20 +1,19 @@
 import type {
   DocumentModelState,
-  FileInput,
+  PHBaseState,
+  PHDocumentHeader,
+  PHDocumentHistory,
   SignalDispatch,
 } from "document-model";
 import type { Draft } from "mutative";
 import type { FC } from "react";
-import type {
-  PHBaseState,
-  PHDocumentHeader,
-  PHDocumentHistory,
-} from "document-model";
 
 export type * from "./actions/types.js";
 export type * from "./ph-types.js";
 export type * from "./schema/types.js";
 export type * from "./signal.js";
+
+export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
 
 //  [
 //     signerAddress,
@@ -332,9 +331,7 @@ export type DocumentModelUtils<TDocument extends PHDocument> = {
   fileExtension: string;
   createState: CreateState<TDocument>;
   createDocument: CreateDocument<TDocument>;
-  loadFromFile: LoadFromFile<TDocument>;
   loadFromInput: LoadFromInput<TDocument>;
-  saveToFile: SaveToFile;
   saveToFileHandle: SaveToFileHandle;
 };
 

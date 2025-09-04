@@ -1,20 +1,18 @@
-import type {
-  Action,
-  CountAction,
-  CountDocument,
-  Operation,
-} from "document-model";
+import type { Action, Operation } from "document-model";
 import {
   baseCreateDocument,
-  countReducer,
-  createCountDocumentState,
-  increment,
   noop,
   processUndoRedo,
   redo,
-  testCreateBaseState,
   undo,
 } from "document-model";
+import type { CountAction, CountDocument } from "document-model/test";
+import {
+  countReducer,
+  createCountDocumentState,
+  increment,
+  testCreateBaseState,
+} from "document-model/test";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("UNDO/REDO", () => {

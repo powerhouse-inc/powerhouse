@@ -13,12 +13,12 @@ import {
   driveCreateDocument,
   driveDocumentModelModule,
   driveDocumentReducer,
-  FilesystemStorage,
   generateNodesCopy,
   InMemoryCache,
   MemoryStorage,
   ReactorBuilder,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { DocumentModelModule, Operation } from "document-model";

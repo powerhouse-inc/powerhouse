@@ -8,8 +8,6 @@ import type {
   SignalDispatch,
 } from "document-model";
 import {
-  baseLoadFromFile,
-  baseSaveToFile,
   loadState,
   prune,
   readOnly,
@@ -64,37 +62,11 @@ export abstract class BaseDocumentClass<
   }
 
   /**
-   * Saves the state of the document to a file.
-   * @param path - The file path where the state should be saved.
-   * @param extension - The file extension to use when saving the state.
-   * @returns The file path where the state was saved.
-   */
-  protected saveToFile(path: string, extension: string, name?: string) {
-    return baseSaveToFile(this._document, path, extension, name);
-  }
-
-  /**
-   * Loads the state of the document from a file.
-   * @param path - The file path where the state is stored.
-   */
-  async loadFromFile(path: string) {
-    this._document = await baseLoadFromFile(path, this._reducer);
-  }
-
-  /**
    * Loads the state of the document from a file and returns it.
    * @param path - The file path where the state is stored.
    * @param reducer - The reducer function that updates the state.
    * @returns The state of the document.
    */
-  protected static async stateFromFile<
-    TGlobalState,
-    TLocalState,
-    TCustomAction extends Action,
-  >(path: string, reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>) {
-    const state = await baseLoadFromFile(path, reducer);
-    return state;
-  }
 
   /**
    *    Gets the current state of the document.

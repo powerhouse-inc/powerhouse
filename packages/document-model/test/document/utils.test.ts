@@ -1,22 +1,23 @@
-import type { CountDocument } from "document-model";
 import {
   baseCreateDocument,
-  countReducer,
-  createCountDocumentState,
   createReducer,
-  fakeAction,
   generateUUIDBrowser,
-  generateUUIDNode,
-  getLocalFile,
   hashBrowser,
-  hashNode,
-  increment,
-  mutableCountReducer,
   replayDocument,
-  setLocalName,
-  testCreateBaseState,
   validateOperations,
 } from "document-model";
+import { generateUUIDNode, getLocalFile, hashNode } from "document-model/node";
+
+import {
+  countReducer,
+  createCountDocumentState,
+  fakeAction,
+  increment,
+  mutableCountReducer,
+  setLocalName,
+  testCreateBaseState,
+  type CountDocument,
+} from "document-model/test";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

@@ -1,7 +1,6 @@
 import type {
   Action,
   ActionSigner,
-  CountDocument,
   PHReducer,
   ReducerOptions,
   SignalDispatch,
@@ -15,18 +14,21 @@ import {
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
   buildSignedAction,
-  countReducer,
-  createCountDocumentState,
-  createCountState,
   generateUUIDBrowser,
   hashDocumentStateForScope,
   hex2ab,
-  increment,
   sign,
   verify,
   verifyOperationSignature,
 } from "document-model";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  countReducer,
+  createCountDocumentState,
+  createCountState,
+  increment,
+  type CountDocument,
+} from "../helpers.js";
 
 /**
  * A signer that uses a key pair to sign and verify data.

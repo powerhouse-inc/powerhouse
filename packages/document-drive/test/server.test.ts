@@ -13,13 +13,13 @@ import {
   driveDocumentModelModule,
   driveDocumentReducer,
   expectUUID,
-  FilesystemStorage,
   InMemoryCache,
   MemoryStorage,
   ReactorBuilder,
   setDriveName,
   SynchronizationManager,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
 import type {
   ActionContext,
   DocumentModelDocument,

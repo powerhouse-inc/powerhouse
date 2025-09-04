@@ -177,7 +177,6 @@ describe("Pull Responder Transmitter", () => {
 
   it("should push new document with operations to remote reactor", async () => {
     const { reactor } = await testSetupReactor();
-    console.log("!!!!!!!!!!!!!", reactor.getDocumentModelModules());
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,

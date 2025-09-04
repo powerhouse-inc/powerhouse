@@ -1,14 +1,17 @@
-import type { BaseStateFromDocument, CountDocument } from "document-model";
+import type { BaseStateFromDocument } from "document-model";
+import {
+  baseCreateDocument,
+  garbageCollectDocumentOperations,
+  replayOperations,
+} from "document-model";
+import type { CountDocument } from "document-model/test";
 import {
   baseCountReducer,
-  baseCreateDocument,
   countReducer,
   createCountDocumentState,
-  garbageCollectDocumentOperations,
   increment,
-  replayOperations,
   testCreateBaseState,
-} from "document-model";
+} from "document-model/test";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Document Operation ID", () => {

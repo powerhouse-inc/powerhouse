@@ -25,19 +25,6 @@ export abstract class DocumentDriveCore extends BaseDocumentClass<
   ) {
     super(driveDocumentReducer, driveCreateDocument(initialState), dispatch);
   }
-
-  public saveToFile(path: string, name?: string) {
-    return super.saveToFile(
-      path,
-      (this.constructor as typeof DocumentDriveCore).fileExtension,
-      name,
-    );
-  }
-
-  public loadFromFile(path: string) {
-    return super.loadFromFile(path);
-  }
-
   static async fromFile(path: string) {
     const document = new (this as any)();
     await document.loadFromFile(path);

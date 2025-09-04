@@ -1,18 +1,20 @@
-import type { CountDocument } from "document-model";
 import {
   baseCreateDocument,
+  loadState,
+  prune,
+  redo,
+  setName,
+  undo,
+} from "document-model";
+import type { CountDocument } from "document-model/test";
+import {
   countReducer,
   createCountDocumentState,
   createCountState,
   increment,
-  loadState,
   mapOperations,
-  prune,
-  redo,
-  setName,
   testCreateBaseState,
-  undo,
-} from "document-model";
+} from "document-model/test";
 import { describe, expect, it } from "vitest";
 
 describe("PRUNE operation", () => {

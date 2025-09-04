@@ -1,23 +1,22 @@
-import type {
-  Action,
-  CountDocument,
-  CreateChildDocumentInput,
-} from "document-model";
+import type { Action, CreateChildDocumentInput } from "document-model";
 import {
   baseCreateDocument,
-  countReducer,
   createAction,
-  createCountDocumentState,
   createReducer,
+  generateId,
+  setName,
+} from "document-model";
+import type { CountDocument } from "document-model/test";
+import {
+  countReducer,
+  createCountDocumentState,
   defaultPHDocumentCreateState,
   error,
   fakeAction,
-  generateId,
   increment,
-  setName,
   testCreateBaseState,
   wrappedEmptyReducer,
-} from "document-model";
+} from "document-model/test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Base reducer", () => {

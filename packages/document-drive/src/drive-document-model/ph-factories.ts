@@ -10,11 +10,7 @@ import {
   type DocumentDriveState,
 } from "document-drive";
 import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
-import {
-  createBaseState,
-  defaultBaseState,
-  testCreateBaseState,
-} from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 
 export function defaultGlobalState(): DocumentDriveState {
   return {
@@ -86,7 +82,7 @@ export function phFactoryDriveCreateDocument(
 ): DocumentDriveDocument {
   const document = driveCreateDocument(
     createState(
-      testCreateBaseState(state.auth, state.document),
+      createBaseState(state.auth, state.document),
       state.global,
       state.local,
     ),

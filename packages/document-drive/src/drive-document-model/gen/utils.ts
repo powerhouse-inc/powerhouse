@@ -20,9 +20,7 @@ import type {
 } from "document-model";
 import {
   baseCreateDocument,
-  baseLoadFromFile,
   baseLoadFromInput,
-  baseSaveToFile,
   baseSaveToFileHandle,
   defaultBaseState,
   generateId,
@@ -70,18 +68,8 @@ export const driveCreateDocument: CreateDocument<DocumentDriveDocument> = (
   return document;
 };
 
-export const driveSaveToFile: SaveToFile = (document, path, name) => {
-  return baseSaveToFile(document, path, driveDocumentFileExtension, name);
-};
-
 export const driveSaveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
-};
-
-export const driveLoadFromFile: LoadFromFile<DocumentDriveDocument> = (
-  path,
-) => {
-  return baseLoadFromFile(path, driveDocumentReducer);
 };
 
 export const driveLoadFromInput: LoadFromInput<DocumentDriveDocument> = (

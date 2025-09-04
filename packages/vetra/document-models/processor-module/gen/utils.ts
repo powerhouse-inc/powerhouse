@@ -1,19 +1,17 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseSaveToFile,
-  baseSaveToFileHandle,
-  baseLoadFromFile,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
 } from "document-model";
+import { reducer } from "./reducer.js";
 import type {
   ProcessorModuleDocument,
-  ProcessorModuleState,
   ProcessorModuleLocalState,
+  ProcessorModuleState,
 } from "./types.js";
-import { reducer } from "./reducer.js";
 
 export const initialGlobalState: ProcessorModuleState = {
   name: "",
@@ -43,14 +41,8 @@ const utils: DocumentModelUtils<ProcessorModuleDocument> = {
 
     return document;
   },
-  saveToFile(document, path, name) {
-    return baseSaveToFile(document, path, ".phdm", name);
-  },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);

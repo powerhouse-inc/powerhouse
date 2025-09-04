@@ -15,10 +15,8 @@ import {
   documentModelCreateDocument,
   documentModelCreateState,
   documentModelFileExtension,
-  documentModelLoadFromFile,
   documentModelLoadFromInput,
   documentModelReducer,
-  documentModelSaveToFile,
   documentModelSaveToFileHandle,
   documentModelState,
   moveOperation,
@@ -105,14 +103,8 @@ const utils = {
   createState: documentModelCreateState,
   createDocument: documentModelCreateDocument,
   loadFromInput: documentModelLoadFromInput,
-  saveToFile: documentModelSaveToFile,
   saveToFileHandle: documentModelSaveToFileHandle,
-  loadFromFile: documentModelLoadFromFile,
 };
-console.log("@@@@@@", {
-  utils,
-  fileExtension: documentModelFileExtension,
-});
 export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
   {
     reducer: documentModelReducer,

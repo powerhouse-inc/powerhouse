@@ -1,9 +1,7 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseSaveToFile,
   baseSaveToFileHandle,
-  baseLoadFromFile,
   baseLoadFromInput,
   defaultBaseState,
   generateId,
@@ -40,14 +38,8 @@ const utils: DocumentModelUtils<AppModuleDocument> = {
 
     return document;
   },
-  saveToFile(document, path, name) {
-    return baseSaveToFile(document, path, ".phdm", name);
-  },
   saveToFileHandle(document, input) {
     return baseSaveToFileHandle(document, input);
-  },
-  loadFromFile(path) {
-    return baseLoadFromFile(path, reducer);
   },
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);

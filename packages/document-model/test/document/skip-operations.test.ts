@@ -1,21 +1,23 @@
-import type { CountDocument } from "document-model";
+import {
+  baseCreateDocument,
+  garbageCollectDocumentOperations,
+  mapSkippedOperations,
+  replayOperations,
+  setName,
+} from "document-model";
+import type { CountDocument } from "document-model/test";
 import {
   baseCountReducer,
-  baseCreateDocument,
   countReducer,
   createCountDocumentState,
   defaultPHDocumentCreateState,
   error,
   fakeOperation,
-  garbageCollectDocumentOperations,
   increment,
   mapOperations,
-  mapSkippedOperations,
-  replayOperations,
-  setName,
   testCreateBaseState,
   wrappedEmptyReducer,
-} from "document-model";
+} from "document-model/test";
 import { describe } from "vitest";
 
 describe("skip operations", () => {

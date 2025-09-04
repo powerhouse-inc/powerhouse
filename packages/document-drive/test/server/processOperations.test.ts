@@ -52,9 +52,7 @@ describe("processOperations", () => {
 
   const driveId = generateId();
   const documentId = generateId();
-  console.log("!!!!!!!!!!!!!!", {
-    documentModelDocumentModelModule,
-  });
+
   function createDocumentModel() {
     return {
       ...documentModelCreateDocument(),

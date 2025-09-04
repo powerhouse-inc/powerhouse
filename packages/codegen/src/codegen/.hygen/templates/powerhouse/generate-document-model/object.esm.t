@@ -26,20 +26,6 @@ class <%= h.changeCase.pascal(documentType) %> extends BaseDocumentClass<<%= h.c
     constructor(initialState?: Partial<BaseStateFromDocument<<%= h.changeCase.pascal(documentType) %>Document>>, dispatch?: SignalDispatch) {
         super(reducer, utils.createDocument(initialState), dispatch);
     }
-
-    public saveToFile(path: string, name?: string) {
-        return super.saveToFile(path, <%= h.changeCase.pascal(documentType) %>.fileExtension, name);
-    }
-
-    public loadFromFile(path: string) {
-        return super.loadFromFile(path);
-    }
-
-    static async fromFile(path: string) {
-        const document = new this();
-        await document.loadFromFile(path);
-        return document;
-    }
 }
 
 applyMixins(<%= h.changeCase.pascal(documentType) %>, [

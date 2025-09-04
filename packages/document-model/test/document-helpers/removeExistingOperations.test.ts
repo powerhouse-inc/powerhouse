@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import type { Operation } from "document-model";
-import { fakeAction, removeExistingOperations } from "document-model";
-import { buildOperations } from "./utils.js";
+import { removeExistingOperations } from "document-model";
+import { buildOperations, fakeAction } from "document-model/test";
 
 describe("removeExistingOperations", () => {
   const scenarios = [
