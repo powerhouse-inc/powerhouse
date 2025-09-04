@@ -99,4 +99,20 @@ export interface IQueue {
    * @returns Promise that resolves when the job is requeued for retry
    */
   retryJob(jobId: string, error?: string): Promise<void>;
+
+  /**
+   * Returns true if and only if all jobs have been resolved.
+   */
+  get isDrained(): boolean;
+
+  /**
+   * Blocks the queue from accepting new jobs.
+   * @param onDrained - Optional callback to call when the queue is drained
+   */
+  block(onDrained?: () => void): void;
+
+  /**
+   * Unblocks the queue from accepting new jobs.
+   */
+  unblock(): void;
 }

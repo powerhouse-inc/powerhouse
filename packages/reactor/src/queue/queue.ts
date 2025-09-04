@@ -15,6 +15,8 @@ export class InMemoryQueue implements IQueue {
   private jobIdToDocId = new Map<string, string>();
   private completedJobs = new Set<string>();
   private jobIndex = new Map<string, Job>();
+  private isBlocked = false;
+  private onDrainedCallback?: () => void;
 
   constructor(private eventBus: IEventBus) {}
 
@@ -99,6 +101,11 @@ export class InMemoryQueue implements IQueue {
   }
 
   async enqueue(job: Job): Promise<void> {
+    // Throw error if queue is blocked
+    if (this.isBlocked) {
+      throw new Error("Queue is blocked");
+    }
+
     const queueKey = this.createQueueKey(job.documentId, job.scope, job.branch);
     const queue = this.getQueue(queueKey);
 
@@ -170,9 +177,9 @@ export class InMemoryQueue implements IQueue {
           const jobIdx = queue.indexOf(job);
           queue.splice(jobIdx, 1);
 
-          // Remove from job index
+          // Remove from queue tracking but keep in job index for retry
           this.jobIdToQueueKey.delete(job.id);
-          this.jobIndex.delete(job.id);
+          // Keep job in jobIndex so we can retry it if needed
 
           // Mark this job as executing for its document
           this.markJobExecuting(job);
@@ -293,9 +300,15 @@ export class InMemoryQueue implements IQueue {
     // Track the job as completed for dependency resolution
     this.completedJobs.add(jobId);
 
+    // Remove from job index
+    this.jobIndex.delete(jobId);
+
     // For in-memory queue, completing just removes the job
     // In a persistent queue, this would update the job status
     await this.remove(jobId);
+
+    // Check if queue is now drained
+    this.checkDrained();
   }
 
   async failJob(jobId: string, error?: string): Promise<void> {
@@ -306,37 +319,33 @@ export class InMemoryQueue implements IQueue {
       this.markJobComplete(jobId, documentId);
     }
 
+    // Remove from job index
+    this.jobIndex.delete(jobId);
+
     // For in-memory queue, failing just removes the job
     // In a persistent queue, this would update the job status and store the error
     await this.remove(jobId);
+
+    // Check if queue is now drained
+    this.checkDrained();
   }
 
   async retryJob(jobId: string, error?: string): Promise<void> {
-    // Get the documentId for the executing job and mark it as complete
+    // Get the job from the index (it might be executing, not in queue)
+    const job = this.jobIndex.get(jobId);
+    if (!job) {
+      return;
+    }
+
+    // Mark it as no longer executing if it was
     const documentId = this.jobIdToDocId.get(jobId);
     if (documentId) {
-      // Mark the job as no longer executing
       this.markJobComplete(jobId, documentId);
     }
 
-    // For in-memory queue, we need to find the job and re-enqueue it
-    // In a real implementation, this would update retry count and delay
-    const queueKey = this.jobIdToQueueKey.get(jobId);
-    if (!queueKey) {
-      return;
-    }
-
-    const queue = this.queues.get(queueKey);
-    if (!queue) {
-      return;
-    }
-
-    const jobIndex = queue.findIndex((job) => job.id === jobId);
-    if (jobIndex === -1) {
-      return;
-    }
-
-    const job = queue[jobIndex];
+    // Remove from indices
+    this.jobIndex.delete(jobId);
+    this.jobIdToQueueKey.delete(jobId);
 
     // Update retry count
     const updatedJob: Job = {
@@ -345,11 +354,51 @@ export class InMemoryQueue implements IQueue {
       lastError: error,
     };
 
-    // Remove old job
-    queue.splice(jobIndex, 1);
-    this.jobIdToQueueKey.delete(jobId);
-
     // Re-enqueue with updated retry count
     await this.enqueue(updatedJob);
+  }
+
+  /**
+   * Check if the queue is drained and call the callback if it is
+   */
+  private checkDrained(): void {
+    if (this.isDrained && this.onDrainedCallback) {
+      const callback = this.onDrainedCallback;
+      this.onDrainedCallback = undefined;
+      callback();
+    }
+  }
+
+  /**
+   * Returns true if and only if all jobs have been resolved.
+   */
+  get isDrained(): boolean {
+    // Queue is drained if there are no pending jobs and no executing jobs
+    const hasPendingJobs = this.queues.size > 0 && 
+      Array.from(this.queues.values()).some((q) => q.length > 0);
+    const hasExecutingJobs = this.docIdToJobId.size > 0 && 
+      Array.from(this.docIdToJobId.values()).some((set) => set.size > 0);
+    
+    return !hasPendingJobs && !hasExecutingJobs;
+  }
+
+  /**
+   * Blocks the queue from accepting new jobs.
+   * @param onDrained - Optional callback to call when the queue is drained
+   */
+  block(onDrained?: () => void): void {
+    this.isBlocked = true;
+    this.onDrainedCallback = onDrained;
+    
+    // Check if already drained
+    this.checkDrained();
+  }
+
+  /**
+   * Unblocks the queue from accepting new jobs.
+   */
+  unblock(): void {
+    this.isBlocked = false;
+    this.onDrainedCallback = undefined;
   }
 }
