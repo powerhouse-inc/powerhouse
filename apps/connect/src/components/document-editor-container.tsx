@@ -2,12 +2,14 @@ import { openUrl } from '#utils';
 import {
     exportFile,
     setSelectedNode,
+    useConnectCrypto,
     useDocumentModelModuleById,
     useDriveIsRemote,
     useDriveRemoteUrl,
     useParentFolder,
     useSelectedDocument,
     useSelectedDrive,
+    useUser,
 } from '@powerhousedao/reactor-browser';
 import { buildDocumentSubgraphUrl } from '@powerhousedao/reactor-browser/utils/switchboard';
 import { type PHDocument } from 'document-model';
@@ -27,6 +29,8 @@ export function DocumentEditorContainer() {
     const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
     const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
     const documentModelModule = useDocumentModelModuleById(documentType);
+    const connectCrypto = useConnectCrypto();
+    const user = useUser();
 
     const exportDocument = (document: PHDocument) => {
         const validationErrors = validateDocument(document);
@@ -84,10 +88,21 @@ export function DocumentEditorContainer() {
                       return;
                   }
 
+                  // @todo: add environment variable for token expiration
+                  const token = user?.address
+                      ? await connectCrypto?.getBearerToken(
+                            remoteUrl,
+                            user.address,
+                            false,
+                            600,
+                        )
+                      : undefined;
+
                   const url = buildDocumentSubgraphUrl(
                       remoteUrl,
                       selectedDocument.header.id,
                       documentModelModule.documentModel,
+                      token,
                   );
                   try {
                       openUrl(url);

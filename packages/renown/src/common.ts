@@ -10,6 +10,7 @@ import {
 } from "./types.js";
 import {
   createAuthBearerToken,
+  type CreateBearerTokenOptions,
   parsePkhDid,
   verifyAuthBearerToken,
 } from "./utils.js";
@@ -143,10 +144,21 @@ export class Renown implements IRenown {
     return verifyAuthBearerToken(token);
   }
 
-  async createBearerToken(address: string, chainId: number, issuer: Issuer) {
+  async createBearerToken(
+    address: string,
+    chainId: number,
+    issuer: Issuer,
+    options: CreateBearerTokenOptions,
+  ) {
     if (!this.user) {
       throw new Error("User not found");
     }
-    return createAuthBearerToken(chainId, this.#connectId, address, issuer);
+    return createAuthBearerToken(
+      chainId,
+      this.#connectId,
+      address,
+      issuer,
+      options,
+    );
   }
 }
