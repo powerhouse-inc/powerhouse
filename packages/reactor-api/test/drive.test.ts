@@ -134,7 +134,7 @@ describe("DriveSubgraph", () => {
     expect(mockReactor.getDocuments).toHaveBeenCalledWith(context.driveId);
   });
 
-  it.only("should return document data", async () => {
+  it("should return document data", async () => {
     const mockDocumentData = driveDocumentModelModule.utils.createDocument({});
     mockDocumentData.header.slug = "test-document-id";
 
