@@ -1,3 +1,14 @@
+## 4.1.0-dev.45 (2025-09-04)
+
+### 🩹 Fixes
+
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.44 (2025-09-04)
 
 ### 🚀 Features
