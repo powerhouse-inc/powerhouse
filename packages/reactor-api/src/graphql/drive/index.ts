@@ -312,6 +312,11 @@ export class DriveSubgraph extends Subgraph {
             documentModel.id === document.header.documentType,
         );
 
+        const driveDocument = await this.reactor.getDrive(driveId);
+        const node = driveDocument.state.global.nodes.find(
+          (node) => node.id === id,
+        );
+
         // eslint-disable-next-line
         const globalState = (document.state as any).global;
         if (!globalState)
@@ -321,7 +326,7 @@ export class DriveSubgraph extends Subgraph {
           (dm?.documentModel.name || "").replaceAll("/", " "),
         );
 
-        return responseForDocument(document, typeName);
+        return responseForDocument(document, typeName, node?.name);
       },
       system: () => ({ sync: {} }),
     },

@@ -28,11 +28,13 @@ export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
   initialState: unknown;
   stateJSON: unknown;
   operations: Operation[];
+  nodeName?: string;
 };
 
 export function responseForDocument<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   typeName: string,
+  nodeName?: string,
 ): PHDocumentGQL {
   return {
     ...document.header,
@@ -42,6 +44,7 @@ export function responseForDocument<TState extends PHBaseState = PHBaseState>(
     lastModified: document.header.lastModifiedAtUtcIso,
     documentType: document.header.documentType,
     name: document.header.name,
+    nodeName,
     revision: document.header.revision.global || 0,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,
