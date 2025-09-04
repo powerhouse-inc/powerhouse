@@ -29,7 +29,12 @@ const mockDocStorage = {
   resolveIds: () => [],
 } as unknown as IDocumentStorage;
 
-const executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
+const mockOperationStorage = {
+  addDocumentOperations: () => Promise.resolve(),
+  getSynchronizationUnitsRevision: () => Promise.resolve({}),
+} as any;
+
+const executor = new SimpleJobExecutor(registry, mockDocStorage, mockOperationStorage);
 
 let jobCounter = 0;
 

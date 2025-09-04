@@ -76,8 +76,8 @@ describe("SimpleJobExecutor Integration", () => {
       expect(updatedDocument.operations.global).toHaveLength(1);
 
       const persistedOperation = updatedDocument.operations.global[0];
-      expect(persistedOperation.type).toBe("ADD_FOLDER");
-      expect(persistedOperation.input).toMatchObject({
+      expect(persistedOperation.action.type).toBe("ADD_FOLDER");
+      expect(persistedOperation.action.input).toMatchObject({
         id: "folder-1",
         name: "Test Folder",
         parentFolder: null,
@@ -85,7 +85,7 @@ describe("SimpleJobExecutor Integration", () => {
 
       // Verify document state reflects the change
       // The state structure uses 'nodes' array for both files and folders
-      const globalState = updatedDocument.state?.global;
+      const globalState = (updatedDocument.state as any)?.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(1);
@@ -167,7 +167,7 @@ describe("SimpleJobExecutor Integration", () => {
       expect(updatedDocument.operations.global).toHaveLength(2);
 
       // Verify state reflects both changes
-      const globalState = updatedDocument.state?.global;
+      const globalState = (updatedDocument.state as any)?.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(2);
@@ -259,7 +259,7 @@ describe("SimpleJobExecutor Integration", () => {
       expect(updatedDocument.operations.global).toHaveLength(2);
 
       // Verify state reflects the changes
-      const globalState = updatedDocument.state?.global;
+      const globalState = (updatedDocument.state as any)?.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(2); // 1 folder + 1 file
@@ -335,7 +335,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Verify no operations were persisted
       const unchangedDocument = await storage.get(document.header.id);
       expect(unchangedDocument.operations.global).toHaveLength(0);
-      const globalState = unchangedDocument.state?.global;
+      const globalState = (unchangedDocument.state as any)?.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(0);
