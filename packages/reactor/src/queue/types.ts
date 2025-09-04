@@ -1,6 +1,30 @@
 import type { Operation } from "document-model";
 
 /**
+ * State of a job in the queue
+ */
+export enum JobQueueState {
+  UNKNOWN = -1,
+  PREPROCESSING = 0,
+  PENDING = 1,
+  READY = 2,
+  RUNNING = 3,
+  RESOLVED = 4,
+}
+
+/**
+ * Interface for a job execution handle
+ */
+export interface IJobExecutionHandle {
+  readonly job: Job;
+  readonly state: JobQueueState;
+
+  start(): void;
+  complete(): void;
+  fail(reason: string): void;
+}
+
+/**
  * Represents a job to be executed by the job executor
  */
 export type Job = {

@@ -96,9 +96,9 @@ describe("InMemoryQueue", () => {
         job1.branch,
       );
 
-      expect(dequeuedJob1?.id).toBe("job-1");
-      expect(dequeuedJob2?.id).toBe("job-2");
-      expect(dequeuedJob3?.id).toBe("job-3");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
+      expect(dequeuedJob3?.job.id).toBe("job-3");
     });
   });
 
@@ -118,7 +118,7 @@ describe("InMemoryQueue", () => {
         testJob.branch,
       );
 
-      expect(dequeuedJob).toEqual(testJob);
+      expect(dequeuedJob?.job).toEqual(testJob);
       expect(
         await queue.size(testJob.documentId, testJob.scope, testJob.branch),
       ).toBe(0);
@@ -133,7 +133,7 @@ describe("InMemoryQueue", () => {
 
       const dequeuedJob = await queue.dequeue("doc-1", "global", "main");
 
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
       expect(await queue.size("doc-2", "global", "main")).toBe(1);
     });
 
@@ -164,7 +164,7 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
 
       expect(dequeuedJob).toBeDefined();
-      expect([job1.id, job2.id]).toContain(dequeuedJob?.id);
+      expect([job1.id, job2.id]).toContain(dequeuedJob?.job.id);
       expect(await queue.totalSize()).toBe(1);
     });
 
@@ -275,8 +275,8 @@ describe("InMemoryQueue", () => {
         job1.branch,
       );
 
-      expect(dequeuedJob1?.id).toBe("job-1");
-      expect(dequeuedJob2?.id).toBe("job-3");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
+      expect(dequeuedJob2?.job.id).toBe("job-3");
     });
 
     it("should clean up empty queue after removing last job", async () => {
@@ -488,7 +488,7 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
     });
 
     it("should block job with unmet dependencies", async () => {
@@ -520,7 +520,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
 
       // Second job should be blocked
       const blockedJob = await queue.dequeue(
@@ -539,7 +539,7 @@ describe("InMemoryQueue", () => {
         job2.scope,
         job2.branch,
       );
-      expect(dequeuedJob2?.id).toBe("job-2");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
     });
 
     it("should handle multiple dependencies", async () => {
@@ -560,7 +560,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
       await queue.completeJob("job-1");
 
       // Next dequeue should return job-2 (not blocked), not job-3 (still blocked)
@@ -569,7 +569,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(nextJob?.id).toBe("job-2");
+      expect(nextJob?.job.id).toBe("job-2");
       await queue.completeJob("job-2");
 
       // Now job 3 should be available
@@ -578,7 +578,7 @@ describe("InMemoryQueue", () => {
         job3.scope,
         job3.branch,
       );
-      expect(dequeuedJob3?.id).toBe("job-3");
+      expect(dequeuedJob3?.job.id).toBe("job-3");
     });
 
     it("should handle dependency chains", async () => {
@@ -594,7 +594,7 @@ describe("InMemoryQueue", () => {
         jobs[0].scope,
         jobs[0].branch,
       );
-      expect(d1?.id).toBe("job-1");
+      expect(d1?.job.id).toBe("job-1");
 
       // Others should be blocked
       expect(
@@ -614,7 +614,7 @@ describe("InMemoryQueue", () => {
         jobs[1].scope,
         jobs[1].branch,
       );
-      expect(d2?.id).toBe("job-2");
+      expect(d2?.job.id).toBe("job-2");
 
       // job-3 and job-4 still blocked
       expect(
@@ -631,7 +631,7 @@ describe("InMemoryQueue", () => {
         jobs[2].scope,
         jobs[2].branch,
       );
-      expect(d3?.id).toBe("job-3");
+      expect(d3?.job.id).toBe("job-3");
 
       // job-4 still blocked
       expect(
@@ -645,7 +645,7 @@ describe("InMemoryQueue", () => {
         jobs[3].scope,
         jobs[3].branch,
       );
-      expect(d4?.id).toBe("job-4");
+      expect(d4?.job.id).toBe("job-4");
     });
 
     it("should dequeue jobs out of order based on dependencies", async () => {
@@ -663,7 +663,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob?.id).toBe("job-2");
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
 
     it("should handle dependencies across different queues", async () => {
@@ -687,12 +687,12 @@ describe("InMemoryQueue", () => {
 
       // Dequeue and complete job 1
       const dequeuedJob1 = await queue.dequeue("doc-1", "global", "main");
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
       await queue.completeJob("job-1");
 
       // Now job 2 should be available
       const dequeuedJob2 = await queue.dequeue("doc-2", "global", "main");
-      expect(dequeuedJob2?.id).toBe("job-2");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
     });
 
     it("should work with dequeueNext respecting dependencies", async () => {
@@ -712,7 +712,7 @@ describe("InMemoryQueue", () => {
 
       // Should dequeue job-2 since job-1 is blocked
       const dequeuedJob = await queue.dequeueNext();
-      expect(dequeuedJob?.id).toBe("job-2");
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
 
     it("should handle circular dependencies by blocking all involved jobs", async () => {
@@ -788,7 +788,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
     });
 
     it("should handle mixed dependencies (some met, some unmet)", async () => {
@@ -816,7 +816,7 @@ describe("InMemoryQueue", () => {
 
       // Now should be available
       dequeuedJob = await queue.dequeue(job.documentId, job.scope, job.branch);
-      expect(dequeuedJob?.id).toBe("job-3");
+      expect(dequeuedJob?.job.id).toBe("job-3");
     });
 
     it("should handle failJob without marking as completed", async () => {
@@ -828,7 +828,7 @@ describe("InMemoryQueue", () => {
 
       // Dequeue and fail job 1
       const d1 = await queue.dequeue(job1.documentId, job1.scope, job1.branch);
-      expect(d1?.id).toBe("job-1");
+      expect(d1?.job.id).toBe("job-1");
       await queue.failJob("job-1", "Test error");
 
       // Job 2 should still be blocked since job 1 wasn't completed
@@ -870,7 +870,7 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
       expect(queue.isDrained).toBe(false);
       
-      await queue.completeJob(dequeuedJob!.id);
+      await queue.completeJob(dequeuedJob!.job.id);
       expect(queue.isDrained).toBe(true);
     });
 
@@ -881,7 +881,7 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
       expect(queue.isDrained).toBe(false);
       
-      await queue.failJob(dequeuedJob!.id, "Test failure");
+      await queue.failJob(dequeuedJob!.job.id, "Test failure");
       expect(queue.isDrained).toBe(true);
     });
 
@@ -895,11 +895,11 @@ describe("InMemoryQueue", () => {
       expect(queue.isDrained).toBe(false);
       
       const dequeued1 = await queue.dequeueNext();
-      await queue.completeJob(dequeued1!.id);
+      await queue.completeJob(dequeued1!.job.id);
       expect(queue.isDrained).toBe(false);
       
       const dequeued2 = await queue.dequeueNext();
-      await queue.completeJob(dequeued2!.id);
+      await queue.completeJob(dequeued2!.job.id);
       expect(queue.isDrained).toBe(true);
     });
   });
@@ -920,7 +920,7 @@ describe("InMemoryQueue", () => {
       
       const dequeuedJob = await queue.dequeueNext();
       expect(dequeuedJob).toBeDefined();
-      expect(dequeuedJob?.id).toBe(job.id);
+      expect(dequeuedJob?.job.id).toBe(job.id);
     });
 
     it("should call onDrained callback when queue becomes drained", async () => {
@@ -932,7 +932,7 @@ describe("InMemoryQueue", () => {
       expect(onDrained).not.toHaveBeenCalled();
       
       const dequeuedJob = await queue.dequeueNext();
-      await queue.completeJob(dequeuedJob!.id);
+      await queue.completeJob(dequeuedJob!.job.id);
       
       expect(onDrained).toHaveBeenCalledTimes(1);
     });
@@ -954,7 +954,7 @@ describe("InMemoryQueue", () => {
       queue.unblock();
       
       const dequeuedJob = await queue.dequeueNext();
-      await queue.completeJob(dequeuedJob!.id);
+      await queue.completeJob(dequeuedJob!.job.id);
       
       expect(onDrained).not.toHaveBeenCalled();
     });
@@ -992,7 +992,7 @@ describe("InMemoryQueue", () => {
       await expect(queue.enqueue(job2)).resolves.not.toThrow();
       
       const dequeuedJob = await queue.dequeueNext();
-      expect(dequeuedJob?.id).toBe("job-2");
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
 
     it("should clear onDrained callback", async () => {
@@ -1005,7 +1005,7 @@ describe("InMemoryQueue", () => {
       
       // Complete the job after unblocking
       const dequeuedJob = await queue.dequeueNext();
-      await queue.completeJob(dequeuedJob!.id);
+      await queue.completeJob(dequeuedJob!.job.id);
       
       // Callback should not be called since we unblocked
       expect(onDrained).not.toHaveBeenCalled();
@@ -1035,7 +1035,7 @@ describe("InMemoryQueue", () => {
       
       // Process one job
       const dequeued1 = await queue.dequeueNext();
-      await queue.completeJob(dequeued1!.id);
+      await queue.completeJob(dequeued1!.job.id);
       expect(onDrained1).not.toHaveBeenCalled();
       
       // Unblock and re-block with new callback
@@ -1044,7 +1044,7 @@ describe("InMemoryQueue", () => {
       
       // Process last job
       const dequeued2 = await queue.dequeueNext();
-      await queue.completeJob(dequeued2!.id);
+      await queue.completeJob(dequeued2!.job.id);
       
       // Only second callback should be called
       expect(onDrained1).not.toHaveBeenCalled();
@@ -1060,7 +1060,7 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
       
       // Retry should fail because queue is blocked
-      await expect(queue.retryJob(dequeuedJob!.id, "Test error")).rejects.toThrow("Queue is blocked");
+      await expect(queue.retryJob(dequeuedJob!.job.id, "Test error")).rejects.toThrow("Queue is blocked");
     });
 
     it("should track drain state correctly with dependencies", async () => {
@@ -1074,7 +1074,7 @@ describe("InMemoryQueue", () => {
       
       // Process first job
       const dequeued1 = await queue.dequeueNext();
-      expect(dequeued1?.id).toBe("job-1");
+      expect(dequeued1?.job.id).toBe("job-1");
       expect(queue.isDrained).toBe(false);
       
       await queue.completeJob("job-1");
@@ -1082,7 +1082,7 @@ describe("InMemoryQueue", () => {
       
       // Process second job
       const dequeued2 = await queue.dequeueNext();
-      expect(dequeued2?.id).toBe("job-2");
+      expect(dequeued2?.job.id).toBe("job-2");
       expect(queue.isDrained).toBe(false);
       
       await queue.completeJob("job-2");
@@ -1126,7 +1126,7 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob).toEqual(job);
+      expect(dequeuedJob?.job).toEqual(job);
     });
 
     it("should handle jobs with optional properties", async () => {
@@ -1148,9 +1148,9 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob).toEqual(job);
-      expect(dequeuedJob?.retryCount).toBeUndefined();
-      expect(dequeuedJob?.maxRetries).toBeUndefined();
+      expect(dequeuedJob?.job).toEqual(job);
+      expect(dequeuedJob?.job.retryCount).toBeUndefined();
+      expect(dequeuedJob?.job.maxRetries).toBeUndefined();
     });
   });
 });

@@ -1,6 +1,7 @@
 import { type IEventBus } from "../events/interfaces.js";
 import { type IQueue } from "./interfaces.js";
-import { QueueEventTypes, type Job, type JobAvailableEvent } from "./types.js";
+import { JobExecutionHandle } from "./job-execution-handle.js";
+import { QueueEventTypes, JobQueueState, type Job, type JobAvailableEvent, type IJobExecutionHandle } from "./types.js";
 
 /**
  * In-memory implementation of the IQueue interface.
@@ -131,7 +132,8 @@ export class InMemoryQueue implements IQueue {
     documentId: string,
     scope: string,
     branch: string,
-  ): Promise<Job | null> {
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null> {
     const queueKey = this.createQueueKey(documentId, scope, branch);
     const queue = this.queues.get(queueKey);
 
@@ -149,19 +151,34 @@ export class InMemoryQueue implements IQueue {
     const jobIndex = queue.indexOf(job);
     queue.splice(jobIndex, 1);
 
-    // Remove from job index
+    // Remove from queue tracking but keep in job index for retry
     this.jobIdToQueueKey.delete(job.id);
-    this.jobIndex.delete(job.id);
+
+    // Mark this job as executing for its document
+    this.markJobExecuting(job);
 
     // Clean up empty queue
     if (queue.length === 0) {
       this.queues.delete(queueKey);
     }
 
-    return job;
+    // Create and return the execution handle
+    const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+      onStart: () => {
+        // Job is now running
+      },
+      onComplete: () => {
+        this.completeJob(job.id);
+      },
+      onFail: (reason: string) => {
+        this.failJob(job.id, reason);
+      },
+    });
+
+    return handle;
   }
 
-  async dequeueNext(): Promise<Job | null> {
+  async dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null> {
     // Find the first non-empty queue for a document that's not currently executing
     for (const [queueKey, queue] of this.queues.entries()) {
       if (queue.length > 0) {
@@ -189,7 +206,20 @@ export class InMemoryQueue implements IQueue {
             this.queues.delete(queueKey);
           }
 
-          return job;
+          // Create and return the execution handle
+          const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+            onStart: () => {
+              // Job is now running
+            },
+            onComplete: () => {
+              this.completeJob(job.id);
+            },
+            onFail: (reason: string) => {
+              this.failJob(job.id, reason);
+            },
+          });
+
+          return handle;
         }
       }
     }
