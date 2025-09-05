@@ -1,3 +1,15 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

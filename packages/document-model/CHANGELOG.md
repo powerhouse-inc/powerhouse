@@ -1,3 +1,18 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🚀 Features
+
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- Callme-T
+- Frank
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

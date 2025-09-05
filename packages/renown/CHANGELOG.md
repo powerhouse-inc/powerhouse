@@ -1,3 +1,15 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- Callme-T
+- Frank
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

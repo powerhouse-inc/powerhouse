@@ -1,3 +1,21 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
+- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+- Frank
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

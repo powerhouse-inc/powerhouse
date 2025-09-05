@@ -1,3 +1,37 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🚀 Features
+
+- queue now queues by doc id ([afc03e437](https://github.com/powerhouse-inc/powerhouse/commit/afc03e437))
+- wip dependency graph ([939e41076](https://github.com/powerhouse-inc/powerhouse/commit/939e41076))
+- added robust dependency system to queue ([4aca91494](https://github.com/powerhouse-inc/powerhouse/commit/4aca91494))
+- plug in persistence ([5af292734](https://github.com/powerhouse-inc/powerhouse/commit/5af292734))
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+- **reactor-browser:** accept documentId on dispatchActions ([a579dd53c](https://github.com/powerhouse-inc/powerhouse/commit/a579dd53c))
+
+### 🩹 Fixes
+
+- build errors ([97b4853a3](https://github.com/powerhouse-inc/powerhouse/commit/97b4853a3))
+- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
+- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
+- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
+- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
+- **reactor-browser:** do not show all nodes on drive root ([da55217c8](https://github.com/powerhouse-inc/powerhouse/commit/da55217c8))
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Callme-T
+- Frank
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only, there were no code changes.

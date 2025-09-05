@@ -1,3 +1,15 @@
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
 ## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
