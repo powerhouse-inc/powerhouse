@@ -37,7 +37,9 @@ export async function login(
       dispatchSetLoginStatusEvent("authorized");
       dispatchSetUserEvent(user);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, user.address, true, 10),
+        connectCrypto.getBearerToken(driveUrl, user.address, true, {
+          expiresIn: 10,
+        }),
       );
       return user;
     }
@@ -51,7 +53,9 @@ export async function login(
       dispatchSetLoginStatusEvent("authorized");
       dispatchSetUserEvent(newUser);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, newUser.address, true, 10),
+        connectCrypto.getBearerToken(driveUrl, newUser.address, true, {
+          expiresIn: 10,
+        }),
       );
     } else {
       dispatchSetLoginStatusEvent("not-authorized");

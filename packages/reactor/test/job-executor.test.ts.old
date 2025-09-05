@@ -1,4 +1,10 @@
-import { type Operation } from "document-model";
+import type { IDocumentStorage } from "document-drive/storage/types";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+  type Operation,
+  type PHDocument,
+} from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { type IEventBus } from "../src/events/interfaces.js";
@@ -16,11 +22,15 @@ import {
 import { type IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import { type Job } from "../src/queue/types.js";
+import { DocumentModelRegistry } from "../src/registry/index.js";
+import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 
 describe("InMemoryJobExecutor", () => {
   let executor: IJobExecutor;
   let eventBus: IEventBus;
   let queue: IQueue;
+  let registry: IDocumentModelRegistry;
+  let documentStorage: IDocumentStorage;
   let mockEventBusEmit: ReturnType<typeof vi.fn>;
 
   const createTestOperation = (
@@ -59,7 +69,40 @@ describe("InMemoryJobExecutor", () => {
     mockEventBusEmit = vi.fn().mockResolvedValue(undefined);
     eventBus.emit = mockEventBusEmit;
     queue = new InMemoryQueue(eventBus);
-    executor = new InMemoryJobExecutor(eventBus, queue);
+
+    // Setup registry with a test module
+    registry = new DocumentModelRegistry();
+    const testModule =
+      documentModelDocumentModelModule as unknown as DocumentModelModule;
+    registry.registerModules(testModule);
+
+    // Setup mock document storage
+    documentStorage = {
+      get: vi.fn().mockImplementation(async () => {
+        // Add a small delay to ensure duration > 0
+        await new Promise(resolve => setTimeout(resolve, 1));
+        return {
+          header: { documentType: testModule.documentModel.id },
+          operations: { global: [] },
+          history: [],
+          state: {},
+          initialState: {},
+          clipboard: [],
+        } as unknown as PHDocument;
+      }),
+      delete: vi.fn(),
+      exists: vi.fn(),
+      getChildren: vi.fn(),
+      findByType: vi.fn(),
+      resolveIds: vi.fn(),
+    } as unknown as IDocumentStorage;
+
+    executor = new InMemoryJobExecutor(
+      eventBus,
+      queue,
+      registry,
+      documentStorage,
+    );
   });
 
   describe("start", () => {
@@ -75,9 +118,9 @@ describe("InMemoryJobExecutor", () => {
     it("should start the executor with custom config", async () => {
       const config: JobExecutorConfig = {
         maxConcurrency: 10,
-        jobTimeout: 60000,
-        retryBaseDelay: 2000,
-        retryMaxDelay: 60000,
+        jobTimeoutMs: 60000,
+        retryBaseDelayMs: 2000,
+        retryMaxDelayMs: 60000,
       };
 
       await executor.start(config);
@@ -109,7 +152,12 @@ describe("InMemoryJobExecutor", () => {
     it("should process existing jobs in queue on start", async () => {
       const realEventBus = new EventBus();
       const realQueue = new InMemoryQueue(realEventBus);
-      const realExecutor = new InMemoryJobExecutor(realEventBus, realQueue);
+      const realExecutor = new InMemoryJobExecutor(
+        realEventBus,
+        realQueue,
+        registry,
+        documentStorage,
+      );
 
       const job = createTestJob();
       await realQueue.enqueue(job);
@@ -410,7 +458,12 @@ describe("InMemoryJobExecutor", () => {
       // Use real event bus for event subscription tests
       realEventBus = new EventBus();
       const realQueue = new InMemoryQueue(realEventBus);
-      realExecutor = new InMemoryJobExecutor(realEventBus, realQueue);
+      realExecutor = new InMemoryJobExecutor(
+        realEventBus,
+        realQueue,
+        registry,
+        documentStorage,
+      );
       await realExecutor.start();
     });
 
@@ -530,7 +583,12 @@ describe("InMemoryJobExecutor", () => {
     it("should respect maxConcurrency setting", async () => {
       const realEventBus = new EventBus();
       const realQueue = new InMemoryQueue(realEventBus);
-      const realExecutor = new InMemoryJobExecutor(realEventBus, realQueue);
+      const realExecutor = new InMemoryJobExecutor(
+        realEventBus,
+        realQueue,
+        registry,
+        documentStorage,
+      );
 
       await realExecutor.start({ maxConcurrency: 2 });
 
@@ -558,7 +616,12 @@ describe("InMemoryJobExecutor", () => {
     it("should process jobs concurrently up to the limit", async () => {
       const realEventBus = new EventBus();
       const realQueue = new InMemoryQueue(realEventBus);
-      const realExecutor = new InMemoryJobExecutor(realEventBus, realQueue);
+      const realExecutor = new InMemoryJobExecutor(
+        realEventBus,
+        realQueue,
+        registry,
+        documentStorage,
+      );
 
       await realExecutor.start({ maxConcurrency: 3 });
 
@@ -602,8 +665,13 @@ describe("InMemoryJobExecutor", () => {
       // Use real event bus and queue for retry logic tests
       realEventBus = new EventBus();
       realQueue = new InMemoryQueue(realEventBus);
-      realExecutor = new InMemoryJobExecutor(realEventBus, realQueue);
-      await realExecutor.start({ retryBaseDelay: 10, retryMaxDelay: 100 });
+      realExecutor = new InMemoryJobExecutor(
+        realEventBus,
+        realQueue,
+        registry,
+        documentStorage,
+      );
+      await realExecutor.start({ retryBaseDelayMs: 10, retryMaxDelayMs: 100 });
     });
 
     afterEach(async () => {
@@ -685,7 +753,7 @@ describe("InMemoryJobExecutor", () => {
 
   describe("job timeout", () => {
     beforeEach(async () => {
-      await executor.start({ jobTimeout: 100 });
+      await executor.start({ jobTimeoutMs: 100 });
     });
 
     afterEach(async () => {

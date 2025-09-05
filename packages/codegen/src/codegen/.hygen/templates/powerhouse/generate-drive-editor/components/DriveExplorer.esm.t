@@ -28,9 +28,9 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
 import { useCallback, useRef, useState } from "react";
-import { CreateDocument } from "./CreateDocument.jsx";
-import { EditorContainer } from "./EditorContainer.jsx";
-import { FolderTree } from "./FolderTree.jsx";
+import { CreateDocument } from "./CreateDocument.js";
+import { EditorContainer } from "./EditorContainer.js";
+import { FolderTree } from "./FolderTree.js";
 
 /**
  * Main drive explorer component with sidebar navigation and content area.

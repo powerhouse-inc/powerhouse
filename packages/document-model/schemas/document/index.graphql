@@ -43,6 +43,7 @@ interface IDocument {
     created: DateTime!
     lastModified: DateTime!
     operations: [IOperation!]!
+    nodeName: String
 }
 
 type Query {

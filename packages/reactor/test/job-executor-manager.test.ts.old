@@ -1,0 +1,291 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IJobExecutor } from "../src/executor/interfaces.js";
+import {
+  SimpleJobExecutorManager as JobExecutorManager,
+  type JobExecutorFactory,
+} from "../src/executor/simple-job-executor-manager.js";
+import type { IJobExecutorManager } from "../src/executor/interfaces.js";
+import type { JobExecutorConfig, JobResult } from "../src/executor/types.js";
+import type { Job } from "../src/queue/types.js";
+
+describe("JobExecutorManager", () => {
+  let manager: IJobExecutorManager;
+  let mockExecutors: IJobExecutor[];
+  let executorFactory: JobExecutorFactory;
+  let nextExecutorIndex: number;
+
+  // Create a mock executor
+  const createMockExecutor = (): IJobExecutor => {
+    const mockExecutor: IJobExecutor = {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      executeJob: vi.fn().mockResolvedValue({
+        job: {} as Job,
+        success: true,
+      } as JobResult),
+      getStatus: vi.fn().mockResolvedValue({
+        isRunning: true,
+        activeJobs: 0,
+        totalJobsProcessed: 0,
+        totalJobsSucceeded: 0,
+        totalJobsFailed: 0,
+      }),
+      getStats: vi.fn().mockResolvedValue({
+        averageExecutionTime: 0,
+        successRate: 100,
+        jobsPerSecond: 0,
+        queueBacklog: 0,
+      }),
+      pause: vi.fn().mockResolvedValue(undefined),
+      resume: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn().mockReturnValue(() => {}),
+    };
+
+    mockExecutors.push(mockExecutor);
+    return mockExecutor;
+  };
+
+  beforeEach(() => {
+    mockExecutors = [];
+    nextExecutorIndex = 0;
+
+    // Create factory that returns mock executors
+    executorFactory = vi.fn(() => createMockExecutor());
+
+    manager = new JobExecutorManager(executorFactory);
+  });
+
+  describe("start", () => {
+    it("should start with specified number of executors", async () => {
+      await manager.start(3);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(3);
+      expect(executorFactory).toHaveBeenCalledTimes(3);
+
+      // Verify each executor was started
+      mockExecutors.forEach((executor) => {
+        expect(executor.start).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should throw error if already running", async () => {
+      await manager.start(2);
+      await expect(manager.start(2)).rejects.toThrow(
+        "JobExecutorManager is already running",
+      );
+    });
+
+    it("should throw error for invalid number of executors", async () => {
+      await expect(manager.start(0)).rejects.toThrow(
+        "Number of executors must be at least 1",
+      );
+      await expect(manager.start(-1)).rejects.toThrow(
+        "Number of executors must be at least 1",
+      );
+    });
+
+    it("should start executors with custom config", async () => {
+      const config: JobExecutorConfig = {
+        maxConcurrency: 10,
+        jobTimeoutMs: 60000,
+      };
+      await manager.start(2, config);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(2);
+
+      // Verify executors were started with the config
+      mockExecutors.forEach((executor) => {
+        expect(executor.start).toHaveBeenCalledWith(
+          expect.objectContaining(config),
+        );
+      });
+    });
+  });
+
+  describe("stop", () => {
+    it("should stop all executors gracefully", async () => {
+      await manager.start(3);
+      await manager.stop(true);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(0);
+
+      // Verify each executor was stopped gracefully
+      mockExecutors.forEach((executor) => {
+        expect(executor.stop).toHaveBeenCalledWith(true);
+      });
+    });
+
+    it("should stop all executors immediately", async () => {
+      await manager.start(3);
+      await manager.stop(false);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(0);
+
+      // Verify each executor was stopped immediately
+      mockExecutors.forEach((executor) => {
+        expect(executor.stop).toHaveBeenCalledWith(false);
+      });
+    });
+
+    it("should handle stop when not running", async () => {
+      await expect(manager.stop()).resolves.not.toThrow();
+    });
+  });
+
+  describe("getExecutors", () => {
+    it("should return empty array when no executors", () => {
+      const executors = manager.getExecutors();
+      expect(executors).toEqual([]);
+    });
+
+    it("should return all executors", async () => {
+      await manager.start(3);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(3);
+    });
+
+    it("should return a copy of executors array", async () => {
+      await manager.start(2);
+      const executors1 = manager.getExecutors();
+      const executors2 = manager.getExecutors();
+      expect(executors1).not.toBe(executors2);
+      expect(executors1).toEqual(executors2);
+    });
+  });
+
+  describe("getExecutor", () => {
+    it("should return executor by index", async () => {
+      await manager.start(3);
+      const executor = manager.getExecutor(1);
+      expect(executor).toBeDefined();
+    });
+
+    it("should return undefined for invalid index", async () => {
+      await manager.start(2);
+      expect(manager.getExecutor(-1)).toBeUndefined();
+      expect(manager.getExecutor(2)).toBeUndefined();
+      expect(manager.getExecutor(100)).toBeUndefined();
+    });
+  });
+
+  describe("scale", () => {
+    it("should scale up executors", async () => {
+      await manager.start(2);
+      await manager.scale(5);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(5);
+    });
+
+    it("should scale down executors", async () => {
+      await manager.start(5);
+      await manager.scale(2);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(2);
+    });
+
+    it("should handle no change in scale", async () => {
+      await manager.start(3);
+      await manager.scale(3);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(3);
+    });
+
+    it("should throw error for invalid scale", async () => {
+      await manager.start(2);
+      await expect(manager.scale(0)).rejects.toThrow(
+        "Number of executors must be at least 1",
+      );
+      await expect(manager.scale(-1)).rejects.toThrow(
+        "Number of executors must be at least 1",
+      );
+    });
+
+    it("should scale up even when not running", async () => {
+      await manager.scale(3);
+      const executors = manager.getExecutors();
+      expect(executors).toHaveLength(3);
+    });
+  });
+
+  describe("getStatus", () => {
+    it("should return aggregate status", async () => {
+      await manager.start(3);
+      const status = await manager.getStatus();
+
+      expect(status.numExecutors).toBe(3);
+      expect(status.totalActiveJobs).toBe(0);
+      expect(status.totalJobsProcessed).toBe(0);
+      expect(status.totalJobsSucceeded).toBe(0);
+      expect(status.totalJobsFailed).toBe(0);
+      expect(status.executorStatuses).toHaveLength(3);
+
+      status.executorStatuses.forEach((execStatus: any, index: number) => {
+        expect(execStatus.index).toBe(index);
+        expect(execStatus.isRunning).toBe(true);
+        expect(execStatus.activeJobs).toBe(0);
+      });
+    });
+
+    it("should return empty status when no executors", async () => {
+      const status = await manager.getStatus();
+
+      expect(status.numExecutors).toBe(0);
+      expect(status.totalActiveJobs).toBe(0);
+      expect(status.totalJobsProcessed).toBe(0);
+      expect(status.executorStatuses).toHaveLength(0);
+    });
+  });
+
+  describe("pauseAll", () => {
+    it("should pause all executors", async () => {
+      await manager.start(3);
+      await expect(manager.pauseAll()).resolves.not.toThrow();
+    });
+
+    it("should handle pause with no executors", async () => {
+      await expect(manager.pauseAll()).resolves.not.toThrow();
+    });
+  });
+
+  describe("resumeAll", () => {
+    it("should resume all executors", async () => {
+      await manager.start(3);
+      await manager.pauseAll();
+      await expect(manager.resumeAll()).resolves.not.toThrow();
+    });
+
+    it("should handle resume with no executors", async () => {
+      await expect(manager.resumeAll()).resolves.not.toThrow();
+    });
+  });
+
+  describe("Integration", () => {
+    it("should handle full lifecycle", async () => {
+      // Start with 2 executors
+      await manager.start(2);
+      expect(manager.getExecutors()).toHaveLength(2);
+
+      // Scale up to 4
+      await manager.scale(4);
+      expect(manager.getExecutors()).toHaveLength(4);
+
+      // Pause all
+      await manager.pauseAll();
+
+      // Get status
+      const status = await manager.getStatus();
+      expect(status.numExecutors).toBe(4);
+
+      // Resume all
+      await manager.resumeAll();
+
+      // Scale down to 1
+      await manager.scale(1);
+      expect(manager.getExecutors()).toHaveLength(1);
+
+      // Stop
+      await manager.stop();
+      expect(manager.getExecutors()).toHaveLength(0);
+    });
+  });
+});

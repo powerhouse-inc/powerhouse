@@ -14,6 +14,11 @@ export type PKHDid = {
   address: `0x${string}`;
 };
 
+export interface CreateBearerTokenOptions {
+  expiresIn?: number;
+  aud?: string;
+}
+
 export function parsePkhDid(did: string): PKHDid {
   const parts = did.split(":");
   if (!did.startsWith("did:pkh:") || parts.length !== 5) {
@@ -63,7 +68,7 @@ export async function createAuthBearerToken(
   networkId: string,
   address: string,
   issuer: Issuer,
-  expiresIn?: number,
+  options?: CreateBearerTokenOptions,
 ) {
   const vcPayload: JwtCredentialPayload = {
     sub: issuer.did,
@@ -76,10 +81,11 @@ export async function createAuthBearerToken(
         address,
       },
     },
+    aud: options?.aud,
   };
 
   const jwt = await createVerifiableCredentialJwt(vcPayload, issuer, {
-    expiresIn,
+    expiresIn: options?.expiresIn,
   });
   return jwt;
 }

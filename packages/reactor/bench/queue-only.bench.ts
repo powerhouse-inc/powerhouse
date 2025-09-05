@@ -30,6 +30,7 @@ function createMinimalJob(): Job {
     },
     maxRetries: 0,
     createdAt: "2023-01-01T00:00:00.000Z",
+    queueHint: [],
   };
 }
 

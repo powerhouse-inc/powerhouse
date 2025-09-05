@@ -5,10 +5,16 @@ import { QueueEventTypes, type Job, type JobAvailableEvent } from "./types.js";
 /**
  * In-memory implementation of the IQueue interface.
  * Organizes jobs by documentId, scope, and branch to ensure proper ordering.
+ * Ensures serial execution per document by tracking executing jobs.
+ * Implements dependency management through queue hints.
  */
 export class InMemoryQueue implements IQueue {
   private queues = new Map<string, Job[]>();
-  private jobIndex = new Map<string, string>(); // jobId -> queueKey mapping
+  private jobIdToQueueKey = new Map<string, string>();
+  private docIdToJobId = new Map<string, Set<string>>();
+  private jobIdToDocId = new Map<string, string>();
+  private completedJobs = new Set<string>();
+  private jobIndex = new Map<string, Job>();
 
   constructor(private eventBus: IEventBus) {}
 
@@ -35,6 +41,63 @@ export class InMemoryQueue implements IQueue {
     return queue;
   }
 
+  /**
+   * Check if a document has any jobs currently executing
+   */
+  private isDocumentExecuting(documentId: string): boolean {
+    const executingSet = this.docIdToJobId.get(documentId);
+    return executingSet ? executingSet.size > 0 : false;
+  }
+
+  /**
+   * Mark a job as executing for its document
+   */
+  private markJobExecuting(job: Job): void {
+    let executingSet = this.docIdToJobId.get(job.documentId);
+    if (!executingSet) {
+      executingSet = new Set();
+      this.docIdToJobId.set(job.documentId, executingSet);
+    }
+    executingSet.add(job.id);
+    this.jobIdToDocId.set(job.id, job.documentId);
+  }
+
+  /**
+   * Mark a job as no longer executing for its document
+   */
+  private markJobComplete(jobId: string, documentId: string): void {
+    const executingSet = this.docIdToJobId.get(documentId);
+    if (executingSet) {
+      executingSet.delete(jobId);
+      if (executingSet.size === 0) {
+        this.docIdToJobId.delete(documentId);
+      }
+    }
+    this.jobIdToDocId.delete(jobId);
+  }
+
+  /**
+   * Check if all dependencies for a job have been completed
+   */
+  private areDependenciesMet(job: Job): boolean {
+    if (!job.queueHint || job.queueHint.length === 0) {
+      return true;
+    }
+    return job.queueHint.every((depId) => this.completedJobs.has(depId));
+  }
+
+  /**
+   * Get the next job that has all its dependencies met
+   */
+  private getNextJobWithMetDependencies(queue: Job[]): Job | null {
+    for (const job of queue) {
+      if (this.areDependenciesMet(job)) {
+        return job;
+      }
+    }
+    return null;
+  }
+
   async enqueue(job: Job): Promise<void> {
     const queueKey = this.createQueueKey(job.documentId, job.scope, job.branch);
     const queue = this.getQueue(queueKey);
@@ -42,8 +105,9 @@ export class InMemoryQueue implements IQueue {
     // Add job to the end of the queue (FIFO)
     queue.push(job);
 
-    // Track job location for removal
-    this.jobIndex.set(job.id, queueKey);
+    // Track job location for removal and dependency resolution
+    this.jobIdToQueueKey.set(job.id, queueKey);
+    this.jobIndex.set(job.id, job);
 
     // Emit job available event
     const eventData: JobAvailableEvent = {
@@ -68,10 +132,18 @@ export class InMemoryQueue implements IQueue {
       return null;
     }
 
-    // Remove job from the front of the queue (FIFO)
-    const job = queue.shift()!;
+    // Find the first job with met dependencies
+    const job = this.getNextJobWithMetDependencies(queue);
+    if (!job) {
+      return null; // No job with met dependencies
+    }
+
+    // Remove job from queue
+    const jobIndex = queue.indexOf(job);
+    queue.splice(jobIndex, 1);
 
     // Remove from job index
+    this.jobIdToQueueKey.delete(job.id);
     this.jobIndex.delete(job.id);
 
     // Clean up empty queue
@@ -83,20 +155,35 @@ export class InMemoryQueue implements IQueue {
   }
 
   async dequeueNext(): Promise<Job | null> {
-    // Find the first non-empty queue and dequeue from it
+    // Find the first non-empty queue for a document that's not currently executing
     for (const [queueKey, queue] of this.queues.entries()) {
       if (queue.length > 0) {
-        const job = queue.shift()!;
-
-        // Remove from job index
-        this.jobIndex.delete(job.id);
-
-        // Clean up empty queue
-        if (queue.length === 0) {
-          this.queues.delete(queueKey);
+        // Find the first job with met dependencies
+        const job = this.getNextJobWithMetDependencies(queue);
+        if (!job) {
+          continue; // No job with met dependencies in this queue
         }
 
-        return job;
+        // Only dequeue if the document is not currently executing jobs
+        if (!this.isDocumentExecuting(job.documentId)) {
+          // Remove job from queue
+          const jobIdx = queue.indexOf(job);
+          queue.splice(jobIdx, 1);
+
+          // Remove from job index
+          this.jobIdToQueueKey.delete(job.id);
+          this.jobIndex.delete(job.id);
+
+          // Mark this job as executing for its document
+          this.markJobExecuting(job);
+
+          // Clean up empty queue
+          if (queue.length === 0) {
+            this.queues.delete(queueKey);
+          }
+
+          return job;
+        }
       }
     }
 
@@ -122,7 +209,7 @@ export class InMemoryQueue implements IQueue {
   }
 
   async remove(jobId: string): Promise<boolean> {
-    const queueKey = this.jobIndex.get(jobId);
+    const queueKey = this.jobIdToQueueKey.get(jobId);
     if (!queueKey) {
       return false;
     }
@@ -130,21 +217,24 @@ export class InMemoryQueue implements IQueue {
     const queue = this.queues.get(queueKey);
     if (!queue) {
       // Clean up orphaned index entry
+      this.jobIdToQueueKey.delete(jobId);
       this.jobIndex.delete(jobId);
       return false;
     }
 
-    const jobIndex = queue.findIndex((job) => job.id === jobId);
-    if (jobIndex === -1) {
+    const jobIdx = queue.findIndex((job) => job.id === jobId);
+    if (jobIdx === -1) {
       // Clean up orphaned index entry
+      this.jobIdToQueueKey.delete(jobId);
       this.jobIndex.delete(jobId);
       return false;
     }
 
     // Remove job from queue
-    queue.splice(jobIndex, 1);
+    queue.splice(jobIdx, 1);
 
     // Remove from job index
+    this.jobIdToQueueKey.delete(jobId);
     this.jobIndex.delete(jobId);
 
     // Clean up empty queue
@@ -166,6 +256,7 @@ export class InMemoryQueue implements IQueue {
     if (queue) {
       // Remove all jobs from the job index
       for (const job of queue) {
+        this.jobIdToQueueKey.delete(job.id);
         this.jobIndex.delete(job.id);
       }
 
@@ -176,9 +267,89 @@ export class InMemoryQueue implements IQueue {
 
   async clearAll(): Promise<void> {
     // Clear all job indices
+    this.jobIdToQueueKey.clear();
     this.jobIndex.clear();
+    this.completedJobs.clear();
 
     // Clear all queues
     this.queues.clear();
+  }
+
+  async hasJobs(): Promise<boolean> {
+    return (
+      this.queues.size > 0 &&
+      Array.from(this.queues.values()).some((q) => q.length > 0)
+    );
+  }
+
+  async completeJob(jobId: string): Promise<void> {
+    // Get the documentId for the executing job
+    const documentId = this.jobIdToDocId.get(jobId);
+    if (documentId) {
+      // Mark the job as no longer executing
+      this.markJobComplete(jobId, documentId);
+    }
+
+    // Track the job as completed for dependency resolution
+    this.completedJobs.add(jobId);
+
+    // For in-memory queue, completing just removes the job
+    // In a persistent queue, this would update the job status
+    await this.remove(jobId);
+  }
+
+  async failJob(jobId: string, error?: string): Promise<void> {
+    // Get the documentId for the executing job
+    const documentId = this.jobIdToDocId.get(jobId);
+    if (documentId) {
+      // Mark the job as no longer executing
+      this.markJobComplete(jobId, documentId);
+    }
+
+    // For in-memory queue, failing just removes the job
+    // In a persistent queue, this would update the job status and store the error
+    await this.remove(jobId);
+  }
+
+  async retryJob(jobId: string, error?: string): Promise<void> {
+    // Get the documentId for the executing job and mark it as complete
+    const documentId = this.jobIdToDocId.get(jobId);
+    if (documentId) {
+      // Mark the job as no longer executing
+      this.markJobComplete(jobId, documentId);
+    }
+
+    // For in-memory queue, we need to find the job and re-enqueue it
+    // In a real implementation, this would update retry count and delay
+    const queueKey = this.jobIdToQueueKey.get(jobId);
+    if (!queueKey) {
+      return;
+    }
+
+    const queue = this.queues.get(queueKey);
+    if (!queue) {
+      return;
+    }
+
+    const jobIndex = queue.findIndex((job) => job.id === jobId);
+    if (jobIndex === -1) {
+      return;
+    }
+
+    const job = queue[jobIndex];
+
+    // Update retry count
+    const updatedJob: Job = {
+      ...job,
+      retryCount: (job.retryCount || 0) + 1,
+      lastError: error,
+    };
+
+    // Remove old job
+    queue.splice(jobIndex, 1);
+    this.jobIdToQueueKey.delete(jobId);
+
+    // Re-enqueue with updated retry count
+    await this.enqueue(updatedJob);
   }
 }

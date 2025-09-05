@@ -1,12 +1,9 @@
-import type {
-  Action,
-  DocumentOperations,
-  Operation,
-  PHDocument,
-} from "document-model";
+import type { DocumentOperations, Operation, PHDocument } from "document-model";
+import { type DocumentDriveDocument } from "../../index.js";
 import {
   type CreateDocumentInput,
   type RevisionsFilter,
+  type SharingType,
   type StrandUpdate,
   type SynchronizationUnitId,
 } from "./types.js";
@@ -147,4 +144,23 @@ export function resolveCreateDocumentInputDocument<
   TDocument extends PHDocument,
 >(input: CreateDocumentInput<TDocument>) {
   return "document" in input ? input.document : undefined;
+}
+
+export function isSharingType(value: string): value is SharingType {
+  return ["LOCAL", "CLOUD", "PUBLIC"].includes(value);
+}
+
+export function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
+  if (typeof drive !== "object") return "LOCAL";
+  const isReadDrive = "readContext" in drive;
+  const { sharingType: _sharingType } = !isReadDrive
+    ? drive.state.local
+    : { sharingType: "PUBLIC" };
+  const __sharingType = _sharingType?.toUpperCase();
+
+  return !__sharingType ||
+    __sharingType === "PRIVATE" ||
+    !isSharingType(__sharingType)
+    ? "LOCAL"
+    : __sharingType;
 }

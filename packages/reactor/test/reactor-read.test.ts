@@ -5,10 +5,10 @@ import {
 } from "document-drive";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
-import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
@@ -68,7 +68,34 @@ describe("Reactor Read Interface", () => {
     // Create event bus, queue, and executor
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    jobExecutor = new InMemoryJobExecutor(eventBus, queue);
+    // Create a mock registry for the executor
+    const registry = {
+      getModule: vi.fn().mockReturnValue({
+        reducer: vi.fn((doc, action) => ({
+          ...doc,
+          operations: { global: [{ index: 0, hash: "test-hash" }] },
+        })),
+      }),
+    } as any;
+
+    // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
+    const mockDocStorage = {
+      get: vi.fn().mockResolvedValue({
+        header: { documentType: "test" },
+        operations: { global: [] },
+        history: [],
+        state: {},
+        initialState: {},
+        clipboard: [],
+      }),
+      delete: vi.fn(),
+      exists: vi.fn(),
+      getChildren: vi.fn(),
+      findByType: vi.fn(),
+      resolveIds: vi.fn(),
+    } as any;
+
+    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
 
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);

@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, bench, describe } from "vitest";
+import { documentModelDocumentModelModule } from "document-model";
 import { EventBus } from "../src/events/event-bus.js";
-import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import { type Job } from "../src/queue/types.js";
+import { DocumentModelRegistry } from "../src/registry/implementation.js";
 
 // Test data generators
 function createSimpleJob(
@@ -31,6 +33,7 @@ function createSimpleJob(
     },
     maxRetries: 0,
     createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 
@@ -67,6 +70,7 @@ function createComplexJob(
     },
     maxRetries: 0,
     createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 
@@ -149,20 +153,31 @@ describe("Queue Operations with Pre-filled Data", () => {
 });
 
 describe("Job Executor Performance", () => {
-  let eventBus: EventBus;
-  let queue: InMemoryQueue;
-  let executor: InMemoryJobExecutor;
+  let executor: SimpleJobExecutor;
+  let registry: DocumentModelRegistry;
+  let mockDocStorage: any;
 
   beforeEach(async () => {
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-    executor = new InMemoryJobExecutor(eventBus, queue);
-    await executor.start({ maxConcurrency: 1, jobTimeout: 5000 });
-  });
+    // Setup registry
+    registry = new DocumentModelRegistry();
+    registry.registerModules(documentModelDocumentModelModule);
 
-  afterEach(async () => {
-    await executor.stop(false);
-    await queue.clearAll();
+    // Setup mock storage
+    mockDocStorage = {
+      get: async () => ({
+        header: { documentType: "powerhouse/document-model" },
+        operations: { global: [] },
+        state: {},
+      }),
+      set: async () => {},
+      delete: async () => {},
+      exists: async () => false,
+      getChildren: async () => [],
+      findByType: async () => [],
+      resolveIds: async () => [],
+    };
+
+    executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
   });
 
   bench("execute single simple job", async () => {
@@ -173,14 +188,6 @@ describe("Job Executor Performance", () => {
   bench("execute single complex job", async () => {
     const job = createComplexJob(`exec-${Math.random()}`);
     await executor.executeJob(job);
-  });
-
-  bench("get executor status", async () => {
-    await executor.getStatus();
-  });
-
-  bench("get executor stats", async () => {
-    await executor.getStats();
   });
 });
 
@@ -313,20 +320,31 @@ describe("Batch Operations Performance", () => {
 });
 
 describe("Mixed Workload Performance", () => {
-  let eventBus: EventBus;
-  let queue: InMemoryQueue;
-  let executor: InMemoryJobExecutor;
+  let executor: SimpleJobExecutor;
+  let registry: DocumentModelRegistry;
+  let mockDocStorage: any;
 
   beforeEach(async () => {
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-    executor = new InMemoryJobExecutor(eventBus, queue);
-    await executor.start({ maxConcurrency: 3, jobTimeout: 5000 });
-  });
+    // Setup registry
+    registry = new DocumentModelRegistry();
+    registry.registerModules(documentModelDocumentModelModule);
 
-  afterEach(async () => {
-    await executor.stop(false);
-    await queue.clearAll();
+    // Setup mock storage
+    mockDocStorage = {
+      get: async () => ({
+        header: { documentType: "powerhouse/document-model" },
+        operations: { global: [] },
+        state: {},
+      }),
+      set: async () => {},
+      delete: async () => {},
+      exists: async () => false,
+      getChildren: async () => [],
+      findByType: async () => [],
+      resolveIds: async () => [],
+    };
+
+    executor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
   });
 
   bench("execute mixed simple and complex jobs", async () => {

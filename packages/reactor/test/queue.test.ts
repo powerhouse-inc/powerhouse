@@ -1,6 +1,4 @@
-import { type Operation } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../src/events/event-bus.js";
+import { beforeEach, describe, expect, it, type vi } from "vitest";
 import { type IEventBus } from "../src/events/interfaces.js";
 import { type IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
@@ -9,47 +7,23 @@ import {
   type Job,
   type JobAvailableEvent,
 } from "../src/queue/types.js";
+import {
+  createTestJob,
+  createMockEventBus,
+  createTestOperation,
+  createJobWithDependencies,
+  createJobDependencyChain,
+} from "./factories.js";
 
 describe("InMemoryQueue", () => {
   let queue: IQueue;
   let eventBus: IEventBus;
   let mockEventBusEmit: ReturnType<typeof vi.fn>;
 
-  const createTestOperation = (
-    overrides: Partial<Operation> = {},
-  ): Operation => ({
-    index: 1,
-    timestampUtcMs: new Date().toISOString(),
-    hash: "test-hash",
-    skip: 0,
-    action: {
-      id: "action-1",
-      type: "test-operation",
-      timestampUtcMs: new Date().toISOString(),
-      input: { test: "data" },
-      scope: "global",
-      ...overrides.action,
-    },
-    id: "op-1",
-    ...overrides,
-  });
-
-  const createTestJob = (overrides: Partial<Job> = {}): Job => ({
-    id: "job-1",
-    documentId: "doc-1",
-    scope: "global",
-    branch: "main",
-    operation: createTestOperation(),
-    createdAt: new Date().toISOString(),
-    retryCount: 0,
-    maxRetries: 3,
-    ...overrides,
-  });
-
   beforeEach(() => {
-    eventBus = new EventBus();
-    mockEventBusEmit = vi.fn().mockResolvedValue(undefined);
-    eventBus.emit = mockEventBusEmit;
+    const mocks = createMockEventBus();
+    eventBus = mocks.eventBus;
+    mockEventBusEmit = mocks.mockEmit;
     queue = new InMemoryQueue(eventBus);
   });
 
@@ -503,6 +477,370 @@ describe("InMemoryQueue", () => {
     });
   });
 
+  describe("dependency management", () => {
+    it("should dequeue job with no dependencies immediately", async () => {
+      const job = createTestJob({ id: "job-1", queueHint: [] });
+      await queue.enqueue(job);
+
+      const dequeuedJob = await queue.dequeue(
+        job.documentId,
+        job.scope,
+        job.branch,
+      );
+
+      expect(dequeuedJob?.id).toBe("job-1");
+    });
+
+    it("should block job with unmet dependencies", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: ["job-0"] });
+      await queue.enqueue(job1);
+
+      const dequeuedJob = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+
+      expect(dequeuedJob).toBeNull();
+      expect(await queue.size(job1.documentId, job1.scope, job1.branch)).toBe(
+        1,
+      );
+    });
+
+    it("should dequeue job after dependencies are completed", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // First job should be dequeued
+      const dequeuedJob1 = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(dequeuedJob1?.id).toBe("job-1");
+
+      // Second job should be blocked
+      const blockedJob = await queue.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(blockedJob).toBeNull();
+
+      // Complete first job
+      await queue.completeJob("job-1");
+
+      // Now second job should be available
+      const dequeuedJob2 = await queue.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(dequeuedJob2?.id).toBe("job-2");
+    });
+
+    it("should handle multiple dependencies", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createTestJob({ id: "job-2", queueHint: [] });
+      const job3 = createTestJob({
+        id: "job-3",
+        queueHint: ["job-1", "job-2"],
+      });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+      await queue.enqueue(job3);
+
+      // Dequeue and complete first job
+      const dequeuedJob1 = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(dequeuedJob1?.id).toBe("job-1");
+      await queue.completeJob("job-1");
+
+      // Next dequeue should return job-2 (not blocked), not job-3 (still blocked)
+      const nextJob = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(nextJob?.id).toBe("job-2");
+      await queue.completeJob("job-2");
+
+      // Now job 3 should be available
+      const dequeuedJob3 = await queue.dequeue(
+        job3.documentId,
+        job3.scope,
+        job3.branch,
+      );
+      expect(dequeuedJob3?.id).toBe("job-3");
+    });
+
+    it("should handle dependency chains", async () => {
+      const jobs = createJobDependencyChain(4);
+
+      for (const job of jobs) {
+        await queue.enqueue(job);
+      }
+
+      // Process in order
+      const d1 = await queue.dequeue(
+        jobs[0].documentId,
+        jobs[0].scope,
+        jobs[0].branch,
+      );
+      expect(d1?.id).toBe("job-1");
+
+      // Others should be blocked
+      expect(
+        await queue.dequeue(jobs[1].documentId, jobs[1].scope, jobs[1].branch),
+      ).toBeNull();
+      expect(
+        await queue.dequeue(jobs[2].documentId, jobs[2].scope, jobs[2].branch),
+      ).toBeNull();
+      expect(
+        await queue.dequeue(jobs[3].documentId, jobs[3].scope, jobs[3].branch),
+      ).toBeNull();
+
+      await queue.completeJob("job-1");
+
+      const d2 = await queue.dequeue(
+        jobs[1].documentId,
+        jobs[1].scope,
+        jobs[1].branch,
+      );
+      expect(d2?.id).toBe("job-2");
+
+      // job-3 and job-4 still blocked
+      expect(
+        await queue.dequeue(jobs[2].documentId, jobs[2].scope, jobs[2].branch),
+      ).toBeNull();
+      expect(
+        await queue.dequeue(jobs[3].documentId, jobs[3].scope, jobs[3].branch),
+      ).toBeNull();
+
+      await queue.completeJob("job-2");
+
+      const d3 = await queue.dequeue(
+        jobs[2].documentId,
+        jobs[2].scope,
+        jobs[2].branch,
+      );
+      expect(d3?.id).toBe("job-3");
+
+      // job-4 still blocked
+      expect(
+        await queue.dequeue(jobs[3].documentId, jobs[3].scope, jobs[3].branch),
+      ).toBeNull();
+
+      await queue.completeJob("job-3");
+
+      const d4 = await queue.dequeue(
+        jobs[3].documentId,
+        jobs[3].scope,
+        jobs[3].branch,
+      );
+      expect(d4?.id).toBe("job-4");
+    });
+
+    it("should dequeue jobs out of order based on dependencies", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: ["job-0"] });
+      const job2 = createTestJob({ id: "job-2", queueHint: [] });
+      const job3 = createTestJob({ id: "job-3", queueHint: [] });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+      await queue.enqueue(job3);
+
+      // Job 1 is blocked, so job 2 should be dequeued
+      const dequeuedJob = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(dequeuedJob?.id).toBe("job-2");
+    });
+
+    it("should handle dependencies across different queues", async () => {
+      const job1 = createTestJob({
+        id: "job-1",
+        documentId: "doc-1",
+        queueHint: [],
+      });
+      const job2 = createTestJob({
+        id: "job-2",
+        documentId: "doc-2",
+        queueHint: ["job-1"],
+      });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // Job 2 should be blocked even though it's in a different queue
+      const blockedJob = await queue.dequeue("doc-2", "global", "main");
+      expect(blockedJob).toBeNull();
+
+      // Dequeue and complete job 1
+      const dequeuedJob1 = await queue.dequeue("doc-1", "global", "main");
+      expect(dequeuedJob1?.id).toBe("job-1");
+      await queue.completeJob("job-1");
+
+      // Now job 2 should be available
+      const dequeuedJob2 = await queue.dequeue("doc-2", "global", "main");
+      expect(dequeuedJob2?.id).toBe("job-2");
+    });
+
+    it("should work with dequeueNext respecting dependencies", async () => {
+      const job1 = createTestJob({
+        id: "job-1",
+        documentId: "doc-1",
+        queueHint: ["job-0"],
+      });
+      const job2 = createTestJob({
+        id: "job-2",
+        documentId: "doc-2",
+        queueHint: [],
+      });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // Should dequeue job-2 since job-1 is blocked
+      const dequeuedJob = await queue.dequeueNext();
+      expect(dequeuedJob?.id).toBe("job-2");
+    });
+
+    it("should handle circular dependencies by blocking all involved jobs", async () => {
+      const job1 = createJobWithDependencies("job-1", ["job-2"]);
+      const job2 = createJobWithDependencies("job-2", ["job-1"]);
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // Both jobs should be blocked
+      const dequeuedJob1 = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(dequeuedJob1).toBeNull();
+
+      const dequeuedJob2 = await queue.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(dequeuedJob2).toBeNull();
+    });
+
+    it("should handle self-dependencies by blocking the job", async () => {
+      const job = createJobWithDependencies("job-1", ["job-1"]);
+      await queue.enqueue(job);
+
+      const dequeuedJob = await queue.dequeue(
+        job.documentId,
+        job.scope,
+        job.branch,
+      );
+      expect(dequeuedJob).toBeNull();
+    });
+
+    it("should clear completed jobs tracking when clearAll is called", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
+
+      await queue.enqueue(job1);
+
+      // Complete job-1
+      await queue.dequeue(job1.documentId, job1.scope, job1.branch);
+      await queue.completeJob("job-1");
+
+      // Clear all
+      await queue.clearAll();
+
+      // Re-enqueue job-2 - it should be blocked again since completed jobs were cleared
+      await queue.enqueue(job2);
+
+      const dequeuedJob = await queue.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(dequeuedJob).toBeNull();
+    });
+
+    it("should handle already completed dependencies", async () => {
+      // Complete a job that doesn't exist in queue
+      await queue.completeJob("job-0");
+
+      // Enqueue a job that depends on it
+      const job1 = createJobWithDependencies("job-1", ["job-0"]);
+      await queue.enqueue(job1);
+
+      // Should be able to dequeue since dependency is already complete
+      const dequeuedJob = await queue.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(dequeuedJob?.id).toBe("job-1");
+    });
+
+    it("should handle mixed dependencies (some met, some unmet)", async () => {
+      // Complete one dependency
+      await queue.completeJob("job-0");
+
+      // Enqueue a job with mixed dependencies
+      const job = createTestJob({
+        id: "job-3",
+        queueHint: ["job-0", "job-1", "job-2"],
+      });
+      await queue.enqueue(job);
+
+      // Should be blocked (job-1 and job-2 not complete)
+      let dequeuedJob = await queue.dequeue(
+        job.documentId,
+        job.scope,
+        job.branch,
+      );
+      expect(dequeuedJob).toBeNull();
+
+      // Complete remaining dependencies
+      await queue.completeJob("job-1");
+      await queue.completeJob("job-2");
+
+      // Now should be available
+      dequeuedJob = await queue.dequeue(job.documentId, job.scope, job.branch);
+      expect(dequeuedJob?.id).toBe("job-3");
+    });
+
+    it("should handle failJob without marking as completed", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // Dequeue and fail job 1
+      const d1 = await queue.dequeue(job1.documentId, job1.scope, job1.branch);
+      expect(d1?.id).toBe("job-1");
+      await queue.failJob("job-1", "Test error");
+
+      // Job 2 should still be blocked since job 1 wasn't completed
+      const dequeuedJob = await queue.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(dequeuedJob).toBeNull();
+    });
+  });
+
   describe("job properties", () => {
     it("should preserve all job properties", async () => {
       const operation = createTestOperation({
@@ -543,15 +881,16 @@ describe("InMemoryQueue", () => {
     });
 
     it("should handle jobs with optional properties", async () => {
-      const job: Job = {
+      const job = {
         id: "minimal-job",
         documentId: "doc-1",
         scope: "global",
         branch: "main",
         operation: createTestOperation(),
         createdAt: new Date().toISOString(),
+        queueHint: [],
         // retryCount and maxRetries are optional
-      };
+      } satisfies Job;
 
       await queue.enqueue(job);
       const dequeuedJob = await queue.dequeue(

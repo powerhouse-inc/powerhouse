@@ -395,6 +395,7 @@ export class Reactor implements IReactor {
         action: action,
       },
       createdAt: new Date().toISOString(),
+      queueHint: [],
       maxRetries: 3,
     }));
 
@@ -536,10 +537,9 @@ export class Reactor implements IReactor {
    */
   private async ensureJobExecutorRunning(): Promise<void> {
     if (!this.jobExecutorStarted) {
-      await this.jobExecutor.start({
-        maxConcurrency: 5,
-        jobTimeout: 30000,
-      });
+      // For new simplified executor, no start method needed
+      // The executor just executes jobs when called
+      // The manager (if used) handles listening to queue events
       this.jobExecutorStarted = true;
     }
   }

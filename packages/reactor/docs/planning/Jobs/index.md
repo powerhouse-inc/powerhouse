@@ -264,6 +264,7 @@ flowchart TD
 - [IQueue](../Queue/index.md)
 - [IEventBus](../Events/index.md)
 - [IOperationStore](../Storage/IOperationStore.md)
+- [IDocumentModelRegistry](./document-model-registry.md)
 
 ### Links
 

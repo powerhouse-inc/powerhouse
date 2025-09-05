@@ -10,14 +10,17 @@ export type JobResult = {
   /** Whether the job executed successfully */
   success: boolean;
 
-  /** Error message if the job failed */
-  error?: string;
+  /** Error if the job failed */
+  error?: Error;
+
+  /** The operation generated from the action (if successful) */
+  operation?: any;
 
   /** Timestamp when the job execution completed */
-  completedAt: string;
+  completedAt?: string;
 
   /** Duration of job execution in milliseconds */
-  duration: number;
+  duration?: number;
 
   /** Any additional metadata from the execution */
   metadata?: Record<string, any>;
@@ -31,13 +34,13 @@ export type JobExecutorConfig = {
   maxConcurrency?: number;
 
   /** Maximum time in milliseconds a job can run before being considered timed out */
-  jobTimeout?: number;
+  jobTimeoutMs?: number;
 
   /** Base delay in milliseconds for exponential backoff retries */
-  retryBaseDelay?: number;
+  retryBaseDelayMs?: number;
 
   /** Maximum delay in milliseconds for exponential backoff retries */
-  retryMaxDelay?: number;
+  retryMaxDelayMs?: number;
 };
 
 /**
@@ -79,4 +82,21 @@ export type ExecutorStartedEvent = {
 export type ExecutorStoppedEvent = {
   stoppedAt: string;
   graceful: boolean;
+};
+
+/**
+ * Status information for the job executor manager
+ */
+export type ExecutorManagerStatus = {
+  /** Whether the manager is currently running */
+  isRunning: boolean;
+
+  /** Number of executor instances managed */
+  numExecutors: number;
+
+  /** Number of jobs currently being processed */
+  activeJobs: number;
+
+  /** Total number of jobs processed since start */
+  totalJobsProcessed: number;
 };

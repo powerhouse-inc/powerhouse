@@ -75,6 +75,7 @@ export function buildDocumentSubgraphQuery(
   driveUrl: string,
   documentId: string,
   documentModel: DocumentModelState,
+  authToken?: string,
 ) {
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery(documentModel);
@@ -83,6 +84,11 @@ export function buildDocumentSubgraphQuery(
     JSON.stringify({
       document: query.trim(),
       variables: JSON.stringify(variables, null, 2),
+      headers: authToken
+        ? JSON.stringify({
+            Authorization: `Bearer ${authToken}`,
+          })
+        : [],
     }),
   );
 }
@@ -91,6 +97,7 @@ export function buildDocumentSubgraphUrl(
   driveUrl: string,
   documentId: string,
   documentModel: DocumentModelState,
+  authToken?: string,
 ) {
   const switchboardUrl = getSwitchboardGatewayUrlFromDriveUrl(driveUrl);
   const subgraph = kebabCase(documentModel.name);
@@ -98,6 +105,7 @@ export function buildDocumentSubgraphUrl(
     driveUrl,
     documentId,
     documentModel,
+    authToken,
   );
   return `${switchboardUrl}/${subgraph}?explorerURLState=${encodedQuery}`;
 }
