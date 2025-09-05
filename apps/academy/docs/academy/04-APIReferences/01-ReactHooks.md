@@ -42,41 +42,17 @@ Learn more about the [Drive Editors](/academy/MasteryTrack/BuildingUserExperienc
 
 All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents. Learn more about the [Reactor](/academy/Architecture/WorkingWithTheReactor)
 
-
-### Selected drives, folders and documents
-In the application, there are certain items that can be set as "selected". 
-
-- selected drive
-- selected folder
-- selected document
-
-We provide hooks for getting the selected item for each:
-
-`useSelectedDrive`
-`useSelectedFolder`
-`useSelectedDocument`
-
-Folders and documents are part of a given drive, so they will both be undefined if the selected drive is undefined.
-
-_Either_ a folder or a document can be selected but not both, so if one is defined then the other will be undefined.
-
-To set the selected drive, we provide a function `setSelectedDrive` which takes either a `DocumentDriveDocument` or a `DocumentDriveDocument['header']['slug']`.
-
-To set the selected document/folder, we provide a function `setSelectedNode` which returns a setter function which can be used for _both_ documents and folders. This function takes either a `Node` or a slug which can be the url slug or the node's id.
-
-## Hooks
-
 <details>
-<summary>Reactor</summary>
+<summary>useReactor</summary>
+
 ```ts
 function useReactor(): Reactor | undefined
 ```
-
-Returns the reactor instance. 
+Returns the reactor instance.
 
 Usage
 ```jsx
-import { useReactor } from '@powerhousedao/state`
+import { useReactor } from '@powerhousedao/state';
 
 function MyEditorComponent() {
   const reactor = useReactor();
@@ -95,7 +71,6 @@ function useDrives(): DocumentDriveDocument[] | undefined
 Returns the drives for a reactor.
 
 Usage
-
 ```jsx
 import { useDrives } from '@powerhousedao/state';
 
@@ -111,16 +86,14 @@ function MyEditorComponent() {
 ```ts
 function useDriveById(id: string | null | undefined): DocumentDriveDocument | undefined
 ```
-
 Returns a drive by id.
 
 Usage
-
 ```jsx
 import { useDriveById } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  const driveById = useDriveById();
+  const driveById = useDriveById('some-id');
 }
 ```
 </details>
@@ -131,11 +104,9 @@ function MyEditorComponent() {
 ```ts
 function useSelectedDrive(): DocumentDriveDocument | undefined
 ```
-
-Returns the selected drive. You can use the selected drive with `setSelectedDrive`.
+Returns the selected drive. You can set the selected drive with `setSelectedDrive`.
 
 Usage
-
 ```jsx
 import { useSelectedDrive } from '@powerhousedao/state';
 
@@ -146,7 +117,7 @@ function MyEditorComponent() {
 </details>
 
 <details>
-<summary>drive properties convenience hooks</summary>
+<summary>Drive Properties Convenience Hooks</summary>
 
 We provide hooks for accessing various properties on the drive object for your convenience. These use the above hooks to get a drive and then return properties in the object.
 
@@ -168,12 +139,11 @@ function useDriveIsRemote(driveId: string | null | undefined): boolean
 /** Returns the sharing type for a drive. */
 function useDriveSharingType(driveId: string | null | undefined): SharingType | undefined
 
-/** Returns  whether a drive is available offline. */
+/** Returns whether a drive is available offline. */
 function useDriveAvailableOffline(driveId: string | null | undefined): boolean
 ```
 
 Usage
-
 ```jsx
 import { 
   useDriveRemoteUrl,
@@ -221,7 +191,6 @@ function useSelectedDriveDocuments(): PHDocument[] | undefined
 Returns the documents in the reactor for the selected drive.
 
 Usage
-
 ```jsx
 import { useAllDocuments, useSelectedDriveDocuments } from '@powerhousedao/state';
 
@@ -241,7 +210,6 @@ function useSelectedDocument(): PHDocument | undefined
 Returns the selected document. You can set the selected document with `setSelectedNode`.
 
 Usage
-
 ```jsx
 import { useSelectedDocument } from '@powerhousedao/state';
 
@@ -260,7 +228,6 @@ function useDocumentById(id: string | null | undefined): PHDocument | undefined
 Returns a document by id.
 
 Usage
-
 ```jsx
 import { useDocumentById } from '@powerhousedao/state';
 
@@ -311,7 +278,6 @@ function useNodes(): Node[] | undefined
 Returns the nodes for a drive.
 
 Usage
-
 ```jsx
 import { useNodes} from '@powerhousedao/state';
 
@@ -330,7 +296,6 @@ function useNodeById(id: string | null | undefined): Node | undefined
 Returns a node in the selected drive by id.
 
 Usage
-
 ```jsx
 import { useNodeById } from '@powerhousedao/state';
 
@@ -352,7 +317,6 @@ function useSelectedFolder(): FolderNode | undefined
 Returns the selected folder. You can set the selected folder with `setSelectedNode`
 
 Usage
-
 ```jsx
 import { useSelectedFolder } from '@powerhousedao/state';
 
@@ -371,14 +335,13 @@ function useSelectedNodePath(): Node[]
 Returns the path to the selected node. Useful for navigational components like breadcrumbs.
 
 Usage
-
 ```jsx
 import { useSelectedNodePath } from '@powerhousedao/state';
 
 function MyEditorComponent() {
   const nodes = useSelectedNodePath();
 
-  return <Breadcrumbs nodes={nodes}>
+  return <Breadcrumbs nodes={nodes} />;
 }
 ```
 </details>
@@ -402,22 +365,21 @@ function useFileChildNodes(): FileNode[]
 Returns the file (document) child nodes for the selected drive or folder.
 
 Usage
-
 ```jsx
 import { useChildNodes, useFolderChildNodes, useFileChildNodes } from '@powerhousedao/state';
 
 function MyEditorComponent() {
   const nodes = useChildNodes();
-  const fileNodes = useChildFileNodes();
-  const folderNodes = useChildFolderNodes();
+  const fileNodes = useFileChildNodes();
+  const folderNodes = useFolderChildNodes();
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
+     <FilesAndFolders nodes={nodes} />
+     <Files fileNodes={fileNodes} />
+     <Folders folderNodes={folderNodes} />
     </div>
- )
+  );
 }
 ```
 </details>
@@ -439,7 +401,6 @@ function useFileChildNodesForId(id: string | null | undefined): FileNode[]
 Returns the file (document) child nodes for a drive or folder by id.
 
 Usage
-
 ```jsx
 import { useChildNodesForId, useFolderChildNodesForId, useFileChildNodesForId } from '@powerhousedao/state';
 
@@ -451,11 +412,11 @@ function MyEditorComponent() {
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
+     <FilesAndFolders nodes={nodes} />
+     <Files fileNodes={fileNodes} />
+     <Folders folderNodes={folderNodes} />
     </div>
- )
+  );
 }
 ```
 </details>
@@ -473,7 +434,6 @@ function useNodeKind(id: string | null | undefined): NodeKind | undefined
 Returns the kind of a node.
 
 Usage
-
 ```jsx
 import { useNodeName, useNodeKind } from '@powerhousedao/state';
 
@@ -493,7 +453,7 @@ function MyEditorComponent() {
 ```
 </details>
 
-### Vetra packages and modules
+### Vetra Packages and Modules
 
 Vetra packages hold code which can plug into your Connect application. This includes common default modules like the document model document model editor and document drive document model, as well as the modules from your local project and the various packages you have installed.
 
@@ -517,12 +477,11 @@ function useVetraPackages(): VetraPackage[] | undefined
 Returns all of the Vetra packages in your Connect app.
 
 Usage
-
 ```jsx
-import { useVetraPackages } from '@powerhousedao/state'
+import { useVetraPackages } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  const vetraPackages = useVetraPackages()
+  const vetraPackages = useVetraPackages();
 }
 ```
 </details>
@@ -537,12 +496,11 @@ function useDocumentModelModules(): DocumentModelModule[] | undefined
 Returns the document model modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useDocumentModelModules } from '@powerhousedao/state'
+import { useDocumentModelModules } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  const documentModelModules = useDocumentModelModules()
+  const documentModelModules = useDocumentModelModules();
 }
 ```
 </details>
@@ -559,13 +517,12 @@ Returns the document model for a given id (document type).
 *NOTE* Connect assumes that these document types (ids) are unique. It is your responsibility to enforce this.
 
 Usage
-
 ```jsx
-import { useDocumentModelModuleById } from '@powerhousedao/state'
+import { useDocumentModelModuleById } from '@powerhousedao/state';
 
 function MyEditorComponent() {
   const documentType = 'my-org/my-document';
-  const documentModelModuleById = useDocumentModelModuleById(documentType)
+  const documentModelModuleById = useDocumentModelModuleById(documentType);
 }
 ```
 </details>
@@ -580,12 +537,11 @@ function useEditorModules(): EditorModule[] | undefined
 Returns the editor modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useEditorModules } from '@powerhousedao/state'
+import { useEditorModules } from '@powerhousedao/state';
 
 function MyEditorComponent() {
-  const editorModules = useEditorModules()
+  const editorModules = useEditorModules();
 }
 ```
 </details>
@@ -600,12 +556,11 @@ function useDriveEditorModules(): DriveEditorModule[] | undefined
 Returns the drive editor modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useDriveEditorModules } from '@powerhousedao/state'
+import { useDriveEditorModules } from '@powerhousedao/state';
 
 function MyDriveEditorComponent() {
-  const driveEditorModules = useDriveEditorModules()
+  const driveEditorModules = useDriveEditorModules();
 }
 ```
 </details>
@@ -620,12 +575,11 @@ function useProcessorModules(): ProcessorModule[] | undefined
 Returns the processor modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useProcessorModules } from '@powerhousedao/state'
+import { useProcessorModules } from '@powerhousedao/state';
 
 function MyProcessorComponent() {
-  const processorModules = useProcessorModules()
+  const processorModules = useProcessorModules();
 }
 ```
 </details>
@@ -640,12 +594,11 @@ function useSubgraphModules(): SubgraphModule[] | undefined
 Returns the subgraph modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useSubgraphModules } from '@powerhousedao/state'
+import { useSubgraphModules } from '@powerhousedao/state';
 
 function MySubgraphComponent() {
-  const subgraphModules = useSubgraphModules()
+  const subgraphModules = useSubgraphModules();
 }
 ```
 </details>
@@ -660,12 +613,11 @@ function useImportScriptModules(): ImportScriptModule[] | undefined
 Returns the import script modules from your Vetra packages.
 
 Usage
-
 ```jsx
-import { useImportScriptModules } from '@powerhousedao/state'
+import { useImportScriptModules } from '@powerhousedao/state';
 
 function MyImportScriptComponent() {
-  const importScriptModules = useImportScriptModules()
+  const importScriptModules = useImportScriptModules();
 }
 ```
 </details>
