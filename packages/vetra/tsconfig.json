@@ -7,11 +7,14 @@
     "lib": ["ESNext", "dom", "dom.iterable"],
     "resolveJsonModule": true
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "tsconfig.json",
+    "eslint.config.js",
+    ".gitignore"
   ],
-  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-model"
