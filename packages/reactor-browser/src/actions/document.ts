@@ -5,7 +5,6 @@ import {
   deleteNode as baseDeleteNode,
   moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
-  createDriveState,
   generateNodesCopy,
   isFileNode,
   isFolderNode,
@@ -22,6 +21,7 @@ import {
   createZip,
   generateId,
   replayDocument,
+  type DocumentOperations,
   type PHDocument,
 } from "document-model";
 import {
@@ -177,49 +177,68 @@ export async function addFile(
     throw new Error("User is not allowed to create files");
   }
 
-  const document = (await loadFile(file)) as DocumentDriveDocument;
+  const document = await loadFile(file);
   if (!document) {
     throw new Error("No document loaded");
   }
 
-  // first create the file with the initial state of document
-  const initialDocument: PHDocument = {
-    header: document.header,
-    history: document.history,
-    initialState: document.initialState,
-    state: createDriveState({
-      global: document.state.global,
-      local: document.state.local,
-    }),
-    operations: {
-      global: [],
-      local: [],
-    },
-    clipboard: [],
+  const documentModule = reactor
+    .getDocumentModelModules()
+    .find((module) => module.documentModel.id === document.header.documentType);
+  if (!documentModule) {
+    throw new Error(
+      `Document model module for type ${document.header.documentType} not found`,
+    );
+  }
+
+  let duplicateId = false;
+  try {
+    await reactor.getDocument(document.header.id);
+    duplicateId = true;
+  } catch {
+    // document id not found
+  }
+
+  const documentId = duplicateId ? generateId() : document.header.id;
+  const header = createPresignedHeader(
+    documentId,
+    document.header.documentType,
+  );
+  header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+  header.meta = document.header.meta;
+  header.name = name || document.header.name;
+
+  // copy the document at it's initial state
+  const initialDocument = {
+    ...document,
+    header,
+    state: document.initialState,
+    operations: Object.keys(document.operations).reduce((acc, key) => {
+      acc[key] = [];
+      return acc;
+    }, {} as DocumentOperations),
   };
+
   const fileNode = await addDocument(
     driveId,
-    name || (typeof file === "string" ? document.header.name : file.name),
+    name || document.header.name,
     document.header.documentType,
     parentFolder,
     initialDocument,
+    documentId,
+    document.header.meta?.preferredEditor,
   );
 
-  // TODO: the return type of addDocument says it cannot fail, so why do we need this?
   if (!fileNode) {
     throw new Error("There was an error adding file");
   }
 
-  // then add all the operations
-  const driveDocument = await reactor.getDrive(driveId);
-  const waitForSync =
-    driveDocument && driveDocument.state.local.listeners.length > 0;
-
-  uploadOperations(document, queueOperations, {
-    waitForSync,
-  }).catch((error) => {
-    throw error;
-  });
+  // then add all the operations in chunks
+  uploadOperations(documentId, document.operations, queueOperations).catch(
+    (error) => {
+      throw error;
+    },
+  );
 }
 
 export async function updateFile(
