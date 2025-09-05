@@ -137,12 +137,10 @@ export async function createReactor() {
         refreshReactorData(reactor).catch(logger.error);
     });
     reactor.on('driveOperationsAdded', (...args) => {
-        console.log('driveOperationsAdded', ...args);
         logger.verbose('driveOperationsAdded', ...args);
         refreshReactorData(reactor).catch(logger.error);
     });
     reactor.on('operationsAdded', (...args) => {
-        console.log('operationsAdded', ...args);
         logger.verbose('operationsAdded', ...args);
         refreshReactorData(reactor).catch(logger.error);
     });

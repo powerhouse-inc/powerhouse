@@ -12,6 +12,7 @@ import {
   logger,
   updateNode,
   type DocumentDriveDocument,
+  type IDocumentDriveServer,
   type Node,
 } from "document-drive";
 import {
@@ -20,6 +21,7 @@ import {
   createPresignedHeader,
   createZip,
   generateId,
+  replayDocument,
   type PHDocument,
 } from "document-model";
 import {
@@ -210,7 +212,6 @@ export async function addFile(
 
   // then add all the operations
   const driveDocument = await reactor.getDrive(driveId);
-  // TODO: the type for reactor.getDrive says it cannot fail, so why do we need this?
   const waitForSync =
     driveDocument && driveDocument.state.local.listeners.length > 0;
 
@@ -334,7 +335,11 @@ export async function renameNode(
   return node;
 }
 
-export async function moveNode(src: Node, target: Node | undefined) {
+export async function moveNode(
+  driveId: string,
+  src: Node,
+  target: Node | undefined,
+) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -344,26 +349,43 @@ export async function moveNode(src: Node, target: Node | undefined) {
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to move documents");
   }
-  // TODO: it should not be this much work just to get the drive for a given node
-  const driveIds = await reactor.getDrives();
-  const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
-  const driveForNode = drives.find((drive) =>
-    drive.state.global.nodes.some((node) => node.id === src.id),
-  );
-  // TODO: the type for reactor.getDrive says it cannot fail, so why do we need this?
-  if (!driveForNode) {
-    throw new Error("Node is not in any drive");
-  }
 
-  const drive = await reactor.getDrive(driveForNode.header.id);
+  const drive = await reactor.getDrive(driveId);
 
-  await queueActions(
+  return await queueActions(
     drive,
     baseMoveNode({ srcFolder: src.id, targetParentFolder: target?.id }),
   );
 }
 
-export async function copyNode(src: Node, target: Node | undefined) {
+function _duplicateDocument(
+  reactor: IDocumentDriveServer,
+  document: PHDocument,
+  newId = generateId(),
+) {
+  const documentModule = reactor
+    .getDocumentModelModules()
+    .find((module) => module.documentModel.id === document.header.documentType);
+  if (!documentModule) {
+    throw new Error(
+      `Document model module for type ${document.header.documentType} not found`,
+    );
+  }
+
+  return replayDocument(
+    document.initialState,
+    document.operations,
+    documentModule.reducer,
+    undefined,
+    createPresignedHeader(newId, document.header.documentType),
+  );
+}
+
+export async function copyNode(
+  driveId: string,
+  src: Node,
+  target: Node | undefined,
+) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -373,16 +395,8 @@ export async function copyNode(src: Node, target: Node | undefined) {
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to copy documents");
   }
-  // TODO: it should not be this much work just to get the drive for a given node
-  const driveIds = await reactor.getDrives();
-  const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
-  const driveForNode = drives.find((drive) =>
-    drive.state.global.nodes.some((node) => node.id === src.id),
-  );
-  // TODO: the type for reactor.getDrive says it cannot fail, so why do we need this?
-  if (!driveForNode) {
-    throw new Error("Node is not in any drive");
-  }
+
+  const drive = await reactor.getDrive(driveId);
 
   const copyNodesInput = generateNodesCopy(
     {
@@ -391,19 +405,34 @@ export async function copyNode(src: Node, target: Node | undefined) {
       targetName: src.name,
     },
     () => generateId(),
-    driveForNode.state.global.nodes,
+    drive.state.global.nodes,
   );
+
+  const fileNodesToCopy = copyNodesInput.filter((copyNodeInput) => {
+    const node = drive.state.global.nodes.find(
+      (node) => node.id === copyNodeInput.srcId,
+    );
+    return node !== undefined && isFileNode(node);
+  });
+
+  for (const fileNodeToCopy of fileNodesToCopy) {
+    try {
+      const document = await reactor.getDocument(fileNodeToCopy.srcId);
+
+      const duplicatedDocument = _duplicateDocument(
+        reactor,
+        document,
+        fileNodeToCopy.targetId,
+      );
+
+      await reactor.addDocument(duplicatedDocument);
+    } catch (e) {
+      logger.error(`Error copying document ${fileNodeToCopy.srcId}: ${e}`);
+    }
+  }
 
   const copyActions = copyNodesInput.map((copyNodeInput) =>
     baseCopyNode(copyNodeInput),
   );
-  // TODO: why does this use addActions instead of queueActions?
-  const result = await reactor.addActions(driveForNode.header.id, copyActions);
-
-  if (result.status !== "SUCCESS") {
-    logger.error(`Error copying files: ${result.status}`, result.error);
-  }
-
-  // TODO: this is a lie
-  return result.document as DocumentDriveDocument;
+  return await queueActions(drive, copyActions);
 }
