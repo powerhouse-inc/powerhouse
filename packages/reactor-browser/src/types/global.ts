@@ -4,12 +4,6 @@ import {
   type IDocumentDriveServer,
   type ProcessorManager,
 } from "document-drive";
-import {
-  type IDocumentAdminStorage,
-  type IDocumentOperationStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "document-drive/storage/types";
 import { type PHDocument } from "document-model";
 import { type DID, type IConnectCrypto } from "../crypto/index.js";
 import {
@@ -62,10 +56,6 @@ export type AppConfig = {
 declare global {
   interface Window {
     reactor?: IDocumentDriveServer | undefined;
-    phStorage?: IDriveOperationStorage &
-      IDocumentOperationStorage &
-      IDocumentStorage &
-      IDocumentAdminStorage;
     connectCrypto?: IConnectCrypto | undefined;
     did?: DID | undefined;
     renown?: IRenown | undefined;

@@ -25,8 +25,20 @@ import {
 import { initRenown } from '@renown/sdk';
 import { logger } from 'document-drive';
 import { ProcessorManager } from 'document-drive/processors/processor-manager';
+import type { IDocumentAdminStorage } from 'document-drive/storage/types';
 import { loadCommonPackage } from './document-model.js';
 import { loadExternalPackages } from './external-packages.js';
+
+let reactorStorage: IDocumentAdminStorage | undefined;
+
+function setReactorStorage(storage: IDocumentAdminStorage) {
+    reactorStorage = storage;
+}
+
+export async function clearReactorStorage() {
+    await reactorStorage?.clear();
+    return !!reactorStorage;
+}
 
 async function loadVetraPackages() {
     const commonPackage = await loadCommonPackage();
@@ -54,6 +66,9 @@ export async function createReactor() {
 
     // initialize storage
     const storage = createBrowserStorage(connectConfig.routerBasename);
+
+    // store storage for admin access
+    setReactorStorage(storage);
 
     // load vetra packages
     const vetraPackages = await loadVetraPackages();
