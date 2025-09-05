@@ -1,3 +1,20 @@
+## 4.1.0-dev.46 (2025-09-05)
+
+### 🚀 Features
+
+- queue now queues by doc id ([afc03e437](https://github.com/powerhouse-inc/powerhouse/commit/afc03e437))
+- wip dependency graph ([939e41076](https://github.com/powerhouse-inc/powerhouse/commit/939e41076))
+- added robust dependency system to queue ([4aca91494](https://github.com/powerhouse-inc/powerhouse/commit/4aca91494))
+- plug in persistence ([5af292734](https://github.com/powerhouse-inc/powerhouse/commit/5af292734))
+
+### 🩹 Fixes
+
+- build errors ([97b4853a3](https://github.com/powerhouse-inc/powerhouse/commit/97b4853a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.45 (2025-09-04)
 
 ### 🚀 Features

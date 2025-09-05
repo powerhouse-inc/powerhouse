@@ -1,3 +1,7 @@
+## 4.1.0-dev.46 (2025-09-05)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.45 (2025-09-04)
 
 ### 🚀 Features
