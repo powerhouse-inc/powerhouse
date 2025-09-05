@@ -1,13 +1,13 @@
 import { Icon } from '@powerhousedao/design-system';
-import { getDriveSharingType } from '@powerhousedao/reactor-browser';
 import { type DocumentDriveDocument } from 'document-drive';
+import { getDriveSharingType } from 'document-drive/server/utils';
 
 export function DriveIcon({
     drive,
 }: {
     drive: DocumentDriveDocument | undefined;
 }) {
-    const sharingType = getDriveSharingType(drive);
+    const sharingType = drive ? getDriveSharingType(drive) : undefined;
     const driveIconSrc = drive?.state.global.icon;
 
     if (driveIconSrc) {
