@@ -26,11 +26,14 @@
     "react-dom": "^18.3.1"
   },
   "dependencies": {
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
+    "@types/luxon": "^3.7.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "luxon": "^3.7.1",
     "react-i18next": "^13.5.0"
   },
   "devDependencies": {

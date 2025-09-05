@@ -1,6 +1,23 @@
 /// <reference lib="WebWorker" />
 
-import type { ServiceWorkerEvent } from "@powerhousedao/connect";
+interface IServiceWorkerMessageData {
+  type: string;
+}
+
+interface ServiceWorkerEvent<T extends IServiceWorkerMessageData>
+  extends ExtendableMessageEvent {
+  data: T;
+}
+
+type NEW_VERSION_AVAILABLE_MESSAGE = {
+  type: "NEW_VERSION_AVAILABLE";
+  version: string;
+  requiresHardRefresh: boolean;
+};
+
+type ServiceWorkerMessageData = NEW_VERSION_AVAILABLE_MESSAGE;
+
+type ServiceWorkerMessage = ServiceWorkerEvent<ServiceWorkerMessageData>;
 
 const _self = self as unknown as ServiceWorkerGlobalScope;
 
@@ -19,16 +36,6 @@ _self.addEventListener("activate", (event: ExtendableEvent) => {
 
   checkAppVersion(APP_VERSION, REQUIRES_HARD_REFRESH).catch(console.error);
 });
-
-export type NEW_VERSION_AVAILABLE_MESSAGE = {
-  type: "NEW_VERSION_AVAILABLE";
-  version: string;
-  requiresHardRefresh: boolean;
-};
-
-export type ServiceWorkerMessageData = NEW_VERSION_AVAILABLE_MESSAGE;
-
-export type ServiceWorkerMessage = ServiceWorkerEvent<ServiceWorkerMessageData>;
 
 function postMessage(client: Client, message: ServiceWorkerMessageData) {
   return client.postMessage(message);

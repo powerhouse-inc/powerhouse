@@ -1,7 +1,9 @@
 import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
 import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
-import type { IAnalyticsStore } from "@powerhousedao/reactor-browser";
+import {
+  AnalyticsQueryEngine,
+  type IAnalyticsStore,
+} from "@powerhousedao/analytics-engine-core";
 import { getGlobal, setGlobal } from "@powerhousedao/reactor-browser";
 import {
   QueryClient,

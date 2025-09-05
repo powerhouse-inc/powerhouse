@@ -343,5 +343,3 @@ export function removeStylesImports(
     fs.writeFileSync(stylesPath, updatedStyles);
   }
 }
-
-export { getConfig } from "@powerhousedao/config";

@@ -1,8 +1,12 @@
 {
     "extends": "../../tsconfig.options.json",
     "compilerOptions": {
-        "outDir": "./ts-build",
-        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "noEmit": true,
+        "lib": [
+            "ESNext",
+            "DOM",
+            "DOM.Iterable"
+        ],
         "types": [
             "node",
             "vite/client",
@@ -10,9 +14,25 @@
             "@types/wicg-file-system-access",
             "vite-envs"
         ],
+        "paths": {
+            "@powerhousedao/connect": [
+                "./src/index.ts"
+            ],
+            "@powerhousedao/connect/config": [
+                "./src/connect.config.ts"
+            ],
+        }
     },
-    "include": ["**/*", "./package.copy.json", "src/i18n/locales/en.json"],
-    "exclude": ["dist", "node_modules", "storybook-static", "ts-build"],
+    "include": [
+        "**/*",
+        "./package.copy.json",
+        "src/i18n/locales/en.json"
+    ],
+    "exclude": [
+        "dist",
+        "node_modules",
+        "storybook-static",
+    ],
     "references": [
         {
             "path": "../../packages/document-model"

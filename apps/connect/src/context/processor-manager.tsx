@@ -1,12 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { live, type PGliteWithLive } from "@electric-sql/pglite/live";
+import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { PGliteWorker } from "@electric-sql/pglite/worker";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { processorFactory } from "@powerhousedao/common";
 import { connectConfig } from "@powerhousedao/connect/config";
-import type {
-  IAnalyticsStore,
-  Processors,
-} from "@powerhousedao/reactor-browser";
+import type { Processors } from "@powerhousedao/reactor-browser";
 import {
   AnalyticsProvider,
   useAnalyticsStoreAsync,
@@ -20,7 +18,7 @@ import { childLogger } from "document-drive";
 import { generateUUIDBrowser } from "document-model";
 import type { PropsWithChildren } from "react";
 import { useEffect, useRef } from "react";
-import PGWorker from "../workers/pglite-worker.js?worker";
+import PGWorker from "../workers/pglite-worker?worker";
 const logger = childLogger(["reactor-analytics"]);
 
 function createPgLiteFactoryWorker(databaseName: string) {
@@ -41,9 +39,6 @@ function createPgLiteFactoryWorker(databaseName: string) {
     const pgLiteWorker = new PGliteWorker(worker, {
       meta: {
         databaseName,
-      },
-      extensions: {
-        live,
       },
     });
 

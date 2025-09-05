@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 const phConfig = getConfig();
 const { switchboard } = phConfig;
 interface Config {

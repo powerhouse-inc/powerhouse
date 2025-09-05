@@ -59,8 +59,6 @@ import {
   removeTrigger,
   requestPublicDriveWithTokenFromReactor,
   resolveCreateDocumentInput,
-  runAsap,
-  runAsapAsync,
   setSharingType,
 } from "document-drive";
 import type {
@@ -90,6 +88,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
+import { runAsap, runAsapAsync } from "../utils/run-asap.js";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager

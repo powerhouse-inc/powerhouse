@@ -16,14 +16,8 @@
         "assets"
     ],
     "exports": {
-        ".": {
-            "import": "./ts-build/src/index.js",
-            "types": "./ts-build/src/index.d.ts"
-        },
-        "./config": {
-            "import": "./ts-build/src/connect.config.js",
-            "types": "./ts-build/src/connect.config.d.ts"
-        },
+        ".": "./src/index.ts",
+          "./config": "./src/connect.config.ts",
         "./assets/*.mp4": "./assets/*.mp4",
         "./assets/*.png": "./assets/*.png",
         "./assets/*.svg": "./assets/*.svg",
@@ -33,7 +27,7 @@
         "./assets/*.webp": "./assets/*.webp",
         "./assets/*.avif": "./assets/*.avif"
     },
-    "types": "./ts-build/src/index.d.ts",
+    "types": "./src/index.ts",
     "license": "AGPL-3.0-only",
     "author": "acaldas@powerhouse.inc",
     "repository": {
@@ -58,6 +52,7 @@
     },
     "devDependencies": {
         "@didtools/key-webcrypto": "^0.2.0",
+        "@electric-sql/pglite": "^0.2.17",
         "@playwright/test": "^1.41.2",
         "@powerhousedao/builder-tools": "workspace:*",
         "@powerhousedao/common": "workspace:*",
@@ -65,7 +60,7 @@
         "@powerhousedao/design-system": "workspace:*",
         "@powerhousedao/diff-analyzer": "^0.0.0-dev.10",
         "@powerhousedao/reactor-browser": "workspace:*",
-        "@electric-sql/pglite": "^0.2.17",
+        "@powerhousedao/analytics-engine-core": "^0.5.0",
         "@renown/sdk": "workspace:*",
         "@rollup/plugin-node-resolve": "^15.2.3",
         "@sentry/browser": "^9.1.0",

@@ -5,11 +5,10 @@ import {
   filterOperationsByRevision,
   isAfterRevision,
   isAtRevision,
-  runAsapAsync,
-  useSetTimeout,
 } from "document-drive";
 import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
+import { runAsapAsync, useSetTimeout } from "../src/utils/run-asap.js";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {

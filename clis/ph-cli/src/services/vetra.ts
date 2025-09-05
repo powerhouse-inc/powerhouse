@@ -1,5 +1,5 @@
 import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import { blue, green, red } from "colorette";
 import { setLogLevel } from "document-drive";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";

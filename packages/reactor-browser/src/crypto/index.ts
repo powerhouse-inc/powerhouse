@@ -74,19 +74,8 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   #initCrypto() {
-    return new Promise<SubtleCrypto>((resolve, reject) => {
-      if (typeof window === "undefined") {
-        import("node:crypto")
-          .then((module) => {
-            resolve(module.webcrypto.subtle as SubtleCrypto);
-          })
-          .catch(reject);
-      } else {
-        if (!window.crypto?.subtle) {
-          reject(new Error("Crypto module not available"));
-        }
-        resolve(window.crypto.subtle);
-      }
+    return new Promise<SubtleCrypto>((resolve) => {
+      resolve(window.crypto.subtle);
     });
   }
 

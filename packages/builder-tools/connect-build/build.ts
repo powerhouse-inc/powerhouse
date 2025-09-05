@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { PH_DIR_NAME } from "../connect-utils/constants.js";

@@ -8,11 +8,11 @@ import ProcessorManagerProvider from "../context/processor-manager.js";
 import Analytics from "./analytics.js";
 import { Router } from "./router.js";
 
-if (import.meta.env.MODE === "development") {
-  window.documentEditorDebugTools = new DocumentEditorDebugTools();
-} else {
-  serviceWorkerManager.registerServiceWorker(false);
-}
+// if (import.meta.env.MODE === "development") {
+//   window.documentEditorDebugTools = new DocumentEditorDebugTools();
+// } else {
+//   serviceWorkerManager.registerServiceWorker(false);
+// }
 
 const App = () => (
   <SentryProvider>

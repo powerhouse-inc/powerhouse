@@ -5,17 +5,20 @@ import {
   driveDocumentModelModule,
   ReactorBuilder,
   type RunAsap,
-  useMessageChannel,
-  usePostMessage,
-  useSetImmediate,
-  useSetTimeout,
 } from "document-drive";
+
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
   generateId,
 } from "document-model";
 import { bench, type BenchOptions, describe, vi } from "vitest";
+import {
+  useMessageChannel,
+  usePostMessage,
+  useSetImmediate,
+  useSetTimeout,
+} from "../../src/utils/run-asap.js";
 import GetDrive from "./getDrive.json" with { type: "json" };
 import Strands from "./strands.small.json" with { type: "json" };
 const DRIVE_ID = GetDrive.data.drive.id;

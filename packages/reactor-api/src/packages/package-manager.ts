@@ -1,4 +1,4 @@
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger, driveDocumentModelModule } from "document-drive";

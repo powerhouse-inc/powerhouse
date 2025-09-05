@@ -1,6 +1,6 @@
 import { generateFromFile } from "@powerhousedao/codegen";
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import { getConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import type {
   LocalReactor,
   RemoteDriveInputSimple,

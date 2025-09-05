@@ -10,18 +10,14 @@ import type {
   StrandUpdate,
   StrandUpdateSource,
 } from "document-drive";
-import {
-  logger,
-  operationsToRevision,
-  runAsap,
-  runAsapAsync,
-} from "document-drive";
+import { logger, operationsToRevision } from "document-drive";
 import type {
   Action,
   GlobalStateFromDocument,
   LocalStateFromDocument,
   PHDocument,
 } from "document-model";
+import { runAsap, runAsapAsync } from "../../../utils/run-asap.js";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;

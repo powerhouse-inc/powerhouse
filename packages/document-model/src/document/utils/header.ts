@@ -61,18 +61,7 @@ export class PublicKeySigner implements ISigner {
 
   #initCrypto() {
     return new Promise<SubtleCrypto>((resolve, reject) => {
-      if (typeof window === "undefined") {
-        import("node:crypto")
-          .then((module) => {
-            resolve(module.webcrypto.subtle as SubtleCrypto);
-          })
-          .catch(reject);
-      } else {
-        if (!window.crypto?.subtle) {
-          reject(new Error("Crypto module not available"));
-        }
-        resolve(window.crypto.subtle);
-      }
+      resolve(crypto.subtle);
     });
   }
 
