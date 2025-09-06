@@ -1,3 +1,15 @@
+## 4.1.0-dev.47 (2025-09-06)
+
+### 🩹 Fixes
+
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
 ## 4.1.0-dev.46 (2025-09-05)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
