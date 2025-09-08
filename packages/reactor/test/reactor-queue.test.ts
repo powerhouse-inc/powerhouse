@@ -1,19 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BaseDocumentDriveServer } from "document-drive";
-import type { DocumentModelModule, Action } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "document-drive";
-import { type MemoryStorage } from "document-drive";
+import type { Action, DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import type { IEventBus } from "../src/events/interfaces.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import type { Job } from "../src/queue/types.js";
 import { type Reactor } from "../src/reactor.js";
 import { JobStatus } from "../src/shared/types.js";
 import {
-  createMockDocument,
   createDocumentModelAction,
+  createMockDocument,
   createTestActions,
   createTestReactorSetup,
 } from "./factories.js";
@@ -21,8 +19,6 @@ import {
 describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
-  let storage: MemoryStorage;
-  let eventBus: IEventBus;
   let queue: IQueue;
   let jobExecutor: IJobExecutor;
 
@@ -35,8 +31,6 @@ describe("Reactor <> Queue Integration", () => {
     const setup = await createTestReactorSetup(documentModels);
     reactor = setup.reactor;
     driveServer = setup.driveServer;
-    storage = setup.storage;
-    eventBus = setup.eventBus;
     queue = setup.queue;
     jobExecutor = setup.jobExecutor;
   });
@@ -253,12 +247,12 @@ describe("Reactor <> Queue Integration", () => {
         // First dequeue should get a job from document 1
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.documentId).toBe(testDoc1.header.id);
+        expect(job1?.job.documentId).toBe(testDoc1.header.id);
 
         // Second dequeue should get the job from document 2 (not doc 1's second job)
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.documentId).toBe(testDoc2.header.id);
+        expect(job2?.job.documentId).toBe(testDoc2.header.id);
 
         // Third dequeue should return null since doc 1 is still executing
         const job3 = await queue.dequeueNext();
@@ -266,13 +260,13 @@ describe("Reactor <> Queue Integration", () => {
 
         // Complete the first job
         if (job1) {
-          await queue.completeJob(job1.id);
+          await queue.completeJob(job1.job.id);
         }
 
         // Now we should be able to dequeue the second job from document 1
         const job4 = await queue.dequeueNext();
         expect(job4).toBeDefined();
-        expect(job4?.documentId).toBe(testDoc1.header.id);
+        expect(job4?.job.documentId).toBe(testDoc1.header.id);
       });
 
       it("should allow concurrent execution of jobs from different documents", async () => {
@@ -314,7 +308,9 @@ describe("Reactor <> Queue Integration", () => {
         }
 
         // Verify we got one job from each document
-        const documentIds = dequeuedJobs.map((job) => job.documentId).sort();
+        const documentIds = dequeuedJobs
+          .map((job) => job.job.documentId)
+          .sort();
         const expectedIds = docs.map((doc) => doc.header.id).sort();
         expect(documentIds).toEqual(expectedIds);
 
@@ -350,7 +346,7 @@ describe("Reactor <> Queue Integration", () => {
         // Dequeue first job
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.operation.index).toBe(0);
+        expect(job1?.job.operation.index).toBe(0);
 
         // Should not be able to dequeue another job for this document
         const blockedJob = await queue.dequeueNext();
@@ -358,22 +354,22 @@ describe("Reactor <> Queue Integration", () => {
 
         // Complete the first job
         if (job1) {
-          await queue.completeJob(job1.id);
+          await queue.completeJob(job1.job.id);
         }
 
         // Now should be able to dequeue the second job
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.operation.index).toBe(1);
+        expect(job2?.job.operation.index).toBe(1);
 
         // Complete second job and get third
         if (job2) {
-          await queue.completeJob(job2.id);
+          await queue.completeJob(job2.job.id);
         }
 
         const job3 = await queue.dequeueNext();
         expect(job3).toBeDefined();
-        expect(job3?.operation.index).toBe(2);
+        expect(job3?.job.operation.index).toBe(2);
       });
 
       it("should handle job failure and allow next job to proceed", async () => {
@@ -410,13 +406,13 @@ describe("Reactor <> Queue Integration", () => {
 
         // Fail the first job
         if (job1) {
-          await queue.failJob(job1.id, "Test failure");
+          await queue.failJob(job1.job.id, "Test failure");
         }
 
         // Now should be able to dequeue the second job
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.operation.index).toBe(1);
+        expect(job2?.job.operation.index).toBe(1);
       });
     });
   });

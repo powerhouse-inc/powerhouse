@@ -93,8 +93,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private async processNextJob(): Promise<void> {
     try {
       // Dequeue next available job
-      const job = await this.queue.dequeueNext();
-      if (!job) {
+      const handle = await this.queue.dequeueNext();
+      if (!handle) {
         return;
       }
 
@@ -105,19 +105,19 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       const executor = this.executors[executorIndex];
 
       // Execute the job
-      const result = await executor.executeJob(job);
+      const result = await executor.executeJob(handle.job);
 
       // Update job status in queue
       if (result.success) {
-        await this.queue.completeJob(job.id);
+        await this.queue.completeJob(handle.job.id);
       } else {
         // Handle retry logic
-        const retryCount = job.retryCount || 0;
-        const maxRetries = job.maxRetries || 0;
+        const retryCount = handle.job.retryCount || 0;
+        const maxRetries = handle.job.maxRetries || 0;
         if (retryCount < maxRetries) {
-          await this.queue.retryJob(job.id, result.error?.message);
+          await this.queue.retryJob(handle.job.id, result.error?.message);
         } else {
-          await this.queue.failJob(job.id, result.error?.message);
+          await this.queue.failJob(handle.job.id, result.error?.message);
         }
       }
 
