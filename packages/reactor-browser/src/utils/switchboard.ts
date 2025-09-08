@@ -50,7 +50,7 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
 }
 
 export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
-  return `query getDocument($documentId: PHID!, $driveId: String) {
+  return `query getDocument($documentId: PHID!, $driveId: PHID) {
   ${pascalCase(documentModel.name.replaceAll("/", " "))} {
     getDocument(docId: $documentId, driveId: $driveId) {
       id
