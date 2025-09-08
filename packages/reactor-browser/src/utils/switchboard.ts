@@ -1,4 +1,3 @@
-import { pascalCase } from "change-case";
 import { type DocumentModelState } from "document-model";
 import { compressToEncodedURIComponent } from "lz-string";
 
@@ -50,18 +49,16 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
 }
 
 export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
-  return `query getDocument($documentId: PHID!, $driveId: PHID) {
-  ${pascalCase(documentModel.name.replaceAll("/", " "))} {
-    getDocument(docId: $documentId, driveId: $driveId) {
+  return `query getDocument($documentId: String!) {
+  document(id: $documentId) {
       id
-      created
       lastModified
       name
       revision
       stateJSON
     }
   }
-}`;
+`;
 }
 
 export function buildDocumentSubgraphQuery(
@@ -97,12 +94,11 @@ export function buildDocumentSubgraphUrl(
   documentModel: DocumentModelState,
   authToken?: string,
 ) {
-  const switchboardUrl = getSwitchboardGatewayUrlFromDriveUrl(driveUrl);
   const encodedQuery = buildDocumentSubgraphQuery(
     driveUrl,
     documentId,
     documentModel,
     authToken,
   );
-  return `${switchboardUrl}?explorerURLState=${encodedQuery}`;
+  return `${driveUrl}?explorerURLState=${encodedQuery}`;
 }
