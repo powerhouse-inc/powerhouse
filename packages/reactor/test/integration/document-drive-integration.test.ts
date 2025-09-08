@@ -1,5 +1,6 @@
 import {
   MemoryStorage,
+  ReactorBuilder,
   addFile,
   addFolder,
   copyNode,
@@ -12,6 +13,7 @@ import {
   setSharingType,
   updateFile,
   updateNode,
+  type BaseDocumentDriveServer,
 } from "document-drive";
 import type {
   IDocumentOperationStorage,
@@ -36,12 +38,20 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let queue: InMemoryQueue;
   let executor: SimpleJobExecutor;
   let executorManager: SimpleJobExecutorManager;
+  let driveServer: BaseDocumentDriveServer;
 
   beforeEach(async () => {
     // Setup real components
     storage = new MemoryStorage();
     registry = new DocumentModelRegistry();
     registry.registerModules(driveDocumentModelModule);
+
+    // Create real drive server using ReactorBuilder
+    const builder = new ReactorBuilder([driveDocumentModelModule]).withStorage(
+      storage,
+    );
+    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+    await driveServer.initialize();
 
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
@@ -62,7 +72,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     // Create reactor with all components
     reactor = new Reactor(
-      {} as any, // driveServer not used for mutations
+      driveServer,
       storage as IDocumentStorage,
       eventBus,
       queue,
