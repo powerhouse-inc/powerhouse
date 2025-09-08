@@ -1,5 +1,4 @@
-import { kebabCase } from "change-case";
-import { generateDocumentStateQueryFields } from "document-drive/utils/graphql";
+import { pascalCase } from "change-case";
 import { type DocumentModelState } from "document-model";
 import { compressToEncodedURIComponent } from "lz-string";
 
@@ -51,21 +50,15 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
 }
 
 export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
-  const stateFields = generateDocumentStateQueryFields(
-    documentModel,
-    "document",
-  );
   return `query getDocument($documentId: PHID!, $driveId: String) {
-  ${documentModel.name} {
+  ${pascalCase(documentModel.name.replaceAll("/", " "))} {
     getDocument(docId: $documentId, driveId: $driveId) {
       id
       created
       lastModified
       name
       revision
-      state {
-        ${stateFields}
-      }
+      stateJSON
     }
   }
 }`;
@@ -80,17 +73,22 @@ export function buildDocumentSubgraphQuery(
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery(documentModel);
   const variables = { documentId, driveId: driveSlug };
-  return compressToEncodedURIComponent(
-    JSON.stringify({
-      document: query.trim(),
-      variables: JSON.stringify(variables, null, 2),
-      headers: authToken
-        ? JSON.stringify({
-            Authorization: `Bearer ${authToken}`,
-          })
-        : [],
-    }),
-  );
+  const queryData: {
+    document: string;
+    variables: string;
+    headers?: string;
+  } = {
+    document: query.trim(),
+    variables: JSON.stringify(variables, null, 2),
+  };
+
+  if (authToken) {
+    queryData.headers = JSON.stringify({
+      Authorization: `Bearer ${authToken}`,
+    });
+  }
+
+  return compressToEncodedURIComponent(JSON.stringify(queryData));
 }
 
 export function buildDocumentSubgraphUrl(
@@ -100,12 +98,11 @@ export function buildDocumentSubgraphUrl(
   authToken?: string,
 ) {
   const switchboardUrl = getSwitchboardGatewayUrlFromDriveUrl(driveUrl);
-  const subgraph = kebabCase(documentModel.name);
   const encodedQuery = buildDocumentSubgraphQuery(
     driveUrl,
     documentId,
     documentModel,
     authToken,
   );
-  return `${switchboardUrl}/${subgraph}?explorerURLState=${encodedQuery}`;
+  return `${switchboardUrl}?explorerURLState=${encodedQuery}`;
 }
