@@ -97,5 +97,5 @@ jobs:
   deploy:
     name: Deploy to environment
     needs: build-and-publish
-    uses: ".github/workflows/deploy-powerhouse.yml@main"
+    uses: "./.github/workflows/deploy-powerhouse.yml"
     secrets: inherit
