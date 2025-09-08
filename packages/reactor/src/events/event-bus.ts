@@ -6,7 +6,7 @@ import {
 } from "./types.js";
 
 export class EventBus implements IEventBus {
-  private eventTypeToSubscribers = new Map<number, Subscriber[]>();
+  public readonly eventTypeToSubscribers = new Map<number, Subscriber[]>();
 
   subscribe<K>(
     type: number,

@@ -240,25 +240,6 @@ export function createMockJobExecutor(
 }
 
 /**
- * Factory for creating mock SimpleJobExecutor with spy functions
- */
-export function createMockSimpleJobExecutor() {
-  const executeJobSpy = vi.fn().mockResolvedValue({
-    success: true,
-    result: {},
-  });
-
-  const executor = {
-    executeJob: executeJobSpy,
-  } as IJobExecutor;
-
-  return {
-    executor,
-    executeJobSpy,
-  };
-}
-
-/**
  * Factory for creating mock IDocumentStorage
  */
 export function createMockDocumentStorage(
@@ -428,9 +409,12 @@ export function createJobDependencyChain(length: number): Job[] {
 /**
  * Factory for creating multiple actions for testing
  */
-export function createTestActions(count: number, type = "SET_NAME"): Action[] {
+export function createTestActions(
+  count: number,
+  type: "SET_NAME" | "SET_DESCRIPTION" | "CREATE" | "UPDATE" = "SET_NAME",
+): Action[] {
   return Array.from({ length: count }, (_, i) =>
-    createDocumentModelAction(type as any, {
+    createDocumentModelAction(type, {
       input: { name: `Action ${i + 1}` },
       timestampUtcMs: String(Date.now() + i * 1000),
     }),
@@ -442,7 +426,12 @@ export function createTestActions(count: number, type = "SET_NAME"): Action[] {
  */
 export function createTestDocuments(
   count: number,
-  baseOverrides: any = {},
+  baseOverrides: {
+    id?: string;
+    slug?: string;
+    documentType?: string;
+    state?: any;
+  } = {},
 ): PHDocument[] {
   return Array.from({ length: count }, (_, i) =>
     createDocModelDocument({

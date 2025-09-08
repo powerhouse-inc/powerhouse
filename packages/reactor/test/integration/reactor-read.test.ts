@@ -141,7 +141,7 @@ describe("Reactor Read Interface", () => {
       });
 
       // Add the document to the drive
-      await driveServer.addDocument(document, "drive1");
+      await driveServer.addDocument(document);
 
       const result = await reactor.getBySlug("test-slug");
 
@@ -316,7 +316,7 @@ describe("Reactor Read Interface", () => {
       });
 
       for (const doc of documents) {
-        await driveServer.addDocument(doc, "drive1");
+        await driveServer.addDocument(doc);
       }
 
       const result = await reactor.find({ ids: ["doc1", "doc3"] });
@@ -347,7 +347,7 @@ describe("Reactor Read Interface", () => {
           triggers: [],
         },
       });
-      await driveServer.addDocument(document, "drive1");
+      await driveServer.addDocument(document);
 
       const result = await reactor.find({}, { scopes: ["global"] });
 

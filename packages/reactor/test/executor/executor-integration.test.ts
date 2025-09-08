@@ -1,4 +1,9 @@
-import { MemoryStorage, driveDocumentModelModule } from "document-drive";
+import {
+  MemoryStorage,
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+  type FolderNode,
+} from "document-drive";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
@@ -72,7 +77,9 @@ describe("SimpleJobExecutor Integration", () => {
       expect(result.error).toBeUndefined();
 
       // Verify operation was persisted to storage
-      const updatedDocument = await storage.get(document.header.id);
+      const updatedDocument = await storage.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(updatedDocument.operations.global).toHaveLength(1);
 
       const persistedOperation = updatedDocument.operations.global[0];
@@ -85,7 +92,7 @@ describe("SimpleJobExecutor Integration", () => {
 
       // Verify document state reflects the change
       // The state structure uses 'nodes' array for both files and folders
-      const globalState = (updatedDocument.state as any)?.global;
+      const globalState = updatedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(1);
@@ -163,30 +170,32 @@ describe("SimpleJobExecutor Integration", () => {
       expect(result2.success).toBe(true);
 
       // Verify both operations were persisted
-      const updatedDocument = await storage.get(document.header.id);
+      const updatedDocument = await storage.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(updatedDocument.operations.global).toHaveLength(2);
 
       // Verify state reflects both changes
-      const globalState = (updatedDocument.state as any)?.global;
+      const globalState = updatedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(2);
 
       const parentFolder = globalState.nodes.find(
-        (n: any) => n.id === "folder-1",
+        (n: FolderNode) => n.id === "folder-1",
       );
       const childFolder = globalState.nodes.find(
-        (n: any) => n.id === "folder-2",
+        (n: FolderNode) => n.id === "folder-2",
       );
 
       expect(parentFolder).toBeDefined();
-      expect(parentFolder.name).toBe("Parent Folder");
-      expect(parentFolder.kind).toBe("folder");
+      expect(parentFolder?.name).toBe("Parent Folder");
+      expect(parentFolder?.kind).toBe("folder");
 
       expect(childFolder).toBeDefined();
-      expect(childFolder.name).toBe("Child Folder");
-      expect(childFolder.parentFolder).toBe("folder-1");
-      expect(childFolder.kind).toBe("folder");
+      expect(childFolder?.name).toBe("Child Folder");
+      expect(childFolder?.parentFolder).toBe("folder-1");
+      expect(childFolder?.kind).toBe("folder");
     });
 
     it("should handle file operations", async () => {
@@ -255,19 +264,23 @@ describe("SimpleJobExecutor Integration", () => {
       expect(result.success).toBe(true);
 
       // Verify operations were persisted
-      const updatedDocument = await storage.get(document.header.id);
+      const updatedDocument = await storage.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(updatedDocument.operations.global).toHaveLength(2);
 
       // Verify state reflects the changes
-      const globalState = (updatedDocument.state as any)?.global;
+      const globalState = updatedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(2); // 1 folder + 1 file
 
-      const folder = globalState.nodes.find((n: any) => n.kind === "folder");
-      const file = globalState.nodes.find((n: any) => n.kind === "file");
+      const folder = globalState.nodes.find(
+        (n: FolderNode) => n.kind === "folder",
+      );
+      const file = globalState.nodes.find((n) => n.kind === "file");
       expect(folder).toBeDefined();
-      expect(folder.id).toBe("folder-1");
+      expect(folder?.id).toBe("folder-1");
 
       expect(file).toBeDefined();
       expect(file).toMatchObject({
@@ -285,16 +298,13 @@ describe("SimpleJobExecutor Integration", () => {
       await storage.create(document);
 
       // Create a mock storage that fails on addDocumentOperations
-      const failingOperationStorage: IDocumentOperationStorage = {
-        addDocumentOperations: vi
-          .fn()
-          .mockRejectedValue(new Error("Storage write failed")),
-      } as any;
+      const fn = vi.fn().mockRejectedValue(new Error("Storage write failed"));
+      storage.addDocumentOperations = fn;
 
       const executorWithFailingStorage = new SimpleJobExecutor(
         registry,
         storage as IDocumentStorage,
-        failingOperationStorage,
+        storage as IDocumentOperationStorage,
       );
 
       // Create a valid job
@@ -333,9 +343,11 @@ describe("SimpleJobExecutor Integration", () => {
       expect(result.error?.message).toBe("Storage write failed");
 
       // Verify no operations were persisted
-      const unchangedDocument = await storage.get(document.header.id);
+      const unchangedDocument = await storage.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(unchangedDocument.operations.global).toHaveLength(0);
-      const globalState = (unchangedDocument.state as any)?.global;
+      const globalState = unchangedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(0);
