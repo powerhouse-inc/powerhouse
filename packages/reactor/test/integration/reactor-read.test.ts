@@ -4,11 +4,7 @@ import {
   driveDocumentModelModule,
   type BaseDocumentDriveServer,
 } from "document-drive";
-import type {
-  DocumentModelModule,
-  PHBaseState,
-  PHDocument,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -19,34 +15,7 @@ import { DocumentModelRegistry } from "../../src/index.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { Reactor } from "../../src/reactor.js";
-
-// Helper to create a valid PHDocument using the document model utils
-function createMockDocument(
-  overrides: {
-    id?: string;
-    slug?: string;
-    documentType?: string;
-    state?: PHBaseState;
-  } = {},
-): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
-
-  // Apply overrides if provided
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
-  if (overrides.slug) {
-    baseDocument.header.slug = overrides.slug;
-  }
-  if (overrides.documentType) {
-    baseDocument.header.documentType = overrides.documentType;
-  }
-  if (overrides.state) {
-    baseDocument.state = { ...baseDocument.state, ...overrides.state };
-  }
-
-  return baseDocument;
-}
+import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
 describe("Reactor Read Interface", () => {
   let reactor: Reactor;
@@ -118,8 +87,8 @@ describe("Reactor Read Interface", () => {
   describe("get", () => {
     it("should retrieve a document by id", async () => {
       // First add a document to the drive server
-      const mockDocument = createMockDocument({ id: "doc1" });
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      await driveServer.addDocument(document);
 
       const result = await reactor.get("doc1");
 
@@ -129,7 +98,7 @@ describe("Reactor Read Interface", () => {
 
     it.skip("should filter by scopes when view filter is provided", async () => {
       // Skipping as scope filtering with custom state is complex with real documents
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         state: {
           global: { someData: "global" },
@@ -138,7 +107,7 @@ describe("Reactor Read Interface", () => {
         },
       });
 
-      await driveServer.addDocument(mockDocument);
+      await driveServer.addDocument(document);
 
       const result = await reactor.get("doc1", { scopes: ["global", "local"] });
 
@@ -154,7 +123,7 @@ describe("Reactor Read Interface", () => {
 
   describe("getBySlug", () => {
     it("should retrieve a document by slug", async () => {
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         slug: "test-slug",
       });
@@ -172,7 +141,7 @@ describe("Reactor Read Interface", () => {
       });
 
       // Add the document to the drive
-      await driveServer.addDocument(mockDocument, "drive1");
+      await driveServer.addDocument(document, "drive1");
 
       const result = await reactor.getBySlug("test-slug");
 
@@ -222,9 +191,9 @@ describe("Reactor Read Interface", () => {
         ],
       };
 
-      const mockDocument = createMockDocument({ id: "doc1" });
-      mockDocument.operations = mockOperations;
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      document.operations = mockOperations;
+      await driveServer.addDocument(document);
 
       const result = await reactor.getOperations("doc1");
 
@@ -284,9 +253,9 @@ describe("Reactor Read Interface", () => {
         ],
       };
 
-      const mockDocument = createMockDocument({ id: "doc1" });
-      mockDocument.operations = mockOperations;
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      document.operations = mockOperations;
+      await driveServer.addDocument(document);
 
       const result = await reactor.getOperations("doc1", {
         scopes: ["global", "local"],
@@ -328,9 +297,11 @@ describe("Reactor Read Interface", () => {
     });
 
     it("should filter documents by ids", async () => {
-      const mockDocuments = Array.from({ length: 5 }, (_, i) =>
-        createMockDocument({ id: `doc${i}` }),
-      );
+      const documents = createTestDocuments(5, {});
+      // Override IDs to match test expectations
+      documents.forEach((doc, i) => {
+        doc.header.id = `doc${i}`;
+      });
 
       // Add a drive and documents
       await driveServer.addDrive({
@@ -344,7 +315,7 @@ describe("Reactor Read Interface", () => {
         },
       });
 
-      for (const doc of mockDocuments) {
+      for (const doc of documents) {
         await driveServer.addDocument(doc, "drive1");
       }
 
@@ -356,7 +327,7 @@ describe("Reactor Read Interface", () => {
 
     it.skip("should filter documents by scopes when view filter is provided", async () => {
       // Skipping as scope filtering with custom state is complex with real documents
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         state: {
           global: { someData: "global" },
@@ -376,7 +347,7 @@ describe("Reactor Read Interface", () => {
           triggers: [],
         },
       });
-      await driveServer.addDocument(mockDocument, "drive1");
+      await driveServer.addDocument(document, "drive1");
 
       const result = await reactor.find({}, { scopes: ["global"] });
 

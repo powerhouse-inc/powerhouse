@@ -10,8 +10,8 @@ import type { Job } from "../../src/queue/types.js";
 import { type Reactor } from "../../src/reactor.js";
 import { JobStatus } from "../../src/shared/types.js";
 import {
+  createDocModelDocument,
   createDocumentModelAction,
-  createMockDocument,
   createTestActions,
   createTestReactorSetup,
 } from "../factories.js";
@@ -38,7 +38,7 @@ describe("Reactor <> Queue Integration", () => {
   describe("mutate", () => {
     it("should enqueue jobs for document mutations", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-1",
         slug: "test-doc",
       });
@@ -74,7 +74,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should create proper Job objects from actions", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-2",
         slug: "test-doc-2",
       });
@@ -118,7 +118,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should start the job executor when jobs are enqueued", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-3",
         slug: "test-doc-3",
       });
@@ -142,7 +142,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should return JobInfo with pending status when jobs are enqueued", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-4",
         slug: "test-doc-4",
       });
@@ -164,7 +164,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should handle multiple actions in sequence", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-5",
         slug: "test-doc-5",
       });
@@ -202,11 +202,11 @@ describe("Reactor <> Queue Integration", () => {
     describe("serial execution per document", () => {
       it("should not dequeue jobs for a document that has executing jobs", async () => {
         // Create two test documents
-        const testDoc1 = createMockDocument({
+        const testDoc1 = createDocModelDocument({
           id: "test-doc-serial-1",
           slug: "test-doc-serial-1",
         });
-        const testDoc2 = createMockDocument({
+        const testDoc2 = createDocModelDocument({
           id: "test-doc-serial-2",
           slug: "test-doc-serial-2",
         });
@@ -272,9 +272,9 @@ describe("Reactor <> Queue Integration", () => {
       it("should allow concurrent execution of jobs from different documents", async () => {
         // Create three test documents
         const docs = await Promise.all([
-          createMockDocument({ id: "concurrent-1", slug: "concurrent-1" }),
-          createMockDocument({ id: "concurrent-2", slug: "concurrent-2" }),
-          createMockDocument({ id: "concurrent-3", slug: "concurrent-3" }),
+          createDocModelDocument({ id: "concurrent-1", slug: "concurrent-1" }),
+          createDocModelDocument({ id: "concurrent-2", slug: "concurrent-2" }),
+          createDocModelDocument({ id: "concurrent-3", slug: "concurrent-3" }),
         ]);
 
         // Add documents to the drive server
@@ -321,7 +321,7 @@ describe("Reactor <> Queue Integration", () => {
 
       it("should resume processing after job completion", async () => {
         // Create a test document
-        const testDoc = createMockDocument({
+        const testDoc = createDocModelDocument({
           id: "test-resume",
           slug: "test-resume",
         });
@@ -374,7 +374,7 @@ describe("Reactor <> Queue Integration", () => {
 
       it("should handle job failure and allow next job to proceed", async () => {
         // Create a test document
-        const testDoc = createMockDocument({
+        const testDoc = createDocModelDocument({
           id: "test-failure",
           slug: "test-failure",
         });

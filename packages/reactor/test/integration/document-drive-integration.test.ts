@@ -14,12 +14,14 @@ import {
   updateFile,
   updateNode,
   type BaseDocumentDriveServer,
+  type DocumentDriveDocument,
+  type FileNode,
 } from "document-drive";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive/storage/types";
-import { generateId } from "document-model";
+import { generateId, type DocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
@@ -47,9 +49,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     registry.registerModules(driveDocumentModelModule);
 
     // Create real drive server using ReactorBuilder
-    const builder = new ReactorBuilder([driveDocumentModelModule]).withStorage(
-      storage,
-    );
+    const builder = new ReactorBuilder([
+      driveDocumentModelModule,
+    ] as DocumentModelModule<any>[]).withStorage(storage);
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
@@ -113,10 +115,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       expect(operations.global.results[0].action.type).toBe("ADD_FOLDER");
 
       // Verify state was updated
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(1);
       expect(globalState.nodes[0]).toMatchObject({
         id: folderId,
@@ -168,13 +169,12 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       expect(operations.global.results).toHaveLength(2);
 
       // Verify state contains both nodes
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(2);
 
-      const file = globalState.nodes.find((n: any) => n.id === fileId);
+      const file = globalState.nodes.find((n) => n.id === fileId);
       expect(file).toMatchObject({
         id: fileId,
         name: "test.txt",
@@ -221,19 +221,22 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the hierarchy
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(3);
 
-      const folder1 = globalState.nodes.find((n: any) => n.id === folder1Id);
-      const folder2 = globalState.nodes.find((n: any) => n.id === folder2Id);
-      const folder3 = globalState.nodes.find((n: any) => n.id === folder3Id);
+      const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
+      const folder2 = globalState.nodes.find((n) => n.id === folder2Id);
+      const folder3 = globalState.nodes.find((n) => n.id === folder3Id);
 
-      expect(folder1.parentFolder).toBe(null);
-      expect(folder2.parentFolder).toBe(folder1Id);
-      expect(folder3.parentFolder).toBe(folder2Id);
+      expect(folder1).toBeDefined();
+      expect(folder2).toBeDefined();
+      expect(folder3).toBeDefined();
+
+      expect(folder1?.parentFolder).toBe(null);
+      expect(folder2?.parentFolder).toBe(folder1Id);
+      expect(folder3?.parentFolder).toBe(folder2Id);
     });
   });
 
@@ -273,11 +276,10 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the update
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const file = globalState.nodes.find((n: any) => n.id === fileId);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const file = globalState.nodes.find((n) => n.id === fileId);
 
       expect(file).toMatchObject({
         id: fileId,
@@ -320,11 +322,10 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the update
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const folder = globalState.nodes.find((n: any) => n.id === folderId);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const folder = globalState.nodes.find((n) => n.id === folderId);
 
       expect(folder).toMatchObject({
         id: folderId,
@@ -367,11 +368,10 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the deletion
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const folder = globalState.nodes.find((n: any) => n.id === folderId);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const folder = globalState.nodes.find((n) => n.id === folderId);
 
       expect(folder).toBeUndefined();
       expect(globalState.nodes).toHaveLength(0);
@@ -431,10 +431,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify all nodes were deleted
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       expect(globalState.nodes).toHaveLength(0);
     });
@@ -489,13 +488,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the move
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const child = globalState.nodes.find((n: any) => n.id === childId);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const child = globalState.nodes.find((n) => n.id === childId);
 
-      expect(child.parentFolder).toBe(folder2Id);
+      expect(child).toBeDefined();
+      expect(child?.parentFolder).toBe(folder2Id);
     });
 
     it("should move a node to root when targetParentFolder is null", async () => {
@@ -540,13 +539,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the move
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const child = globalState.nodes.find((n: any) => n.id === childId);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const child = globalState.nodes.find((n) => n.id === childId);
 
-      expect(child.parentFolder).toBe(null);
+      expect(child).toBeDefined();
+      expect(child?.parentFolder).toBe(null);
     });
 
     it("should prevent moving folder to its descendant", async () => {
@@ -595,13 +594,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // The operation should have been rejected - verify folder1 is still at root
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const folder1 = globalState.nodes.find((n: any) => n.id === folder1Id);
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
 
-      expect(folder1.parentFolder).toBe(null);
+      expect(folder1).toBeDefined();
+      expect(folder1?.parentFolder).toBe(null);
     });
   });
 
@@ -656,21 +655,20 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the copy
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       // Original should still exist
-      const original = globalState.nodes.find((n: any) => n.id === sourceId);
+      const original = globalState.nodes.find((n) => n.id === sourceId);
       expect(original).toBeDefined();
-      expect(original.parentFolder).toBe(folder1Id);
+      expect(original?.parentFolder).toBe(folder1Id);
 
       // Copy should exist in new location
-      const copy = globalState.nodes.find((n: any) => n.id === targetId);
+      const copy = globalState.nodes.find((n) => n.id === targetId);
       expect(copy).toBeDefined();
-      expect(copy.parentFolder).toBe(folder2Id);
-      expect(copy.name).toBe("Source");
+      expect(copy?.parentFolder).toBe(folder2Id);
+      expect(copy?.name).toBe("Source");
     });
 
     it("should copy a node with a new name", async () => {
@@ -709,14 +707,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the copy
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
-      const copy = globalState.nodes.find((n: any) => n.id === targetId);
+      const copy = globalState.nodes.find((n) => n.id === targetId);
       expect(copy).toBeDefined();
-      expect(copy.name).toBe("New Name");
+      expect(copy?.name).toBe("New Name");
     });
 
     it("should copy a single node", async () => {
@@ -771,40 +768,33 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       await reactor.mutate(document.header.id, [copyAction]);
 
       await vi.waitFor(async () => {
-        const { document: doc } = await reactor.get(document.header.id);
-        const globalState = (doc.state as any)?.global;
+        const { document: doc } = await reactor.get<DocumentDriveDocument>(
+          document.header.id,
+        );
+        const globalState = doc.state.global;
         // Should have original 4 nodes + 1 copied node
         expect(globalState.nodes.length).toBe(5);
       });
 
       // Verify the node was copied
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       // Find the copied parent
-      const copiedParent = globalState.nodes.find(
-        (n: any) => n.id === targetId,
-      );
+      const copiedParent = globalState.nodes.find((n) => n.id === targetId);
       expect(copiedParent).toBeDefined();
       // The name might have a suffix if there's a collision
-      expect(copiedParent.name).toMatch(/^Parent( \(copy\)( \d+)?)?$/);
+      expect(copiedParent?.name).toMatch(/^Parent( \(copy\)( \d+)?)?$/);
 
       // Verify only the single node was copied (not children)
       expect(globalState.nodes.length).toBe(5); // 4 original + 1 copied
 
       // Verify original nodes still exist
-      const originalParent = globalState.nodes.find(
-        (n: any) => n.id === parentId,
-      );
-      const originalChild1 = globalState.nodes.find(
-        (n: any) => n.id === child1Id,
-      );
-      const originalChild2 = globalState.nodes.find(
-        (n: any) => n.id === child2Id,
-      );
-      const originalFile = globalState.nodes.find((n: any) => n.id === fileId);
+      const originalParent = globalState.nodes.find((n) => n.id === parentId);
+      const originalChild1 = globalState.nodes.find((n) => n.id === child1Id);
+      const originalChild2 = globalState.nodes.find((n) => n.id === child2Id);
+      const originalFile = globalState.nodes.find((n) => n.id === fileId);
 
       expect(originalParent).toBeDefined();
       expect(originalChild1).toBeDefined();
@@ -813,7 +803,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
       // The copied node should not have children automatically copied
       const copiedNodeChildren = globalState.nodes.filter(
-        (n: any) => n.parentFolder === targetId,
+        (n) => n.parentFolder === targetId,
       );
       expect(copiedNodeChildren.length).toBe(0);
     });
@@ -837,10 +827,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the drive name was set
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       expect(globalState.name).toBe("My Drive");
     });
 
@@ -861,10 +850,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the drive icon was set
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       expect(globalState.icon).toBe("folder-open");
     });
 
@@ -885,10 +873,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the sharing type was set
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const localState = (updatedDocument.state as any)?.local;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const localState = updatedDocument.state.local;
       expect(localState.sharingType).toBe("PUBLIC");
     });
 
@@ -909,10 +896,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify available offline was set
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const localState = (updatedDocument.state as any)?.local;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const localState = updatedDocument.state.local;
       expect(localState.availableOffline).toBe(true);
     });
   });
@@ -965,26 +951,25 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify all operations were applied
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       expect(globalState.name).toBe("Multi-Op Drive");
       expect(globalState.nodes).toHaveLength(4);
 
       // Verify structure
-      const folder1 = globalState.nodes.find((n: any) => n.id === folder1Id);
-      const folder2 = globalState.nodes.find((n: any) => n.id === folder2Id);
-      const file1 = globalState.nodes.find((n: any) => n.id === file1Id);
-      const file2 = globalState.nodes.find((n: any) => n.id === file2Id);
+      const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
+      const folder2 = globalState.nodes.find((n) => n.id === folder2Id);
+      const file1 = globalState.nodes.find((n) => n.id === file1Id);
+      const file2 = globalState.nodes.find((n) => n.id === file2Id);
 
       expect(folder1).toBeDefined();
       expect(folder2).toBeDefined();
       expect(file1).toBeDefined();
-      expect(file1.parentFolder).toBe(folder1Id);
+      expect(file1?.parentFolder).toBe(folder1Id);
       expect(file2).toBeDefined();
-      expect(file2.parentFolder).toBe(folder2Id);
+      expect(file2?.parentFolder).toBe(folder2Id);
     });
 
     it("should maintain operation order in batch processing", async () => {
@@ -1029,16 +1014,15 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify final state
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
-      const folder = globalState.nodes.find((n: any) => n.id === folderId);
-      const file = globalState.nodes.find((n: any) => n.id === fileId);
+      const folder = globalState.nodes.find((n) => n.id === folderId);
+      const file = globalState.nodes.find((n) => n.id === fileId);
 
-      expect(folder.name).toBe("Updated Name");
-      expect(file.documentType).toBe("text/markdown");
+      expect(folder?.name).toBe("Updated Name");
+      expect((file as FileNode).documentType).toBe("text/markdown");
     });
   });
 
@@ -1063,14 +1047,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
       // The operation should have been attempted but may have failed
       // Check that the document state is still valid
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       // File might exist even with invalid parent (depends on reducer logic)
       // The important thing is that the system didn't crash
-      const file = globalState.nodes?.find((n: any) => n.id === fileId);
+      const file = globalState.nodes.find((n) => n.id === fileId);
+
       // Either the file doesn't exist or exists with the invalid parent
       if (file) {
         expect(file.parentFolder).toBe("non-existent-folder");
@@ -1106,13 +1090,10 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Only one node with the ID should exist
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
-      const nodesWithId = globalState.nodes.filter(
-        (n: any) => n.id === duplicateId,
-      );
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
+      const nodesWithId = globalState.nodes.filter((n) => n.id === duplicateId);
 
       expect(nodesWithId).toHaveLength(1);
     });
@@ -1147,12 +1128,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Check how the system handled the collision
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
       const foldersWithName = globalState.nodes.filter(
-        (n: any) =>
+        (n) =>
           n.name === "Duplicate Name" || n.name.startsWith("Duplicate Name"),
       );
 
@@ -1196,13 +1176,12 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Check that valid operations were processed
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
-      const folder1 = globalState.nodes.find((n: any) => n.id === folder1Id);
-      const folder2 = globalState.nodes.find((n: any) => n.id === folder2Id);
+      const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
+      const folder2 = globalState.nodes.find((n) => n.id === folder2Id);
 
       // At least one of the valid operations should have succeeded
       expect(folder1 || folder2).toBeDefined();
@@ -1297,23 +1276,22 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify final structure
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       // Temp folder should be gone
-      const temp = globalState.nodes.find((n: any) => n.id === tempId);
+      const temp = globalState.nodes.find((n) => n.id === tempId);
       expect(temp).toBeUndefined();
 
       // Files should be in correct folders
-      const doc1 = globalState.nodes.find((n: any) => n.id === doc1Id);
-      const doc2 = globalState.nodes.find((n: any) => n.id === doc2Id);
-      const img1 = globalState.nodes.find((n: any) => n.id === img1Id);
+      const doc1 = globalState.nodes.find((n) => n.id === doc1Id);
+      const doc2 = globalState.nodes.find((n) => n.id === doc2Id);
+      const img1 = globalState.nodes.find((n) => n.id === img1Id);
 
-      expect(doc1.parentFolder).toBe(docsId);
-      expect(doc2.parentFolder).toBe(docsId);
-      expect(img1.parentFolder).toBe(imagesId);
+      expect(doc1?.parentFolder).toBe(docsId);
+      expect(doc2?.parentFolder).toBe(docsId);
+      expect(img1?.parentFolder).toBe(imagesId);
     });
 
     it("should handle project template creation", async () => {
@@ -1394,24 +1372,23 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       });
 
       // Verify the complete structure
-      const { document: updatedDocument } = await reactor.get(
-        document.header.id,
-      );
-      const globalState = (updatedDocument.state as any)?.global;
+      const { document: updatedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const globalState = updatedDocument.state.global;
 
       expect(globalState.name).toBe("My Project");
       expect(globalState.nodes).toHaveLength(9); // 5 folders + 4 files
 
       // Verify hierarchy
-      const project = globalState.nodes.find((n: any) => n.id === projectId);
-      expect(project.parentFolder).toBe(null);
+      const project = globalState.nodes.find((n) => n.id === projectId);
+      expect(project?.parentFolder).toBe(null);
 
-      const src = globalState.nodes.find((n: any) => n.id === srcId);
-      expect(src.parentFolder).toBe(projectId);
+      const src = globalState.nodes.find((n) => n.id === srcId);
+      expect(src?.parentFolder).toBe(projectId);
 
-      const mainFile = globalState.nodes.find((n: any) => n.id === mainFileId);
-      expect(mainFile.parentFolder).toBe(srcId);
-      expect(mainFile.documentType).toBe("text/typescript");
+      const mainFile = globalState.nodes.find((n) => n.id === mainFileId);
+      expect(mainFile?.parentFolder).toBe(srcId);
+      expect((mainFile as FileNode).documentType).toBe("text/typescript");
     });
   });
 });

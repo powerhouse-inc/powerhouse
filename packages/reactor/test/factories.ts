@@ -1,8 +1,8 @@
 import {
   MemoryStorage,
   ReactorBuilder,
-  type BaseDocumentDriveServer,
   driveDocumentModelModule,
+  type BaseDocumentDriveServer,
 } from "document-drive";
 import type {
   IDocumentOperationStorage,
@@ -20,10 +20,10 @@ import { vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import { Reactor } from "../src/reactor.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
@@ -166,7 +166,7 @@ export function createDocumentModelAction(
 /**
  * Factory for creating mock PHDocument objects
  */
-export function createMockDocument(
+export function createDocModelDocument(
   overrides: {
     id?: string;
     slug?: string;
@@ -459,7 +459,7 @@ export function createTestDocuments(
   baseOverrides: any = {},
 ): PHDocument[] {
   return Array.from({ length: count }, (_, i) =>
-    createMockDocument({
+    createDocModelDocument({
       id: `doc-${i + 1}`,
       slug: `doc-${i + 1}`,
       ...baseOverrides,
