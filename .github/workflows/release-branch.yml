@@ -1,11 +1,11 @@
 name: Release Branch
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       version:
         type: choice
-        description: 'Select version type (semantic-versioning will use calculated version from commit messages)'
+        description: "Select version type (semantic-versioning will use calculated version from commit messages)"
         options:
           - semantic-versioning
           - prerelease
@@ -19,7 +19,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
 env:
   NX_ISOLATE_PLUGINS: false
@@ -40,7 +40,6 @@ jobs:
           else
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
           fi
-          
           if [[ "${{ github.ref_name }}" == release* ]]; then
             echo "VERSION=" >> $GITHUB_ENV
             echo "BRANCH_RELEASE=${{ github.ref_name }}" >> $GITHUB_ENV
@@ -95,8 +94,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
-      # - name: Publish to npm
-      #   run: pnpm nx release publish --projects='apps/*,packages/*,clis/*' --tag=${{ env.TAG }}
-      #   shell: bash
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+  deploy:
+    name: Deploy to environment
+    needs: build-and-publish
+    uses: "./.github/workflows/deploy-powerhouse.yml"
+    secrets: inherit

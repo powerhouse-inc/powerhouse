@@ -173,10 +173,6 @@ export function getSyncStatusSync(
   }
 }
 
-export async function clearStorage() {
-  await window.phStorage?.clear();
-}
-
 export async function removeTrigger(driveId: string, triggerId: string) {
   const reactor = window.reactor;
   if (!reactor) {

@@ -4,6 +4,7 @@ import {
   type SharingType,
   type Trigger,
 } from "document-drive";
+import { getDriveSharingType } from "document-drive/server/utils";
 import { type PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
@@ -11,10 +12,7 @@ import {
   subscribeToDrives,
   subscribeToSelectedDriveId,
 } from "../events/index.js";
-import {
-  getDriveAvailableOffline,
-  getDriveSharingType,
-} from "../utils/drives.js";
+import { getDriveAvailableOffline } from "../utils/drives.js";
 import { useDispatch } from "./dispatch.js";
 
 /** Returns the drives for a reactor. */

@@ -1,35 +1,6 @@
-import {
-  type DocumentDriveDocument,
-  type FolderNode,
-  type SharingType,
-} from "document-drive";
+import { type DocumentDriveDocument, type FolderNode } from "document-drive";
 import { type PHDocument } from "document-model";
 import { type Reactor } from "../types/reactor.js";
-
-/** Returns the sharing type for a drive. */
-export function getDriveSharingType(
-  drive:
-    | {
-        state: {
-          local: {
-            sharingType?: string | null;
-          };
-        };
-        readContext?: {
-          sharingType?: string | null;
-        };
-      }
-    | undefined
-    | null,
-) {
-  if (!drive) return "PUBLIC";
-  const isReadDrive = "readContext" in drive;
-  const { sharingType: _sharingType } = !isReadDrive
-    ? drive.state.local
-    : { sharingType: "PUBLIC" };
-  const __sharingType = _sharingType?.toUpperCase();
-  return (__sharingType === "PRIVATE" ? "LOCAL" : __sharingType) as SharingType;
-}
 
 /** Returns whether a drive is available offline. */
 export function getDriveAvailableOffline(

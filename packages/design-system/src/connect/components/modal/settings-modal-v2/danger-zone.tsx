@@ -1,7 +1,8 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#ui";
 import { capitalCase } from "change-case";
-import { type DocumentDriveDocument, type SharingType } from "document-drive";
+import { type DocumentDriveDocument } from "document-drive";
+import { getDriveSharingType } from "document-drive/server/utils";
 import { useState } from "react";
 import { CLOUD, PUBLIC } from "../../../constants/drives.js";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
@@ -67,32 +68,6 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
   ) : (
     <Icon name="M" size={16} className="flex-none" />
   );
-
-  function getDriveSharingType(
-    drive:
-      | {
-          state: {
-            local: {
-              sharingType?: string | null;
-            };
-          };
-          readContext?: {
-            sharingType?: string | null;
-          };
-        }
-      | undefined
-      | null,
-  ) {
-    if (!drive) return "PUBLIC";
-    const isReadDrive = "readContext" in drive;
-    const { sharingType: _sharingType } = !isReadDrive
-      ? drive.state.local
-      : { sharingType: "PUBLIC" };
-    const __sharingType = _sharingType?.toUpperCase();
-    return (
-      __sharingType === "PRIVATE" ? "LOCAL" : __sharingType
-    ) as SharingType;
-  }
 
   function getNodeIcon() {
     const sharingType = getDriveSharingType(drive);

@@ -156,7 +156,7 @@ export function useChildNodesForId(id: string | null | undefined) {
   if (!nodes || !drives) return [];
   const isDrive = drives.some((d) => d.header.id === id);
   const childNodes = isDrive
-    ? nodes
+    ? nodes.filter((n) => !n.parentFolder)
     : nodes.filter((n) => n.parentFolder === id);
   return sortNodesByName(childNodes);
 }

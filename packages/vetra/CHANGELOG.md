@@ -1,3 +1,19 @@
+## 4.1.0-dev.47 (2025-09-06)
+
+### 🩹 Fixes
+
+- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+
+## 4.1.0-dev.46 (2025-09-05)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.45 (2025-09-04)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

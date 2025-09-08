@@ -67,7 +67,7 @@ export class DriveSubgraph extends Subgraph {
     type Query {
       system: System
       drive: DriveInfo
-      document(id: String!): IDocument
+      document(id: String!): DriveDocument
       documents: [String!]!
     }
 

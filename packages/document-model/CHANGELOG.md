@@ -1,3 +1,17 @@
+## 4.1.0-dev.47 (2025-09-06)
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 4.1.0-dev.46 (2025-09-05)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.45 (2025-09-04)
 
 ### 🚀 Features

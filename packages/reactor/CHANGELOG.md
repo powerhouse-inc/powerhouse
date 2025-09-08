@@ -1,3 +1,30 @@
+## 4.1.0-dev.47 (2025-09-06)
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 4.1.0-dev.46 (2025-09-05)
+
+### 🚀 Features
+
+- plug in persistence ([5af292734](https://github.com/powerhouse-inc/powerhouse/commit/5af292734))
+- added robust dependency system to queue ([4aca91494](https://github.com/powerhouse-inc/powerhouse/commit/4aca91494))
+- wip dependency graph ([939e41076](https://github.com/powerhouse-inc/powerhouse/commit/939e41076))
+- queue now queues by doc id ([afc03e437](https://github.com/powerhouse-inc/powerhouse/commit/afc03e437))
+
+### 🩹 Fixes
+
+- build errors ([97b4853a3](https://github.com/powerhouse-inc/powerhouse/commit/97b4853a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.45 (2025-09-04)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

@@ -1,6 +1,5 @@
 import { DangerZone as BaseDangerZone } from '@powerhousedao/design-system';
 import {
-    clearStorage,
     deleteDrive,
     setSelectedDrive,
     setSelectedNode,
@@ -8,6 +7,7 @@ import {
 } from '@powerhousedao/reactor-browser';
 import { type DocumentDriveDocument, logger } from 'document-drive';
 import { useTranslation } from 'react-i18next';
+import { clearReactorStorage } from '../../../../store/reactor';
 import { useModal } from '../../modal.js';
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
@@ -31,7 +31,7 @@ export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
                 'modals.connectSettings.clearStorage.confirmation.clearButton',
             ),
             onContinue: () => {
-                clearStorage()
+                clearReactorStorage()
                     .then(() => {
                         // refreshes the page to reload default drive
                         setSelectedDrive(undefined);
