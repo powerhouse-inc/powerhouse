@@ -203,20 +203,6 @@ export function createTestEventBus(): IEventBus {
 }
 
 /**
- * Factory for creating test EventBus with mock emit
- */
-export function createMockEventBus() {
-  const eventBus = new EventBus();
-  const mockEmit = vi.fn().mockResolvedValue(undefined);
-  eventBus.emit = mockEmit;
-
-  return {
-    eventBus,
-    mockEmit,
-  };
-}
-
-/**
  * Factory for creating test Queue instances
  */
 export function createTestQueue(eventBus?: IEventBus): IQueue {

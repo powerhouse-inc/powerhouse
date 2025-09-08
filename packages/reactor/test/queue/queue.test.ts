@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
 import { type IEventBus } from "../../src/events/interfaces.js";
 import { type IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
@@ -10,7 +11,6 @@ import {
 import {
   createJobDependencyChain,
   createJobWithDependencies,
-  createMockEventBus,
   createTestJob,
   createTestOperation,
 } from "../factories.js";
@@ -21,9 +21,10 @@ describe("InMemoryQueue", () => {
   let mockEventBusEmit: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    const mocks = createMockEventBus();
-    eventBus = mocks.eventBus;
-    mockEventBusEmit = mocks.mockEmit;
+    eventBus = new EventBus();
+    mockEventBusEmit = vi.fn().mockResolvedValue(undefined);
+    eventBus.emit = mockEventBusEmit;
+
     queue = new InMemoryQueue(eventBus);
   });
 
