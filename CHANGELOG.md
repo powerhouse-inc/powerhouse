@@ -1,3 +1,13 @@
+## 5.0.0-staging.3 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.2 (2025-09-05)
 
 ### 🚀 Features
