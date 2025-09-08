@@ -4,17 +4,17 @@ import type { Action, DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IJobExecutor } from "../src/executor/interfaces.js";
-import type { IQueue } from "../src/queue/interfaces.js";
-import type { Job } from "../src/queue/types.js";
-import { type Reactor } from "../src/reactor.js";
-import { JobStatus } from "../src/shared/types.js";
+import type { IJobExecutor } from "../../src/executor/interfaces.js";
+import type { IQueue } from "../../src/queue/interfaces.js";
+import type { Job } from "../../src/queue/types.js";
+import { type Reactor } from "../../src/reactor.js";
+import { JobStatus } from "../../src/shared/types.js";
 import {
   createDocumentModelAction,
   createMockDocument,
   createTestActions,
   createTestReactorSetup,
-} from "./factories.js";
+} from "../factories.js";
 
 describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;

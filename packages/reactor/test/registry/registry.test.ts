@@ -8,7 +8,7 @@ import {
   DocumentModelRegistry,
   DuplicateModuleError,
   ModuleNotFoundError,
-} from "../src/registry/implementation.js";
+} from "../../src/registry/implementation.js";
 
 describe("DocumentModelRegistry", () => {
   let registry: DocumentModelRegistry;

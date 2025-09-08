@@ -1,19 +1,19 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { type IEventBus } from "../src/events/interfaces.js";
-import { type IQueue } from "../src/queue/interfaces.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type IEventBus } from "../../src/events/interfaces.js";
+import { type IQueue } from "../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../src/queue/queue.js";
 import {
   QueueEventTypes,
   type Job,
   type JobAvailableEvent,
-} from "../src/queue/types.js";
+} from "../../src/queue/types.js";
 import {
-  createTestJob,
-  createMockEventBus,
-  createTestOperation,
-  createJobWithDependencies,
   createJobDependencyChain,
-} from "./factories.js";
+  createJobWithDependencies,
+  createMockEventBus,
+  createTestJob,
+  createTestOperation,
+} from "../factories.js";
 
 describe("InMemoryQueue", () => {
   let queue: IQueue;
@@ -849,27 +849,27 @@ describe("InMemoryQueue", () => {
     it("should return false when jobs are pending", async () => {
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       expect(queue.isDrained).toBe(false);
     });
 
     it("should return false when jobs are executing", async () => {
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       // Dequeue the job (marks it as executing)
       await queue.dequeueNext();
-      
+
       expect(queue.isDrained).toBe(false);
     });
 
     it("should return true after all jobs are completed", async () => {
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       const dequeuedJob = await queue.dequeueNext();
       expect(queue.isDrained).toBe(false);
-      
+
       await queue.completeJob(dequeuedJob!.job.id);
       expect(queue.isDrained).toBe(true);
     });
@@ -877,10 +877,10 @@ describe("InMemoryQueue", () => {
     it("should return true after all jobs are failed", async () => {
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       const dequeuedJob = await queue.dequeueNext();
       expect(queue.isDrained).toBe(false);
-      
+
       await queue.failJob(dequeuedJob!.job.id, "Test failure");
       expect(queue.isDrained).toBe(true);
     });
@@ -888,16 +888,16 @@ describe("InMemoryQueue", () => {
     it("should handle multiple queues", async () => {
       const job1 = createTestJob({ id: "job-1", documentId: "doc-1" });
       const job2 = createTestJob({ id: "job-2", documentId: "doc-2" });
-      
+
       await queue.enqueue(job1);
       await queue.enqueue(job2);
-      
+
       expect(queue.isDrained).toBe(false);
-      
+
       const dequeued1 = await queue.dequeueNext();
       await queue.completeJob(dequeued1!.job.id);
       expect(queue.isDrained).toBe(false);
-      
+
       const dequeued2 = await queue.dequeueNext();
       await queue.completeJob(dequeued2!.job.id);
       expect(queue.isDrained).toBe(true);
@@ -907,7 +907,7 @@ describe("InMemoryQueue", () => {
   describe("block", () => {
     it("should prevent new jobs from being enqueued", async () => {
       queue.block();
-      
+
       const job = createTestJob();
       await expect(queue.enqueue(job)).rejects.toThrow("Queue is blocked");
     });
@@ -915,9 +915,9 @@ describe("InMemoryQueue", () => {
     it("should allow existing jobs to be processed", async () => {
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       queue.block();
-      
+
       const dequeuedJob = await queue.dequeueNext();
       expect(dequeuedJob).toBeDefined();
       expect(dequeuedJob?.job.id).toBe(job.id);
@@ -927,21 +927,21 @@ describe("InMemoryQueue", () => {
       const onDrained = vi.fn();
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       queue.block(onDrained);
       expect(onDrained).not.toHaveBeenCalled();
-      
+
       const dequeuedJob = await queue.dequeueNext();
       await queue.completeJob(dequeuedJob!.job.id);
-      
+
       expect(onDrained).toHaveBeenCalledTimes(1);
     });
 
     it("should call onDrained immediately if already drained", async () => {
       const onDrained = vi.fn();
-      
+
       queue.block(onDrained);
-      
+
       expect(onDrained).toHaveBeenCalledTimes(1);
     });
 
@@ -949,23 +949,23 @@ describe("InMemoryQueue", () => {
       const onDrained = vi.fn();
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       queue.block(onDrained);
       queue.unblock();
-      
+
       const dequeuedJob = await queue.dequeueNext();
       await queue.completeJob(dequeuedJob!.job.id);
-      
+
       expect(onDrained).not.toHaveBeenCalled();
     });
 
     it("should handle multiple block calls", async () => {
       const onDrained1 = vi.fn();
       const onDrained2 = vi.fn();
-      
+
       queue.block(onDrained1);
       queue.block(onDrained2);
-      
+
       // Only the second callback should be registered
       expect(onDrained1).toHaveBeenCalledTimes(1);
       expect(onDrained2).toHaveBeenCalledTimes(1);
@@ -973,7 +973,7 @@ describe("InMemoryQueue", () => {
 
     it("should handle block without callback", async () => {
       queue.block();
-      
+
       const job = createTestJob();
       await expect(queue.enqueue(job)).rejects.toThrow("Queue is blocked");
     });
@@ -982,15 +982,15 @@ describe("InMemoryQueue", () => {
   describe("unblock", () => {
     it("should allow new jobs to be enqueued after unblocking", async () => {
       queue.block();
-      
+
       const job1 = createTestJob({ id: "job-1" });
       await expect(queue.enqueue(job1)).rejects.toThrow("Queue is blocked");
-      
+
       queue.unblock();
-      
+
       const job2 = createTestJob({ id: "job-2" });
       await expect(queue.enqueue(job2)).resolves.not.toThrow();
-      
+
       const dequeuedJob = await queue.dequeueNext();
       expect(dequeuedJob?.job.id).toBe("job-2");
     });
@@ -999,21 +999,21 @@ describe("InMemoryQueue", () => {
       const onDrained = vi.fn();
       const job = createTestJob();
       await queue.enqueue(job);
-      
+
       queue.block(onDrained);
       queue.unblock();
-      
+
       // Complete the job after unblocking
       const dequeuedJob = await queue.dequeueNext();
       await queue.completeJob(dequeuedJob!.job.id);
-      
+
       // Callback should not be called since we unblocked
       expect(onDrained).not.toHaveBeenCalled();
     });
 
     it("should handle unblock when not blocked", async () => {
       expect(() => queue.unblock()).not.toThrow();
-      
+
       const job = createTestJob();
       await expect(queue.enqueue(job)).resolves.not.toThrow();
     });
@@ -1023,29 +1023,29 @@ describe("InMemoryQueue", () => {
     it("should handle complex block/unblock scenarios", async () => {
       const onDrained1 = vi.fn();
       const onDrained2 = vi.fn();
-      
+
       // Add some jobs
       const job1 = createTestJob({ id: "job-1" });
       const job2 = createTestJob({ id: "job-2" });
       await queue.enqueue(job1);
       await queue.enqueue(job2);
-      
+
       // Block with callback
       queue.block(onDrained1);
-      
+
       // Process one job
       const dequeued1 = await queue.dequeueNext();
       await queue.completeJob(dequeued1!.job.id);
       expect(onDrained1).not.toHaveBeenCalled();
-      
+
       // Unblock and re-block with new callback
       queue.unblock();
       queue.block(onDrained2);
-      
+
       // Process last job
       const dequeued2 = await queue.dequeueNext();
       await queue.completeJob(dequeued2!.job.id);
-      
+
       // Only second callback should be called
       expect(onDrained1).not.toHaveBeenCalled();
       expect(onDrained2).toHaveBeenCalledTimes(1);
@@ -1054,37 +1054,39 @@ describe("InMemoryQueue", () => {
     it("should handle retry while blocked", async () => {
       const job = createTestJob({ id: "job-1", maxRetries: 3 });
       await queue.enqueue(job);
-      
+
       queue.block();
-      
+
       const dequeuedJob = await queue.dequeueNext();
-      
+
       // Retry should fail because queue is blocked
-      await expect(queue.retryJob(dequeuedJob!.job.id, "Test error")).rejects.toThrow("Queue is blocked");
+      await expect(
+        queue.retryJob(dequeuedJob!.job.id, "Test error"),
+      ).rejects.toThrow("Queue is blocked");
     });
 
     it("should track drain state correctly with dependencies", async () => {
       const job1 = createTestJob({ id: "job-1", queueHint: [] });
       const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
-      
+
       await queue.enqueue(job1);
       await queue.enqueue(job2);
-      
+
       expect(queue.isDrained).toBe(false);
-      
+
       // Process first job
       const dequeued1 = await queue.dequeueNext();
       expect(dequeued1?.job.id).toBe("job-1");
       expect(queue.isDrained).toBe(false);
-      
+
       await queue.completeJob("job-1");
       expect(queue.isDrained).toBe(false); // job-2 still pending
-      
+
       // Process second job
       const dequeued2 = await queue.dequeueNext();
       expect(dequeued2?.job.id).toBe("job-2");
       expect(queue.isDrained).toBe(false);
-      
+
       await queue.completeJob("job-2");
       expect(queue.isDrained).toBe(true);
     });

@@ -4,14 +4,14 @@ import type {
 } from "document-drive/storage/types";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
-import type { Job } from "../src/queue/types.js";
-import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
+import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
+import type { Job } from "../../src/queue/types.js";
+import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import {
   createMockDocumentStorage,
   createMockOperationStorage,
   createTestRegistry,
-} from "./factories.js";
+} from "../factories.js";
 
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;

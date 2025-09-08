@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { JobExecutionHandle } from "../src/queue/job-execution-handle.js";
-import { JobQueueState } from "../src/queue/types.js";
-import { createTestJob } from "./factories.js";
+import { JobExecutionHandle } from "../../src/queue/job-execution-handle.js";
+import { JobQueueState } from "../../src/queue/types.js";
+import { createTestJob } from "../factories.js";
 
 describe("JobExecutionHandle", () => {
   describe("constructor", () => {
