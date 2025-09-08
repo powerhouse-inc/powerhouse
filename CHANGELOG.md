@@ -1,3 +1,13 @@
+## 5.0.0-staging.6 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** use fallback when window.showSaveFilePicker is not available ([78164031c](https://github.com/powerhouse-inc/powerhouse/commit/78164031c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.5 (2025-09-08)
 
 This was a version bump only, there were no code changes.
