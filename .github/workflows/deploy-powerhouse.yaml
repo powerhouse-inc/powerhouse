@@ -1,26 +1,8 @@
 name: Deploy Powerhouse
 
 on:
-  workflow_run:
-    workflows: [Release Branch]
-    types:
-      - completed
-  push:
-    branches:
-      - sky-atlas-staging
-      - sky-atlas-demo
+  workflow_call:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch to deploy"
-        required: true
-        default: "staging"
-        type: choice
-        options:
-          - main
-          - release/staging/*
-          - sky-atlas-staging
-          - sky-atlas-demo
 
 env:
   HUSKY: 0
@@ -100,6 +82,7 @@ jobs:
           process_type: web
           docker_options: "--build-arg TAG=${{ vars.PH_TAG }}"
   academy:
+    if: ${{ needs.setup.outputs.deploy-env == 'main' }}
     needs: setup
     environment: ${{ needs.setup.outputs.deploy-env }}
     runs-on: ubuntu-latest
