@@ -843,7 +843,7 @@ describe("InMemoryQueue", () => {
   });
 
   describe("isDrained", () => {
-    it("should return true when queue is empty", async () => {
+    it("should return true when queue is empty", () => {
       expect(queue.isDrained).toBe(true);
     });
 
@@ -938,7 +938,7 @@ describe("InMemoryQueue", () => {
       expect(onDrained).toHaveBeenCalledTimes(1);
     });
 
-    it("should call onDrained immediately if already drained", async () => {
+    it("should call onDrained immediately if already drained", () => {
       const onDrained = vi.fn();
 
       queue.block(onDrained);
@@ -960,7 +960,7 @@ describe("InMemoryQueue", () => {
       expect(onDrained).not.toHaveBeenCalled();
     });
 
-    it("should handle multiple block calls", async () => {
+    it("should handle multiple block calls", () => {
       const onDrained1 = vi.fn();
       const onDrained2 = vi.fn();
 

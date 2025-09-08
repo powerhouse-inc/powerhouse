@@ -12,8 +12,6 @@ export class JobExecutionHandle implements IJobExecutionHandle {
 
   private getStateName(state: JobQueueState): string {
     switch (state) {
-      case JobQueueState.UNKNOWN:
-        return "UNKNOWN";
       case JobQueueState.PREPROCESSING:
         return "PREPROCESSING";
       case JobQueueState.PENDING:
@@ -25,7 +23,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
       case JobQueueState.RESOLVED:
         return "RESOLVED";
       default:
-        return `UNKNOWN_STATE_${state}`;
+        return `UNKNOWN`;
     }
   }
 

@@ -307,6 +307,10 @@ describe("EventBus", () => {
         callCount++;
       });
 
+      // Emit event before unsubscribing
+      eventBus.emit(eventType, { data: "test" });
+      expect(callCount).toBe(1);
+
       // Call unsubscribe multiple times
       unsubscribe();
       unsubscribe();
@@ -314,6 +318,10 @@ describe("EventBus", () => {
 
       // Should not throw and should work correctly
       expect(() => unsubscribe()).not.toThrow();
+
+      // Emit again to verify unsubscribe worked
+      eventBus.emit(eventType, { data: "test" });
+      expect(callCount).toBe(1); // Should still be 1
     });
 
     it("should handle unsubscribe during emission", async () => {
@@ -350,7 +358,7 @@ describe("EventBus", () => {
       expect(results).toEqual([1, 3]);
     });
 
-    it("should clean up empty listener arrays", async () => {
+    it("should clean up empty listener arrays", () => {
       const eventBus = new EventBus();
       const eventType = 1;
 
@@ -407,7 +415,7 @@ describe("EventBus", () => {
         results.push(3);
       });
 
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe(eventType, () => {
         throw new Error("Subscriber 4 error");
       });
 
@@ -449,7 +457,7 @@ describe("EventBus", () => {
         throw new Error("Second error");
       });
 
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe(eventType, () => {
         throw new Error("Third error");
       });
 

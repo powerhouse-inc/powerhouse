@@ -1,6 +1,6 @@
 import type { IEventBus } from "../events/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
-import { QueueEventTypes, type JobAvailableEvent } from "../queue/types.js";
+import { QueueEventTypes } from "../queue/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus } from "./types.js";
 
@@ -41,7 +41,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // Start listening for job available events
     this.unsubscribe = this.eventBus.subscribe(
       QueueEventTypes.JOB_AVAILABLE,
-      async (_type: number, _event: JobAvailableEvent) => {
+      async () => {
         // Only process if we have capacity (simple round-robin for now)
         if (this.activeJobs < this.executors.length) {
           await this.processNextJob();

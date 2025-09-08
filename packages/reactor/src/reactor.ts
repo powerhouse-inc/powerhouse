@@ -173,6 +173,7 @@ export class Reactor implements IReactor {
     // to the underlying store, but is here now for the interface.
     for (const scope in document.state) {
       if (!matchesScope(view, scope)) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete document.state[scope as keyof PHBaseState];
       }
     }
@@ -379,7 +380,7 @@ export class Reactor implements IReactor {
    */
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     // Ensure the job executor is running
-    await this.ensureJobExecutorRunning();
+    this.ensureJobExecutorRunning();
 
     // Create jobs for each action/operation
     const jobs: Job[] = actions.map((action, index) => ({
@@ -521,21 +522,25 @@ export class Reactor implements IReactor {
   /**
    * Retrieves the status of a job
    */
-  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
     // TODO: Phase 3 - Implement once IQueue and job tracking is in place
     // For now, return a not found status
-    return {
+    return Promise.resolve({
       id: jobId,
       status: JobStatus.FAILED,
       error: "Job tracking not yet implemented",
-    };
+    });
   }
 
   /**
    * Starts the job executor if not already running.
    * Called automatically when the first job is enqueued.
    */
-  private async ensureJobExecutorRunning(): Promise<void> {
+  private ensureJobExecutorRunning(): void {
     if (!this.jobExecutorStarted) {
       // For new simplified executor, no start method needed
       // The executor just executes jobs when called
@@ -574,6 +579,7 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -644,6 +650,7 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -718,6 +725,7 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -794,6 +802,7 @@ export class Reactor implements IReactor {
       // Apply view filter
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }

@@ -2,11 +2,11 @@ import { type IEventBus } from "../events/interfaces.js";
 import { type IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
 import {
-  QueueEventTypes,
   JobQueueState,
+  QueueEventTypes,
+  type IJobExecutionHandle,
   type Job,
   type JobAvailableEvent,
-  type IJobExecutionHandle,
 } from "./types.js";
 
 /**
@@ -89,7 +89,7 @@ export class InMemoryQueue implements IQueue {
    * Check if all dependencies for a job have been completed
    */
   private areDependenciesMet(job: Job): boolean {
-    if (!job.queueHint || job.queueHint.length === 0) {
+    if (job.queueHint.length === 0) {
       return true;
     }
     return job.queueHint.every((depId) => this.completedJobs.has(depId));

@@ -19,7 +19,7 @@ describe("SimpleJobExecutor Integration", () => {
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Use real storage that implements both IDocumentStorage and IDocumentOperationStorage
     storage = new MemoryStorage();
 

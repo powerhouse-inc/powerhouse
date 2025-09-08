@@ -6,6 +6,7 @@ import { type PagedResults } from "./shared/types.js";
  */
 export function filterByParentId(
   results: PagedResults<PHDocument>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   parentId: string,
 ): PagedResults<PHDocument> {
   // TODO: Implement filterByParentId

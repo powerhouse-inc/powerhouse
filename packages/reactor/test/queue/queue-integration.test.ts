@@ -4,7 +4,6 @@ import type { Action, DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IJobExecutor } from "../../src/executor/interfaces.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
 import { type Reactor } from "../../src/reactor.js";
@@ -20,7 +19,6 @@ describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let queue: IQueue;
-  let jobExecutor: IJobExecutor;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -32,7 +30,6 @@ describe("Reactor <> Queue Integration", () => {
     reactor = setup.reactor;
     driveServer = setup.driveServer;
     queue = setup.queue;
-    jobExecutor = setup.jobExecutor;
   });
 
   describe("mutate", () => {
@@ -125,9 +122,6 @@ describe("Reactor <> Queue Integration", () => {
 
       // Add the document to the drive server
       await driveServer.addDocument(testDoc);
-
-      // Spy on the executor's executeJob method (start is called internally)
-      const executorSpy = vi.spyOn(jobExecutor, "executeJob");
 
       const action = createDocumentModelAction("SET_NAME", {
         input: { name: "Test Name" },
