@@ -1,3 +1,13 @@
+## 5.0.0-staging.4 (2025-09-08)
+
+### 🩹 Fixes
+
+- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.3 (2025-09-08)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

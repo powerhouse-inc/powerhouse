@@ -1,3 +1,7 @@
+## 5.0.0-staging.4 (2025-09-08)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 5.0.0-staging.3 (2025-09-08)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

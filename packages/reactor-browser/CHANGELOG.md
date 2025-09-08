@@ -1,3 +1,14 @@
+## 5.0.0-staging.4 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+- **reactor-browser:** set driveId to type of phid ([4d7cb2fbf](https://github.com/powerhouse-inc/powerhouse/commit/4d7cb2fbf))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.3 (2025-09-08)
 
 ### 🩹 Fixes

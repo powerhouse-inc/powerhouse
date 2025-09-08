@@ -1,3 +1,13 @@
+## 5.0.0-staging.4 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.3 (2025-09-08)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
