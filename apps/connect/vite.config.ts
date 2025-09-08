@@ -61,6 +61,8 @@ export default defineConfig(({ mode }) => {
     nodePolyfills({
       include: ["events"],
       globals: {
+        Buffer: false,
+        global: false,
         process: true,
       },
     }),
@@ -115,9 +117,6 @@ export default defineConfig(({ mode }) => {
     build: {
       minify: false,
       sourcemap: true,
-      rollupOptions: {
-        external: ["vite-plugin-node-polyfills"],
-      },
     },
     worker: {
       format: "es",
