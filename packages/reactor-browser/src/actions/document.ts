@@ -31,7 +31,7 @@ import {
 } from "../actions/queue.js";
 import { getUserPermissions } from "../utils/user.js";
 
-export function downloadFile(document: PHDocument) {
+export function downloadFile(document: PHDocument, fileName: string) {
   const zip = createZip(document);
   zip
     .generateAsync({ type: "blob" })
@@ -39,7 +39,7 @@ export function downloadFile(document: PHDocument) {
       const link = window.document.createElement("a");
       link.style.display = "none";
       link.href = URL.createObjectURL(blob);
-      link.download = `${document.header.name || "Untitled"}.zip`;
+      link.download = fileName;
 
       window.document.body.appendChild(link);
       link.click();
@@ -49,7 +49,7 @@ export function downloadFile(document: PHDocument) {
     .catch(logger.error);
 }
 
-export async function exportFile(document: PHDocument) {
+export async function exportFile(document: PHDocument, suggestedName?: string) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -59,11 +59,17 @@ export async function exportFile(document: PHDocument) {
     (module) => module.documentModel.id === document.header.documentType,
   );
   const extension = documentModelModule?.documentModel.extension;
+  const name = `${suggestedName || document.header.name || "Untitled"}.${
+    extension ? `${extension}.` : ""
+  }zip`;
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!window.showSaveFilePicker) {
+    return downloadFile(document, name);
+  }
   try {
     const fileHandle = await window.showSaveFilePicker({
-      suggestedName: `${document.header.name || "Untitled"}.${
-        extension ? `${extension}.` : ""
-      }zip`,
+      suggestedName: name,
     });
 
     await baseSaveToFileHandle(document, fileHandle);
