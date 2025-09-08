@@ -34,7 +34,11 @@ const mockOperationStorage = {
   getSynchronizationUnitsRevision: () => Promise.resolve({}),
 } as any;
 
-const executor = new SimpleJobExecutor(registry, mockDocStorage, mockOperationStorage);
+const executor = new SimpleJobExecutor(
+  registry,
+  mockDocStorage,
+  mockOperationStorage,
+);
 
 let jobCounter = 0;
 

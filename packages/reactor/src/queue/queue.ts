@@ -1,7 +1,13 @@
 import { type IEventBus } from "../events/interfaces.js";
 import { type IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
-import { QueueEventTypes, JobQueueState, type Job, type JobAvailableEvent, type IJobExecutionHandle } from "./types.js";
+import {
+  QueueEventTypes,
+  JobQueueState,
+  type Job,
+  type JobAvailableEvent,
+  type IJobExecutionHandle,
+} from "./types.js";
 
 /**
  * In-memory implementation of the IQueue interface.
@@ -404,11 +410,13 @@ export class InMemoryQueue implements IQueue {
    */
   get isDrained(): boolean {
     // Queue is drained if there are no pending jobs and no executing jobs
-    const hasPendingJobs = this.queues.size > 0 && 
+    const hasPendingJobs =
+      this.queues.size > 0 &&
       Array.from(this.queues.values()).some((q) => q.length > 0);
-    const hasExecutingJobs = this.docIdToJobId.size > 0 && 
+    const hasExecutingJobs =
+      this.docIdToJobId.size > 0 &&
       Array.from(this.docIdToJobId.values()).some((set) => set.size > 0);
-    
+
     return !hasPendingJobs && !hasExecutingJobs;
   }
 
@@ -419,7 +427,7 @@ export class InMemoryQueue implements IQueue {
   block(onDrained?: () => void): void {
     this.isBlocked = true;
     this.onDrainedCallback = onDrained;
-    
+
     // Check if already drained
     this.checkDrained();
   }

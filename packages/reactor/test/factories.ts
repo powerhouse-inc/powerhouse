@@ -4,7 +4,10 @@ import {
   type BaseDocumentDriveServer,
   driveDocumentModelModule,
 } from "document-drive";
-import type { IDocumentOperationStorage, IDocumentStorage } from "document-drive/storage/types";
+import type {
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive/storage/types";
 import {
   documentModelDocumentModelModule,
   type Action,
