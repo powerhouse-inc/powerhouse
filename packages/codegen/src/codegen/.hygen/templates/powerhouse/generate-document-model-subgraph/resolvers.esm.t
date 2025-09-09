@@ -7,7 +7,7 @@ import { addFile } from "document-drive";
 import { actions <% modules.forEach(module => { %><% module.operations.forEach(op => { %>, type <%- h.changeCase.pascal(op.name) %>Input<%_ })}); %>, type <%- h.changeCase.pascal(documentType) %>Document } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
 import { setName } from "document-model";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return ({
