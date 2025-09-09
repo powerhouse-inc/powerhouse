@@ -1,3 +1,17 @@
+## 4.1.0-dev.49 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
+- **reactor-browser:** set driveId to type of phid ([4d7cb2fbf](https://github.com/powerhouse-inc/powerhouse/commit/4d7cb2fbf))
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.48 (2025-09-09)
 
 ### 🚀 Features

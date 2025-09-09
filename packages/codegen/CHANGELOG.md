@@ -1,3 +1,13 @@
+## 4.1.0-dev.49 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.48 (2025-09-09)
 
 ### 🩹 Fixes

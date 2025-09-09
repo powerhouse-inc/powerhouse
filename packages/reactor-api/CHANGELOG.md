@@ -1,3 +1,14 @@
+## 4.1.0-dev.49 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.48 (2025-09-09)
 
 ### 🩹 Fixes
