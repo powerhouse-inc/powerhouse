@@ -1,3 +1,13 @@
+## 4.1.0-dev.50 (2025-09-09)
+
+### 🩹 Fixes
+
+- **design-system:** improve drop zone validation and event handling ([75cd1e4c6](https://github.com/powerhouse-inc/powerhouse/commit/75cd1e4c6))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.49 (2025-09-09)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

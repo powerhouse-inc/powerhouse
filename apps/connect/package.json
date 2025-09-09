@@ -1,7 +1,7 @@
 {
     "name": "@powerhousedao/connect",
     "productName": "Powerhouse-Connect",
-    "version": "4.1.0-dev.49",
+    "version": "4.1.0-dev.50",
     "description": "Powerhouse Connect",
     "main": "./dist/index.html",
     "type": "module",
