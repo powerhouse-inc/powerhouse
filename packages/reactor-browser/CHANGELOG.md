@@ -1,3 +1,14 @@
+## 4.1.0-dev.48 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+- **reactor-browser:** use fallback when window.showSaveFilePicker is not available ([78164031c](https://github.com/powerhouse-inc/powerhouse/commit/78164031c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.47 (2025-09-06)
 
 ### 🚀 Features

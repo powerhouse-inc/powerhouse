@@ -1,3 +1,7 @@
+## 4.1.0-dev.48 (2025-09-09)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.47 (2025-09-06)
 
 ### 🩹 Fixes
