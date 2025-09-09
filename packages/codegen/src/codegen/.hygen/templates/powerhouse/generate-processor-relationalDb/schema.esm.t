@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/schema.ts"
-force: true
+unless_exists: true
 ---
 export interface Todo {
   status: boolean | null;
