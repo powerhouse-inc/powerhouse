@@ -8,11 +8,24 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 
 ## 5.0.0-staging.4 (2025-09-08)
 
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+### 🚀 Features
 
-## 5.0.0-staging.3 (2025-09-08)
+- update queue to use job handles ([acbe50ee1](https://github.com/powerhouse-inc/powerhouse/commit/acbe50ee1))
+- tests for job execution handle ([5af69c190](https://github.com/powerhouse-inc/powerhouse/commit/5af69c190))
+- moving to job execution handles ([f91c3a759](https://github.com/powerhouse-inc/powerhouse/commit/f91c3a759))
+- drain, block, unblock on queue ([77ad8f9bc](https://github.com/powerhouse-inc/powerhouse/commit/77ad8f9bc))
+- added job execution handle ([4fadd6638](https://github.com/powerhouse-inc/powerhouse/commit/4fadd6638))
 
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+### 🩹 Fixes
+
+- more linting issues ([5dd874517](https://github.com/powerhouse-inc/powerhouse/commit/5dd874517))
+- tons of linting fixes ([38c7981e3](https://github.com/powerhouse-inc/powerhouse/commit/38c7981e3))
+- automated linting fixes ([d9c123692](https://github.com/powerhouse-inc/powerhouse/commit/d9c123692))
+- fix eventbus benchmarks, remove old benchmark ([5a85f498e](https://github.com/powerhouse-inc/powerhouse/commit/5a85f498e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
 
 ## 5.0.0-staging.2 (2025-09-05)
 

@@ -1,19 +1,19 @@
-import { beforeEach, describe, expect, it, type vi } from "vitest";
-import { type IEventBus } from "../src/events/interfaces.js";
-import { type IQueue } from "../src/queue/interfaces.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
+import { type IEventBus } from "../../src/events/interfaces.js";
+import { type IQueue } from "../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../src/queue/queue.js";
 import {
   QueueEventTypes,
   type Job,
   type JobAvailableEvent,
-} from "../src/queue/types.js";
+} from "../../src/queue/types.js";
 import {
-  createTestJob,
-  createMockEventBus,
-  createTestOperation,
-  createJobWithDependencies,
   createJobDependencyChain,
-} from "./factories.js";
+  createJobWithDependencies,
+  createTestJob,
+  createTestOperation,
+} from "../factories.js";
 
 describe("InMemoryQueue", () => {
   let queue: IQueue;
@@ -21,9 +21,10 @@ describe("InMemoryQueue", () => {
   let mockEventBusEmit: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    const mocks = createMockEventBus();
-    eventBus = mocks.eventBus;
-    mockEventBusEmit = mocks.mockEmit;
+    eventBus = new EventBus();
+    mockEventBusEmit = vi.fn().mockResolvedValue(undefined);
+    eventBus.emit = mockEventBusEmit;
+
     queue = new InMemoryQueue(eventBus);
   });
 
@@ -96,9 +97,9 @@ describe("InMemoryQueue", () => {
         job1.branch,
       );
 
-      expect(dequeuedJob1?.id).toBe("job-1");
-      expect(dequeuedJob2?.id).toBe("job-2");
-      expect(dequeuedJob3?.id).toBe("job-3");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
+      expect(dequeuedJob3?.job.id).toBe("job-3");
     });
   });
 
@@ -118,7 +119,7 @@ describe("InMemoryQueue", () => {
         testJob.branch,
       );
 
-      expect(dequeuedJob).toEqual(testJob);
+      expect(dequeuedJob?.job).toEqual(testJob);
       expect(
         await queue.size(testJob.documentId, testJob.scope, testJob.branch),
       ).toBe(0);
@@ -133,7 +134,7 @@ describe("InMemoryQueue", () => {
 
       const dequeuedJob = await queue.dequeue("doc-1", "global", "main");
 
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
       expect(await queue.size("doc-2", "global", "main")).toBe(1);
     });
 
@@ -164,7 +165,7 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
 
       expect(dequeuedJob).toBeDefined();
-      expect([job1.id, job2.id]).toContain(dequeuedJob?.id);
+      expect([job1.id, job2.id]).toContain(dequeuedJob?.job.id);
       expect(await queue.totalSize()).toBe(1);
     });
 
@@ -275,8 +276,8 @@ describe("InMemoryQueue", () => {
         job1.branch,
       );
 
-      expect(dequeuedJob1?.id).toBe("job-1");
-      expect(dequeuedJob2?.id).toBe("job-3");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
+      expect(dequeuedJob2?.job.id).toBe("job-3");
     });
 
     it("should clean up empty queue after removing last job", async () => {
@@ -488,7 +489,7 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
     });
 
     it("should block job with unmet dependencies", async () => {
@@ -520,7 +521,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
 
       // Second job should be blocked
       const blockedJob = await queue.dequeue(
@@ -539,7 +540,7 @@ describe("InMemoryQueue", () => {
         job2.scope,
         job2.branch,
       );
-      expect(dequeuedJob2?.id).toBe("job-2");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
     });
 
     it("should handle multiple dependencies", async () => {
@@ -560,7 +561,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
       await queue.completeJob("job-1");
 
       // Next dequeue should return job-2 (not blocked), not job-3 (still blocked)
@@ -569,7 +570,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(nextJob?.id).toBe("job-2");
+      expect(nextJob?.job.id).toBe("job-2");
       await queue.completeJob("job-2");
 
       // Now job 3 should be available
@@ -578,7 +579,7 @@ describe("InMemoryQueue", () => {
         job3.scope,
         job3.branch,
       );
-      expect(dequeuedJob3?.id).toBe("job-3");
+      expect(dequeuedJob3?.job.id).toBe("job-3");
     });
 
     it("should handle dependency chains", async () => {
@@ -594,7 +595,7 @@ describe("InMemoryQueue", () => {
         jobs[0].scope,
         jobs[0].branch,
       );
-      expect(d1?.id).toBe("job-1");
+      expect(d1?.job.id).toBe("job-1");
 
       // Others should be blocked
       expect(
@@ -614,7 +615,7 @@ describe("InMemoryQueue", () => {
         jobs[1].scope,
         jobs[1].branch,
       );
-      expect(d2?.id).toBe("job-2");
+      expect(d2?.job.id).toBe("job-2");
 
       // job-3 and job-4 still blocked
       expect(
@@ -631,7 +632,7 @@ describe("InMemoryQueue", () => {
         jobs[2].scope,
         jobs[2].branch,
       );
-      expect(d3?.id).toBe("job-3");
+      expect(d3?.job.id).toBe("job-3");
 
       // job-4 still blocked
       expect(
@@ -645,7 +646,7 @@ describe("InMemoryQueue", () => {
         jobs[3].scope,
         jobs[3].branch,
       );
-      expect(d4?.id).toBe("job-4");
+      expect(d4?.job.id).toBe("job-4");
     });
 
     it("should dequeue jobs out of order based on dependencies", async () => {
@@ -663,7 +664,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob?.id).toBe("job-2");
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
 
     it("should handle dependencies across different queues", async () => {
@@ -687,12 +688,12 @@ describe("InMemoryQueue", () => {
 
       // Dequeue and complete job 1
       const dequeuedJob1 = await queue.dequeue("doc-1", "global", "main");
-      expect(dequeuedJob1?.id).toBe("job-1");
+      expect(dequeuedJob1?.job.id).toBe("job-1");
       await queue.completeJob("job-1");
 
       // Now job 2 should be available
       const dequeuedJob2 = await queue.dequeue("doc-2", "global", "main");
-      expect(dequeuedJob2?.id).toBe("job-2");
+      expect(dequeuedJob2?.job.id).toBe("job-2");
     });
 
     it("should work with dequeueNext respecting dependencies", async () => {
@@ -712,7 +713,7 @@ describe("InMemoryQueue", () => {
 
       // Should dequeue job-2 since job-1 is blocked
       const dequeuedJob = await queue.dequeueNext();
-      expect(dequeuedJob?.id).toBe("job-2");
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
 
     it("should handle circular dependencies by blocking all involved jobs", async () => {
@@ -788,7 +789,7 @@ describe("InMemoryQueue", () => {
         job1.scope,
         job1.branch,
       );
-      expect(dequeuedJob?.id).toBe("job-1");
+      expect(dequeuedJob?.job.id).toBe("job-1");
     });
 
     it("should handle mixed dependencies (some met, some unmet)", async () => {
@@ -816,7 +817,7 @@ describe("InMemoryQueue", () => {
 
       // Now should be available
       dequeuedJob = await queue.dequeue(job.documentId, job.scope, job.branch);
-      expect(dequeuedJob?.id).toBe("job-3");
+      expect(dequeuedJob?.job.id).toBe("job-3");
     });
 
     it("should handle failJob without marking as completed", async () => {
@@ -828,7 +829,7 @@ describe("InMemoryQueue", () => {
 
       // Dequeue and fail job 1
       const d1 = await queue.dequeue(job1.documentId, job1.scope, job1.branch);
-      expect(d1?.id).toBe("job-1");
+      expect(d1?.job.id).toBe("job-1");
       await queue.failJob("job-1", "Test error");
 
       // Job 2 should still be blocked since job 1 wasn't completed
@@ -838,6 +839,257 @@ describe("InMemoryQueue", () => {
         job2.branch,
       );
       expect(dequeuedJob).toBeNull();
+    });
+  });
+
+  describe("isDrained", () => {
+    it("should return true when queue is empty", () => {
+      expect(queue.isDrained).toBe(true);
+    });
+
+    it("should return false when jobs are pending", async () => {
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      expect(queue.isDrained).toBe(false);
+    });
+
+    it("should return false when jobs are executing", async () => {
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      // Dequeue the job (marks it as executing)
+      await queue.dequeueNext();
+
+      expect(queue.isDrained).toBe(false);
+    });
+
+    it("should return true after all jobs are completed", async () => {
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      const dequeuedJob = await queue.dequeueNext();
+      expect(queue.isDrained).toBe(false);
+
+      await queue.completeJob(dequeuedJob!.job.id);
+      expect(queue.isDrained).toBe(true);
+    });
+
+    it("should return true after all jobs are failed", async () => {
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      const dequeuedJob = await queue.dequeueNext();
+      expect(queue.isDrained).toBe(false);
+
+      await queue.failJob(dequeuedJob!.job.id, "Test failure");
+      expect(queue.isDrained).toBe(true);
+    });
+
+    it("should handle multiple queues", async () => {
+      const job1 = createTestJob({ id: "job-1", documentId: "doc-1" });
+      const job2 = createTestJob({ id: "job-2", documentId: "doc-2" });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      expect(queue.isDrained).toBe(false);
+
+      const dequeued1 = await queue.dequeueNext();
+      await queue.completeJob(dequeued1!.job.id);
+      expect(queue.isDrained).toBe(false);
+
+      const dequeued2 = await queue.dequeueNext();
+      await queue.completeJob(dequeued2!.job.id);
+      expect(queue.isDrained).toBe(true);
+    });
+  });
+
+  describe("block", () => {
+    it("should prevent new jobs from being enqueued", async () => {
+      queue.block();
+
+      const job = createTestJob();
+      await expect(queue.enqueue(job)).rejects.toThrow("Queue is blocked");
+    });
+
+    it("should allow existing jobs to be processed", async () => {
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      queue.block();
+
+      const dequeuedJob = await queue.dequeueNext();
+      expect(dequeuedJob).toBeDefined();
+      expect(dequeuedJob?.job.id).toBe(job.id);
+    });
+
+    it("should call onDrained callback when queue becomes drained", async () => {
+      const onDrained = vi.fn();
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      queue.block(onDrained);
+      expect(onDrained).not.toHaveBeenCalled();
+
+      const dequeuedJob = await queue.dequeueNext();
+      await queue.completeJob(dequeuedJob!.job.id);
+
+      expect(onDrained).toHaveBeenCalledTimes(1);
+    });
+
+    it("should call onDrained immediately if already drained", () => {
+      const onDrained = vi.fn();
+
+      queue.block(onDrained);
+
+      expect(onDrained).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not call onDrained if unblocked before draining", async () => {
+      const onDrained = vi.fn();
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      queue.block(onDrained);
+      queue.unblock();
+
+      const dequeuedJob = await queue.dequeueNext();
+      await queue.completeJob(dequeuedJob!.job.id);
+
+      expect(onDrained).not.toHaveBeenCalled();
+    });
+
+    it("should handle multiple block calls", () => {
+      const onDrained1 = vi.fn();
+      const onDrained2 = vi.fn();
+
+      queue.block(onDrained1);
+      queue.block(onDrained2);
+
+      // Only the second callback should be registered
+      expect(onDrained1).toHaveBeenCalledTimes(1);
+      expect(onDrained2).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle block without callback", async () => {
+      queue.block();
+
+      const job = createTestJob();
+      await expect(queue.enqueue(job)).rejects.toThrow("Queue is blocked");
+    });
+  });
+
+  describe("unblock", () => {
+    it("should allow new jobs to be enqueued after unblocking", async () => {
+      queue.block();
+
+      const job1 = createTestJob({ id: "job-1" });
+      await expect(queue.enqueue(job1)).rejects.toThrow("Queue is blocked");
+
+      queue.unblock();
+
+      const job2 = createTestJob({ id: "job-2" });
+      await expect(queue.enqueue(job2)).resolves.not.toThrow();
+
+      const dequeuedJob = await queue.dequeueNext();
+      expect(dequeuedJob?.job.id).toBe("job-2");
+    });
+
+    it("should clear onDrained callback", async () => {
+      const onDrained = vi.fn();
+      const job = createTestJob();
+      await queue.enqueue(job);
+
+      queue.block(onDrained);
+      queue.unblock();
+
+      // Complete the job after unblocking
+      const dequeuedJob = await queue.dequeueNext();
+      await queue.completeJob(dequeuedJob!.job.id);
+
+      // Callback should not be called since we unblocked
+      expect(onDrained).not.toHaveBeenCalled();
+    });
+
+    it("should handle unblock when not blocked", async () => {
+      expect(() => queue.unblock()).not.toThrow();
+
+      const job = createTestJob();
+      await expect(queue.enqueue(job)).resolves.not.toThrow();
+    });
+  });
+
+  describe("block/unblock integration", () => {
+    it("should handle complex block/unblock scenarios", async () => {
+      const onDrained1 = vi.fn();
+      const onDrained2 = vi.fn();
+
+      // Add some jobs
+      const job1 = createTestJob({ id: "job-1" });
+      const job2 = createTestJob({ id: "job-2" });
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      // Block with callback
+      queue.block(onDrained1);
+
+      // Process one job
+      const dequeued1 = await queue.dequeueNext();
+      await queue.completeJob(dequeued1!.job.id);
+      expect(onDrained1).not.toHaveBeenCalled();
+
+      // Unblock and re-block with new callback
+      queue.unblock();
+      queue.block(onDrained2);
+
+      // Process last job
+      const dequeued2 = await queue.dequeueNext();
+      await queue.completeJob(dequeued2!.job.id);
+
+      // Only second callback should be called
+      expect(onDrained1).not.toHaveBeenCalled();
+      expect(onDrained2).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle retry while blocked", async () => {
+      const job = createTestJob({ id: "job-1", maxRetries: 3 });
+      await queue.enqueue(job);
+
+      queue.block();
+
+      const dequeuedJob = await queue.dequeueNext();
+
+      // Retry should fail because queue is blocked
+      await expect(
+        queue.retryJob(dequeuedJob!.job.id, "Test error"),
+      ).rejects.toThrow("Queue is blocked");
+    });
+
+    it("should track drain state correctly with dependencies", async () => {
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+
+      expect(queue.isDrained).toBe(false);
+
+      // Process first job
+      const dequeued1 = await queue.dequeueNext();
+      expect(dequeued1?.job.id).toBe("job-1");
+      expect(queue.isDrained).toBe(false);
+
+      await queue.completeJob("job-1");
+      expect(queue.isDrained).toBe(false); // job-2 still pending
+
+      // Process second job
+      const dequeued2 = await queue.dequeueNext();
+      expect(dequeued2?.job.id).toBe("job-2");
+      expect(queue.isDrained).toBe(false);
+
+      await queue.completeJob("job-2");
+      expect(queue.isDrained).toBe(true);
     });
   });
 
@@ -877,7 +1129,7 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob).toEqual(job);
+      expect(dequeuedJob?.job).toEqual(job);
     });
 
     it("should handle jobs with optional properties", async () => {
@@ -899,9 +1151,9 @@ describe("InMemoryQueue", () => {
         job.branch,
       );
 
-      expect(dequeuedJob).toEqual(job);
-      expect(dequeuedJob?.retryCount).toBeUndefined();
-      expect(dequeuedJob?.maxRetries).toBeUndefined();
+      expect(dequeuedJob?.job).toEqual(job);
+      expect(dequeuedJob?.job.retryCount).toBeUndefined();
+      expect(dequeuedJob?.job.maxRetries).toBeUndefined();
     });
   });
 });

@@ -1,10 +1,13 @@
 import {
   MemoryStorage,
   ReactorBuilder,
-  type BaseDocumentDriveServer,
   driveDocumentModelModule,
+  type BaseDocumentDriveServer,
 } from "document-drive";
-import type { IDocumentOperationStorage, IDocumentStorage } from "document-drive/storage/types";
+import type {
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive/storage/types";
 import {
   documentModelDocumentModelModule,
   type Action,
@@ -17,10 +20,10 @@ import { vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IQueue } from "../src/queue/interfaces.js";
+import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import { Reactor } from "../src/reactor.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
@@ -163,7 +166,7 @@ export function createDocumentModelAction(
 /**
  * Factory for creating mock PHDocument objects
  */
-export function createMockDocument(
+export function createDocModelDocument(
   overrides: {
     id?: string;
     slug?: string;
@@ -200,20 +203,6 @@ export function createTestEventBus(): IEventBus {
 }
 
 /**
- * Factory for creating test EventBus with mock emit
- */
-export function createMockEventBus() {
-  const eventBus = new EventBus();
-  const mockEmit = vi.fn().mockResolvedValue(undefined);
-  eventBus.emit = mockEmit;
-
-  return {
-    eventBus,
-    mockEmit,
-  };
-}
-
-/**
  * Factory for creating test Queue instances
  */
 export function createTestQueue(eventBus?: IEventBus): IQueue {
@@ -247,25 +236,6 @@ export function createMockJobExecutor(
   return {
     executeJob: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
-  };
-}
-
-/**
- * Factory for creating mock SimpleJobExecutor with spy functions
- */
-export function createMockSimpleJobExecutor() {
-  const executeJobSpy = vi.fn().mockResolvedValue({
-    success: true,
-    result: {},
-  });
-
-  const executor = {
-    executeJob: executeJobSpy,
-  } as IJobExecutor;
-
-  return {
-    executor,
-    executeJobSpy,
   };
 }
 
@@ -439,9 +409,12 @@ export function createJobDependencyChain(length: number): Job[] {
 /**
  * Factory for creating multiple actions for testing
  */
-export function createTestActions(count: number, type = "SET_NAME"): Action[] {
+export function createTestActions(
+  count: number,
+  type: "SET_NAME" | "SET_DESCRIPTION" | "CREATE" | "UPDATE" = "SET_NAME",
+): Action[] {
   return Array.from({ length: count }, (_, i) =>
-    createDocumentModelAction(type as any, {
+    createDocumentModelAction(type, {
       input: { name: `Action ${i + 1}` },
       timestampUtcMs: String(Date.now() + i * 1000),
     }),
@@ -453,10 +426,15 @@ export function createTestActions(count: number, type = "SET_NAME"): Action[] {
  */
 export function createTestDocuments(
   count: number,
-  baseOverrides: any = {},
+  baseOverrides: {
+    id?: string;
+    slug?: string;
+    documentType?: string;
+    state?: any;
+  } = {},
 ): PHDocument[] {
   return Array.from({ length: count }, (_, i) =>
-    createMockDocument({
+    createDocModelDocument({
       id: `doc-${i + 1}`,
       slug: `doc-${i + 1}`,
       ...baseOverrides,

@@ -86,14 +86,23 @@ export interface IQueue {
   enqueue(params: QueueParameters): string;
   
   /**
-   * Get the next available job from any queue.
-   * 
-   * Note that if the execution handle is not marked as started, `getNext` will continue to return the same handle until it is started.
-   * 
-   * @param signal - Optional abort signal to cancel the request
-   * 
+   * Get the next job to execute for a specific document/scope/branch combination.
+   * @param documentId - The document ID to get jobs for
+   * @param scope - The scope to get jobs for
+   * @param branch - The branch to get jobs for
    * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
-  getNext(signal?: AbortSignal): IJobExecutionHandle | null;
+  dequeue(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null>;
+
+  /**
+   * Get the next available job from any queue.
+   * @returns Promise that resolves to the next job execution handle or null if no jobs available
+   */
+  dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null>;
 }
 ```

@@ -1,6 +1,6 @@
 import type { IEventBus } from "../events/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
-import { QueueEventTypes, type JobAvailableEvent } from "../queue/types.js";
+import { QueueEventTypes } from "../queue/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus } from "./types.js";
 
@@ -41,7 +41,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     // Start listening for job available events
     this.unsubscribe = this.eventBus.subscribe(
       QueueEventTypes.JOB_AVAILABLE,
-      async (_type: number, _event: JobAvailableEvent) => {
+      async () => {
         // Only process if we have capacity (simple round-robin for now)
         if (this.activeJobs < this.executors.length) {
           await this.processNextJob();
@@ -93,8 +93,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private async processNextJob(): Promise<void> {
     try {
       // Dequeue next available job
-      const job = await this.queue.dequeueNext();
-      if (!job) {
+      const handle = await this.queue.dequeueNext();
+      if (!handle) {
         return;
       }
 
@@ -105,19 +105,19 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       const executor = this.executors[executorIndex];
 
       // Execute the job
-      const result = await executor.executeJob(job);
+      const result = await executor.executeJob(handle.job);
 
       // Update job status in queue
       if (result.success) {
-        await this.queue.completeJob(job.id);
+        await this.queue.completeJob(handle.job.id);
       } else {
         // Handle retry logic
-        const retryCount = job.retryCount || 0;
-        const maxRetries = job.maxRetries || 0;
+        const retryCount = handle.job.retryCount || 0;
+        const maxRetries = handle.job.maxRetries || 0;
         if (retryCount < maxRetries) {
-          await this.queue.retryJob(job.id, result.error?.message);
+          await this.queue.retryJob(handle.job.id, result.error?.message);
         } else {
-          await this.queue.failJob(job.id, result.error?.message);
+          await this.queue.failJob(handle.job.id, result.error?.message);
         }
       }
 

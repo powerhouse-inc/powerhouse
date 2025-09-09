@@ -2,49 +2,24 @@ import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
+  type BaseDocumentDriveServer,
 } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../src/events/event-bus.js";
-import type { IEventBus } from "../src/events/interfaces.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
-import type { IJobExecutor } from "../src/executor/interfaces.js";
-import type { IQueue } from "../src/queue/interfaces.js";
-import { InMemoryQueue } from "../src/queue/queue.js";
-import { Reactor } from "../src/reactor.js";
-
-// Helper to create a valid PHDocument using the document model utils
-function createMockDocument(
-  overrides: {
-    id?: string;
-    slug?: string;
-    documentType?: string;
-    state?: any;
-  } = {},
-): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
-
-  // Apply overrides if provided
-  if (overrides.id) {
-    baseDocument.header.id = overrides.id;
-  }
-  if (overrides.slug) {
-    baseDocument.header.slug = overrides.slug;
-  }
-  if (overrides.documentType) {
-    baseDocument.header.documentType = overrides.documentType;
-  }
-  if (overrides.state) {
-    baseDocument.state = { ...baseDocument.state, ...overrides.state };
-  }
-
-  return baseDocument;
-}
+import { beforeEach, describe, expect, it } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
+import type { IJobExecutor } from "../../src/executor/interfaces.js";
+import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
+import { DocumentModelRegistry } from "../../src/index.js";
+import type { IQueue } from "../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../src/queue/queue.js";
+import { Reactor } from "../../src/reactor.js";
+import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
 describe("Reactor Read Interface", () => {
   let reactor: Reactor;
-  let driveServer: any;
+  let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
   let eventBus: IEventBus;
   let queue: IQueue;
@@ -62,40 +37,20 @@ describe("Reactor Read Interface", () => {
     // Create real drive server with the storage
     const builder = new ReactorBuilder(documentModels);
     builder.withStorage(storage);
-    driveServer = builder.build();
+    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
     // Create event bus, queue, and executor
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    // Create a mock registry for the executor
-    const registry = {
-      getModule: vi.fn().mockReturnValue({
-        reducer: vi.fn((doc, action) => ({
-          ...doc,
-          operations: { global: [{ index: 0, hash: "test-hash" }] },
-        })),
-      }),
-    } as any;
 
-    // Create a mock document storage for the executor (different from IDocumentStorage for reactor)
-    const mockDocStorage = {
-      get: vi.fn().mockResolvedValue({
-        header: { documentType: "test" },
-        operations: { global: [] },
-        history: [],
-        state: {},
-        initialState: {},
-        clipboard: [],
-      }),
-      delete: vi.fn(),
-      exists: vi.fn(),
-      getChildren: vi.fn(),
-      findByType: vi.fn(),
-      resolveIds: vi.fn(),
-    } as any;
+    // Create a real registry with actual document models
+    const registry = new DocumentModelRegistry();
+    registry.registerModules(documentModelDocumentModelModule);
+    registry.registerModules(driveDocumentModelModule);
 
-    jobExecutor = new SimpleJobExecutor(registry, mockDocStorage, mockDocStorage);
+    // Use the real storage for the executor
+    jobExecutor = new SimpleJobExecutor(registry, storage, storage);
 
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
@@ -103,30 +58,7 @@ describe("Reactor Read Interface", () => {
 
   describe("getDocumentModels", () => {
     it("should retrieve document models", async () => {
-      const mockModules = [
-        {
-          documentModel: {
-            id: "model1",
-            name: "TestModel",
-            extension: ".test",
-            specifications: [],
-            author: { name: "Test Author", website: "test.com" },
-            description: "Test description",
-          },
-        },
-        {
-          documentModel: {
-            id: "model2",
-            name: "AnotherModel",
-            extension: ".another",
-            specifications: [],
-            author: { name: "Test Author", website: "test.com" },
-            description: "Another description",
-          },
-        },
-      ];
-      // Add mock modules to the drive server
-      // Since we're using a real drive server, we need to work with the actual document models
+      // Since we're using a real drive server with actual document models
       const result = await reactor.getDocumentModels();
 
       // The real drive server will have the document models we initialized it with
@@ -155,8 +87,8 @@ describe("Reactor Read Interface", () => {
   describe("get", () => {
     it("should retrieve a document by id", async () => {
       // First add a document to the drive server
-      const mockDocument = createMockDocument({ id: "doc1" });
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      await driveServer.addDocument(document);
 
       const result = await reactor.get("doc1");
 
@@ -166,7 +98,7 @@ describe("Reactor Read Interface", () => {
 
     it.skip("should filter by scopes when view filter is provided", async () => {
       // Skipping as scope filtering with custom state is complex with real documents
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         state: {
           global: { someData: "global" },
@@ -175,7 +107,7 @@ describe("Reactor Read Interface", () => {
         },
       });
 
-      await driveServer.addDocument(mockDocument);
+      await driveServer.addDocument(document);
 
       const result = await reactor.get("doc1", { scopes: ["global", "local"] });
 
@@ -191,7 +123,7 @@ describe("Reactor Read Interface", () => {
 
   describe("getBySlug", () => {
     it("should retrieve a document by slug", async () => {
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         slug: "test-slug",
       });
@@ -209,7 +141,7 @@ describe("Reactor Read Interface", () => {
       });
 
       // Add the document to the drive
-      await driveServer.addDocument(mockDocument, "drive1");
+      await driveServer.addDocument(document);
 
       const result = await reactor.getBySlug("test-slug");
 
@@ -259,9 +191,9 @@ describe("Reactor Read Interface", () => {
         ],
       };
 
-      const mockDocument = createMockDocument({ id: "doc1" });
-      mockDocument.operations = mockOperations;
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      document.operations = mockOperations;
+      await driveServer.addDocument(document);
 
       const result = await reactor.getOperations("doc1");
 
@@ -321,9 +253,9 @@ describe("Reactor Read Interface", () => {
         ],
       };
 
-      const mockDocument = createMockDocument({ id: "doc1" });
-      mockDocument.operations = mockOperations;
-      await driveServer.addDocument(mockDocument);
+      const document = createDocModelDocument({ id: "doc1" });
+      document.operations = mockOperations;
+      await driveServer.addDocument(document);
 
       const result = await reactor.getOperations("doc1", {
         scopes: ["global", "local"],
@@ -365,9 +297,11 @@ describe("Reactor Read Interface", () => {
     });
 
     it("should filter documents by ids", async () => {
-      const mockDocuments = Array.from({ length: 5 }, (_, i) =>
-        createMockDocument({ id: `doc${i}` }),
-      );
+      const documents = createTestDocuments(5, {});
+      // Override IDs to match test expectations
+      documents.forEach((doc, i) => {
+        doc.header.id = `doc${i}`;
+      });
 
       // Add a drive and documents
       await driveServer.addDrive({
@@ -381,8 +315,8 @@ describe("Reactor Read Interface", () => {
         },
       });
 
-      for (const doc of mockDocuments) {
-        await driveServer.addDocument(doc, "drive1");
+      for (const doc of documents) {
+        await driveServer.addDocument(doc);
       }
 
       const result = await reactor.find({ ids: ["doc1", "doc3"] });
@@ -393,7 +327,7 @@ describe("Reactor Read Interface", () => {
 
     it.skip("should filter documents by scopes when view filter is provided", async () => {
       // Skipping as scope filtering with custom state is complex with real documents
-      const mockDocument = createMockDocument({
+      const document = createDocModelDocument({
         id: "doc1",
         state: {
           global: { someData: "global" },
@@ -413,7 +347,7 @@ describe("Reactor Read Interface", () => {
           triggers: [],
         },
       });
-      await driveServer.addDocument(mockDocument, "drive1");
+      await driveServer.addDocument(document);
 
       const result = await reactor.find({}, { scopes: ["global"] });
 

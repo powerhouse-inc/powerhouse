@@ -10,11 +10,11 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 ### 🩹 Fixes
 
-- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
 
 ### ❤️ Thank You
 
-- Frank
+- acaldas @acaldas
 
 ## 5.0.0-staging.3 (2025-09-08)
 

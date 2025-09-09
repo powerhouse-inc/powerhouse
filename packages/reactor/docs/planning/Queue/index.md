@@ -6,10 +6,8 @@ The `IQueue` provides a durable API to queue new write jobs and to pull jobs fro
 
 - The queue keeps and updates a journal for recovery and graceful shutdown purposes.
 - All jobs are enqueued with `(documentId, scope, branch)` information.
-- Jobs can also include dependency relationships, through the `dependsOn` property.
+- Jobs can also include dependency information through the `queueHint` field (see the [Dependencies](dependencies.md) doc for more information).
 - Dependency information cannot be changed after a job is enqueued.
-- Internally, a list of directed graphs is maintained in memory to track the dependency relationships between jobs.
-- If a cycle is detected when enqueuing a job, the job will be rejected with a `QueueCycleError`.
 - On enqueue and on job completion, the queue scans the dependency graph to determine if any jobs are now ready to be executed.
 - If there is are jobs ready to be executed, the queue emits a `QueueEventTypes.JOB_AVAILABLE` event through the `IEventBus`.
 - When there is heavy contention, reshuffle logic will be applied by the `IJobExecutor`, not the queue.

@@ -10,11 +10,11 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 ### 🩹 Fixes
 
-- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
 
 ### ❤️ Thank You
 
-- Frank
+- acaldas @acaldas
 
 ## 5.0.0-staging.3 (2025-09-08)
 

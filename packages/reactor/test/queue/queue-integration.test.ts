@@ -1,30 +1,24 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BaseDocumentDriveServer } from "document-drive";
-import type { DocumentModelModule, Action } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
 import { driveDocumentModelModule } from "document-drive";
-import { type MemoryStorage } from "document-drive";
+import type { Action, DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import type { IEventBus } from "../src/events/interfaces.js";
-import type { IJobExecutor } from "../src/executor/interfaces.js";
-import type { IQueue } from "../src/queue/interfaces.js";
-import type { Job } from "../src/queue/types.js";
-import { type Reactor } from "../src/reactor.js";
-import { JobStatus } from "../src/shared/types.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IQueue } from "../../src/queue/interfaces.js";
+import type { Job } from "../../src/queue/types.js";
+import { type Reactor } from "../../src/reactor.js";
+import { JobStatus } from "../../src/shared/types.js";
 import {
-  createMockDocument,
+  createDocModelDocument,
   createDocumentModelAction,
   createTestActions,
   createTestReactorSetup,
-} from "./factories.js";
+} from "../factories.js";
 
 describe("Reactor <> Queue Integration", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
-  let storage: MemoryStorage;
-  let eventBus: IEventBus;
   let queue: IQueue;
-  let jobExecutor: IJobExecutor;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -35,16 +29,13 @@ describe("Reactor <> Queue Integration", () => {
     const setup = await createTestReactorSetup(documentModels);
     reactor = setup.reactor;
     driveServer = setup.driveServer;
-    storage = setup.storage;
-    eventBus = setup.eventBus;
     queue = setup.queue;
-    jobExecutor = setup.jobExecutor;
   });
 
   describe("mutate", () => {
     it("should enqueue jobs for document mutations", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-1",
         slug: "test-doc",
       });
@@ -80,7 +71,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should create proper Job objects from actions", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-2",
         slug: "test-doc-2",
       });
@@ -124,16 +115,13 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should start the job executor when jobs are enqueued", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-3",
         slug: "test-doc-3",
       });
 
       // Add the document to the drive server
       await driveServer.addDocument(testDoc);
-
-      // Spy on the executor's executeJob method (start is called internally)
-      const executorSpy = vi.spyOn(jobExecutor, "executeJob");
 
       const action = createDocumentModelAction("SET_NAME", {
         input: { name: "Test Name" },
@@ -148,7 +136,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should return JobInfo with pending status when jobs are enqueued", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-4",
         slug: "test-doc-4",
       });
@@ -170,7 +158,7 @@ describe("Reactor <> Queue Integration", () => {
 
     it("should handle multiple actions in sequence", async () => {
       // Create a test document
-      const testDoc = createMockDocument({
+      const testDoc = createDocModelDocument({
         id: "test-doc-5",
         slug: "test-doc-5",
       });
@@ -208,11 +196,11 @@ describe("Reactor <> Queue Integration", () => {
     describe("serial execution per document", () => {
       it("should not dequeue jobs for a document that has executing jobs", async () => {
         // Create two test documents
-        const testDoc1 = createMockDocument({
+        const testDoc1 = createDocModelDocument({
           id: "test-doc-serial-1",
           slug: "test-doc-serial-1",
         });
-        const testDoc2 = createMockDocument({
+        const testDoc2 = createDocModelDocument({
           id: "test-doc-serial-2",
           slug: "test-doc-serial-2",
         });
@@ -253,12 +241,12 @@ describe("Reactor <> Queue Integration", () => {
         // First dequeue should get a job from document 1
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.documentId).toBe(testDoc1.header.id);
+        expect(job1?.job.documentId).toBe(testDoc1.header.id);
 
         // Second dequeue should get the job from document 2 (not doc 1's second job)
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.documentId).toBe(testDoc2.header.id);
+        expect(job2?.job.documentId).toBe(testDoc2.header.id);
 
         // Third dequeue should return null since doc 1 is still executing
         const job3 = await queue.dequeueNext();
@@ -266,21 +254,21 @@ describe("Reactor <> Queue Integration", () => {
 
         // Complete the first job
         if (job1) {
-          await queue.completeJob(job1.id);
+          await queue.completeJob(job1.job.id);
         }
 
         // Now we should be able to dequeue the second job from document 1
         const job4 = await queue.dequeueNext();
         expect(job4).toBeDefined();
-        expect(job4?.documentId).toBe(testDoc1.header.id);
+        expect(job4?.job.documentId).toBe(testDoc1.header.id);
       });
 
       it("should allow concurrent execution of jobs from different documents", async () => {
         // Create three test documents
         const docs = await Promise.all([
-          createMockDocument({ id: "concurrent-1", slug: "concurrent-1" }),
-          createMockDocument({ id: "concurrent-2", slug: "concurrent-2" }),
-          createMockDocument({ id: "concurrent-3", slug: "concurrent-3" }),
+          createDocModelDocument({ id: "concurrent-1", slug: "concurrent-1" }),
+          createDocModelDocument({ id: "concurrent-2", slug: "concurrent-2" }),
+          createDocModelDocument({ id: "concurrent-3", slug: "concurrent-3" }),
         ]);
 
         // Add documents to the drive server
@@ -314,7 +302,9 @@ describe("Reactor <> Queue Integration", () => {
         }
 
         // Verify we got one job from each document
-        const documentIds = dequeuedJobs.map((job) => job.documentId).sort();
+        const documentIds = dequeuedJobs
+          .map((job) => job.job.documentId)
+          .sort();
         const expectedIds = docs.map((doc) => doc.header.id).sort();
         expect(documentIds).toEqual(expectedIds);
 
@@ -325,7 +315,7 @@ describe("Reactor <> Queue Integration", () => {
 
       it("should resume processing after job completion", async () => {
         // Create a test document
-        const testDoc = createMockDocument({
+        const testDoc = createDocModelDocument({
           id: "test-resume",
           slug: "test-resume",
         });
@@ -350,7 +340,7 @@ describe("Reactor <> Queue Integration", () => {
         // Dequeue first job
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.operation.index).toBe(0);
+        expect(job1?.job.operation.index).toBe(0);
 
         // Should not be able to dequeue another job for this document
         const blockedJob = await queue.dequeueNext();
@@ -358,27 +348,27 @@ describe("Reactor <> Queue Integration", () => {
 
         // Complete the first job
         if (job1) {
-          await queue.completeJob(job1.id);
+          await queue.completeJob(job1.job.id);
         }
 
         // Now should be able to dequeue the second job
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.operation.index).toBe(1);
+        expect(job2?.job.operation.index).toBe(1);
 
         // Complete second job and get third
         if (job2) {
-          await queue.completeJob(job2.id);
+          await queue.completeJob(job2.job.id);
         }
 
         const job3 = await queue.dequeueNext();
         expect(job3).toBeDefined();
-        expect(job3?.operation.index).toBe(2);
+        expect(job3?.job.operation.index).toBe(2);
       });
 
       it("should handle job failure and allow next job to proceed", async () => {
         // Create a test document
-        const testDoc = createMockDocument({
+        const testDoc = createDocModelDocument({
           id: "test-failure",
           slug: "test-failure",
         });
@@ -410,13 +400,13 @@ describe("Reactor <> Queue Integration", () => {
 
         // Fail the first job
         if (job1) {
-          await queue.failJob(job1.id, "Test failure");
+          await queue.failJob(job1.job.id, "Test failure");
         }
 
         // Now should be able to dequeue the second job
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
-        expect(job2?.operation.index).toBe(1);
+        expect(job2?.job.operation.index).toBe(1);
       });
     });
   });
