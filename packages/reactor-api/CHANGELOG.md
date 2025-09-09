@@ -1,3 +1,15 @@
+## 5.0.0-staging.7 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.0.0-staging.6 (2025-09-08)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

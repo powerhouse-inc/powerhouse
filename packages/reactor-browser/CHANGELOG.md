@@ -1,3 +1,13 @@
+## 5.0.0-staging.7 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.6 (2025-09-08)
 
 ### 🩹 Fixes
