@@ -16,7 +16,21 @@ This was a version bump only for @powerhousedao/config to align it with other pr
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.45 (2025-09-04)
+## 5.0.0-staging.3 (2025-09-08)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
 

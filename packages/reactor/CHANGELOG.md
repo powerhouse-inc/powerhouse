@@ -40,13 +40,15 @@
 
 ### 🩹 Fixes
 
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
 - build errors ([97b4853a3](https://github.com/powerhouse-inc/powerhouse/commit/97b4853a3))
 
 ### ❤️ Thank You
 
 - Benjamin Jordan (@thegoldenmule)
+- Callme-T
 
-## 4.1.0-dev.45 (2025-09-04)
+## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
 

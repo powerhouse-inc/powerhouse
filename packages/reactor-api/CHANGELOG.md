@@ -24,7 +24,7 @@
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.45 (2025-09-04)
+## 5.0.0-staging.2 (2025-09-05)
 
 ### 🚀 Features
 
@@ -32,11 +32,18 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 ### 🩹 Fixes
 
+- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
 - **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
 
 ### ❤️ Thank You
 
+- Callme-T
 - Frank
+
+## 5.0.0-staging.1 (2025-09-04)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
 
 ## 4.1.0-dev.44 (2025-09-04)
 

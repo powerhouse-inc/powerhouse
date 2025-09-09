@@ -37,11 +37,48 @@ This was a version bump only for @powerhousedao/reactor-browser to align it with
 
 ### 🩹 Fixes
 
-- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+- **reactor-browser:** set driveId to type of phid ([4d7cb2fbf](https://github.com/powerhouse-inc/powerhouse/commit/4d7cb2fbf))
 
 ### ❤️ Thank You
 
 - Frank
+
+## 5.0.0-staging.3 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🚀 Features
+
+- **reactor-browser:** accept documentId on dispatchActions ([a579dd53c](https://github.com/powerhouse-inc/powerhouse/commit/a579dd53c))
+
+### 🩹 Fixes
+
+- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
+- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
+- **reactor-browser:** do not show all nodes on drive root ([da55217c8](https://github.com/powerhouse-inc/powerhouse/commit/da55217c8))
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+- Frank
+
+## 5.0.0-staging.1 (2025-09-04)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
 
 ## 4.1.0-dev.44 (2025-09-04)
 
