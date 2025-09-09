@@ -9,9 +9,6 @@ import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
-import type { IJobExecutor } from "../../src/executor/interfaces.js";
-import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import { DocumentModelRegistry } from "../../src/index.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { Reactor } from "../../src/reactor.js";
@@ -23,7 +20,6 @@ describe("Reactor Read Interface", () => {
   let storage: MemoryStorage;
   let eventBus: IEventBus;
   let queue: IQueue;
-  let jobExecutor: IJobExecutor;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -40,20 +36,12 @@ describe("Reactor Read Interface", () => {
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    // Create event bus, queue, and executor
+    // Create event bus and queue
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
 
-    // Create a real registry with actual document models
-    const registry = new DocumentModelRegistry();
-    registry.registerModules(documentModelDocumentModelModule);
-    registry.registerModules(driveDocumentModelModule);
-
-    // Use the real storage for the executor
-    jobExecutor = new SimpleJobExecutor(registry, storage, storage);
-
     // Create reactor facade with all required dependencies
-    reactor = new Reactor(driveServer, storage, eventBus, queue, jobExecutor);
+    reactor = new Reactor(driveServer, storage, queue);
   });
 
   describe("getDocumentModels", () => {

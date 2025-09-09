@@ -76,13 +76,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     await executorManager.start(1);
 
     // Create reactor with all components
-    reactor = new Reactor(
-      driveServer,
-      storage as IDocumentStorage,
-      eventBus,
-      queue,
-      executor,
-    );
+    reactor = new Reactor(driveServer, storage as IDocumentStorage, queue);
   });
 
   afterEach(async () => {
