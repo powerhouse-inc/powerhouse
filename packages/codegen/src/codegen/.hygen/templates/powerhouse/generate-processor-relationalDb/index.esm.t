@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
-force: true
+unless_exists: true
 ---
 import { type IRelationalDb } from "document-drive/processors/types";
 import { RelationalDbProcessor } from "document-drive/processors/relational";
