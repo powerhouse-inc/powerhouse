@@ -1,3 +1,15 @@
+## 5.0.0-staging.9 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** do not overwrite existing processors ([4c74b8c4d](https://github.com/powerhouse-inc/powerhouse/commit/4c74b8c4d))
+- **design-system:** improve drop zone validation and event handling ([75cd1e4c6](https://github.com/powerhouse-inc/powerhouse/commit/75cd1e4c6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
 ## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only, there were no code changes.

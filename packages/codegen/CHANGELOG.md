@@ -1,3 +1,13 @@
+## 5.0.0-staging.9 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** do not overwrite existing processors ([4c74b8c4d](https://github.com/powerhouse-inc/powerhouse/commit/4c74b8c4d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
