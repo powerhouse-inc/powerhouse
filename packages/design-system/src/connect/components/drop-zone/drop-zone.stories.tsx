@@ -1,5 +1,6 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 
+import { action } from "@storybook/addon-actions";
 import { DropZone } from "./drop-zone.js";
 
 const meta: Meta<typeof DropZone> = {
@@ -11,6 +12,9 @@ const meta: Meta<typeof DropZone> = {
   args: {
     title: "Drag your documents",
     subtitle: "to drop them in the currently selected folder.",
+    onAddFile: action("onAddFile"),
+    onMoveNode: action("onMoveNode"),
+    onCopyNode: action("onCopyNode"),
   },
 };
 
