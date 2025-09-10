@@ -995,7 +995,7 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 - **reactor-api:** added access public ([0481de9e](https://github.com/powerhouse-inc/powerhouse/commit/0481de9e))
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente @gpuente
@@ -1006,6 +1006,6 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas

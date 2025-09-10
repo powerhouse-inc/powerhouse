@@ -23,7 +23,7 @@
     // required configs for monorepo
     "composite": true,
     "incremental": true,
-    
+
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",
@@ -31,6 +31,6 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   }
 }

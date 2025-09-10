@@ -34,8 +34,6 @@ type Keyword {
   label: String!
 }
 
-
-
 # base_operations
 
 input SetPackageNameInput {

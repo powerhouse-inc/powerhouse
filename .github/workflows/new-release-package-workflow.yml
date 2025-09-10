@@ -1,6 +1,6 @@
 name: Full Managed Release Workflow (DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING)
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       version:

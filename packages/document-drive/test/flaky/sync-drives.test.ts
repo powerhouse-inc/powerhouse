@@ -469,7 +469,11 @@ describe("Document Drive Server interaction", () => {
     remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperation(
       "1",
-      buildOperation(driveDocumentReducer, remoteDrive, actions.deleteNode({ id: "1" })),
+      buildOperation(
+        driveDocumentReducer,
+        remoteDrive,
+        actions.deleteNode({ id: "1" }),
+      ),
     );
 
     const connectServer = new ReactorBuilder(documentModels).build();
@@ -593,14 +597,20 @@ describe("Document Drive Server interaction", () => {
       buildOperation(
         documentModelDocumentModelModule.reducer,
         remoteDocument as DocumentModelDocument,
-        documentModelDocumentModelModule.actions.setModelName({ name: "test 2" }),
+        documentModelDocumentModelModule.actions.setModelName({
+          name: "test 2",
+        }),
       ),
     );
 
     remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperation(
       "1",
-      buildOperation(driveDocumentReducer, remoteDrive, actions.deleteNode({ id: "1" })),
+      buildOperation(
+        driveDocumentReducer,
+        remoteDrive,
+        actions.deleteNode({ id: "1" }),
+      ),
     );
 
     // wait for pull strands polling

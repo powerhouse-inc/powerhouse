@@ -49,14 +49,18 @@ This is the standard workflow for all regular releases.
 #### 🎯 How It Works
 
 ##### 🌿 Release Branches
+
 When triggered from a release branch (format: `release/<tag>/<version>`), the workflow automatically determines version and npm tag from the branch name.
 
 Examples:
+
 - `release/staging/1.7.8` → version: `1.7.8-staging.0`
 - `release/dev/2.0.0` → version: `2.0.0-dev.0`
 
 ##### 🏭 Production Releases
+
 Special handling for production branches:
+
 - `release/production/x.y.z`
 - `release/prod/x.y.z`
 
@@ -64,6 +68,7 @@ These will use the `latest` npm tag and take the version as-is.
 Example: `release/production/1.2.2` → version: `1.2.2`, tag: `latest`
 
 ##### 🌳 Other Branches
+
 For non-release branches, you can manually select the versioning strategy:
 
 - `semantic-versioning` (default)
@@ -75,7 +80,9 @@ For non-release branches, you can manually select the versioning strategy:
 **Note:** Always use `semantic-versioning` unless there's a specific reason not to.
 
 ###### 🔢 Semantic Versioning Logic
+
 Calculates next version based on commit messages:
+
 - Current version: `1.5.6-dev.0` + fix commit → `1.5.6-dev.1`
 - Current version: `1.6.7` + fix commit → `1.6.8`
 
@@ -86,12 +93,14 @@ Calculates next version based on commit messages:
 This is a fully customizable release workflow for specific scenarios.
 
 #### 🛠️ Features
+
 - Set any version manually
 - Skip npm publish
 - Customize tags
 - More granular control
 
 #### ⚠️ Usage Guidelines
+
 - **Only use when absolutely necessary**
 - Example use case: Aligning all package versions in `main`
 - **Always run with `dry-run: true` first**
@@ -101,11 +110,13 @@ This is a fully customizable release workflow for specific scenarios.
 This is an automated release workflow that runs daily to keep the main branch up to date.
 
 #### ⏰ Schedule
+
 - Runs automatically every day at 6:00 AM UTC
 - Can be manually triggered from the main branch
 - Uses semantic versioning to determine the next version
 
 #### 🔧 Configuration
+
 - Automatically runs on the main branch
 - Supports dry-run mode for testing
 - Uses the same versioning logic as the Release Branch workflow
@@ -113,6 +124,7 @@ This is an automated release workflow that runs daily to keep the main branch up
 ## ⚙️ Workflow Configuration
 
 ### 📦 Release Branch Workflow
+
 ```yaml
 Inputs:
   version:
@@ -128,6 +140,7 @@ Inputs:
 ```
 
 ### ⚡ Full Managed Release Workflow
+
 ```yaml
 Inputs:
   version: string
@@ -139,12 +152,13 @@ Inputs:
 ```
 
 ### 🕒 Release Cron Workflow
+
 ```yaml
 Inputs:
   dry-run:
     type: boolean
     default: false
-    description: 'Run in dry-run mode to preview changes without publishing'
+    description: "Run in dry-run mode to preview changes without publishing"
 ```
 
 ## ✅ Best Practices
@@ -158,6 +172,7 @@ Inputs:
 ## 🔍 Troubleshooting
 
 If you encounter issues:
+
 1. Check the prerequisites are met
 2. Verify branch naming follows conventions
 3. Use `dry-run` to debug version calculations

@@ -84,4 +84,4 @@ jobs:
         with:
           name: test-results
           path: test/connect-e2e/test-results/
-          retention-days: 30 
+          retention-days: 30

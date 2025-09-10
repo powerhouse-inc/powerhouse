@@ -1,6 +1,6 @@
 @import "tailwindcss" source("./");
-@import './node_modules/@powerhousedao/design-system/dist/style.css';
-@import './html-defaults.css';
+@import "./node_modules/@powerhousedao/design-system/dist/style.css";
+@import "./html-defaults.css";
 
 /* Uses .dark class for dark mode */
 @custom-variant dark (&:where(.dark, .dark *));

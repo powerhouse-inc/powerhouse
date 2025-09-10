@@ -3,18 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist",
     "resolveJsonModule": true,
-    "lib": [
-      "esnext",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["esnext", "DOM", "DOM.Iterable"],
     "types": [
       "vite/client",
       "@storybook/types",
       "node",
       "vite/client",
       "vitest/globals",
-      "@testing-library/jest-dom",
+      "@testing-library/jest-dom"
     ]
   },
   "references": [
@@ -28,12 +24,6 @@
       "path": "../reactor-browser"
     }
   ],
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "storybook-static"
-  ]
+  "include": ["**/*"],
+  "exclude": ["node_modules", "dist", "storybook-static"]
 }

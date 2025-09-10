@@ -1,23 +1,23 @@
 input SetModelNameInput {
-    name: String!
+  name: String!
 }
 
 input SetModelIdInput {
-    id: String!
+  id: String!
 }
 
 input SetModelExtensionInput {
-    extension: String!
+  extension: String!
 }
 
 input SetModelDescriptionInput {
-    description: String!
+  description: String!
 }
 
 input SetAuthorNameInput {
-    authorName: String!
+  authorName: String!
 }
 
 input SetAuthorWebsiteInput {
-    authorWebsite: String!
+  authorWebsite: String!
 }

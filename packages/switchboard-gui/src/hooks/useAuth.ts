@@ -84,7 +84,6 @@ const useAuth = () => {
     uri: "/system",
   });
 
-
   const authLink = setContext((_, { headers }) => {
     return {
       headers: {

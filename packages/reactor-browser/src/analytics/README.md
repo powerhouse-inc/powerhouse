@@ -7,7 +7,7 @@ The analytics module provides React hooks and context providers for managing ana
 To use analytics in your application, wrap your components with the `AnalyticsProvider`:
 
 ```tsx
-import { AnalyticsProvider } from '@powerhousedao/reactor-browser';
+import { AnalyticsProvider } from "@powerhousedao/reactor-browser";
 
 function App() {
   return (
@@ -19,6 +19,7 @@ function App() {
 ```
 
 The provider accepts the following props:
+
 - `databaseName`: Required. A unique name for the analytics database
 - `queryClient`: Optional. A custom React Query client instance
 
@@ -31,7 +32,7 @@ function CustomProcessor() {
 
   useEffect(() => {
     if (!store || !manager) return;
-    
+
     registerProcessor(manager, store).catch(console.error);
   }, [store, manager]);
 
@@ -50,14 +51,14 @@ const { data, isLoading } = useAnalyticsQuery({
   start: DateTime.now().minus({ days: 7 }),
   end: DateTime.now(),
   granularity: AnalyticsGranularity.Total,
-  metrics: ['PageViews'],
+  metrics: ["PageViews"],
   select: {
-    page: [AnalyticsPath.fromString('pages/home')],  
-    user: [AnalyticsPath.fromString(`users/active`)]
+    page: [AnalyticsPath.fromString("pages/home")],
+    user: [AnalyticsPath.fromString(`users/active`)],
   },
   lod: {
-    page: 1
-  }
+    page: 1,
+  },
 });
 ```
 
@@ -67,13 +68,13 @@ Query time series data:
 
 ```tsx
 const { data } = useAnalyticsSeries({
-  start: null, 
+  start: null,
   end: null,
-  metrics: ['Revenue'],
+  metrics: ["Revenue"],
   select: {
-    product: [AnalyticsPath.fromString('products/electronics')],
-    region: [AnalyticsPath.fromString('regions/na')]
-  }
+    product: [AnalyticsPath.fromString("products/electronics")],
+    region: [AnalyticsPath.fromString("regions/na")],
+  },
 });
 ```
 
@@ -85,14 +86,14 @@ Add a single value to a time series:
 const mutation = useAddSeriesValue();
 await mutation.mutateAsync({
   start: DateTime.now(),
-  source: AnalyticsPath.fromString('events/sales'),
+  source: AnalyticsPath.fromString("events/sales"),
   value: 1000,
-  unit: 'USD',
-  metric: 'Revenue',
+  unit: "USD",
+  metric: "Revenue",
   dimensions: {
-    product: AnalyticsPath.fromString('products/electronics'),
-    region: AnalyticsPath.fromString('regions/na')
-  }
+    product: AnalyticsPath.fromString("products/electronics"),
+    region: AnalyticsPath.fromString("regions/na"),
+  },
 });
 ```
 
@@ -102,25 +103,27 @@ Add multiple values to time series:
 
 ```tsx
 const mutation = useAddSeriesValues();
-await mutation.mutateAsync([{
-  start: DateTime.now(),
-  source: AnalyticsPath.fromString('events/views'),
-  value: 500,
-  metric: 'PageViews',
-  dimensions: {
-    page: AnalyticsPath.fromString('pages/home')
-  }
-},
-{
-  start: DateTime.now(),
-  source: AnalyticsPath.fromString('events/sales'),
-  value: 1000,
-  unit: 'USD',
-  metric: 'Revenue',
-  dimensions: {
-    product: AnalyticsPath.fromString('products/electronics')
-  }
-}]);
+await mutation.mutateAsync([
+  {
+    start: DateTime.now(),
+    source: AnalyticsPath.fromString("events/views"),
+    value: 500,
+    metric: "PageViews",
+    dimensions: {
+      page: AnalyticsPath.fromString("pages/home"),
+    },
+  },
+  {
+    start: DateTime.now(),
+    source: AnalyticsPath.fromString("events/sales"),
+    value: 1000,
+    unit: "USD",
+    metric: "Revenue",
+    dimensions: {
+      product: AnalyticsPath.fromString("products/electronics"),
+    },
+  },
+]);
 ```
 
 ### useClearSeriesBySource
@@ -130,8 +133,8 @@ Clear all series data for a specific source:
 ```tsx
 const mutation = useClearSeriesBySource();
 await mutation.mutateAsync({
-  source: AnalyticsPath.fromString('events/sales'),
-  cleanUpDimensions: true
+  source: AnalyticsPath.fromString("events/sales"),
+  cleanUpDimensions: true,
 });
 ```
 
@@ -146,14 +149,14 @@ const { data: dimensions } = useGetDimensions();
 ### Context Hooks
 
 - `useAnalyticsStore`: Access the analytics store instance
-- `useAnalyticsEngine`: Access the analytics query engine instance 
+- `useAnalyticsEngine`: Access the analytics query engine instance
 
 ## Types
 
 The module re-exports all types from `@powerhousedao/analytics-engine-core` and `@powerhousedao/analytics-engine-browser`, including:
 
 - `AnalyticsQuery`
-- `AnalyticsSeriesQuery` 
+- `AnalyticsSeriesQuery`
 - `AnalyticsSeriesInput`
 - `AnalyticsDimension`
 - `AnalyticsPath`
@@ -175,18 +178,23 @@ const wrapper = ({ children }: PropsWithChildren) => (
   </AnalyticsProvider>
 );
 
-describe('Analytics', () => {
-  it('should query analytics data', async () => {
-    const { result } = renderHook(() => useAnalyticsQuery({
-      start: DateTime.now().minus({ days: 1 }),
-      end: DateTime.now(),
-      granularity: AnalyticsGranularity.Daily,
-      metrics: ['PageViews'],
-      select: {
-        page: [AnalyticsPath.fromString('pages/home')]
-      }
-    }), { wrapper });
-    
+describe("Analytics", () => {
+  it("should query analytics data", async () => {
+    const { result } = renderHook(
+      () =>
+        useAnalyticsQuery({
+          start: DateTime.now().minus({ days: 1 }),
+          end: DateTime.now(),
+          granularity: AnalyticsGranularity.Daily,
+          metrics: ["PageViews"],
+          select: {
+            page: [AnalyticsPath.fromString("pages/home")],
+          },
+        }),
+      { wrapper },
+    );
+
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 });
+```

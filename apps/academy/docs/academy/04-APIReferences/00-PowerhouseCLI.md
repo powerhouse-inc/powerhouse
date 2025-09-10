@@ -23,7 +23,7 @@ pnpm install -g ph-cmd
 
 ```
 Command Overview:
-  The init command creates a new Powerhouse project with optimal defaults. It sets up a fully 
+  The init command creates a new Powerhouse project with optimal defaults. It sets up a fully
   configured project structure with all necessary dependencies, configurations, and boilerplate.
 
   This command:
@@ -34,21 +34,21 @@ Command Overview:
 
 Arguments:
   [project-name]        Optional. Name of the project to create. If not provided,
-                        you'll be prompted to provide a name, or the current directory 
+                        you'll be prompted to provide a name, or the current directory
                         will be used if in interactive mode.
 
 Options:
   -p, --project         Specify the name of the project to create.
-                        
+
   -i, --interactive     Run the command in interactive mode, which will guide you
                         through the project setup with customizable options.
-                        
+
   -v, --version         Specify the development version to use. Defaults to "main".
-                        
+
   --dev                 Use the "development" version of the boilerplate.
-                        
+
   --staging             Use the "staging" version of the boilerplate.
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
 
 Project Structure:
@@ -72,7 +72,7 @@ Examples:
 
 ```
 Command Overview:
-  The setup-globals command initializes a new Powerhouse project with the necessary global 
+  The setup-globals command initializes a new Powerhouse project with the necessary global
   configuration. It helps you set up a project quickly with proper defaults and dependencies.
 
   This command:
@@ -87,16 +87,16 @@ Arguments:
 
 Options:
   -p, --project         Specify the name of the project to create.
-                        
+
   -i, --interactive     Run the command in interactive mode, which will guide you
                         through the setup process with questions and prompts.
-                        
+
   -v, --version         Specify the development version to use. Defaults to "main".
-                        
+
   --dev                 Use the "development" version of the boilerplate.
-                        
+
   --staging             Use the "staging" version of the boilerplate.
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
 
 Project Structure:
@@ -120,7 +120,7 @@ Examples:
 Command Overview:
   The update command helps you manage and update Powerhouse dependencies in your project. It provides
   an efficient way to keep your project up-to-date with the latest versions of Powerhouse packages.
-  
+
   This command:
   1. Updates all Powerhouse dependencies based on the semver ranges specified in your package.json
   2. Can force update all dependencies to a specific environment version (dev, prod, latest)
@@ -132,15 +132,15 @@ Options:
                         Valid environments: dev, prod, latest.
                         - dev: Uses @dev tag for all dependencies
                         - prod/latest: Uses @latest tag for all dependencies
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
-                        
+
   --debug               Show additional logs while executing the command.
 
 Special Cases:
   - Local Dependencies: If you have dependencies linked from a local monorepo (using file: or link:
     protocols), the command will detect the monorepo root, build affected packages, then update.
-  
+
   - No Dependencies: If no Powerhouse dependencies are found in your project, the command will
     display a message and exit without making changes.
 
@@ -172,15 +172,15 @@ Arguments:
                         - dev: Use development versions (@dev tag)
                         - prod/latest: Use production versions (@latest tag)
                         - local: Use local filesystem versions (requires localPath)
-                        
+
   [localPath]           Path to the local monorepo. Required when environment is 'local'.
                         This should be the root of your Powerhouse monorepo.
 
 Options:
   --force               Force environment to use, even if not in the predefined list
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
-                        
+
   --debug               Show additional logs during execution for troubleshooting.
 
   --use-resolved        Resolves tags to their actual version numbers. For example:
@@ -191,7 +191,7 @@ Options:
 Special Cases:
   - Local Development: When using the 'local' environment, dependencies are linked directly
     to local filesystem paths, allowing for real-time development and testing.
-  
+
   - Missing Dependencies: The command only updates Powerhouse dependencies that are already
     installed in your project. It won't add new ones.
 
@@ -207,7 +207,7 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*\n\n### ph-cli Commands\n\n- [Connect Build](#connect-build)
+_This document was automatically generated from the help text in the codebase._\n\n### ph-cli Commands\n\n- [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
 - [Connect Studio](#connect-studio)
 - [Dev](#dev)
@@ -256,7 +256,7 @@ Options:
 ```
 Command Overview:
   The connect command starts the Connect Studio, a development environment for building
-  and testing Powerhouse applications. It provides a visual interface for working with 
+  and testing Powerhouse applications. It provides a visual interface for working with
   your project.
 
   This command:
@@ -267,15 +267,15 @@ Command Overview:
 
 Options:
   -p, --port <port>      Port to run the server on. Default is 3000.
-                       
+
   -h, --host             Expose the server to the network. By default, the server
                         only accepts connections from localhost.
-                       
+
   --https                Enable HTTPS for secure connections. You may need to provide
                         certificate files for this option to work properly.
-                       
+
   --open                 Automatically open the browser window after starting the server.
-                       
+
   --config-file <path>   Path to the powerhouse.config.js file. This allows you to
                         customize the behavior of Connect Studio.
 
@@ -306,17 +306,17 @@ Command Overview:
 Options:
   --generate               Generate code automatically when document models are updated.
                           This keeps your code in sync with model changes.
-                        
+
   --switchboard-port <port> Specify the port to use for the Switchboard service.
                           The Switchboard handles document processing and communication.
-                        
+
   --https-key-file <path>  Path to the SSL key file if using HTTPS for secure connections.
-                        
+
   --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
-                        
+
   --config-file <path>     Path to the powerhouse.config.js file. This allows you to
                           customize the behavior of the development environment.
-                        
+
   -w, --watch              Watch for local changes to document models and processors,
                           and automatically update the Switchboard accordingly.
 
@@ -333,7 +333,7 @@ Examples:
 
 ```
 Command Overview:
-  The generate command creates code from document models. It helps you build editors, 
+  The generate command creates code from document models. It helps you build editors,
   processors, and other components based on your document model files.
 
   This command:
@@ -350,37 +350,37 @@ Arguments:
 Options:
   -i, --interactive      Run the command in interactive mode, which will guide you
                         through the generation process with prompts and options.
-                        
+
   --editors <path>       Path to the directory where editors should be generated or found.
-                        
+
   -e, --editor <name>    Name of the editor to generate or use.
-                        
+
   --file <path>          Specific file path to the document model.
-                        
+
   --processors <path>    Path to the directory where processors should be generated or found.
-                        
+
   -p, --processor <name> Name of the processor to generate.
-                        
+
   --processor-type <type> Type of processor to generate.
-                        
+
   -s, --subgraph <name>  Name of the subgraph to use or create.
-                        
+
   --document-models <path> Path to the document models directory.
-                        
+
   --document-types <types> Document types supported by the editor, in the format
                         'namespace/type' (e.g., 'powerhouse/todo').
-                        
+
   -is, --import-script <name> Name of the import script to generate.
-                        
+
   -sf, --skip-format     Skip formatting the generated code.
-                        
+
   -w, --watch            Watch for changes in the document model and regenerate code
                         when changes are detected.
-                        
+
   -d, --drive-editor <name> Generate a drive editor with the specified name.
 
   --migration-file <path> Path to the migration file when running 'ph generate
-    
+
   --schema-file <path> Path to the output file. Defaults to 'schema.ts' at the same directory of the migration file.
 
 Examples:
@@ -453,12 +453,12 @@ Arguments:
 
 Options:
   -g, --global           Install the dependencies globally rather than in the current project.
-                        
+
   --debug                Show additional logs during the installation process for troubleshooting.
-                        
+
   -w, --workspace        Install the dependencies in the workspace (use this option for monorepos).
                         This ensures packages are installed with proper workspace configuration.
-                        
+
   --package-manager <pm> Force a specific package manager to use. Supported values are:
                         "npm", "yarn", "pnpm", "bun". If not specified, the command will
                         detect the appropriate package manager from lockfiles.
@@ -523,21 +523,21 @@ Command Overview:
 
 Options:
   --port <PORT>           Port to host the API. Default is 4001.
-                        
-  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+
+  --config-file <path>    Path to the powerhouse.config.js file. Default is
                         './powerhouse.config.json'. This configures the reactor behavior.
-                        
+
   --generate              Generate code automatically when document models are updated.
-                        
+
   --db-path <DB_PATH>     Path to the database for storing document data.
-                        
+
   --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
-                        
+
   --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
-                        
+
   -w, --watch             Watch for local changes to document models and processors,
                         and automatically update the reactor accordingly.
-                        
+
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
 
@@ -571,7 +571,7 @@ Arguments:
                         - list: List all managed services (default)
                         - startup: Configure services to start on system boot
                         - unstartup: Remove services from system startup
-                        
+
   [service]             Optional. The service to act upon. Available services:
                         - switchboard: The document processing engine
                         - connect: The Connect Studio interface
@@ -582,7 +582,7 @@ Examples:
   $ ph service start              # Start the services
   $ ph service stop                   # Stop the services
   $ ph service status                        # Check status of all services
-  
+
 
 Notes:
   - Services are managed using PM2, a process manager for Node.js applications
@@ -607,24 +607,24 @@ Command Overview:
 
 Options:
   --port <PORT>           Port to host the API. Default is 4001.
-                        
-  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+
+  --config-file <path>    Path to the powerhouse.config.js file. Default is
                         './powerhouse.config.json'. This configures the switchboard behavior.
-                        
+
   --dev                   Enable development mode to load local packages from the current directory.
                         This allows the switchboard to discover and load document models, processors,
                         and subgraphs from your local development environment.
-                        
+
   --db-path <DB_PATH>     Path to the database for storing document data.
-                        
+
   --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
-                        
+
   --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
-                        
+
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
-                        
-  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment 
+
+  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment
                         variable used by the server to prefix all routes.
 
 Examples:
@@ -656,14 +656,14 @@ Arguments:
 Options:
   -g, --global           Uninstall the dependencies from the global installation
                         rather than from the current project.
-                        
+
   --debug                Show additional logs during the uninstallation process
                         for troubleshooting and to trace the command execution.
-                        
+
   -w, --workspace        Uninstall the dependencies from the workspace (use this option
                         for monorepos). This ensures packages are removed while
                         respecting workspace configurations.
-                        
+
   --package-manager <pm> Force a specific package manager to use. Supported values are:
                         "npm", "yarn", "pnpm", "bun". If not specified, the command will
                         detect the appropriate package manager from lockfiles.
@@ -715,7 +715,7 @@ Notes:
 ```
 Command Overview:
   The vetra command sets up a Vetra development environment for working with Vetra projects.
-  It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+  It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration
   and real-time processing with a "Vetra" drive or connection to remote drives.
 
   This command:
@@ -727,29 +727,29 @@ Command Overview:
 Options:
   --logs                     Enable verbose logging for all services. This provides detailed
                             output from Switchboard and Connect during startup and operation.
-                        
+
   --switchboard-port <port>  Specify the port to use for the Vetra Switchboard service.
                             Default is 4001. The Switchboard handles document storage.
-                        
+
   --connect-port <port>      Specify the port to use for Connect Studio.
                             Default is 3000. Connect provides the user interface.
-                        
+
   --https-key-file <path>    Path to the SSL key file if using HTTPS for secure connections.
-                        
+
   --https-cert-file <path>   Path to the SSL certificate file if using HTTPS.
-                        
+
   --config-file <path>       Path to the powerhouse.config.js file. This allows you to
                             customize the behavior of the Vetra development environment.
-                        
+
   -w, --watch                Watch for local changes to document models and processors,
                             and automatically update the Switchboard accordingly.
-                        
+
   --remote-drive <url>       URL of remote drive to connect to. When specified, the switchboard
                             connects to this remote drive instead of creating a local Vetra drive.
-                        
+
   --disable-connect          Skip Connect initialization (only start switchboard and reactor).
                             Use this when you only need the backend services running.
-                        
+
   --interactive              Enable interactive mode for code generation. When enabled, the system
                             will prompt for user confirmation before generating code. This is useful
                             for development when you want control over when code regeneration happens.
@@ -768,4 +768,4 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*\n<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
+_This document was automatically generated from the help text in the codebase._\n<!-- AUTO-GENERATED-CLI-COMMANDS-END -->

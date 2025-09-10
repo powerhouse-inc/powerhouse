@@ -19,8 +19,7 @@
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/check-commit-nx.yml"],
     "default": ["sharedGlobals"]
   },
-  "targetDefaults": {
-  },
+  "targetDefaults": {},
   "release": {
     "projects": ["packages/*", "clis/*", "apps/*"],
     "projectsRelationship": "managed",

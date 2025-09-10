@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["ESNext", "dom", "dom.iterable"],
     "outDir": "./dist",
-    "types": ["@types/wicg-file-system-access", "vitest/globals"],
+    "types": ["@types/wicg-file-system-access", "vitest/globals"]
   },
   "include": ["**/*"],
   "references": [

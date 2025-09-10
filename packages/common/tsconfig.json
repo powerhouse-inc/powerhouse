@@ -1,13 +1,9 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "node",
-      "vitest/globals",
-      "@types/wicg-file-system-access",
-    ],
+    "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
     "outDir": "./dist",
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": ["**/*"],
   "exclude": ["dist", "node_modules", "storybook-static"],

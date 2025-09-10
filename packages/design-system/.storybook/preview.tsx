@@ -3,7 +3,6 @@ import type { Preview, ReactRenderer } from "@storybook/react";
 import "../dist/style.css";
 import "../style.css";
 
-
 const preview: Preview = {
   parameters: {
     controls: {

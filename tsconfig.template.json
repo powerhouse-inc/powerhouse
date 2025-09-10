@@ -1,4 +1,4 @@
-{ 
+{
   // extend our monorepo's base tsconfig
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
@@ -6,9 +6,7 @@
     "outDir": "./dist"
   },
   // include all files in this package's root
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   // add monorepo package paths here
   // whenever you add "workspace:*" to this package's package.json, also add the path here
   "references": []

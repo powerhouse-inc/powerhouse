@@ -12,6 +12,7 @@ Both processors convert operations into structured analytics data stored as time
 ## Purpose
 
 This processor enables developers to:
+
 - Monitor document drive activity and usage patterns
 - Track operational metrics across different drives, branches, and scopes
 - Analyze user behavior and system performance
@@ -40,16 +41,19 @@ The processor implements the `IProcessor` interface and processes `InternalTrans
 Each analytics data point includes the following dimensions:
 
 ### 1. Drive Dimension
+
 - **Path Format**: `ph/drive/{driveId}/{branch}/{scope}/{revision}`
 - **Purpose**: Identifies the specific drive, branch, scope, and revision
 - **Example**: `ph/drive/abc123/main/global/42`
 
 ### 2. Operation Dimension
+
 - **Path Format**: `ph/drive/operation/{operationType}/{operationIndex}`
 - **Purpose**: Identifies the specific operation type and its sequence number
 - **Example**: `ph/drive/operation/ADD_FILE/5`
 
 ### 3. Target Dimension
+
 - **Path Format**: `ph/drive/target/{targetType}/{targetId}`
 - **Purpose**: Identifies what was targeted by the operation
 - **Target Types**:
@@ -58,6 +62,7 @@ Each analytics data point includes the following dimensions:
 - **Example**: `ph/drive/target/NODE/file123`
 
 ### 4. Action Type Dimension
+
 - **Path Format**: `ph/drive/actionType/{actionType}/{targetId}`
 - **Purpose**: Categorizes the type of action performed
 - **Action Types**:
@@ -73,18 +78,22 @@ Each analytics data point includes the following dimensions:
 The processor handles the following operation types:
 
 ### Creation Operations
+
 - `ADD_FILE`: Creates a new file
 - `ADD_FOLDER`: Creates a new folder
 
 ### Modification Operations
+
 - `UPDATE_FILE`: Updates file content
 - `UPDATE_NODE`: Updates node metadata
 
 ### Organization Operations
+
 - `MOVE_NODE`: Moves nodes between locations
 - `COPY_NODE`: Duplicates existing nodes
 
 ### Deletion Operations
+
 - `DELETE_NODE`: Removes nodes from the drive
 
 ## Data Source Structure
@@ -107,7 +116,7 @@ ph/drive/{documentId}/{branch}/{scope}
 // Get all operations for a specific drive
 const driveOperations = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/drive/abc123/main/global"),
-  metric: "DriveOperations"
+  metric: "DriveOperations",
 });
 
 // Get operations by action type
@@ -115,8 +124,8 @@ const createdNodes = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/drive/abc123/main/global"),
   metric: "DriveOperations",
   dimensions: {
-    actionType: AnalyticsPath.fromString("ph/drive/actionType/CREATED")
-  }
+    actionType: AnalyticsPath.fromString("ph/drive/actionType/CREATED"),
+  },
 });
 ```
 
@@ -128,8 +137,8 @@ const fileAdditions = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/drive/abc123/main/global"),
   metric: "DriveOperations",
   dimensions: {
-    operation: AnalyticsPath.fromString("ph/drive/operation/ADD_FILE")
-  }
+    operation: AnalyticsPath.fromString("ph/drive/operation/ADD_FILE"),
+  },
 });
 ```
 
@@ -142,8 +151,8 @@ const recentOperations = await analyticsStore.getSeriesValues({
   metric: "DriveOperations",
   timeRange: {
     start: DateTime.now().minus({ hours: 24 }),
-    end: DateTime.now()
-  }
+    end: DateTime.now(),
+  },
 });
 ```
 
@@ -165,6 +174,7 @@ const recentOperations = await analyticsStore.getSeriesValues({
 ### Logging
 
 The processor uses structured logging with the following context:
+
 - **Logger Path**: `["processor", "drive-analytics"]`
 - **Error Logging**: Failed source clearing operations
 
@@ -178,6 +188,7 @@ import {
   type IAnalyticsStore,
 } from "@powerhousedao/reactor-browser/analytics";
 ```
+
 ---
 
 # Document Analytics Processor
@@ -189,6 +200,7 @@ The `DocumentAnalyticsProcessor` is a complementary processor that focuses speci
 ## Purpose
 
 The DocumentAnalyticsProcessor enables developers to:
+
 - Monitor individual document activity and modification patterns
 - Track document-specific operations across different drives and branches
 - Analyze document lifecycle and usage patterns
@@ -208,16 +220,19 @@ The DocumentAnalyticsProcessor enables developers to:
 Each analytics data point includes the following dimensions:
 
 ### 1. Drive Dimension
+
 - **Path Format**: `ph/doc/drive/{driveId}/{branch}/{scope}/{revision}`
 - **Purpose**: Identifies the drive context where the document operation occurred
 - **Example**: `ph/doc/drive/abc123/main/global/42`
 
 ### 2. Operation Dimension
+
 - **Path Format**: `ph/doc/operation/{operationType}/{operationIndex}`
 - **Purpose**: Identifies the specific operation type and its sequence number
 - **Example**: `ph/doc/operation/SET_STATE/15`
 
 ### 3. Target Dimension
+
 - **Path Format**: `ph/doc/target/{driveId}/{targetType}/{documentId}`
 - **Purpose**: Identifies the document target and its relationship to the drive
 - **Target Types**:
@@ -257,7 +272,7 @@ const target = driveId === documentId ? "DRIVE" : "NODE";
 // Get all operations for a specific document
 const documentOperations = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/doc/abc123/doc456/main/global"),
-  metric: "DocumentOperations"
+  metric: "DocumentOperations",
 });
 
 // Get operations by target type
@@ -265,8 +280,8 @@ const driveDocumentOps = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/doc/abc123/abc123/main/global"),
   metric: "DocumentOperations",
   dimensions: {
-    target: AnalyticsPath.fromString("ph/doc/target/abc123/DRIVE")
-  }
+    target: AnalyticsPath.fromString("ph/doc/target/abc123/DRIVE"),
+  },
 });
 ```
 
@@ -278,8 +293,8 @@ const stateChanges = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/doc/abc123/*/main/global"),
   metric: "DocumentOperations",
   dimensions: {
-    operation: AnalyticsPath.fromString("ph/doc/operation/SET_STATE")
-  }
+    operation: AnalyticsPath.fromString("ph/doc/operation/SET_STATE"),
+  },
 });
 ```
 
@@ -315,6 +330,7 @@ await processorManager.register(documentProcessor);
 ### Logging
 
 The processor uses structured logging with the following context:
+
 - **Logger Path**: `["processor", "document-analytics"]`
 - **Error Logging**: Failed source clearing operations
 
@@ -326,12 +342,12 @@ When querying analytics data, you can distinguish between the two processors:
 // Drive-level analytics (from DriveAnalyticsProcessor)
 const driveData = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/drive/*"),
-  metric: "DriveOperations"
+  metric: "DriveOperations",
 });
 
 // Document-level analytics (from DocumentAnalyticsProcessor)
 const documentData = await analyticsStore.getSeriesValues({
   source: AnalyticsPath.fromString("ph/doc/*"),
-  metric: "DocumentOperations"
+  metric: "DocumentOperations",
 });
 ```

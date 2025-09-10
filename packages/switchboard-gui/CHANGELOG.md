@@ -1726,7 +1726,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
 - **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - ryanwolhuter @ryanwolhuter
 
@@ -1743,7 +1743,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
 - **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan
@@ -1755,7 +1755,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 
 - **switchboard-gui:** updated gitignore ([1fd60a3b](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3b))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 
@@ -1776,7 +1776,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **ph-cli:** Support for dev and generate command ([#406](https://github.com/powerhouse-inc/powerhouse/pull/406))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente Sandoval @gpuente

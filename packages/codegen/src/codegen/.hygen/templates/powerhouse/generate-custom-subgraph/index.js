@@ -1,8 +1,6 @@
 // @ts-check
 const generateCustomSubgraph = {
-  params: ({
-    args,
-  }) => {
+  params: ({ args }) => {
     return {
       rootDir: args.rootDir,
       subgraph: args.subgraph,

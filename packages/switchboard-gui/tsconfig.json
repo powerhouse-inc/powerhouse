@@ -9,5 +9,5 @@
     "jsxImportSource": "preact",
     "jsx": "preserve"
   },
-  "include": ["**/*"],
+  "include": ["**/*"]
 }

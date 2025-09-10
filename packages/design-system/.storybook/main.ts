@@ -37,7 +37,6 @@ const config: StorybookConfig = {
           external: ["node:crypto"],
         },
       },
-      
     });
   },
 };

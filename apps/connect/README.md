@@ -17,7 +17,6 @@ You can follow these instructions to setup a dev environment:
 - Clone this repository
 - Run `npm install` to install dependencies
 
-
 **Starting Connect**
 
 ```bash
@@ -46,21 +45,22 @@ pnpm run docker:build # Build the Docker image, only needs to run once
 ```
 
 Build the Monorepo packages before starting a container
+
 ```bash
 pnpm build:all # Build the packages, needs to run before running the Docker container
 ```
 
 Run the Docker container from `apps/connect/`:
+
 ```bash
 pnpm docker:run # Run the Docker container
 ```
 
 Connect will be available at: `http://localhost:4000/develop/powerhouse/connect`
 
-
 ## Troubleshooting
 
-- For a complete list of *Electron Forge* options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage).
+- For a complete list of _Electron Forge_ options and requirements, visit the [official docs](https://github.com/electron-userland/electron-forge#usage).
 
 - If you're experiencing troubles with node-gyp on Windows 11, follow [this guide](https://devkimchi.com/2021/11/26/troubleshooting-node-gyp-package-on-windows11/).
 
@@ -69,4 +69,3 @@ Connect will be available at: `http://localhost:4000/develop/powerhouse/connect`
 - To use yarn via Windows PowerShell, check [this guide](https://bobbyhadz.com/blog/yarn-cannot-be-loaded-running-scripts-disabled)
 
 - For any other issues, reach out to our discord server [`#ask-powerhouse-team`](https://discord.com/channels/815917281728659516/883285185595047937) channel for help.
-

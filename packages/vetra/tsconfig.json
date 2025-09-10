@@ -3,12 +3,9 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "outDir": "./dist",
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
-  ],
+  "include": ["**/*", "./powerhouse.manifest.json"],
   "references": [
     {
       "path": "../document-model"

@@ -2,25 +2,25 @@
 
 ---
 
-# Powerhouse Monorepo 
+# Powerhouse Monorepo
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
 
 ## Table of Contents
 
--   [How to Run this Repo](#clone-repo)
--   [Linking Dependencies Between Projects and Packages](#linking-deps)
--   [Adding a New Package or App](#add-new-package)
--   [Using Docker](#using-docker)
--   [How to contribute to this project](#how-to-contribute)
+- [How to Run this Repo](#clone-repo)
+- [Linking Dependencies Between Projects and Packages](#linking-deps)
+- [Adding a New Package or App](#add-new-package)
+- [Using Docker](#using-docker)
+- [How to contribute to this project](#how-to-contribute)
 
 ## How to Run this Repo <a id="clone-repo"></a>
 
 1. Clone the repo
-    ```bash
-    git clone <repo-url>
-    cd <repo-directory>
-    ```
+   ```bash
+   git clone <repo-url>
+   cd <repo-directory>
+   ```
 2. Install the dependencies: `pnpm install`
 3. Build with: `pnpm build`
 4. Run a project or app: `npx nx <run_command_for_the_package_or_app> <package_or_app_name>`;
@@ -66,64 +66,64 @@ To link a dependency into a project, add it to your package.json and point the d
 5. If pushing a new package to be deployed to npm, build the package first: `npx nx <build_command> <your_new_package_name>`
 6. Perform an initial test release in your local environment: `npx nx release --first-release --projects=<your_new_package_name> --dry-run`
 7. Perform the initial release in your local environment: (This step is required, otherwise releases from CI are not going to work): `npx nx release --first-release --projects=<your_new_package_name>`
-    - This process will create a new tag and release in GitHub, and push the new tag to GitHub.
-    - You'll be prompted if you want to create the release manually in your browser (this is going to prefill all the info for the release for you). Answer "yes" and verify in your browser that the release information is correct. Publish the release in github.
-    - Finally you'll be prompted if you want to publish the release to npm: answer "yes" if this is required for your package.
+   - This process will create a new tag and release in GitHub, and push the new tag to GitHub.
+   - You'll be prompted if you want to create the release manually in your browser (this is going to prefill all the info for the release for you). Answer "yes" and verify in your browser that the release information is correct. Publish the release in github.
+   - Finally you'll be prompted if you want to publish the release to npm: answer "yes" if this is required for your package.
 8. Add your package/app to the release GitHub Action workflow: If adding a new package to be released to npm, update the `.github/worflows/release-package.yml`:
 
-    ```yml
-    ---
-    name: Release Package
+   ```yml
+   ---
+   name: Release Package
 
-    on:
-    workflow_dispatch:
-        inputs:
-        package:
-            description: 'Choose a package'
-            required: true
-            default: 'packages/*'
-            type: choice
-            options:
-                - '@pgph/pkg-a'
-                - '@pgph/pkg-b'
-                - '@pgph/pkg-c'
-                - <add_your_new_package_name_here>
-                - 'packages/*'
-    ```
+   on:
+   workflow_dispatch:
+     inputs:
+     package:
+       description: "Choose a package"
+       required: true
+       default: "packages/*"
+       type: choice
+       options:
+         - "@pgph/pkg-a"
+         - "@pgph/pkg-b"
+         - "@pgph/pkg-c"
+         - <add_your_new_package_name_here>
+         - "packages/*"
+   ```
 
-    If adding a new app or a package requiring a special workflow, set up a new release configuration:
+   If adding a new app or a package requiring a special workflow, set up a new release configuration:
 
-    ```yml
+   ```yml
 
-    name: Your Custom Release
+   name: Your Custom Release
 
-    on:
-    workflow_dispatch:
+   on:
+   workflow_dispatch:
 
 
-    jobs:
-    build:
-        name: ...
-        runs-on: ...
-        permissions:
-        contents: write
-        id-token: write
-        steps:
-        ...
-        - name: git config
-            shell: bash
-            run: |
-            git config user.name "Github Actions Bot"
-            git config user.email "-"
+   jobs:
+   build:
+       name: ...
+       runs-on: ...
+       permissions:
+       contents: write
+       id-token: write
+       steps:
+       ...
+       - name: git config
+           shell: bash
+           run: |
+           git config user.name "Github Actions Bot"
+           git config user.email "-"
 
-        - name: Update pkg version
-            run: npx nx release --projects=<your_new_package/app_name> --skip-publish
-            shell: bash
-            env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        ...
+       - name: Update pkg version
+           run: npx nx release --projects=<your_new_package/app_name> --skip-publish
+           shell: bash
+           env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+       ...
 
-    ```
+   ```
 
 9. Trigger future releases directly from GitHub Actions.
 
@@ -139,29 +139,33 @@ This project can be run using Docker and Docker Compose. The `docker-compose.yml
 ### Basic Usage
 
 1. Build and start all services:
-    ```bash
-    docker compose up
-    ```
+
+   ```bash
+   docker compose up
+   ```
 
 2. Run in detached mode (background):
-    ```bash
-    docker compose up -d
-    ```
+
+   ```bash
+   docker compose up -d
+   ```
 
 3. View running containers:
-    ```bash
-    docker compose ps
-    ```
+
+   ```bash
+   docker compose ps
+   ```
 
 4. View logs:
-    ```bash
-    docker compose logs -f
-    ```
+
+   ```bash
+   docker compose logs -f
+   ```
 
 5. Stop all services:
-    ```bash
-    docker compose down
-    ```
+   ```bash
+   docker compose down
+   ```
 
 ### Working with Individual Services
 
@@ -196,20 +200,19 @@ Currently, only the `main` branch is enabled in this project, which means all pa
 
 1. Create a feature branch from the `main` branch:
 
-    ```bash
-    git pull origin main
-    git checkout main
-    git checkout -b feature/my-branch
-    ```
+   ```bash
+   git pull origin main
+   git checkout main
+   git checkout -b feature/my-branch
+   ```
 
 2. Make your changes in the feature branch.
 3. Once your changes are ready, commit them following the [conventional commits standard](https://www.conventionalcommits.org/en/v1.0.0/):
-    - Try to keep your commits scoped (do not include files from multiple packages in a single commit).
-    - Include the package scope affected by your changes in the commit message, for example:
-        ```bash
-        git commit -m "feat(document-model): my commit message"
-        ```
+   - Try to keep your commits scoped (do not include files from multiple packages in a single commit).
+   - Include the package scope affected by your changes in the commit message, for example:
+     ```bash
+     git commit -m "feat(document-model): my commit message"
+     ```
 4. Push your branch to GitHub and open a pull request (PR) against the `main` branch.
 5. Once your PR is approved, merge it.
 6. A GitHub Action will be triggered automatically after you merge your PR. This action will handle versioning and release the new version of the affected packages to NPM. Optionally, you can trigger the deployment of your package [manually](https://github.com/powerhouse-inc/powerhouse/actions/workflows/release-package-manual.yml)
-   

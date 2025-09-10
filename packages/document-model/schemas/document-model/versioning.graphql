@@ -1,18 +1,18 @@
 type AddChangeLogItemInput {
-    id: ID!
-    insertBefore: ID
-    content: String!
+  id: ID!
+  insertBefore: ID
+  content: String!
 }
 
 type UpdateChangeLogItemInput {
-    id: ID!
-    newContent: String!
+  id: ID!
+  newContent: String!
 }
 
 type DeleteChangeLogItemInput {
-    id: ID!
+  id: ID!
 }
 
 type ReorderChangeLogItemsInput {
-    order: [ID!]!
+  order: [ID!]!
 }

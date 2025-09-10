@@ -4,8 +4,8 @@
 
 Install the library:
 
--   NPM: `npm install @acaldas/document-model-libs`
--   Yarn: `yarn add @acaldas/document-model-libs`
+- NPM: `npm install @acaldas/document-model-libs`
+- Yarn: `yarn add @acaldas/document-model-libs`
 
 ## Documentation
 
@@ -17,32 +17,32 @@ There are two ways to interact with a document:
 
 ```javascript
 import {
-    actions,
-    reducer,
-    utils,
-} from '@acaldas/document-model-libs/budget-statement';
+  actions,
+  reducer,
+  utils,
+} from "@acaldas/document-model-libs/budget-statement";
 
 let budgetStatement = utils.createDocument({
-    name: 'March report',
-    data: { month: '2023/01' },
+  name: "March report",
+  data: { month: "2023/01" },
 });
 
 budgetStatement = reducer(
-    budgetStatement,
-    actions.addAccount([{ address: 'eth:0x00' }])
+  budgetStatement,
+  actions.addAccount([{ address: "eth:0x00" }]),
 );
 ```
 
 ### Object oriented:
 
 ```javascript
-import { BudgetStatement } from '@acaldas/document-model-libs/budget-statement';
+import { BudgetStatement } from "@acaldas/document-model-libs/budget-statement";
 
 const budgetStatement = new BudgetStatement({
-    name: 'march',
-    data: { month: '2023/01' },
+  name: "march",
+  data: { month: "2023/01" },
 });
-budgetStatement.addAccount([{ address: 'eth:0x00' }]);
+budgetStatement.addAccount([{ address: "eth:0x00" }]);
 ```
 
 ## Architecture
@@ -59,24 +59,24 @@ An action is a JSON object with the action name and payload:
 
 ```javascript
 {
-    type: 'SET_NAME';
-    input: {
-        name: 'March report';
-    }
+  type: "SET_NAME";
+  input: {
+    name: "March report";
+  }
 }
 ```
 
 To make it easier to create actions and avoid bugs, an action creator is provided for each action. This is a function that accepts the action input and returns the JSON structure. For the case above the action creator would be:
 
 ```javascript
-state = reducer(state, setName('March report'));
+state = reducer(state, setName("March report"));
 ```
 
 An Object-oriented version is also provided. A document can be instantiated and interacted in an imperative way:
 
 ```javascript
 const document = new Document();
-document.setName('March report');
+document.setName("March report");
 ```
 
 ## Base Document Model
@@ -100,25 +100,25 @@ Document reducers are wrapped by the Base Document reducer, which is responsible
 
 ▸ For more information on Document actions, please refer to the [complete documentation](markdown/modules/Document.actions.md).
 
--   `SET_NAME`: Changes the name of the document
+- `SET_NAME`: Changes the name of the document
 
 ```javascript
 setName(name: string);
 ```
 
--   `UNDO`: Cancels the last X operations. Defaults to 1.
+- `UNDO`: Cancels the last X operations. Defaults to 1.
 
 ```javascript
 undo(count: number);
 ```
 
--   `REDO`: Cancels the last X UNDO operations. Defaults to 1.
+- `REDO`: Cancels the last X UNDO operations. Defaults to 1.
 
 ```javascript
 redo(count: number);
 ```
 
--   `PRUNE`: Joins multiple operations into a single `LOAD_STATE` operation. Useful to keep operations history smaller. Operations to prune are selected by index, similar to the [slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) method in Arrays.
+- `PRUNE`: Joins multiple operations into a single `LOAD_STATE` operation. Useful to keep operations history smaller. Operations to prune are selected by index, similar to the [slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) method in Arrays.
 
 ```javascript
 prune(start?: number, end?: number);
