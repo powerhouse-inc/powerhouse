@@ -2,6 +2,10 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
   schema: "./src/graphql/reactor/schema.graphql",
+  documents: [
+    "./src/graphql/reactor/**/*.ts",
+    "!./src/graphql/reactor/generated/**/*",
+  ],
   generates: {
     "./src/graphql/reactor/generated/graphql.ts": {
       plugins: ["typescript", "typescript-operations", "typescript-resolvers"],
@@ -18,6 +22,12 @@ const config: CodegenConfig = {
         constEnums: false,
         immutableTypes: true,
         maybeValue: "T | null | undefined",
+      },
+    },
+    "./src/graphql/reactor/generated/sdk.ts": {
+      plugins: ["typescript-generic-sdk"],
+      config: {
+        documentMode: "documentNode",
       },
     },
     "./src/graphql/reactor/generated/zod-schemas.ts": {
