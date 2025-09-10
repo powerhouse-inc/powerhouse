@@ -10,7 +10,6 @@ import { fileURLToPath } from "url";
 import { type Resolvers } from "./generated/graphql.js";
 // TODO: Import IReactorClient when available
 // import { type IReactorClient } from "@powerhousedao/reactor-mcp";
-type IReactorClient = any;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +26,7 @@ const DateTimeScalar = new GraphQLScalarType({
       return new Date(value).toISOString();
     }
     throw new GraphQLError(
-      `DateTime cannot represent non-date value: ${value}`,
+      `DateTime cannot represent non-date value: ${String(value)}`,
     );
   },
   parseValue(value: unknown) {
@@ -35,7 +34,7 @@ const DateTimeScalar = new GraphQLScalarType({
       return new Date(value);
     }
     throw new GraphQLError(
-      `DateTime cannot represent non-date value: ${value}`,
+      `DateTime cannot represent non-date value: ${String(value)}`,
     );
   },
   parseLiteral(ast) {
@@ -57,8 +56,6 @@ export class ReactorSubgraph extends Subgraph {
     Math.floor(Math.random() * 999).toString(),
   ]);
 
-  private reactorClient: IReactorClient | null = null;
-
   constructor(args: SubgraphArgs) {
     super(args);
     this.logger.verbose(`constructor()`);
@@ -73,37 +70,37 @@ export class ReactorSubgraph extends Subgraph {
 
   resolvers: Resolvers = {
     Query: {
-      documentModels: async (_parent, args, context) => {
+      documentModels: (_parent, args) => {
         this.logger.debug("documentModels", args);
         // TODO: Implement using IReactorClient.getDocumentModels
         throw new GraphQLError("Not implemented yet");
       },
 
-      document: async (_parent, args, context) => {
+      document: (_parent, args) => {
         this.logger.debug("document", args);
         // TODO: Implement using IReactorClient.get
         throw new GraphQLError("Not implemented yet");
       },
 
-      documentChildren: async (_parent, args, context) => {
+      documentChildren: (_parent, args) => {
         this.logger.debug("documentChildren", args);
         // TODO: Implement using IReactorClient.getChildren
         throw new GraphQLError("Not implemented yet");
       },
 
-      documentParents: async (_parent, args, context) => {
+      documentParents: (_parent, args) => {
         this.logger.debug("documentParents", args);
         // TODO: Implement using IReactorClient.getParents
         throw new GraphQLError("Not implemented yet");
       },
 
-      findDocuments: async (_parent, args, context) => {
+      findDocuments: (_parent, args) => {
         this.logger.debug("findDocuments", args);
         // TODO: Implement using IReactorClient.find
         throw new GraphQLError("Not implemented yet");
       },
 
-      jobStatus: async (_parent, args, context) => {
+      jobStatus: (_parent, args) => {
         this.logger.debug("jobStatus", args);
         // TODO: Implement using IReactorClient.getJobStatus
         throw new GraphQLError("Not implemented yet");
@@ -111,61 +108,61 @@ export class ReactorSubgraph extends Subgraph {
     },
 
     Mutation: {
-      createDocument: async (_parent, args, context) => {
+      createDocument: (_parent, args) => {
         this.logger.debug("createDocument", args);
         // TODO: Implement using IReactorClient.create
         throw new GraphQLError("Not implemented yet");
       },
 
-      createEmptyDocument: async (_parent, args, context) => {
+      createEmptyDocument: (_parent, args) => {
         this.logger.debug("createEmptyDocument", args);
         // TODO: Implement using IReactorClient.createEmpty
         throw new GraphQLError("Not implemented yet");
       },
 
-      mutateDocument: async (_parent, args, context) => {
+      mutateDocument: (_parent, args) => {
         this.logger.debug("mutateDocument", args);
         // TODO: Implement using IReactorClient.mutate
         throw new GraphQLError("Not implemented yet");
       },
 
-      mutateDocumentAsync: async (_parent, args, context) => {
+      mutateDocumentAsync: (_parent, args) => {
         this.logger.debug("mutateDocumentAsync", args);
         // TODO: Implement using IReactorClient.mutateAsync
         throw new GraphQLError("Not implemented yet");
       },
 
-      renameDocument: async (_parent, args, context) => {
+      renameDocument: (_parent, args) => {
         this.logger.debug("renameDocument", args);
         // TODO: Implement using IReactorClient.rename
         throw new GraphQLError("Not implemented yet");
       },
 
-      addChildren: async (_parent, args, context) => {
+      addChildren: (_parent, args) => {
         this.logger.debug("addChildren", args);
         // TODO: Implement using IReactorClient.addChildren
         throw new GraphQLError("Not implemented yet");
       },
 
-      removeChildren: async (_parent, args, context) => {
+      removeChildren: (_parent, args) => {
         this.logger.debug("removeChildren", args);
         // TODO: Implement using IReactorClient.removeChildren
         throw new GraphQLError("Not implemented yet");
       },
 
-      moveChildren: async (_parent, args, context) => {
+      moveChildren: (_parent, args) => {
         this.logger.debug("moveChildren", args);
         // TODO: Implement using IReactorClient.moveChildren
         throw new GraphQLError("Not implemented yet");
       },
 
-      deleteDocument: async (_parent, args, context) => {
+      deleteDocument: (_parent, args) => {
         this.logger.debug("deleteDocument", args);
         // TODO: Implement using IReactorClient.deleteDocument
         throw new GraphQLError("Not implemented yet");
       },
 
-      deleteDocuments: async (_parent, args, context) => {
+      deleteDocuments: (_parent, args) => {
         this.logger.debug("deleteDocuments", args);
         // TODO: Implement using IReactorClient.deleteDocuments
         throw new GraphQLError("Not implemented yet");
@@ -174,27 +171,32 @@ export class ReactorSubgraph extends Subgraph {
 
     Subscription: {
       documentChanges: {
-        subscribe: async function* (_parent, args, context) {
+        subscribe: () => {
           // TODO: Implement using IReactorClient.subscribe
           throw new GraphQLError("Not implemented yet");
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        resolve: (payload: any) => payload as any,
       },
 
       jobChanges: {
-        subscribe: async function* (_parent, args, context) {
+        subscribe: () => {
           // TODO: Implement job subscription
           throw new GraphQLError("Not implemented yet");
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        resolve: (payload: any) => payload as any,
       },
     },
 
     // Scalar resolvers
-    JSONObject: GraphQLJSON.GraphQLJSONObject || GraphQLJSON,
+    JSONObject: GraphQLJSON.GraphQLJSONObject,
     DateTime: DateTimeScalar,
   };
 
-  async onSetup() {
+  onSetup(): Promise<void> {
     this.logger.info("Setting up ReactorSubgraph");
     // TODO: Initialize IReactorClient when available
+    return Promise.resolve();
   }
 }
