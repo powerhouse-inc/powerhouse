@@ -19,7 +19,7 @@ const config: CodegenConfig = {
         "typescript-resolvers",
       ],
       config: {
-        contextType: "../context.js#Context",
+        contextType: "../../types.js#Context",
         scalars: {
           JSONObject: "any",
           DateTime: "string | Date",
