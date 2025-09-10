@@ -1,7 +1,7 @@
-import { type BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import {
-  type AnalyticsQueryEngine,
-  type IAnalyticsStore,
+import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import type {
+  AnalyticsQueryEngine,
+  IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
 
 export type * from "@powerhousedao/analytics-engine-core";

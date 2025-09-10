@@ -5,7 +5,7 @@ import { cn } from "../../lib/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Button } from "../button/button.js";
 import { Command } from "../command/command.js";
-import { type SelectOption, type SelectProps } from "../enum-field/types.js";
+import type { SelectOption, SelectProps } from "../enum-field/types.js";
 import { FormDescription } from "../form-description/index.js";
 import { FormGroup } from "../form-group/index.js";
 import { FormLabel } from "../form-label/index.js";

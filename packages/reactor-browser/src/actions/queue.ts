@@ -1,9 +1,9 @@
 import { logger } from "document-drive";
-import {
-  type Action,
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
+import type {
+  Action,
+  DocumentOperations,
+  Operation,
+  PHDocument,
 } from "document-model";
 
 export async function queueActions(

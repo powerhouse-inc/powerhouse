@@ -31,8 +31,6 @@ enum StatusType {
   CONFIRMED
 }
 
-
-
 # base_operations
 
 input SetEditorNameInput {

@@ -1,4 +1,4 @@
-import { type PowerhousePackage } from "./powerhouse.js";
+import type { PowerhousePackage } from "./powerhouse.js";
 
 export const PH_PACKAGES: PowerhousePackage[] = [
   {

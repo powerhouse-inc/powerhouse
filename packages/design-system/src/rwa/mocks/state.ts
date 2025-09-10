@@ -1,4 +1,4 @@
-import { type RealWorldAssetsState } from "../types/index.js";
+import type { RealWorldAssetsState } from "../types/index.js";
 import {
   mockAccounts,
   mockCashAsset,

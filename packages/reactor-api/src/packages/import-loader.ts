@@ -1,11 +1,11 @@
-import { type SubgraphClass } from "#graphql/index.js";
-import { type IPackageLoader } from "#types.js";
+import type { SubgraphClass } from "#graphql/index.js";
+import type { IPackageLoader } from "#types.js";
 import { childLogger } from "document-drive";
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
 } from "document-drive/processors/types";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import {
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,

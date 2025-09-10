@@ -15,8 +15,8 @@ import {
   hash as hashNode,
 } from "../../src/document/utils/node.js";
 import { validateOperations } from "../../src/document/utils/validation.js";
+import type { CountPHState } from "../helpers.js";
 import {
-  type CountPHState,
   countReducer,
   createTestState,
   createCountDocumentState,

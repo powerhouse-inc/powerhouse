@@ -1,12 +1,13 @@
 ## Context / Background
 
-> Describe the context and motivation for this issue.   
-Why is it being created?    
-Link to any related discussions, documents, Slack threads, or demo scenarios.
+> Describe the context and motivation for this issue.  
+> Why is it being created?  
+> Link to any related discussions, documents, Slack threads, or demo scenarios.
 
 ## Goals / What We Want to Achieve
 
 > A clear list of what this issue aims to accomplish.
+
 - [ ] Goal 1: What success looks like
 - [ ] Goal 2: Secondary objectives, if any
 
@@ -20,6 +21,7 @@ Link to any related discussions, documents, Slack threads, or demo scenarios.
 ## Proposed Solution / Implementation Plan
 
 > How do we think this will be implemented?
+
 - [ ] Step-by-step breakdown of work
 - [ ] Any suggested libraries, APIs, patterns, or prior art
 - [ ] Known trade-offs or alternatives considered
@@ -27,18 +29,21 @@ Link to any related discussions, documents, Slack threads, or demo scenarios.
 ## Open Questions
 
 > Anything we need to clarify before implementation can start?
+
 - [ ] Question 1
 - [ ] Question 2
 
 ## Design Notes (if applicable)
 
 > Include links to design specs, Figma files, diagrams, or UX rationale.
+
 - Link to design files
 - Notes from design discussions
 
 ## Dependencies
 
 > Are there other tickets or systems this is blocked by or related to?
+
 - [ ] Depends on: `#123`, `#456`
 - [ ] Blocks: `#789`
 - [ ] Requires collaboration from: `Team X`, `Person Y`

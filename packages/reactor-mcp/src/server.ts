@@ -1,6 +1,6 @@
 import { createReactorMcpProvider } from "#tools/reactor.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { type IDocumentDriveServer } from "document-drive";
+import type { IDocumentDriveServer } from "document-drive";
 
 export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
 There are 5 main concepts to know of: 

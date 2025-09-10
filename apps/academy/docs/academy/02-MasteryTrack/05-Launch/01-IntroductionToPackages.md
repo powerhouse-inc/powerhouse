@@ -18,10 +18,9 @@ By packaging document models together, developers can create well-organized, int
 - **Contributor Billing Package** – Defines document models for tracking work, invoicing, and facilitating payments (in both fiat and crypto) for contributors in decentralized organizations. link
 - **Governance Package** – Models for proposals, voting, contributor agreements, and decision-making processes. link
 - **People Ops Package** – Documents managing contributor profiles, roles, task assignments, and reputation tracking. link
-- **Project Management Package** – Models for task tracking, milestones, resource allocation, and deliverables. link  
+- **Project Management Package** – Models for task tracking, milestones, resource allocation, and deliverables. link
 
-
-    A **Powerhouse Package** is a **modular unit** that defines and automates **data structures and workflows** within the Powerhouse ecosystem. Each package includes several components that work together to ensure **seamless interaction, data processing, and automation** for different areas of decentralized operations.
+  A **Powerhouse Package** is a **modular unit** that defines and automates **data structures and workflows** within the Powerhouse ecosystem. Each package includes several components that work together to ensure **seamless interaction, data processing, and automation** for different areas of decentralized operations.
 
 Packages follow a **scoped naming convention** based on the organization that owns them or created the package:
 

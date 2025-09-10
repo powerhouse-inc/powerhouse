@@ -22,5 +22,5 @@ Instead, the `IReactorClient` will sign `Action` objects before submitting them 
 
 ### Links
 
-* [Interface](interface.md)
-* [Usage](usage.md)
+- [Interface](interface.md)
+- [Usage](usage.md)

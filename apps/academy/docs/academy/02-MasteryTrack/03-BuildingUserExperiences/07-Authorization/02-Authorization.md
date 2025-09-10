@@ -86,7 +86,6 @@ docker run -e AUTH_ENABLED=true \
 3. Review and update role assignments regularly
 4. Consider using AUTH_ENABLED=false only in development
 
-
 ## Troubleshooting
 
 If you encounter authorization issues:

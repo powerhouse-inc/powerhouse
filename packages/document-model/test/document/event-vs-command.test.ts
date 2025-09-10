@@ -2,8 +2,8 @@
 // Event = operation => should keep the same operation information but execute the action input against the document
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
+import type { TestPHState } from "../helpers.js";
 import {
-  type TestPHState,
   defaultPHDocumentCreateState,
   fakeAction,
   wrappedEmptyReducer,

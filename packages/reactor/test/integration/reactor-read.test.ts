@@ -1,14 +1,14 @@
-import { EventBus } from "../../src/events/event-bus.js";
-import type { IEventBus } from "../../src/events/interfaces.js";
+import type { BaseDocumentDriveServer } from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
-  type BaseDocumentDriveServer,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { Reactor } from "../../src/reactor.js";

@@ -1,9 +1,9 @@
 import {
-    AddChangeLogItemAction,
-    UpdateChangeLogItemAction,
-    DeleteChangeLogItemAction,
-    ReorderChangeLogItemsAction,
-    ReleaseNewVersionAction,
+  AddChangeLogItemAction,
+  UpdateChangeLogItemAction,
+  DeleteChangeLogItemAction,
+  ReorderChangeLogItemsAction,
+  ReleaseNewVersionAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";
 

@@ -1,5 +1,5 @@
-import { type ProcessorManager } from "document-drive";
-import { type SetProcessorManagerEvent } from "./types.js";
+import type { ProcessorManager } from "document-drive";
+import type { SetProcessorManagerEvent } from "./types.js";
 
 export function dispatchSetProcessorManagerEvent(
   processorManager: ProcessorManager | undefined,

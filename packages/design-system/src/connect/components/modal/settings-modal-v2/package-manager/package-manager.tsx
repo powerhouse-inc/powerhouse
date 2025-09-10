@@ -1,17 +1,11 @@
 import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
-import {
-  PackageManagerInput,
-  type PackageManagerInputProps,
-} from "./package-manager-input.js";
-import {
-  PackageManagerList,
-  type PackageManagerListProps,
-} from "./package-manager-list.js";
-import {
-  PackageManagerReactorSelect,
-  type PackageManagerReactorSelectProps,
-} from "./package-manager-select.js";
+import type { PackageManagerInputProps } from "./package-manager-input.js";
+import { PackageManagerInput } from "./package-manager-input.js";
+import type { PackageManagerListProps } from "./package-manager-list.js";
+import { PackageManagerList } from "./package-manager-list.js";
+import type { PackageManagerReactorSelectProps } from "./package-manager-select.js";
+import { PackageManagerReactorSelect } from "./package-manager-select.js";
 
 type Props = PackageManagerReactorSelectProps &
   PackageManagerInputProps &

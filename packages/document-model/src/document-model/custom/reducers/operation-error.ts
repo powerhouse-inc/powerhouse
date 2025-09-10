@@ -1,5 +1,5 @@
-import { type DocumentModelOperationErrorOperations } from "../../gen/operation-error/operations.js";
-import { type OperationError } from "../../gen/schema/types.js";
+import type { DocumentModelOperationErrorOperations } from "../../gen/operation-error/operations.js";
+import type { OperationError } from "../../gen/schema/types.js";
 
 const errorSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};

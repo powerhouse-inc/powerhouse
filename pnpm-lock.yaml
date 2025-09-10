@@ -1392,6 +1392,9 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       jest:
         specifier: ^30.0.5
         version: 30.0.5(@types/node@22.17.2)(babel-plugin-macros@3.1.0)(esbuild-register@3.6.0(esbuild@0.25.9))(ts-node@10.9.1(@swc/core@1.11.31(@swc/helpers@0.5.17))(@types/node@22.17.2)(typescript@5.9.2))
@@ -1595,6 +1598,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.15.5
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       esbuild:
         specifier: ^0.24.0
         version: 0.24.2
@@ -30555,7 +30561,7 @@ snapshots:
 
   '@types/minimatch@6.0.0':
     dependencies:
-      minimatch: 3.1.2
+      minimatch: 10.0.3
 
   '@types/mkdirp@0.5.2':
     dependencies:

@@ -1,4 +1,4 @@
-import { type FolderNode, type Node } from "document-drive";
+import type { FolderNode, Node } from "document-drive";
 
 export type TNodeActions = {
   onAddFile: (file: File, parent: Node | undefined) => Promise<void>;

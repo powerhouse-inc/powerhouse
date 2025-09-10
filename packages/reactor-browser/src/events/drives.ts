@@ -1,6 +1,6 @@
-import { type DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import { dispatchSetSelectedNodeIdEvent } from "./nodes.js";
-import { type SetDrivesEvent, type SetSelectedDriveIdEvent } from "./types.js";
+import type { SetDrivesEvent, SetSelectedDriveIdEvent } from "./types.js";
 
 export function dispatchSetDrivesEvent(
   drives: DocumentDriveDocument[] | undefined,

@@ -2,7 +2,7 @@ import { Subgraph } from "#graphql/base/index.js";
 import { childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { type SystemContext } from "./types.js";
+import type { SystemContext } from "./types.js";
 
 const logger = childLogger(["reactor", "system-subgraph"]);
 
@@ -100,27 +100,26 @@ export class SystemSubgraph extends Subgraph {
           throw e instanceof Error ? e : new Error(e as string);
         }
       },
-    },
+      deleteDrive: async (
+        parent: unknown,
+        args: { id: string },
+        ctx: SystemContext,
+      ): Promise<boolean> => {
+        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        if (!isAdmin) {
+          throw new GraphQLError("Forbidden");
+        }
 
-    deleteDrive: async (
-      parent: unknown,
-      args: { id: string },
-      ctx: SystemContext,
-    ): Promise<boolean> => {
-      const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-      if (!isAdmin) {
-        throw new GraphQLError("Forbidden");
-      }
+        try {
+          await this.reactor.deleteDrive(args.id);
 
-      try {
-        await this.reactor.deleteDrive(args.id);
+          return true;
+        } catch (e) {
+          logger.error(e);
 
-        return true;
-      } catch (e) {
-        logger.error(e);
-
-        return false;
-      }
+          return false;
+        }
+      },
     },
   };
 

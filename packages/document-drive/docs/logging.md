@@ -65,9 +65,9 @@ Yet switch them on by updating `powerhouse.config.json`:
 ```
 {
   ...,
-  
+
   "logLevel": "verbose",
-  
+
   ...
 }
 ```

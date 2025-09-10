@@ -15,7 +15,7 @@ graph TD
             ASub["on()"]
         end
 
-    
+
         ASub --> ARM["IDocumentView"] <-->|"Read/Write"| IDocumentIndexer
         ARM -->|"Read Events"| AES
     end

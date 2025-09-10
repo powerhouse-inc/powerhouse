@@ -4,7 +4,7 @@ import * as creators from "./gen/creators.js";
 import { documentModelState } from "./gen/document-model.js";
 import { reducer } from "./gen/reducer.js";
 import * as documentModelUtils from "./gen/utils.js";
-import { type DocumentModelDocumentModelModule } from "./types.js";
+import type { DocumentModelDocumentModelModule } from "./types.js";
 
 export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
   {

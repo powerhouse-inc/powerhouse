@@ -7,9 +7,10 @@ import {
   SharingTypeFormInput,
 } from "#connect";
 import { Button } from "#powerhouse";
-import { type SharingType } from "document-drive";
-import { type App } from "document-model";
-import { type SubmitHandler, useForm } from "react-hook-form";
+import type { SharingType } from "document-drive";
+import type { App } from "document-model";
+import type { SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 export type AddLocalDriveInput = {
   name: string;

@@ -8,9 +8,9 @@ import {
   undo,
 } from "../../src/document/actions/creators.js";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
+import type { CountPHState } from "../helpers.js";
 import {
-  type CountDocument,
-  type CountPHState,
+  CountDocument,
   countReducer,
   createTestState,
   createCountDocumentState,

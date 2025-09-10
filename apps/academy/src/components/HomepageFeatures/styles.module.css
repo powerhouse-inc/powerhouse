@@ -156,10 +156,9 @@
   color: var(--ifm-color-primary);
 }
 
-
 .learningPath {
   width: 100%;
-  padding: 3rem 0 0 0;  /* Added top padding */
+  padding: 3rem 0 0 0; /* Added top padding */
   margin-bottom: 3rem;
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -1,10 +1,5 @@
-import {
-  ASSET_PURCHASE,
-  ASSET_SALE,
-  type FixedIncome,
-  type FixedIncomeType,
-  type GroupTransaction,
-} from "#rwa";
+import type { FixedIncome, FixedIncomeType, GroupTransaction } from "#rwa";
+import { ASSET_PURCHASE, ASSET_SALE } from "#rwa";
 import { all, create } from "mathjs";
 
 type NumericKeys<T> = {

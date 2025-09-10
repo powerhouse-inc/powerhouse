@@ -1,11 +1,11 @@
 import type { DocumentOperations, Operation, PHDocument } from "document-model";
-import { type DocumentDriveDocument } from "../../index.js";
-import {
-  type CreateDocumentInput,
-  type RevisionsFilter,
-  type SharingType,
-  type StrandUpdate,
-  type SynchronizationUnitId,
+import type { DocumentDriveDocument } from "../../index.js";
+import type {
+  CreateDocumentInput,
+  RevisionsFilter,
+  SharingType,
+  StrandUpdate,
+  SynchronizationUnitId,
 } from "./types.js";
 
 export function buildRevisionsFilter(

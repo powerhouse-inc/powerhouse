@@ -1,10 +1,10 @@
-import {
-  type FixedIncome,
-  type GroupTransaction,
-  type ServiceProviderFeeType,
-  type TableName,
-  useEditorContext,
+import type {
+  FixedIncome,
+  GroupTransaction,
+  ServiceProviderFeeType,
+  TableName,
 } from "#rwa";
+import { useEditorContext } from "#rwa";
 import { useMemo } from "react";
 
 export type DependentItemProps = {

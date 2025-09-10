@@ -1,26 +1,26 @@
-import { type Node } from 'document-drive';
+import type { Node } from "document-drive";
 
 export const sanitizePath = (path: string) =>
-    path.replace(/\s/g, '-').toLowerCase();
+  path.replace(/\s/g, "-").toLowerCase();
 
 export const getLastIndexFromPath = (
-    nodes: Array<Node>,
-    name: string,
-    parentFolder?: string,
+  nodes: Array<Node>,
+  name: string,
+  parentFolder?: string,
 ): number | null => {
-    const regexp = new RegExp(`^${name}(\\s\\d+)?$`, 'i');
+  const regexp = new RegExp(`^${name}(\\s\\d+)?$`, "i");
 
-    const filteredNodes = nodes
-        .filter(
-            node => node.parentFolder == parentFolder && regexp.test(node.name),
-        )
-        .map(node => {
-            const index = /(\d+)?$/i.exec(node.name);
-            if (index) return Number(index[0]);
-            return 0;
-        })
-        .sort((a, b) => a - b);
+  const filteredNodes = nodes
+    .filter(
+      (node) => node.parentFolder == parentFolder && regexp.test(node.name),
+    )
+    .map((node) => {
+      const index = /(\d+)?$/i.exec(node.name);
+      if (index) return Number(index[0]);
+      return 0;
+    })
+    .sort((a, b) => a - b);
 
-    if (!filteredNodes || filteredNodes.length === 0) return null;
-    return filteredNodes[filteredNodes.length - 1];
+  if (!filteredNodes || filteredNodes.length === 0) return null;
+  return filteredNodes[filteredNodes.length - 1];
 };

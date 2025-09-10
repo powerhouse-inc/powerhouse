@@ -1,9 +1,9 @@
-import { type FileNode } from "document-drive";
-import type React from 'react';
-import { DataIntegrationsColumn } from './DataIntegrationsColumn.js';
-import { DocumentModelsColumn } from './DocumentModelsColumn.js';
-import { SectionAccordion } from './SectionAccordion.js';
-import { UserExperiencesColumn } from './UserExperiencesColumn.js';
+import type { FileNode } from "document-drive";
+import type React from "react";
+import { DataIntegrationsColumn } from "./DataIntegrationsColumn.js";
+import { DocumentModelsColumn } from "./DocumentModelsColumn.js";
+import { SectionAccordion } from "./SectionAccordion.js";
+import { UserExperiencesColumn } from "./UserExperiencesColumn.js";
 
 interface ModuleSpecificationsSectionProps {
   documentModels: FileNode[];
@@ -21,10 +21,12 @@ interface ModuleSpecificationsSectionProps {
   onOpenDocument?: (node: FileNode) => void;
 }
 
-export const ModuleSpecificationsSection: React.FC<ModuleSpecificationsSectionProps> = (props) => {
+export const ModuleSpecificationsSection: React.FC<
+  ModuleSpecificationsSectionProps
+> = (props) => {
   return (
     <SectionAccordion title="Module Specifications" defaultOpen={true}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+      <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <DocumentModelsColumn
           documentModels={props.documentModels}
           onAddDocumentModel={props.onAddDocumentModel}

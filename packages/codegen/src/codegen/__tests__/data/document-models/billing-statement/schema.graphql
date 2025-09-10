@@ -15,7 +15,7 @@ scalar Amount_Currency
 scalar Amount_Crypto
 scalar Amount
 type BillingStatementState {
-  contributor: PHID  # Change to AID when available
+  contributor: PHID # Change to AID when available
   dateIssued: DateTime!
   dateDue: DateTime
   lineItems: [BillingStatementLineItem!]!
@@ -73,10 +73,6 @@ enum BillingStatementUnitInput {
   DAY
   UNIT
 }
-
-
-
-
 
 # general
 

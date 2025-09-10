@@ -434,8 +434,10 @@ describe("ReducerGenerator Integration", () => {
       // Should contain custom reducer code instead of TODO
       expect(content).toContain("state.value = action.input.value;");
       expect(content).toContain("return state;");
-      expect(content).not.toContain('// TODO: Implement "setValueOperation" reducer');
-      expect(content).not.toContain('throw new Error');
+      expect(content).not.toContain(
+        '// TODO: Implement "setValueOperation" reducer',
+      );
+      expect(content).not.toContain("throw new Error");
     });
 
     it("should update existing reducer when forceUpdate is true", async () => {
@@ -474,7 +476,9 @@ describe("ReducerGenerator Integration", () => {
       let content = sourceFile!.getFullText();
 
       // Should have default TODO implementation
-      expect(content).toContain('// TODO: Implement "setValueOperation" reducer');
+      expect(content).toContain(
+        '// TODO: Implement "setValueOperation" reducer',
+      );
 
       // Now update with custom reducer code and forceUpdate = true
       const updatedOperations: Operation[] = [
@@ -507,7 +511,9 @@ describe("ReducerGenerator Integration", () => {
 
       // Should now have custom implementation
       expect(content).toContain("state.customValue = action.input.value;");
-      expect(content).not.toContain('// TODO: Implement "setValueOperation" reducer');
+      expect(content).not.toContain(
+        '// TODO: Implement "setValueOperation" reducer',
+      );
     });
 
     it("should not update existing reducer when forceUpdate is false", async () => {
@@ -572,7 +578,9 @@ describe("ReducerGenerator Integration", () => {
       const content = sourceFile!.getFullText();
 
       // Should still have original TODO implementation
-      expect(content).toContain('// TODO: Implement "setValueOperation" reducer');
+      expect(content).toContain(
+        '// TODO: Implement "setValueOperation" reducer',
+      );
       expect(content).not.toContain("state.customValue = action.input.value;");
     });
   });

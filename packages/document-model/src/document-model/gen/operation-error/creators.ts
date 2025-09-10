@@ -25,7 +25,7 @@ export const addOperationError = (input: AddOperationErrorInput) =>
     { ...input },
     undefined,
     z.AddOperationErrorInputSchema,
-    "global"
+    "global",
   );
 
 export const setOperationErrorCode = (input: SetOperationErrorCodeInput) =>
@@ -34,7 +34,7 @@ export const setOperationErrorCode = (input: SetOperationErrorCodeInput) =>
     { ...input },
     undefined,
     z.SetOperationErrorCodeInputSchema,
-    "global"
+    "global",
   );
 
 export const setOperationErrorName = (input: SetOperationErrorNameInput) =>
@@ -43,7 +43,7 @@ export const setOperationErrorName = (input: SetOperationErrorNameInput) =>
     { ...input },
     undefined,
     z.SetOperationErrorNameInputSchema,
-    "global"
+    "global",
   );
 
 export const setOperationErrorDescription = (
@@ -54,7 +54,7 @@ export const setOperationErrorDescription = (
     { ...input },
     undefined,
     z.SetOperationErrorDescriptionInputSchema,
-    "global"
+    "global",
   );
 
 export const setOperationErrorTemplate = (
@@ -65,7 +65,7 @@ export const setOperationErrorTemplate = (
     { ...input },
     undefined,
     z.SetOperationErrorTemplateInputSchema,
-    "global"
+    "global",
   );
 
 export const deleteOperationError = (input: DeleteOperationErrorInput) =>
@@ -74,7 +74,7 @@ export const deleteOperationError = (input: DeleteOperationErrorInput) =>
     { ...input },
     undefined,
     z.DeleteOperationErrorInputSchema,
-    "global"
+    "global",
   );
 
 export const reorderOperationErrors = (input: ReorderOperationErrorsInput) =>
@@ -83,5 +83,5 @@ export const reorderOperationErrors = (input: ReorderOperationErrorsInput) =>
     { ...input },
     undefined,
     z.ReorderOperationErrorsInputSchema,
-    "global"
+    "global",
   );

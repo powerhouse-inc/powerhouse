@@ -1,7 +1,7 @@
 import { generateEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type DocumentEditorState } from "../../../../document-models/document-editor/index.js";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { DocumentEditorState } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 

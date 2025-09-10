@@ -3,12 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
-    "types": [
-      "node",
-      "vitest/globals",
-      "@vitest/browser/providers/playwright",
-    ],
-    "outDir": "test/dist",
+    "types": ["node", "vitest/globals", "@vitest/browser/providers/playwright"],
+    "outDir": "test/dist"
   },
   "references": [
     {

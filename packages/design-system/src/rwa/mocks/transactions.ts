@@ -1,7 +1,6 @@
+import type { BaseTransaction, GroupTransaction } from "#rwa";
 import {
-  type BaseTransaction,
   FEES_PAYMENT,
-  type GroupTransaction,
   allGroupTransactionTypes,
   calculateCashBalanceChange,
   isAssetGroupTransactionType,

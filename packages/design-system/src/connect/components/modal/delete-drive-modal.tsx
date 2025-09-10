@@ -2,10 +2,8 @@ import { Icon } from "#powerhouse";
 
 import { useState } from "react";
 import { FormInput } from "../form-input/index.js";
-import {
-  type ConfirmationModalProps,
-  ConnectConfirmationModal,
-} from "./confirmation-modal.js";
+import type { ConfirmationModalProps } from "./confirmation-modal.js";
+import { ConnectConfirmationModal } from "./confirmation-modal.js";
 
 export interface ConnectDeleteDriveModalProps extends ConfirmationModalProps {
   readonly inputPlaceholder: string;

@@ -13,16 +13,16 @@ import type { IReactor } from "./interfaces/reactor.js";
 import type { IQueue } from "./queue/interfaces.js";
 import type { Job } from "./queue/types.js";
 import { createMutableShutdownStatus } from "./shared/factories.js";
-import {
-  JobStatus,
-  type JobInfo,
-  type PagedResults,
-  type PagingOptions,
-  type PropagationMode,
-  type SearchFilter,
-  type ShutdownStatus,
-  type ViewFilter,
+import type {
+  JobInfo,
+  PagedResults,
+  PagingOptions,
+  PropagationMode,
+  SearchFilter,
+  ShutdownStatus,
+  ViewFilter,
 } from "./shared/types.js";
+import { JobStatus } from "./shared/types.js";
 import { matchesScope } from "./shared/utils.js";
 import { filterByParentId, filterByType } from "./utils.js";
 

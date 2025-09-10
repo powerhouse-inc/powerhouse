@@ -4,7 +4,7 @@ force: true
 ---
 import { type Subgraph } from "@powerhousedao/reactor-api";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return ({

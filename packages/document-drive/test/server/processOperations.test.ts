@@ -127,7 +127,9 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect((result.document.state as any).global).toMatchObject({ name: "test" });
+    expect((result.document.state as any).global).toMatchObject({
+      name: "test",
+    });
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(1);
     expect(result.operationsApplied).toMatchObject(

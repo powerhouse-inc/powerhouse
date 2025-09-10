@@ -1,4 +1,4 @@
-import { type DocumentModelDocument } from "../../index.js";
+import { DocumentModelDocument } from "../../index.js";
 import {
   setAuthorName,
   setAuthorWebsite,
@@ -7,7 +7,7 @@ import {
   setModelId,
   setModelName,
 } from "../../src/document-model/gen/creators.js";
-import { type DocumentModelPHState } from "../../src/document-model/gen/ph-factories.js";
+import type { DocumentModelPHState } from "../../src/document-model/gen/ph-factories.js";
 import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
 import { createDocument } from "../../src/document-model/gen/utils.js";
 import { replayOperations } from "../../src/document/utils/base.js";

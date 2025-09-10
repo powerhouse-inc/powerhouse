@@ -1,19 +1,19 @@
-import { type IOperationResult } from "#server/types";
+import type { IOperationResult } from "#server/types";
 import { childLogger, logger } from "#utils/logger";
 import { generateId } from "document-model";
-import { createNanoEvents, type Unsubscribe } from "nanoevents";
+import type { Unsubscribe } from "nanoevents";
+import { createNanoEvents } from "nanoevents";
 import { MemoryQueue } from "./base.js";
-import {
-  type IJob,
-  type IJobQueue,
-  type IQueueManager,
-  isDocumentJob,
-  type IServerDelegate,
-  isOperationJob,
-  type Job,
-  type JobId,
-  type QueueEvents,
+import type {
+  IJob,
+  IJobQueue,
+  IQueueManager,
+  IServerDelegate,
+  Job,
+  JobId,
+  QueueEvents,
 } from "./types.js";
+import { isDocumentJob, isOperationJob } from "./types.js";
 
 type DocId = string;
 

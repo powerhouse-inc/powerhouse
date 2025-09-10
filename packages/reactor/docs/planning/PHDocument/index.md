@@ -140,7 +140,7 @@ The `auth` scope is always present, but populated only with state that is availa
 type PHDocumentState = {
   auth: AuthScopeState;
   document: DocumentScopeState;
-}
+};
 
 //
 
@@ -153,7 +153,7 @@ Custom document types extend the `PHDocument` class:
 // simple type intersection for state
 type MyDocModelState = PHDocumentState & {
   myScope: MyScopeState;
-}
+};
 
 // subclass of PHDocument, overriding the state
 class MyDocument extends PHDocument {
@@ -208,7 +208,6 @@ class MyDocument extends PHDocument {
 The mutations object is a typed API for creating and/or executing operations. It has operation-specific methods that pertain to the specific scope.
 
 ```tsx
-
 // base class
 class PHDocumentMutations {
   auth: AuthMutations;
@@ -230,7 +229,6 @@ class DriveGlobalMutations extends PHDocumentMutations {
 The `ActionExecutor` is a wrapper around an `Action` that provides a way to execute the action or pass it into the Reactor API.
 
 ```tsx
-
 interface IExecutionDelegate {
   /**
    * Executes the action.
@@ -266,26 +264,27 @@ This allows us to execute actions in a more functional way:
 
 ```tsx
 // change the drive icon
-await drive.mutations.global.setDriveIcon({
-  icon: "🚀",
-}).execute();
+await drive.mutations.global
+  .setDriveIcon({
+    icon: "🚀",
+  })
+  .execute();
 
 // add a new folder
-await drive.mutations.global.setDriveName({
-  name: "My Drive",
-}).execute();
+await drive.mutations.global
+  .setDriveName({
+    name: "My Drive",
+  })
+  .execute();
 ```
 
 But we are still free to batch operations together via the client API:
 
 ```tsx
-await client.mutate(
-  drive.id,
-  [
-    drive.mutations.global.setDriveName({ name: "My Drive" }).action,
-    drive.mutations.global.setDriveIcon({ icon: "🚀" }).action,
-  ],
-);
+await client.mutate(drive.id, [
+  drive.mutations.global.setDriveName({ name: "My Drive" }).action,
+  drive.mutations.global.setDriveIcon({ icon: "🚀" }).action,
+]);
 ```
 
 #### History
@@ -298,7 +297,9 @@ const operations = await drive.history.fetchOperations("myScope");
 console.log(`Drive history: ${operations.length} operations`);
 
 // this is paged:
-for await (const page of paginate(() => drive.history.fetchOperations("myScope", { limit: 1000 }))) {
+for await (const page of paginate(() =>
+  drive.history.fetchOperations("myScope", { limit: 1000 }),
+)) {
   for (const operation of page.results) {
     console.log(operation.id);
   }

@@ -18,7 +18,7 @@ In this tutorial, we'll show how to use a **GraphQL** query to query a document 
 To make our document model available in the Apollo Studio Sandbox, we'll need to store it on a remote [Reactor](/academy/Architecture/WorkingWithTheReactor).
 
 :::info What are reactors?
-**Powerhouse Reactors** are the nodes in the network that store documents, resolve conflicts, and rerun operations to verify document event histories. 
+**Powerhouse Reactors** are the nodes in the network that store documents, resolve conflicts, and rerun operations to verify document event histories.
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
 :::
 
@@ -29,11 +29,13 @@ ph reactor
 ```
 
 To start both Connect and a Reactor locally at the same time in a Powerhouse project, you can use the following command:
+
 ```bash
 ph dev
 ```
 
 This will return a URL to access the Reactor.
+
 ```bash
 [Reactor]:   ➜  Reactor:   http://localhost:4001/d/powerhouse
 ```
@@ -46,8 +48,13 @@ Get access to an **organization's drive** instances by adding their drive to you
 Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'll have to know the correct public URL of the drive. Read more about [configuring drives](/academy/Architecture/WorkingWithTheReactor).
 
 <figure className="image-container">
-  <img src={require("./images/AddNewDriveURL.png").default} alt="Add a drive through an URL" />
-  <figcaption>The 'Add Drive' button that allows you to enter a Drive URL.</figcaption>
+  <img
+    src={require("./images/AddNewDriveURL.png").default}
+    alt="Add a drive through an URL"
+  />
+  <figcaption>
+    The 'Add Drive' button that allows you to enter a Drive URL.
+  </figcaption>
 </figure>
 
 ## Query the state of a document
@@ -55,10 +62,10 @@ Click the (+) 'Create New Drive' to add a public drive. To add a new drive, you'
 Now that we have our remote reactor and/or drive running, we can store our document model on it.
 Let's quickly create a new to-do list document in Connect Studio to test the process. Let's call it **'Powerhouse-onboarding-tasks'**.
 
-
 Add the following to-dos to your list:
+
 - [ ] Sign up for Powerhouse
-- [ ] Do the work 
+- [ ] Do the work
 - [ ] Deliver the work
 - [ ] Send the invoice
 - [ ] Get paid
@@ -66,8 +73,13 @@ Add the following to-dos to your list:
 Below is the operation history of the to-do list document. As you can see, the operations are logged in the order they were executed.
 
 <figure className="image-container">
-  <img src={require("./images/OnboardingTasks.png").default} alt="Operation history in Connect" />
-  <figcaption>The operation history of the to-do list document, showing each change made.</figcaption>
+  <img
+    src={require("./images/OnboardingTasks.png").default}
+    alt="Operation history in Connect"
+  />
+  <figcaption>
+    The operation history of the to-do list document, showing each change made.
+  </figcaption>
 </figure>
 
 Now that we have some data in our document model, we can query it through the GraphQL API.
@@ -79,8 +91,14 @@ The Switchboard API button at the top of your document model will get you the co
 This will prepopulate the Apollo Studio Sandbox with the correct **DocumentID** for your document model.
 
 <figure className="image-container">
-  <img src={require("./images/SwitchboardButton.png").default} alt="Switchboard button in document editor" />
-  <figcaption>The Switchboard button provides a direct link to the GraphQL API for the document.</figcaption>
+  <img
+    src={require("./images/SwitchboardButton.png").default}
+    alt="Switchboard button in document editor"
+  />
+  <figcaption>
+    The Switchboard button provides a direct link to the GraphQL API for the
+    document.
+  </figcaption>
 </figure>
 
 ### Option 2: Query your document by document ID
@@ -89,16 +107,27 @@ In your Document Toolbar, you will find an icon to visit your operations history
 Copy this ID to use it in the Switchboard API.
 
 <figure className="image-container">
-  <img src={require("./images/DocumentID.png").default} alt="Copy the DocumentID" />
-  <figcaption>You can copy your Document ID from your operations history.</figcaption>
+  <img
+    src={require("./images/DocumentID.png").default}
+    alt="Copy the DocumentID"
+  />
+  <figcaption>
+    You can copy your Document ID from your operations history.
+  </figcaption>
 </figure>
 
 When you navigate to your Switchboard endpoint by adding **`/graphql/system`** to the end of your URL. (e.g., http://localhost:4001/graphql/system, https://switchboard.phd/graphql/system, or add it to a custom domain), you can use this document ID to query the state of your document.
 The documentation on the left-hand side of the Apollo Sandbox will show you all the different fields that are available to query.
 
 <figure className="image-container">
-  <img src={require("./images/QueryDocumentID.png").default} alt="Apollo Studio with document query" />
-  <figcaption>The Apollo Studio Sandbox showing the available fields for querying a document.</figcaption>
+  <img
+    src={require("./images/QueryDocumentID.png").default}
+    alt="Apollo Studio with document query"
+  />
+  <figcaption>
+    The Apollo Studio Sandbox showing the available fields for querying a
+    document.
+  </figcaption>
 </figure>
 
 ### Option 3: Search for your document ID via GraphQL
@@ -143,7 +172,16 @@ query getDocument($documentId: PHID!, $driveId: String) {
       name
       revision
       state {
-        items { id text checked } stats { total checked unchecked }
+        items {
+          id
+          text
+          checked
+        }
+        stats {
+          total
+          checked
+          unchecked
+        }
       }
     }
   }
@@ -160,10 +198,15 @@ query getDocument($documentId: PHID!, $driveId: String) {
 This query will return the current state of the document, including all to-do items and stats.
 
 <figure className="image-container">
-  <img src={require("./images/OperationsQuery.png").default} alt="Executing a mutation for a to-do item in Apollo Studio" />
-  <figcaption>The Apollo Studio Sandbox showing the <code>addTodoItem</code> mutation. You can see the variables passed in and the response from the server.</figcaption>
+  <img
+    src={require("./images/OperationsQuery.png").default}
+    alt="Executing a mutation for a to-do item in Apollo Studio"
+  />
+  <figcaption>
+    The Apollo Studio Sandbox showing the <code>addTodoItem</code> mutation. You
+    can see the variables passed in and the response from the server.
+  </figcaption>
 </figure>
-
 
 ## Mutate the state of a document
 
@@ -205,6 +248,7 @@ To delete an item, you'll need its unique identifier. When you query for the to-
 The document model provides a `DELETE_TODO_ITEM` operation, which corresponds to a `deleteTodoItem` mutation.
 
 Here's how you can use it:
+
 ```graphql title="example-delete-mutation"
 mutation Mutation($docId: PHID, $input: ToDoList_DeleteTodoItemInput) {
   ToDoList_deleteTodoItem(docId: $docId, input: $input)
@@ -230,7 +274,6 @@ After performing a write mutation, you can verify that the change was successful
 
 1.  **Query the document state again:** Rerun the `getDocument` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
-
 
 ### Summary
 

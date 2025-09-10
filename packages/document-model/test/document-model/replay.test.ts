@@ -4,8 +4,8 @@ import {
   createReducer,
   replayDocument,
 } from "../../src/document/utils/base.js";
+import type { CountPHState } from "../helpers.js";
 import {
-  type CountPHState,
   baseCountReducer,
   countReducer,
   createCountState,

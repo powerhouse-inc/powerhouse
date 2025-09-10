@@ -1,4 +1,4 @@
-import { type SynchronizationUnitId } from "./types.js";
+import type { SynchronizationUnitId } from "./types.js";
 
 /**
  * Interface for a specialized Map implementation that manages synchronization units.

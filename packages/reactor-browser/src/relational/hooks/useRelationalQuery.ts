@@ -1,6 +1,6 @@
-import { type LiveQueryResults } from "@electric-sql/pglite/live";
-import { type RelationalDbProcessorClass } from "document-drive/processors/relational";
-import { type IRelationalQueryBuilder } from "document-drive/processors/types";
+import type { LiveQueryResults } from "@electric-sql/pglite/live";
+import type { RelationalDbProcessorClass } from "document-drive/processors/relational";
+import type { IRelationalQueryBuilder } from "document-drive/processors/types";
 import { useEffect, useRef, useState } from "react";
 import { useRelationalDb } from "./useRelationalDb.js";
 

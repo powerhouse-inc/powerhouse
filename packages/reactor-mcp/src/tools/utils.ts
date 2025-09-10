@@ -1,8 +1,8 @@
-import { type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { camelCase } from "change-case";
-import { type Action, type DocumentModelModule } from "document-model";
-import { type Operation } from "document-model/document-model/gen/schema/types";
-import { type z } from "zod";
+import type { Action, DocumentModelModule } from "document-model";
+import type { Operation } from "document-model/document-model/gen/schema/types";
+import type { z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
 export class InvalidToolOutputError extends Error {

@@ -1,36 +1,32 @@
+import type { GqlPrimitiveNodeName } from "#document-model-editor/constants/graphql-kinds";
 import {
   BOOLEAN_GQL_PRIMITIVE_NAME,
   FLOAT_GQL_PRIMITIVE_NAME,
-  type GqlPrimitiveNodeName,
   gqlPrimitiveNodeNamesList,
   ID_GQL_PRIMITIVE_NAME,
   INT_GQL_PRIMITIVE_NAME,
   STRING_GQL_PRIMITIVE_NAME,
 } from "#document-model-editor/constants/graphql-kinds";
 import { safeParseSdl } from "#document-model-editor/context/schema-context";
-import {
-  getPHCustomScalarByTypeName,
-  type Serializable,
-} from "@powerhousedao/document-engineering/graphql";
+import type { Serializable } from "@powerhousedao/document-engineering/graphql";
+import { getPHCustomScalarByTypeName } from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
-import {
-  type ASTNode,
-  type DefinitionNode,
-  type DocumentNode,
-  type EnumTypeDefinitionNode,
-  type FieldDefinitionNode,
-  Kind,
-  type ListTypeNode,
-  type NamedTypeNode,
-  type NonNullTypeNode,
-  type ObjectTypeDefinitionNode,
-  print,
-  type ScalarTypeDefinitionNode,
-  type UnionTypeDefinitionNode,
-  visit,
+import type {
+  ASTNode,
+  DefinitionNode,
+  DocumentNode,
+  EnumTypeDefinitionNode,
+  FieldDefinitionNode,
+  ListTypeNode,
+  NamedTypeNode,
+  NonNullTypeNode,
+  ObjectTypeDefinitionNode,
+  ScalarTypeDefinitionNode,
+  UnionTypeDefinitionNode,
 } from "graphql";
+import { Kind, print, visit } from "graphql";
 import { z } from "zod";
-import { type Scope } from "../types/documents.js";
+import type { Scope } from "../types/documents.js";
 
 export function makeStateSchemaNameForScope(modelName: string, scope: string) {
   const modelNamePascalCase = pascalCase(modelName);

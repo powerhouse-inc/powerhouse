@@ -1,9 +1,9 @@
-import { type SubgraphClass } from "#graphql/index.js";
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
+import type { SubgraphClass } from "#graphql/index.js";
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
 } from "document-drive/processors/types";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 
 export interface IPackageLoader {
   loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;

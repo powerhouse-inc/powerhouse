@@ -1,7 +1,7 @@
 import { Icon } from "#powerhouse";
 import { cn } from "#ui";
 import { capitalCase } from "change-case";
-import { type DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import { getDriveSharingType } from "document-drive/server/utils";
 import { useState } from "react";
 import { CLOUD, PUBLIC } from "../../../constants/drives.js";

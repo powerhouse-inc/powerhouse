@@ -1,38 +1,33 @@
 import { Subgraph } from "#graphql/base/index.js";
-import { type Context, type SubgraphArgs } from "#graphql/types.js";
+import type { Context, SubgraphArgs } from "#graphql/types.js";
+import type { InternalStrandUpdate } from "#sync/utils.js";
 import {
   processAcknowledge,
   processGetStrands,
   processPushUpdate,
-  type InternalStrandUpdate,
 } from "#sync/utils.js";
-import { type GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import type { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { pascalCase } from "change-case";
-import {
-  PullResponderTransmitter,
-  childLogger,
-  type DocumentDriveDocument,
-  type FileNode,
-  type ListenerFilter,
-  type ListenerRevision,
-  type Node,
-  type StrandUpdateGraphQL,
+import type {
+  DocumentDriveDocument,
+  FileNode,
+  ListenerFilter,
+  ListenerRevision,
+  Node,
+  StrandUpdateGraphQL,
 } from "document-drive";
-import { type Listener } from "document-drive/server/types";
+import { PullResponderTransmitter, childLogger } from "document-drive";
+import type { Listener } from "document-drive/server/types";
 import {
   responseForDocument,
   responseForDrive,
 } from "document-drive/utils/gql-transformations";
-import { type DriveInfo } from "document-drive/utils/graphql";
-import {
-  generateId,
-  type DocumentModelInput,
-  type Operation,
-  type PHDocument,
-} from "document-model";
+import type { DriveInfo } from "document-drive/utils/graphql";
+import type { DocumentModelInput, Operation, PHDocument } from "document-model";
+import { generateId } from "document-model";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { type Asset } from "./temp-hack-rwa-type-defs.js";
+import type { Asset } from "./temp-hack-rwa-type-defs.js";
 
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",

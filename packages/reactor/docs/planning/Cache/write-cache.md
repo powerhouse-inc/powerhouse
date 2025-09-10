@@ -34,27 +34,27 @@ Thus, `IWriteCache` is a write model and approach (1) is the more viable option.
 
 Operations are kept in the `IOperationStore` as a table of `Operation`s. The full schema is defined in the [`IOperationStore`](../Storage/IOperationStore.md) documentation, but below is a non-authoritative example of what the table might look like:
 
-| id | jobId | opId | prevOpId | writeTimestampUtcMs | documentId | scope | branch | timestampUtcMs | index | action | skip |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | 1 | null | 2021-01-01 00:00:00 | doc1 | scope1 | branch1 | 2021-01-01 00:00:00 | 1 | { "type": "create", "data": { "id": "1" } } | 0 |
-| 2 | 1 | 2 | 1 | 2021-01-01 00:00:00 | doc1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2 | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0 |
-| 3 | 1 | 3 | 2 | 2021-01-01 00:00:00 | doc1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3 | { "type": "delete", "data": { "id": "1" } } | 0 |
+| id  | jobId | opId | prevOpId | writeTimestampUtcMs | documentId | scope  | branch  | timestampUtcMs      | index | action                                                          | skip |
+| --- | ----- | ---- | -------- | ------------------- | ---------- | ------ | ------- | ------------------- | ----- | --------------------------------------------------------------- | ---- |
+| 1   | 1     | 1    | null     | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 1     | { "type": "create", "data": { "id": "1" } }                     | 0    |
+| 2   | 1     | 2    | 1        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0    |
+| 3   | 1     | 3    | 2        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     | 0    |
 
 The `IWriteCache` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been in that drive. A drive is always a member of it's own collection. While documents are free to exist in a graph structure (with some restrictions), the `IWriteCache` only stores flat collections of documents.
 
 | documentId | collectionId |
-| --- | --- |
-| doc1 | collection1 |
-| doc2 | collection1 |
-| doc3 | collection2 |
+| ---------- | ------------ |
+| doc1       | collection1  |
+| doc2       | collection1  |
+| doc3       | collection2  |
 
 Additionally, the `IWriteCache` stores a table very similar to the `IOperationStore` table, so that a join can be performed on `documentId`.
 
-| ordinal | opId | documentId | documentType | scope | branch | timestampUtcMs | index | action |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1 | doc1 | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 1 | { "type": "create", "data": { "id": "1" } } |
-| 2 | 1 | doc1 | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2 | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
-| 3 | 1 | doc1 | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3 | { "type": "delete", "data": { "id": "1" } } |
+| ordinal | opId | documentId | documentType  | scope  | branch  | timestampUtcMs      | index | action                                                          |
+| ------- | ---- | ---------- | ------------- | ------ | ------- | ------------------- | ----- | --------------------------------------------------------------- |
+| 1       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 1     | { "type": "create", "data": { "id": "1" } }                     |
+| 2       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
+| 3       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     |
 
 The main difference is that the `IWriteCache` table is not append-only. It is garbage collected and thus has no skip, only ordered streams.
 

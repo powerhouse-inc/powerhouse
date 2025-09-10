@@ -1,5 +1,5 @@
-import { type Reactor } from "../types/reactor.js";
-import { type SetReactorEvent } from "./types.js";
+import type { Reactor } from "../types/reactor.js";
+import type { SetReactorEvent } from "./types.js";
 
 export function dispatchSetReactorEvent(reactor: Reactor | undefined) {
   const event = new CustomEvent("ph:setReactor", {

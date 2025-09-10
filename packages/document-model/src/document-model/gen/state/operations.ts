@@ -1,9 +1,9 @@
 import {
-    SetStateSchemaAction,
-    SetInitialStateAction,
-    AddStateExampleAction,
-    UpdateStateExampleAction,
-    DeleteStateExampleAction,
+  SetStateSchemaAction,
+  SetInitialStateAction,
+  AddStateExampleAction,
+  UpdateStateExampleAction,
+  DeleteStateExampleAction,
   ReorderStateExamplesAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";

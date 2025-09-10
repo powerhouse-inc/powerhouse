@@ -1,5 +1,7 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { type TypographySize, inputStyle, typographySizes } from "./styles.js";
+import type { KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { TypographySize } from "./styles.js";
+import { inputStyle, typographySizes } from "./styles.js";
 
 interface TextInputProps {
   readonly theme: "light" | "dark";

@@ -1,5 +1,5 @@
 import { TooltipProvider } from "#connect";
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { Timestamp } from "./timestamp.js";
 
 const meta = {

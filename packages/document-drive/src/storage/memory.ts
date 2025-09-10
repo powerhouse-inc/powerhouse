@@ -1,4 +1,4 @@
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
@@ -6,16 +6,16 @@ import {
   DocumentNotFoundError,
   DocumentSlugValidationError,
 } from "#server/error";
-import { type SynchronizationUnitQuery } from "#server/types";
+import type { SynchronizationUnitQuery } from "#server/types";
 import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
-import { type Operation, type PHDocument } from "document-model";
-import {
-  type IDocumentAdminStorage,
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-  type IStorageUnit,
-  type IStorageUnitFilter,
+import type { Operation, PHDocument } from "document-model";
+import type {
+  IDocumentAdminStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
 } from "./types.js";
 import {
   isValidDocumentId,

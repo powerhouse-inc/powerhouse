@@ -16,12 +16,13 @@ Follow the steps in the "Mastery Track – Document Model Creation" chapters to 
 
 ### Option 2: Clone and run the code locally
 
-The package includes:  
-- The Document Model  
-- Reducer Code  
-- Reducer Tests  
-- Editor Code  
-- Drive Explorer Code  
+The package includes:
+
+- The Document Model
+- Reducer Code
+- Reducer Tests
+- Editor Code
+- Drive Explorer Code
 
 You can clone the repository and run Connect Studio to see all the code in action:
 
@@ -36,6 +37,3 @@ Alternatively, you can install this package in a Powerhouse project or in your d
 ```bash
 ph install @powerhousedao/todo-demo-package
 ```
-
-
-

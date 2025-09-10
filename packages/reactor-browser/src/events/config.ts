@@ -1,5 +1,5 @@
-import { type AppConfig } from "../types/global.js";
-import { type SetAppConfigEvent } from "./types.js";
+import type { AppConfig } from "../types/global.js";
+import type { SetAppConfigEvent } from "./types.js";
 
 export function dispatchSetAppConfigEvent(appConfig: AppConfig | undefined) {
   const event = new CustomEvent("ph:setAppConfig", {

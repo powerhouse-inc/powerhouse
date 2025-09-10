@@ -1,16 +1,15 @@
 import { getConfig } from "@powerhousedao/config/utils";
-import { type SubgraphClass } from "@powerhousedao/reactor-api";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import { childLogger, driveDocumentModelModule } from "document-drive";
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
 } from "document-drive/processors/types";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
-import { watchFile, type StatWatcher } from "node:fs";
+import type { StatWatcher } from "node:fs";
+import { watchFile } from "node:fs";
 import type {
   IPackageLoader,
   IPackageManager,

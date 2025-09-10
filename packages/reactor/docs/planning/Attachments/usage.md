@@ -21,5 +21,4 @@ const response = await store.get(ref, {}, abortController.signal);
 console.log(response.header.mimeType);
 
 await response.body.pipeTo(destWritable);
-
 ```

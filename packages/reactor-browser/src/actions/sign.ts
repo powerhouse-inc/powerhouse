@@ -1,10 +1,6 @@
 import { logger } from "document-drive";
-import {
-  type Action,
-  type ActionSigner,
-  type PHDocument,
-  buildSignedAction,
-} from "document-model";
+import type { Action, ActionSigner, PHDocument } from "document-model";
+import { buildSignedAction } from "document-model";
 
 export async function signAction(action: Action, document: PHDocument) {
   const reactor = window.reactor;

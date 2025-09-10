@@ -1,20 +1,19 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import {
-  isSubgraphClass,
-  type SubgraphClass,
-} from "@powerhousedao/reactor-api";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import { isSubgraphClass } from "@powerhousedao/reactor-api";
 import { childLogger } from "document-drive";
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
 } from "document-drive/processors/types";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { createServer, type ViteDevServer } from "vite";
-import {
-  type ISubscribablePackageLoader,
-  type ISubscriptionOptions,
+import type { ViteDevServer } from "vite";
+import { createServer } from "vite";
+import type {
+  ISubscribablePackageLoader,
+  ISubscriptionOptions,
 } from "./types.js";
 import { debounce } from "./util.js";
 

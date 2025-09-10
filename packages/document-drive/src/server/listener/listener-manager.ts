@@ -1,24 +1,25 @@
 import { OperationError } from "#server/error";
-import { type StrandUpdateSource } from "#server/listener/transmitter/types";
+import type { StrandUpdateSource } from "#server/listener/transmitter/types";
 import { SyncUnitMap } from "#server/sync-unit-map";
-import {
-  DefaultListenerManagerOptions,
-  type DriveUpdateErrorHandler,
-  type ErrorStatus,
-  type GetStrandsOptions,
-  type IListenerManager,
-  type ISynchronizationManager,
-  type Listener,
-  type ListenerManagerOptions,
-  type ListenerState,
-  type ListenerUpdate,
-  type OperationUpdate,
-  type StrandUpdate,
-  type SynchronizationUnit,
-  type SynchronizationUnitId,
-  type SyncronizationUnitState,
+import type {
+  DriveUpdateErrorHandler,
+  ErrorStatus,
+  GetStrandsOptions,
+  IListenerManager,
+  ISynchronizationManager,
+  Listener,
+  ListenerManagerOptions,
+  ListenerState,
+  ListenerUpdate,
+  OperationUpdate,
+  StrandUpdate,
+  SynchronizationUnit,
+  SynchronizationUnitId,
+  SyncronizationUnitState,
 } from "#server/types";
-import { childLogger, type ListenerFilter } from "document-drive";
+import { DefaultListenerManagerOptions } from "#server/types";
+import type { ListenerFilter } from "document-drive";
+import { childLogger } from "document-drive";
 
 import { debounce } from "./util.js";
 

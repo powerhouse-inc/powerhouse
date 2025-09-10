@@ -1,12 +1,12 @@
 import { loadState, prune, redo, setName, undo } from "./actions/creators.js";
-import { type PHBaseState } from "./ph-types.js";
-import { type SignalDispatch } from "./signal.js";
-import {
-  type PHDocument,
-  type Action,
-  type AttachmentRef,
-  type Reducer,
-  type ReducerOptions,
+import type { PHBaseState } from "./ph-types.js";
+import type { SignalDispatch } from "./signal.js";
+import type {
+  PHDocument,
+  Action,
+  AttachmentRef,
+  Reducer,
+  ReducerOptions,
 } from "./types.js";
 import { readOnly } from "./utils/base.js";
 import { baseLoadFromFile, baseSaveToFile } from "./utils/file.js";

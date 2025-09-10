@@ -14,17 +14,15 @@ import RedisCache from "document-drive/cache/redis";
 import { DocumentAlreadyExistsError } from "document-drive/server/error";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import path from "path";
-import { type RedisClientType } from "redis";
+import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initProfilerFromEnv } from "./profiler.js";
-import { type StartServerOptions, type SwitchboardReactor } from "./types.js";
+import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive } from "./utils.js";
 
 dotenv.config();

@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "./dist"
   },
   "references": [
     {
       "path": "../document-model"
-    },
+    }
   ],
-  "include": ["src", "index.ts"],
+  "include": ["src", "index.ts"]
 }

@@ -1,30 +1,29 @@
-import {
-  type GetStrandsOptions,
-  type IListenerManager,
-  type IOperationResult,
-  type Listener,
-  type ListenerRevision,
-  type ListenerRevisionWithError,
-  type OperationUpdate,
-  type RemoteDriveOptions,
-  type StrandUpdate,
+import type {
+  GetStrandsOptions,
+  IListenerManager,
+  IOperationResult,
+  Listener,
+  ListenerRevision,
+  ListenerRevisionWithError,
+  OperationUpdate,
+  RemoteDriveOptions,
+  StrandUpdate,
 } from "#server/types";
 
-import {
-  type ListenerFilter,
-  type Trigger,
-} from "#drive-document-model/gen/types";
+import type { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
 import { PULL_DRIVE_INTERVAL } from "#server/constants";
 import { OperationError } from "#server/error";
-import { requestGraphql, type GraphQLResult } from "#utils/graphql";
-import { childLogger, type ILogger } from "#utils/logger";
+import type { GraphQLResult } from "#utils/graphql";
+import { requestGraphql } from "#utils/graphql";
+import type { ILogger } from "#utils/logger";
+import { childLogger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { generateId } from "document-model";
 import { gql } from "graphql-request";
-import {
-  type ITransmitter,
-  type PullResponderTrigger,
-  type StrandUpdateSource,
+import type {
+  ITransmitter,
+  PullResponderTrigger,
+  StrandUpdateSource,
 } from "./types.js";
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {

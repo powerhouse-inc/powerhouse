@@ -1,4 +1,4 @@
-import { type PHBaseState } from "#document/ph-types.js";
+import type { PHBaseState } from "#document/ph-types.js";
 import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,
@@ -6,15 +6,15 @@ import {
   SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "../schema/zod.js";
-import { type Action } from "../types.js";
+import type { Action } from "../types.js";
 import { createAction } from "../utils/base.js";
-import {
-  type LoadStateAction,
-  type NOOPAction,
-  type PruneAction,
-  type RedoAction,
-  type SetNameAction,
-  type UndoAction,
+import type {
+  LoadStateAction,
+  NOOPAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
 } from "./types.js";
 
 /**

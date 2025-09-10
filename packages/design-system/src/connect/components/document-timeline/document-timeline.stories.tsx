@@ -1,4 +1,4 @@
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { DocumentTimeline } from "./document-timeline.js";
 import { generateLargeTimeline } from "./mock-utils.js";
 

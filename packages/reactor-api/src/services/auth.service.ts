@@ -1,5 +1,5 @@
 import { verifyAuthBearerToken } from "@renown/sdk";
-import { type NextFunction, type Request, type Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 export interface AuthConfig {
   enabled: boolean;

@@ -1,5 +1,5 @@
+import type { FileStatus } from "./get-folder-status.js";
 import {
-  type FileStatus,
   getFolderStatus,
   removeSuccessFiles,
   sortFilesByStatus,

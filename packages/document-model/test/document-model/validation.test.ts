@@ -11,14 +11,11 @@ import {
   initialLocalState,
 } from "#document-model/gen/constants.js";
 import { reducer } from "#document-model/gen/reducer.js";
-import {
-  type Module,
-  type Operation,
-} from "#document-model/gen/schema/types.js";
-import { type DocumentModelDocument } from "#document-model/gen/types.js";
+import type { Module, Operation } from "#document-model/gen/schema/types.js";
+import { DocumentModelDocument } from "#document-model/gen/types.js";
 import { createDocument } from "#document-model/gen/utils.js";
 import { defaultBaseState } from "#document/ph-factories.js";
-import { type ValidationError } from "#document/types.js";
+import type { ValidationError } from "#document/types.js";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";

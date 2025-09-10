@@ -7,22 +7,22 @@
 type ShutdownStatus = {
   /**
    * True if and only if the system has been shutdown.
-   * 
+   *
    * This value is meant to be polled to determine if the system has been shutdown.
-   * 
+   *
    * In the case of a browser process, the `kill` method should be able to synchronously set this to true.
-   * 
+   *
    * In the case of a server process, a graceful shutdown period should be allowed for the system to finish its work.
    */
   get isShutdown(): boolean;
-}
+};
 
 /**
  * Enum that determines deletion propagation.
  */
 enum PropagationMode {
   None = "none",
-  Cascade = "cascade"
+  Cascade = "cascade",
 }
 
 /**
@@ -30,7 +30,7 @@ enum PropagationMode {
  */
 enum RelationshipChangeType {
   Added = "added",
-  Removed = "removed"
+  Removed = "removed",
 }
 
 /**
@@ -40,20 +40,20 @@ type JobInfo = {
   id: string;
   status: JobStatus;
   error?: string;
-}
+};
 
 /**
  * Job execution statuses (copied from Jobs/interface.md)
  */
 enum JobStatus {
   /** Job is queued but not yet started */
-  PENDING = 'PENDING',
+  PENDING = "PENDING",
   /** Job is currently being executed */
-  RUNNING = 'RUNNING',
+  RUNNING = "RUNNING",
   /** Job completed successfully */
-  COMPLETED = 'COMPLETED',
+  COMPLETED = "COMPLETED",
   /** Job failed (may be retried) */
-  FAILED = 'FAILED',
+  FAILED = "FAILED",
 }
 
 /**
@@ -65,7 +65,7 @@ type ViewFilter = {
   scopes?: string[];
   revision?: number;
   headerOnly?: boolean;
-}
+};
 
 /**
  * Describes filter options for searching documents.
@@ -75,7 +75,7 @@ type SearchFilter = {
   parentId?: string;
   ids?: string[];
   slugs?: string[];
-}
+};
 
 /**
  * Describes the options for paging.
@@ -83,7 +83,7 @@ type SearchFilter = {
 type PagingOptions = {
   cursor: string;
   limit: number;
-}
+};
 
 /**
  * The paged result.
@@ -94,6 +94,5 @@ type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
-}
-
+};
 ```

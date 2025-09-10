@@ -1,5 +1,6 @@
 import { Icon } from "#powerhouse";
-import { type FC, useState } from "react";
+import type { FC } from "react";
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 export interface AccountPopoverLoginProps {

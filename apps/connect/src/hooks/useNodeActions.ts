@@ -1,218 +1,218 @@
-import { type TNodeActions } from '@powerhousedao/design-system';
+import type { TNodeActions } from "@powerhousedao/design-system";
 import {
-    addFile,
-    addFolder,
-    addTrigger,
-    copyNode,
-    moveNode,
-    registerNewPullResponderTrigger,
-    removeTrigger,
-    renameNode,
-    setSelectedNode,
-    useSelectedDrive,
-    useSelectedFolder,
-    useSelectedParentFolder,
-} from '@powerhousedao/reactor-browser';
-import { type Node } from 'document-drive';
-import { useCallback, useMemo } from 'react';
+  addFile,
+  addFolder,
+  addTrigger,
+  copyNode,
+  moveNode,
+  registerNewPullResponderTrigger,
+  removeTrigger,
+  renameNode,
+  setSelectedNode,
+  useSelectedDrive,
+  useSelectedFolder,
+  useSelectedParentFolder,
+} from "@powerhousedao/reactor-browser";
+import type { Node } from "document-drive";
+import { useCallback, useMemo } from "react";
 export function useDebugHandlers() {
-    const onAddTrigger = useCallback(
-        async (driveId: string) => {
-            const url = window.prompt('url') || '';
+  const onAddTrigger = useCallback(
+    async (driveId: string) => {
+      const url = window.prompt("url") || "";
 
-            const pullResponderTrigger = await registerNewPullResponderTrigger(
-                driveId,
-                url,
-                { pullInterval: 6000 },
-            );
-            if (!pullResponderTrigger) return;
-            await addTrigger(driveId, pullResponderTrigger);
+      const pullResponderTrigger = await registerNewPullResponderTrigger(
+        driveId,
+        url,
+        { pullInterval: 6000 },
+      );
+      if (!pullResponderTrigger) return;
+      await addTrigger(driveId, pullResponderTrigger);
+    },
+    [addTrigger, registerNewPullResponderTrigger],
+  );
+
+  const onRemoveTrigger = useCallback(
+    async (driveId: string) => {
+      const triggerId = window.prompt("triggerId:");
+
+      if (triggerId) {
+        await removeTrigger(driveId, triggerId);
+      }
+    },
+    [removeTrigger],
+  );
+
+  const onAddInvalidTrigger = useCallback(
+    async (driveId: string) => {
+      const url = window.prompt("url") || "";
+
+      await addTrigger(driveId, {
+        id: "some-invalid-id",
+        type: "PullResponder",
+        data: {
+          interval: "3000",
+          listenerId: "invalid-listener-id",
+          url,
         },
-        [addTrigger, registerNewPullResponderTrigger],
-    );
+      });
+    },
+    [addTrigger],
+  );
 
-    const onRemoveTrigger = useCallback(
-        async (driveId: string) => {
-            const triggerId = window.prompt('triggerId:');
-
-            if (triggerId) {
-                await removeTrigger(driveId, triggerId);
-            }
-        },
-        [removeTrigger],
-    );
-
-    const onAddInvalidTrigger = useCallback(
-        async (driveId: string) => {
-            const url = window.prompt('url') || '';
-
-            await addTrigger(driveId, {
-                id: 'some-invalid-id',
-                type: 'PullResponder',
-                data: {
-                    interval: '3000',
-                    listenerId: 'invalid-listener-id',
-                    url,
-                },
-            });
-        },
-        [addTrigger],
-    );
-
-    return {
-        onAddTrigger,
-        onRemoveTrigger,
-        onAddInvalidTrigger,
-    };
+  return {
+    onAddTrigger,
+    onRemoveTrigger,
+    onAddInvalidTrigger,
+  };
 }
 
 function resolveNode(driveId: string, node: Node | undefined) {
-    return node?.id !== driveId ? node : undefined;
+  return node?.id !== driveId ? node : undefined;
 }
 
 export function useNodeActions(): TNodeActions {
-    const [selectedDrive] = useSelectedDrive();
-    const selectedFolder = useSelectedFolder();
-    const selectedParentFolder = useSelectedParentFolder();
-    const selectedDriveId = selectedDrive?.header.id;
+  const [selectedDrive] = useSelectedDrive();
+  const selectedFolder = useSelectedFolder();
+  const selectedParentFolder = useSelectedParentFolder();
+  const selectedDriveId = selectedDrive?.header.id;
 
-    const onAddFile = useCallback(
-        async (file: File, parent: Node | undefined) => {
-            if (!selectedDriveId) return;
+  const onAddFile = useCallback(
+    async (file: File, parent: Node | undefined) => {
+      if (!selectedDriveId) return;
 
-            const fileName = file.name.replace(/\..+/gim, '');
+      const fileName = file.name.replace(/\..+/gim, "");
 
-            return await addFile(
-                file,
-                selectedDriveId,
-                fileName,
-                resolveNode(selectedDriveId, parent)?.id,
-            );
-        },
-        [addFile, selectedDriveId],
-    );
+      return await addFile(
+        file,
+        selectedDriveId,
+        fileName,
+        resolveNode(selectedDriveId, parent)?.id,
+      );
+    },
+    [addFile, selectedDriveId],
+  );
 
-    const onAddFolder = useCallback(
-        async (name: string, parent: Node | undefined) => {
-            if (!selectedDriveId) return;
+  const onAddFolder = useCallback(
+    async (name: string, parent: Node | undefined) => {
+      if (!selectedDriveId) return;
 
-            return await addFolder(
-                selectedDriveId,
-                name,
-                resolveNode(selectedDriveId, parent)?.id,
-            );
-        },
-        [addFolder, selectedDriveId],
-    );
+      return await addFolder(
+        selectedDriveId,
+        name,
+        resolveNode(selectedDriveId, parent)?.id,
+      );
+    },
+    [addFolder, selectedDriveId],
+  );
 
-    const onRenameNode = useCallback(
-        async (newName: string, node: Node): Promise<Node | undefined> => {
-            if (!selectedDriveId) return;
+  const onRenameNode = useCallback(
+    async (newName: string, node: Node): Promise<Node | undefined> => {
+      if (!selectedDriveId) return;
 
-            const resolvedNode = resolveNode(selectedDriveId, node);
-            if (!resolvedNode) {
-                console.error(`Node ${node.id} not found`);
-                return;
-            }
+      const resolvedNode = resolveNode(selectedDriveId, node);
+      if (!resolvedNode) {
+        console.error(`Node ${node.id} not found`);
+        return;
+      }
 
-            return await renameNode(selectedDriveId, node.id, newName);
-        },
-        [renameNode, selectedDriveId],
-    );
+      return await renameNode(selectedDriveId, node.id, newName);
+    },
+    [renameNode, selectedDriveId],
+  );
 
-    const onCopyNode = useCallback(
-        async (src: Node, target: Node | undefined) => {
-            if (!selectedDriveId) return;
-            const resolvedSrc = resolveNode(selectedDriveId, src);
-            if (!resolvedSrc) {
-                console.error(`Node ${src.id} not found`);
-                return;
-            }
-            const resolvedTarget = resolveNode(selectedDriveId, target);
+  const onCopyNode = useCallback(
+    async (src: Node, target: Node | undefined) => {
+      if (!selectedDriveId) return;
+      const resolvedSrc = resolveNode(selectedDriveId, src);
+      if (!resolvedSrc) {
+        console.error(`Node ${src.id} not found`);
+        return;
+      }
+      const resolvedTarget = resolveNode(selectedDriveId, target);
 
-            await copyNode(selectedDriveId, resolvedSrc, resolvedTarget);
-        },
-        [copyNode, selectedDriveId],
-    );
+      await copyNode(selectedDriveId, resolvedSrc, resolvedTarget);
+    },
+    [copyNode, selectedDriveId],
+  );
 
-    const onMoveNode = useCallback(
-        async (src: Node, target: Node | undefined) => {
-            if (!selectedDriveId) return;
+  const onMoveNode = useCallback(
+    async (src: Node, target: Node | undefined) => {
+      if (!selectedDriveId) return;
 
-            const resolvedSrc = resolveNode(selectedDriveId, src);
-            if (!resolvedSrc) {
-                console.error(`Node ${src.id} not found`);
-                return;
-            }
-            const resolvedTarget = resolveNode(selectedDriveId, target);
-            await moveNode(selectedDriveId, resolvedSrc, resolvedTarget);
-        },
-        [moveNode, selectedDriveId],
-    );
+      const resolvedSrc = resolveNode(selectedDriveId, src);
+      if (!resolvedSrc) {
+        console.error(`Node ${src.id} not found`);
+        return;
+      }
+      const resolvedTarget = resolveNode(selectedDriveId, target);
+      await moveNode(selectedDriveId, resolvedSrc, resolvedTarget);
+    },
+    [moveNode, selectedDriveId],
+  );
 
-    const onDuplicateNode = useCallback(
-        async (src: Node) => {
-            if (!selectedDriveId) return;
+  const onDuplicateNode = useCallback(
+    async (src: Node) => {
+      if (!selectedDriveId) return;
 
-            const resolvedSrc = resolveNode(selectedDriveId, src);
-            if (!resolvedSrc) {
-                console.error(`Node ${src.id} not found`);
-                return;
-            }
+      const resolvedSrc = resolveNode(selectedDriveId, src);
+      if (!resolvedSrc) {
+        console.error(`Node ${src.id} not found`);
+        return;
+      }
 
-            const target = resolveNode(
-                selectedDriveId,
-                selectedFolder ?? selectedParentFolder,
-            );
-            await copyNode(selectedDriveId, resolvedSrc, target);
-        },
-        [copyNode, selectedDriveId, selectedFolder, selectedParentFolder],
-    );
+      const target = resolveNode(
+        selectedDriveId,
+        selectedFolder ?? selectedParentFolder,
+      );
+      await copyNode(selectedDriveId, resolvedSrc, target);
+    },
+    [copyNode, selectedDriveId, selectedFolder, selectedParentFolder],
+  );
 
-    const onAddAndSelectNewFolder = useCallback(
-        async (name: string) => {
-            if (!name) return;
-            if (!selectedDriveId) return;
+  const onAddAndSelectNewFolder = useCallback(
+    async (name: string) => {
+      if (!name) return;
+      if (!selectedDriveId) return;
 
-            const resolvedTarget = resolveNode(
-                selectedDriveId,
-                selectedFolder ?? selectedParentFolder,
-            );
-            if (!resolvedTarget) return;
+      const resolvedTarget = resolveNode(
+        selectedDriveId,
+        selectedFolder ?? selectedParentFolder,
+      );
+      if (!resolvedTarget) return;
 
-            const newFolder = await onAddFolder(name, resolvedTarget);
+      const newFolder = await onAddFolder(name, resolvedTarget);
 
-            if (newFolder) {
-                setSelectedNode(newFolder);
-            }
-        },
-        [
-            onAddFolder,
-            selectedDriveId,
-            selectedFolder,
-            selectedParentFolder,
-            setSelectedNode,
-        ],
-    );
+      if (newFolder) {
+        setSelectedNode(newFolder);
+      }
+    },
+    [
+      onAddFolder,
+      selectedDriveId,
+      selectedFolder,
+      selectedParentFolder,
+      setSelectedNode,
+    ],
+  );
 
-    return useMemo(
-        () => ({
-            onAddFile,
-            onAddFolder,
-            onRenameNode,
-            onCopyNode,
-            onMoveNode,
-            onDuplicateNode,
-            onAddAndSelectNewFolder,
-        }),
-        [
-            onAddFolder,
-            onAddFile,
-            onCopyNode,
-            onMoveNode,
-            onRenameNode,
-            onDuplicateNode,
-            onAddAndSelectNewFolder,
-        ],
-    );
+  return useMemo(
+    () => ({
+      onAddFile,
+      onAddFolder,
+      onRenameNode,
+      onCopyNode,
+      onMoveNode,
+      onDuplicateNode,
+      onAddAndSelectNewFolder,
+    }),
+    [
+      onAddFolder,
+      onAddFile,
+      onCopyNode,
+      onMoveNode,
+      onRenameNode,
+      onDuplicateNode,
+      onAddAndSelectNewFolder,
+    ],
+  );
 }

@@ -1,7 +1,5 @@
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 import { createBrowserDocumentDriveServer } from "../src/reactor.js";
 

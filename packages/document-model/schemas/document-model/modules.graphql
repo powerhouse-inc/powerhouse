@@ -1,23 +1,23 @@
 input AddModuleInput {
-    id: ID!
-    name: String!
-    description: String
+  id: ID!
+  name: String!
+  description: String
 }
 
 input SetModuleNameInput {
-    id: ID!
-    name: String
+  id: ID!
+  name: String
 }
 
 input SetModuleDescriptionInput {
-    id: ID!
-    description: String
+  id: ID!
+  description: String
 }
 
 input DeleteModuleInput {
-    id: ID!
+  id: ID!
 }
 
 input ReorderModulesInput {
-    order: [ID!]!
+  order: [ID!]!
 }

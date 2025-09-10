@@ -1,5 +1,6 @@
-import { type CodegenConfig, generate } from "@graphql-codegen/cli";
-import { type TypeScriptPluginConfig } from "@graphql-codegen/typescript";
+import type { CodegenConfig } from "@graphql-codegen/cli";
+import { generate } from "@graphql-codegen/cli";
+import type { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
 import {
   generatorTypeDefs,
   validationSchema,

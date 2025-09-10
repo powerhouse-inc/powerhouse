@@ -1,5 +1,5 @@
-import { type PHDocument } from "document-model";
-import { type PagedResults } from "./shared/types.js";
+import type { PHDocument } from "document-model";
+import type { PagedResults } from "./shared/types.js";
 
 /**
  * Filters paged results by parent ID

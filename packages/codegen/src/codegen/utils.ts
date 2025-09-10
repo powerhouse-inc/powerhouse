@@ -1,8 +1,5 @@
-import {
-  documentModelLoadFromFile,
-  type DocumentModelDocument,
-  type DocumentModelState,
-} from "document-model";
+import type { DocumentModelDocument, DocumentModelState } from "document-model";
+import { documentModelLoadFromFile } from "document-model";
 import fs from "node:fs";
 import { format } from "prettier";
 

@@ -29,9 +29,9 @@ export type ProcessorFactory = (
 1. Update your processor factories to take a `PHDocumentHeader` instead of a `driveId`.
 2. If necessary, regenerate your processor with `ph generate` to get the latest changes.
 
-## Updating document model 
+## Updating document model
 
-1. An export of the zip file can no longer be used to generate your document model code. 
+1. It's still possible to generate from zip files, but due to breaking changes in the document structure, zips exported from older versions no longer work
 2. Instead: use ph generate document-models/<yourdocument>/<yourdocument>.json
 
 ### Type parameters have been removed

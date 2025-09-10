@@ -1,10 +1,11 @@
-import { Argument, type Command } from "commander";
+import type { Command } from "commander";
+import { Argument } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serviceHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 interface PackageJson {

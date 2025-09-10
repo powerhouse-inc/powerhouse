@@ -1,5 +1,5 @@
+import type { ActionOutputFor } from "#rwa";
 import {
-  type ActionOutputFor,
   mockAccounts,
   mockFixedIncomes,
   mockFixedIncomeTypes,
@@ -11,8 +11,9 @@ import {
   RWAEditor,
   RWAEditorContextProvider,
 } from "#rwa";
-import { type Meta, type StoryObj } from "@storybook/react";
-import { type ComponentPropsWithoutRef, useState } from "react";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { ComponentPropsWithoutRef } from "react";
+import { useState } from "react";
 import { useInterval } from "usehooks-ts";
 
 const meta: Meta<typeof RWAEditor> = {

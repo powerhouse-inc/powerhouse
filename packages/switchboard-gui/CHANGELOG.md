@@ -1,3 +1,15 @@
+## 4.1.0-dev.50 (2025-09-09)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.49 (2025-09-09)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.48 (2025-09-09)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.47 (2025-09-06)
 
 ### 🩹 Fixes
@@ -12,7 +24,21 @@
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.45 (2025-09-04)
+## 5.0.0-staging.3 (2025-09-08)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
+## 5.0.0-staging.2 (2025-09-05)
+
+### 🩹 Fixes
+
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+
+### ❤️ Thank You
+
+- Callme-T
+
+## 5.0.0-staging.1 (2025-09-04)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
 
@@ -1810,7 +1836,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
 - **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - ryanwolhuter @ryanwolhuter
 
@@ -1827,7 +1853,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
 - **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan
@@ -1839,7 +1865,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 
 - **switchboard-gui:** updated gitignore ([1fd60a3b](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3b))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 
@@ -1860,7 +1886,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **ph-cli:** Support for dev and generate command ([#406](https://github.com/powerhouse-inc/powerhouse/pull/406))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente Sandoval @gpuente

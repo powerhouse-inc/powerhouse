@@ -1,10 +1,7 @@
 import { FormInput } from "#connect";
 import { Icon } from "#powerhouse";
-import {
-  type ComponentPropsWithRef,
-  type ForwardedRef,
-  forwardRef,
-} from "react";
+import type { ComponentPropsWithRef, ForwardedRef } from "react";
+import { forwardRef } from "react";
 
 type DriveNameInputProps = Omit<
   ComponentPropsWithRef<typeof FormInput>,

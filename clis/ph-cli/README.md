@@ -69,6 +69,7 @@ ph generate --interactive
 Starts Connect Studio, a development environment for Powerhouse. This command launches a local development server with hot-reloading and debugging capabilities.
 
 #### Options:
+
 - `-p, --port <port>`: Port to run the server on (default: 3000)
 - `-h, --host`: Expose the server to the network
 - `--https`: Enable HTTPS
@@ -76,6 +77,7 @@ Starts Connect Studio, a development environment for Powerhouse. This command la
 - `--config-file <configFile>`: Path to the powerhouse.config.js file
 
 #### Examples:
+
 ```bash
 # Start Connect Studio on default port (3000)
 ph connect
@@ -98,6 +100,7 @@ ph connect --config-file ./my-config.js
 Generate code from document models with various options. This command supports multiple generation types including editors, processors, subgraphs, and import scripts.
 
 #### Options:
+
 - `-i, --interactive`: Run the command in interactive mode
 - `--editors <type>`: Path to the editors directory
 - `-e, --editor <type>`: Editor Name
@@ -114,6 +117,7 @@ Generate code from document models with various options. This command supports m
 - `-d, --drive-editor <name>`: Generate a drive editor with the specified name
 
 #### Examples:
+
 ```bash
 # Generate code from a specific file
 ph generate path/to/model.json
@@ -145,12 +149,14 @@ ph generate --watch
 Install Powerhouse dependencies with support for global and workspace-specific installations.
 
 #### Options:
+
 - `-g, --global`: Install the dependency globally
 - `--debug`: Show additional logs
 - `-w, --workspace`: Install the dependency in the workspace (use this option for monorepos)
 - `--package-manager <packageManager>`: Force package manager to use
 
 #### Examples:
+
 ```bash
 # Install a package
 ph install @powerhousedao/package-name
@@ -170,12 +176,14 @@ ph install @powerhousedao/package1 @powerhousedao/package2
 Remove Powerhouse dependencies from your project.
 
 #### Options:
+
 - `-g, --global`: Remove the dependency globally
 - `--debug`: Show additional logs
 - `-w, --workspace`: Remove the dependency in the workspace (use this option for monorepos)
 - `--package-manager <packageManager>`: Force package manager to use
 
 #### Examples:
+
 ```bash
 # Remove a package
 ph uninstall @powerhousedao/package-name
@@ -192,9 +200,11 @@ ph uninstall -w @powerhousedao/package-name
 List all installed Powerhouse packages in your project with detailed information.
 
 #### Options:
+
 - `--debug`: Show additional logs
 
 #### Examples:
+
 ```bash
 # List packages
 ph list
@@ -208,9 +218,11 @@ ph list --debug
 Inspect a specific package for detailed information about its dependencies, configuration, and usage.
 
 #### Options:
+
 - `--debug`: Show additional logs
 
 #### Examples:
+
 ```bash
 # Inspect a package
 ph inspect @powerhousedao/package-name
@@ -224,10 +236,12 @@ ph inspect --debug @powerhousedao/package-name
 Manage Powerhouse services with various operations.
 
 #### Options:
+
 - `action`: The action to perform (default: "list")
 - `service`: The service to manage (default: "all")
 
 #### Examples:
+
 ```bash
 # List all services
 ph service list
@@ -241,9 +255,11 @@ ph service list service-name
 Display the current version of the PH CLI and related information.
 
 #### Options:
+
 - `--debug`: Show additional logs
 
 #### Examples:
+
 ```bash
 ph version
 ```
@@ -253,6 +269,7 @@ ph version
 Display comprehensive help information about the CLI and its commands.
 
 #### Examples:
+
 ```bash
 # Show general help
 ph help
@@ -270,11 +287,11 @@ module.exports = {
   port: 3000,
   host: false,
   https: false,
-  packageManager: 'npm',
+  packageManager: "npm",
   workspace: {
     enabled: true,
-    root: './packages'
-  }
+    root: "./packages",
+  },
 };
 ```
 

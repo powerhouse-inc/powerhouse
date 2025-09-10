@@ -1,7 +1,7 @@
 import { createProject, parseVersion } from "@powerhousedao/codegen";
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { initHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
 import {
   getPackageManagerFromPath,
   PH_BIN_PATH,

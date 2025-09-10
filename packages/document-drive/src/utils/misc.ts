@@ -1,13 +1,9 @@
-import {
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
-} from "document-model";
+import type { DocumentOperations, Operation, PHDocument } from "document-model";
 
 import { driveDocumentType } from "#drive-document-model/constants";
-import { type DocumentDriveDocument } from "#drive-document-model/gen/types";
+import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import { OperationError } from "#server/error";
-import { type ListenerRevision } from "#server/types";
+import type { ListenerRevision } from "#server/types";
 import { pascalCase } from "change-case";
 import { RunAsap } from "./run-asap.js";
 

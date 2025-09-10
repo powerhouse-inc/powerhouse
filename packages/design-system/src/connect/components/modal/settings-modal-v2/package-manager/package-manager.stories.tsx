@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
 import { PH_PACKAGES } from "@powerhousedao/config/packages";
-import { type ComponentPropsWithoutRef, useState } from "react";
+import type { ComponentPropsWithoutRef } from "react";
+import { useState } from "react";
 import { mockPackages, mockReactorOptions } from "../mocks.js";
 import { PackageManager } from "./package-manager.js";
 

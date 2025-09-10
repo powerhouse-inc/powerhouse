@@ -1,6 +1,6 @@
-import { type DirectoryManager } from "../utilities/DirectoryManager.js";
-import { type ImportManager } from "../utilities/ImportManager.js";
-import { type GenerationContext } from "./GenerationContext.js";
+import type { DirectoryManager } from "../utilities/DirectoryManager.js";
+import type { ImportManager } from "../utilities/ImportManager.js";
+import type { GenerationContext } from "./GenerationContext.js";
 
 export abstract class FileGenerator {
   constructor(

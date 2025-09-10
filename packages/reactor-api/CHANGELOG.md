@@ -1,3 +1,28 @@
+## 4.1.0-dev.50 (2025-09-09)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.49 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.48 (2025-09-09)
+
+### 🩹 Fixes
+
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.47 (2025-09-06)
 
 ### 🩹 Fixes
@@ -14,7 +39,7 @@
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.45 (2025-09-04)
+## 5.0.0-staging.2 (2025-09-05)
 
 ### 🚀 Features
 
@@ -22,11 +47,18 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 ### 🩹 Fixes
 
+- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
 - **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
 
 ### ❤️ Thank You
 
+- Callme-T
 - Frank
+
+## 5.0.0-staging.1 (2025-09-04)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
 
 ## 4.1.0-dev.44 (2025-09-04)
 
@@ -1129,7 +1161,7 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 - **reactor-api:** added access public ([0481de9e](https://github.com/powerhouse-inc/powerhouse/commit/0481de9e))
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente @gpuente
@@ -1140,6 +1172,6 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas

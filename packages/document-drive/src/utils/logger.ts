@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { isLogLevel, type LogLevel, LogLevels } from "@powerhousedao/config";
+import type { LogLevel } from "@powerhousedao/config";
+import { isLogLevel, LogLevels } from "@powerhousedao/config";
 
-export { isLogLevel, LogLevel, LogLevels };
+export { isLogLevel, LogLevels };
+export type { LogLevel };
 
 export type ILogger = Pick<
   Console,

@@ -12,15 +12,15 @@ import {
   operationFromAction,
   operationFromOperation,
 } from "./ph-factories.js";
-import { type PHBaseState, type PHDocumentHeader } from "./ph-types.js";
+import type { PHBaseState, PHDocumentHeader } from "./ph-types.js";
 import { DocumentActionSchema } from "./schema/zod.js";
-import { type SignalDispatch } from "./signal.js";
-import {
-  type Action,
-  type Operation,
-  type PHDocument,
-  type ReducerOptions,
-  type StateReducer,
+import type { SignalDispatch } from "./signal.js";
+import type {
+  Action,
+  Operation,
+  PHDocument,
+  ReducerOptions,
+  StateReducer,
 } from "./types.js";
 import {
   getDocumentLastModified,

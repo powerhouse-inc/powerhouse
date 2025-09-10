@@ -1,6 +1,6 @@
 import { useArgs } from "@storybook/preview-api";
-import { type Meta, type StoryObj } from "@storybook/react";
-import { type DocumentDriveDocument } from "document-drive";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { DocumentDriveDocument } from "document-drive";
 import { useCallback } from "react";
 import { DangerZone } from "./danger-zone.js";
 

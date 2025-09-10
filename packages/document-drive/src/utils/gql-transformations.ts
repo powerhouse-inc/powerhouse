@@ -1,9 +1,9 @@
-import { type DocumentDriveDocument } from "document-drive";
-import {
-  type Operation,
-  type PHBaseState,
-  type PHDocument,
-  type PHDocumentHeader,
+import type { DocumentDriveDocument } from "document-drive";
+import type {
+  Operation,
+  PHBaseState,
+  PHDocument,
+  PHDocumentHeader,
 } from "document-model";
 
 export function responseForDrive(drive: DocumentDriveDocument) {

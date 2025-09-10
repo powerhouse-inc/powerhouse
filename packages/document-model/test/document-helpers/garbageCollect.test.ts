@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  garbageCollect,
-  type OperationIndex,
-} from "../../src/document/utils/document-helpers.js";
+import type { OperationIndex } from "../../src/document/utils/document-helpers.js";
+import { garbageCollect } from "../../src/document/utils/document-helpers.js";
 import { buildOperation, buildOperations } from "./utils.js";
 
 describe("garbageCollect", () => {

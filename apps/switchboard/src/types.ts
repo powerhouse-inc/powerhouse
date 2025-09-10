@@ -1,4 +1,4 @@
-import { type DriveInput, type IDocumentDriveServer } from "document-drive";
+import type { DriveInput, IDocumentDriveServer } from "document-drive";
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";

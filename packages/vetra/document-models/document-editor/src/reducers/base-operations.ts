@@ -5,7 +5,10 @@ export const reducer: DocumentEditorBaseOperationsOperations = {
     state.name = action.input.name;
   },
   addDocumentTypeOperation(state, action, dispatch) {
-    state.documentTypes.push({ id: action.input.id, documentType: action.input.documentType });
+    state.documentTypes.push({
+      id: action.input.id,
+      documentType: action.input.documentType,
+    });
   },
   removeDocumentTypeOperation(state, action, dispatch) {
     state.documentTypes = state.documentTypes.filter(
@@ -14,5 +17,5 @@ export const reducer: DocumentEditorBaseOperationsOperations = {
   },
   setEditorStatusOperation(state, action, dispatch) {
     state.status = action.input.status;
-  }
+  },
 };

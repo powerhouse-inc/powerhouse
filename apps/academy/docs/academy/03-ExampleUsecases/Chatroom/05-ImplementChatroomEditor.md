@@ -1,7 +1,6 @@
-
 # Implement Chatroom Editor
 
-In this section you will implement the `Chatroom` document model editor. This means you will create a simple user interface for the `Chatroom` document model which will be used inside the Connect app to visualise our chatroom, send messages and emoji reactions. 
+In this section you will implement the `Chatroom` document model editor. This means you will create a simple user interface for the `Chatroom` document model which will be used inside the Connect app to visualise our chatroom, send messages and emoji reactions.
 
 ## Generate the editor template
 
@@ -15,24 +14,25 @@ ph generate -- --editor ChatRoomEditor --document-types powerhouse/chat-room
 
 Once complete, navigate to the `editors/chat-room/editor.tsx` file and open it in your editor.
 
-As you'll see you will need to add more complex logic to make the chatroom functional and interact with our document model. 
+As you'll see you will need to add more complex logic to make the chatroom functional and interact with our document model.
 
 ## Add the necessary components for your editor first
 
 Download the repository of the chatroom-demo as a zip file https://github.com/powerhouse-inc/chatroom-demo
-and navigate to .../chatroom-demo-main/editors/chat-room-editor to copy both the components folder & utils function. In this repository you will also find all of the other code snippets we've been using in this tutorial. 
+and navigate to .../chatroom-demo-main/editors/chat-room-editor to copy both the components folder & utils function. In this repository you will also find all of the other code snippets we've been using in this tutorial.
 
 Drag the folder with react components & utils functions into your VSCode of your chat-room-editor.
 
 In this folder you'll find:
+
 - An avatar to be set for each chat room participant
 - The chatroom environment itself
 - A header for the chatroom
-- The UI for rendering the message, username and reaction popup. 
-- The emoji reaction interface 
-- A UI for a text input field 
+- The UI for rendering the message, username and reaction popup.
+- The emoji reaction interface
+- A UI for a text input field
 
-The utils function will help you with mapping information from the document model to your chatroom components. Such as your emoji values to the relevant emoji to be displayed.   
+The utils function will help you with mapping information from the document model to your chatroom components. Such as your emoji values to the relevant emoji to be displayed.
 
 Now, let's copy & paste the code below into the `editor.tsx` file located at `editors/chat-room-editor`and save the file.
 
@@ -60,7 +60,7 @@ export default function Editor(props: IProps) {
   const disableChatRoom = !props.context.user;          // we're disabling the chatroom when a user is not logged in.
 
   const messages: ChatRoomProps["messages"] =
-    props.document.state.global.messages.map((message) => ({    // this object comes from the document state with a mapping that validates which message which user has send. 
+    props.document.state.global.messages.map((message) => ({    // this object comes from the document state with a mapping that validates which message which user has send.
       id: message.id,
       message: message.content || "",
       timestamp: message.sentAt,
@@ -75,13 +75,13 @@ export default function Editor(props: IProps) {
       return;
     }
 
-    props.dispatch(             
+    props.dispatch(
       actions.addMessage({
         messageId: documentModelUtils.hashKey(),
         content: message,
         sender: {
-          id: props.context.user?.address || "anon-user",           
-          name: props.context.user?.ens?.name || null,  // The context of the editor allows us to get hold of the users profile information. 
+          id: props.context.user?.address || "anon-user",
+          name: props.context.user?.ens?.name || null,  // The context of the editor allows us to get hold of the users profile information.
           avatarUrl: props.context.user?.ens?.avatarUrl || null,
         },
         sentAt: new Date().toISOString(),
@@ -183,7 +183,7 @@ Now you can run the Connect app and see the `Chatroom` editor in action.
 ph connect
 ```
 
-In connect, in the bottom right corner you'll find a new Document Model that you can create: `ChatRoom`. Click on it to create a new Chat Room document. A warning will prompt you to login before you are able to send messages. 
+In connect, in the bottom right corner you'll find a new Document Model that you can create: `ChatRoom`. Click on it to create a new Chat Room document. A warning will prompt you to login before you are able to send messages.
 
 Login with an ethereum address via Renown to start sending messages.
 
@@ -191,4 +191,4 @@ Below GIF shows the `Chatroom` editor in action.
 
 ![Chatroom Editor](./images/ChatRoomTest.gif)
 
-If you managed to follow this tutorial until this point, you have successfully implemented the `ChatRoom` document model with its reducer operations and editor. 
+If you managed to follow this tutorial until this point, you have successfully implemented the `ChatRoom` document model with its reducer operations and editor.

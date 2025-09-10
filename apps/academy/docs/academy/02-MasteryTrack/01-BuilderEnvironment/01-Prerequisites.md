@@ -1,18 +1,20 @@
-# Prerequisites 
+# Prerequisites
 
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 :::info
 If you've already set up **Git, Node, and pnpm**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
 :::
-___
+
+---
 
 ## Overview
 
-Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools: 
+Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools:
+
 - Node.js 22, which helps us run our code.
 - Visual Studio Code (VS Code), which is where we'll write our code
-- Git, which helps us manage our code. 
+- Git, which helps us manage our code.
 
 Follow the steps below based on your computer's operating system.
 
@@ -21,14 +23,17 @@ Follow the steps below based on your computer's operating system.
 node.js 22 is a tool that lets us run our application. Let's install it step by step.
 
 #### For Windows:
+
 1. **Set up PowerShell for running commands:**
    - Press the Windows key
    - Type "PowerShell"
    - Right-click on "Windows PowerShell" and select "Run as administrator"
    - In the PowerShell window, type this command and press Enter:
+
    ```powershell
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
+
    - Type 'A' when prompted to confirm
    - You can now close this window and open PowerShell normally for the remaining steps
 
@@ -41,6 +46,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 3. **Install pnpm:**
    - Open PowerShell (no need for admin mode)
    - Type this command and press Enter:
+
    ```powershell
    npm install -g pnpm
    ```
@@ -52,25 +58,32 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - Node.js and pnpm are installed!
 
 > **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
 
 #### For macOS:
+
 1. **Install Homebrew:**
    - Open Terminal (press Command + Space and type "Terminal")
    - Copy and paste this command into Terminal and press Enter:
+
    ```bash
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
+
    - Follow any additional instructions that appear
 
 2. **Install node.js 22:**
    - In the same Terminal window, type this command and press Enter:
+
    ```bash
    brew install node@22
    ```
+
    - Then, install pnpm:
+
    ```bash
    brew install pnpm
    ```
@@ -81,19 +94,23 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - If you see version numbers, you've successfully installed Node.js and pnpm!
 
 #### For Linux (Ubuntu/Debian):
+
 1. **Open Terminal:**
    - Press Ctrl + Alt + T on your keyboard, or
    - Click the Activities button and type "Terminal"
 
 2. **Update Package List:**
+
    ```bash
    sudo apt update
    ```
 
 3. **Install node.js 22 and pnpm:**
+
    ```bash
    sudo apt install nodejs pnpm
    ```
@@ -104,6 +121,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - If you see version numbers, you're all set!
 
 ### Installing Visual Studio Code
@@ -111,6 +129,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 VS Code is the editor we'll use to write our code. Here's how to install it:
 
 #### For Windows:
+
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Windows" button
 3. Once the installer downloads, double-click it
@@ -121,6 +140,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 8. When installation is complete, click "Finish"
 
 #### For macOS:
+
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Mac" button
 3. Once the .zip file downloads, double-click it to extract
@@ -132,6 +152,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    - Type "shell command" and select "Shell Command: Install 'code' command in PATH"
 
 #### For Linux (Ubuntu/Debian):
+
 1. Open Terminal (Ctrl + Alt + T)
 2. First, update the packages list:
    ```bash
@@ -160,6 +181,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 ### Install Git
 
 #### For Windows
+
 1. Open PowerShell (press Windows key, type "PowerShell", and press Enter)
 2. Visit the [Git website](https://git-scm.com/)
 3. Download the latest version for Windows
@@ -170,6 +192,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    ```
 
 #### For macOS
+
 1. Install using Homebrew:
    ```bash
    brew install git
@@ -180,6 +203,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    ```
 
 #### For Linux (Ubuntu/Debian)
+
 1. Update package list:
    ```bash
    sudo apt update
@@ -196,6 +220,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 ### Configure Git (All Systems)
 
 After installation, set up your identity:
+
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
@@ -204,11 +229,13 @@ git config --global user.email "your.email@example.com"
 ### Install the Powerhouse CLI
 
 The Powerhouse CLI (installed via the `ph-cmd` package) is a command-line interface tool. It provides the `ph` command, which is essential for managing Powerhouse projects. You can get access to the Powerhouse Ecosystem tools by installing them globally using:
+
 ```bash
 pnpm install -g ph-cmd
-``` 
+```
 
 Key commands include:
+
 - `ph connect` for running the Connect application locally
 - `ph switchboard` or `ph reactor` for starting the API service
 - `ph init` to start a new project and build a document model
@@ -221,24 +248,26 @@ This tool will be fundamental on your journey when creating, building, and runni
 
 When installing or using the Powerhouse CLI commands you can use the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bug fix or features under development.
 
-| Command | Description |
-|---------|-------------|
-| **pnpm install -g ph-cmd** | Install latest stable version |
-| **pnpm install -g ph-cmd@dev** | Install development version |
-| **pnpm install -g ph-cmd@staging** | Install staging version |
-| **ph init** | Use latest stable version of the boilerplate |
-| **ph init --dev** | Use development version of the boilerplate |
-| **ph init --staging** | Use staging version of the boilerplate |
-| **ph use** | Switch all dependencies to latest production versions |
-| **ph use dev** | Switch all dependencies to development versions |
-| **ph use prod** | Switch all dependencies to production versions |
+| Command                            | Description                                           |
+| ---------------------------------- | ----------------------------------------------------- |
+| **pnpm install -g ph-cmd**         | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev**     | Install development version                           |
+| **pnpm install -g ph-cmd@staging** | Install staging version                               |
+| **ph init**                        | Use latest stable version of the boilerplate          |
+| **ph init --dev**                  | Use development version of the boilerplate            |
+| **ph init --staging**              | Use staging version of the boilerplate                |
+| **ph use**                         | Switch all dependencies to latest production versions |
+| **ph use dev**                     | Switch all dependencies to development versions       |
+| **ph use prod**                    | Switch all dependencies to production versions        |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
+
 </details>
 
 ### Verify Installation
 
 Open your terminal (command prompt) and run the following commands to verify your setup:
+
 ```bash
 node --version
 pnpm --version
@@ -255,10 +284,9 @@ v22.16.0
 % pnpm --version
 10.10.0
 % git --version
-git version 2.39.3 
+git version 2.39.3
 % ph --version
 PH CMD version:  0.43.18
 -------------------------------------
 PH CLI is not available, please run `ph setup-globals` to generate the default global project
 ```
-

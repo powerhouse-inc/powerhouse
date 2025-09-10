@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "lib": ["ESNext"],
-    "types": ["node", "./types.d.ts"],
+    "types": ["node", "./types.d.ts"]
   },
   "references": [
     {

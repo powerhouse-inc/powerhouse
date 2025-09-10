@@ -1,7 +1,7 @@
 import { readJsonFile } from "#connect-utils";
 import { dirname, isAbsolute, join } from "path";
 import { startServer } from "./server.js";
-import { type ConnectStudioOptions, type StartServerOptions } from "./types.js";
+import type { ConnectStudioOptions, StartServerOptions } from "./types.js";
 
 export function startConnectStudio(options: ConnectStudioOptions) {
   const serverOptions: StartServerOptions = {};

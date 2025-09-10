@@ -1,4 +1,4 @@
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { createInterface } from "readline";
 import { logger } from "./logger.js";
 
@@ -16,7 +16,7 @@ export class InteractiveManager {
   private processingConfirmation = false;
   private strandQueue = new Map<string, QueuedStrand>();
 
-  constructor(interactiveMode: boolean = false) {
+  constructor(interactiveMode = false) {
     this.isInteractiveMode = interactiveMode;
   }
 

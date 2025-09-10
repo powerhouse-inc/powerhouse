@@ -1,10 +1,10 @@
-import { type FileNode, type FolderNode, type Node } from "document-drive";
+import type { FileNode, FolderNode, Node } from "document-drive";
 import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedNodeIdEvent,
   subscribeToSelectedNodeId,
 } from "../events/nodes.js";
-import { type NodeKind } from "../types/reactor.js";
+import type { NodeKind } from "../types/reactor.js";
 import { makeFolderNodeFromDrive } from "../utils/drives.js";
 import {
   isFileNodeKind,

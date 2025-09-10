@@ -1,13 +1,15 @@
 # Environment setup guide
 
 ## Introduction
-Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.   
+
+Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.  
 This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
 
 ## Prerequisites
-Before you begin, ensure you have a Linux-based system (Ubuntu or Debian recommended), sudo privileges, and a stable internet connection.   
-These are essential for the installation and configuration process. 
-The system should have at least 1GB of RAM and 10GB of free disk space for optimal performance. 
+
+Before you begin, ensure you have a Linux-based system (Ubuntu or Debian recommended), sudo privileges, and a stable internet connection.  
+These are essential for the installation and configuration process.
+The system should have at least 1GB of RAM and 10GB of free disk space for optimal performance.
 While these are minimum requirements, more resources will provide better performance, especially when running multiple services.
 
 Also make sure you have your preferred domain registered and created subdomains for your Connect & Switchboard instances.
@@ -68,8 +70,9 @@ It will take a minute or two for your Droplet to be provisioned. Once it's ready
 
 To log in via SSH:
 
-1. Open a terminal (on macOS/Linux) or an SSH client like PuTTY (on Windows). You can also use Digital Ocean's web 'Console'. 
+1. Open a terminal (on macOS/Linux) or an SSH client like PuTTY (on Windows). You can also use Digital Ocean's web 'Console'.
 2. Use one of these commands:
+
    ```bash
    # If using password authentication
    ssh root@YOUR_DROPLET_IP
@@ -161,6 +164,7 @@ Now your Droplet is running! Now you can continue with the Powerhouse tutorial o
 ### Verify configuration
 
 1. Use DNS lookup tools to verify your records:
+
    ```bash
    dig +short yourdomain.com
    dig +short www.yourdomain.com
@@ -181,26 +185,25 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 
 **Current Date:** May 15, 2024
 
-   - Make sure your region is set to eu-west-1 (Ireland)
-   - Name your instance something like `cloud-server` or your project's name
-   - Select Ubuntu 24.04 LTS
-   - Architecture 64-bit (x86)
-   - Scroll down to Instance type and select t2.medium (recommended)
-      - 2 vCPUs and 4 GiB of memory are the recommended minimum specs
-      - For larger projects or higher load, consider t2.large or t2.xlarge
-   - Create a new key pair and save it in a secure location from which you can connect to your instance with the SSH client later.
-   - Configure the security group to allow inbound traffic:
-      - SSH (Port 22) from your IP address
-      - HTTP (Port 80) from anywhere
-      - HTTPS (Port 443) from anywhere
-      - Custom TCP (Port 8442) for Connect
-      - Custom TCP (Port 8441) for Switchboard
-   - **Launch the instance**
+- Make sure your region is set to eu-west-1 (Ireland)
+- Name your instance something like `cloud-server` or your project's name
+- Select Ubuntu 24.04 LTS
+- Architecture 64-bit (x86)
+- Scroll down to Instance type and select t2.medium (recommended)
+  - 2 vCPUs and 4 GiB of memory are the recommended minimum specs
+  - For larger projects or higher load, consider t2.large or t2.xlarge
+- Create a new key pair and save it in a secure location from which you can connect to your instance with the SSH client later.
+- Configure the security group to allow inbound traffic:
+  - SSH (Port 22) from your IP address
+  - HTTP (Port 80) from anywhere
+  - HTTPS (Port 443) from anywhere
+  - Custom TCP (Port 8442) for Connect
+  - Custom TCP (Port 8441) for Switchboard
+- **Launch the instance**
 
-   :::warning
-   Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
-   :::
-
+:::warning
+Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
+:::
 
 ## Part 1: Assigning a static IP to EC2 instance
 
@@ -302,6 +305,7 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 ### Verify configuration
 
 1. Use DNS lookup tools to verify your records:
+
    ```bash
    dig +short yourdomain.com
    dig +short www.yourdomain.com
@@ -322,33 +326,38 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 ### Installation
 
 1.  Run the setup script:
+
     ```bash
     curl -fsSL https://apps.powerhouse.io/install | bash # for macOS, Linux, and WSL
     ```
 
 2.  After installation, source your shell configuration:
+
     ```bash
     source ~/.bashrc  # or source ~/.zshrc if using zsh
     ```
 
 3.  Verify that the Powerhouse CLI is ready to be installed in the next step:
+
     ```bash
     ph --version
     ```
+
     You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
 
-4. Create a project with `ph-init <projectname>`. 
+4.  Create a project with `ph-init <projectname>`.
 
-5. After creation, move into the project with `cd <projectname>`. 
+5.  After creation, move into the project with `cd <projectname>`.
 
-Up next is the configurations of your services. 
+Up next is the configurations of your services.
 
 ### Service configuration
 
-Next, run 
+Next, run
+
 ```bash
 ph service setup
-``` 
+```
 
 Follow the interactive prompts. This command installs the Powerhouse services (Connect and Switchboard) and guides you through their configuration.
 
@@ -363,22 +372,29 @@ PM2 is configured to automatically restart services if they crash and to start t
 The setup command will prompt you for the following information:
 
 #### Package installation
+
 During this phase, you can enter package names that you want to install. For example, you might want to `ph install @powerhousedao/todo-demo-package` or other Powerhouse packages. This step is crucial for adding the specific functionality you need. You can also press Enter to skip this step and install packages later using the `ph install` command.
 
 #### Database configuration
+
 The script offers two options for database configuration:
-*   **Option 1: Local Database** Sets up a local PostgreSQL database, which is ideal for development or small deployments. It automatically creates a database user with a secure random password and configures the database to accept local connections. This option is perfect for getting started quickly.
-*   **Option 2: Remote Database** Allows you to connect to a remote PostgreSQL database by providing a connection URL in the format `postgres://user:password@host:port/db`. This is recommended for production environments.
+
+- **Option 1: Local Database** Sets up a local PostgreSQL database, which is ideal for development or small deployments. It automatically creates a database user with a secure random password and configures the database to accept local connections. This option is perfect for getting started quickly.
+- **Option 2: Remote Database** Allows you to connect to a remote PostgreSQL database by providing a connection URL in the format `postgres://user:password@host:port/db`. This is recommended for production environments.
 
 #### SSL configuration
+
 For SSL configuration, you have two choices:
-*   **Option 1: Let's Encrypt (Recommended for Production)** This option requires you to provide a base domain (e.g., `powerhouse.xyz`) and subdomains for your services. The script will automatically obtain and configure SSL certificates for your domains.
-*   **Option 2: Self-signed Certificate** This is suitable for development or testing. It uses your machine's hostname and generates a self-signed certificate. Browsers will show security warnings with this option.
+
+- **Option 1: Let's Encrypt (Recommended for Production)** This option requires you to provide a base domain (e.g., `powerhouse.xyz`) and subdomains for your services. The script will automatically obtain and configure SSL certificates for your domains.
+- **Option 2: Self-signed Certificate** This is suitable for development or testing. It uses your machine's hostname and generates a self-signed certificate. Browsers will show security warnings with this option.
 
 #### Domain setup
+
 You will be asked to enter your `connect` and `switchboard` subdomains to complete the setup. If you need more information, revisit the cloud provider setup sections at the beginning of this guide.
 
 #### Security features
+
 Security is a top priority. The script implements automatic SSL certificate management, generates secure database passwords, and configures security headers in Nginx, and sets up proper proxy settings to support WebSocket connections securely.
 
 ## 2. Verifying the setup
@@ -386,47 +402,56 @@ Security is a top priority. The script implements automatic SSL certificate mana
 After the installation is complete, it's important to verify that everything is working correctly. You can check the status of your services using PM2, verify the Nginx configuration, and ensure your SSL certificates are properly installed. This step is crucial for identifying any potential issues before they affect your users.
 
 1. Check service status of switchboard and connect:
+
 ```bash
 ph service status
 ```
+
 You can also use
 
 ```bash
-ph service start | stop | restart 
+ph service start | stop | restart
 ```
+
 to start | stop | restart switchboard and connect
 
 2. View Nginx configuration:
+
 ```bash
 sudo nginx -t
 ```
 
 3. Check SSL certificates:
+
 ```bash
 sudo certbot certificates  # if using Let's Encrypt
 ```
 
 ## 3. Accessing the services
 
-Once everything is set up, you can access your services through the configured domains.   
+Once everything is set up, you can access your services through the configured domains.  
 If you chose Let's Encrypt, your services will be available at their respective subdomains. With a self-signed certificate, you'll access the services through your machine's hostname with the appropriate base paths. The services are configured to use HTTPS by default, ensuring secure communication.
 
 ### With Let's Encrypt
+
 - Connect: `https://connect.yourdomain.com`
 - Switchboard: `https://switchboard.yourdomain.com`
 
 ### With self-signed certificate
+
 - Connect: `https://your-hostname/connect`
 - Switchboard: `https://your-hostname/switchboard`
 
 ## 4. Troubleshooting
 
-When issues arise, there are several common problems you might encounter. 
-- The "`ph`: command not found" error usually means you need to source your shell configuration file. 
-- Nginx configuration errors can be investigated through the error logs, and service issues can be diagnosed using PM2 logs. 
+When issues arise, there are several common problems you might encounter.
+
+- The "`ph`: command not found" error usually means you need to source your shell configuration file.
+- Nginx configuration errors can be investigated through the error logs, and service issues can be diagnosed using PM2 logs.
 - SSL certificate problems often relate to DNS settings or certificate paths. Understanding these common issues and their solutions will help you maintain a stable Powerhouse installation.
 
 ### Common issues
+
 1. **"`ph`: command not found"**
    - Run `source ~/.bashrc` or restart your terminal
    - Verify that the `PNPM_HOME` environment variable is set correctly
@@ -452,16 +477,19 @@ When issues arise, there are several common problems you might encounter.
 Regular maintenance is crucial for keeping your Powerhouse installation running smoothly. You can update services using the Powerhouse CLI, restart services through PM2, and monitor logs to ensure everything is functioning correctly. Regular maintenance helps prevent issues and ensures that your services are running with the latest security patches and features.
 
 ### Updating services
+
 ```bash
 ph update <package-name>
 ```
 
 ### Restarting services
+
 ```bash
 ph service restart
 ```
 
 ### Checking service status and logs
+
 ```bash
 ph service status
 ```
@@ -475,11 +503,13 @@ Maintaining security is an ongoing process. It's essential to keep your database
 Regular backups are crucial for data safety. The database can be backed up using pg_dump, and your configuration files can be archived using tar. These backups should be stored securely and tested regularly to ensure they can be restored if needed. Consider implementing an automated backup schedule and storing backups in multiple locations for redundancy.
 
 ### Database backup
+
 ```bash
 pg_dump -U powerhouse -d powerhouse > backup.sql
 ```
 
 ### Configuration backup
+
 ```bash
 sudo tar -czf powerhouse-config.tar.gz /etc/powerhouse/
 ```
@@ -501,4 +531,4 @@ If you encounter issues or need assistance, there are several resources availabl
 1. **Documentation**: Check the official Powerhouse documentation for detailed information.
 2. **Community**: Join the Powerhouse community forums or chat channels.
 3. **Support**: Contact Powerhouse support for professional assistance.
-4. **GitHub**: Report issues or contribute to the project on GitHub. 
+4. **GitHub**: Report issues or contribute to the project on GitHub.

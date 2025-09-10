@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface ShareIconProps {
   width?: number;
@@ -10,8 +10,8 @@ interface ShareIconProps {
 export const ShareIcon: React.FC<ShareIconProps> = ({
   width = 16,
   height = 16,
-  className = '',
-  fill = '#8391A7'
+  className = "",
+  fill = "#8391A7",
 }) => {
   return (
     <svg

@@ -1,6 +1,7 @@
 # Create New Powerhouse Project
 
-:::tip  **Prerequisites**
+:::tip **Prerequisites**
+
 - Powerhouse CLI installed: `pnpm install -g ph-cmd`
 - node.js 22 and pnpm installed
 - Visual Studio Code (or your preferred IDE)
@@ -16,6 +17,7 @@ This command will create a new project in the current directory. You can run the
 mkdir ph-projects
 cd ph-projects
 ```
+
 This essentially opens that folder and places you in it.
 
 Once you've navigated to the directory where you want to create the new project and in your terminal, run the following command:
@@ -24,13 +26,13 @@ Once you've navigated to the directory where you want to create the new project 
 ph init
 ```
 
-In the terminal, you will be asked to enter the project name. Fill in the project name and press enter. Make sure to pay attention to the capitalization of our name `ChatRoom` as it will influence your code generation. 
+In the terminal, you will be asked to enter the project name. Fill in the project name and press enter. Make sure to pay attention to the capitalization of our name `ChatRoom` as it will influence your code generation.
 
 ```bash
 you@yourmachine:~/Powerhouse$ ph init
 
 ? What is the project name? ‣ ChatRoom
-```	
+```
 
 Once the project is created, you will see the following output:
 

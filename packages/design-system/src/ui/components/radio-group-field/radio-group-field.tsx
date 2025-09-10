@@ -1,7 +1,7 @@
 import React, { useId } from "react";
 import { cn } from "../../lib/index.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
-import { type RadioGroupProps } from "../enum-field/types.js";
+import type { RadioGroupProps } from "../enum-field/types.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/message-list.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";

@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
-force: true
+unless_exists: true
 ---
 import { AnalyticsPath, AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/reactor-api";
 import { type InternalTransmitterUpdate, type IProcessor } from "document-drive";

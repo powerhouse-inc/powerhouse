@@ -1,6 +1,6 @@
 import { generateManifest } from "@powerhousedao/codegen";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type VetraPackageState } from "../../../../document-models/vetra-package/index.js";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { VetraPackageState } from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 

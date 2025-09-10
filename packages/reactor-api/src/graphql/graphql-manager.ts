@@ -2,33 +2,37 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "#utils/create-schema.js";
+import type {
+  GraphQLDataSourceProcessOptions,
+  ServiceDefinition,
+} from "@apollo/gateway";
 import {
   ApolloGateway,
   LocalCompose,
   RemoteGraphQLDataSource,
-  type GraphQLDataSourceProcessOptions,
-  type ServiceDefinition,
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import bodyParser from "body-parser";
 import cors from "cors";
-import { childLogger, type IDocumentDriveServer } from "document-drive";
-import { type IRelationalDb } from "document-drive/processors/types";
+import type { IDocumentDriveServer } from "document-drive";
+import { childLogger } from "document-drive";
+import type { IRelationalDb } from "document-drive/processors/types";
 import { debounce } from "document-drive/server/listener/util";
 import type express from "express";
-import { Router, type IRouter } from "express";
-import { type GraphQLSchema } from "graphql";
+import type { IRouter } from "express";
+import { Router } from "express";
+import type { GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { AnalyticsSubgraph } from "./analytics/index.js";
 import { DriveSubgraph } from "./drive/index.js";
-import { type Subgraph, type SubgraphClass } from "./index.js";
+import type { Subgraph, SubgraphClass } from "./index.js";
 import { SystemSubgraph } from "./system/index.js";
-import { type Context } from "./types.js";
+import type { Context } from "./types.js";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,

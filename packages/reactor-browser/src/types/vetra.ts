@@ -1,17 +1,17 @@
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import {
-  type IRelationalDb,
-  type ProcessorRecord,
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type {
+  IRelationalDb,
+  ProcessorRecord,
 } from "document-drive/processors/types";
-import {
-  type Action,
-  type Author,
-  type DocumentModelState,
-  type DocumentSpecification,
-  type ImportScriptModule,
-  type PHDocumentHeader,
-  type Reducer,
-  type SubgraphModule,
+import type {
+  Action,
+  Author,
+  DocumentModelState,
+  DocumentSpecification,
+  ImportScriptModule,
+  PHDocumentHeader,
+  Reducer,
+  SubgraphModule,
 } from "document-model";
 
 export type Processors = (module: {

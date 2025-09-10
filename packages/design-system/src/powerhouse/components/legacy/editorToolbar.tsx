@@ -1,4 +1,4 @@
-import { type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 interface EditorToolbarProps {
   readonly left?: ReactElement<ReactElement>[];

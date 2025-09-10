@@ -1,10 +1,7 @@
-import { type ChangeEvent, type ComponentPropsWithRef, useRef } from "react";
-import {
-  type Control,
-  Controller,
-  type FieldValues,
-  type Path,
-} from "react-hook-form";
+import type { ChangeEvent, ComponentPropsWithRef } from "react";
+import { useRef } from "react";
+import type { Control, FieldValues, Path } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 type Props<TFieldValues extends FieldValues> = Omit<

@@ -40,10 +40,10 @@ import { PGlite } from '@electric-sql/pglite';
 
 function DatabaseSetup() {
   const setPGliteState = useSetPGliteDB();
-  
+
   const initializeDatabase = async () => {
     setPGliteState({ isLoading: true });
-    
+
     try {
       const db = new PGlite('idb://my-database');
       setPGliteState({ db, isLoading: false, error: null });
@@ -51,7 +51,7 @@ function DatabaseSetup() {
       setPGliteState({ error: error as Error, isLoading: false });
     }
   };
-  
+
   return <button onClick={initializeDatabase}>Initialize DB</button>;
 }
 ```
@@ -63,11 +63,11 @@ import { usePGliteDB } from '@powerhousedao/reactor-browser/pglite';
 
 function DatabaseStatus() {
   const { db, isLoading, error } = usePGliteDB();
-  
+
   if (isLoading) return <div>Database initializing...</div>;
   if (error) return <div>Database error: {error.message}</div>;
   if (!db) return <div>No database connection</div>;
-  
+
   return <div>Database ready!</div>;
 }
 ```
@@ -83,25 +83,27 @@ const { db, isLoading, error } = usePGliteDB();
 ```
 
 **Returns:**
+
 ```typescript
 {
-  db: PGliteWithLive | null;    // PGlite database instance with live query support
-  isLoading: boolean;           // True while database is initializing
-  error: Error | null;          // Any initialization error
+  db: PGliteWithLive | null; // PGlite database instance with live query support
+  isLoading: boolean; // True while database is initializing
+  error: Error | null; // Any initialization error
 }
 ```
 
 **Usage:**
+
 ```typescript
 import { usePGliteDB } from '@powerhousedao/reactor-browser/pglite';
 
 function DatabaseStatus() {
   const { db, isLoading, error } = usePGliteDB();
-  
+
   if (isLoading) return <div>Database initializing...</div>;
   if (error) return <div>Database error: {error.message}</div>;
   if (!db) return <div>No database connection</div>;
-  
+
   return <div>Database ready!</div>;
 }
 ```
@@ -115,20 +117,22 @@ const setPGliteState = useSetPGliteDB();
 ```
 
 **Returns:**
+
 ```typescript
 (pglite: Partial<PGliteState>) => void
 ```
 
 **Usage:**
+
 ```typescript
 import { useSetPGliteDB } from '@powerhousedao/reactor-browser/pglite';
 
 function DatabaseSetup() {
   const setPGliteState = useSetPGliteDB();
-  
+
   const initializeDatabase = async () => {
     setPGliteState({ isLoading: true });
-    
+
     try {
       const db = await createPGliteInstance();
       setPGliteState({ db, isLoading: false, error: null });
@@ -136,7 +140,7 @@ function DatabaseSetup() {
       setPGliteState({ error: error as Error, isLoading: false });
     }
   };
-  
+
   return <button onClick={initializeDatabase}>Initialize DB</button>;
 }
 ```
@@ -150,24 +154,26 @@ const [pglite, setPGlite] = usePGlite();
 ```
 
 **Returns:**
+
 ```typescript
 [PGliteState, (pglite: Partial<PGliteState>) => void]
 ```
 
 **Usage:**
+
 ```typescript
 import { usePGlite } from '@powerhousedao/reactor-browser/pglite';
 
 function DatabaseManager() {
   const [{ db, isLoading, error }, setPGlite] = usePGlite();
-  
+
   // Use db, isLoading, error for state
   // Use setPGlite to update state
-  
+
   const resetDatabase = () => {
     setPGlite({ db: null, isLoading: false, error: null });
   };
-  
+
   return (
     <div>
       <div>Status: {isLoading ? 'Loading' : db ? 'Ready' : 'Not connected'}</div>
@@ -186,11 +192,12 @@ The hooks use global state management through the `window.powerhouse.pglite` obj
 window.powerhouse.pglite = {
   db: PGliteWithLive | null,
   isLoading: boolean,
-  error: Error | null
+  error: Error | null,
 };
 ```
 
 This ensures that:
+
 - Database state is shared across all components
 - State updates trigger re-renders in all consuming components
 - Database initialization happens once globally
@@ -203,11 +210,11 @@ The system uses custom events for state synchronization:
 - All hooks automatically subscribe to this event for reactive updates
 
 ```typescript
-import { PGLITE_UPDATE_EVENT } from '@powerhousedao/reactor-browser/pglite';
+import { PGLITE_UPDATE_EVENT } from "@powerhousedao/reactor-browser/pglite";
 
 // Custom event handling
 window.addEventListener(PGLITE_UPDATE_EVENT, () => {
-  console.log('PGlite state updated');
+  console.log("PGlite state updated");
 });
 ```
 
@@ -216,15 +223,15 @@ window.addEventListener(PGLITE_UPDATE_EVENT, () => {
 This package re-exports useful types and utilities from `@electric-sql/pglite`:
 
 ```typescript
-import { 
-  PGlite, 
-  PGliteWorker, 
+import {
+  PGlite,
+  PGliteWorker,
   worker,
   // All live query types
   type LiveQuery,
   type LiveQueryResults,
-  type PGliteWorkerOptions 
-} from '@powerhousedao/reactor-browser/pglite';
+  type PGliteWorkerOptions,
+} from "@powerhousedao/reactor-browser/pglite";
 ```
 
 ## Hook Relationships
@@ -249,16 +256,16 @@ Initialize the database at the application root level:
 ```typescript
 function App() {
   const setPGliteState = useSetPGliteDB();
-  
+
   useEffect(() => {
     const initDB = async () => {
       const db = new PGlite('idb://app-database');
       setPGliteState({ db, isLoading: false });
     };
-    
+
     initDB();
   }, [setPGliteState]);
-  
+
   return <AppContent />;
 }
 ```
@@ -303,10 +310,10 @@ setPGliteState({ db: newDatabase, isLoading: false });
 ```typescript
 // Debug database state
 const { db, isLoading, error } = usePGliteDB();
-console.log('Database state:', { db: !!db, isLoading, error });
+console.log("Database state:", { db: !!db, isLoading, error });
 
 // Debug global state
-console.log('Global PGlite state:', window.powerhouse?.pglite);
+console.log("Global PGlite state:", window.powerhouse?.pglite);
 ```
 
 ## For Higher-Level Database Operations
@@ -315,7 +322,10 @@ For type-safe queries and live query capabilities, use the relational database l
 
 ```typescript
 // For type-safe queries and live updates
-import { useRelationalDb, useRelationalQuery } from '@powerhousedao/reactor-browser/relational';
+import {
+  useRelationalDb,
+  useRelationalQuery,
+} from "@powerhousedao/reactor-browser/relational";
 ```
 
 This package provides the foundation - the relational database layer builds on top of it for everyday database operations.

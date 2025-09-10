@@ -16,7 +16,6 @@ A powerful code generation toolkit for the Powerhouse ecosystem, designed to aut
 pnpm add @powerhousedao/codegen
 ```
 
-
 ## Templates
 
 The package supports custom templates for different output formats:

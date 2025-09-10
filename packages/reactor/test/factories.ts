@@ -1,20 +1,20 @@
+import type { BaseDocumentDriveServer } from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
-  type BaseDocumentDriveServer,
 } from "document-drive";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive/storage/types";
-import {
-  documentModelDocumentModelModule,
-  type Action,
-  type DocumentModelModule,
-  type Operation,
-  type PHDocument,
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
 } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";

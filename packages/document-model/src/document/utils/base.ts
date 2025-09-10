@@ -1,4 +1,4 @@
-import { type PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
+import type { PHBaseState, PHDocumentHeader } from "#document/ph-types.js";
 import { hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
 import { ZodError } from "zod";
@@ -11,20 +11,20 @@ import {
   UNDO,
 } from "../actions/types.js";
 import { baseReducer, updateHeaderRevision } from "../reducer.js";
-import { type UndoAction, type UndoRedoAction } from "../schema/types.js";
-import { type SignalDispatch } from "../signal.js";
-import {
-  type Action,
-  type CreateState,
-  type DocumentAction,
-  type DocumentOperations,
-  type DocumentOperationsIgnoreMap,
-  type MappedOperation,
-  type Operation,
-  type PHDocument,
-  type Reducer,
-  type ReducerOptions,
-  type StateReducer,
+import type { UndoAction, UndoRedoAction } from "../schema/types.js";
+import type { SignalDispatch } from "../signal.js";
+import type {
+  Action,
+  CreateState,
+  DocumentAction,
+  DocumentOperations,
+  DocumentOperationsIgnoreMap,
+  MappedOperation,
+  Operation,
+  PHDocument,
+  Reducer,
+  ReducerOptions,
+  StateReducer,
 } from "../types.js";
 import { generateId } from "./crypto.js";
 import { sortOperations } from "./document-helpers.js";

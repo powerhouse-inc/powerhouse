@@ -1,15 +1,16 @@
-import { type PHBaseState, type PHDocumentHeader } from "#document/ph-types.js";
-import { type Reducer } from "#document/types.js";
+import type { PHBaseState, PHDocumentHeader } from "#document/ph-types.js";
+import type { Reducer } from "#document/types.js";
 import { fetchFile, getFile, hash, readFile, writeFile } from "#utils/env";
 import JSZip from "jszip";
 import mime from "mime/lite";
-import {
-  type Attachment,
-  type AttachmentInput,
-  type DocumentOperations,
-  type PHDocument,
+import type {
+  Attachment,
+  AttachmentInput,
+  DocumentOperations,
+  PHDocument,
 } from "../types.js";
-import { replayDocument, type ReplayDocumentOptions } from "./base.js";
+import type { ReplayDocumentOptions } from "./base.js";
+import { replayDocument } from "./base.js";
 import {
   filterDocumentOperationsResultingState,
   garbageCollectDocumentOperations,

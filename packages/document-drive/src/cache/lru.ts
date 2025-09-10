@@ -1,7 +1,8 @@
 import { childLogger } from "#utils/logger";
-import { LRUCache as BaseLRUCache, type LRUCache } from "lru-cache";
+import type { LRUCache } from "lru-cache";
+import { LRUCache as BaseLRUCache } from "lru-cache";
 import sizeof from "object-sizeof";
-import { type ICacheStorage } from "./memory.js";
+import type { ICacheStorage } from "./memory.js";
 
 /**
  * Options for configuring an LRU (Least Recently Used) cache storage.

@@ -1,14 +1,14 @@
-import {
-  type Account,
-  type FixedIncome,
-  type FixedIncomeType,
-  type GroupTransaction,
-  type ServiceProviderFeeType,
-  type SPV,
-  type tableNames,
+import type {
+  Account,
+  FixedIncome,
+  FixedIncomeType,
+  GroupTransaction,
+  ServiceProviderFeeType,
+  SPV,
+  tableNames,
 } from "#rwa";
-import { type Identifier, type Order } from "natural-orderby";
-import { type ReactNode, type RefObject } from "react";
+import type { Identifier, Order } from "natural-orderby";
+import type { ReactNode, RefObject } from "react";
 
 export type ColumnCountByTableWidth = Record<number, number>;
 

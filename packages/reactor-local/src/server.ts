@@ -4,20 +4,16 @@ import {
   startViteServer,
   VitePackageLoader,
 } from "@powerhousedao/reactor-api/packages/vite-loader";
-import {
-  InMemoryCache,
-  logger,
-  ReactorBuilder,
-  type DefaultRemoteDriveInput,
-} from "document-drive";
+import type { DefaultRemoteDriveInput } from "document-drive";
+import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
-import {
-  DefaultStartServerOptions,
-  type LocalReactor,
-  type RemoteDriveInputSimple,
-  type StartServerOptions,
+import type {
+  LocalReactor,
+  RemoteDriveInputSimple,
+  StartServerOptions,
 } from "./types.js";
+import { DefaultStartServerOptions } from "./types.js";
 import { addDefaultDrive, createStorage } from "./util.js";
 
 dotenv.config();

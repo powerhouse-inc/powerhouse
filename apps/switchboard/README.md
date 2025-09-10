@@ -56,15 +56,15 @@ pnpm add -g @powerhousedao/switchboard
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `4001` |
-| `DATABASE_URL` | Database connection string | `./.ph/drive-storage` |
-| `REDIS_URL` | Redis connection URL | - |
-| `REDIS_TLS_URL` | Redis TLS connection URL | - |
-| `SENTRY_DSN` | Sentry DSN for error tracking | - |
-| `SENTRY_ENV` | Sentry environment | - |
-| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address | - |
+| Variable                   | Description                   | Default               |
+| -------------------------- | ----------------------------- | --------------------- |
+| `PORT`                     | Server port                   | `4001`                |
+| `DATABASE_URL`             | Database connection string    | `./.ph/drive-storage` |
+| `REDIS_URL`                | Redis connection URL          | -                     |
+| `REDIS_TLS_URL`            | Redis TLS connection URL      | -                     |
+| `SENTRY_DSN`               | Sentry DSN for error tracking | -                     |
+| `SENTRY_ENV`               | Sentry environment            | -                     |
+| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address      | -                     |
 
 ### Authentication Configuration
 
@@ -72,10 +72,10 @@ pnpm add -g @powerhousedao/switchboard
 const options = {
   auth: {
     enabled: true,
-    guests: ['0x123', '0x456'],
-    users: ['0x789', '0xabc'],
-    admins: ['0xdef', '0xghi']
-  }
+    guests: ["0x123", "0x456"],
+    users: ["0x789", "0xabc"],
+    admins: ["0xdef", "0xghi"],
+  },
 };
 ```
 
@@ -92,7 +92,7 @@ Switchboard supports multiple storage backends:
 ### Using Docker Compose
 
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   switchboard:
     image: powerhouse/switchboard:latest

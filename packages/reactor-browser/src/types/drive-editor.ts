@@ -1,6 +1,6 @@
-import { type FolderNode, type Node } from "document-drive";
-import { type DocumentModelModule, type PHDocument } from "document-model";
-import { type FC } from "react";
+import type { FolderNode, Node } from "document-drive";
+import type { DocumentModelModule, PHDocument } from "document-model";
+import type { FC } from "react";
 
 /**
  * Interface representing the context values provided by the host application

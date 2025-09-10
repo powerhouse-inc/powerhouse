@@ -47,43 +47,34 @@ The above query will output the following list, which is described in the dropdo
 <summary>👉 Expand this dropdown to explore the list of fields and retrievable data.</summary>
 
 - **Actuals**: This metric represents the recorded amounts that have been actually spent or received. It is used for tracking and comparing against budgeted or forecasted amounts. This will be helpful to understand the real financial performance.
-
-    - Example Use Case: Comparing actual spending against the budget for a specific project to assess financial management efficiency.
+  - Example Use Case: Comparing actual spending against the budget for a specific project to assess financial management efficiency.
 
 - **Budget**: The estimated financial plan for a period, detailing the expected amounts allocated for various expenses and revenues.
-    - Example Use Case: Planning financial allocations for upcoming quarters and tracking the distribution of funds across different departments.
+  - Example Use Case: Planning financial allocations for upcoming quarters and tracking the distribution of funds across different departments.
 
 - **Forecast**: A projection of future financial outcomes based on current trends and past data. This functions as an educated estimate that helps in planning and strategy.
-
-    - Example Use Case: Anticipating cash flow and financial needs for the next fiscal year to make informed business decisions and adjustments.
+  - Example Use Case: Anticipating cash flow and financial needs for the next fiscal year to make informed business decisions and adjustments.
 
 - **PaymentsOnChain**: This metric tracks transactions executed on the blockchain, ensuring transparency and immutability of payment records.
-
-    - Example Use Case: Auditing blockchain transactions to ensure the accuracy of financial reporting within decentralized finance operations.
+  - Example Use Case: Auditing blockchain transactions to ensure the accuracy of financial reporting within decentralized finance operations.
 
 - **PaymentsOffChainIncluded**: Reflects transactions that occur outside the blockchain but are recognized in the financial records, possibly including traditional banking transactions and off-chain payment channels.
-
-    - Example Use Case: Reconciling on-chain and off-chain financial activities to maintain a comprehensive understanding of total expenditures and revenues.
+  - Example Use Case: Reconciling on-chain and off-chain financial activities to maintain a comprehensive understanding of total expenditures and revenues.
 
 - **DailyDaiPriceChange**: This metric measures the daily fluctuation in the price of DAI in USD. It's crucial for understanding the stability of DAI and its performance against the US dollar on a day-to-day basis.
-
-    - Example Use Case: Monitoring the stability of DAI to ensure it maintains its peg to the US dollar, crucial for financial planning and risk assessment in DAI-denominated transactions.
+  - Example Use Case: Monitoring the stability of DAI to ensure it maintains its peg to the US dollar, crucial for financial planning and risk assessment in DAI-denominated transactions.
 
 - **DailyUsdcPriceChange**: Tracks the daily price change of USDC in USD. This metric is important for analyzing USDC's stability and its daily performance relative to the US dollar.
-
-    - Example Use Case: Evaluating the daily fluctuations of USDC to assess its reliability as a stablecoin for operational liquidity and treasury management.
+  - Example Use Case: Evaluating the daily fluctuations of USDC to assess its reliability as a stablecoin for operational liquidity and treasury management.
 
 - **DailyUsdpPriceChange**: Reflects the daily price movement of USDP (Pax Dollar) in USD. It provides insights into the daily stability and performance of USDP against the US dollar.
-
-    - Example Use Case: Analyzing USDP's stability for strategic decisions in treasury operations, especially for entities holding or transacting in USDP.
+  - Example Use Case: Analyzing USDP's stability for strategic decisions in treasury operations, especially for entities holding or transacting in USDP.
 
 - **DailyMkrPriceChange**: This metric shows the daily variation in the price of MKR in USD. It is vital for stakeholders to track the governance token's market performance on a daily basis.
-
-    - Example Use Case: Investors and MKR holders use this data to make informed decisions regarding buying, selling, or holding MKR based on its daily market performance.
+  - Example Use Case: Investors and MKR holders use this data to make informed decisions regarding buying, selling, or holding MKR based on its daily market performance.
 
 - **DailyEthPriceChange**: Measures the daily price change of Ethereum (ETH) in USD. Given Ethereum's centrality to the DeFi ecosystem, this metric is key for evaluating the daily market dynamics of ETH.
-
-    - Example Use Case: DeFi participants and investors track ETH's price fluctuations to adjust their investment strategies, hedge risks, and capitalize on market movements.
+  - Example Use Case: DeFi participants and investors track ETH's price fluctuations to adjust their investment strategies, hedge risks, and capitalize on market movements.
 
 </details>
 
@@ -107,7 +98,7 @@ query Analytics {
 }
 ```
 
-The output of the query above: 
+The output of the query above:
 
 ```graphql
 {
@@ -201,42 +192,24 @@ The output of the query above:
 
 <summary> Expand this dropdown to explore the list of fields and retrievable data.</summary>
 
-**Budget**
-    - **Description**: Refers to the allocation and utilization of funds within different projects or operational areas. It includes various budget categories such as recognized delegates, specific projects, and governance facilitation.
+**Budget** - **Description**: Refers to the allocation and utilization of funds within different projects or operational areas. It includes various budget categories such as recognized delegates, specific projects, and governance facilitation.
 
 - **Values**:
-    - Paths like `atlas/legacy/recognized-delegates/` and `atlas/scopes/SUP/I/PHOENIX/` represent different budget categories or segments.
-    - Labels, descriptions, and icons are provided for more detailed budget segments, aiding in identifying specific budget areas and their purposes.
+  - Paths like `atlas/legacy/recognized-delegates/` and `atlas/scopes/SUP/I/PHOENIX/` represent different budget categories or segments.
+  - Labels, descriptions, and icons are provided for more detailed budget segments, aiding in identifying specific budget areas and their purposes.
 
-**Category**
-    - **Description**: Categorizes transactions or allocations into broader groups like compensation, benefits, or non-headcount expenses.
-    - **Values**:
-        - Paths like `atlas/headcount/CompensationAndBenefits/` and `atlas/non-headcount/` help segregate financial data into meaningful categories for analysis.
+**Category** - **Description**: Categorizes transactions or allocations into broader groups like compensation, benefits, or non-headcount expenses. - **Values**: - Paths like `atlas/headcount/CompensationAndBenefits/` and `atlas/non-headcount/` help segregate financial data into meaningful categories for analysis.
 
-**Wallet**
-    - **Description**: Tracks transactions or balances associated with specific blockchain wallet addresses.
-    - **Values**:
-        - Each path, like `atlas/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb/`, corresponds to a unique wallet address, enabling financial tracking at the wallet level.
+**Wallet** - **Description**: Tracks transactions or balances associated with specific blockchain wallet addresses. - **Values**: - Each path, like `atlas/0xbe8e3e3618f7474f8cb1d074a26affef007e98fb/`, corresponds to a unique wallet address, enabling financial tracking at the wallet level.
 
-**Project**
-    - **Description**: Represents different projects or initiatives within the MakerDAO ecosystem.
-    - **Values**:
-        - Paths such as `atlas/Flip Flap Flop Delegate LLC/` and `atlas/Feedblack Loops LLC/` designate various projects, facilitating project-specific financial analysis and reporting.
+**Project** - **Description**: Represents different projects or initiatives within the MakerDAO ecosystem. - **Values**: - Paths such as `atlas/Flip Flap Flop Delegate LLC/` and `atlas/Feedblack Loops LLC/` designate various projects, facilitating project-specific financial analysis and reporting.
 
-**Report**
-    - **Description**: Used for accessing specific financial reports, typically segmented by time (e.g., monthly, quarterly).
-    - **Values**:
-        - Paths like `atlas/Delegates/null/2021/11/` represent report segments, often organized by date, allowing users to access financial information for specific time periods.
+**Report** - **Description**: Used for accessing specific financial reports, typically segmented by time (e.g., monthly, quarterly). - **Values**: - Paths like `atlas/Delegates/null/2021/11/` represent report segments, often organized by date, allowing users to access financial information for specific time periods.
 
-**TransactionType**
-    - **Description**: Differentiates between various types of transactions within the MakerDAO ecosystem. This dimension helps in analyzing transaction flows, such as internal transfers, governance actions, or external payments.
-    - **Values**:
-        - A path like `atlas/Internal Transaction/` signifies a specific category of transaction, in this case, internal transactions within the organization. This allows for a focused analysis of internal fund movements or operational transactions.
+**TransactionType** - **Description**: Differentiates between various types of transactions within the MakerDAO ecosystem. This dimension helps in analyzing transaction flows, such as internal transfers, governance actions, or external payments. - **Values**: - A path like `atlas/Internal Transaction/` signifies a specific category of transaction, in this case, internal transactions within the organization. This allows for a focused analysis of internal fund movements or operational transactions.
 
-**PriceData**
-    - **Description**: Provides access to historical price data for different cryptocurrencies, facilitating financial analysis and market trend observations. This dimension is crucial for tracking the day-to-day or historical price movements of tokens like MKR, DAI, etc.
-    - **Values**:
-        - Paths such as `atlas/price-data/mkr-usd/day-average/` offer access to daily average prices of MKR in USD, enabling detailed analysis of MKR's price performance over time. This can be invaluable for financial reporting, investment analysis, or economic research within the MakerDAO ecosystem.
+**PriceData** - **Description**: Provides access to historical price data for different cryptocurrencies, facilitating financial analysis and market trend observations. This dimension is crucial for tracking the day-to-day or historical price movements of tokens like MKR, DAI, etc. - **Values**: - Paths such as `atlas/price-data/mkr-usd/day-average/` offer access to daily average prices of MKR in USD, enabling detailed analysis of MKR's price performance over time. This can be invaluable for financial reporting, investment analysis, or economic research within the MakerDAO ecosystem.
+
 </details>
 
 ### Currency
@@ -267,7 +240,6 @@ query Analytics($filter: AnalyticsFilter) {
     }
   }
 }
-
 ```
 
 With filters for MKR:
@@ -284,6 +256,7 @@ With filters for MKR:
   }
 }
 ```
+
 This query will return budget data in MKR for the specified time frame and dimension.
 
 3. Consistency in Currency Specification: It's essential to be consistent in specifying the currency for each query. If your analysis involves comparing data across both DAI and MKR, ensure that separate queries are made for each currency and the results are appropriately labeled and distinguished.
@@ -314,6 +287,7 @@ By appropriately specifying the currency in your queries, you can tailor the fin
   }
 }
 ```
+
 This configuration fetches total MKR budget data for the entire year of 2023, focusing on the 'budget' dimension with a specific level of detail.
 
 2. Comprehensive Yearly Financial Analysis in DAI:
@@ -337,6 +311,7 @@ This configuration fetches total MKR budget data for the entire year of 2023, fo
 }
 
 ```
+
 This filter setup is designed to provide an annual overview of actuals and forecast data across all categories in DAI for the year 2023.
 
 These examples demonstrate how to construct a complete filter object for different types of financial analysis. By properly defining each parameter, users can ensure accurate and relevant data retrieval from the analytics engine.
@@ -353,7 +328,7 @@ The `multiCurrencySeries` is a new feature introduced to the MakerDAO Analytics 
 
 The conversion is based on the available price change metrics in the analytics engine. To see all available price change metrics in the engine, use the metricsfield in the query to get a list:
 
-```graphql	
+```graphql
  "metrics": [
         "Actuals",
         "Budget",
@@ -530,7 +505,6 @@ query MyAnalyticsQuery($filter: AnalyticsFilter) {
     }
   }
 }
-
 ```
 
 **Step 6: Execute the Query**
@@ -598,7 +572,7 @@ Explanation
 
 - This query fetches the total actual expenses and budget for MakerDAO for the entire year of 2023.
 - The granularity is set to "total" to aggregate data across the whole year.
-metrics include "Actuals" and "Budget" to get both actual spendings and budgeted amounts.
+  metrics include "Actuals" and "Budget" to get both actual spendings and budgeted amounts.
 - The currency is set to "DAI" to ensure all financial data is in the DAI format.
 
 Modification for Custom Use Cases

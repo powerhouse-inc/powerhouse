@@ -1,6 +1,6 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { setupGlobalsHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
 import { createGlobalProject, withCustomHelp } from "../utils/index.js";
 
 // Extract the type parameters for reuse

@@ -1,4 +1,4 @@
-import { type BaseDocumentGen } from "./base-document-gen.js";
+import type { BaseDocumentGen } from "./base-document-gen.js";
 import { DocumentCodegenManager } from "./document-codegen-manager.js";
 import {
   AppGenerator,
@@ -8,7 +8,7 @@ import {
   ProcessorGenerator,
   SubgraphGenerator,
 } from "./generators/index.js";
-import { type Config } from "./types.js";
+import type { Config } from "./types.js";
 
 /**
  * Factory class for creating and configuring DocumentCodegenManager instances
@@ -18,7 +18,10 @@ export class DocumentCodegenFactory {
   /**
    * Create a DocumentCodegenManager with all standard generators registered
    */
-  static createManager(config: Config, interactiveMode: boolean = false): DocumentCodegenManager {
+  static createManager(
+    config: Config,
+    interactiveMode = false,
+  ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 
     // Register all the standard generators
@@ -44,7 +47,7 @@ export class DocumentCodegenFactory {
   static createManagerWithGenerators(
     config: Config,
     generators: Array<new (config: Config) => any>,
-    interactiveMode: boolean = false
+    interactiveMode = false,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 

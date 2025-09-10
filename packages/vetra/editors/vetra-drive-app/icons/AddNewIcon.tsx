@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface AddNewIconProps {
   width?: number;
@@ -9,7 +9,7 @@ interface AddNewIconProps {
 export const AddNewIcon: React.FC<AddNewIconProps> = ({
   width = 40,
   height = 48,
-  className = ''
+  className = "",
 }) => {
   return (
     <svg
@@ -87,12 +87,7 @@ export const AddNewIcon: React.FC<AddNewIconProps> = ({
           />
           <feOffset dy="-1" />
           <feGaussianBlur stdDeviation="0.5" />
-          <feComposite
-            in2="hardAlpha"
-            operator="arithmetic"
-            k2="-1"
-            k3="1"
-          />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
           <feColorMatrix
             type="matrix"
             values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0"
@@ -150,12 +145,7 @@ export const AddNewIcon: React.FC<AddNewIconProps> = ({
           />
           <feOffset dy="-1" />
           <feGaussianBlur stdDeviation="0.5" />
-          <feComposite
-            in2="hardAlpha"
-            operator="arithmetic"
-            k2="-1"
-            k3="1"
-          />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
           <feColorMatrix
             type="matrix"
             values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0"

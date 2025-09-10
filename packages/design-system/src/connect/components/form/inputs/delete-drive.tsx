@@ -1,6 +1,6 @@
 import { DriveNameInput } from "#connect";
 import { Button, Icon } from "#powerhouse";
-import { type DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 
 export type DeleteDriveProps = {

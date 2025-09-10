@@ -1,4 +1,4 @@
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { EditorUndoRedoButtons } from "./editor-undo-redo-buttons.js";
 
 const meta: Meta = {

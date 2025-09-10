@@ -1,4 +1,4 @@
-import { type Node } from "document-drive";
+import type { Node } from "document-drive";
 import { useCallback } from "react";
 
 interface UseBreadcrumbsProps {

@@ -1,6 +1,7 @@
 import { cn } from "../../lib/index.js";
 
-import { FormMessage, type FormMessageType } from "./form-message.js";
+import type { FormMessageType } from "./form-message.js";
+import { FormMessage } from "./form-message.js";
 
 interface FormMessageListProps {
   messages: string[];
