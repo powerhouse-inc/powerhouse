@@ -24,5 +24,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "#": new URL("./src/", import.meta.url).pathname,
     },
+    coverage: {
+      exclude: ["src/storage/prisma/client/**"],
+    },
   },
 }));

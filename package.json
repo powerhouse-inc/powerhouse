@@ -14,6 +14,7 @@
     "build:all": "pnpm nx run-many --target=build --all",
     "build:affected": "pnpm nx affected --target=build",
     "test:all": "pnpm nx run-many --target=test --all",
+    "test:coverage": "pnpm vitest run --coverage",
     "storybook:all": "pnpm nx run-many --target=build-storybook --all",
     "check:all": "pnpm i && pnpm nx run-many --target=build,lint:nx,test --all",
     "check:all:ci": "pnpm check:all --exclude=document-drive",
