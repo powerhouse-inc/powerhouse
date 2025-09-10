@@ -11,20 +11,13 @@ import {
   expectedProOperationsContent,
 } from "./fixtures/expected-reducer-content.js";
 
+const testDir = path.join(import.meta.dirname);
+
 describe("ts-morph generator", () => {
-  const srcPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    ".test-project",
-  );
+  const srcPath = path.join(testDir, ".test-project");
 
   const srcTestDocumentPathV3 = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
+    testDir,
     "data",
     "test-doc-versions",
     "test-doc-v3",
@@ -32,10 +25,7 @@ describe("ts-morph generator", () => {
   );
 
   const srcTestDocumentPathV4 = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
+    testDir,
     "data",
     "test-doc-versions",
     "test-doc-v4",
