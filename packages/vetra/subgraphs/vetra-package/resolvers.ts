@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { type Subgraph } from "@powerhousedao/reactor-api";
+import type { Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { generateId } from "document-model";
 import { actions } from "../../document-models/vetra-package/index.js";

@@ -1,4 +1,4 @@
-import { type BaseDocumentGen } from "./base-document-gen.js";
+import type { BaseDocumentGen } from "./base-document-gen.js";
 import { DocumentCodegenManager } from "./document-codegen-manager.js";
 import {
   AppGenerator,
@@ -8,7 +8,7 @@ import {
   ProcessorGenerator,
   SubgraphGenerator,
 } from "./generators/index.js";
-import { type Config } from "./types.js";
+import type { Config } from "./types.js";
 
 /**
  * Factory class for creating and configuring DocumentCodegenManager instances

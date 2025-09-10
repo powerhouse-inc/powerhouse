@@ -1,5 +1,5 @@
-import { type DID, type IConnectCrypto } from "../crypto/index.js";
-import { type SetConnectCryptoEvent, type SetDidEvent } from "./types.js";
+import type { DID, IConnectCrypto } from "../crypto/index.js";
+import type { SetConnectCryptoEvent, SetDidEvent } from "./types.js";
 
 export function dispatchSetConnectCryptoEvent(
   connectCrypto: IConnectCrypto | undefined,

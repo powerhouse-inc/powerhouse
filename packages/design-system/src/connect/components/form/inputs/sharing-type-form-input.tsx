@@ -1,6 +1,7 @@
-import { type SharingType } from "document-drive";
-import { type ComponentPropsWithRef } from "react";
-import { Controller, type Control, type Path } from "react-hook-form";
+import type { SharingType } from "document-drive";
+import type { ComponentPropsWithRef } from "react";
+import type { Control, Path } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { sharingTypeOptions } from "../../../constants/options.js";
 import { Select } from "../../select/select.js";
 

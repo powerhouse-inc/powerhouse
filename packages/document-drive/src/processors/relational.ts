@@ -1,9 +1,9 @@
-import { type ListenerFilter } from "#drive-document-model/module";
-import { type InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
-import {
-  type IProcessor,
-  type IRelationalDb,
-  type IRelationalQueryBuilder,
+import type { ListenerFilter } from "#drive-document-model/module";
+import type { InternalTransmitterUpdate } from "../server/listener/transmitter/internal.js";
+import type {
+  IProcessor,
+  IRelationalDb,
+  IRelationalQueryBuilder,
 } from "./types.js";
 import { relationalDbToQueryBuilder } from "./utils.js";
 

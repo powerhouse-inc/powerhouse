@@ -1,9 +1,8 @@
-import {
-  type IdbFs,
-  type PGliteWorkerOptions,
-  live,
-  worker,
+import type {
+  IdbFs,
+  PGliteWorkerOptions,
 } from "@powerhousedao/reactor-browser/pglite";
+import { live, worker } from "@powerhousedao/reactor-browser/pglite";
 
 interface PGLiteWorkerOptions extends PGliteWorkerOptions {
   meta: {

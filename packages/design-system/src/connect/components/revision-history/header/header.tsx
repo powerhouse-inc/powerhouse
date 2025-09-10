@@ -1,5 +1,5 @@
 import { Icon } from "#powerhouse";
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { Branch } from "./branch.js";
 import { DocId } from "./doc-id.js";

@@ -1,4 +1,4 @@
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
 import { createInterface } from "readline";
 import { logger } from "./logger.js";
 

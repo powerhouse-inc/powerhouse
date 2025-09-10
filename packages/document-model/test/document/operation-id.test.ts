@@ -1,10 +1,9 @@
 import { baseCreateDocument, replayOperations } from "#document/utils/base.js";
 import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { CountDocument, CountPHState } from "../helpers.js";
 import {
   baseCountReducer,
-  type CountDocument,
-  type CountPHState,
   countReducer,
   createTestState,
   createCountDocumentState,

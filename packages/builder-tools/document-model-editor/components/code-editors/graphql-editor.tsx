@@ -1,4 +1,5 @@
-import { type Diagnostic, forceLinting } from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
+import { forceLinting } from "@codemirror/lint";
 import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { graphql } from "cm6-graphql";

@@ -1,7 +1,7 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { inspectHelp } from "../help.js";
-import { type InspectOptions } from "../services/inspect.js";
-import { type CommandActionType } from "../types.js";
+import type { InspectOptions } from "../services/inspect.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startInspect(packageName: string, options: InspectOptions) {

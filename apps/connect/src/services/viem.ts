@@ -1,9 +1,10 @@
-import { createPublicClient, http, type PublicClient } from "viem";
+import type { PublicClient } from "viem";
+import { createPublicClient, http } from "viem";
 import { getEnsAvatar, getEnsName } from "viem/actions";
+import type { Chain } from "viem/chains";
 import {
   arbitrum,
   base,
-  type Chain,
   goerli,
   mainnet,
   optimism,

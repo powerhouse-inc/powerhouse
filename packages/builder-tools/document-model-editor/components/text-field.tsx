@@ -7,7 +7,8 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
-import { type FieldValues, useForm } from "react-hook-form";
+import type { FieldValues } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createNameSchema } from "../schemas/inputs.js";
 import { compareStringsWithoutWhitespace } from "../utils/helpers.js";
@@ -19,7 +20,8 @@ import {
   FormLabel,
   FormMessage,
 } from "./form.js";
-import { type TextareaHandle, Textarea } from "./text-area.js";
+import type { TextareaHandle } from "./text-area.js";
+import { Textarea } from "./text-area.js";
 
 type TextFieldProps = {
   name: string;

@@ -1,5 +1,5 @@
 import stringify from "safe-stable-stringify";
-import { type DocumentOperations, type Operation } from "../types.js";
+import type { DocumentOperations, Operation } from "../types.js";
 import { generateId } from "./crypto.js";
 
 export type OperationIndex = {

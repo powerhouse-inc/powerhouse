@@ -1,7 +1,5 @@
-import {
-  type ConnectStudioOptions,
-  startConnectStudio,
-} from "@powerhousedao/builder-tools/connect-studio";
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
+import { startConnectStudio } from "@powerhousedao/builder-tools/connect-studio";
 import { getConfig } from "@powerhousedao/config/utils";
 import packageJson from "../../package.json" with { type: "json" };
 

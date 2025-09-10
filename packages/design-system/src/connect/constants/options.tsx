@@ -1,8 +1,8 @@
-import {
-  type DebugNodeOption,
-  type NodeOption,
-  type NormalNodeOption,
-  type OptionMetadata,
+import type {
+  DebugNodeOption,
+  NodeOption,
+  NormalNodeOption,
+  OptionMetadata,
 } from "#connect";
 import { Icon } from "#powerhouse";
 

@@ -1,5 +1,5 @@
 import { format, parse } from "date-fns";
-import { type AmountValue } from "../components/amount-input/types.js";
+import type { AmountValue } from "../components/amount-input/types.js";
 import { getDateFromValue } from "../components/date-picker/utils.js";
 import {
   getDateFormat,

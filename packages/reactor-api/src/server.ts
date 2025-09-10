@@ -6,37 +6,36 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "#packages/package-manager.js";
-import { type IPackageLoader } from "#packages/types.js";
-import { type PGlite } from "@electric-sql/pglite";
-import { type IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IPackageLoader } from "#packages/types.js";
+import type { PGlite } from "@electric-sql/pglite";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/utils";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
 import devcert from "devcert";
-import {
-  childLogger,
-  type DocumentDriveDocument,
-  type IDocumentDriveServer,
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
 } from "document-drive";
+import { childLogger } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
-import {
-  type IProcessorHostModule,
-  type IProcessorManager,
-  type IRelationalDb,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModule,
+  IProcessorManager,
+  IRelationalDb,
+  ProcessorFactory,
 } from "document-drive/processors/types";
 import { createRelationalDb } from "document-drive/processors/utils";
-import express, { type Express } from "express";
+import type { Express } from "express";
+import express from "express";
 import fs from "node:fs";
 import https from "node:https";
 import path from "node:path";
-import { type TlsOptions } from "node:tls";
-import { type Pool } from "pg";
-import {
-  type AuthenticatedRequest,
-  AuthService,
-} from "./services/auth.service.js";
-import { type API, type Processor, type SubgraphClass } from "./types.js";
+import type { TlsOptions } from "node:tls";
+import type { Pool } from "pg";
+import type { AuthenticatedRequest } from "./services/auth.service.js";
+import { AuthService } from "./services/auth.service.js";
+import type { API, Processor, SubgraphClass } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);

@@ -1,7 +1,7 @@
-import {
-  type IDriveContext,
-  type VetraDocumentModelModule,
-  type VetraEditorModule,
+import type {
+  IDriveContext,
+  VetraDocumentModelModule,
+  VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
 import type React from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";

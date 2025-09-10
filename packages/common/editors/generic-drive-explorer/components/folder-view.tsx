@@ -1,19 +1,11 @@
 import type { BaseProps } from "#editors/utils/index";
-import {
-  FolderItem,
-  useDrop,
-  type TNodeActions,
-} from "@powerhousedao/design-system";
+import type { TNodeActions } from "@powerhousedao/design-system";
+import { FolderItem, useDrop } from "@powerhousedao/design-system";
 import {
   useFileChildNodesForId,
   useFolderChildNodesForId,
 } from "@powerhousedao/reactor-browser";
-import {
-  type FolderNode,
-  type Node,
-  type SharingType,
-  type SyncStatus,
-} from "document-drive";
+import type { FolderNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
 import FileContentView from "./file-content-view.js";

@@ -1,4 +1,5 @@
-import { type ComponentPropsWithRef, forwardRef } from "react";
+import type { ComponentPropsWithRef } from "react";
+import { forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type RWATableRowProps = ComponentPropsWithRef<"tr">;

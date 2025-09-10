@@ -6,21 +6,21 @@ import type {
   PHBaseState,
   PHDocument,
 } from "document-model";
-import { type GraphQLError } from "graphql";
+import type { GraphQLError } from "graphql";
 import { driveDocumentType } from "../drive-document-model/constants.js";
-import { type DocumentDrivePHState } from "../drive-document-model/gen/index.js";
+import type { DocumentDrivePHState } from "../drive-document-model/gen/index.js";
 import {
   ReadDocumentNotFoundError,
   ReadDriveError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
 } from "./errors.js";
-import {
-  type GetDocumentModelModule,
-  type IReadModeDriveService,
-  type ReadDrive,
-  type ReadDriveContext,
-  type ReadDriveOptions,
+import type {
+  GetDocumentModelModule,
+  IReadModeDriveService,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveOptions,
 } from "./types.js";
 
 export class ReadModeService implements IReadModeDriveService {

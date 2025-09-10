@@ -1,5 +1,5 @@
 import { ConnectDeleteDriveModal } from "@powerhousedao/design-system";
-import { type DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import { useTranslation } from "react-i18next";
 
 export interface DeleteDriveModalProps {

@@ -15,9 +15,10 @@ import type {
   PHDocumentHeader,
 } from "document-model";
 import { actionContext } from "document-model";
-import { backOff, type IBackOffOptions } from "exponential-backoff";
-import { type ICache } from "../../cache/types.js";
-import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
+import type { IBackOffOptions } from "exponential-backoff";
+import { backOff } from "exponential-backoff";
+import type { ICache } from "../../cache/types.js";
+import type { DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import {
   ConflictOperationError,
   DocumentAlreadyExistsError,
@@ -26,7 +27,7 @@ import {
   DocumentNotFoundError,
   DocumentSlugValidationError,
 } from "../../server/error.js";
-import { type SynchronizationUnitQuery } from "../../server/types.js";
+import type { SynchronizationUnitQuery } from "../../server/types.js";
 import { childLogger, logger } from "../../utils/logger.js";
 import type {
   IDocumentStorage,
@@ -34,7 +35,7 @@ import type {
   IStorageUnit,
   IStorageUnitFilter,
 } from "../types.js";
-import { type Prisma, type PrismaClient } from "./client/index.js";
+import type { Prisma, PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
 

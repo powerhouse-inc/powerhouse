@@ -1,6 +1,9 @@
-import { type Color, getDimensions, type Size } from "#powerhouse";
-import { type ComponentPropsWithoutRef, Suspense } from "react";
-import { iconComponents, type IconName } from "../icon-components/index.js";
+import type { Color, Size } from "#powerhouse";
+import { getDimensions } from "#powerhouse";
+import type { ComponentPropsWithoutRef } from "react";
+import { Suspense } from "react";
+import type { IconName } from "../icon-components/index.js";
+import { iconComponents } from "../icon-components/index.js";
 
 export type IconProps = ComponentPropsWithoutRef<"svg"> & {
   readonly name: IconName;

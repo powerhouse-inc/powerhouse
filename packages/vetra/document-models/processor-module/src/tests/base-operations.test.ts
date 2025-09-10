@@ -6,13 +6,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import utils from "../../gen/utils.js";
-import {
-  z,
-  type SetProcessorNameInput,
-  type SetProcessorTypeInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
+import type {
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
 import * as creators from "../../gen/base-operations/creators.js";
 import type { ProcessorModuleDocument } from "../../gen/types.js";

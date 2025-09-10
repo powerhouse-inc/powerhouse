@@ -1,6 +1,6 @@
 import connectConfig from "#connect-config";
 import { convertLegacyLibToVetraPackage } from "@powerhousedao/reactor-browser";
-import { type DocumentModelLib } from "document-model";
+import type { DocumentModelLib } from "document-model";
 
 const externalPackagesUrl =
   connectConfig.routerBasename + "external-packages.js";

@@ -1,16 +1,16 @@
-import { type IProcessor } from "#processors/types";
-import {
-  type GetDocumentOptions,
-  type IBaseDocumentDriveServer,
-  type IDocumentDriveServer,
-  type ListenerRevision,
-  type StrandUpdate,
+import type { IProcessor } from "#processors/types";
+import type {
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  IDocumentDriveServer,
+  ListenerRevision,
+  StrandUpdate,
 } from "#server/types";
 import { logger } from "#utils/logger";
 import { operationsToRevision } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
-import { type Action, type Operation, type PHBaseState } from "document-model";
-import { type ITransmitter, type StrandUpdateSource } from "./types.js";
+import type { Action, Operation, PHBaseState } from "document-model";
+import type { ITransmitter, StrandUpdateSource } from "./types.js";
 
 export type InternalOperationUpdate = Omit<Operation, "scope"> & {
   /** The state, for a specific scope, of the document */

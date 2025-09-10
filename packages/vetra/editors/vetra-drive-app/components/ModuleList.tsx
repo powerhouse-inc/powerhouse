@@ -1,4 +1,4 @@
-import { type FileNode } from "document-drive";
+import type { FileNode } from "document-drive";
 import type React from "react";
 import { ModuleItem } from "./ModuleItem.js";
 import { NewModuleItem } from "./NewModuleItem.js";

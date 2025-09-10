@@ -6,7 +6,7 @@ import {
   useSelectedFolder,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 
 export interface CreateDocumentModalProps {
   open: boolean;

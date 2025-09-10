@@ -1,4 +1,4 @@
-import { type ImportDeclaration, type SourceFile } from "ts-morph";
+import type { ImportDeclaration, SourceFile } from "ts-morph";
 
 export interface ImportSpec {
   moduleSpecifier: string;

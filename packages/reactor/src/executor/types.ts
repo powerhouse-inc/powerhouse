@@ -1,4 +1,4 @@
-import { type Job } from "../queue/types.js";
+import type { Job } from "../queue/types.js";
 
 /**
  * Represents the result of a job execution

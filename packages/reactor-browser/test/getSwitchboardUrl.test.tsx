@@ -1,4 +1,4 @@
-import { type DocumentModelState } from "document-model";
+import type { DocumentModelState } from "document-model";
 import { decompressFromEncodedURIComponent } from "lz-string";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDocumentSubgraphQuery } from "../src/utils/switchboard.js";

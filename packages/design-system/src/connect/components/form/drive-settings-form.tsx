@@ -11,9 +11,10 @@ import {
   SWITCHBOARD,
 } from "#connect";
 import { Button, Icon } from "#powerhouse";
-import { type DocumentDriveDocument, type SharingType } from "document-drive";
+import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import type { SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 type Inputs = {
   name: string;

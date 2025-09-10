@@ -1,10 +1,10 @@
-import { type SubgraphClass } from "#graphql/index.js";
+import type { SubgraphClass } from "#graphql/index.js";
 import { childLogger } from "document-drive";
-import {
-  type IProcessorHostModule,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
 } from "document-drive/processors/types";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
 import { resolveLinkedPackage } from "./import-resolver.js";
 

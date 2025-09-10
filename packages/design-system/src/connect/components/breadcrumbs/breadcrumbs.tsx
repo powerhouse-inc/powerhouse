@@ -1,7 +1,7 @@
 import { NodeInput } from "#connect";
 import { Icon } from "#powerhouse";
 import { Fragment, useCallback, useState } from "react";
-import { type Node } from "document-drive";
+import type { Node } from "document-drive";
 
 export type BreadcrumbsProps<T extends boolean = boolean> = {
   breadcrumbs: Node[];

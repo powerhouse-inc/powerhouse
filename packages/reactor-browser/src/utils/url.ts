@@ -1,4 +1,4 @@
-import { type DocumentDriveDocument, type Node } from "document-drive";
+import type { DocumentDriveDocument, Node } from "document-drive";
 import slug from "slug";
 
 /** Makes a URL component for a drive. */

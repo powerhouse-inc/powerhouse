@@ -1,4 +1,4 @@
-import { type PHDocumentHeader } from "#document/ph-types.js";
+import type { PHDocumentHeader } from "#document/ph-types.js";
 import { generateUUID } from "#utils/env";
 
 /**

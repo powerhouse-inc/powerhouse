@@ -3,7 +3,7 @@ import {
   setVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
-import { type DocumentModelLib } from "document-model";
+import type { DocumentModelLib } from "document-model";
 import { useEffect, useRef } from "react";
 import type { ViteHotContext } from "vite/types/hot.js";
 

@@ -1,5 +1,5 @@
 import { useReactor } from "@powerhousedao/reactor-browser";
-import { type DocumentModelDocument } from "document-model";
+import type { DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 import type {
   AddDocumentTypeInput,

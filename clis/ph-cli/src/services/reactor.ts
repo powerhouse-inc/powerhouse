@@ -1,19 +1,19 @@
 import { generateFromFile } from "@powerhousedao/codegen";
-import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import type { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import { getConfig } from "@powerhousedao/config/utils";
+import type {
+  LocalReactor,
+  RemoteDriveInputSimple,
+  StartServerOptions,
+} from "@powerhousedao/reactor-local";
 import {
   DefaultStartServerOptions,
   startServer,
-  type LocalReactor,
-  type RemoteDriveInputSimple,
-  type StartServerOptions,
 } from "@powerhousedao/reactor-local";
-import { type IProcessor } from "document-drive/processors/types";
-import {
-  InternalTransmitter,
-  type InternalTransmitterUpdate,
-} from "document-drive/server/listener/transmitter/internal";
-import { type Listener } from "document-drive/server/types";
+import type { IProcessor } from "document-drive/processors/types";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
+import type { Listener } from "document-drive/server/types";
 import { readFileSync } from "node:fs";
 
 export type ReactorOptions = StartServerOptions & {

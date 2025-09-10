@@ -1,14 +1,10 @@
-import {
-  expect,
-  test,
-  type Download,
-  type Locator,
-  type Page,
-} from "@playwright/test";
+import type { Download, Locator, Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { DocumentBasicData } from "./helpers/index.js";
 import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
@@ -19,7 +15,6 @@ import {
   normalizeCode,
   openDocumentByName,
   verifyDocumentInList,
-  type DocumentBasicData,
 } from "./helpers/index.js";
 
 const __filename = fileURLToPath(import.meta.url);

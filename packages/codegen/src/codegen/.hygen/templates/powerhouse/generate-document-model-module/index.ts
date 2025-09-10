@@ -1,6 +1,6 @@
 import { paramCase } from "change-case";
-import { type DocumentModelState } from "document-model";
-import { type Args } from "../generate-document-model/index.js";
+import type { DocumentModelState } from "document-model";
+import type { Args } from "../generate-document-model/index.js";
 
 type ModuleArgs = Args & { module: string };
 type OperationError =

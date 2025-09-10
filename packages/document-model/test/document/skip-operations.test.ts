@@ -5,10 +5,9 @@ import {
   replayOperations,
 } from "../../src/document/utils/base.js";
 import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
+import type { CountPHState, TestPHState } from "../helpers.js";
 import {
   baseCountReducer,
-  type CountPHState,
-  type TestPHState,
   countReducer,
   createTestState,
   createCountDocumentState,

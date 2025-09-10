@@ -1,5 +1,5 @@
 import { createProject, parseVersion } from "@powerhousedao/codegen";
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { homedir } from "node:os";

@@ -1,4 +1,4 @@
-import { type FileNode, type FolderNode, type Node } from "document-drive";
+import type { FileNode, FolderNode, Node } from "document-drive";
 
 /** Sorts nodes by name. */
 export function sortNodesByName<T extends Node>(nodes: T[]) {

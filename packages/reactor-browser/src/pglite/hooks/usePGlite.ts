@@ -1,4 +1,4 @@
-import { type PGliteWithLive } from "@electric-sql/pglite/live";
+import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { useEffect, useState } from "react";
 
 export const PGLITE_UPDATE_EVENT = "ph:pglite-update";

@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { CONNECT_URL } from "../../playwright.config.js";
 import { handleCookieConsent } from "./cookie-consent.js";
 /**

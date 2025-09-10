@@ -6,9 +6,10 @@ import {
   useDriveEditorModuleById,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { useCallback } from "react";
-import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import type { FallbackProps } from "react-error-boundary";
+import { ErrorBoundary } from "react-error-boundary";
 import { useModal } from "./modal/index.js";
 
 function DriveEditorError({ error }: FallbackProps) {

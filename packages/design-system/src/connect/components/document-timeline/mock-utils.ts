@@ -1,7 +1,7 @@
 import { addHours } from "date-fns";
-import {
-  type TimelineBarItem,
-  type TimelineDividerItem,
+import type {
+  TimelineBarItem,
+  TimelineDividerItem,
 } from "./document-timeline.js";
 
 // Generate timestamps with 1 hour difference starting from a base date

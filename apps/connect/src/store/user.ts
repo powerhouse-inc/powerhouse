@@ -1,8 +1,6 @@
 import { useUser } from "@powerhousedao/reactor-browser";
-import {
-  setUser as setSentryUser,
-  type User as SentryUser,
-} from "@sentry/react";
+import type { User as SentryUser } from "@sentry/react";
+import { setUser as setSentryUser } from "@sentry/react";
 import { useEffect } from "react";
 
 export function useSetSentryUser() {

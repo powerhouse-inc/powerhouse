@@ -1,4 +1,4 @@
-import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+import type { DriveEditorModule } from "@powerhousedao/reactor-browser";
 import Editor from "./editor.js";
 
 export const module: DriveEditorModule = {

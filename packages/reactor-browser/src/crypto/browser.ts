@@ -1,4 +1,4 @@
-import { type JsonWebKeyPairStorage, type JwkKeyPair } from "./index.js";
+import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
 
 export class BrowserKeyStorage implements JsonWebKeyPairStorage {
   static #DB_NAME = "browserKeyDB";

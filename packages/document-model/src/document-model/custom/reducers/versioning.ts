@@ -4,7 +4,7 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import { type DocumentModelVersioningOperations } from "../../gen/versioning/operations.js";
+import type { DocumentModelVersioningOperations } from "../../gen/versioning/operations.js";
 
 export const reducer: DocumentModelVersioningOperations = {
   addChangeLogItemOperation(state, action) {

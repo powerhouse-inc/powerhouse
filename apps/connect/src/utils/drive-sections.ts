@@ -12,8 +12,8 @@ import {
   LOCAL,
   PUBLIC,
 } from "@powerhousedao/design-system";
-import { type SharingType } from "document-drive";
-import { type ReactNode } from "react";
+import type { SharingType } from "document-drive";
+import type { ReactNode } from "react";
 
 type AllNodeOptions =
   | (typeof debugNodeOptions)[number]

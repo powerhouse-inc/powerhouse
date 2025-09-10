@@ -1,4 +1,4 @@
-import { type IJob, type IQueue, type Job, type JobId } from "./types.js";
+import type { IJob, IQueue, Job, JobId } from "./types.js";
 
 export class MemoryQueue<T> implements IQueue<T> {
   private id: string;

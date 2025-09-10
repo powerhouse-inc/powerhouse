@@ -3,7 +3,8 @@ import { cn } from "../../lib/index.js";
 import type { InputBaseProps } from "../../types.js";
 import { FormLabel } from "../form-label/index.js";
 import { FormMessageList } from "../form-message/index.js";
-import { CheckboxBase, type CheckboxValue } from "./checkbox-base.js";
+import type { CheckboxValue } from "./checkbox-base.js";
+import { CheckboxBase } from "./checkbox-base.js";
 
 type CheckboxBaseProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,

@@ -1,6 +1,6 @@
 import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { type DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import React from "react";
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";

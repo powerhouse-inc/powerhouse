@@ -1,11 +1,8 @@
 import { Icon, Modal } from "#powerhouse";
-import {
-  ModalFormInputs,
-  tableLabels,
-  type TableName,
-  useTableForm,
-} from "#rwa";
-import { type ComponentPropsWithoutRef, memo, useCallback } from "react";
+import type { TableName } from "#rwa";
+import { ModalFormInputs, tableLabels, useTableForm } from "#rwa";
+import type { ComponentPropsWithoutRef } from "react";
+import { memo, useCallback } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type RWACreateItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {

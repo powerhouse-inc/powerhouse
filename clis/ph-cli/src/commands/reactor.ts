@@ -1,8 +1,8 @@
-import { type LocalReactor } from "@powerhousedao/reactor-local";
-import { type Command } from "commander";
+import type { LocalReactor } from "@powerhousedao/reactor-local";
+import type { Command } from "commander";
 import { reactorHelp } from "../help.js";
-import { type ReactorOptions } from "../services/reactor.js";
-import { type CommandActionType } from "../types.js";
+import type { ReactorOptions } from "../services/reactor.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startLocalSwitchboard(options: ReactorOptions) {

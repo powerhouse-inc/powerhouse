@@ -1,10 +1,5 @@
-import {
-  type MutableRefObject,
-  type RefObject,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import type { MutableRefObject, RefObject } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Props = {
   selectedItemNumber: number | undefined;

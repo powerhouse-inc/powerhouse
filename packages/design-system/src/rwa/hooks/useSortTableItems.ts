@@ -1,5 +1,6 @@
-import { type Item, type TableItem } from "#rwa";
-import { type Identifier, type Order, orderBy } from "natural-orderby";
+import type { Item, TableItem } from "#rwa";
+import type { Identifier, Order } from "natural-orderby";
+import { orderBy } from "natural-orderby";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**

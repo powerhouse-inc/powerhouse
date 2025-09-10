@@ -1,15 +1,15 @@
-import { type DocumentDriveServerConstructor } from "#server/base-server";
-import { type RemoteDriveOptions } from "#server/types";
+import type { DocumentDriveServerConstructor } from "#server/base-server";
+import type { RemoteDriveOptions } from "#server/types";
 import { logger } from "#utils/logger";
-import { type PHBaseState } from "document-model";
-import { type ReadDriveSlugNotFoundError } from "./errors.js";
+import type { PHBaseState } from "document-model";
+import type { ReadDriveSlugNotFoundError } from "./errors.js";
 import { ReadModeService } from "./service.js";
-import {
-  type IReadModeDriveServer,
-  type IReadModeDriveService,
-  type ReadDrive,
-  type ReadDriveOptions,
-  type ReadDrivesListener,
+import type {
+  IReadModeDriveServer,
+  IReadModeDriveService,
+  ReadDrive,
+  ReadDriveOptions,
+  ReadDrivesListener,
 } from "./types.js";
 
 export function ReadModeServer(

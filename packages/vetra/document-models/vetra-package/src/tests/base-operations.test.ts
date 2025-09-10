@@ -6,19 +6,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import utils from "../../gen/utils.js";
-import {
-  z,
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
-  type SetPackageAuthorInput,
-  type SetPackageAuthorNameInput,
-  type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
-  type SetPackageGithubUrlInput,
-  type SetPackageNpmUrlInput,
+import type {
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
 import * as creators from "../../gen/base-operations/creators.js";
 import type { VetraPackageDocument } from "../../gen/types.js";

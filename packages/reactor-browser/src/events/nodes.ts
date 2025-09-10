@@ -2,7 +2,7 @@ import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
 } from "../utils/url.js";
-import { type SetSelectedNodeIdEvent } from "./types.js";
+import type { SetSelectedNodeIdEvent } from "./types.js";
 
 export function dispatchSetSelectedNodeIdEvent(nodeSlug: string | undefined) {
   const event = new CustomEvent("ph:setSelectedNodeId", {

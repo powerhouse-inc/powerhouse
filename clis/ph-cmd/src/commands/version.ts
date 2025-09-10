@@ -1,4 +1,4 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import fs from "node:fs";
 import path from "node:path";
 import {

@@ -1,6 +1,6 @@
 import { documentTypes } from "#connect";
-import { type Meta, type StoryObj } from "@storybook/react";
-import { type FileNode } from "document-drive";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { FileNode } from "document-drive";
 import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {

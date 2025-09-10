@@ -1,10 +1,7 @@
 import connectConfig from "#connect-config";
 import React, { Suspense } from "react";
-import {
-  type RouteObject,
-  RouterProvider,
-  createBrowserRouter,
-} from "react-router-dom";
+import type { RouteObject } from "react-router-dom";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const Content = React.lazy(() => import("../pages/content.js"));
 const Root = React.lazy(() => import("./root.js"));

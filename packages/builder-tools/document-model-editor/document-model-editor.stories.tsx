@@ -1,11 +1,11 @@
 import { createDocumentStory } from "#editor-utils/storybook";
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
+import type { DocumentSpecification } from "document-model";
 import {
   defaultBaseState,
   createState as documentModelCreateState,
   documentModelReducer,
   generateId,
-  type DocumentSpecification,
 } from "document-model";
 import { v7 as uuidv7 } from "uuid";
 import { DocumentModelEditor } from "./editor.js";

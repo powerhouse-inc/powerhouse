@@ -1,6 +1,7 @@
 import { UI_NODE } from "#connect";
-import { type Node } from "document-drive";
-import { type DragEvent, useCallback, useMemo, useState } from "react";
+import type { Node } from "document-drive";
+import type { DragEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 type Props = {
   node: Node | undefined;

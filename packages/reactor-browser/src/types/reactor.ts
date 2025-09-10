@@ -1,4 +1,4 @@
-import { type IDocumentDriveServer } from "document-drive";
+import type { IDocumentDriveServer } from "document-drive";
 
 export type Reactor = IDocumentDriveServer;
 

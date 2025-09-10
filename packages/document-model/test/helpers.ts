@@ -1,12 +1,12 @@
 import { randomUUID } from "crypto";
 import { defaultBaseState } from "../src/document/ph-factories.js";
-import {
-  type Action,
-  type CreateState,
-  type Operation,
-  type PHBaseState,
-  type PHDocument,
-  type StateReducer,
+import type {
+  Action,
+  CreateState,
+  Operation,
+  PHBaseState,
+  PHDocument,
+  StateReducer,
 } from "../src/document/types.js";
 import { createAction, createReducer } from "../src/document/utils/base.js";
 

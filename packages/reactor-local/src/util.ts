@@ -4,13 +4,13 @@ import {
   MemoryStorage,
 } from "document-drive";
 
-import { type DriveInput, type IDocumentDriveServer } from "document-drive";
-import { type ICache } from "document-drive/cache/types";
+import type { DriveInput, IDocumentDriveServer } from "document-drive";
+import type { ICache } from "document-drive/cache/types";
 import { BrowserStorage } from "document-drive/storage/browser";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma/factory";
-import { type IDriveOperationStorage } from "document-drive/storage/types";
-import { type StorageOptions } from "./types.js";
+import type { IDriveOperationStorage } from "document-drive/storage/types";
+import type { StorageOptions } from "./types.js";
 
 export const createStorage = (
   options: StorageOptions,

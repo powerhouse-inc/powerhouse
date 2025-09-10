@@ -1,4 +1,4 @@
-import { type IJobExecutionHandle, type Job } from "./types.js";
+import type { IJobExecutionHandle, Job } from "./types.js";
 
 /**
  * Interface for a job queue that manages write operations.

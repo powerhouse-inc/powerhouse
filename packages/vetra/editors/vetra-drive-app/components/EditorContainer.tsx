@@ -1,10 +1,10 @@
 import { DefaultEditorLoader } from "@powerhousedao/design-system";
-import {
-  useDocumentById,
-  type IDriveContext,
-  type VetraDocumentModelModule,
-  type VetraEditorModule,
+import type {
+  IDriveContext,
+  VetraDocumentModelModule,
+  VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import { Suspense } from "react";
 
 export interface EditorContainerProps {

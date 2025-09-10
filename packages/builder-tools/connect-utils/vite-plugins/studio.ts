@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { join } from "node:path";
-import { type PluginOption } from "vite";
+import type { PluginOption } from "vite";
 import { externalIds, viteIgnoreStaticImport } from "./base.js";
 
 export function viteConnectDevStudioPlugin(

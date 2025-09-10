@@ -1,5 +1,6 @@
 import connectConfig from "#connect-config";
-import { BaseStorage, type IStorage } from "./index.js";
+import type { IStorage } from "./index.js";
+import { BaseStorage } from "./index.js";
 
 const store: IStorage = {
   get: function <Key extends string>(key: Key): unknown {

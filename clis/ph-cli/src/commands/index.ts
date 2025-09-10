@@ -1,4 +1,4 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { connectCommand } from "./connect.js";
 // import { devCommand } from "./dev.js";
 import { generateCommand } from "./generate.js";

@@ -1,8 +1,8 @@
+import type { BaseDocumentDriveServer } from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
-  type BaseDocumentDriveServer,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";

@@ -1,6 +1,6 @@
-import { type DocumentDriveDocument, type FolderNode } from "document-drive";
-import { type PHDocument } from "document-model";
-import { type Reactor } from "../types/reactor.js";
+import type { DocumentDriveDocument, FolderNode } from "document-drive";
+import type { PHDocument } from "document-model";
+import type { Reactor } from "../types/reactor.js";
 
 /** Returns whether a drive is available offline. */
 export function getDriveAvailableOffline(

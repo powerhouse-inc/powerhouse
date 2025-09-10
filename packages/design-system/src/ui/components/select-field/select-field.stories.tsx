@@ -1,4 +1,5 @@
-import { Icon, type IconName } from "#powerhouse";
+import type { IconName } from "#powerhouse";
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "../../lib/decorators.js";
 import {

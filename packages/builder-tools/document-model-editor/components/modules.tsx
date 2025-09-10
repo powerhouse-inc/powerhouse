@@ -1,4 +1,4 @@
-import { type Module as TModule } from "document-model";
+import type { Module as TModule } from "document-model";
 import { useCallback, useRef, useState } from "react";
 import { Module } from "./module.js";
 

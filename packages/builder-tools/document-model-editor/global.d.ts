@@ -1,4 +1,4 @@
-import { type LogLevel } from "#document-model-editor/types";
+import type { LogLevel } from "#document-model-editor/types";
 
 declare global {
   interface Window {

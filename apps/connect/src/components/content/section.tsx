@@ -1,4 +1,4 @@
-import { type DivProps } from "@powerhousedao/design-system";
+import type { DivProps } from "@powerhousedao/design-system";
 import type React from "react";
 
 export interface ContentSection extends DivProps {

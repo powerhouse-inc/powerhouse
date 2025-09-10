@@ -1,17 +1,17 @@
 import { actionSigner, operationWithContext } from "#document/ph-factories.js";
-import { type PHBaseState } from "#document/ph-types.js";
+import type { PHBaseState } from "#document/ph-types.js";
 import { generateUUID, hash } from "#utils/env";
 import stringifyJson from "safe-stable-stringify";
-import {
-  type Action,
-  type ActionContext,
-  type ActionSignatureContext,
-  type ActionSigner,
-  type ActionSigningHandler,
-  type ActionVerificationHandler,
-  type PHDocument,
-  type Reducer,
-  type Signature,
+import type {
+  Action,
+  ActionContext,
+  ActionSignatureContext,
+  ActionSigner,
+  ActionSigningHandler,
+  ActionVerificationHandler,
+  PHDocument,
+  Reducer,
+  Signature,
 } from "../types.js";
 
 export function generateId(method?: "UUIDv4"): string {

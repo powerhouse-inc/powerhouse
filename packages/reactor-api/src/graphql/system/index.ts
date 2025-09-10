@@ -2,7 +2,7 @@ import { Subgraph } from "#graphql/base/index.js";
 import { childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import { type SystemContext } from "./types.js";
+import type { SystemContext } from "./types.js";
 
 const logger = childLogger(["reactor", "system-subgraph"]);
 

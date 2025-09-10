@@ -1,12 +1,6 @@
 import { Pagination, usePagination } from "#powerhouse";
-import {
-  ItemDetails,
-  Table,
-  type TableColumn,
-  type TableName,
-  useEditorContext,
-  useTableData,
-} from "#rwa";
+import type { TableColumn, TableName } from "#rwa";
+import { ItemDetails, Table, useEditorContext, useTableData } from "#rwa";
 
 type Props = {
   readonly tableName: TableName;

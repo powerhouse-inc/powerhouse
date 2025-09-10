@@ -1,8 +1,5 @@
-import {
-  DocumentAlreadyExistsError,
-  type DriveInput,
-  type IDocumentDriveServer,
-} from "document-drive";
+import type { DriveInput, IDocumentDriveServer } from "document-drive";
+import { DocumentAlreadyExistsError } from "document-drive";
 
 export async function addDefaultDrive(
   driveServer: IDocumentDriveServer,

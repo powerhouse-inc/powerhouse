@@ -8,9 +8,8 @@ import { FormGroup } from "../form-group/form-group.js";
 import { FormLabel } from "../form-label/form-label.js";
 import { FormMessageList } from "../form-message/message-list.js";
 import { Input } from "../input/index.js";
-import ValueTransformer, {
-  type TransformerType,
-} from "../value-transformer/value-transformer.js";
+import type { TransformerType } from "../value-transformer/value-transformer.js";
+import ValueTransformer from "../value-transformer/value-transformer.js";
 import TextInputDiff from "./text-input-diff.js";
 import type { CommonTextProps } from "./types.js";
 

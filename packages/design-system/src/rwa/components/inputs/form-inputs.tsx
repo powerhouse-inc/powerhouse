@@ -1,4 +1,4 @@
-import { type ComponentType, type ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { twJoin } from "tailwind-merge";
 
 type Input = {

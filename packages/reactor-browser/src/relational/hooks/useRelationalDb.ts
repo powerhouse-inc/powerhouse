@@ -1,9 +1,6 @@
-import { type PGlite } from "@electric-sql/pglite";
-import {
-  type LiveNamespace,
-  type PGliteWithLive,
-} from "@electric-sql/pglite/live";
-import { type IRelationalDb as _IRelationalDb } from "document-drive/processors/types";
+import type { PGlite } from "@electric-sql/pglite";
+import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
+import type { IRelationalDb as _IRelationalDb } from "document-drive/processors/types";
 import { createRelationalDb } from "document-drive/processors/utils";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";

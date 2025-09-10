@@ -2,13 +2,8 @@
  *  https://github.com/adobe/react-spectrum/blob/main/packages/react-aria-components/src/utils.tsx#L215
  */
 
-import {
-  type RefObject,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import type { RefObject } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 
 export function useEnterAnimation(ref: RefObject<HTMLElement>, isReady = true) {

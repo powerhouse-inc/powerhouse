@@ -1,4 +1,4 @@
-import { type Meta, type StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { TooltipProvider } from "../../tooltip/index.js";
 import { globalOperations, localOperations } from "../mocks.js";
 import { Timeline } from "./timeline.js";

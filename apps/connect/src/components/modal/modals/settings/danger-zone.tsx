@@ -5,7 +5,8 @@ import {
   setSelectedNode,
   useDrives,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentDriveDocument, logger } from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
+import { logger } from "document-drive";
 import { useTranslation } from "react-i18next";
 import { clearReactorStorage } from "../../../../store/reactor";
 import { useModal } from "../../modal.js";

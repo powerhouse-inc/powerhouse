@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Operation } from "../../src/document/types.js";
+import type { Operation } from "../../src/document/types.js";
 import { removeExistingOperations } from "../../src/document/utils/document-helpers.js";
 import { fakeAction } from "../helpers.js";
 import { buildOperations } from "./utils.js";

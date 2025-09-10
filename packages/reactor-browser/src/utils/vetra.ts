@@ -1,16 +1,16 @@
-import {
-  type DocumentModelLib,
-  type DocumentModelModule,
-  type EditorModule,
-  generateId,
+import type {
+  DocumentModelLib,
+  DocumentModelModule,
+  EditorModule,
 } from "document-model";
-import {
-  type VetraDocumentModelModule,
-  type VetraEditorModule,
-  type VetraMeta,
-  type VetraModules,
-  type VetraPackage,
-  type VetraPackageManifest,
+import { generateId } from "document-model";
+import type {
+  VetraDocumentModelModule,
+  VetraEditorModule,
+  VetraMeta,
+  VetraModules,
+  VetraPackage,
+  VetraPackageManifest,
 } from "../types/vetra.js";
 
 export function convertLegacyLibToVetraPackage(

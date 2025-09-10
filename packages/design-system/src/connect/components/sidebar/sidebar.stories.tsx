@@ -2,8 +2,8 @@ import connectLogo from "#assets/connect.png";
 import { WagmiContext } from "#connect";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { type DocumentDriveDocument } from "document-drive";
-import { type ComponentPropsWithoutRef } from "react";
+import type { DocumentDriveDocument } from "document-drive";
+import type { ComponentPropsWithoutRef } from "react";
 import { ConnectSidebar } from "../index.js";
 import { SidebarItem } from "./sidebar-item.js";
 

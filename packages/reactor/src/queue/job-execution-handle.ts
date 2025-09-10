@@ -1,4 +1,5 @@
-import { JobQueueState, type IJobExecutionHandle, type Job } from "./types.js";
+import type { IJobExecutionHandle, Job } from "./types.js";
+import { JobQueueState } from "./types.js";
 
 /**
  * Implementation of the IJobExecutionHandle interface

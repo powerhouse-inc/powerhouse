@@ -1,10 +1,10 @@
 import { useUndoRedoShortcuts } from "#hooks";
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
+import type { TimelineItem } from "@powerhousedao/design-system";
 import {
   Button,
   DocumentToolbar,
   RevisionHistory,
-  type TimelineItem,
 } from "@powerhousedao/design-system";
 import {
   useDocumentById,
@@ -13,9 +13,11 @@ import {
   useFallbackEditorModule,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { type PHDocument, redo, undo } from "document-model";
+import type { PHDocument } from "document-model";
+import { redo, undo } from "document-model";
 import { Suspense, useEffect, useState } from "react";
-import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import type { FallbackProps } from "react-error-boundary";
+import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
 import { EditorLoader } from "./editor-loader.js";
 import { useModal } from "./modal/index.js";

@@ -1,11 +1,11 @@
 import { actionSigner } from "#document/ph-factories.js";
-import {
-  type Action,
-  type ActionSigner,
-  type PHDocument,
-  type Reducer,
-  type ReducerOptions,
-  type SignalDispatch,
+import type {
+  Action,
+  ActionSigner,
+  PHDocument,
+  Reducer,
+  ReducerOptions,
+  SignalDispatch,
 } from "#document/types.js";
 import { generateUUID } from "#utils/env";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -21,15 +21,15 @@ import {
   hex2ab,
   verifyOperationSignature,
 } from "../../src/document/utils/crypto.js";
+import type { SigningParameters } from "../../src/document/utils/header.js";
 import {
   PublicKeySigner,
   sign,
-  type SigningParameters,
   verify,
 } from "../../src/document/utils/header.js";
+import type { CountPHState } from "../helpers.js";
 import {
-  type CountDocument,
-  type CountPHState,
+  CountDocument,
   countReducer,
   createCountDocumentState,
   createCountState,

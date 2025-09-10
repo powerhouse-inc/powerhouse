@@ -2,17 +2,16 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { generateId } from "../../index.js";
 import { setName } from "../../src/document/actions/creators.js";
 import { SET_NAME } from "../../src/document/actions/types.js";
-import { type CreateChildDocumentInput } from "../../src/document/signal.js";
-import { type Action } from "../../src/document/types.js";
+import type { CreateChildDocumentInput } from "../../src/document/signal.js";
+import type { Action } from "../../src/document/types.js";
 import {
   baseCreateDocument,
   createAction,
   createReducer,
 } from "../../src/document/utils/base.js";
+import type { CountPHState, TestPHState } from "../helpers.js";
 import {
-  type CountDocument,
-  type CountPHState,
-  type TestPHState,
+  CountDocument,
   countReducer,
   createTestState,
   createCountDocumentState,

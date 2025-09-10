@@ -1,9 +1,9 @@
 import type { Options } from "@sindresorhus/fnv1a";
 import fnv1a from "@sindresorhus/fnv1a";
-import {
-  type IBaseRelationalDb,
-  type IRelationalDb,
-  type IRelationalQueryBuilder,
+import type {
+  IBaseRelationalDb,
+  IRelationalDb,
+  IRelationalQueryBuilder,
 } from "./types.js";
 
 const SUPPORTED_SIZES: Options["size"][] = [32, 64, 128, 256, 512, 1024];

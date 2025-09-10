@@ -6,11 +6,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import utils from "../../gen/utils.js";
-import {
-  z,
-  type SetAppNameInput,
-  type SetAppStatusInput,
+import type {
+  SetAppNameInput,
+  SetAppStatusInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
 import * as creators from "../../gen/base-operations/creators.js";
 import type { AppModuleDocument } from "../../gen/types.js";

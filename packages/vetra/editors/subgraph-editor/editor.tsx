@@ -1,10 +1,8 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  type SubgraphModuleDocument,
-  actions,
-} from "../../document-models/subgraph-module/index.js";
+import type { SubgraphModuleDocument } from "../../document-models/subgraph-module/index.js";
+import { actions } from "../../document-models/subgraph-module/index.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 
 export type IProps = EditorProps;
