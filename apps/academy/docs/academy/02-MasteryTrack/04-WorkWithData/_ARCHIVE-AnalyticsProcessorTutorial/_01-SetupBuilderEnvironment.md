@@ -7,6 +7,7 @@ If you've already setup git, node, and npm, your most important step is to insta
 :::
 
 ## Table of contents
+
 - [Prerequisites](#prerequisites)
 - [Installing node.js 22](#installing-nodejs)
   - [For Windows](#for-windows)
@@ -32,14 +33,17 @@ Before we begin with any of the Powerhouse Connect tutorials, we need to install
 node.js 22 is a tool that lets us run our application. Let's install it step by step.
 
 #### For Windows
+
 1. **Set up PowerShell for running commands:**
    - Press the Windows key
    - Type "PowerShell"
    - Right-click on "Windows PowerShell" and select "Run as administrator"
    - In the PowerShell window, type this command and press Enter:
+
    ```powershell
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
+
    - Type 'A' when prompted to confirm
    - You can now close this window and open PowerShell normally for the remaining steps
 
@@ -56,21 +60,26 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - node.js 22 is installed!
 
 > **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
 
 #### For macOS
+
 1. **Install Homebrew:**
    - Open Terminal (press Command + Space and type "Terminal")
    - Copy and paste this command into Terminal and press Enter:
+
    ```bash
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
+
    - Follow any additional instructions that appear
 
 2. **Install node.js 22:**
    - In the same Terminal window, type this command and press Enter:
+
    ```bash
    brew install node
    ```
@@ -81,19 +90,23 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - If you see version numbers, you've successfully installed node.js 22!
 
 #### For Linux (Ubuntu/Debian)
+
 1. **Open Terminal:**
    - Press Ctrl + Alt + T on your keyboard, or
    - Click the Activities button and type "Terminal"
 
 2. **Update Package List:**
+
    ```bash
    sudo apt update
    ```
 
 3. **Install node.js 22 and npm:**
+
    ```bash
    sudo apt install nodejs npm
    ```
@@ -104,6 +117,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    node --version
    pnpm --version
    ```
+
    - If you see version numbers, you're all set!
 
 ### Installing Visual Studio Code
@@ -111,6 +125,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 VS Code is the editor we'll use to write our code. Here's how to install it:
 
 #### For Windows
+
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Windows" button
 3. Once the installer downloads, double-click it
@@ -121,6 +136,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 8. When installation is complete, click "Finish"
 
 #### For macOS
+
 1. Visit the [Visual Studio Code website](https://code.visualstudio.com/)
 2. Click the blue "Download for Mac" button
 3. Once the .zip file downloads, double-click it to extract
@@ -132,6 +148,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    - Type "shell command" and select "Install 'code' command in PATH"
 
 #### For Linux (Ubuntu/Debian)
+
 1. Open Terminal (Ctrl + Alt + T)
 2. First, update the packages list:
    ```bash
@@ -160,6 +177,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 ### Install Git
 
 #### For Windows
+
 1. Open PowerShell (press Windows key, type "PowerShell", and press Enter)
 2. Visit the [Git website](https://git-scm.com/)
 3. Download the latest version for Windows
@@ -170,6 +188,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    ```
 
 #### For macOS
+
 1. Install using Homebrew:
    ```bash
    brew install git
@@ -180,6 +199,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
    ```
 
 #### For Linux (Ubuntu/Debian)
+
 1. Update package list:
    ```bash
    sudo apt update
@@ -198,6 +218,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 Open your terminal (command prompt) and run the following commands to set up Git:
 
 After installation, set up your identity:
+
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
@@ -206,6 +227,7 @@ git config --global user.email "your.email@example.com"
 ### Verify installation
 
 Open your terminal (command prompt) and run the following commands to verify your setup:
+
 ```bash
 node --version
 pnpm --version

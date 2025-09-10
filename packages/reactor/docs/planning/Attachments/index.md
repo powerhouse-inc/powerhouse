@@ -7,7 +7,7 @@ Attachments are binary files that accompany Documents via Operations. Attachment
 The attachment system is designed to be completely separate from the document system. Reactor has no knowledge of the attachment system, and the attachment system has no knowledge of the document system.
 
 The `IReactorClient` interface puts these pieces together.
- 
+
 ### Diagram
 
 ```mermaid
@@ -28,9 +28,9 @@ graph TD
 
 ### Dependencies
 
-* [Operations](../Operations/index.md)
+- [Operations](../Operations/index.md)
 
 ### Links
 
-* [Interface](interface.md)
-* [Usage](usage.md)
+- [Interface](interface.md)
+- [Usage](usage.md)

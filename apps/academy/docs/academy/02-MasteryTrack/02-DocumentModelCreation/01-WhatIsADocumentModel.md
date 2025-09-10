@@ -1,20 +1,21 @@
 # What is a document model?
 
 :::tip
-This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced to-do list** document model. 
+This chapter on **Document Model Creation** will help you with an in depth practicial understanding while building an **advanced to-do list** document model.
 Although not required, if you have completed the 'Get Started' tutorial you will revisit familiar topics and can update your existing document model.
 :::
 
 :::info **Definition: What is a Document Model?**
 A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
 
-For instance, an invoice document model might define fields like *issuer*, *lineItems*, and *status*, with operations such as *AddLineItem* and *MarkAsPaid*.
+For instance, an invoice document model might define fields like _issuer_, _lineItems_, and _status_, with operations such as _AddLineItem_ and _MarkAsPaid_.
 :::
 
-A Document Model can be understood as: 
-- A structured software framework that represents and **manages business logic** within a digital environment. 
-- A sophisticated template that **encapsulates the essential aspects of a digital process or a set of data**. 
-- A blueprints that define how data is **captured, manipulated, and visualised** within a system. 
+A Document Model can be understood as:
+
+- A structured software framework that represents and **manages business logic** within a digital environment.
+- A sophisticated template that **encapsulates the essential aspects of a digital process or a set of data**.
+- A blueprints that define how data is **captured, manipulated, and visualised** within a system.
 - A **standardized way to store, modify, and query data** in scalable, decentralized applications.
 
 ### **How does a document model function?**
@@ -27,7 +28,7 @@ Each document model consists of three key components:
 2. **Document Operations** – Defines how the document can be modified.
 3. **Event History** – Maintains an append-only log of changes.
 
-Document models leverage **event sourcing, CQRS (Command Query Responsibility Segregation), and an append-only architecture** to ensure immutability, auditability, and scalability. 
+Document models leverage **event sourcing, CQRS (Command Query Responsibility Segregation), and an append-only architecture** to ensure immutability, auditability, and scalability.
 
 ---
 
@@ -43,19 +44,19 @@ Example of a **GraphQL-like state schema** for an invoice document:
 
 ```graphql
 type InvoiceState {
-  id: OID!                # Unique identifier for the invoice
-  issuer: OID!            # Reference to the issuing entity
-  recipient: OID!         # Reference to the recipient entity
-  status: String          # (value: "DRAFT") # Invoice status
-  dueDate: DateTime       # Payment due date
+  id: OID! # Unique identifier for the invoice
+  issuer: OID! # Reference to the issuing entity
+  recipient: OID! # Reference to the recipient entity
+  status: String # (value: "DRAFT") # Invoice status
+  dueDate: DateTime # Payment due date
   lineItems: [LineItem!]! # List of line items
-  totalAmount: Currency   # Computed field for total invoice value
+  totalAmount: Currency # Computed field for total invoice value
 }
 
 type LineItem {
   id: OID!
   description: String
-  quantity: Int 
+  quantity: Int
   unitPrice: Currency
 }
 ```
@@ -80,7 +81,7 @@ Example operations for modifying an invoice:
 input AddLineItemInput {
   invoiceId: OID!
   description: String
-  quantity: Int 
+  quantity: Int
   unitPrice: Currency
 }
 
@@ -94,7 +95,7 @@ input MarkAsPaidInput {
 }
 ```
 
-Each operation **modifies the document state** without altering past data.    
+Each operation **modifies the document state** without altering past data.  
 Instead, a new event is appended to the document history.
 
 ---
@@ -109,7 +110,7 @@ Every operation applied to a document is **stored as an event** in an append-onl
 [
   { "timestamp": 1700000001, "operation": "CREATE_INVOICE", "data": { "id": "inv-001", "issuer": "company-123", "recipient": "client-456" } },
   { "timestamp": 1700000100, "operation": "ADD_LINE_ITEM", "data": { "description": "Software Development", "quantity": 10, "unitPrice": 100 } },
-  { "timestamp": 1700000200, "operation": "MARK_AS_PAID", "data": {} 
+  { "timestamp": 1700000200, "operation": "MARK_AS_PAID", "data": {}
 ```
 
 ### **Event history benefits:**
@@ -136,7 +137,11 @@ Document models in Powerhouse rely on **event-driven architecture, event sourcin
 ```json
 {
   "operation": "CREATE_INVOICE",
-  "data": { "id": "inv-001", "issuer": "company-123", "recipient": "client-456" }
+  "data": {
+    "id": "inv-001",
+    "issuer": "company-123",
+    "recipient": "client-456"
+  }
 }
 ```
 
@@ -155,7 +160,11 @@ Adding a line item:
 ```json
 {
   "operation": "ADD_LINE_ITEM",
-  "data": { "description": "Software Development", "quantity": 10, "unitPrice": 100 }
+  "data": {
+    "description": "Software Development",
+    "quantity": 10,
+    "unitPrice": 100
+  }
 }
 ```
 
@@ -198,7 +207,7 @@ Document Models offer a range of features that can be leveraged to create sophis
 - **Collaboration**: Empower decentralized teams to build, modify, and share documents asynchronously.
 - **Extensibility**: Add new fields, operations, and integrations over time without rewriting logic.
 
-Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data. 
+Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data.
 
 ### Up next: How to build a document model
 

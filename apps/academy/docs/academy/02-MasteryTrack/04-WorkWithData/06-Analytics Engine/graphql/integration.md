@@ -11,11 +11,17 @@ The `analytics-engine-graphql` module provides types and resolvers needed for a 
 The graphql package contains typical resolvers and typedefs. The resolvers, however, are dependent on another object: `AnalyticsModel`. This object is responsible for connecting GQL types with an `IAnalyticsStore` implementation.
 
 ```typescript
-import { AnalyticsModel, AnalyticsResolvers, typedefs } from "@powerhousedao/analytics-engine-graphql";
+import {
+  AnalyticsModel,
+  AnalyticsResolvers,
+  typedefs,
+} from "@powerhousedao/analytics-engine-graphql";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 
-const model = new AnalyticsModel(new AnalyticsQueryEngine(new MemoryAnalyticsStore()));
+const model = new AnalyticsModel(
+  new AnalyticsQueryEngine(new MemoryAnalyticsStore()),
+);
 ```
 
 > Note that the analytics resolvers require the passed in context to have an `AnalyticsModel` implementation on it. See below for details.
@@ -30,10 +36,14 @@ import http from "http";
 
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from '@apollo/server/express4';
-import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { expressMiddleware } from "@apollo/server/express4";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 
-import { AnalyticsModel, AnalyticsResolvers, typedefs } from "@powerhousedao/analytics-engine-graphql";
+import {
+  AnalyticsModel,
+  AnalyticsResolvers,
+  typedefs,
+} from "@powerhousedao/analytics-engine-graphql";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 
@@ -48,7 +58,10 @@ const schema = makeExecutableSchema({
 });
 
 // create an apollo instance
-const plugins = [ApolloServerPluginDrainHttpServer({ httpServer }), responseCachePlugin()];
+const plugins = [
+  ApolloServerPluginDrainHttpServer({ httpServer }),
+  responseCachePlugin(),
+];
 const server = new ApolloServer({
   schema,
   plugins,
@@ -57,9 +70,12 @@ const server = new ApolloServer({
 await server.start();
 
 // needed by the analytics resolvers
-const model = new AnalyticsModel(new AnalyticsQueryEngine(new MemoryAnalyticsStore()));
+const model = new AnalyticsModel(
+  new AnalyticsQueryEngine(new MemoryAnalyticsStore()),
+);
 
-app.use("/graphql",
+app.use(
+  "/graphql",
   express.json(),
   expressMiddleware(server, {
     context: ({ req }) => {

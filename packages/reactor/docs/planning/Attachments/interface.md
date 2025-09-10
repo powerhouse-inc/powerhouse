@@ -20,7 +20,7 @@ export type AttachmentHeader = {
 
 /**
  * The reference to an attachment. This is what should be stored in documents.
- * 
+ *
  * In the form `attachment://<attachmentId>`.
  */
 export type AttachmentRef = `attachment://${string}`;
@@ -47,7 +47,7 @@ export interface CreateAttachmentHandle {
 
   /**
    * Writable sink for the raw bytes.
-   * 
+   *
    * Pipe any `Readable`/`ReadableStream` into it, call `close()` when done,
    * or `abort()` early.
    */
@@ -108,7 +108,7 @@ export interface IAttachmentStore {
    * is available.  The actual bytes are delivered through `response.body`,
    * which the caller can read, pipe, or cancel just like `fetch()`’s body
    * stream.
-   * 
+   *
    * `abortSignal` is used to abort the request early.
    */
   get(
@@ -117,7 +117,6 @@ export interface IAttachmentStore {
     abortSignal?: AbortSignal,
   ): Promise<AttachmentResponse>;
 }
-
 ```
 
 ### Diagram
@@ -132,18 +131,18 @@ sequenceDiagram
     Note over Client, Stream: Upload Flow
     Client->>AttachmentStore: create(options: CreateAttachmentOptions)
     AttachmentStore-->>Client: CreateAttachmentHandle { attachmentId, sink, done }
-    
+
     Client->>Handle: pipe data to sink
     Handle->>Stream: WritableStream<Uint8Array>
     Stream-->>Handle: data written
-    
+
     Client->>Handle: await done
     Handle-->>Client: CreateAttachmentResult { header, ref }
-    
+
     Note over Client, Stream: Download Flow
     Client->>AttachmentStore: get(ref: AttachmentRef, params?, abortSignal?)
     AttachmentStore-->>Client: Promise<AttachmentResponse>
-    
+
     Client->>Client: response.header (AttachmentHeader)
     Client->>Stream: consume response.body
     Stream-->>Client: ReadableStream<Uint8Array>

@@ -39,7 +39,7 @@ graph LR
 
       IQueueManager -->|"via event bus"| IJobExecutorManager
       IOperationStore --> emit
-      
+
       subgraph IEventBus
         emit
         on
@@ -49,7 +49,7 @@ graph LR
       on --> IDocumentIndexer
       on --> ISyncManager
       on --> IProcessorManager
-  
+
     end
   end
 

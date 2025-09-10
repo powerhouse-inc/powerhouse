@@ -4,7 +4,7 @@
 interface IReactorClient {
   /**
    * Retrieves a list of document model specifications
-   * 
+   *
    * @param namespace - Optional namespace like "powerhouse" or "sky", defaults to ""
    * @param signal - Optional abort signal to cancel the request
    *
@@ -18,7 +18,7 @@ interface IReactorClient {
 
   /**
    * Retrieves a specific PHDocument
-   * 
+   *
    * @param identifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
@@ -36,7 +36,7 @@ interface IReactorClient {
 
   /**
    * Retrieves children of a document.
-   * 
+   *
    * @param parentIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
@@ -52,7 +52,7 @@ interface IReactorClient {
 
   /**
    * Retrieves parents of a document.
-   * 
+   *
    * @param childIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
@@ -68,7 +68,7 @@ interface IReactorClient {
 
   /**
    * Filters documents by criteria and returns a list of them
-   * 
+   *
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
@@ -85,7 +85,7 @@ interface IReactorClient {
 
   /**
    * Creates a document and waits for completion
-   * 
+   *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param parentIdentifier - Optional "id" or "slug" of parent document
    * @param signal - Optional abort signal to cancel the request
@@ -99,7 +99,7 @@ interface IReactorClient {
 
   /**
    * Creates an empty document and waits for completion
-   * 
+   *
    * @param documentType - Type of document to create.
    * @param parentIdentifier - Optional "id" or "slug" of parent document
    * @param signal - Optional abort signal to cancel the request
@@ -112,7 +112,7 @@ interface IReactorClient {
 
   /**
    * Applies a list of actions to a document and waits for completion
-   * 
+   *
    * @param documentIdentifier - Target document id or slug
    * @param actions - List of actions to apply
    * @param view - Optional filter containing branch and scopes information
@@ -128,7 +128,7 @@ interface IReactorClient {
 
   /**
    * Submits a list of actions to a document
-   * 
+   *
    * @param documentIdentifier - Target document id or slug
    * @param actions - List of actions to apply
    * @param view - Optional filter containing branch and scopes information
@@ -144,7 +144,7 @@ interface IReactorClient {
 
   /**
    * Renames a document and waits for completion
-   * 
+   *
    * @param documentIdentifier - Target document id or slug
    * @param name - The new name of the document
    * @param view - Optional filter
@@ -160,7 +160,7 @@ interface IReactorClient {
 
   /**
    * Adds multiple documents as children to another and waits for completion
-   * 
+   *
    * @param parentIdentifier - Parent document id or slug
    * @param documentIdentifiers - List of document identifiers to add as children
    * @param view - Optional filter containing branch and scopes information
@@ -176,7 +176,7 @@ interface IReactorClient {
 
   /**
    * Removes multiple documents as children from another and waits for completion
-   * 
+   *
    * @param parentIdentifier - Parent document identifiers
    * @param documentIdentifiers - List of document ids to remove as children
    * @param view - Optional filter containing branch and scopes information
@@ -192,7 +192,7 @@ interface IReactorClient {
 
   /**
    * Moves multiple documents from one parent to another and waits for completion
-   * 
+   *
    * @param sourceParentIdentifier - Source parent document id or slug
    * @param targetParentIdentifier - Target parent document id or slug
    * @param documentIdentifiers - List of document identifiers to move
@@ -207,13 +207,13 @@ interface IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<{
-    source: PHDocument,
-    target: PHDocument,
+    source: PHDocument;
+    target: PHDocument;
   }>;
 
   /**
    * Deletes a document and waits for completion
-   * 
+   *
    * @param identifier - Document identifier (id or slug)
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
@@ -227,7 +227,7 @@ interface IReactorClient {
 
   /**
    * Deletes documents and waits for completion
-   * 
+   *
    * @param identifiers - Document identifiers (ids or slugs)
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
@@ -241,7 +241,7 @@ interface IReactorClient {
 
   /**
    * Retrieves the status of a job
-   * 
+   *
    * @param jobId - The job id
    * @param signal - Optional abort signal to cancel the request
    * @returns The job status
@@ -250,7 +250,7 @@ interface IReactorClient {
 
   /**
    * Waits for a job to complete
-   * 
+   *
    * @param jobId - The job id or job object
    * @param signal - Optional abort signal to cancel the request
    * @returns The result of the job
@@ -282,7 +282,7 @@ enum DocumentChangeType {
   ParentAdded = "parent_added",
   ParentRemoved = "parent_removed",
   ChildAdded = "child_added",
-  ChildRemoved = "child_removed"
+  ChildRemoved = "child_removed",
 }
 
 /**
@@ -295,5 +295,5 @@ type DocumentChangeEvent = {
     parentId?: string;
     childId?: string;
   };
-}
+};
 ```

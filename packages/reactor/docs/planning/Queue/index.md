@@ -110,6 +110,6 @@ In the case that a job did resolve but the journal could not be updated, the Job
 
 ### Links
 
-* [Interface](interface.md)
-* [IQueueJournal](journal.md)
-* [Usage](usage.md)
+- [Interface](interface.md)
+- [IQueueJournal](journal.md)
+- [Usage](usage.md)

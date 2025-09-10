@@ -70,7 +70,9 @@ const results = await engine.execute({
   currency: AnalyticsPath.fromArray(["DAI"]),
   metrics: ["Forecast"],
   select: {
-    report: [AnalyticsPath.fromArray(["atlas", "EcosystemActor", "50", "2023", "11"])],
+    report: [
+      AnalyticsPath.fromArray(["atlas", "EcosystemActor", "50", "2023", "11"]),
+    ],
   },
   granularity: 0,
   lod: {},
@@ -111,11 +113,11 @@ type GroupedPeriodResult = {
 - `unit`: This indicates the unit of measurement for the metric, such as quantities, currency (e.g., `"DAI"`), or percentages.
 
 - `dimensions`: A nested array that provides context for the metric by breaking it down into finer categories or segments, such as `"project"` or `"category"`. Each dimension can contain:
-    - `name`: The identifier or key for the dimension.
-    - `path`: A structured representation of the dimension's hierarchy or location within a dataset.
-    - `label`: A human-readable label for the dimension, which can be used for display purposes.
-    - `description`: A brief explanation of the dimension to give users an understanding of what it represents.
-    - `icon`: A graphical representation or icon associated with the dimension for easier identification in user interfaces.
+  - `name`: The identifier or key for the dimension.
+  - `path`: A structured representation of the dimension's hierarchy or location within a dataset.
+  - `label`: A human-readable label for the dimension, which can be used for display purposes.
+  - `description`: A brief explanation of the dimension to give users an understanding of what it represents.
+  - `icon`: A graphical representation or icon associated with the dimension for easier identification in user interfaces.
 
 - `value`: The actual numerical value of the metric for each row within the specified period.
 
@@ -160,7 +162,7 @@ await store.addSeriesValue([
     dimensions: {
       budget: AnalyticsPath.fromString("atlas/legacy/core-units/PE-001"),
       category: AnalyticsPath.fromString(
-        "atlas/headcount/CompensationAndBenefits/FrontEndEngineering"
+        "atlas/headcount/CompensationAndBenefits/FrontEndEngineering",
       ),
       project: source,
     },
@@ -176,11 +178,14 @@ The `IAnalyticsStore` also provides an API for subscribing to data changes. This
 const store = new MemoryAnalyticsStore();
 
 // subscribe
-const unsub = store.subscribeToSource(AnalyticsPath.fromString("atlas/"), (source) => {
-  console.log('Atlas data was changed!');
+const unsub = store.subscribeToSource(
+  AnalyticsPath.fromString("atlas/"),
+  (source) => {
+    console.log("Atlas data was changed!");
 
-  // decide whether or not to requery
-});
+    // decide whether or not to requery
+  },
+);
 
 // elided
 

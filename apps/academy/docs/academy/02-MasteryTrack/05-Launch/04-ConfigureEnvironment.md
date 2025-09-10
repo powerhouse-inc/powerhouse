@@ -100,6 +100,7 @@ PH_CONNECT_CLI_VERSION=""
 APP_VERSION=""
 SENTRY_RELEASE=""
 ```
+
 You can find the most up-to-date list of variables in the source repository: [https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env](https://github.com/powerhouse-inc/powerhouse/blob/main/apps/connect/.env)
 
 ## Using a configuration file

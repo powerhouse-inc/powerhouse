@@ -85,14 +85,14 @@ Actions include cryptographic signatures on the `ActionContext` to verify that t
 type PublicKey {
   /**
    * The name of the algorithm used to sign the action.
-   * 
+   *
    * See: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/verify#algorithm
    */
   algorithm: string;
 
   /**
    * The format of the public key.
-   * 
+   *
    * https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/exportKey#format
    */
   format: string;
@@ -111,11 +111,11 @@ type Signer = {
 
   /**
    * The name of the signer, used to identify a signing application.
-   * 
+   *
    * Eg: "Connect", "Powerhouse", etc
    */
   app?: string;
-  
+
   /**
    * EVM address of the signer, used to identify a user.
    */
@@ -186,10 +186,10 @@ Each `Operation` is stored with the original `Action` that produced it. This all
 type Operation = {
   /** Unique operation id */
   id: string;
-  
+
   /** Position of the operation in the history */
   index: number;
-  
+
   /** The number of operations skipped with this Operation */
   skip: number;
 
@@ -251,7 +251,7 @@ See the [Attachments doc](../Attachments/index.md) for more information on attac
 
 The `IOperationStore` holds many streams of operations: one stream per `(documentId, scope, branch)` tuple. However, there are some operations that occur outside of this tuple-defined stream. We are left with two options: either create a wrapper around `Operation` that functions differently (`{ type, data: operations }`), or create a special stream on top of the existing `Operation` scheme. We have opted for the latter.
 
-The "System Stream" is a special stream of Operations that represent state changes not from a reducer, but from the Reactor itself. This stream is determined by the tuple,  `(00000000-0000-0000-0000-000000000000, "system", "*")` (we leave open the possibility of other system streams in the future).
+The "System Stream" is a special stream of Operations that represent state changes not from a reducer, but from the Reactor itself. This stream is determined by the tuple, `(00000000-0000-0000-0000-000000000000, "system", "*")` (we leave open the possibility of other system streams in the future).
 
 The actions that are handled by the Reactor include:
 
@@ -354,14 +354,11 @@ Internally, the `IReactorClient` implementation would look like this:
 
 ```tsx
 // first, we create a new document (which now does not need to belong to a drive) and wait on it
-const jobId = await this.reactor.mutate(
-  SYSTEM_DOCUMENT_ID,
-  [
-    createDocument({
-      content: myNewDocument, // a PHDocument
-    }),
-  ],
-)
+const jobId = await this.reactor.mutate(SYSTEM_DOCUMENT_ID, [
+  createDocument({
+    content: myNewDocument, // a PHDocument
+  }),
+]);
 const { operations } = await waitOnJob(jobId);
 
 // pull off the new document id

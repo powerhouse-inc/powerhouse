@@ -3,6 +3,7 @@
 In this section, we will cover **the core concepts of GraphQL with examples applied to the Powerhouse ecosystem**. GraphQL plays a fundamental role in defining document model data schemas, handling data access patterns, and enabling event-driven workflows within the Powerhouse ecosystem.
 
 More specifically, GraphQL is used as:
+
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
 - As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically.
 
@@ -15,21 +16,22 @@ More specifically, GraphQL is used as:
 ## GraphQL: Core concepts
 
 ### Schema
+
 The schema defines the structure of a GraphQL API. It acts as a contract between the client and server, detailing:
 
-- **Data Types**: The various types of data that can be queried.   
-For example the contributor type and the project type
-- **Fields**: The available fields on each type.   
-For example the contributor type has a field 'name' and the project type has a field 'title'
-- **Relationships**: How different types relate to each other.   
-For example the contributor type has a relationship with the project type
+- **Data Types**: The various types of data that can be queried.  
+  For example the contributor type and the project type
+- **Fields**: The available fields on each type.  
+  For example the contributor type has a field 'name' and the project type has a field 'title'
+- **Relationships**: How different types relate to each other.  
+  For example the contributor type has a relationship with the project type
 
   ```graphql title="Example of a Powerhouse Contributor schema in GraphQL"
   type Contributor {
     id: ID!
     name: String!
     reputationScore: Float
-    projects: [Project]   # The Contributor type has a field 'projects' that returns an array of Project objects
+    projects: [Project] # The Contributor type has a field 'projects' that returns an array of Project objects
   }
 
   type Project {
@@ -46,22 +48,23 @@ For example the contributor type has a relationship with the project type
 
   With the following query someone can request the contributor with the id 123
 
-    ```graphql title="Example of a query to get a contributor"
-    query {
-      getContributor(id: "123") {
-        name
-        reputationScore
-        projects {      # Accessing the related projects
-          title
-          status
+      ```graphql title="Example of a query to get a contributor"
+      query {
+        getContributor(id: "123") {
+          name
+          reputationScore
+          projects {      # Accessing the related projects
+            title
+            status
+          }
         }
       }
-    }
-    ```
+      ```
 
 ---
 
 ### Fields and arguments
+
 - **Field**: A specific piece of data you can request from an object. When you build a query, you select the fields you want to retrieve.
 - **Argument**: Key-value pairs that can be attached to fields to customize and refine the query. Some fields require arguments to work correctly, especially when dealing with mutations.
 
@@ -78,9 +81,11 @@ For example the contributor type has a relationship with the project type
     }
   }
   ```
-___
+
+---
 
 ### Introspection
+
 GraphQL APIs are self-documenting. Through introspection, you can query the API to retrieve details about its schema, including:
 
 - The list of **available types and fields**.
@@ -102,7 +107,9 @@ GraphQL APIs are self-documenting. Through introspection, you can query the API 
   ```
 
 ---
+
 ### Connections, edges, and nodes
+
 When dealing with lists of data, GraphQL employs a pattern that includes:
 
 - **Connection**: A structure that represents a list of related objects.
@@ -136,21 +143,24 @@ When dealing with lists of data, GraphQL employs a pattern that includes:
 ---
 
 ### Mutations
+
 - While queries retrieve data, **mutations modify data**. In Powerhouse, a contributor might need to submit an invoice after completing a task. A GraphQL mutation for this could be:
 
-    ```graphql title="Submitting an Invoice"
-    mutation {
-      submitInvoice(input: {
+  ```graphql title="Submitting an Invoice"
+  mutation {
+    submitInvoice(
+      input: {
         contributorId: "123"
         amount: 500.00
         currency: "USD"
         dueDate: "2024-03-01"
-      }) {
-        id
-        status
       }
+    ) {
+      id
+      status
     }
-    ```
+  }
+  ```
 
 ---
 
@@ -192,14 +202,15 @@ Powerhouse uses **CQRS (Command Query Responsibility Segregation)** to separate 
 
 Powerhouse's subgraphs act as the read layer, while processors handle write operations into operational data stores. This prevents conflicts between querying and modifying data.
 
-| Layer | Role | GraphQL Usage | Implementation |
-| --- | --- | --- | --- |
-| Write Model (Commands) | Handles state changes (adding, modifying, deleting) | GraphQL Mutations | Processor |
-| Read Model (Queries) | Optimized for fetching/reading/retrieving data | GraphQL Queries | Subgraph |
+| Layer                  | Role                                                | GraphQL Usage     | Implementation |
+| ---------------------- | --------------------------------------------------- | ----------------- | -------------- |
+| Write Model (Commands) | Handles state changes (adding, modifying, deleting) | GraphQL Mutations | Processor      |
+| Read Model (Queries)   | Optimized for fetching/reading/retrieving data      | GraphQL Queries   | Subgraph       |
 
-### Read and write separation  
+### Read and write separation
 
-**Read Model (Query)**  
+**Read Model (Query)**
+
 - Optimized for data retrieval
 - Structured using GraphQL Queries
 - Aggregates and exposes data via a subgraph
@@ -216,7 +227,8 @@ query {
 }
 ```
 
-**Write Model (Mutation)** 
+**Write Model (Mutation)**
+
 - Handles state changes (adding, modifying, deleting)
 - Structured using GraphQL Mutations
 - Writes data to Operational Data Stores

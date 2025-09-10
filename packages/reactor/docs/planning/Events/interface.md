@@ -24,11 +24,11 @@ export interface IEventBus {
   ): Unsubscribe;
 
   /**
-  * Emit an event with data.
-  * @param type - The event type to emit
-  * @param data - The data to pass to subscribers
-  * @param signal - Optional abort signal to cancel the event
-  */
+   * Emit an event with data.
+   * @param type - The event type to emit
+   * @param data - The data to pass to subscribers
+   * @param signal - Optional abort signal to cancel the event
+   */
   emit(type: number, data: any, signal?: AbortSignal): Promise<void>;
 }
 ```
