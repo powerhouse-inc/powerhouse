@@ -17,7 +17,6 @@
     "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "prepare": "husky"
-
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
@@ -69,7 +68,7 @@
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.40.0",
-    "vitest": "^3.1.2",
+    "vitest": "^3.2.4",
     "yargs": "^18.0.0"
   },
   "dependencies": {

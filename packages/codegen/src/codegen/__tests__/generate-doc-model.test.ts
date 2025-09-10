@@ -10,23 +10,12 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
-describe("document model", () => {
-  const srcPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    "data",
-    "document-models",
-  );
+const testDir = import.meta.dirname;
 
-  const outPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    ".out",
-  );
+describe("document model", () => {
+  const srcPath = path.join(testDir, "data", "document-models");
+
+  const outPath = path.join(testDir, ".out");
 
   beforeEach(async () => {
     // make sure to remove the outPath directory
@@ -66,9 +55,10 @@ describe("document model", () => {
         stdout: [],
         stderr: [],
       };
+      const rootDir = path.join(testDir, "../../..");
       const child = exec(
         "npx tsc --project tsconfig.document-model.test.json",
-        { cwd: process.cwd() },
+        { cwd: rootDir },
       );
       child.stdout?.on("data", (data) => {
         output.stdout.push(data);

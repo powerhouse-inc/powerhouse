@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     include: ["src/**/__tests__/**/*.test.ts"],
     exclude: ["src/codegen/__tests__/.out/**/*"],
+    setupFiles: ["src/codegen/__tests__/setup-tests.ts"],
   },
   resolve: {
     dedupe: ["graphql"],
