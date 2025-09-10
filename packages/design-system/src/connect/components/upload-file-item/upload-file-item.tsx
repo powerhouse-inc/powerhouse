@@ -41,7 +41,7 @@ export const UploadFileItem = forwardRef<HTMLDivElement, UploadFileItemProps>(
       <div
         ref={ref}
         className={twMerge(
-          "flex w-[286px] flex-col gap-0.5 rounded-md border border-gray-100 bg-white p-2 shadow-[0_2px_12px_rgba(37,42,52,0.1)]",
+          "flex w-full flex-col gap-0.5 rounded-md border border-gray-100 bg-white p-2 shadow-[0_2px_12px_rgba(37,42,52,0.1)]",
           className,
         )}
         {...delegatedProps}

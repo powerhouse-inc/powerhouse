@@ -35,7 +35,7 @@ const Template: Story = {
   args: {},
   decorators: [
     (Story) => (
-      <div className="flex h-screen items-center justify-center bg-gray-50 p-8">
+      <div className="flex h-screen w-[338px] items-center justify-center bg-gray-50 p-8">
         <Story />
       </div>
     ),
