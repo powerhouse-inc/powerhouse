@@ -1,8 +1,8 @@
 // Main subgraph export
 export { ReactorSubgraph } from "./index.js";
 
-// Client exports
-export { ReactorGraphQLClient } from "./client.js";
+// SDK factory export
+export { createReactorSdk } from "./sdk.factory.js";
 
 // DTO exports
 export * from "./dtos.js";

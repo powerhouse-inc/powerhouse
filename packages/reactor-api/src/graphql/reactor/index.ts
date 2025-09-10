@@ -48,6 +48,9 @@ const DateTimeScalar = new GraphQLScalarType({
   },
 });
 
+// Export SDK factory
+export * from "./sdk.factory.js";
+
 export class ReactorSubgraph extends Subgraph {
   private logger = childLogger([
     "ReactorSubgraph",
