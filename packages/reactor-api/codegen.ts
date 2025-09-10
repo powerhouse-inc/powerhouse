@@ -3,12 +3,21 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 const config: CodegenConfig = {
   schema: "./src/graphql/reactor/schema.graphql",
   documents: [
-    "./src/graphql/reactor/**/*.ts",
-    "!./src/graphql/reactor/generated/**/*",
+    "./src/graphql/reactor/**/*.graphql",
+    "!./src/graphql/reactor/schema.graphql",
   ],
   generates: {
     "./src/graphql/reactor/generated/graphql.ts": {
-      plugins: ["typescript", "typescript-operations", "typescript-resolvers"],
+      plugins: [
+        {
+          add: {
+            content: "/* eslint-disable */",
+          },
+        },
+        "typescript",
+        "typescript-operations",
+        "typescript-resolvers",
+      ],
       config: {
         contextType: "../context.js#Context",
         scalars: {
@@ -28,17 +37,47 @@ const config: CodegenConfig = {
       plugins: [
         {
           add: {
-            content: "import * as Types from './graphql.js';",
+            content:
+              "/* eslint-disable */\nimport * as Types from './graphql.js';",
           },
         },
+        "typescript",
+        "typescript-operations",
         "typescript-generic-sdk",
       ],
       config: {
         documentMode: "documentNode",
       },
     },
+    "./src/graphql/reactor/generated/typed-document-nodes.ts": {
+      plugins: [
+        {
+          add: {
+            content: "/* eslint-disable */",
+          },
+        },
+        "typescript",
+        "typescript-operations",
+        "typed-document-node",
+      ],
+      config: {
+        scalars: {
+          JSONObject: "any",
+          DateTime: "string | Date",
+        },
+        strictScalars: true,
+        skipTypename: true,
+      },
+    },
     "./src/graphql/reactor/generated/zod-schemas.ts": {
-      plugins: ["typescript-validation-schema"],
+      plugins: [
+        {
+          add: {
+            content: "/* eslint-disable */",
+          },
+        },
+        "typescript-validation-schema",
+      ],
       config: {
         schema: "zod",
         scalarSchemas: {

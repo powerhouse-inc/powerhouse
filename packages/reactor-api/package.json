@@ -40,6 +40,7 @@
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/client-preset": "^4.1.0",
+    "@graphql-codegen/typed-document-node": "^5.0.1",
     "@graphql-codegen/typescript": "^4.0.1",
     "@graphql-codegen/typescript-generic-sdk": "^4.0.2",
     "@graphql-codegen/typescript-graphql-request": "^6.2.0",
@@ -67,6 +68,7 @@
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.17",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/analytics-engine-graphql": "^0.4.0",
