@@ -8,8 +8,6 @@ import GraphQLJSON from "graphql-type-json";
 import path from "path";
 import { fileURLToPath } from "url";
 import { type Resolvers } from "./generated/graphql.js";
-// TODO: Import IReactorClient when available
-// import { type IReactorClient } from "@powerhousedao/reactor-mcp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
