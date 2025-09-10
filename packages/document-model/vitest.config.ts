@@ -1,6 +1,6 @@
-import { defineConfig } from "vitest/config";
+import { defineProject } from "vitest/config";
 
-export default defineConfig({
+export default defineProject({
   test: {
     include: ["test/**/*.test.ts"],
     globals: true,
@@ -8,9 +8,6 @@ export default defineConfig({
       "#utils/env": new URL("./src/document/utils/node.ts", import.meta.url)
         .pathname,
       "#": new URL("./src/", import.meta.url).pathname,
-    },
-    coverage: {
-      reporter: ["text", "json", "html"],
     },
   },
 });

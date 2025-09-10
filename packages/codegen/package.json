@@ -32,7 +32,6 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "clean:node_modules": "rimraf node_modules",
-    "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
     "test": "vitest run"
   },
   "dependencies": {
@@ -69,7 +68,7 @@
     "husky": "^8.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vitest": "^3.1.2",
+    "vitest": "^3.2.4",
     "zod": "^3.24.3"
   }
 }

@@ -14,7 +14,7 @@ describe("generateManifest", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = path.join(__dirname, "temp");
+    testDir = path.join(import.meta.dirname, "temp");
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
