@@ -1,4 +1,3 @@
-import type { DocumentModelState } from "document-model";
 import { decompressFromEncodedURIComponent } from "lz-string";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDocumentSubgraphQuery } from "../src/utils/switchboard.js";
@@ -24,38 +23,6 @@ vi.mock("document-drive/utils/graphql", () => ({
 }));
 
 describe("buildDocumentSubgraphQuery", () => {
-  const mockDocumentModel: DocumentModelState = {
-    __typename: "DocumentModelState",
-    name: "Test Document Model",
-    id: "test-model-id",
-    extension: ".test",
-    description: "A test document model",
-    author: {
-      name: "Test Author",
-      website: "https://test.com",
-    },
-    specifications: [
-      {
-        __typename: "DocumentSpecification",
-        version: 1,
-        state: {
-          global: {
-            schema: "type TestState { id: String! }",
-            initialValue: '{"id": "test"}',
-            examples: [],
-          },
-          local: {
-            schema: "type TestLocalState { }",
-            initialValue: "{}",
-            examples: [],
-          },
-        },
-        modules: [],
-        changeLog: ["Initial version"],
-      },
-    ],
-  };
-
   const mockDriveUrl = "https://example.com/d/test-drive";
   const mockDocumentId = "test-document-123";
 
@@ -64,11 +31,7 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should build query without auth token", () => {
-    const result = buildDocumentSubgraphQuery(
-      mockDriveUrl,
-      mockDocumentId,
-      mockDocumentModel,
-    );
+    const result = buildDocumentSubgraphQuery(mockDriveUrl, mockDocumentId);
 
     // The result should be a compressed string
     expect(typeof result).toBe("string");
@@ -98,7 +61,6 @@ describe("buildDocumentSubgraphQuery", () => {
     const result = buildDocumentSubgraphQuery(
       mockDriveUrl,
       mockDocumentId,
-      mockDocumentModel,
       authToken,
     );
 
@@ -125,11 +87,7 @@ describe("buildDocumentSubgraphQuery", () => {
   it("should extract drive slug from drive URL correctly", () => {
     const driveUrlWithSlug = "https://example.com/d/my-test-drive";
 
-    const result = buildDocumentSubgraphQuery(
-      driveUrlWithSlug,
-      mockDocumentId,
-      mockDocumentModel,
-    );
+    const result = buildDocumentSubgraphQuery(driveUrlWithSlug, mockDocumentId);
 
     const decompressed = JSON.parse(
       decompressFromEncodedURIComponent(result) || "",
@@ -139,33 +97,8 @@ describe("buildDocumentSubgraphQuery", () => {
     expect(variables.driveId).toBe("my-test-drive");
   });
 
-  it("should handle document model with special characters in name", () => {
-    const specialModel: DocumentModelState = {
-      ...mockDocumentModel,
-      name: "Test/Model With Spaces",
-    };
-
-    const result = buildDocumentSubgraphQuery(
-      mockDriveUrl,
-      mockDocumentId,
-      specialModel,
-    );
-
-    const decompressed = JSON.parse(
-      decompressFromEncodedURIComponent(result) || "",
-    ) as CompressedQueryData;
-
-    // Verify the document query uses pascalCase for the model name
-    expect(decompressed.document).toContain("TestModelWithSpaces");
-  });
-
   it("should handle empty auth token as undefined", () => {
-    const result = buildDocumentSubgraphQuery(
-      mockDriveUrl,
-      mockDocumentId,
-      mockDocumentModel,
-      "",
-    );
+    const result = buildDocumentSubgraphQuery(mockDriveUrl, mockDocumentId, "");
 
     const decompressed = JSON.parse(
       decompressFromEncodedURIComponent(result) || "",
@@ -176,29 +109,23 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should generate correct GraphQL query structure", () => {
-    const result = buildDocumentSubgraphQuery(
-      mockDriveUrl,
-      mockDocumentId,
-      mockDocumentModel,
-    );
+    const result = buildDocumentSubgraphQuery(mockDriveUrl, mockDocumentId);
 
     const decompressed = JSON.parse(
       decompressFromEncodedURIComponent(result) || "",
     ) as CompressedQueryData;
 
     // Verify the document contains expected GraphQL query structure
-    expect(decompressed.document).toContain("query getDocument");
-    expect(decompressed.document).toContain("$documentId: PHID!");
-    expect(decompressed.document).toContain("$driveId: String");
-    expect(decompressed.document).toContain(
-      "getDocument(docId: $documentId, driveId: $driveId)",
-    );
-    expect(decompressed.document).toContain("id");
-    expect(decompressed.document).toContain("created");
-    expect(decompressed.document).toContain("lastModified");
-    expect(decompressed.document).toContain("name");
-    expect(decompressed.document).toContain("revision");
-    expect(decompressed.document).toContain("stateJSON");
+    expect(decompressed.document)
+      .toStrictEqual(`query getDocument($documentId: String!) {
+  document(id: $documentId) {
+      id
+      lastModified
+      name
+      revision
+      stateJSON
+    }
+  }`);
   });
 
   it("should handle different drive URL formats", () => {
@@ -209,11 +136,7 @@ describe("buildDocumentSubgraphQuery", () => {
     ];
 
     urls.forEach((url) => {
-      const result = buildDocumentSubgraphQuery(
-        url,
-        mockDocumentId,
-        mockDocumentModel,
-      );
+      const result = buildDocumentSubgraphQuery(url, mockDocumentId);
 
       const decompressed = JSON.parse(
         decompressFromEncodedURIComponent(result) || "",
@@ -230,14 +153,12 @@ describe("buildDocumentSubgraphQuery", () => {
     const result1 = buildDocumentSubgraphQuery(
       mockDriveUrl,
       mockDocumentId,
-      mockDocumentModel,
       "test-token",
     );
 
     const result2 = buildDocumentSubgraphQuery(
       mockDriveUrl,
       mockDocumentId,
-      mockDocumentModel,
       "test-token",
     );
 
@@ -249,14 +170,12 @@ describe("buildDocumentSubgraphQuery", () => {
     const result1 = buildDocumentSubgraphQuery(
       mockDriveUrl,
       mockDocumentId,
-      mockDocumentModel,
       "token1",
     );
 
     const result2 = buildDocumentSubgraphQuery(
       mockDriveUrl,
       mockDocumentId,
-      mockDocumentModel,
       "token2",
     );
 

@@ -3,7 +3,6 @@ import {
   exportFile,
   setSelectedNode,
   useConnectCrypto,
-  useDocumentModelModuleById,
   useDriveIsRemote,
   useDriveRemoteUrl,
   useParentFolder,
@@ -25,10 +24,8 @@ export function DocumentEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
   const parentFolder = useParentFolder(selectedDocument?.header.id);
-  const documentType = selectedDocument?.header.documentType;
   const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
   const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
-  const documentModelModule = useDocumentModelModuleById(documentType);
   const connectCrypto = useConnectCrypto();
   const user = useUser();
 
@@ -83,11 +80,6 @@ export function DocumentEditorContainer() {
             return;
           }
 
-          if (!documentModelModule) {
-            console.error("No document model found");
-            return;
-          }
-
           // @todo: add environment variable for token expiration
           const token = user?.address
             ? await connectCrypto?.getBearerToken(
@@ -101,7 +93,6 @@ export function DocumentEditorContainer() {
           const url = buildDocumentSubgraphUrl(
             remoteUrl,
             selectedDocument.header.id,
-            documentModelModule.documentModel,
             token,
           );
           try {
@@ -111,7 +102,7 @@ export function DocumentEditorContainer() {
           }
         }
       : undefined;
-  }, [isRemoteDrive, remoteUrl, selectedDocument, documentModelModule]);
+  }, [isRemoteDrive, remoteUrl, selectedDocument]);
 
   if (!selectedDocument) return null;
 
