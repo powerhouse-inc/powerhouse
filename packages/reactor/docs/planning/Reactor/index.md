@@ -15,6 +15,6 @@ Manages DocumentModels and Documents with an asynchronous interface.
 
 ### Links
 
-* [Interface](interface.md)
-* [Usage](usage.md)
-* [Diagram](diagram.md)
+- [Interface](interface.md)
+- [Usage](usage.md)
+- [Diagram](diagram.md)

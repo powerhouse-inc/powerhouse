@@ -61,9 +61,7 @@ describe("generateManifest", () => {
         name: "@existing",
         url: "https://example.com/existing",
       },
-      documentModels: [
-        { id: "test/document", name: "Test Document" },
-      ],
+      documentModels: [{ id: "test/document", name: "Test Document" }],
       editors: [
         {
           id: "test-editor",
@@ -232,9 +230,7 @@ describe("generateManifest", () => {
         name: "@test",
         url: "https://test.com",
       },
-      documentModels: [
-        { id: "test/doc", name: "Test Doc" },
-      ],
+      documentModels: [{ id: "test/doc", name: "Test Doc" }],
       editors: [
         {
           id: "test-editor",
@@ -276,7 +272,7 @@ describe("generateManifest", () => {
     expect(manifest).toEqual(manifestData);
 
     // Verify formatting (4 spaces indentation)
-    expect(content).toContain("    \"name\":");
-    expect(content).toContain("        \"id\":");
+    expect(content).toContain('    "name":');
+    expect(content).toContain('        "id":');
   });
 });

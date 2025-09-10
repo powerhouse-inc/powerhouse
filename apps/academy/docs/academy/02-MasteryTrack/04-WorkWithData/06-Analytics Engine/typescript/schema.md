@@ -1,9 +1,9 @@
 # Database schema
 
 ![untitled](../images/dbs.png)
-*Database table structures for the analytics engine.*
+_Database table structures for the analytics engine._
 
-Analytics information  is stored in three database tables: 
+Analytics information is stored in three database tables:
 
 - `AnalyticsSeries`: This table stores the raw data over a period with its metric, value, unit, function and parameters.
 - `AnalyticsDimension`: This table stores all available dimensions for each series.

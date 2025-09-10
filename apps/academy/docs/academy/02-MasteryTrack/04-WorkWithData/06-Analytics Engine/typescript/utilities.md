@@ -48,7 +48,9 @@ The `AnalyticsProfiler` requires a namespace and a logger.
 ```typescript
 const profiler = new AnalyticsProfiler(
   "my-system",
-  (metricName: string, ms: number) => console.log(`[${metricName}] ${Math.floor(ms)} ms`));
+  (metricName: string, ms: number) =>
+    console.log(`[${metricName}] ${Math.floor(ms)} ms`),
+);
 ```
 
 > This object may be passed in through the constructor.
@@ -86,17 +88,17 @@ Often, it is useful to group metrics together. This is accomplished through a me
 // Blocks, { }, are a good convention to signal stack depth.
 profiler.push("system");
 {
-  profiler.recordSync("a", myFuncA);    // my-system.system.a
+  profiler.recordSync("a", myFuncA); // my-system.system.a
 
   profiler.push("subsystem");
   {
-    profiler.recordSync("b", myFuncB);  // my-system.system.subsystem.b
+    profiler.recordSync("b", myFuncB); // my-system.system.subsystem.b
   }
   profiler.pop();
 
-  profiler.recordSync("c", myFuncC);    // my-system.system.c
+  profiler.recordSync("c", myFuncC); // my-system.system.c
 }
 profiler.pop();
 
-profiler.recordSync("d", myFuncC);      // my-system.c
+profiler.recordSync("d", myFuncC); // my-system.c
 ```

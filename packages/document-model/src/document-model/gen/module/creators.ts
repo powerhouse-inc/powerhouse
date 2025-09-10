@@ -21,7 +21,7 @@ export const addModule = (input: AddModuleInput) =>
     { ...input },
     undefined,
     z.AddModuleInputSchema,
-    "global"
+    "global",
   );
 
 export const setModuleName = (input: SetModuleNameInput) =>
@@ -30,7 +30,7 @@ export const setModuleName = (input: SetModuleNameInput) =>
     { ...input },
     undefined,
     z.SetModuleNameInputSchema,
-    "global"
+    "global",
   );
 
 export const setModuleDescription = (input: SetModuleDescriptionInput) =>
@@ -39,7 +39,7 @@ export const setModuleDescription = (input: SetModuleDescriptionInput) =>
     { ...input },
     undefined,
     z.SetModuleDescriptionInputSchema,
-    "global"
+    "global",
   );
 
 export const deleteModule = (input: DeleteModuleInput) =>
@@ -48,7 +48,7 @@ export const deleteModule = (input: DeleteModuleInput) =>
     { ...input },
     undefined,
     z.DeleteModuleInputSchema,
-    "global"
+    "global",
   );
 
 export const reorderModules = (input: ReorderModulesInput) =>
@@ -57,5 +57,5 @@ export const reorderModules = (input: ReorderModulesInput) =>
     { ...input },
     undefined,
     z.ReorderModulesInputSchema,
-    "global"
+    "global",
   );

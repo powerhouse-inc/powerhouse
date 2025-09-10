@@ -80,6 +80,7 @@ export const EthereumAddress: React.FC<EthereumAddressProps> = ({ onChange }) =>
 ```
 
 **Key Points:**
+
 - Use the scalar's `.schema.safeParse(value)` for validation.
 - Display error messages if validation fails.
 - Call `onChange` with both the value and its validity.

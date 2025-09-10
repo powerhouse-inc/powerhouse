@@ -1,11 +1,11 @@
 import {
-    AddOperationErrorAction,
-    SetOperationErrorCodeAction,
-    SetOperationErrorNameAction,
-    SetOperationErrorDescriptionAction,
-    SetOperationErrorTemplateAction,
-    DeleteOperationErrorAction,
-    ReorderOperationErrorsAction,
+  AddOperationErrorAction,
+  SetOperationErrorCodeAction,
+  SetOperationErrorNameAction,
+  SetOperationErrorDescriptionAction,
+  SetOperationErrorTemplateAction,
+  DeleteOperationErrorAction,
+  ReorderOperationErrorsAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";
 

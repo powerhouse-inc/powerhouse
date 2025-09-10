@@ -43,20 +43,18 @@ The `kill()` method mimics the `SIGTERM` signal and synchronously returns an `IS
 In a browser environment, the `kill()` method must be able to synchronously call the `onShutdown` callback.
 
 ```tsx
-reactor
-  .kill()
-  .onShutdown(() => {
-  console.log("Reactor has been shutdown");         // this will be logged first
+reactor.kill().onShutdown(() => {
+  console.log("Reactor has been shutdown"); // this will be logged first
 });
 
-console.log("Waiting for reactor to shutdown...");  // this will be logged second
+console.log("Waiting for reactor to shutdown..."); // this will be logged second
 ```
 
 In a server environment, a graceful shutdown period should be allowed for the reactor to finish its work (i.e. flush job queue, finish db writes, etc). A host application, like Switchboard, can watch this value to determine if the reactor has been shutdown.
 
 ```tsx
 // hook into SIGTERM signal
-process.on('SIGTERM', () => {
+process.on("SIGTERM", () => {
   console.log("Graceful shutdown initiated.");
 
   // forward the signal to the reactor
@@ -90,7 +88,7 @@ kill(): ShutdownStatus {
   // elided ...
 
   this.queue.block();
-  
+
   // elided ...
 }
 ```
@@ -122,13 +120,13 @@ On the case of shutdown, there are limited cases:
 ```mermaid
 flowchart TD
     A[Shutdown] --> B{Did IOperationStore write all operations for job?}
-    
+
     B -->|Yes| C{Was job written to journal?}
     B -->|No| D[Queue will requeue job on next startup]
-    
+
     C -->|Yes| E[Job successfully processed and written to journal]
     C -->|No| F[Job not written to journal<br/>Replay on startup will be noop<br/>due to Operation idempotency]
-    
+
     style E fill:#70AA70
     style F fill:#70AA70
     style D fill:#70AA70
@@ -147,7 +145,7 @@ In this scenario, a projection receives an event over the event bus with a seque
 ```mermaid
 flowchart TD
     A[Operation Event] --> B{Is the operation id what we expect?}
-    
+
     B -->|Yes| C[Index Operation]
     B -->|No| E[Query IOperationStore for operations between last known id and event id]
     E --> C
@@ -173,11 +171,7 @@ We maintain eventual consistency through two primary scenarios:
 
 #### Runtime
 
-
-
 #### Startup
-
-
 
 ### ISyncManager
 

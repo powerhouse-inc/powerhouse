@@ -1,114 +1,114 @@
 {
-    "common": {
-        "cancel": "Cancel",
-        "delete": "Delete",
-        "continue": "Continue",
-        "empty": "Empty",
-        "create": "Create",
-        "save": "Save",
-        "export": "Export",
-        "reload": "Reload",
-        "reloadConnect": "Click here to reload Connect"
-    },
-    "searchbar": {
-        "placeholder": "Search Powerhouse",
-        "filterLabel": "File type"
-    },
-    "folderView": {
-        "sections": {
-            "folders": {
-                "title": "Folders",
-                "empty": "No folders 🗂️"
-            },
-            "documents": {
-                "title": "Documents and files",
-                "empty": "No documents or files 📄"
-            }
-        }
-    },
-    "files": {
-        "options": {
-            "switchboardLink": "Switchboard Link"
-        }
-    },
-    "modals": {
-        "deleteItem": {
-            "folder": {
-                "header": "Delete “{{item}}” folder?",
-                "body": "Are you sure you want to delete this folder? All files and subfolders within it will be removed."
-            },
-            "file": {
-                "header": "Delete “{{item}}” file?",
-                "body": "Are you sure you want to delete this file?"
-            }
-        },
-        "deleteDrive": {
-            "title": "Delete \"{{label}}\" drive?",
-            "body": "Are you sure you want to delete this drive? All files and subfolders within it will be removed. Do you want to proceed?",
-            "inputPlaceholder": "Enter drive name..."
-        },
-        "upgradeDrive": {
-            "header": "Upgrade to cloud drive",
-            "body": "You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
-        },
-        "createDocument": {
-            "header": "Create a new document",
-            "placeholder": "Document name"
-        },
-        "connectSettings": {
-            "title": "Settings",
-            "body": "These settings will apply to all drives.",
-            "clearStorage": {
-                "button": "Clear Storage",
-                "description": "Delete previous session data",
-                "confirmation": {
-                    "title": "Clear Storage",
-                    "body": "Are you sure you want to clear the storage? This will remove all previous session data.",
-                    "clearButton": "Clear Storage"
-                }
-            },
-            "enabledDocumentTypes": {
-                "title": "Document Models",
-                "description": "Documents enabled",
-                "allSelected": "All documents are selected"
-            }
-        },
-        "exportDocumentWithErrors": {
-            "title": "Your document contains errors",
-            "body": "Your document contains structure errors. Do you want to export it anyway?"
-        },
-        "disclaimer": {
-            "title": "Disclaimer",
-            "body": "All content provided herein our website, hyperlinked sites, associated applications, forums, blogs, social media accounts and other platforms (“Site”) is for your general information only, procured from third party sources. We make no warranties of any kind in relation to our content, including but not limited to accuracy and updatedness. No part of the content that we provide constitutes financial advice, legal advice or any other form of advice meant for your specific reliance for any purpose. Any use or reliance on our content is solely at your own risk and discretion. You should conduct your own research, review, analyse and verify our content before relying on them. Trading is a highly risky activity that can lead to major losses, please therefore consult your financial advisor before making any decision. No content on our Site is meant to be a solicitation or offer."
-        },
-        "cookiesPolicy": {
-            "title": "Cookies Policy",
-            "body": "<subtitle>Use of Cookies and Similar Technologies</subtitle><p>The Site is using cookies. Cookies are small text files that are placed on your computer by websites that you visit. They are widely used in order to make websites work, or work more efficiently, as well as to provide information to the owners of the site. Cookies are typically stored on your computer´s hard drive.Information collected from cookies is used by us to evaluate the effectiveness of our Site and analyze trends. The information collected from cookies allows us to determine such things as which parts of the Site are most visited and difficulties our visitors may experience in accessing the SIte. With this knowledge, we can improve the quality of your experience on the Site by recognizing and delivering more of the most desired features and information, as well as by resolving access difficulties.</p><p>We use third party service providers, to assist us in better understanding the use of our Site. Our service providers will place cookies on the hard drive of your computer (or use similar technologies) and will receive information that we select that will educate us on such things as how visitors navigate around our Site. This information is aggregated to provide statistical data about our users browsing actions and patterns, and does not personally identify individuals. This information may include:</p><p>Computer or mobile device information, Website usage information, such as:<list></p><bullet>Page views,</bullet><bullet>Button clicks,</bullet><bullet>Input form changes (without the values being entered),</bullet><bullet>Errors.</bullet></list><p>Our service providers analyses this information and provides us with aggregate reports. The information and analysis provided by our service providers will be used to assist us in better understanding our visitors interests in our Site and how to better serve those interests. If you want to avoid using cookies altogether, you can disable cookies in your browser. However, disabling cookies might make it impossible for you to use certain features of the Site. Your use of the Site with a browser that is configured to accept cookies constitutes an acceptance of our and third-party cookies.</p>"
-        }
-    },
-    "notifications": {
-        "deleteDriveSuccess": "Drive successfully deleted",
-        "deleteFolderSuccess": "Folder deleted",
-        "fileDeleteSuccess": "File deleted",
-        "addDriveSuccess": "New drive successfully added",
-        "driveSyncSuccess": "Drive synced successfully",
-        "driveSyncError": "Error synchronizing drive {{drive}}",
-        "driveSyncConflict": "Conflict error detected in {{drive}}",
-        "reloadApp": "It seems like you're running an outdated version of the app. Please reload Connect to get the latest version."
-    },
-    "footer": {
-        "cookiePolicy": "Cookie Policy",
-        "termsOfUse": "Terms of Use",
-        "disclaimer": "Disclaimer",
-        "builtWith": "Built with <icon /> Powerhouse"
-    },
-    "cookieBanner": {
-        "message": "This website uses cookies for analytic purposes only. Cookies are anonymous and do not link to user data. We collect information to improve the user experience and validate UI changes. You can still use the page without cookies. For more information, please read our <a>cookies policy.</a>",
-        "accept": "Accept configured cookies",
-        "reject": "Reject all cookies",
-        "cookies": {
-            "functional": "Functional cookies",
-            "analytics": "Analytics cookies"
-        }
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "continue": "Continue",
+    "empty": "Empty",
+    "create": "Create",
+    "save": "Save",
+    "export": "Export",
+    "reload": "Reload",
+    "reloadConnect": "Click here to reload Connect"
+  },
+  "searchbar": {
+    "placeholder": "Search Powerhouse",
+    "filterLabel": "File type"
+  },
+  "folderView": {
+    "sections": {
+      "folders": {
+        "title": "Folders",
+        "empty": "No folders 🗂️"
+      },
+      "documents": {
+        "title": "Documents and files",
+        "empty": "No documents or files 📄"
+      }
     }
+  },
+  "files": {
+    "options": {
+      "switchboardLink": "Switchboard Link"
+    }
+  },
+  "modals": {
+    "deleteItem": {
+      "folder": {
+        "header": "Delete “{{item}}” folder?",
+        "body": "Are you sure you want to delete this folder? All files and subfolders within it will be removed."
+      },
+      "file": {
+        "header": "Delete “{{item}}” file?",
+        "body": "Are you sure you want to delete this file?"
+      }
+    },
+    "deleteDrive": {
+      "title": "Delete \"{{label}}\" drive?",
+      "body": "Are you sure you want to delete this drive? All files and subfolders within it will be removed. Do you want to proceed?",
+      "inputPlaceholder": "Enter drive name..."
+    },
+    "upgradeDrive": {
+      "header": "Upgrade to cloud drive",
+      "body": "You are moving files from a private to a shared drive. These files will become accessible to others in the shared drive.Do you want to proceed?"
+    },
+    "createDocument": {
+      "header": "Create a new document",
+      "placeholder": "Document name"
+    },
+    "connectSettings": {
+      "title": "Settings",
+      "body": "These settings will apply to all drives.",
+      "clearStorage": {
+        "button": "Clear Storage",
+        "description": "Delete previous session data",
+        "confirmation": {
+          "title": "Clear Storage",
+          "body": "Are you sure you want to clear the storage? This will remove all previous session data.",
+          "clearButton": "Clear Storage"
+        }
+      },
+      "enabledDocumentTypes": {
+        "title": "Document Models",
+        "description": "Documents enabled",
+        "allSelected": "All documents are selected"
+      }
+    },
+    "exportDocumentWithErrors": {
+      "title": "Your document contains errors",
+      "body": "Your document contains structure errors. Do you want to export it anyway?"
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "body": "All content provided herein our website, hyperlinked sites, associated applications, forums, blogs, social media accounts and other platforms (“Site”) is for your general information only, procured from third party sources. We make no warranties of any kind in relation to our content, including but not limited to accuracy and updatedness. No part of the content that we provide constitutes financial advice, legal advice or any other form of advice meant for your specific reliance for any purpose. Any use or reliance on our content is solely at your own risk and discretion. You should conduct your own research, review, analyse and verify our content before relying on them. Trading is a highly risky activity that can lead to major losses, please therefore consult your financial advisor before making any decision. No content on our Site is meant to be a solicitation or offer."
+    },
+    "cookiesPolicy": {
+      "title": "Cookies Policy",
+      "body": "<subtitle>Use of Cookies and Similar Technologies</subtitle><p>The Site is using cookies. Cookies are small text files that are placed on your computer by websites that you visit. They are widely used in order to make websites work, or work more efficiently, as well as to provide information to the owners of the site. Cookies are typically stored on your computer´s hard drive.Information collected from cookies is used by us to evaluate the effectiveness of our Site and analyze trends. The information collected from cookies allows us to determine such things as which parts of the Site are most visited and difficulties our visitors may experience in accessing the SIte. With this knowledge, we can improve the quality of your experience on the Site by recognizing and delivering more of the most desired features and information, as well as by resolving access difficulties.</p><p>We use third party service providers, to assist us in better understanding the use of our Site. Our service providers will place cookies on the hard drive of your computer (or use similar technologies) and will receive information that we select that will educate us on such things as how visitors navigate around our Site. This information is aggregated to provide statistical data about our users browsing actions and patterns, and does not personally identify individuals. This information may include:</p><p>Computer or mobile device information, Website usage information, such as:<list></p><bullet>Page views,</bullet><bullet>Button clicks,</bullet><bullet>Input form changes (without the values being entered),</bullet><bullet>Errors.</bullet></list><p>Our service providers analyses this information and provides us with aggregate reports. The information and analysis provided by our service providers will be used to assist us in better understanding our visitors interests in our Site and how to better serve those interests. If you want to avoid using cookies altogether, you can disable cookies in your browser. However, disabling cookies might make it impossible for you to use certain features of the Site. Your use of the Site with a browser that is configured to accept cookies constitutes an acceptance of our and third-party cookies.</p>"
+    }
+  },
+  "notifications": {
+    "deleteDriveSuccess": "Drive successfully deleted",
+    "deleteFolderSuccess": "Folder deleted",
+    "fileDeleteSuccess": "File deleted",
+    "addDriveSuccess": "New drive successfully added",
+    "driveSyncSuccess": "Drive synced successfully",
+    "driveSyncError": "Error synchronizing drive {{drive}}",
+    "driveSyncConflict": "Conflict error detected in {{drive}}",
+    "reloadApp": "It seems like you're running an outdated version of the app. Please reload Connect to get the latest version."
+  },
+  "footer": {
+    "cookiePolicy": "Cookie Policy",
+    "termsOfUse": "Terms of Use",
+    "disclaimer": "Disclaimer",
+    "builtWith": "Built with <icon /> Powerhouse"
+  },
+  "cookieBanner": {
+    "message": "This website uses cookies for analytic purposes only. Cookies are anonymous and do not link to user data. We collect information to improve the user experience and validate UI changes. You can still use the page without cookies. For more information, please read our <a>cookies policy.</a>",
+    "accept": "Accept configured cookies",
+    "reject": "Reject all cookies",
+    "cookies": {
+      "functional": "Functional cookies",
+      "analytics": "Analytics cookies"
+    }
+  }
 }

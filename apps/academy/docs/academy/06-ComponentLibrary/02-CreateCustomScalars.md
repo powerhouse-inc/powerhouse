@@ -14,48 +14,60 @@ Create a new TypeScript file in `src/scalars/graphql/` for your scalar. Use `Ema
 **Example: Creating a `PhoneNumber.ts` scalar**
 
 ```typescript
-import { GraphQLError, GraphQLScalarType, type GraphQLScalarTypeConfig, Kind } from 'graphql'
-import { z } from 'zod'
+import {
+  GraphQLError,
+  GraphQLScalarType,
+  type GraphQLScalarTypeConfig,
+  Kind,
+} from "graphql";
+import { z } from "zod";
 
 export interface ScalarType {
-  input: string
-  output: string
+  input: string;
+  output: string;
 }
 
-export const type = 'string' // TS type in string form
+export const type = "string"; // TS type in string form
 
-export const typedef = 'scalar PhoneNumber'
+export const typedef = "scalar PhoneNumber";
 
-export const schema = z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format')
+export const schema = z
+  .string()
+  .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format");
 
-export const stringSchema = 'z.string().regex(/^\\+?[1-9]\\d{1,14}$/, "Invalid phone number format")'
+export const stringSchema =
+  'z.string().regex(/^\\+?[1-9]\\d{1,14}$/, "Invalid phone number format")';
 
 const phoneValidation = (value: unknown): string => {
-  if (typeof value !== 'string') {
-    throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`)
+  if (typeof value !== "string") {
+    throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`);
   }
 
-  const result = schema.safeParse(value)
+  const result = schema.safeParse(value);
 
-  if (result.success) return result.data
-  throw new GraphQLError(result.error.message)
-}
+  if (result.success) return result.data;
+  throw new GraphQLError(result.error.message);
+};
 
 export const config: GraphQLScalarTypeConfig<string, string> = {
-  name: 'PhoneNumber',
-  description: 'A field whose value conforms to international phone number format.',
+  name: "PhoneNumber",
+  description:
+    "A field whose value conforms to international phone number format.",
   serialize: phoneValidation,
   parseValue: phoneValidation,
   parseLiteral: (value) => {
     if (value.kind !== Kind.STRING) {
-      throw new GraphQLError(`Can only validate strings as phone numbers but got a: ${value.kind}`, { nodes: value })
+      throw new GraphQLError(
+        `Can only validate strings as phone numbers but got a: ${value.kind}`,
+        { nodes: value },
+      );
     }
 
-    return phoneValidation(value.value)
+    return phoneValidation(value.value);
   },
-}
+};
 
-export const scalar = new GraphQLScalarType(config)
+export const scalar = new GraphQLScalarType(config);
 ```
 
 ### Key Components to Update:
@@ -79,11 +91,11 @@ Add your scalar to the namespace imports section (around line 2):
 
 ```typescript
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
-import * as Amount from './Amount.js'
-import * as AmountCrypto from './AmountCrypto.js'
+import * as Amount from "./Amount.js";
+import * as AmountCrypto from "./AmountCrypto.js";
 // ... other imports ...
-import * as PhoneNumber from './PhoneNumber.js' // ADD THIS LINE
-import * as URLScalar from './URL.js'
+import * as PhoneNumber from "./PhoneNumber.js"; // ADD THIS LINE
+import * as URLScalar from "./URL.js";
 ```
 
 ### 2.2 Add Type Export
@@ -92,10 +104,10 @@ Add the type export (around line 22):
 
 ```typescript
 // export types -- DO NOT REMOVE OR EDIT THIS COMMENT
-export type { ScalarType as AmountScalarType } from './Amount.js'
+export type { ScalarType as AmountScalarType } from "./Amount.js";
 // ... other type exports ...
-export type { ScalarType as PhoneNumberScalarType } from './PhoneNumber.js' // ADD THIS LINE
-export type { ScalarType as URLScalarType } from './URL.js'
+export type { ScalarType as PhoneNumberScalarType } from "./PhoneNumber.js"; // ADD THIS LINE
+export type { ScalarType as URLScalarType } from "./URL.js";
 ```
 
 ### 2.3 Add to Export Object
@@ -109,7 +121,7 @@ export {
   // ... other exports ...
   PhoneNumber, // ADD THIS LINE
   URLScalar,
-}
+};
 ```
 
 ### 2.4 Add to Custom Scalars
@@ -121,7 +133,7 @@ export const customScalars: Record<string, BasePHScalar<any>> = {
   // ... other scalars ...
   PhoneNumber, // ADD THIS LINE
   URLScalar,
-} as const
+} as const;
 ```
 
 #### 2.5 Add to Resolvers
@@ -135,7 +147,7 @@ export const resolvers = {
   // ... other resolvers ...
   PhoneNumber: PhoneNumber.scalar, // ADD THIS LINE
   Amount: Amount.scalar,
-}
+};
 ```
 
 ### 2.6 Add to Type Definitions
@@ -149,7 +161,7 @@ export const typeDefs = [
   // ... other typedefs ...
   PhoneNumber.typedef, // ADD THIS LINE
   Amount.typedef,
-]
+];
 ```
 
 ### 2.7 Add to Generator Type Definitions
@@ -163,7 +175,7 @@ export const generatorTypeDefs = {
   // ... other entries ...
   [PhoneNumber.config.name]: PhoneNumber.type, // ADD THIS LINE
   [Amount.config.name]: Amount.type,
-}
+};
 ```
 
 ### 2.8 Add to Validation Schema
@@ -177,7 +189,7 @@ export const validationSchema = {
   // ... other entries ...
   [PhoneNumber.config.name]: PhoneNumber.stringSchema, // ADD THIS LINE
   [Amount.config.name]: Amount.stringSchema,
-}
+};
 ```
 
 ## Step 3: Create Tests for Your Scalar
@@ -187,79 +199,79 @@ Every scalar must have comprehensive tests to ensure it works correctly. Create 
 **Example: Creating `PhoneNumber.test.ts`**
 
 ```typescript
-import { Kind } from 'graphql'
-import { scalar } from '../PhoneNumber.js'
+import { Kind } from "graphql";
+import { scalar } from "../PhoneNumber.js";
 
-describe('PhoneNumber Scalar', () => {
-  it('should serialize a phone number', () => {
-    const phoneNumber = '+1234567890'
+describe("PhoneNumber Scalar", () => {
+  it("should serialize a phone number", () => {
+    const phoneNumber = "+1234567890";
 
-    expect(scalar.serialize(phoneNumber)).toBe(phoneNumber)
-  })
+    expect(scalar.serialize(phoneNumber)).toBe(phoneNumber);
+  });
 
-  it('should throw an error if the value is not a string', () => {
-    const phoneNumber = 123
+  it("should throw an error if the value is not a string", () => {
+    const phoneNumber = 123;
 
-    expect(() => scalar.serialize(phoneNumber)).toThrow()
-  })
+    expect(() => scalar.serialize(phoneNumber)).toThrow();
+  });
 
-  it('should throw an error if the value is not a valid phone number', () => {
-    const phoneNumber = 'invalid-phone'
+  it("should throw an error if the value is not a valid phone number", () => {
+    const phoneNumber = "invalid-phone";
 
-    expect(() => scalar.serialize(phoneNumber)).toThrow()
-  })
+    expect(() => scalar.serialize(phoneNumber)).toThrow();
+  });
 
-  it('should parse a valid phone number', () => {
-    const phoneNumber = '+1234567890'
+  it("should parse a valid phone number", () => {
+    const phoneNumber = "+1234567890";
 
-    expect(scalar.parseValue(phoneNumber)).toBe(phoneNumber)
-  })
+    expect(scalar.parseValue(phoneNumber)).toBe(phoneNumber);
+  });
 
-  it('should throw an error if parse a value that is not a valid phone number', () => {
-    const phoneNumber = 'invalid-phone'
+  it("should throw an error if parse a value that is not a valid phone number", () => {
+    const phoneNumber = "invalid-phone";
 
-    expect(() => scalar.parseValue(phoneNumber)).toThrow()
-  })
+    expect(() => scalar.parseValue(phoneNumber)).toThrow();
+  });
 
-  it('should throw an error if parse a value that is not a string', () => {
-    const phoneNumber = 123
+  it("should throw an error if parse a value that is not a string", () => {
+    const phoneNumber = 123;
 
-    expect(() => scalar.parseValue(phoneNumber)).toThrow()
-  })
+    expect(() => scalar.parseValue(phoneNumber)).toThrow();
+  });
 
-  it('should parse a valid phone number from a literal', () => {
-    const phoneNumber = '+1234567890'
+  it("should parse a valid phone number from a literal", () => {
+    const phoneNumber = "+1234567890";
 
     expect(
       scalar.parseLiteral({
         kind: Kind.STRING,
         value: phoneNumber,
-      })
-    ).toBe(phoneNumber)
-  })
+      }),
+    ).toBe(phoneNumber);
+  });
 
-  it('should throw an error if parse a literal that is not a valid phone number', () => {
-    const phoneNumber = 'invalid-phone'
+  it("should throw an error if parse a literal that is not a valid phone number", () => {
+    const phoneNumber = "invalid-phone";
 
     expect(() =>
       scalar.parseLiteral({
         kind: Kind.STRING,
         value: phoneNumber,
-      })
-    ).toThrow()
-  })
+      }),
+    ).toThrow();
+  });
 
-  it('should throw an error if parse a literal that is not a string', () => {
-    const phoneNumber = '+1234567890'
+  it("should throw an error if parse a literal that is not a string", () => {
+    const phoneNumber = "+1234567890";
 
     expect(() =>
       scalar.parseLiteral({
         kind: Kind.INT,
         value: phoneNumber,
-      })
-    ).toThrow()
-  })
-})
+      }),
+    ).toThrow();
+  });
+});
 ```
 
 #### Required Test Cases
@@ -297,37 +309,37 @@ Your scalar tests should cover these essential scenarios:
 
 ```typescript
 // Test empty string
-expect(() => scalar.parseValue('')).toThrow()
+expect(() => scalar.parseValue("")).toThrow();
 
 // Test too long/short values
-expect(() => scalar.parseValue('123')).toThrow()
-expect(() => scalar.parseValue('+' + '1'.repeat(20))).toThrow()
+expect(() => scalar.parseValue("123")).toThrow();
+expect(() => scalar.parseValue("+" + "1".repeat(20))).toThrow();
 
 // Test special characters
-expect(() => scalar.parseValue('+1-234-567-890')).not.toThrow()
+expect(() => scalar.parseValue("+1-234-567-890")).not.toThrow();
 ```
 
 **Number-based scalars:**
 
 ```typescript
 // Test zero
-expect(scalar.parseValue(0)).toBe(0)
+expect(scalar.parseValue(0)).toBe(0);
 
 // Test negative numbers
-expect(() => scalar.parseValue(-1)).toThrow()
+expect(() => scalar.parseValue(-1)).toThrow();
 
 // Test decimal numbers
-expect(scalar.parseValue(123.45)).toBe(123.45)
+expect(scalar.parseValue(123.45)).toBe(123.45);
 ```
 
 **Date-based scalars:**
 
 ```typescript
 // Test valid ISO date
-expect(scalar.parseValue('2023-12-25T00:00:00Z')).toBe('2023-12-25T00:00:00Z')
+expect(scalar.parseValue("2023-12-25T00:00:00Z")).toBe("2023-12-25T00:00:00Z");
 
 // Test invalid date format
-expect(() => scalar.parseValue('25/12/2023')).toThrow()
+expect(() => scalar.parseValue("25/12/2023")).toThrow();
 ```
 
 ## Step 4: Validate Your Implementation
@@ -346,22 +358,22 @@ Here are some common patterns for different types of scalars:
 #### String-based Scalars
 
 ```typescript
-export const type = 'string'
-export const schema = z.string().min(1).max(100)
+export const type = "string";
+export const schema = z.string().min(1).max(100);
 ```
 
 #### Number-based Scalars
 
 ```typescript
-export const type = 'number'
-export const schema = z.number().positive()
+export const type = "number";
+export const schema = z.number().positive();
 ```
 
 #### Date-based Scalars
 
 ```typescript
-export const type = 'string'
-export const schema = z.string().datetime()
+export const type = "string";
+export const schema = z.string().datetime();
 ```
 
 :::info
@@ -370,7 +382,7 @@ export const schema = z.string().datetime()
 - **Open Source**: Please submit contributions as a pull request to the Powerhouse team.
 - **UI is Optional but Helpful**: A design or UI for your scalar isn't required, but it helps reviewers understand its purpose.
 - **Semantic Scalars**: Some scalars don't need a unique UI. For instance, `Title` and `Description` might both use a simple text input but serve a semantic role by adding specific meaning and validation to the schema.
-:::
+  :::
 
 ### Tips
 

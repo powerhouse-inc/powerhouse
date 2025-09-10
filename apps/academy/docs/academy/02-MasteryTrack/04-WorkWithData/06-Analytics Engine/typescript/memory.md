@@ -40,15 +40,16 @@ const knex = knexFactory({ client: "pg", useNullAsDefault: true });
 
 // create your own Pglite instance and pass it in
 // See (https://github.com/electric-sql/pglite/blob/main/packages/pglite/src/interface.ts) for full list of options.
-const pgLiteFactory = () => PGlite.create({
-  debug: 3,
-  relaxedDurability: false,
-});
+const pgLiteFactory = () =>
+  PGlite.create({
+    debug: 3,
+    relaxedDurability: false,
+  });
 
 const store = new MemoryAnalyticsStore({
   knex,
   pgLiteFactory,
-})
+});
 ```
 
 ## Initialization

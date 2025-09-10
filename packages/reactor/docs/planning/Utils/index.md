@@ -10,5 +10,5 @@ Utility functions used throughout.
 
 ### Links
 
-* [Usage](usage.md)
-* [Interface](interface.md)
+- [Usage](usage.md)
+- [Interface](interface.md)

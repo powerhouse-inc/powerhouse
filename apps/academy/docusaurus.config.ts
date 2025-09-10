@@ -1,65 +1,63 @@
-import { themes as prismThemes } from 'prism-react-renderer';
-import type { Config } from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import { themes as prismThemes } from "prism-react-renderer";
+import type { Config } from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: 'Powerhouse Academy',
-  tagline: 'Get started with the Powerhouse ecosystem',
-  favicon: 'img/ph-icon-light.svg',
+  title: "Powerhouse Academy",
+  tagline: "Get started with the Powerhouse ecosystem",
+  favicon: "img/ph-icon-light.svg",
 
   // Set the production url of your site here
-  url: 'https://powerhouse.academy',
+  url: "https://powerhouse.academy",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: "/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: '', // Usually your GitHub org/user name.
-  projectName: '', // Usually your repo name.
+  organizationName: "", // Usually your GitHub org/user name.
+  projectName: "", // Usually your repo name.
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
-  deploymentBranch: 'gh-pages',
+  onBrokenLinks: "warn",
+  onBrokenMarkdownLinks: "warn",
+  deploymentBranch: "gh-pages",
   trailingSlash: false,
-  onBrokenAnchors: 'ignore',
+  onBrokenAnchors: "ignore",
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: "en",
+    locales: ["en"],
   },
 
   presets: [
     [
-      'classic',
+      "classic",
       {
         docs: {
-          routeBasePath: '/',
-          sidebarPath: './sidebars.ts',
-          editUrl:
-            'https://github.com/powerhouse-inc/powerhouse-docs/tree/dev',
+          routeBasePath: "/",
+          sidebarPath: "./sidebars.ts",
+          editUrl: "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev",
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: "./src/css/custom.css",
         },
         blog: {
           showReadingTime: false,
-          editUrl:
-            'https://github.com/powerhouse-inc/powerhouse-docs/tree/dev',
-          onInlineAuthors: 'ignore',
+          editUrl: "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev",
+          onInlineAuthors: "ignore",
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },
         sitemap: {
-          changefreq: 'weekly',
+          changefreq: "weekly",
           priority: 0.5,
-          ignorePatterns: ['/tags/**'],
-          filename: 'sitemap.xml',
+          ignorePatterns: ["/tags/**"],
+          filename: "sitemap.xml",
         },
       } satisfies Preset.Options,
     ],
@@ -67,86 +65,86 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: "img/docusaurus-social-card.jpg",
     algolia: {
-      appId: '2P4JJIQAAV',
-      apiKey: 'b5d796c3c48626f107dabdcb1cd77f29',
-      indexName: 'staging-powerhouse',
+      appId: "2P4JJIQAAV",
+      apiKey: "b5d796c3c48626f107dabdcb1cd77f29",
+      indexName: "staging-powerhouse",
       contextualSearch: true,
     },
     navbar: {
-      title: '',
+      title: "",
       logo: {
-        alt: 'My Site Logo',
-        src: 'img/Powerhouse-main.svg',
-        srcDark: 'img/Powerhouse-main-light.svg',
-        href: '/',
+        alt: "My Site Logo",
+        src: "img/Powerhouse-main.svg",
+        srcDark: "img/Powerhouse-main-light.svg",
+        href: "/",
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'academySidebar',
-          position: 'left',
-          label: 'Academy',
+          type: "docSidebar",
+          sidebarId: "academySidebar",
+          position: "left",
+          label: "Academy",
         },
         {
-          href: 'https://github.com/powerhouse-inc/powerhouse-docs',
-          label: 'GitHub',
-          position: 'right',
+          href: "https://github.com/powerhouse-inc/powerhouse-docs",
+          label: "GitHub",
+          position: "right",
         },
       ],
     },
     footer: {
-      style: 'dark',
+      style: "dark",
       links: [
         {
-          title: 'Docs',
+          title: "Docs",
           items: [
             {
-              label: 'Connect',
-              to: 'academy/Architecture/PowerhouseArchitecture',
+              label: "Connect",
+              to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
-              label: 'Reactor',
-              to: 'academy/Architecture/PowerhouseArchitecture',
+              label: "Reactor",
+              to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
-              label: 'Switchboard',
-              to: 'academy/Architecture/PowerhouseArchitecture',
+              label: "Switchboard",
+              to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
-              label: 'Renown',
-              to: 'academy/Architecture/PowerhouseArchitecture',
+              label: "Renown",
+              to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
-              label: 'FAQ',
-              to: 'academy/Architecture/PowerhouseArchitecture',
+              label: "FAQ",
+              to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
               label: "Blog",
-              to: '/blog'
-            }
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Discord',
-              href: 'https://discord.gg/h7GKvqDyDP',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/PowerhouseDAO',
+              to: "/blog",
             },
           ],
         },
         {
-          title: 'More',
+          title: "Community",
           items: [
             {
-              label: 'GitHub',
-              href: 'https://github.com/powerhouse-inc',
+              label: "Discord",
+              href: "https://discord.gg/h7GKvqDyDP",
+            },
+            {
+              label: "X",
+              href: "https://x.com/PowerhouseDAO",
+            },
+          ],
+        },
+        {
+          title: "More",
+          items: [
+            {
+              label: "GitHub",
+              href: "https://github.com/powerhouse-inc",
             },
           ],
         },

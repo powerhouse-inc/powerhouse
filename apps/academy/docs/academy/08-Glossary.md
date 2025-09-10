@@ -1,15 +1,18 @@
 # Glossary
 
 ## General Terms
+
 - **Powerhouse** – A network organization that provides open-source software and services to support decentralized operations for other network organizations.
 - **Scalable Network Organization (SNO)** – A network organization structured according to the Powerhouse framework, designed for sustainable and scalable growth.
 - **Powerhouse Ecosystem** – The overall environment of Powerhouse tools, applications (like Connect), concepts (document models, packages), and services.
 
 ## Technology & Framework
+
 - **CQRS (Command Query Responsibility Segregation)** – A pattern that separates read and write operations to improve scalability.
 - **Event Sourcing** – A method of storing system state as a sequence of immutable events rather than modifying a single record.
 
 ## Software Components
+
 - **Reactor** – A storage node for Powerhouse documents and files with multiple storage adapters (local, cloud, decentralized).
 - **Powerhouse Switchboard** – A scalable API service that aggregates and processes document data.
 - **Powerhouse Fusion** – A platform front-end that hosts the public marketplace for SNO interactions.
@@ -26,6 +29,7 @@
 - **Powerhouse Switchboard (Verifier Role)** – A function of Powerhouse Switchboard that validates DIDs and credentials for operations submitted via Connect, ensuring they are authorized.
 
 ## Document Modeling
+
 - **Action Creators (for Document Operations)** – Auto-generated helper functions creating structured "action" objects for dispatching operations to a document model's reducer.
 - **Actions (Document Actions)** – Typed objects representing an intent to change a document's state, dispatched to reducers, containing an operation type and input data.
 - **API Integration (for Document Models)** – The capability of Document Models to connect with Switchboard API or external APIs, facilitating data exchange between Powerhouse applications and other systems.
@@ -54,6 +58,7 @@
 - **Version Control (for Document Models)** – A planned feature for Document Models in Connect that will allow tracking of changes, comparison of different versions, and maintenance of data integrity over time, similar to version control systems for source code.
 
 ## Development & Tooling
+
 - **Boilerplate (Powerhouse Project)** – The `ph init` command's initial project structure, providing a standard starting point for new Powerhouse packages.
 - **Connect Build** – The output of the `ph connect build` command, which packages a Connect project into a distributable format. This build includes all necessary local/external packages, assets, and styles, and can be previewed locally with `ph connect preview` or deployed.
 - **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications, typically initiated with the `ph dev` command. It runs essential backend services like the Powerhouse Switchboard to enable real-time document model processing, code generation, and live updates, separate from the front-end Connect Studio.
@@ -71,14 +76,15 @@
 - **Tailwind CSS (in Connect Studio)** – Utility CSS framework integrated into Connect Studio for styling document editors.
 
 ## AI & Automation
+
 - **AI Assistants** – AI-powered contributors paired with human contributors to automate tasks and improve productivity.
 - **AI Contributor Modes** – Configurable states that determine the AI assistant's behavior, permissions, and task focus.
 - **Task Automation & Scaling** – The use of AI to streamline repetitive tasks, improve communications, and enhance decision-making.
 - **Decentralized Identifier (DID)** – A user-controlled, globally unique ID, used in Renown to link a user's blockchain key to actions pseudonymously.
 
 ## Organizational Concepts
+
 - **Ceramic** – A decentralized network for storing verifiable data, used by Powerhouse Renown for secure credential management.
 - **Decentralized Identifier (DID)** – A user-controlled, globally unique ID, used in Renown to link a user's blockchain key to actions pseudonymously.
 - **Event-Driven Architecture (EDA)** – A software design approach where system flows are determined by events that trigger actions asynchronously.
 - **Network Organization** – A group of independent contributors and teams working together towards a common purpose, relying on decentralization and resource sharing.
-

@@ -1,6 +1,6 @@
 # React Hooks
 
-On this page we're providing an overview of the available hooks you can make use of as a builder. 
+On this page we're providing an overview of the available hooks you can make use of as a builder.
 
 <details>
 <summary>Need a refresher on React Hooks?</summary>
@@ -9,11 +9,13 @@ React Hooks allow you to use various React features directly within your functio
 
 **What are Custom Hooks?**
 A custom hook is a JavaScript function whose name starts with "use" and that calls other Hooks. They are used to:
+
 - Reuse stateful logic between components.
 - Abstract complex logic into a simpler interface.
 - Isolate side effects, particularly those managed by `useEffect`.
 
 **Key Built-in Hooks Examples:**
+
 - `useState`: Lets a component "remember" information (state).
 - `useEffect`: Lets a component perform side effects (e.g., data fetching, subscriptions, manually changing the DOM).
 - `useContext`: Lets a component receive information from distant parent components without explicitly passing props through every level of the component tree.
@@ -22,6 +24,7 @@ A custom hook is a JavaScript function whose name starts with "use" and that cal
 Hook names must always start with `use` followed by a capital letter (e.g., `useState`, `useOnlineStatus`).
 
 **Rules of Hooks:**
+
 1.  **Only Call Hooks at the Top Level**: Don't call Hooks inside loops, conditions, or nested functions.
 2.  **Only Call Hooks from React Functions**: Call Hooks from React functional components or from custom Hooks.
 
@@ -46,18 +49,21 @@ All of the data used by these hooks is ultimately derived from the `Reactor`, wh
 <summary>useReactor</summary>
 
 ```ts
-function useReactor(): Reactor | undefined
+function useReactor(): Reactor | undefined;
 ```
+
 Returns the reactor instance.
 
 Usage
+
 ```jsx
-import { useReactor } from '@powerhousedao/state';
+import { useReactor } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const reactor = useReactor();
 }
 ```
+
 </details>
 
 ### Drives
@@ -66,54 +72,65 @@ function MyEditorComponent() {
 <summary>useDrives</summary>
 
 ```ts
-function useDrives(): DocumentDriveDocument[] | undefined
+function useDrives(): DocumentDriveDocument[] | undefined;
 ```
+
 Returns the drives for a reactor.
 
 Usage
+
 ```jsx
-import { useDrives } from '@powerhousedao/state';
+import { useDrives } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const drives = useDrives();
 }
 ```
+
 </details>
 
 <details>
 <summary>useDriveById</summary>
 
 ```ts
-function useDriveById(id: string | null | undefined): DocumentDriveDocument | undefined
+function useDriveById(
+  id: string | null | undefined,
+): DocumentDriveDocument | undefined;
 ```
+
 Returns a drive by id.
 
 Usage
+
 ```jsx
-import { useDriveById } from '@powerhousedao/state';
+import { useDriveById } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const driveById = useDriveById('some-id');
+  const driveById = useDriveById("some-id");
 }
 ```
+
 </details>
 
 <details>
 <summary>useSelectedDrive</summary>
 
 ```ts
-function useSelectedDrive(): DocumentDriveDocument | undefined
+function useSelectedDrive(): DocumentDriveDocument | undefined;
 ```
+
 Returns the selected drive. You can set the selected drive with `setSelectedDrive`.
 
 Usage
+
 ```jsx
-import { useSelectedDrive } from '@powerhousedao/state';
+import { useSelectedDrive } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const selectedDrive = useSelectedDrive();
 }
 ```
+
 </details>
 
 <details>
@@ -123,36 +140,43 @@ We provide hooks for accessing various properties on the drive object for your c
 
 ```ts
 /** Returns the remote URL for a drive. */
-function useDriveRemoteUrl(driveId: string | null | undefined): string | undefined
+function useDriveRemoteUrl(
+  driveId: string | null | undefined,
+): string | undefined;
 
 /** Returns the pull responder trigger for a drive. */
 function useDrivePullResponderTrigger(
   driveId: string | null | undefined,
-): Trigger | undefined
+): Trigger | undefined;
 
 /** Returns the pull responder URL for a drive. */
-function useDrivePullResponderUrl(driveId: string | null | undefined): string | undefined
+function useDrivePullResponderUrl(
+  driveId: string | null | undefined,
+): string | undefined;
 
 /** Returns whether a drive is remote. */
-function useDriveIsRemote(driveId: string | null | undefined): boolean
+function useDriveIsRemote(driveId: string | null | undefined): boolean;
 
 /** Returns the sharing type for a drive. */
-function useDriveSharingType(driveId: string | null | undefined): SharingType | undefined
+function useDriveSharingType(
+  driveId: string | null | undefined,
+): SharingType | undefined;
 
 /** Returns whether a drive is available offline. */
-function useDriveAvailableOffline(driveId: string | null | undefined): boolean
+function useDriveAvailableOffline(driveId: string | null | undefined): boolean;
 ```
 
 Usage
+
 ```jsx
-import { 
+import {
   useDriveRemoteUrl,
   useDrivePullResponderTrigger,
   useDrivePullResponderUrl,
   useDriveIsRemote,
   useDriveSharingType,
   useDriveAvailableOffline,
-} from '@powerhousedao/state';
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const myDriveId = "some-drive-id";
@@ -170,9 +194,10 @@ function MyEditorComponent() {
     driveIsRemote,
     driveSharingType,
     driveAvailableOffline,
-  })
+  });
 }
 ```
+
 </details>
 
 ### Documents
@@ -181,61 +206,74 @@ function MyEditorComponent() {
 <summary>useAllDocuments/useSelectedDriveDocuments</summary>
 
 ```ts
-function useAllDocuments(): PHDocument[] | undefined
+function useAllDocuments(): PHDocument[] | undefined;
 ```
+
 Returns all of the documents in the reactor.
 
 ```ts
-function useSelectedDriveDocuments(): PHDocument[] | undefined
+function useSelectedDriveDocuments(): PHDocument[] | undefined;
 ```
+
 Returns the documents in the reactor for the selected drive.
 
 Usage
+
 ```jsx
-import { useAllDocuments, useSelectedDriveDocuments } from '@powerhousedao/state';
+import {
+  useAllDocuments,
+  useSelectedDriveDocuments,
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const allDocuments = useAllDocuments();
   const selectedDriveDocuments = useSelectedDriveDocuments();
 }
 ```
+
 </details>
 
 <details>
 <summary>useSelectedDocument</summary>
 
 ```ts
-function useSelectedDocument(): PHDocument | undefined
+function useSelectedDocument(): PHDocument | undefined;
 ```
+
 Returns the selected document. You can set the selected document with `setSelectedNode`.
 
 Usage
+
 ```jsx
-import { useSelectedDocument } from '@powerhousedao/state';
+import { useSelectedDocument } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const selectedDocument = useSelectedDocument();
 }
 ```
+
 </details>
 
 <details>
 <summary>useDocumentById</summary>
 
 ```ts
-function useDocumentById(id: string | null | undefined): PHDocument | undefined
+function useDocumentById(id: string | null | undefined): PHDocument | undefined;
 ```
+
 Returns a document by id.
 
 Usage
+
 ```jsx
-import { useDocumentById } from '@powerhousedao/state';
+import { useDocumentById } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const myDocumentId = 'some-document-id';
+  const myDocumentId = "some-document-id";
   const documentById = useDocumentById(myDocumentId);
 }
 ```
+
 </details>
 
 ### Nodes
@@ -255,14 +293,14 @@ type FileNode = {
   kind: string;
   name: string;
   parentFolder: string | null | undefined;
-}
+};
 
 type FolderNode = {
   id: string;
   kind: string;
   name: string;
   parentFolder: string | null | undefined;
-}
+};
 
 type Node = FileNode | FolderNode;
 ```
@@ -273,70 +311,81 @@ type Node = FileNode | FolderNode;
 Ideally you should not need to handle the list of nodes directly, since we already provide documents and folders. But these hooks are provided just in case.
 
 ```ts
-function useNodes(): Node[] | undefined
+function useNodes(): Node[] | undefined;
 ```
+
 Returns the nodes for a drive.
 
 Usage
+
 ```jsx
-import { useNodes} from '@powerhousedao/state';
+import { useNodes } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const nodes = useNodes();
 }
 ```
+
 </details>
 
 <details>
 <summary>useNodeById</summary>
 
 ```ts
-function useNodeById(id: string | null | undefined): Node | undefined
+function useNodeById(id: string | null | undefined): Node | undefined;
 ```
+
 Returns a node in the selected drive by id.
 
 Usage
+
 ```jsx
-import { useNodeById } from '@powerhousedao/state';
+import { useNodeById } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const myFolderId = 'some-folder-id';
-  const myDocumentId = 'some-document-id';
+  const myFolderId = "some-folder-id";
+  const myDocumentId = "some-document-id";
   const myFolderNode = useNodeById(myFolderId);
   const myFileNode = useNodeById(myDocumentId);
 }
 ```
+
 </details>
 
 <details>
 <summary>useSelectedFolder</summary>
 
 ```ts
-function useSelectedFolder(): FolderNode | undefined
+function useSelectedFolder(): FolderNode | undefined;
 ```
+
 Returns the selected folder. You can set the selected folder with `setSelectedNode`
 
 Usage
+
 ```jsx
-import { useSelectedFolder } from '@powerhousedao/state';
+import { useSelectedFolder } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const selectedFolder = useSelectedFolder();
 }
 ```
+
 </details>
 
 <details>
 <summary>useSelectedNodePath</summary>
 
 ```ts
-function useSelectedNodePath(): Node[]
+function useSelectedNodePath(): Node[];
 ```
+
 Returns the path to the selected node. Useful for navigational components like breadcrumbs.
 
 Usage
+
 ```jsx
-import { useSelectedNodePath } from '@powerhousedao/state';
+import { useSelectedNodePath } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const nodes = useSelectedNodePath();
@@ -344,29 +393,38 @@ function MyEditorComponent() {
   return <Breadcrumbs nodes={nodes} />;
 }
 ```
+
 </details>
 
 <details>
 <summary>useChildNodes/useFolderChildNodes/useFileChildNodes</summary>
 
 ```ts
-function useChildNodes(): Node[]
+function useChildNodes(): Node[];
 ```
+
 Returns the child nodes for the selected drive or folder.
 
 ```ts
-function useFolderChildNodes(): FolderNode[]
+function useFolderChildNodes(): FolderNode[];
 ```
+
 Returns the folder child nodes for the selected drive or folder.
 
 ```ts
-function useFileChildNodes(): FileNode[]
+function useFileChildNodes(): FileNode[];
 ```
+
 Returns the file (document) child nodes for the selected drive or folder.
 
 Usage
+
 ```jsx
-import { useChildNodes, useFolderChildNodes, useFileChildNodes } from '@powerhousedao/state';
+import {
+  useChildNodes,
+  useFolderChildNodes,
+  useFileChildNodes,
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const nodes = useChildNodes();
@@ -375,82 +433,99 @@ function MyEditorComponent() {
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes} />
-     <Files fileNodes={fileNodes} />
-     <Folders folderNodes={folderNodes} />
+      <FilesAndFolders nodes={nodes} />
+      <Files fileNodes={fileNodes} />
+      <Folders folderNodes={folderNodes} />
     </div>
   );
 }
 ```
+
 </details>
 
 <details>
 <summary>useChildNodesForId/useFolderChildNodesForId/useFileChildNodesForId</summary>
 
 ```ts
-function useChildNodesForId(id: string | null | undefined): Node[]
+function useChildNodesForId(id: string | null | undefined): Node[];
 ```
+
 Returns the child nodes for a drive or folder by id.
+
 ```ts
-function useFolderChildNodesForId(id: string | null | undefined): FolderNode[]
+function useFolderChildNodesForId(id: string | null | undefined): FolderNode[];
 ```
+
 Returns the folder child nodes for a drive or folder by id.
+
 ```ts
-function useFileChildNodesForId(id: string | null | undefined): FileNode[]
+function useFileChildNodesForId(id: string | null | undefined): FileNode[];
 ```
+
 Returns the file (document) child nodes for a drive or folder by id.
 
 Usage
+
 ```jsx
-import { useChildNodesForId, useFolderChildNodesForId, useFileChildNodesForId } from '@powerhousedao/state';
+import {
+  useChildNodesForId,
+  useFolderChildNodesForId,
+  useFileChildNodesForId,
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const driveOrFolderId = 'some-drive-or-folder-id';
+  const driveOrFolderId = "some-drive-or-folder-id";
   const nodes = useChildNodesForId(driveOrFolderId);
   const fileNodes = useFileChildNodesForId(driveOrFolderId);
   const folderNodes = useFolderChildNodesForId(driveOrFolderId);
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes} />
-     <Files fileNodes={fileNodes} />
-     <Folders folderNodes={folderNodes} />
+      <FilesAndFolders nodes={nodes} />
+      <Files fileNodes={fileNodes} />
+      <Folders folderNodes={folderNodes} />
     </div>
   );
 }
 ```
+
 </details>
 
 <details>
 <summary>useNodeName/useNodeKind</summary>
 
 ```ts
-function useNodeName(id: string | null | undefined): string | undefined
+function useNodeName(id: string | null | undefined): string | undefined;
 ```
+
 Returns the name of a node.
+
 ```ts
-function useNodeKind(id: string | null | undefined): NodeKind | undefined
+function useNodeKind(id: string | null | undefined): NodeKind | undefined;
 ```
+
 Returns the kind of a node.
 
 Usage
+
 ```jsx
-import { useNodeName, useNodeKind } from '@powerhousedao/state';
+import { useNodeName, useNodeKind } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const nodeId = 'some-node-id';
+  const nodeId = "some-node-id";
   const nodeName = useNodeName(nodeId);
   const nodeKind = useNodeKind(nodeId);
 
-  if (nodeKind === 'file') {
+  if (nodeKind === "file") {
     return <File name={nodeName} />;
   }
 
-  if (nodeKind === 'folder') {
+  if (nodeKind === "folder") {
     return <Folder name={nodeName} />;
   }
 }
 ```
+
 </details>
 
 ### Vetra Packages and Modules
@@ -471,155 +546,171 @@ Each Vetra package contains a `modules` field which optionally contains lists of
 <summary>useVetraPackages</summary>
 
 ```ts
-function useVetraPackages(): VetraPackage[] | undefined
+function useVetraPackages(): VetraPackage[] | undefined;
 ```
 
 Returns all of the Vetra packages in your Connect app.
 
 Usage
+
 ```jsx
-import { useVetraPackages } from '@powerhousedao/state';
+import { useVetraPackages } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const vetraPackages = useVetraPackages();
 }
 ```
+
 </details>
 
 <details>
 <summary>useDocumentModelModules</summary>
 
 ```ts
-function useDocumentModelModules(): DocumentModelModule[] | undefined
+function useDocumentModelModules(): DocumentModelModule[] | undefined;
 ```
 
 Returns the document model modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useDocumentModelModules } from '@powerhousedao/state';
+import { useDocumentModelModules } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const documentModelModules = useDocumentModelModules();
 }
 ```
+
 </details>
 
 <details>
 <summary>useDocumentModelModuleById</summary>
 
 ```ts
-function useDocumentModelModuleById(): DocumentModelModule[] | undefined
+function useDocumentModelModuleById(): DocumentModelModule[] | undefined;
 ```
 
 Returns the document model for a given id (document type).
-*NOTE* What we call here an id is really the value in the "document type" field in the document model editor
-*NOTE* Connect assumes that these document types (ids) are unique. It is your responsibility to enforce this.
+_NOTE_ What we call here an id is really the value in the "document type" field in the document model editor
+_NOTE_ Connect assumes that these document types (ids) are unique. It is your responsibility to enforce this.
 
 Usage
+
 ```jsx
-import { useDocumentModelModuleById } from '@powerhousedao/state';
+import { useDocumentModelModuleById } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const documentType = 'my-org/my-document';
+  const documentType = "my-org/my-document";
   const documentModelModuleById = useDocumentModelModuleById(documentType);
 }
 ```
+
 </details>
 
 <details>
 <summary>useEditorModules</summary>
 
 ```ts
-function useEditorModules(): EditorModule[] | undefined
+function useEditorModules(): EditorModule[] | undefined;
 ```
 
 Returns the editor modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useEditorModules } from '@powerhousedao/state';
+import { useEditorModules } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const editorModules = useEditorModules();
 }
 ```
+
 </details>
 
 <details>
 <summary>useDriveEditorModules</summary>
 
 ```ts
-function useDriveEditorModules(): DriveEditorModule[] | undefined
+function useDriveEditorModules(): DriveEditorModule[] | undefined;
 ```
 
 Returns the drive editor modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useDriveEditorModules } from '@powerhousedao/state';
+import { useDriveEditorModules } from "@powerhousedao/state";
 
 function MyDriveEditorComponent() {
   const driveEditorModules = useDriveEditorModules();
 }
 ```
+
 </details>
 
 <details>
 <summary>useProcessorModules</summary>
 
 ```ts
-function useProcessorModules(): ProcessorModule[] | undefined
+function useProcessorModules(): ProcessorModule[] | undefined;
 ```
 
 Returns the processor modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useProcessorModules } from '@powerhousedao/state';
+import { useProcessorModules } from "@powerhousedao/state";
 
 function MyProcessorComponent() {
   const processorModules = useProcessorModules();
 }
 ```
+
 </details>
 
 <details>
 <summary>useSubgraphModules</summary>
 
 ```ts
-function useSubgraphModules(): SubgraphModule[] | undefined
+function useSubgraphModules(): SubgraphModule[] | undefined;
 ```
 
 Returns the subgraph modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useSubgraphModules } from '@powerhousedao/state';
+import { useSubgraphModules } from "@powerhousedao/state";
 
 function MySubgraphComponent() {
   const subgraphModules = useSubgraphModules();
 }
 ```
+
 </details>
 
 <details>
 <summary>useImportScriptModules</summary>
 
 ```ts
-function useImportScriptModules(): ImportScriptModule[] | undefined
+function useImportScriptModules(): ImportScriptModule[] | undefined;
 ```
 
 Returns the import script modules from your Vetra packages.
 
 Usage
+
 ```jsx
-import { useImportScriptModules } from '@powerhousedao/state';
+import { useImportScriptModules } from "@powerhousedao/state";
 
 function MyImportScriptComponent() {
   const importScriptModules = useImportScriptModules();
 }
 ```
+
 </details>
 
 ## More documentation coming soon!
@@ -628,25 +719,30 @@ Global access to drive state: A top-level, possibly context-based, way to intros
 
 Global dispatcher access: A utility or API (probably a hook or service function) where they give a document ID and get back all the relevant dispatch functions — kind of like a command palette for document ops.
 
-### Core Hooks & Patterns	
+### Core Hooks & Patterns
+
 - useDocumentField
 - useReadDocumentField
 - useUpdateDocumentField
-- useDocumentDispatch(docId):  updateX, delete, ... 
+- useDocumentDispatch(docId): updateX, delete, ...
 
-### Global Drive Access	
+### Global Drive Access
+
 - How to access and manipulate the global document tree
 - How to inspect children from parent context
 - Tree traversal utilities (if any)
 
-### Convenience APIs	
+### Convenience APIs
+
 - Utility functions like getDispatchFunctions(docId)
 - "Quick Start" to manipulate any document like a pro
 
-### Working with Context	
+### Working with Context
+
 - DriveContext: what lives there, how to use it
 - Example: using context to get current doc, sibling docs
 
-### Best Practices & Patterns	
+### Best Practices & Patterns
+
 - When to use useDocumentField vs getDispatch
 - Composing document fields into custom logic

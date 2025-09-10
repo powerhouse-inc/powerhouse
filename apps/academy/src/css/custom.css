@@ -6,21 +6,21 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #1A1A1B;
-  --ifm-color-primary-dark: #1A1A1B;
-  --ifm-color-primary-darker: #1A1A1B;
-  --ifm-color-primary-darkest: #1A1A1B;
-  --ifm-color-primary-light: #1A1A1B;
-  --ifm-color-primary-lighter: #1A1A1B;
-  --ifm-color-primary-lightest: #1A1A1B;
+  --ifm-color-primary: #1a1a1b;
+  --ifm-color-primary-dark: #1a1a1b;
+  --ifm-color-primary-darker: #1a1a1b;
+  --ifm-color-primary-darkest: #1a1a1b;
+  --ifm-color-primary-light: #1a1a1b;
+  --ifm-color-primary-lighter: #1a1a1b;
+  --ifm-color-primary-lightest: #1a1a1b;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
   --toc-color: #555; /* Muted black for inactive items */
-  --toc-color-active: #1A1A1B; /* Black for active items */
+  --toc-color-active: #1a1a1b; /* Black for active items */
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
+[data-theme="dark"] {
   --ifm-color-primary: #ffffff;
   --ifm-color-primary-dark: #ffffff;
   --ifm-color-primary-darker: #ffffff;
@@ -34,28 +34,28 @@
 }
 
 @font-face {
-  font-family: 'Franie';
-  src: url('/fonts/FranieRegular.otf') format('woff2');
+  font-family: "Franie";
+  src: url("/fonts/FranieRegular.otf") format("woff2");
   font-weight: normal;
   font-style: normal;
 }
 
 @font-face {
-  font-family: 'Franie';
-  src: url('/fonts/FranieBold.otf') format('woff2');
+  font-family: "Franie";
+  src: url("/fonts/FranieBold.otf") format("woff2");
   font-weight: bold;
   font-style: normal;
 }
 
 .hero__title {
-  font-family: 'Franie', sans-serif;
+  font-family: "Franie", sans-serif;
   font-weight: bold;
   font-size: 39.75px;
   margin-bottom: 0.1rem; /* Reduce bottom margin */
 }
 
 .hero__subtitle {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-weight: normal;
   margin-top: 0.1rem; /* Reduce top margin */
 }
@@ -67,51 +67,51 @@
 }
 
 /* If you need different colors for light mode, use this */
-html[data-theme='light'] .hero__title,
-html[data-theme='light'] .hero__subtitle {
+html[data-theme="light"] .hero__title,
+html[data-theme="light"] .hero__subtitle {
   color: #ffffff; /* or any other color for light mode */
 }
 
 /* Explicitly set white color for dark mode */
-html[data-theme='dark'] .hero__title,
-html[data-theme='dark'] .hero__subtitle {
+html[data-theme="dark"] .hero__title,
+html[data-theme="dark"] .hero__subtitle {
   color: #ffffff;
 }
 
 /* Dark mode styles */
-html[data-theme='dark'] {
-  --ifm-background-color: #1A1A1B;
-  --ifm-background-surface-color: #1A1A1B;
+html[data-theme="dark"] {
+  --ifm-background-color: #1a1a1b;
+  --ifm-background-surface-color: #1a1a1b;
 }
 
 /* If you want to affect specific elements, you can add more specific rules */
-html[data-theme='dark'] .main-wrapper {
-  background-color: #1A1A1B;
+html[data-theme="dark"] .main-wrapper {
+  background-color: #1a1a1b;
 }
 
-html[data-theme='dark'] .navbar {
-  background-color: #1A1A1B;
+html[data-theme="dark"] .navbar {
+  background-color: #1a1a1b;
 }
 
-html[data-theme='dark'] .footer {
-  background-color: #1A1A1B;
+html[data-theme="dark"] .footer {
+  background-color: #1a1a1b;
 }
 
-html[data-theme='light'] .footer {
+html[data-theme="light"] .footer {
   background-color: #f5f5f5;
 }
 
 /* Light theme styles for footer */
-html[data-theme='light'] .footer {
+html[data-theme="light"] .footer {
   --ifm-footer-color: #000000;
   --ifm-footer-link-color: #000000;
   --ifm-footer-title-color: #000000;
 }
 
 /* If you need more specific control: */
-html[data-theme='light'] .footer .footer__link-item,
-html[data-theme='light'] .footer .footer__title,
-html[data-theme='light'] .footer .footer__copyright {
+html[data-theme="light"] .footer .footer__link-item,
+html[data-theme="light"] .footer .footer__title,
+html[data-theme="light"] .footer .footer__copyright {
   color: #000000;
 }
 
@@ -158,17 +158,17 @@ a {
 }
 
 /* Dark mode specific styles for better readability */
-[data-theme='dark'] .docs-doc-page .theme-doc-markdown a,
-[data-theme='dark'] .markdown a,
-[data-theme='dark'] details a,
-[data-theme='dark'] .theme-doc-markdown details a {
+[data-theme="dark"] .docs-doc-page .theme-doc-markdown a,
+[data-theme="dark"] .markdown a,
+[data-theme="dark"] details a,
+[data-theme="dark"] .theme-doc-markdown details a {
   color: #66b3ff !important; /* lighter blue for dark mode */
 }
 
-[data-theme='dark'] .docs-doc-page .theme-doc-markdown a:hover,
-[data-theme='dark'] .markdown a:hover,
-[data-theme='dark'] details a:hover,
-[data-theme='dark'] .theme-doc-markdown details a:hover {
+[data-theme="dark"] .docs-doc-page .theme-doc-markdown a:hover,
+[data-theme="dark"] .markdown a:hover,
+[data-theme="dark"] details a:hover,
+[data-theme="dark"] .theme-doc-markdown details a:hover {
   color: #99ccff !important; /* even lighter blue on hover for dark mode */
 }
 
@@ -224,7 +224,7 @@ article > a,
   cursor: pointer;
   transition: all 0.2s ease;
   background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   height: 100%; /* This ensures equal height */
   display: flex;
   flex-direction: column;
@@ -237,7 +237,7 @@ article > a,
 
 .track-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .track-title {
@@ -298,11 +298,11 @@ article > a,
   text-decoration: none !important;
   color: inherit !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Dark mode adjustments */
-[data-theme='dark'] .path-button {
+[data-theme="dark"] .path-button {
   background-color: #1f1f20;
   border: none; /* Remove default border */
   position: relative; /* For pseudo-element positioning */
@@ -310,8 +310,8 @@ article > a,
 }
 
 /* Gradient border effect - dark mode only */
-[data-theme='dark'] .path-button::before {
-  content: '';
+[data-theme="dark"] .path-button::before {
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -320,11 +320,11 @@ article > a,
   border-radius: 8px;
   padding: 1px; /* Border width */
   background: linear-gradient(90deg, #4633eb, #7a5cff);
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -332,11 +332,11 @@ article > a,
 }
 
 /* Hover effects - dark mode */
-[data-theme='dark'] .path-button:hover {
+[data-theme="dark"] .path-button:hover {
   transform: translateY(-2px);
 }
 
-[data-theme='dark'] .path-button:hover::before {
+[data-theme="dark"] .path-button:hover::before {
   box-shadow: 0 0 15px rgba(74, 51, 235, 0.3); /* Subtle blue glow */
 }
 
@@ -345,7 +345,7 @@ article > a,
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .path-card.full-width {
@@ -369,98 +369,98 @@ article > a,
 }
 
 /* Dark mode adjustments */
-[data-theme='dark'] .path-card {
+[data-theme="dark"] .path-card {
   background-color: #2a2a2b;
   border-color: #3a3a3b;
 }
 
-[data-theme='dark'] .card-title {
+[data-theme="dark"] .card-title {
   color: white;
 }
 
 /* Algolia DocSearch Dark Mode Styles */
-html[data-theme='dark'] .DocSearch-Hits {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hits {
+  background-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hit {
+  background-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-source {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hit-source {
+  background-color: #1a1a1b !important;
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-content-wrapper {
+html[data-theme="dark"] .DocSearch-Hit-content-wrapper {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-title {
+html[data-theme="dark"] .DocSearch-Hit-title {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-path {
+html[data-theme="dark"] .DocSearch-Hit-path {
   color: #a0a0a0 !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-icon {
+html[data-theme="dark"] .DocSearch-Hit-icon {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit-action {
+html[data-theme="dark"] .DocSearch-Hit-action {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit[aria-selected='true'] {
+html[data-theme="dark"] .DocSearch-Hit[aria-selected="true"] {
   background-color: #2a2a2b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Modal {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Modal {
+  background-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-SearchBar {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-SearchBar {
+  background-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Form {
+html[data-theme="dark"] .DocSearch-Form {
   background-color: #2a2a2b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Input {
+html[data-theme="dark"] .DocSearch-Input {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Reset {
+html[data-theme="dark"] .DocSearch-Reset {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Cancel {
+html[data-theme="dark"] .DocSearch-Cancel {
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit:first-child {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hit:first-child {
+  background-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hit--empty,
-html[data-theme='dark'] .DocSearch-Hit[aria-label="No results"],
-html[data-theme='dark'] .DocSearch-Hit-content-wrapper:empty,
-html[data-theme='dark'] .DocSearch-Hit[style*="background-color: white"],
-html[data-theme='dark'] .DocSearch-Hit {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hit--empty,
+html[data-theme="dark"] .DocSearch-Hit[aria-label="No results"],
+html[data-theme="dark"] .DocSearch-Hit-content-wrapper:empty,
+html[data-theme="dark"] .DocSearch-Hit[style*="background-color: white"],
+html[data-theme="dark"] .DocSearch-Hit {
+  background-color: #1a1a1b !important;
   color: #ffffff !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hits > * {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hits > * {
+  background-color: #1a1a1b !important;
   color: #ffffff !important;
-  border-color: #1A1A1B !important;
+  border-color: #1a1a1b !important;
 }
 
-html[data-theme='dark'] .DocSearch-Hits > *:empty {
-  background-color: #1A1A1B !important;
+html[data-theme="dark"] .DocSearch-Hits > *:empty {
+  background-color: #1a1a1b !important;
   color: #ffffff !important;
   min-height: 48px; /* or whatever height matches the box */
   border-radius: 8px;

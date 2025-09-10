@@ -1445,7 +1445,7 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 
@@ -1459,7 +1459,7 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - Updated @powerhousedao/reactor-api to 1.1.0
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 
@@ -1473,6 +1473,6 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - Updated @powerhousedao/general-document-indexer to 1.1.0
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas

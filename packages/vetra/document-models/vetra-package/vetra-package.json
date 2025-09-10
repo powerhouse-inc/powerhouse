@@ -1,147 +1,147 @@
 {
-    "id": "powerhouse/package",
-    "name": "Vetra Package",
-    "extension": ".phdm",
-    "description": "This document model defines the schema for PH package information.",
-    "author": {
-        "name": "Powerhouse",
-        "website": "https://powerhouse.inc"
-    },
-    "specifications": [
-        {
-            "version": 1,
-            "changeLog": [],
-            "state": {
-                "global": {
-                    "schema": "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
-                    "initialValue": "{\n  \"name\": null,\n  \"description\": null,\n  \"category\": null,\n  \"author\": {\n    \"name\": null,\n    \"website\": null\n  },\n  \"keywords\": [],\n  \"githubUrl\": null,\n  \"npmUrl\": null\n}",
-                    "examples": []
-                },
-                "local": {
-                    "schema": "",
-                    "initialValue": "",
-                    "examples": []
-                }
-            },
-            "modules": [
-                {
-                    "id": "a6156f32-8120-43a5-be8b-51c7feaa3460",
-                    "name": "base_operations",
-                    "description": "",
-                    "operations": [
-                        {
-                            "id": "33f2eab7-9e07-497f-a4e6-53e50968c3c9",
-                            "name": "SET_PACKAGE_NAME",
-                            "description": "",
-                            "schema": "input SetPackageNameInput {\n  name: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "a07bee80-c2a8-40d7-891b-822ee298d7d9",
-                            "name": "SET_PACKAGE_DESCRIPTION",
-                            "description": "",
-                            "schema": "input SetPackageDescriptionInput {\n  description: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "f3ad82f8-580a-4c6e-b930-e203cda998bb",
-                            "name": "SET_PACKAGE_CATEGORY",
-                            "description": "",
-                            "schema": "input SetPackageCategoryInput {\n  category: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "67f43579-ce98-47e6-bf48-27c0f44818b9",
-                            "name": "SET_PACKAGE_AUTHOR",
-                            "description": "",
-                            "schema": "input SetPackageAuthorInput {\n  name: OID\n  website: URL\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "94ba44c4-9627-405e-9ea2-34e9da1c283a",
-                            "name": "SET_PACKAGE_AUTHOR_NAME",
-                            "description": "",
-                            "schema": "input SetPackageAuthorNameInput {\n  name: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "3d5c08df-6c14-480b-915b-875941979fd0",
-                            "name": "SET_PACKAGE_AUTHOR_WEBSITE",
-                            "description": "",
-                            "schema": "input SetPackageAuthorWebsiteInput {\n  website: URL!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "ed95f841-6fd0-4552-898d-e915599b7495",
-                            "name": "ADD_PACKAGE_KEYWORD",
-                            "description": "",
-                            "schema": "input AddPackageKeywordInput {\n  id: String!\n  label: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "83c4db24-bd2f-424d-9e26-751580d6307b",
-                            "name": "REMOVE_PACKAGE_KEYWORD",
-                            "description": "",
-                            "schema": "input RemovePackageKeywordInput {\n  id: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "83a90530-8535-4ea7-ab53-7865532398f7",
-                            "name": "SET_PACKAGE_GITHUB_URL",
-                            "description": "",
-                            "schema": "input SetPackageGithubUrlInput {\n  url: URL!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "e789859a-01ee-4b60-8e7e-a3ad928a26d1",
-                            "name": "SET_PACKAGE_NPM_URL",
-                            "description": "",
-                            "schema": "input SetPackageNpmUrlInput {\n  url: URL!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        }
-                    ]
-                }
-            ]
+  "id": "powerhouse/package",
+  "name": "Vetra Package",
+  "extension": ".phdm",
+  "description": "This document model defines the schema for PH package information.",
+  "author": {
+    "name": "Powerhouse",
+    "website": "https://powerhouse.inc"
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
+          "initialValue": "{\n  \"name\": null,\n  \"description\": null,\n  \"category\": null,\n  \"author\": {\n    \"name\": null,\n    \"website\": null\n  },\n  \"keywords\": [],\n  \"githubUrl\": null,\n  \"npmUrl\": null\n}",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
         }
-    ]
+      },
+      "modules": [
+        {
+          "id": "a6156f32-8120-43a5-be8b-51c7feaa3460",
+          "name": "base_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "33f2eab7-9e07-497f-a4e6-53e50968c3c9",
+              "name": "SET_PACKAGE_NAME",
+              "description": "",
+              "schema": "input SetPackageNameInput {\n  name: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "a07bee80-c2a8-40d7-891b-822ee298d7d9",
+              "name": "SET_PACKAGE_DESCRIPTION",
+              "description": "",
+              "schema": "input SetPackageDescriptionInput {\n  description: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "f3ad82f8-580a-4c6e-b930-e203cda998bb",
+              "name": "SET_PACKAGE_CATEGORY",
+              "description": "",
+              "schema": "input SetPackageCategoryInput {\n  category: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "67f43579-ce98-47e6-bf48-27c0f44818b9",
+              "name": "SET_PACKAGE_AUTHOR",
+              "description": "",
+              "schema": "input SetPackageAuthorInput {\n  name: OID\n  website: URL\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "94ba44c4-9627-405e-9ea2-34e9da1c283a",
+              "name": "SET_PACKAGE_AUTHOR_NAME",
+              "description": "",
+              "schema": "input SetPackageAuthorNameInput {\n  name: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "3d5c08df-6c14-480b-915b-875941979fd0",
+              "name": "SET_PACKAGE_AUTHOR_WEBSITE",
+              "description": "",
+              "schema": "input SetPackageAuthorWebsiteInput {\n  website: URL!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "ed95f841-6fd0-4552-898d-e915599b7495",
+              "name": "ADD_PACKAGE_KEYWORD",
+              "description": "",
+              "schema": "input AddPackageKeywordInput {\n  id: String!\n  label: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "83c4db24-bd2f-424d-9e26-751580d6307b",
+              "name": "REMOVE_PACKAGE_KEYWORD",
+              "description": "",
+              "schema": "input RemovePackageKeywordInput {\n  id: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "83a90530-8535-4ea7-ab53-7865532398f7",
+              "name": "SET_PACKAGE_GITHUB_URL",
+              "description": "",
+              "schema": "input SetPackageGithubUrlInput {\n  url: URL!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "e789859a-01ee-4b60-8e7e-a3ad928a26d1",
+              "name": "SET_PACKAGE_NPM_URL",
+              "description": "",
+              "schema": "input SetPackageNpmUrlInput {\n  url: URL!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

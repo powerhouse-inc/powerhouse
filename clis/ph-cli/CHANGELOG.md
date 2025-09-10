@@ -2161,7 +2161,7 @@ This was a version bump only for @powerhousedao/ph-cli to align it with other pr
 - **ph-cli:** added scope to package name ([ef18ead6](https://github.com/powerhouse-inc/powerhouse/commit/ef18ead6))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 - Guillermo Puente Sandoval @gpuente

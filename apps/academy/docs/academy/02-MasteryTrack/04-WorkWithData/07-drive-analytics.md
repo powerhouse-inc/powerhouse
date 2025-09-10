@@ -16,8 +16,9 @@ These processors run in the background, converting operations into structured ti
 Connect applications have Drive Analytics enabled by default through the `ReactorAnalyticsProvider`. When enabled, the system automatically tracks:
 
 ### Drive Operations Metrics
+
 - **File Creation**: New documents added to drives
-- **Folder Creation**: New directories created  
+- **Folder Creation**: New directories created
 - **File Updates**: Document content modifications
 - **Node Updates**: Metadata changes
 - **File Moves**: Documents relocated between folders
@@ -25,6 +26,7 @@ Connect applications have Drive Analytics enabled by default through the `Reacto
 - **File Deletions**: Documents removed from drives
 
 ### Document Operations Metrics
+
 - **State Changes**: Document model state modifications
 
 ## Data Sources and Structure
@@ -32,15 +34,19 @@ Connect applications have Drive Analytics enabled by default through the `Reacto
 Drive Analytics organizes data using hierarchical source paths that allow precise querying of different analytics contexts:
 
 ### Drive Analytics Sources
+
 Pattern: `ph/drive/{driveId}/{branch}/{scope}`
+
 - **driveId**: Unique identifier for the document drive
-- **branch**: Branch name (e.g., "main", "dev")  
+- **branch**: Branch name (e.g., "main", "dev")
 - **scope**: Operation scope ("global" for shared operations, "local" for device-specific)
 
 Example: `ph/drive/abc123/main/global`
 
-### Document Analytics Sources  
+### Document Analytics Sources
+
 Pattern: `ph/doc/{driveId}/{documentId}/{branch}/{scope}`
+
 - **driveId**: Drive containing the document
 - **documentId**: Specific document identifier
 - **branch**: Branch name
@@ -51,13 +57,17 @@ Example: `ph/doc/abc123/doc456/main/global`
 ## Available Metrics
 
 ### DriveOperations
+
 Tracks file system operations within drives:
+
 - **Value**: Always 1 (counter metric)
 - **Purpose**: Count drive-level operations like file creation, deletion, moves
 - **Source Pattern**: `ph/drive/*`
 
-### DocumentOperations  
+### DocumentOperations
+
 Tracks document content and state changes:
+
 - **Value**: Always 1 (counter metric)
 - **Purpose**: Count document-specific operations like state changes
 - **Source Pattern**: `ph/doc/*`
@@ -67,21 +77,25 @@ Tracks document content and state changes:
 ### Drive Analytics Dimensions
 
 #### 1. Drive Dimension
+
 **Pattern**: `ph/drive/{driveId}/{branch}/{scope}/{revision}`
 **Purpose**: Identifies the drive context with revision information
+
 ```tsx
 // Examples
-"ph/drive/abc123/main/global/42"
-"ph/drive/my-drive/feature-branch/local/15"
+"ph/drive/abc123/main/global/42";
+"ph/drive/my-drive/feature-branch/local/15";
 ```
 
 #### 2. Operation Dimension
+
 **Pattern**: `ph/drive/operation/{operationType}/{operationIndex}`
 **Purpose**: Identifies specific operation types and their sequence
 
 **Available Operation Types**:
+
 - **ADD_FILE**: Create new file
-- **ADD_FOLDER**: Create new folder  
+- **ADD_FOLDER**: Create new folder
 - **UPDATE_FILE**: Modify file content
 - **UPDATE_NODE**: Modify node metadata
 - **MOVE_NODE**: Move file/folder to different location
@@ -90,31 +104,35 @@ Tracks document content and state changes:
 
 ```tsx
 // Examples
-"ph/drive/operation/ADD_FILE/5"
-"ph/drive/operation/DELETE_NODE/23"
-"ph/drive/operation/MOVE_NODE/12"
+"ph/drive/operation/ADD_FILE/5";
+"ph/drive/operation/DELETE_NODE/23";
+"ph/drive/operation/MOVE_NODE/12";
 ```
 
 #### 3. Target Dimension
+
 **Pattern**: `ph/drive/target/{targetType}/{targetId}`
 **Purpose**: Identifies what was targeted by the operation
 
 **Target Types**:
+
 - **DRIVE**: Operation affects the drive itself
 - **NODE**: Operation affects a specific file/folder
 
 ```tsx
 // Examples
-"ph/drive/target/DRIVE/abc123"
-"ph/drive/target/NODE/file456"
-"ph/drive/target/NODE/folder789"
+"ph/drive/target/DRIVE/abc123";
+"ph/drive/target/NODE/file456";
+"ph/drive/target/NODE/folder789";
 ```
 
 #### 4. Action Type Dimension
+
 **Pattern**: `ph/drive/actionType/{actionType}/{targetId}`
 **Purpose**: Categorizes operations by their effect
 
 **Action Types**:
+
 - **CREATED**: New items added (ADD_FILE, ADD_FOLDER)
 - **DUPLICATED**: Items copied (COPY_NODE)
 - **UPDATED**: Existing items modified (UPDATE_FILE, UPDATE_NODE)
@@ -123,48 +141,55 @@ Tracks document content and state changes:
 
 ```tsx
 // Examples
-"ph/drive/actionType/CREATED/file123"
-"ph/drive/actionType/MOVED/folder456" 
-"ph/drive/actionType/REMOVED/doc789"
+"ph/drive/actionType/CREATED/file123";
+"ph/drive/actionType/MOVED/folder456";
+"ph/drive/actionType/REMOVED/doc789";
 ```
 
 ### Document Analytics Dimensions
 
 #### 1. Drive Dimension
+
 **Pattern**: `ph/doc/drive/{driveId}/{branch}/{scope}/{revision}`
 **Purpose**: Drive context for document operations
+
 ```tsx
 // Examples
-"ph/doc/drive/abc123/main/global/42"
+"ph/doc/drive/abc123/main/global/42";
 ```
 
-#### 2. Operation Dimension  
+#### 2. Operation Dimension
+
 **Pattern**: `ph/doc/operation/{operationType}/{operationIndex}`
 **Purpose**: Document-specific operation identification
+
 ```tsx
 // Examples (document model operations vary by document type)
-"ph/doc/operation/SET_STATE/15"
-"ph/doc/operation/ADD_ITEM/8"
-"ph/doc/operation/UPDATE_PROPERTY/22"
+"ph/doc/operation/SET_STATE/15";
+"ph/doc/operation/ADD_ITEM/8";
+"ph/doc/operation/UPDATE_PROPERTY/22";
 ```
 
 #### 3. Target Dimension
+
 **Pattern**: `ph/doc/target/{driveId}/{targetType}/{documentId}`
 **Purpose**: Document target identification
 
 **Target Types**:
+
 - **DRIVE**: Document is the drive document itself (driveId === documentId)
 - **NODE**: Document is a regular document within the drive
 
 ```tsx
 // Examples
-"ph/doc/target/abc123/DRIVE/abc123"  // Drive document
-"ph/doc/target/abc123/NODE/doc456"   // Regular document
+"ph/doc/target/abc123/DRIVE/abc123"; // Drive document
+"ph/doc/target/abc123/NODE/doc456"; // Regular document
 ```
 
 ## Query Parameters
 
 ### Time Range
+
 - **start**: DateTime object for query start time
 - **end**: DateTime object for query end time
 - **granularity**: Time bucketing (Total, Hourly, Daily, Weekly, Monthly)
@@ -180,19 +205,19 @@ select: {
     AnalyticsPath.fromString("ph/drive/abc123"),
     AnalyticsPath.fromString("ph/drive/xyz789")
   ],
-  
+
   // Filter by operation types
   operation: [
     AnalyticsPath.fromString("ph/drive/operation/ADD_FILE"),
     AnalyticsPath.fromString("ph/drive/operation/UPDATE_FILE")
   ],
-  
-  // Filter by action types  
+
+  // Filter by action types
   actionType: [
     AnalyticsPath.fromString("ph/drive/actionType/CREATED"),
     AnalyticsPath.fromString("ph/drive/actionType/UPDATED")
   ],
-  
+
   // Filter by targets
   target: [
     AnalyticsPath.fromString("ph/drive/target/NODE")
@@ -220,7 +245,12 @@ lod: {
 The primary way to access drive analytics is through the `useAnalyticsQuery` hook:
 
 ```tsx
-import { useAnalyticsQuery, AnalyticsGranularity, AnalyticsPath, DateTime } from '@powerhousedao/reactor-browser/analytics';
+import {
+  useAnalyticsQuery,
+  AnalyticsGranularity,
+  AnalyticsPath,
+  DateTime,
+} from "@powerhousedao/reactor-browser/analytics";
 
 function DriveUsageChart({ driveId }: { driveId: string }) {
   const { data, isLoading } = useAnalyticsQuery({
@@ -233,13 +263,13 @@ function DriveUsageChart({ driveId }: { driveId: string }) {
       actionType: [
         AnalyticsPath.fromString("ph/drive/actionType/CREATED"),
         AnalyticsPath.fromString("ph/drive/actionType/UPDATED"),
-        AnalyticsPath.fromString("ph/drive/actionType/REMOVED")
-      ]
+        AnalyticsPath.fromString("ph/drive/actionType/REMOVED"),
+      ],
     },
     lod: {
       drive: 1,
-      actionType: 1
-    }
+      actionType: 1,
+    },
   });
 
   if (isLoading) return <div>Loading analytics...</div>;
@@ -247,7 +277,7 @@ function DriveUsageChart({ driveId }: { driveId: string }) {
   return (
     <div>
       {/* Render your chart using the analytics data */}
-      {data?.rows.map(row => (
+      {data?.rows.map((row) => (
         <div key={row.metric}>
           {row.metric}: {row.value}
         </div>
@@ -262,20 +292,20 @@ function DriveUsageChart({ driveId }: { driveId: string }) {
 For common drive analytics queries, use the specialized `useDriveAnalytics` hook:
 
 ```tsx
-import { useDriveAnalytics } from '@powerhousedao/common/drive-analytics';
-import { AnalyticsGranularity } from '@powerhousedao/reactor-browser/analytics';
+import { useDriveAnalytics } from "@powerhousedao/common/drive-analytics";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
 
 function DriveInsights({ driveIds }: { driveIds: string[] }) {
   const analytics = useDriveAnalytics({
     filters: {
       driveId: driveIds,
       operation: ["ADD_FILE", "UPDATE_FILE", "DELETE_NODE"],
-      actionType: ["CREATED", "UPDATED", "REMOVED"]
+      actionType: ["CREATED", "UPDATED", "REMOVED"],
     },
     from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
     to: new Date().toISOString(),
     granularity: AnalyticsGranularity.Daily,
-    levelOfDetail: { drive: 1, operation: 1 }
+    levelOfDetail: { drive: 1, operation: 1 },
   });
 
   if (analytics.isLoading) return <div>Loading...</div>;
@@ -285,7 +315,10 @@ function DriveInsights({ driveIds }: { driveIds: string[] }) {
       <h3>Drive Activity Summary</h3>
       {analytics.data?.rows.map((row, index) => (
         <div key={index}>
-          <strong>{row.dimensions.find(d => d.name === 'actionType')?.path}</strong>: {row.value}
+          <strong>
+            {row.dimensions.find((d) => d.name === "actionType")?.path}
+          </strong>
+          : {row.value}
         </div>
       ))}
     </div>
@@ -298,26 +331,32 @@ function DriveInsights({ driveIds }: { driveIds: string[] }) {
 For document-specific analytics queries, use the `useDocumentAnalytics` hook:
 
 ```tsx
-import { useDocumentAnalytics } from '@powerhousedao/common/drive-analytics';
-import { AnalyticsGranularity } from '@powerhousedao/reactor-browser/analytics';
+import { useDocumentAnalytics } from "@powerhousedao/common/drive-analytics";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
 
-function DocumentInsights({ driveId, documentIds }: { driveId: string, documentIds: string[] }) {
+function DocumentInsights({
+  driveId,
+  documentIds,
+}: {
+  driveId: string;
+  documentIds: string[];
+}) {
   const analytics = useDocumentAnalytics({
     filters: {
       driveId: [driveId],
       documentId: documentIds,
       target: ["NODE"], // Focus on document nodes vs drive documents
       branch: ["main"],
-      scope: ["global"]
+      scope: ["global"],
     },
     from: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 24 hours ago
     to: new Date().toISOString(),
     granularity: AnalyticsGranularity.Hourly,
-    levelOfDetail: { 
-      drive: 1, 
+    levelOfDetail: {
+      drive: 1,
       operation: 1,
-      target: 1 
-    }
+      target: 1,
+    },
   });
 
   if (analytics.isLoading) return <div>Loading...</div>;
@@ -326,9 +365,7 @@ function DocumentInsights({ driveId, documentIds }: { driveId: string, documentI
     <div>
       <h3>Document Activity Summary</h3>
       {analytics.data?.rows.map((row, index) => (
-        <div key={index}>
-          Document Operations: {row.value}
-        </div>
+        <div key={index}>Document Operations: {row.value}</div>
       ))}
     </div>
   );
@@ -349,20 +386,18 @@ const { data } = useAnalyticsQuery({
   select: {
     drive: [
       AnalyticsPath.fromString("ph/drive/project-a"),
-      AnalyticsPath.fromString("ph/drive/project-b")
+      AnalyticsPath.fromString("ph/drive/project-b"),
     ],
     operation: [
       AnalyticsPath.fromString("ph/drive/operation/ADD_FILE"),
-      AnalyticsPath.fromString("ph/drive/operation/UPDATE_FILE")
+      AnalyticsPath.fromString("ph/drive/operation/UPDATE_FILE"),
     ],
-    target: [
-      AnalyticsPath.fromString("ph/drive/target/NODE")
-    ]
+    target: [AnalyticsPath.fromString("ph/drive/target/NODE")],
   },
   lod: {
     drive: 1,
-    operation: 1
-  }
+    operation: 1,
+  },
 });
 ```
 
@@ -374,14 +409,14 @@ const driveOps = useDriveAnalytics({
   filters: { driveId: [driveId] },
   from: DateTime.now().minus({ days: 1 }).toISO(),
   to: DateTime.now().toISO(),
-  granularity: AnalyticsGranularity.Total
+  granularity: AnalyticsGranularity.Total,
 });
 
 const docOps = useDocumentAnalytics({
   filters: { driveId: [driveId] },
   from: DateTime.now().minus({ days: 1 }).toISO(),
   to: DateTime.now().toISO(),
-  granularity: AnalyticsGranularity.Total
+  granularity: AnalyticsGranularity.Total,
 });
 
 // Or using useAnalyticsQuery directly
@@ -391,8 +426,8 @@ const driveOpsQuery = useAnalyticsQuery({
   granularity: AnalyticsGranularity.Total,
   metrics: ["DriveOperations"],
   select: {
-    drive: [AnalyticsPath.fromString(`ph/drive/${driveId}`)]
-  }
+    drive: [AnalyticsPath.fromString(`ph/drive/${driveId}`)],
+  },
 });
 
 const docOpsQuery = useAnalyticsQuery({
@@ -401,8 +436,8 @@ const docOpsQuery = useAnalyticsQuery({
   granularity: AnalyticsGranularity.Total,
   metrics: ["DocumentOperations"],
   select: {
-    drive: [AnalyticsPath.fromString(`ph/doc/drive/${driveId}`)]
-  }
+    drive: [AnalyticsPath.fromString(`ph/doc/drive/${driveId}`)],
+  },
 });
 ```
 
@@ -417,13 +452,13 @@ const { data } = useAnalyticsQuery(
     granularity: AnalyticsGranularity.Total,
     metrics: ["DriveOperations"],
     select: {
-      drive: [AnalyticsPath.fromString(`ph/drive/${driveId}`)]
-    }
+      drive: [AnalyticsPath.fromString(`ph/drive/${driveId}`)],
+    },
   },
   {
     sources: [AnalyticsPath.fromString(`ph/drive/${driveId}`)],
-    refetchInterval: 5000 // Poll every 5 seconds
-  }
+    refetchInterval: 5000, // Poll every 5 seconds
+  },
 );
 ```
 
@@ -437,16 +472,15 @@ const { data } = useAnalyticsQuery(
     start: DateTime.now().minus({ hours: 1 }),
     end: DateTime.now(),
     granularity: AnalyticsGranularity.Total,
-    metrics: ["DriveOperations"]
+    metrics: ["DriveOperations"],
   },
   {
-    sources: [AnalyticsPath.fromString(`ph/drive/${driveId}`)]
-  }
+    sources: [AnalyticsPath.fromString(`ph/drive/${driveId}`)],
+  },
 );
 
 // This query will automatically refetch when new operations occur in the specified drive
 ```
-
 
 ## Configuration in Connect
 

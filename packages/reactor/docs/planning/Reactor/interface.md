@@ -94,10 +94,7 @@ interface IReactor {
    * @param signal - Optional abort signal to cancel the request
    * @returns The job status
    */
-  create(
-    document: PHDocument,
-    signal?: AbortSignal,
-  ): Promise<JobStatus>;
+  create(document: PHDocument, signal?: AbortSignal): Promise<JobStatus>;
 
   /**
    * Deletes a document

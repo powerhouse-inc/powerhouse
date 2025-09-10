@@ -1,110 +1,110 @@
 {
-    "id": "powerhouse/test-doc",
-    "name": "test-doc",
-    "extension": ".phdm",
-    "description": "test description",
-    "author": {
-        "name": "Powerhouse",
-        "website": "https://powerhouse.inc"
-    },
-    "specifications": [
-        {
-            "version": 1,
-            "changeLog": [],
-            "state": {
-                "global": {
-                    "schema": "type TestDocState {\n  id: Int!\n  name: String!\n  description: String\n  value: String!\n}",
-                    "initialValue": "{\n  \"id\": 0,\n  \"name\": \"\",\n  \"description\": null,\n  \"value\": \"\"\n}",
-                    "examples": []
-                },
-                "local": {
-                    "schema": "",
-                    "initialValue": "",
-                    "examples": []
-                }
-            },
-            "modules": [
-                {
-                    "id": "1eb3fcc2-deac-4932-9cf1-077a9c915b64",
-                    "name": "base_operations",
-                    "description": "",
-                    "operations": [
-                        {
-                            "id": "c4b46f8b-0981-47f7-9bbc-86e998595c97",
-                            "name": "SET_TEST_ID",
-                            "description": "",
-                            "schema": "input SetTestIdInput {\n  id: Int!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "def9d61b-c6d1-4d3b-89bd-65b22fc36bc6",
-                            "name": "SET_TEST_NAME",
-                            "description": "",
-                            "schema": "input SetTestNameInput {\n  name: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "cfa69e77-c1dc-4e18-815c-5968dff533c6",
-                            "name": "SET_TEST_DESCRIPTION",
-                            "description": "",
-                            "schema": "input SetTestDescriptionInput {\n  description: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "0b2a8f9e-e9ca-4683-a205-bbb06e381127",
-                            "name": "SET_TEST_VALUE",
-                            "description": "",
-                            "schema": "input SetTestValueInput {\n  value: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        }
-                    ]
-                },
-                {
-                    "id": "b403c673-702d-4e5d-969e-bc54bd796441",
-                    "name": "pro_operations",
-                    "description": "",
-                    "operations": [
-                        {
-                            "id": "eb9b97c9-5468-48e4-996e-6e0cdb3c612d",
-                            "name": "SET_NAME_AND_VALUE",
-                            "description": "",
-                            "schema": "input SetNameAndValueInput {\n  name: String!\n  value: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "8a8bd977-41ea-4e4d-b76f-1fa15949a862",
-                            "name": "SET_ID_AND_DESCRIPTION",
-                            "description": "",
-                            "schema": "input SetIdAndDescriptionInput {\n  id: Int!\n  description: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        }
-                    ]
-                }
-            ]
+  "id": "powerhouse/test-doc",
+  "name": "test-doc",
+  "extension": ".phdm",
+  "description": "test description",
+  "author": {
+    "name": "Powerhouse",
+    "website": "https://powerhouse.inc"
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type TestDocState {\n  id: Int!\n  name: String!\n  description: String\n  value: String!\n}",
+          "initialValue": "{\n  \"id\": 0,\n  \"name\": \"\",\n  \"description\": null,\n  \"value\": \"\"\n}",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
         }
-    ]
+      },
+      "modules": [
+        {
+          "id": "1eb3fcc2-deac-4932-9cf1-077a9c915b64",
+          "name": "base_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "c4b46f8b-0981-47f7-9bbc-86e998595c97",
+              "name": "SET_TEST_ID",
+              "description": "",
+              "schema": "input SetTestIdInput {\n  id: Int!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "def9d61b-c6d1-4d3b-89bd-65b22fc36bc6",
+              "name": "SET_TEST_NAME",
+              "description": "",
+              "schema": "input SetTestNameInput {\n  name: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "cfa69e77-c1dc-4e18-815c-5968dff533c6",
+              "name": "SET_TEST_DESCRIPTION",
+              "description": "",
+              "schema": "input SetTestDescriptionInput {\n  description: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "0b2a8f9e-e9ca-4683-a205-bbb06e381127",
+              "name": "SET_TEST_VALUE",
+              "description": "",
+              "schema": "input SetTestValueInput {\n  value: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        },
+        {
+          "id": "b403c673-702d-4e5d-969e-bc54bd796441",
+          "name": "pro_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "eb9b97c9-5468-48e4-996e-6e0cdb3c612d",
+              "name": "SET_NAME_AND_VALUE",
+              "description": "",
+              "schema": "input SetNameAndValueInput {\n  name: String!\n  value: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "8a8bd977-41ea-4e4d-b76f-1fa15949a862",
+              "name": "SET_ID_AND_DESCRIPTION",
+              "description": "",
+              "schema": "input SetIdAndDescriptionInput {\n  id: Int!\n  description: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

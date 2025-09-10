@@ -71,7 +71,6 @@ const utils: DocumentDriveUtils = {
 
 export const createDocument: CreateDocument<DocumentDrivePHState> =
   utils.createDocument;
-export const createState: CreateState<DocumentDrivePHState> =
-  utils.createState;
+export const createState: CreateState<DocumentDrivePHState> = utils.createState;
 
 export default utils;

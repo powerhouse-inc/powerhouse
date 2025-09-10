@@ -25,7 +25,8 @@ await connectCrypto.init();
 const signedDocument = await createSignedHeader(
   document.header,
   document.documentType,
-  connectCrypto);
+  connectCrypto,
+);
 
 // document.header.id !== signedDocument.header.id
 ```

@@ -7,11 +7,13 @@ This guide documents the changes required to refactor generated code in the `gen
 ## Core Concept Changes
 
 ### Before
+
 - Documents had separate `global` and `local` state properties directly
 - `PHDocument` was a simple type with two generic parameters: `PHDocument<GlobalState, LocalState>`
 - State was managed independently from base document properties
 
-### After  
+### After
+
 - Documents have a single state type that extends `PHBaseState`
 - `PHBaseState` contains `auth` and `document` properties for system state
 - Document-specific state (`global` and `local`) are composed with `PHBaseState`
@@ -76,7 +78,7 @@ export function createGlobalState(
   } as [DocumentName]State;
 }
 
-// Factory for creating local state with partials  
+// Factory for creating local state with partials
 export function createLocalState(
   state?: Partial<[DocumentName]LocalState>,
 ): [DocumentName]LocalState {
@@ -133,6 +135,7 @@ export function create[DocumentName]Document(
 The types file needs to be updated to use the new PHState type and properly type the document.
 
 #### Before:
+
 ```typescript
 import type { BaseDocument } from "../../document/types.js";
 import type { [DocumentName]Action } from "./actions.js";
@@ -149,6 +152,7 @@ export { [DocumentName]Action, [DocumentName]LocalState, [DocumentName]State };
 ```
 
 #### After:
+
 ```typescript
 import type { PHDocument } from "../../document/types.js";
 import type { [DocumentName]Action } from "./actions.js";
@@ -169,11 +173,13 @@ The utils file needs to use the new PHState type for all type parameters.
 #### Key Changes:
 
 1. Import the PHState type:
+
 ```typescript
 import { [DocumentName]PHState } from "./ph-factories.js";
 ```
 
 2. Update `createState` function signature:
+
 ```typescript
 export const createState: CreateState<[DocumentName]PHState> = (state) => {
   return {
@@ -185,6 +191,7 @@ export const createState: CreateState<[DocumentName]PHState> = (state) => {
 ```
 
 3. Update `createDocument` function signature:
+
 ```typescript
 export const createDocument: CreateDocument<[DocumentName]PHState> = (state) => {
   const document = baseCreateDocument(createState, state);
@@ -194,6 +201,7 @@ export const createDocument: CreateDocument<[DocumentName]PHState> = (state) => 
 ```
 
 4. Update `loadFromFile` function signature:
+
 ```typescript
 export const loadFromFile: LoadFromFile<[DocumentName]PHState> = (path) => {
   return baseLoadFromFile(path, reducer);
@@ -201,6 +209,7 @@ export const loadFromFile: LoadFromFile<[DocumentName]PHState> = (path) => {
 ```
 
 5. Update `loadFromInput` function signature:
+
 ```typescript
 export const loadFromInput: LoadFromInput<[DocumentName]PHState> = (input) => {
   return baseLoadFromInput(input, reducer);
@@ -214,11 +223,13 @@ The reducer needs to work with the new PHState type.
 #### Key Changes:
 
 1. Import the PHState type:
+
 ```typescript
 import { [DocumentName]PHState } from "./ph-factories.js";
 ```
 
 2. Update the state reducer signature:
+
 ```typescript
 export const stateReducer: TStateReducer<[DocumentName]PHState> = (
   state,
@@ -227,12 +238,13 @@ export const stateReducer: TStateReducer<[DocumentName]PHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-  
+
   // ... rest of reducer logic
 };
 ```
 
 3. Update the main reducer export:
+
 ```typescript
 export const reducer = createReducer<[DocumentName]PHState>(stateReducer);
 ```
@@ -244,11 +256,13 @@ If the document has an object representation, update it to use the PHState type.
 #### Key Changes:
 
 1. Import PHState:
+
 ```typescript
 import { [DocumentName]PHState } from "./ph-factories.js";
 ```
 
 2. Update class definition:
+
 ```typescript
 export class [DocumentName] extends BaseDocument<[DocumentName]PHState> {
   // ... class implementation
@@ -276,7 +290,7 @@ When refactoring generated code for a document type, follow this checklist:
 
 1. ✅ Create `ph-factories.ts` with:
    - [ ] `defaultGlobalState()` function
-   - [ ] `defaultLocalState()` function  
+   - [ ] `defaultLocalState()` function
    - [ ] `defaultPHState()` function
    - [ ] `createGlobalState()` function
    - [ ] `createLocalState()` function
@@ -310,19 +324,25 @@ When refactoring generated code for a document type, follow this checklist:
 ## Important Notes
 
 ### State Composition
+
 The key insight is that document state is now composed of three parts:
+
 1. **Base state** (`auth` and `document` properties from `PHBaseState`)
 2. **Global state** (document-specific global state)
 3. **Local state** (document-specific local state)
 
 ### Type Safety
+
 Always ensure that:
+
 - The PHState type properly extends `PHBaseState`
 - All functions that create or manipulate state use the correct PHState type
 - The spread operator properly merges base state with document state
 
 ### Backwards Compatibility
+
 When consuming code uses the old pattern, you may need to:
+
 1. Access `document.state.global` instead of `document.global`
 2. Access `document.state.local` instead of `document.local`
 3. Use the new factory functions instead of direct object creation
@@ -339,6 +359,7 @@ For a document called "BillingStatement", the changes would be:
 ## Testing Considerations
 
 After refactoring, ensure that:
+
 1. All documents can be created with the new factory functions
 2. State is properly initialized with base state properties
 3. Reducers can access both base state and document state

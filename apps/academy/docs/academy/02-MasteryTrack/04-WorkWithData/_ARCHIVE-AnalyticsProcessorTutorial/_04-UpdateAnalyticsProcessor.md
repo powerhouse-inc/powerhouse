@@ -7,7 +7,7 @@ You will likely already be in the desired directory, but if not, navigate to the
 cd rwa-analytics
 ```
 
-Now open the directory with your code editor. 
+Now open the directory with your code editor.
 
 ```bash
 code .
@@ -23,9 +23,7 @@ import {
   type IAnalyticsStore,
   AnalyticsSeriesInput,
 } from "@powerhousedao/reactor-api";
-import {
-  CreateGroupTransactionInput,
-} from "document-model-libs/real-world-assets";
+import { CreateGroupTransactionInput } from "document-model-libs/real-world-assets";
 import { DateTime } from "luxon";
 import { IProcessor } from "document-drive/processors/types";
 import { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
@@ -35,10 +33,10 @@ export class RwaAnalyticsProcessor implements IProcessor {
   constructor(private readonly analyticsStore: IAnalyticsStore) {
     //
   }
-  
+
   // This is the function that is called when the processor receives a new strand.
   async onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[]
+    strands: InternalTransmitterUpdate<TDocument>[],
   ): Promise<void> {
     if (strands.length === 0) {
       return;
@@ -60,12 +58,13 @@ export class RwaAnalyticsProcessor implements IProcessor {
         `ph/${strand.driveId}/${documentId}/${strand.branch}/${strand.scope}`,
       );
 
-      if (firstOp.index === 0) { // This is the index of the operation in the strand.
+      if (firstOp.index === 0) {
+        // This is the index of the operation in the strand.
         // This is the function that clears the source of the operation since there could be data existing from previous runs for the same document to avoid double counting.
         await this.analyticsStore.clearSeriesBySource(source, true);
       }
 
-      for (const operation of strand.operations) {	
+      for (const operation of strand.operations) {
         // This is the type of the operation that is being displayed in the terminal.
         console.log(">>> ", operation.type);
 
@@ -87,16 +86,15 @@ export class RwaAnalyticsProcessor implements IProcessor {
           }
 
           // Up next we'll go through the crucial design decision of defining the different dimensions or categories that are relevant to our analytics and queries. In this case we'll create 2 series values for each transaction type. Cash and Fixed Income transactions.
-          const { fixedIncomeTransaction, cashTransaction } =
-            groupTransaction;
+          const { fixedIncomeTransaction, cashTransaction } = groupTransaction;
 
           if (fixedIncomeTransaction) {
             const dimensions = {
               // We're selecting T-bills as one of the dimensions.
               asset: AnalyticsPath.fromString(
-                `sky/rwas/assets/t-bills/${fixedIncomeTransaction.assetId}`
+                `sky/rwas/assets/t-bills/${fixedIncomeTransaction.assetId}`,
               ),
-              // We're selecting the portfolio as another dimension.	
+              // We're selecting the portfolio as another dimension.
               portfolio: AnalyticsPath.fromString(
                 `sky/rwas/portfolios/${documentId}`,
               ),
@@ -104,9 +102,9 @@ export class RwaAnalyticsProcessor implements IProcessor {
 
             values.push({
               dimensions,
-              metric: "AssetBalance",	// We're selecting the AssetBalance metric.
+              metric: "AssetBalance", // We're selecting the AssetBalance metric.
               source,
-              start: DateTime.fromISO(fixedIncomeTransaction.entryTime),	// We're selecting the entryTime as the start of the series value.
+              start: DateTime.fromISO(fixedIncomeTransaction.entryTime), // We're selecting the entryTime as the start of the series value.
               value:
                 groupTransaction.type === "AssetPurchase"
                   ? fixedIncomeTransaction.amount
@@ -125,14 +123,14 @@ export class RwaAnalyticsProcessor implements IProcessor {
 
             values.push({
               dimensions,
-              metric: "AssetBalance",	// We're selecting the AssetBalance metric for our tutorial scenario
+              metric: "AssetBalance", // We're selecting the AssetBalance metric for our tutorial scenario
               source,
-              start: DateTime.fromISO(cashTransaction.entryTime),	// We're selecting the entryTime as the start of the series value.
+              start: DateTime.fromISO(cashTransaction.entryTime), // We're selecting the entryTime as the start of the series value.
               value:
                 groupTransaction.type === "AssetPurchase" ||
                 groupTransaction.type === "PrincipalReturn"
-                  ? -cashTransaction.amount	
-                  : cashTransaction.amount,	
+                  ? -cashTransaction.amount
+                  : cashTransaction.amount,
             });
           }
         }
@@ -157,7 +155,7 @@ You'll need to use this specific endpoint to access the graphql playground `http
 Then, use this query to get the data from the analytics store, but don't forget to also add the variables below.
 
 ```graphql
-query analytics ($filter: AnalyticsFilter) {
+query analytics($filter: AnalyticsFilter) {
   analytics {
     series(filter: $filter) {
       start
@@ -174,7 +172,8 @@ query analytics ($filter: AnalyticsFilter) {
   }
 }
 ```
-With the following variables: 
+
+With the following variables:
 
 ```graphql
 {
@@ -190,11 +189,11 @@ With the following variables:
         "select": "sky"
       }
     ]
-  }  
+  }
 }
 ```
 
-You'll see that the data is now being displayed per month for each of the asset classes. 
+You'll see that the data is now being displayed per month for each of the asset classes.
 
 `sum`: Displays the total cumulative sum of the asset class for the month.
 
@@ -208,10 +207,10 @@ When you play around with the variables of our query you can see the different g
 
 If you would take 'total' you would see the total value left in the portfolio.
 
-To see more changes become present in the analytics store, you could add more transactions to the portfolio. We could do this by adding a rwa portfolio with a different documentId. 
-Imagine that this is similar to real time updates that might happen to a live environment when new transactions are added to a porftolio. 
+To see more changes become present in the analytics store, you could add more transactions to the portfolio. We could do this by adding a rwa portfolio with a different documentId.
+Imagine that this is similar to real time updates that might happen to a live environment when new transactions are added to a porftolio.
 
-Now you know how to implement a custom analytics processor and how to query the data from the analytics store! 
+Now you know how to implement a custom analytics processor and how to query the data from the analytics store!
 In case you'd want to try it out on another document model follow the steps below.
 
 1. Generate the processor
@@ -220,4 +219,4 @@ In case you'd want to try it out on another document model follow the steps belo
 4. Launch the reactor (again) and add your data
 5. Query the data from the analytics store
 
-Enjoy! 
+Enjoy!

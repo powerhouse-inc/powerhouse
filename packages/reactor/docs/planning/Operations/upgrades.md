@@ -27,9 +27,7 @@ const doc = await createDocument({
 2. Next, we submit it to the `IReactor`.
 
 ```tsx
-
 const jobStatus = await reactor.create(doc);
-
 ```
 
 3. Internally, the `IReactor` will:

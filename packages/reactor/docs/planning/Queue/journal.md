@@ -5,7 +5,6 @@ The `IQueueJournal` is responsible for implementing the durable journal.
 ### Interface
 
 ```tsx
-
 type JsonValue =
   | string
   | number
@@ -19,7 +18,6 @@ interface IQueueJournal {
   fail(jobId: string, reason: string): Promise<void>;
   findUnresolvedJobs(): Promise<Job[]>;
 }
-
 ```
 
 ### RedisQueueJournal

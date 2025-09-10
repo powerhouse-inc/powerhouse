@@ -33,7 +33,7 @@ class DuplicateOperationError extends Error {
 
 interface IOperationStore {
   // this function throws named exceptions when it can't
-  // acquire a lock, there are revision mismatches, or 
+  // acquire a lock, there are revision mismatches, or
   // the changes cannot be applied atomically
   apply(
     documentId: string,
@@ -43,21 +43,21 @@ interface IOperationStore {
     (txn: AtomicTxn) => void,
     signal?: AbortSignal,
   ): Promise<void>;
-  
+
   getHeader(
     documentId: string,
     branch: string,
     revision: number,
     signal?: AbortSignal,
   ): Promise<DocumentHeader>;
-  
+
   get(
     documentId: string,
     scope: string,
     branch: string,
     index: number,
     signal?: AbortSignal): Promise<Operation>;
-  
+
   getSince(
     documentId: string,
     scope: string,
@@ -81,7 +81,7 @@ interface IOperationStore {
 interface AtomicTxn {
 	// append-only operations
 	addOperations(...operations: Operation[]);
-	
+
 	// header operations
 	setSlug(slug: string);
 	setName(name: string);
@@ -91,20 +91,18 @@ interface AtomicTxn {
 ### Usage
 
 ```tsx
-await operations.apply(
-	documentId, scope, branch, revision,
-	async (txn) => {
-		// get current state to pass to reducers
-		const currentState = await readModel.get(documentId, scope, branch, revision);
-		const { operations, header } = await applyReducers(currentState);
-		
-		// add new operations
-	  txn.addOperations(...operations);
-	  
-	  // header operations
-	  txn.setSlug('updated-slug');
-	  txn.setName('updated-name');
-	});
+await operations.apply(documentId, scope, branch, revision, async (txn) => {
+  // get current state to pass to reducers
+  const currentState = await readModel.get(documentId, scope, branch, revision);
+  const { operations, header } = await applyReducers(currentState);
+
+  // add new operations
+  txn.addOperations(...operations);
+
+  // header operations
+  txn.setSlug("updated-slug");
+  txn.setName("updated-name");
+});
 ```
 
 ### Schema
@@ -140,7 +138,7 @@ model Operation {
 
   // defines reshuffling logic (the reactor does this)
   skip            Int
-  
+
 
   // compound unique constraint: the index is unique
   @@unique([documentId, scope, branch, index], name: "unique_revision")
@@ -167,8 +165,8 @@ BEGIN;
 
 -- Lock all operations for the stream
 SELECT index, skip
-  FROM "Operation" 
-  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3 
+  FROM "Operation"
+  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3
 FOR UPDATE;
 ```
 
@@ -188,10 +186,10 @@ COMMIT;
 An optimistic approach would look like this:
 
 ```sql
-SELECT index, skip 
-  FROM "Operation" 
-  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3 
-  ORDER BY "id" DESC 
+SELECT index, skip
+  FROM "Operation"
+  WHERE "documentId" = $1 AND "scope" = $2 AND "branch" = $3
+  ORDER BY "id" DESC
 LIMIT 1;
 ```
 

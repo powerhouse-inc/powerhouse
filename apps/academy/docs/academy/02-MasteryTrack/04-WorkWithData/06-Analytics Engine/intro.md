@@ -109,7 +109,7 @@ The analytics engine supports various granularity options, each suitable for dif
 5. `monthly` : Monthly granularity is useful for a more detailed view of trends and patterns, particularly useful for operational planning and monitoring.
 
 6. `weekly` : Provides weekly data aggregation, which is helpful for short-term performance tracking and operational adjustments.
-daily: Offers a day-to-day breakdown, ideal for detailed analysis of daily operations or events.
+   daily: Offers a day-to-day breakdown, ideal for detailed analysis of daily operations or events.
 
 7. `hourly`: The most granular level, providing insights into hourly fluctuations. Useful in scenarios where short-term data spikes or dips are significant.
 
@@ -118,7 +118,7 @@ daily: Offers a day-to-day breakdown, ideal for detailed analysis of daily opera
 - Data Volume: Higher granularity (like hourly or daily) results in a larger volume of data points, providing more detailed insights but potentially leading to more complex analysis. Lower granularity (like annual or total) simplifies the data into fewer, broader data points.
 
 - Trend Analysis: Finer granularity helps in identifying short-term trends and anomalies, whereas coarser granularity is better for long-term trend analysis and strategic planning.
-Performance Impact: Queries with finer granularity might be more resource-intensive and take longer to execute due to the larger number of data points processed.
+  Performance Impact: Queries with finer granularity might be more resource-intensive and take longer to execute due to the larger number of data points processed.
 
 - Contextual Relevance: The choice of granularity should match the context of the analysis. For instance, financial planning might prefer annual or quarterly granularity, while operational monitoring might require daily or hourly data.
 
@@ -130,20 +130,20 @@ In summary, the choice of granularity in your query significantly influences the
 
 These are high-level definitions of major terms you will need to know.
 
-* **AnalyticsSeries** - The individual metric values, comprised of `(value, start, end)`. There should be one of these for every change in value.
+- **AnalyticsSeries** - The individual metric values, comprised of `(value, start, end)`. There should be one of these for every change in value.
 
-* **AnalyticsDimension** - Shared objects that decorate series objects with `name` and `path` information. Used to relate metrics to one another.
+- **AnalyticsDimension** - Shared objects that decorate series objects with `name` and `path` information. Used to relate metrics to one another.
 
-* **Path** - Composable, `/`-delimited string field on dimension that is used to _determine specificity_ during queries.
+- **Path** - Composable, `/`-delimited string field on dimension that is used to _determine specificity_ during queries.
 
-* **LOD** - A number that, when paired with `path`, determines how to aggregate values across dimensions.
+- **LOD** - A number that, when paired with `path`, determines how to aggregate values across dimensions.
 
-* **Granularity** - Determines how to aggregate values over time, like "monthly" or "yearly".
+- **Granularity** - Determines how to aggregate values over time, like "monthly" or "yearly".
 
 ## Next steps
 
 Next steps depend on use case.
 
-* For developers looking to **input data**, or **query data with Typescript**, see the [Typescript](./typescript/) docs.
-* For developers interested in **querying data with GraphQL**, see the [GraphQL](./graphql/) documentation. Data cannot be input through GraphQL.
-* For developers interested in **contributing to this project**, see the developer documentation [on GitHub](https://github.com/powerhouse-inc/analytics-engine).
+- For developers looking to **input data**, or **query data with Typescript**, see the [Typescript](./typescript/) docs.
+- For developers interested in **querying data with GraphQL**, see the [GraphQL](./graphql/) documentation. Data cannot be input through GraphQL.
+- For developers interested in **contributing to this project**, see the developer documentation [on GitHub](https://github.com/powerhouse-inc/analytics-engine).

@@ -1,9 +1,9 @@
 import {
-    AddModuleAction,
-    SetModuleNameAction,
-    SetModuleDescriptionAction,
-    DeleteModuleAction,
-    ReorderModulesAction,
+  AddModuleAction,
+  SetModuleNameAction,
+  SetModuleDescriptionAction,
+  DeleteModuleAction,
+  ReorderModulesAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";
 

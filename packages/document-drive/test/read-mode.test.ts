@@ -75,7 +75,7 @@ function buildDriveDocument(
         nodes: [],
         ...state,
       },
-    })
+    }),
   );
   doc.header.id = id;
   doc.header.slug = slug;
@@ -98,7 +98,7 @@ function buildModelDocument(
         description: "",
         ...state,
       } as DocumentModelState,
-    })
+    }),
   );
 }
 
@@ -373,7 +373,7 @@ describe.skip("Read mode methods", () => {
           sharingType: "PUBLIC",
           triggers: [],
         },
-      }) as any
+      }) as any,
     );
 
     drive.header.id = readDriveId;

@@ -6,15 +6,17 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 
 ### Development environment
 
-Connect Studio is your primary tool for development.   
+Connect Studio is your primary tool for development.  
 When you run `ph connect`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
 Key aspects of the Powerhouse development environment:
+
 - **React Foundation**: Build your editor UIs using React components, just as you would in any standard React project.
 - **Automatic Build Processes**: Tailwind CSS is installed by default and fully managed by Connect Studio. There's no need to manually configure or run Tailwind or other build processes during development. Connect Studio handles CSS generation and other necessary build steps automatically, especially when you publish a package.
 - **Styling Flexibility**: You are not limited to Tailwind. Regular CSS (`.css` files), inline styles, and any React-compatible styling method work exactly as you would expect.
 
 Powerhouse aims to keep your developer experience clean, familiar, and focused:
+
 - Build React components as you normally would.
 - Use styling approaches you're comfortable with.
 - Trust Connect Studio to handle the setup and build processes for you.
@@ -25,9 +27,11 @@ To kickstart your editor development, Powerhouse provides a command to generate 
 If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
 For example, to generate an editor for a To-do List document model with a document type `powerhouse/todolist`:
+
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
 ```
+
 This will create the template in the `editors/to-do-list/editor.tsx` folder.
 
 ### Styling your editor
@@ -37,7 +41,8 @@ You have several options for styling your editor components:
 1.  **Default HTML Styling**: Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default browser styles or any base styling provided by the Connect environment. This is suitable for basic structure and quick prototyping.
 
 2.  **Tailwind CSS**: Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes in your JSX for rapid and consistent styling without writing separate CSS files.
-    *Example (from the ToDoList Editor):*
+    _Example (from the ToDoList Editor):_
+
     ```typescript
     <div className="container mx-auto p-4 max-w-md">
         <h1 className="text-2xl font-bold mb-4">ToDoList</h1>
@@ -46,19 +51,22 @@ You have several options for styling your editor components:
     ```
 
 3.  **Custom CSS Files**: You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
-    *Create an `editor.css` file in your editor's directory:*
+    _Create an `editor.css` file in your editor's directory:_
+
     ```css
     /* editors/your-editor/editor.css */
     .editor-container {
-        padding: 1rem;
-        border: 1px solid #ccc;
+      padding: 1rem;
+      border: 1px solid #ccc;
     }
     .editor-title {
-        color: navy;
-        font-size: 1.8rem;
+      color: navy;
+      font-size: 1.8rem;
     }
     ```
-    *Import and use it in your `editor.tsx`:*
+
+    _Import and use it in your `editor.tsx`:_
+
     ```typescript
     import './editor.css'; // Import the CSS file
 
@@ -74,9 +82,9 @@ You have several options for styling your editor components:
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Connect Studio (`ph connect`) will allow you to see your styles applied in real-time.
 
-:::warning  **Best practices for consistent reliable styles**
+:::warning **Best practices for consistent reliable styles**
 
-In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package. 
+In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package.
 
 **1. Centralize style imports**
 
@@ -93,28 +101,28 @@ In any package the styles are being generated through the styles.css file with t
 **Using `ph install` includes package styles automatically**
 
 - When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
-:::
-
-
+  :::
 
 ### State management in editors
 
 When you build an editor in Powerhouse, your main editor component receives `EditorProps`. These props are crucial for interacting with the document:
 
-*   **`document`**: This object contains the entire document structure, including its current state. You'll typically access the global document state via `document.state.global`.
-*   **`dispatch`**: This function is your gateway to modifying the document's state. You call `dispatch` with an action object (usually created by action creators from your document model's generated code) to signal an intended change.
+- **`document`**: This object contains the entire document structure, including its current state. You'll typically access the global document state via `document.state.global`.
+- **`dispatch`**: This function is your gateway to modifying the document's state. You call `dispatch` with an action object (usually created by action creators from your document model's generated code) to signal an intended change.
 
 **Local vs. Global State:**
-*   **Local Component State**: For UI-specific state that doesn't need to be part of the persisted document model (e.g., the current text in an input field before submission, visibility of a dropdown), use React's `useState` hook.
-    ```typescript
-    const [inputValue, setInputValue] = useState('');
-    // ...
-    <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
-    ```
-*   **Global Document State**: For data that is part of the document itself and should be saved (e.g., the items in a to-do list), you modify it by dispatching actions. The `document.state.global` object provides read-only access to this state within your editor.
+
+- **Local Component State**: For UI-specific state that doesn't need to be part of the persisted document model (e.g., the current text in an input field before submission, visibility of a dropdown), use React's `useState` hook.
+  ```typescript
+  const [inputValue, setInputValue] = useState('');
+  // ...
+  <input value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
+  ```
+- **Global Document State**: For data that is part of the document itself and should be saved (e.g., the items in a to-do list), you modify it by dispatching actions. The `document.state.global` object provides read-only access to this state within your editor.
 
 **Dispatching Actions:**
 Your document model's generated code (e.g., in `document-models/your-model/index.js` or `document-models/your-model/gen/operations.js`) will provide action creators.
+
 ```typescript
 // Assuming 'actions' are imported from your document model
 // import { actions } from '../../document-models/to-do-list/index.js';
@@ -133,6 +141,7 @@ Your document model's generated code (e.g., in `document-models/your-model/index
 //   };
 // }
 ```
+
 The actual state modification logic resides in your document model's reducers, ensuring that all changes are consistent and follow the defined operations.
 
 ## Powerhouse component library
@@ -140,19 +149,26 @@ The actual state modification logic resides in your document model's reducers, e
 Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/ComponentLibrary/DocumentEngineering)
 
 ### Exploring components
+
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance:
 [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy)
 
 Storybook allows you to:
-*   Visually inspect each component.
-*   Interact with different states and variations.
-*   View code snippets for basic implementation.
-*   Consult the props table for detailed configuration options.
+
+- Visually inspect each component.
+- Interact with different states and variations.
+- View code snippets for basic implementation.
+- Consult the props table for detailed configuration options.
 
 ### Using components
+
 1.  **Import**: Add an import statement at the top of your editor file:
     ```typescript
-    import { Checkbox, StringField, Form } from '@powerhousedao/document-engineering/scalars';
+    import {
+      Checkbox,
+      StringField,
+      Form,
+    } from "@powerhousedao/document-engineering/scalars";
     ```
 2.  **Implement**: Use the component in your JSX, configuring it with props:
     ```typescript
@@ -172,11 +188,11 @@ Storybook allows you to:
 
 ## Build a To-do List editor
 
-In this final part of our tutorial we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your To-do List items, but also dispaly the statistics we've implemented in our reducers. 
+In this final part of our tutorial we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your To-do List items, but also dispaly the statistics we've implemented in our reducers.
 
 ## Generate the editor template
 
-Run the command below to generate the editor template for the **To-do List** document model.   
+Run the command below to generate the editor template for the **To-do List** document model.  
 This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
 
 Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
@@ -187,12 +203,11 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 
 Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
 
-
 ### Editor implementation options
 
 When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
 
-1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate. 
+1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
@@ -203,9 +218,9 @@ Connect Studio provides a dynamic local environment (`ph connect`) to visualize 
 ## To-do List editor
 
 :::tip Implementing components
-The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**. 
+The editor we are about to implement makes use of some components from **Powerhouse Document Engineering**.
 When you add the editor code, you'll see it makes use of two components, the `Checkbox` and `InputField`.
-These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`) which you should find under 'devdependencies' in your package.json file.   
+These are imported from the Powerhouse Document Engineering design system (`@powerhousedao/document-engineering/scalars`) which you should find under 'devdependencies' in your package.json file.
 
 This system provides a library of reusable components to ensure consistency and speed up development.  
 You can explore available components, see usage examples, and understand their properties (props) using our Storybook instance. For a detailed guide on how to leverage the Document Engineering design system and Storybook, see [Using the Powerhouse Document Engineering](/academy/ComponentLibrary/DocumentEngineering) page.
@@ -219,23 +234,24 @@ For this tutorial, create a `components` folder inside `editors/to-do-list`. The
 import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
 
 interface CheckboxProps {
-  value: boolean;
-  onChange: (value: boolean) => void;
+value: boolean;
+onChange: (value: boolean) => void;
 }
 
 export const Checkbox = ({ value, onChange }: CheckboxProps) => {
-  return (
-    <Form onSubmit={() => {}}>
-      <BooleanField 
+return (
+<Form onSubmit={() => {}}>
+<BooleanField 
         name="checked"
         description="Check this box to mark the todo as completed"
         value={value}
         onChange={onChange}
       />
-    </Form>
-  );
+</Form>
+);
 };
-```
+
+````
 </details>
 
 <details>
@@ -277,9 +293,9 @@ export const InputField = (props: InputFieldProps) => {
     </Form>
   );
 };
-```
-</details>
+````
 
+</details>
 
 Below is the complete code for the To-Do List editor. It primarily uses Tailwind CSS for styling and imports the local `Checkbox` and `InputField` components you created in the previous step. These local components, in turn, utilize elements from the Powerhouse Document Engineering design system.
 
@@ -506,6 +522,7 @@ export default function Editor(props: IProps) {
     );
 }
 ```
+
 </details>
 
 Now you can run the Connect app and see the **To-do List** editor in action.
@@ -517,14 +534,15 @@ ph connect
 In Connect, in the bottom right corner you'll find a new Document Model that you can create: **To-do List**. Click on it to create a new To-do List document.
 
 :::tip Connect as your dynamic development environment
-The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio. 
+The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio.
 :::
 
 </details>
 
 Congratulations!
-If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor. 
+If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor.
 
-## Up Next 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your To-do List document.    
+## Up Next
+
+Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your To-do List document.  
 Imagine you have many To-do Lists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!

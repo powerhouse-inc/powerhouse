@@ -1,14 +1,14 @@
 import {
-    AddOperationAction,
-    SetOperationNameAction,
-    SetOperationSchemaAction,
-    SetOperationDescriptionAction,
-    SetOperationTemplateAction,
-    SetOperationReducerAction,
-    MoveOperationAction,
-    DeleteOperationAction,
-    ReorderModuleOperationsAction,
-    SetOperationScopeAction,
+  AddOperationAction,
+  SetOperationNameAction,
+  SetOperationSchemaAction,
+  SetOperationDescriptionAction,
+  SetOperationTemplateAction,
+  SetOperationReducerAction,
+  MoveOperationAction,
+  DeleteOperationAction,
+  ReorderModuleOperationsAction,
+  SetOperationScopeAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";
 

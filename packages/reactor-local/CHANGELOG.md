@@ -1011,7 +1011,7 @@ This was a version bump only for @powerhousedao/reactor-local to align it with o
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 
@@ -1025,7 +1025,7 @@ This was a version bump only for @powerhousedao/reactor-local to align it with o
 
 - Updated @powerhousedao/reactor-api to 1.1.0
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 

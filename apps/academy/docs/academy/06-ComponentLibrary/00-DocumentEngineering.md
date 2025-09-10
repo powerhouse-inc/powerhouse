@@ -1,19 +1,19 @@
 # Document-Engineering
 
-The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars. 
+The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
 Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
-These components are offered through the **Powerhouse Document-Engineering system** with the help of storybook & the Academy documentation. 
+These components are offered through the **Powerhouse Document-Engineering system** with the help of storybook & the Academy documentation.
 
-It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on graphql scalars. 
+It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on graphql scalars.
 
 :::info
-A GraphQL scalar is essentially a primitive, indivisible value in the GraphQL type system. 
+A GraphQL scalar is essentially a primitive, indivisible value in the GraphQL type system.
 Here are the key points to understand:
 
 - **Basic Building Blocks:** Scalars are the basic data types—like String, Int, Float, Boolean, and ID—that represent atomic values.
 - **Leaf Nodes:** Scalars are the "leaves" of a GraphQL query. They can't have any sub-fields, meaning once you hit a scalar in a query, that's the final value.
-- **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem. 
-:::
+- **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem.
+  :::
 
 ## What are Components?
 
@@ -43,7 +43,7 @@ There are two applications of scalar components in the document model workflow:
 
 These are specialized form components, each corresponding to a GraphQL scalar type (e.g., String, Number, Boolean, Currency, PHID). They are built on top of react-hook-form, offering out-of-the-box validation but must be wrapped with a Form component in order to work properly.
 
-**Location:** @powerhousedao/document-engineering/scalars    
+**Location:** @powerhousedao/document-engineering/scalars  
 https://github.com/powerhouse-inc/document-engineering
 
 **Key Feature**: Must be used within a Form component provided by this library.
@@ -52,7 +52,7 @@ https://github.com/powerhouse-inc/document-engineering
 
 This category includes a broader range of UI elements such as simplified versions of the Scalar components (which don't require a Form wrapper but lack built-in validation), as well as other versatile components like Dropdown, Tooltip, Sidebar, ObjectSetTable and more. These are designed for crafting diverse and complex user interfaces.
 
-**Location:** @powerhousedao/document-engineering/ui   
+**Location:** @powerhousedao/document-engineering/ui  
 https://github.com/powerhouse-inc/document-engineering
 
 ## Component Types Classification
@@ -60,18 +60,22 @@ https://github.com/powerhouse-inc/document-engineering
 Inspired by atomic design methodology, Powerhouse classifies components into the following categories:
 
 ### Fragment
+
 The smallest element that combined together makes up a scalar or other simple component.
 **Examples:** Character counter, Checkbox field, Label
 
 ### Scalar (Simple Component)
+
 The simplest component that contains the basic input field for one-dimensional data type (single value).
 **Examples:** Integer, Boolean, String, Powerhouse ID (PHID)
 
 ### Complex Component
+
 Compound component that has an object/array value. It's made up of multiple scalars combined to serve a specific function.
 **Examples:** Sidebar (tree structure navigation component with content-style navigation for hierarchical data)
 
 ### Layout Component
+
 Purpose-specific container for other components like lists of other components, color layouts, sections, etc.
 **Examples:** Homepage section layout
 
@@ -81,15 +85,15 @@ The Powerhouse team is building a Component library with a wide range of compone
 
 ## Component Behavior & UX Principles
 
-Besides the ability to input data, components have another crucial utility: they describe the mechanism of user interaction through implementing a defined set of behavior rules. 
+Besides the ability to input data, components have another crucial utility: they describe the mechanism of user interaction through implementing a defined set of behavior rules.
 
 **Best Practices for Component Behavior:**
+
 - Implementing behaviors at a component level is much more efficient than at the document level
 - Good component behavior feels natural to the user and is easily understood
 - Components should be intuitive and not require additional tutorials or explanations
 - Start with the most simple/basic behaviors first, then layer additional behaviors on top
 - Keep behaviors as simple as needed - less is more
-
 
 ## Exploring Components with Storybook
 
@@ -112,13 +116,13 @@ Let's walk through the typical workflow for using a component from the document-
 
 1.  **Identify the Need:** While building your feature (e.g., the To-do List editor in `editor.tsx`), you determine the need for a standard UI element, like a checkbox.
 2.  **Consult the Document Engineering Components in Storybook:**
-    *   Open the Powerhouse Storybook instance. [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy)
-    *   Navigate or search to find the `Checkbox` component.
-    *   Review the visual examples and interactive demo.
-    *   Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`label`, `value`, `onChange`, etc.).
+    - Open the Powerhouse Storybook instance. [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy)
+    - Navigate or search to find the `Checkbox` component.
+    - Review the visual examples and interactive demo.
+    - Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`label`, `value`, `onChange`, etc.).
 3.  **Import the Component:** In your code editor, open the relevant file (e.g., `editors/to-do-list/editor.tsx`). Add an import statement at the top to bring the component into your file's scope:
     ```typescript
-    import { Checkbox } from '@powerhousedao/document-engineering/scalars';
+    import { Checkbox } from "@powerhousedao/document-engineering/scalars";
     // Or import other components as needed:
     // import { Checkbox, InputField, Button } from '@powerhousedao/document-engineering/scalars';
     ```
@@ -128,9 +132,9 @@ Let's walk through the typical workflow for using a component from the document-
     // Example from the To-do List Editor:
     <Checkbox
         // Bind the checked state to data within editor.tsx
-        value={item.checked} 
+        value={item.checked}
         // Provide a function from editor.tsx to handle changes
-        onChange={() => { 
+        onChange={() => {
             dispatch(actions.updateTodoItem({
                 id: item.id,
                 checked: !item.checked,
@@ -179,7 +183,7 @@ import { ... } from '@powerhousedao/document-engineering/graphql';
 To include the package's styles:
 
 ```typescript
-import '@powerhousedao/document-engineering/style.css';
+import "@powerhousedao/document-engineering/style.css";
 ```
 
 ## Import Maps
@@ -188,14 +192,12 @@ Within the project, the following import maps are available:
 
 - `#assets` - Assets utilities and components
 - `#scalars` - Scalar transformations and utilities
-- `#ui` - UI components 
+- `#ui` - UI components
 - `#graphql` - GraphQL related utilities
 
-Please don't hesitate to reach out in our discord channels with any questions.    
-Happy designing! 
+Please don't hesitate to reach out in our discord channels with any questions.  
+Happy designing!
 
 ### Up next: Create Custom Scalars
 
 You can learn how to do so in our guide on [Creating Custom Scalars](/academy/ComponentLibrary/CreateCustomScalars).
-
-

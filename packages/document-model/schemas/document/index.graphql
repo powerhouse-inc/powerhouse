@@ -4,132 +4,132 @@ scalar Unknown
 scalar Attachment
 
 directive @equals(
-    value: String = ""
+  value: String = ""
 ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 
 interface IAction {
-    type: String!
+  type: String!
 }
 
 type Action implements IAction {
-    type: String!
+  type: String!
 }
 
 interface IOperation {
-    type: String!
-    index: Int!
-    timestamp: DateTime!
-    hash: String!
+  type: String!
+  index: Int!
+  timestamp: DateTime!
+  hash: String!
 }
 
 type Operation implements IOperation {
-    type: String!
-    index: Int!
-    timestamp: DateTime!
-    hash: String!
+  type: String!
+  index: Int!
+  timestamp: DateTime!
+  hash: String!
 }
 
 type DocumentFile {
-    data: String!
-    mimeType: String!
-    extension: String
-    fileName: String
+  data: String!
+  mimeType: String!
+  extension: String
+  fileName: String
 }
 
 interface IDocument {
-    name: String!
-    documentType: String!
-    revision: Int!
-    created: DateTime!
-    lastModified: DateTime!
-    operations: [IOperation!]!
-    nodeName: String
+  name: String!
+  documentType: String!
+  revision: Int!
+  created: DateTime!
+  lastModified: DateTime!
+  operations: [IOperation!]!
+  nodeName: String
 }
 
 type Query {
-    document: IDocument
+  document: IDocument
 }
 
 enum SET_NAME {
-    SET_NAME
+  SET_NAME
 }
 
 type SetNameOperation implements IOperation {
-    type: String!
-    input: String!
-    index: Int!
-    timestamp: DateTime!
-    hash: String!
+  type: String!
+  input: String!
+  index: Int!
+  timestamp: DateTime!
+  hash: String!
 }
 
 input SetNameAction {
-    type: SET_NAME!
-    input: String!
+  type: SET_NAME!
+  input: String!
 }
 
 enum UNDO {
-    UNDO
+  UNDO
 }
 
 input UndoAction {
-    type: UNDO!
-    input: Int!
+  type: UNDO!
+  input: Int!
 }
 
 enum REDO {
-    REDO
+  REDO
 }
 
 input RedoAction {
-    type: REDO!
-    input: Int!
+  type: REDO!
+  input: Int!
 }
 
 enum PRUNE {
-    PRUNE
+  PRUNE
 }
 
 input PruneActionInput {
-    start: Int
-    end: Int
+  start: Int
+  end: Int
 }
 
 input PruneAction {
-    type: PRUNE!
-    input: PruneActionInput!
+  type: PRUNE!
+  input: PruneActionInput!
 }
 
 enum LOAD_STATE {
-    LOAD_STATE
+  LOAD_STATE
 }
 
 input LoadStateActionStateInput {
-    name: String!
-    data: Unknown
-    # How to define data?
+  name: String!
+  data: Unknown
+  # How to define data?
 }
 
 input LoadStateActionInput {
-    state: LoadStateActionStateInput!
-    operations: Int!
+  state: LoadStateActionStateInput!
+  operations: Int!
 }
 
 input LoadStateAction {
-    type: LOAD_STATE!
-    input: LoadStateActionInput!
+  type: LOAD_STATE!
+  input: LoadStateActionInput!
 }
 
 union DocumentAction =
-      SetNameAction
-    | UndoAction
-    | RedoAction
-    | PruneAction
-    | LoadStateAction
+  | SetNameAction
+  | UndoAction
+  | RedoAction
+  | PruneAction
+  | LoadStateAction
 
 type Mutation {
-    setName(input: SetNameAction!): IDocument
-    undo(input: UndoAction!): IDocument
-    redo(input: RedoAction!): IDocument
-    prune(input: PruneAction!): IDocument
-    loadState(input: LoadStateAction!): IDocument
+  setName(input: SetNameAction!): IDocument
+  undo(input: UndoAction!): IDocument
+  redo(input: RedoAction!): IDocument
+  prune(input: PruneAction!): IDocument
+  loadState(input: LoadStateAction!): IDocument
 }

@@ -36,4 +36,4 @@ controller.abort();
 
 ## Links
 
-* [Interface](interface.md)
+- [Interface](interface.md)

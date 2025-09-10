@@ -15,6 +15,7 @@ Version 4.0.0 introduced a significant refactor of the `PHDocument` structure th
 The most significant change is the consolidation of document metadata into a `header` field. Previously, document properties were scattered at the root level of the document object.
 
 **Before (v3.2.0 and earlier):**
+
 ```javascript
 const document = {
   id: "doc-123",
@@ -25,10 +26,11 @@ const document = {
   name: "My Todo List",
   slug: "my-todo-list",
   // ... other properties
-}
+};
 ```
 
 **After (v4.0.0):**
+
 ```javascript
 const document = {
   header: {
@@ -41,26 +43,26 @@ const document = {
     slug: "my-todo-list",
     branch: "main",
     sig: { nonce: "", publicKey: {} },
-    meta: {}
+    meta: {},
   },
   // ... other properties
-}
+};
 ```
 
 ## Complete Property Migration Map
 
-| **Old Property** | **New Property** | **Additional Changes** |
-|------------------|------------------|------------------------|
-| `document.id` | `document.header.id` | Now an Ed25519 signature for signed documents |
-| `document.created` | `document.header.createdAtUtcIso` | **Renamed** to include UTC ISO specification |
-| `document.lastModified` | `document.header.lastModifiedAtUtcIso` | **Renamed** to include UTC ISO specification |
-| `document.revision` | `document.header.revision` | Now an **object** with scope keys (e.g., `{ global: 5, local: 0 }`) |
-| `document.documentType` | `document.header.documentType` | No additional changes |
-| `document.name` | `document.header.name` | No additional changes |
-| `document.slug` | `document.header.slug` | No additional changes |
-| `document.branch` | `document.header.branch` | Now explicitly included |
-| `document.meta` | `document.header.meta` | Now explicitly included |
-| N/A | `document.header.sig` | **New** - Signature information for document verification |
+| **Old Property**        | **New Property**                       | **Additional Changes**                                              |
+| ----------------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| `document.id`           | `document.header.id`                   | Now an Ed25519 signature for signed documents                       |
+| `document.created`      | `document.header.createdAtUtcIso`      | **Renamed** to include UTC ISO specification                        |
+| `document.lastModified` | `document.header.lastModifiedAtUtcIso` | **Renamed** to include UTC ISO specification                        |
+| `document.revision`     | `document.header.revision`             | Now an **object** with scope keys (e.g., `{ global: 5, local: 0 }`) |
+| `document.documentType` | `document.header.documentType`         | No additional changes                                               |
+| `document.name`         | `document.header.name`                 | No additional changes                                               |
+| `document.slug`         | `document.header.slug`                 | No additional changes                                               |
+| `document.branch`       | `document.header.branch`               | Now explicitly included                                             |
+| `document.meta`         | `document.header.meta`                 | Now explicitly included                                             |
+| N/A                     | `document.header.sig`                  | **New** - Signature information for document verification           |
 
 ## Step-by-Step Migration Guide
 
@@ -72,6 +74,7 @@ Replace all instances of direct property access with header-based access:
 <summary>**Common Property Access Patterns**</summary>
 
 **Document ID Access:**
+
 ```javascript
 // Before
 const documentId = document.id;
@@ -81,6 +84,7 @@ const documentId = document.header.id;
 ```
 
 **Document Name Access:**
+
 ```javascript
 // Before
 const documentName = document.name;
@@ -90,6 +94,7 @@ const documentName = document.header.name;
 ```
 
 **Document Type Access:**
+
 ```javascript
 // Before
 const docType = document.documentType;
@@ -99,6 +104,7 @@ const docType = document.header.documentType;
 ```
 
 **Timestamp Access:**
+
 ```javascript
 // Before
 const created = document.created;
@@ -110,6 +116,7 @@ const lastModified = document.header.lastModifiedAtUtcIso;
 ```
 
 **Revision Access:**
+
 ```javascript
 // Before
 const revision = document.revision; // Was a number
@@ -135,11 +142,13 @@ const allRevisions = document.header.revision; // { global: 5, local: 0, ... }
 function DocumentList({ documents }) {
   return (
     <div>
-      {documents.map(doc => (
+      {documents.map((doc) => (
         <div key={doc.id} className="document-item">
           <h3>{doc.name}</h3>
           <p>Type: {doc.documentType}</p>
-          <p>Last modified: {new Date(doc.lastModified).toLocaleDateString()}</p>
+          <p>
+            Last modified: {new Date(doc.lastModified).toLocaleDateString()}
+          </p>
           <p>Revision: {doc.revision}</p>
         </div>
       ))}
@@ -151,11 +160,14 @@ function DocumentList({ documents }) {
 function DocumentList({ documents }) {
   return (
     <div>
-      {documents.map(doc => (
+      {documents.map((doc) => (
         <div key={doc.header.id} className="document-item">
           <h3>{doc.header.name}</h3>
           <p>Type: {doc.header.documentType}</p>
-          <p>Last modified: {new Date(doc.header.lastModifiedAtUtcIso).toLocaleDateString()}</p>
+          <p>
+            Last modified:{" "}
+            {new Date(doc.header.lastModifiedAtUtcIso).toLocaleDateString()}
+          </p>
           <p>Global Revision: {doc.header.revision.global}</p>
         </div>
       ))}
@@ -218,16 +230,17 @@ interface MyDocument {
 <summary>**GraphQL Query Compatibility**</summary>
 
 **GraphQL Queries:**
+
 ```graphql
 # Your existing queries continue to work unchanged
 query GetDocument($id: ID!) {
   document(id: $id) {
-    id              # Still works due to response transformation
-    name            # Still works due to response transformation
-    documentType    # Still works due to response transformation
-    created         # Still works due to response transformation
-    lastModified    # Still works due to response transformation
-    revision        # Still works due to response transformation
+    id # Still works due to response transformation
+    name # Still works due to response transformation
+    documentType # Still works due to response transformation
+    created # Still works due to response transformation
+    lastModified # Still works due to response transformation
+    revision # Still works due to response transformation
   }
 }
 ```
@@ -237,10 +250,6 @@ query GetDocument($id: ID!) {
 :::
 
 </details>
-
-
-
-
 
 ## Common Migration Issues and Solutions
 
@@ -299,15 +308,15 @@ Create tests to verify your migration:
 
 ```javascript
 // Test document property access
-describe('Document Migration', () => {
-  it('should access document properties correctly', () => {
+describe("Document Migration", () => {
+  it("should access document properties correctly", () => {
     const mockDocument = {
       header: {
-        id: 'test-id',
-        name: 'Test Document',
-        documentType: 'powerhouse/test',
-        createdAtUtcIso: '2023-01-01T00:00:00.000Z',
-        lastModifiedAtUtcIso: '2023-01-01T12:00:00.000Z',
+        id: "test-id",
+        name: "Test Document",
+        documentType: "powerhouse/test",
+        createdAtUtcIso: "2023-01-01T00:00:00.000Z",
+        lastModifiedAtUtcIso: "2023-01-01T12:00:00.000Z",
         revision: { global: 5, local: 0 },
         // ... other header properties
       },
@@ -315,16 +324,14 @@ describe('Document Migration', () => {
     };
 
     // Test property access
-    expect(mockDocument.header.id).toBe('test-id');
-    expect(mockDocument.header.name).toBe('Test Document');
+    expect(mockDocument.header.id).toBe("test-id");
+    expect(mockDocument.header.name).toBe("Test Document");
     expect(mockDocument.header.revision.global).toBe(5);
   });
 });
 ```
 
 </details>
-
-
 
 ## Related Documentation
 
@@ -334,4 +341,4 @@ describe('Document Migration', () => {
 
 ---
 
-*This migration guide covers the major changes in v4.0.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository.* 
+_This migration guide covers the major changes in v4.0.0. For additional technical details, refer to the [RELEASE-NOTES.md](https://github.com/powerhouse-dao/powerhouse/blob/main/RELEASE-NOTES.md) in the main repository._
