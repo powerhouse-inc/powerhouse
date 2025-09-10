@@ -1,6 +1,7 @@
-import type { PHDocument, BaseStateFromDocument } from "document-model";
-import type { DocumentEditorState } from "./schema/types.js";
+import type { PHDocument } from "document-model";
 import type { DocumentEditorAction } from "./actions.js";
+import type { DocumentEditorPHState } from "./ph-factories.js";
+import type { DocumentEditorState } from "./schema/types.js";
 
 export { z } from "./schema/index.js";
 export type * from "./schema/types.js";

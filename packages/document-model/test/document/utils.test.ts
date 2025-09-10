@@ -173,7 +173,7 @@ describe("Base utils", () => {
   });
 
   it("should replay document and keep lastModified timestamp", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );
@@ -198,8 +198,8 @@ describe("Base utils", () => {
   });
 
   it("should work with mutable reducer", () => {
-    const reducer = createReducer<CountDocument>(mutableCountReducer);
-    const document = baseCreateDocument<CountDocument>(
+    const reducer = createReducer<CountPHState>(mutableCountReducer);
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );

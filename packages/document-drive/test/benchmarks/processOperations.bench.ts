@@ -25,7 +25,7 @@ const DRIVE_ID = GetDrive.data.drive.id;
 const documentModels = [
   driveDocumentModelModule,
   documentModelDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 vi.mock(import("graphql-request"), async () => {
   const originalModule = await vi.importActual("graphql-request");

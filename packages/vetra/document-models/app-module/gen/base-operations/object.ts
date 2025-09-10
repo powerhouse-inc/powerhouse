@@ -8,11 +8,7 @@ import type {
 import { setAppName, setAppStatus } from "./creators.js";
 import type { AppModuleAction } from "../actions.js";
 
-export default class AppModule_BaseOperations extends BaseDocumentClass<
-  AppModuleState,
-  AppModuleLocalState,
-  AppModuleAction
-> {
+export default class AppModule_BaseOperations extends BaseDocumentClass<AppModulePHState> {
   public setAppName(input: SetAppNameInput) {
     return this.dispatch(setAppName(input));
   }

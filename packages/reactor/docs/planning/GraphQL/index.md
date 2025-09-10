@@ -9,7 +9,7 @@ be handled outside of this interface.
 
 ```graphql
 # Scalar types
-scalar JSON
+scalar JSONObject
 scalar DateTime
 
 # Input types
@@ -52,7 +52,7 @@ type DocumentModelState {
   name: String!
   namespace: String
   version: String
-  specification: JSON
+  specification: JSONObject
 }
 
 type DocumentModelResultPage {
@@ -68,7 +68,7 @@ type PHDocument {
   slug: String
   name: String!
   documentType: String!
-  state: JSON!
+  state: JSONObject!
   revision: Int!
   created: DateTime!
   lastModified: DateTime!
@@ -96,7 +96,7 @@ type MoveChildrenResult {
 type JobInfo {
   id: String!
   status: String!
-  result: JSON
+  result: JSONObject
   error: String
   createdAt: DateTime!
   completedAt: DateTime
@@ -158,19 +158,19 @@ type Mutation {
     parentIdentifier: String
   ): PHDocument!
 
-  # Apply operations to a document (synchronous)
+  # Apply actions to a document (synchronous)
   mutateDocument(
     documentIdentifier: String!
-    operations: [JSON!]!
+    actions: [JSONObject!]!
     view: ViewFilterInput
   ): PHDocument!
 
-  # Submit operations to a document (asynchronous)
+  # Submit actions to a document (asynchronous)
   mutateDocumentAsync(
     documentIdentifier: String!
-    operations: [JSON!]!
+    actions: [JSONObject!]!
     view: ViewFilterInput
-  ): JobInfo!
+  ): String!
 
   # Rename a document
   renameDocument(
@@ -214,6 +214,9 @@ type Subscription {
     search: SearchFilterInput!
     view: ViewFilterInput
   ): DocumentChangeEvent!
+
+  # Subscribe to job changes
+  jobChanges(jobId: String!): JobChangeEvent!
 }
 ```
 
@@ -300,7 +303,7 @@ query GetPhSkyDocumentModels {
 ### 2. Creating a Document of Type "document-drive"
 
 ```graphql
-mutation CreateDocumentDrive($document: JSON!, $parentId: String) {
+mutation CreateDocumentDrive($document: JSONObject!, $parentId: String) {
   createDocument(document: $document, parentIdentifier: $parentId) {
     id
     slug
@@ -421,15 +424,9 @@ mutation SubmitDocumentMutation(
 ) {
   mutateDocumentAsync(
     documentIdentifier: $docId
-    operations: $operations
+    actions: $actions
     view: $view
-  ) {
-    id
-    status
-    createdAt
-    result
-    error
-  }
+  )
 }
 ```
 
@@ -438,7 +435,7 @@ mutation SubmitDocumentMutation(
 ```json
 {
   "docId": "document-id-or-slug",
-  "operations": [
+  "actions": [
     {
       "type": "SET_NAME",
       "input": {
@@ -481,7 +478,7 @@ mutation MutateDocumentSync(
 
 ### 5. Checking Job Status
 
-After submitting an async mutation, check the job status:
+After submitting an async mutation, use the returned job id to check the job status:
 
 ```graphql
 query CheckJobStatus($jobId: String!) {
@@ -546,7 +543,7 @@ subscription WatchDocumentChanges(
 All resolvers forward errors from the underlying `IReactorClient` methods as GraphQL errors. Common error scenarios include:
 
 - **Document not found**: When requesting a document that doesn't exist
-- **Invalid operations**: When submitting malformed operations
+- **Invalid actions**: When submitting malformed actions
 - **Permission denied**: When attempting unauthorized actions
 - **Validation errors**: When document state validation fails
 

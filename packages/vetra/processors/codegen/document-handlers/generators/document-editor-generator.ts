@@ -56,9 +56,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as DocumentEditorState;
 
     // Validation is already done in shouldProcess, so we can proceed directly

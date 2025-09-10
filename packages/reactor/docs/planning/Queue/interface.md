@@ -93,6 +93,17 @@ export interface IQueue {
    *
    * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
-  getNext(signal?: AbortSignal): IJobExecutionHandle | null;
+  dequeue(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null>;
+
+  /**
+   * Get the next available job from any queue.
+   * @returns Promise that resolves to the next job execution handle or null if no jobs available
+   */
+  dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null>;
 }
 ```

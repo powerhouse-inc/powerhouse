@@ -90,7 +90,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const documentModels = [
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-    ] as DocumentModelModule[];
+    ] as DocumentModelModule<any>[];
 
     let server: IDocumentDriveServer;
     beforeEach(async () => {

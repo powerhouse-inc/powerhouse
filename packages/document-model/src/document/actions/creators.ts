@@ -92,8 +92,8 @@ export const prune = (start?: number, end?: number, scope = "global") =>
  * @param operations - Number of operations that were removed from the previous state.
  * @category Actions
  */
-export const loadState = <S, T>(
-  state: BaseState<S, T> & { name: string },
+export const loadState = <TState extends PHBaseState = PHBaseState>(
+  state: TState & { name: string },
   operations: number,
 ) =>
   createAction<LoadStateAction>(

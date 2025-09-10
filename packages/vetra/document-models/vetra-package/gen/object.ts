@@ -22,10 +22,10 @@ class VetraPackage extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<VetraPackageDocument>>,
+    initialState?: Partial<VetraPackagePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 }
 

@@ -14,7 +14,9 @@ describe("Event", () => {
   });
 
   it("should not re-assingn index to an event", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
 
     document = wrappedEmptyReducer(
       document,
@@ -72,7 +74,9 @@ describe("Event", () => {
   });
 
   it("should remove skipped operations", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
 
     document = wrappedEmptyReducer(
       document,
@@ -133,7 +137,9 @@ describe("Event", () => {
   });
 
   it("should continue with next index after an operation", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
 
     document = wrappedEmptyReducer(
       document,
@@ -204,7 +210,9 @@ describe("Event", () => {
   });
 
   it("should calculate the right document revision when last action is an event", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
 
     document = wrappedEmptyReducer(
       document,

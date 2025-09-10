@@ -51,30 +51,23 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
 }
 
 export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
-  const stateFields = generateDocumentStateQueryFields(
-    documentModel,
-    "document",
-  );
-  return `query getDocument($documentId: PHID!, $driveId: String) {
-  ${documentModel.name} {
-    getDocument(docId: $documentId, driveId: $driveId) {
+  return `query getDocument($documentId: String!) {
+  document(id: $documentId) {
       id
-      created
       lastModified
       name
       revision
-      state {
-        ${stateFields}
-      }
+      stateJSON
     }
   }
-}`;
+`;
 }
 
 export function buildDocumentSubgraphQuery(
   driveUrl: string,
   documentId: string,
   documentModel: DocumentModelState,
+  authToken?: string,
 ) {
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery(documentModel);
@@ -91,13 +84,13 @@ export function buildDocumentSubgraphUrl(
   driveUrl: string,
   documentId: string,
   documentModel: DocumentModelState,
+  authToken?: string,
 ) {
-  const switchboardUrl = getSwitchboardGatewayUrlFromDriveUrl(driveUrl);
-  const subgraph = kebabCase(documentModel.name);
   const encodedQuery = buildDocumentSubgraphQuery(
     driveUrl,
     documentId,
     documentModel,
+    authToken,
   );
-  return `${switchboardUrl}/${subgraph}?explorerURLState=${encodedQuery}`;
+  return `${driveUrl}?explorerURLState=${encodedQuery}`;
 }

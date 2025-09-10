@@ -31,9 +31,7 @@ export class PackageGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as VetraPackageState;
 
     logger.info("🔄 Generating manifest for package");

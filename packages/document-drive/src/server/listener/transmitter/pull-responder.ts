@@ -281,6 +281,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                 branch
                 operations {
                   id
+                  actionId
                   timestampUtcMs
                   skip
                   type
@@ -330,6 +331,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
                     branch
                     operations {
                       id
+                      actionId
                       timestampUtcMs
                       skip
                       type

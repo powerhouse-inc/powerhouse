@@ -26,27 +26,25 @@ export async function baseSaveToFileHandle(
 
 export async function baseLoadFromInput<TDocument extends PHDocument>(
   input: FileInput,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const zip = new JSZip();
   await zip.loadAsync(input);
   return loadFromZip(zip, reducer, options);
 }
 
-async function loadFromZip<TDocument extends PHDocument>(
+async function loadFromZip<TState extends PHBaseState>(
   zip: JSZip,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const initialStateZip = zip.file("state.json");
   if (!initialStateZip) {
     throw new Error("Initial state not found");
   }
   const initialStateStr = await initialStateZip.async("string");
-  const initialState = JSON.parse(
-    initialStateStr,
-  ) as BaseStateFromDocument<TDocument>;
+  const initialState = JSON.parse(initialStateStr) as TState;
 
   const headerZip = zip.file("header.json");
   let header: PHDocumentHeader | undefined = undefined;

@@ -68,7 +68,7 @@ export class ReadModeService implements IReadModeDriveService {
     if (!drive) {
       return new ReadDriveNotFoundError(id);
     }
-    const document = await this.fetchDocument<DocumentDriveDocument>(
+    const document = await this.fetchDocument<DocumentDrivePHState>(
       id,
       id,
       driveDocumentType,
@@ -81,12 +81,12 @@ export class ReadModeService implements IReadModeDriveService {
     return result;
   }
 
-  async fetchDocument<TDocument extends PHDocument>(
+  async fetchDocument<TState extends PHBaseState = PHBaseState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | DocumentGraphQLResult<TDocument>
+    | PHDocument<TState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -96,7 +96,7 @@ export class ReadModeService implements IReadModeDriveService {
       return new ReadDriveNotFoundError(driveId);
     }
 
-    let documentModelModule: DocumentModelModule<TDocument> | undefined =
+    let documentModelModule: DocumentModelModule<TState> | undefined =
       undefined;
     try {
       documentModelModule = this.#getDocumentModelModule(documentType);
@@ -105,7 +105,7 @@ export class ReadModeService implements IReadModeDriveService {
     }
 
     const { url } = drive.context;
-    const { errors, document } = await fetchDocument<TDocument>(
+    const { errors, document } = await fetchDocument<TState>(
       url,
       documentId,
       documentModelModule,

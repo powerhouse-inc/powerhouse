@@ -62,7 +62,7 @@ describe("SwitchboardPush Listener", () => {
     const documentModels = [
       documentModelDocumentModelModule,
       driveDocumentModelModule,
-    ] as DocumentModelModule[];
+    ] as DocumentModelModule<any>[];
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();

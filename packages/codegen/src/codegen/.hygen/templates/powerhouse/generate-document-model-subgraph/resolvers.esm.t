@@ -4,10 +4,10 @@ force: true
 ---
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { actions <% modules.forEach(module => { %><% module.operations.forEach(op => { %>, type <%- h.changeCase.pascal(op.name) %>Input<%_ })}); %> } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
+import { actions <% modules.forEach(module => { %><% module.operations.forEach(op => { %>, type <%- h.changeCase.pascal(op.name) %>Input<%_ })}); %>, type <%- h.changeCase.pascal(documentType) %>Document } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
 import { setName } from "document-model";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return ({
@@ -28,11 +28,13 @@ export const getResolvers = (subgraph: Subgraph) => {
               }
             }
 
-            const doc = await reactor.getDocument(docId);
+            const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
               state: doc.state.global,
               stateJSON: doc.state.global,
               revision: doc.header?.revision?.global ?? 0,
@@ -43,11 +45,13 @@ export const getResolvers = (subgraph: Subgraph) => {
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(docId);
+                const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
                   state: doc.state.global,
                   stateJSON: doc.state.global,
                   revision: doc.header?.revision?.global ?? 0,
@@ -92,7 +96,7 @@ export const getResolvers = (subgraph: Subgraph) => {
 <% module.operations.forEach(op => { _%>
         <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) %>: async (_: unknown, args: { docId: string, input: <%- h.changeCase.pascal(op.name) %>Input}) => {
             const { docId, input } = args;
-            const doc = await reactor.getDocument(docId);
+            const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
             if(!doc) {
               throw new Error("Document not found");
             }

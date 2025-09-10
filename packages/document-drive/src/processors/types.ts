@@ -52,9 +52,7 @@ export interface IProcessor {
    *
    * @param strands The strands to process.
    */
-  onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void>;
+  onStrands(strands: InternalTransmitterUpdate[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected. This is generally meant to

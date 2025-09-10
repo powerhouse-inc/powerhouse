@@ -14,6 +14,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
+  DocumentModelDocument,
   documentModelDocumentModelModule,
   generateId,
   setAuthorName,
@@ -124,7 +125,9 @@ describe("Pull Responder Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(drive.state.global).toStrictEqual(result.document?.state.global);
+
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(drive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     await reactor.deleteDrive(driveId);
@@ -160,16 +163,22 @@ describe("Pull Responder Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(drive.state.global).toStrictEqual(result.document?.state.global);
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(drive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     await vi.waitFor(async () => {
-      const document = await reactor.getDocument(documentId);
+      const document = (await reactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(document)).toStrictEqual({
         global: -1,
         local: -1,
       });
-      expect(document.state.global).toStrictEqual(document?.state.global);
+      const remoteDocument = (await remoteReactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
+      expect(document.state.global).toStrictEqual(remoteDocument.state.global);
     });
 
     await reactor.deleteDrive(driveId);
@@ -206,14 +215,15 @@ describe("Pull Responder Transmitter", () => {
     );
 
     await vi.waitFor(async () => {
-      const document = await reactor.getDocument(documentId);
+      const document = (await reactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(document)).toStrictEqual({
         global: 0,
         local: -1,
       });
-      expect(document.state.global).toStrictEqual(
-        result.document?.state.global,
-      );
+      const resultDocument = result.document as DocumentDriveDocument;
+      expect(document.state.global).toStrictEqual(resultDocument.state.global);
     });
 
     await reactor.deleteDrive(driveId);

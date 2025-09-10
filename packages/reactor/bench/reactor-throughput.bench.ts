@@ -1,61 +1,80 @@
-import { bench, describe } from "vitest";
+import { MemoryStorage } from "document-drive";
+import { documentModelDocumentModelModule } from "document-model";
+import { beforeAll, bench, describe } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
-import { InMemoryJobExecutor } from "../src/executor/job-executor.js";
+import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import { type Job } from "../src/queue/types.js";
 
 // Pre-create shared components to avoid setup overhead
 const eventBus = new EventBus();
 const queue = new InMemoryQueue(eventBus);
-const executor = new InMemoryJobExecutor(eventBus, queue);
 
-// Initialize executor once
-await executor.start({ maxConcurrency: 5, jobTimeout: 10000 });
+// Create registry with real document model
+const registry = new DocumentModelRegistry();
+registry.registerModules(documentModelDocumentModelModule);
+
+// Use real storage
+const storage = new MemoryStorage();
+
+// Create real executor with real storage
+const executor = new SimpleJobExecutor(registry, storage, storage);
+
+// Pre-create a document for benchmarks
+const testDocument = documentModelDocumentModelModule.utils.createDocument();
+testDocument.header.id = "doc1";
 
 let jobCounter = 0;
 
 function createSimpleJob(): Job {
+  const action = createDocumentModelAction("SET_NAME", {
+    input: { name: `Test Name ${++jobCounter}` },
+  });
+  const operation = createTestOperation({ action });
+
   return {
-    id: `job-${++jobCounter}`,
+    id: `job-${jobCounter}`,
     documentId: "doc1",
-    scope: "default",
+    scope: "global",
     branch: "main",
-    operation: {
-      type: "CREATE",
-      input: { data: "simple data" },
-      index: 0,
-      timestampUtcMs: "2023-01-01T00:00:00.000Z",
-      hash: "hash-123",
-      skip: 0,
-    },
+    operation,
     maxRetries: 0,
-    createdAt: "2023-01-01T00:00:00.000Z",
+    createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 
 function createComplexJob(): Job {
+  const action = createDocumentModelAction("SET_DESCRIPTION", {
+    input: {
+      description: Array.from(
+        { length: 100 },
+        (_, i) => `Description line ${i}`,
+      ).join("\n"),
+    },
+  });
+  const operation = createTestOperation({
+    action,
+    index: Math.floor(Math.random() * 1000),
+  });
+
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
-    scope: "default",
+    scope: "global",
     branch: "main",
-    operation: {
-      type: "UPDATE",
-      input: {
-        data: Array.from({ length: 100 }, (_, i) => `item ${i}`),
-        metadata: { timestampUtcMs: Date.now(), user: "test" },
-      },
-      index: Math.floor(Math.random() * 1000),
-      timestampUtcMs: "2023-01-01T00:00:00.000Z",
-      hash: "hash-456",
-      skip: 0,
-    },
+    operation,
     maxRetries: 0,
-    createdAt: "2023-01-01T00:00:00.000Z",
+    createdAt: new Date().toISOString(),
+    queueHint: [],
   };
 }
 
 describe("Queue Throughput", () => {
+  beforeAll(async () => {
+    await storage.create(testDocument);
+  });
+
   bench("enqueue simple job", async () => {
     const job = createSimpleJob();
     await queue.enqueue(job);
@@ -95,13 +114,7 @@ describe("Job Executor Throughput", () => {
     await executor.executeJob(job);
   });
 
-  bench("executor status check", async () => {
-    await executor.getStatus();
-  });
-
-  bench("executor stats check", async () => {
-    await executor.getStats();
-  });
+  // Status and stats checks are now on the manager, not individual executors
 });
 
 describe("End-to-End Throughput", () => {

@@ -45,9 +45,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as SubgraphModuleState;
 
     // Check if we have a valid subgraph name and it's confirmed

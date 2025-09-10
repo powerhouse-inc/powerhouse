@@ -27,11 +27,7 @@ import {
 } from "./creators.js";
 import type { VetraPackageAction } from "../actions.js";
 
-export default class VetraPackage_BaseOperations extends BaseDocumentClass<
-  VetraPackageState,
-  VetraPackageLocalState,
-  VetraPackageAction
-> {
+export default class VetraPackage_BaseOperations extends BaseDocumentClass<VetraPackagePHState> {
   public setPackageName(input: SetPackageNameInput) {
     return this.dispatch(setPackageName(input));
   }

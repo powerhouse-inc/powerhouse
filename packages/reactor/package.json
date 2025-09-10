@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "4.1.0-dev.33",
+  "version": "4.1.0-dev.50",
   "description": "",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -24,6 +24,11 @@
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",
+  "dependencies": {
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "uuid": "^11.0.5"
+  },
   "devDependencies": {
     "vitest": "^3.1.2"
   }

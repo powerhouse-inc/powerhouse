@@ -67,32 +67,6 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
     <Icon name="M" size={16} className="flex-none" />
   );
 
-  function getDriveSharingType(
-    drive:
-      | {
-          state: {
-            local: {
-              sharingType?: string | null;
-            };
-          };
-          readContext?: {
-            sharingType?: string | null;
-          };
-        }
-      | undefined
-      | null,
-  ) {
-    if (!drive) return "PUBLIC";
-    const isReadDrive = "readContext" in drive;
-    const { sharingType: _sharingType } = !isReadDrive
-      ? drive.state.local
-      : { sharingType: "PUBLIC" };
-    const __sharingType = _sharingType?.toUpperCase();
-    return (
-      __sharingType === "PRIVATE" ? "LOCAL" : __sharingType
-    ) as SharingType;
-  }
-
   function getNodeIcon() {
     const sharingType = getDriveSharingType(drive);
     if (sharingType === PUBLIC) {

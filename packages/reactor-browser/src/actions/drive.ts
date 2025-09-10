@@ -10,6 +10,8 @@ import type {
   Trigger,
 } from "document-drive";
 import {
+  PullResponderTransmitter,
+  SynchronizationUnitNotFoundError,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
   driveCreateState,
@@ -22,13 +24,13 @@ import {
 import { generateId } from "document-model";
 import { queueActions } from "./queue.js";
 
-export async function addDrive(drive: DriveInput, preferredEditor?: string) {
+export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const reactor = window.reactor;
   if (!reactor) {
     return;
   }
-  const { isAllowedToCreateDocuments } = getUserPermissions();
 
+  const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
   }
@@ -36,8 +38,8 @@ export async function addDrive(drive: DriveInput, preferredEditor?: string) {
   const driveInput = driveCreateState(drive);
   const newDrive = await reactor.addDrive(
     {
-      global: driveInput.global,
-      local: driveInput.local,
+      global: state.global,
+      local: state.local,
       id,
     },
     preferredEditor,
@@ -163,10 +165,6 @@ export function getSyncStatusSync(
     console.error(error);
     return "ERROR";
   }
-}
-
-export async function clearStorage() {
-  await window.phStorage?.clear();
 }
 
 export async function removeTrigger(driveId: string, triggerId: string) {

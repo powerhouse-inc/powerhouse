@@ -3,6 +3,11 @@ import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import { EventBusAggregateError } from "../src/events/types.js";
 
+type TestEvent = {
+  emitId?: string;
+  value?: number;
+};
+
 describe("EventBus", () => {
   describe("order of subscriber execution", () => {
     it("should execute subscribers in registration order", async () => {
@@ -99,16 +104,22 @@ describe("EventBus", () => {
       const eventType2 = 2;
 
       // Subscriber for event type 1 with delay
-      eventBus.subscribe(eventType1, async (type, data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        results.push({ eventType: type, data, timestampUtcMs: Date.now() });
-      });
+      eventBus.subscribe<TestEvent>(
+        eventType1,
+        async (type, data: TestEvent) => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          results.push({ eventType: type, data, timestampUtcMs: Date.now() });
+        },
+      );
 
       // Subscriber for event type 2 with shorter delay
-      eventBus.subscribe(eventType2, async (type, data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        results.push({ eventType: type, data, timestampUtcMs: Date.now() });
-      });
+      eventBus.subscribe<TestEvent>(
+        eventType2,
+        async (type, data: TestEvent) => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          results.push({ eventType: type, data, timestampUtcMs: Date.now() });
+        },
+      );
 
       const startTime = Date.now();
 
@@ -148,23 +159,29 @@ describe("EventBus", () => {
       const eventType = 1;
 
       // Multiple subscribers with different delays
-      eventBus.subscribe(eventType, async (type, data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        results.push({
-          emitId: data.emitId,
-          subscriberId: 1,
-          timestampUtcMs: Date.now(),
-        });
-      });
+      eventBus.subscribe<TestEvent>(
+        eventType,
+        async (type, data: TestEvent) => {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          results.push({
+            emitId: data.emitId ?? "",
+            subscriberId: 1,
+            timestampUtcMs: Date.now(),
+          });
+        },
+      );
 
-      eventBus.subscribe(eventType, async (type, data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-        results.push({
-          emitId: data.emitId,
-          subscriberId: 2,
-          timestampUtcMs: Date.now(),
-        });
-      });
+      eventBus.subscribe<TestEvent>(
+        eventType,
+        async (type, data: TestEvent) => {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          results.push({
+            emitId: data.emitId ?? "",
+            subscriberId: 2,
+            timestampUtcMs: Date.now(),
+          });
+        },
+      );
 
       // Emit the same event type concurrently
       await Promise.all([
@@ -194,19 +211,22 @@ describe("EventBus", () => {
       const eventType = 1;
 
       // Synchronous subscriber
-      eventBus.subscribe(eventType, (type, data: any) => {
-        results.push({ type: "sync", value: data.value });
+      eventBus.subscribe<TestEvent>(eventType, (type, data: TestEvent) => {
+        results.push({ type: "sync", value: data.value ?? 0 });
       });
 
       // Asynchronous subscriber
-      eventBus.subscribe(eventType, async (type, data: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        results.push({ type: "async", value: data.value });
-      });
+      eventBus.subscribe<TestEvent>(
+        eventType,
+        async (type, data: TestEvent) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push({ type: "async", value: data.value ?? 0 });
+        },
+      );
 
       // Another synchronous subscriber
-      eventBus.subscribe(eventType, (type, data: any) => {
-        results.push({ type: "sync2", value: data.value });
+      eventBus.subscribe<TestEvent>(eventType, (type, data: TestEvent) => {
+        results.push({ type: "sync2", value: data.value ?? 0 });
       });
 
       await eventBus.emit(eventType, { value: 42 });
@@ -224,18 +244,18 @@ describe("EventBus", () => {
       const eventType = 1;
 
       // Subscriber returning void
-      eventBus.subscribe(eventType, () => {
+      eventBus.subscribe<TestEvent>(eventType, () => {
         results.push("void");
       });
 
       // Subscriber returning Promise<void>
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe<TestEvent>(eventType, async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         results.push("promise-void");
       });
 
       // Subscriber returning a value (should be ignored)
-      eventBus.subscribe(eventType, () => {
+      eventBus.subscribe<TestEvent>(eventType, () => {
         results.push("value");
         // Don't return anything to avoid type error
       });
@@ -250,11 +270,11 @@ describe("EventBus", () => {
       const eventBus = new EventBus();
       const eventType = 1;
 
-      eventBus.subscribe(eventType, () => {
+      eventBus.subscribe<TestEvent>(eventType, () => {
         throw new Error("Sync error");
       });
 
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe<TestEvent>(eventType, () => {
         throw new Error("Async error");
       });
 
@@ -267,12 +287,12 @@ describe("EventBus", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(EventBusAggregateError);
         expect((error as EventBusAggregateError).errors).toHaveLength(2);
-        expect((error as EventBusAggregateError).errors[0].message).toBe(
-          "Sync error",
-        );
-        expect((error as EventBusAggregateError).errors[1].message).toBe(
-          "Async error",
-        );
+        expect(
+          ((error as EventBusAggregateError).errors[0] as Error).message,
+        ).toBe("Sync error");
+        expect(
+          ((error as EventBusAggregateError).errors[1] as Error).message,
+        ).toBe("Async error");
       }
     });
   });
@@ -283,9 +303,13 @@ describe("EventBus", () => {
       const eventType = 1;
       let callCount = 0;
 
-      const unsubscribe = eventBus.subscribe(eventType, () => {
+      const unsubscribe = eventBus.subscribe<TestEvent>(eventType, () => {
         callCount++;
       });
+
+      // Emit event before unsubscribing
+      eventBus.emit(eventType, { data: "test" });
+      expect(callCount).toBe(1);
 
       // Call unsubscribe multiple times
       unsubscribe();
@@ -294,6 +318,10 @@ describe("EventBus", () => {
 
       // Should not throw and should work correctly
       expect(() => unsubscribe()).not.toThrow();
+
+      // Emit again to verify unsubscribe worked
+      eventBus.emit(eventType, { data: "test" });
+      expect(callCount).toBe(1); // Should still be 1
     });
 
     it("should handle unsubscribe during emission", async () => {
@@ -301,9 +329,9 @@ describe("EventBus", () => {
       const results: number[] = [];
       const eventType = 1;
 
-      let unsubscribe2: (() => void) | undefined;
+      let unsubscribe2: (() => void) | undefined = undefined;
 
-      eventBus.subscribe(eventType, () => {
+      eventBus.subscribe<TestEvent>(eventType, () => {
         results.push(1);
         // Unsubscribe subscriber 2 during emission
         if (unsubscribe2) {
@@ -311,7 +339,7 @@ describe("EventBus", () => {
         }
       });
 
-      unsubscribe2 = eventBus.subscribe(eventType, () => {
+      unsubscribe2 = eventBus.subscribe<TestEvent>(eventType, () => {
         results.push(2);
       });
 
@@ -330,7 +358,7 @@ describe("EventBus", () => {
       expect(results).toEqual([1, 3]);
     });
 
-    it("should clean up empty listener arrays", async () => {
+    it("should clean up empty listener arrays", () => {
       const eventBus = new EventBus();
       const eventType = 1;
 
@@ -338,24 +366,16 @@ describe("EventBus", () => {
       const unsubscribe2 = eventBus.subscribe(eventType, () => {});
 
       // Verify listeners exist
-      expect((eventBus as any).eventTypeToSubscribers.has(eventType)).toBe(
-        true,
-      );
-      expect(
-        (eventBus as any).eventTypeToSubscribers.get(eventType),
-      ).toHaveLength(2);
+      expect(eventBus.eventTypeToSubscribers.has(eventType)).toBe(true);
+      expect(eventBus.eventTypeToSubscribers.get(eventType)).toHaveLength(2);
 
       // Unsubscribe first subscriber
       unsubscribe1();
-      expect(
-        (eventBus as any).eventTypeToSubscribers.get(eventType),
-      ).toHaveLength(1);
+      expect(eventBus.eventTypeToSubscribers.get(eventType)).toHaveLength(1);
 
       // Unsubscribe last subscriber - should clean up the map entry
       unsubscribe2();
-      expect((eventBus as any).eventTypeToSubscribers.has(eventType)).toBe(
-        false,
-      );
+      expect(eventBus.eventTypeToSubscribers.has(eventType)).toBe(false);
     });
 
     it("should handle unsubscribe of non-existent subscriber gracefully", () => {
@@ -365,7 +385,11 @@ describe("EventBus", () => {
       const unsubscribe = eventBus.subscribe(eventType, () => {});
 
       // Manually remove the subscriber to simulate edge case
-      const listeners = (eventBus as any).eventTypeToSubscribers.get(eventType);
+      const listeners = eventBus.eventTypeToSubscribers.get(eventType);
+      if (!listeners) {
+        throw new Error("Listeners not found");
+      }
+
       listeners.length = 0;
 
       // Should not throw
@@ -391,7 +415,7 @@ describe("EventBus", () => {
         results.push(3);
       });
 
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe(eventType, () => {
         throw new Error("Subscriber 4 error");
       });
 
@@ -412,12 +436,12 @@ describe("EventBus", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(EventBusAggregateError);
         expect((error as EventBusAggregateError).errors).toHaveLength(2);
-        expect((error as EventBusAggregateError).errors[0].message).toBe(
-          "Subscriber 2 error",
-        );
-        expect((error as EventBusAggregateError).errors[1].message).toBe(
-          "Subscriber 4 error",
-        );
+        expect(
+          ((error as EventBusAggregateError).errors[0] as Error).message,
+        ).toBe("Subscriber 2 error");
+        expect(
+          ((error as EventBusAggregateError).errors[1] as Error).message,
+        ).toBe("Subscriber 4 error");
       }
     });
 
@@ -433,7 +457,7 @@ describe("EventBus", () => {
         throw new Error("Second error");
       });
 
-      eventBus.subscribe(eventType, async () => {
+      eventBus.subscribe(eventType, () => {
         throw new Error("Third error");
       });
 
@@ -446,15 +470,15 @@ describe("EventBus", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(EventBusAggregateError);
         expect((error as EventBusAggregateError).errors).toHaveLength(3);
-        expect((error as EventBusAggregateError).errors[0].message).toBe(
-          "First error",
-        );
-        expect((error as EventBusAggregateError).errors[1].message).toBe(
-          "Second error",
-        );
-        expect((error as EventBusAggregateError).errors[2].message).toBe(
-          "Third error",
-        );
+        expect(
+          ((error as EventBusAggregateError).errors[0] as Error).message,
+        ).toBe("First error");
+        expect(
+          ((error as EventBusAggregateError).errors[1] as Error).message,
+        ).toBe("Second error");
+        expect(
+          ((error as EventBusAggregateError).errors[2] as Error).message,
+        ).toBe("Third error");
       }
     });
 
@@ -491,9 +515,9 @@ describe("EventBus", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(EventBusAggregateError);
         expect((error as EventBusAggregateError).errors).toHaveLength(1);
-        expect((error as EventBusAggregateError).errors[0].message).toBe(
-          "Async error",
-        );
+        expect(
+          ((error as EventBusAggregateError).errors[0] as Error).message,
+        ).toBe("Async error");
       }
     });
 
@@ -533,12 +557,12 @@ describe("EventBus", () => {
       } catch (error) {
         expect(error).toBeInstanceOf(EventBusAggregateError);
         expect((error as EventBusAggregateError).errors).toHaveLength(2);
-        expect((error as EventBusAggregateError).errors[0].message).toBe(
-          "Sync error",
-        );
-        expect((error as EventBusAggregateError).errors[1].message).toBe(
-          "Async error",
-        );
+        expect(
+          ((error as EventBusAggregateError).errors[0] as Error).message,
+        ).toBe("Sync error");
+        expect(
+          ((error as EventBusAggregateError).errors[1] as Error).message,
+        ).toBe("Async error");
       }
     });
 

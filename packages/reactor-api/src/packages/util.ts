@@ -74,7 +74,8 @@ async function loadDependency<T = unknown>(
     if (
       e instanceof Error &&
       "code" in e &&
-      e.code === "ERR_MODULE_NOT_FOUND"
+      (e.code === "ERR_MODULE_NOT_FOUND" ||
+        e.code === "ERR_UNSUPPORTED_DIR_IMPORT")
     ) {
       const result = await resolveLinkedPackage<T>(packageName, subPath);
       if (result) return result;
@@ -83,13 +84,17 @@ async function loadDependency<T = unknown>(
       logger.warn(
         `Unable to load dependency ${fullPath} - tried standard import, suggested paths, resolved paths, and workspace patterns`,
       );
+
+      logger.error(e);
     } else if (
       e instanceof Error &&
       "code" in e &&
-      !["ERR_PACKAGE_PATH_NOT_EXPORTED", "ERR_MODULE_NOT_FOUND"].includes(
+      ["ERR_PACKAGE_PATH_NOT_EXPORTED", "ERR_MODULE_NOT_FOUND"].includes(
         e.code as string,
       )
     ) {
+      return null;
+    } else {
       logger.error(`Unexpected error loading ${fullPath}:`, e);
     }
 

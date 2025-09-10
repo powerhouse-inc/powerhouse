@@ -147,11 +147,25 @@ export class SwitchboardPushTransmitter implements ITransmitter {
         `,
         {
           strands: culledStrands.map((strand) => ({
-            ...strand,
+            driveId: strand.driveId,
+            documentId: strand.documentId,
+            documentType: strand.documentType,
+            scope: strand.scope,
+            branch: strand.branch,
             operations: strand.operations.map((op) => ({
-              ...op,
+              index: op.index,
+              skip: op.skip,
+              type: op.type,
+              id: op.id ?? undefined,
               actionId: op.actionId,
               input: stringify(op.input),
+              hash: op.hash,
+              timestampUtcMs: op.timestampUtcMs,
+              context: op.context
+                ? {
+                    signer: op.context.signer,
+                  }
+                : undefined,
             })),
           })),
         },

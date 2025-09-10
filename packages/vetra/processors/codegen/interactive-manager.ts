@@ -4,7 +4,7 @@ import { createInterface } from "readline";
 import { logger } from "./logger.js";
 
 export interface QueuedStrand {
-  strand: InternalTransmitterUpdate<DocumentModelDocument>;
+  strand: InternalTransmitterUpdate;
   timestamp: number;
 }
 
@@ -17,7 +17,7 @@ export class InteractiveManager {
   private processingConfirmation = false;
   private strandQueue = new Map<string, QueuedStrand>();
 
-  constructor(interactiveMode: boolean = false) {
+  constructor(interactiveMode = false) {
     this.isInteractiveMode = interactiveMode;
   }
 

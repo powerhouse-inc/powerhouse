@@ -147,7 +147,7 @@ vi.mock(import("graphql-request"), async () => {
 const documentModels = [
   driveDocumentModelModule,
   documentModelDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 describe("default remote drives", () => {
   const documentDriveServerOptions: DocumentDriveServerOptions = {

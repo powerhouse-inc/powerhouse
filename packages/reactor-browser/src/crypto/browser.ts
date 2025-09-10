@@ -6,15 +6,52 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
   static #KEY = "keyPair";
 
   #db: Promise<IDBDatabase>;
+
   constructor() {
-    this.#db = new Promise((resolve, reject) => {
-      const req = indexedDB.open(BrowserKeyStorage.#DB_NAME, 1);
-      req.onupgradeneeded = () => {
-        req.result.createObjectStore(BrowserKeyStorage.#STORE_NAME);
-      };
-      req.onsuccess = () => resolve(req.result);
+    this.#db = this.#initializeDatabase();
+  }
+
+  #initializeDatabase(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      // Open without version to get current version or create new database
+      const req = indexedDB.open(BrowserKeyStorage.#DB_NAME);
+      req.onupgradeneeded = this.#handleDatabaseUpgrade;
+      req.onsuccess = () =>
+        this.#handleDatabaseSuccess(req.result, resolve, reject);
       req.onerror = () => reject(req.error as Error);
     });
+  }
+
+  #handleDatabaseUpgrade = (event: IDBVersionChangeEvent): void => {
+    const db = (event.target as IDBOpenDBRequest).result;
+    this.#ensureObjectStoreExists(db);
+  };
+
+  #handleDatabaseSuccess = (
+    db: IDBDatabase,
+    resolve: (db: IDBDatabase) => void,
+    reject: (error: Error) => void,
+  ): void => {
+    if (!db.objectStoreNames.contains(BrowserKeyStorage.#STORE_NAME)) {
+      // Close and reopen with a higher version to create the missing object store
+      const currentVersion = db.version;
+      db.close();
+      const upgradeReq = indexedDB.open(
+        BrowserKeyStorage.#DB_NAME,
+        currentVersion + 1,
+      );
+      upgradeReq.onupgradeneeded = this.#handleDatabaseUpgrade;
+      upgradeReq.onsuccess = () => resolve(upgradeReq.result);
+      upgradeReq.onerror = () => reject(upgradeReq.error as Error);
+    } else {
+      resolve(db);
+    }
+  };
+
+  #ensureObjectStoreExists(db: IDBDatabase): void {
+    if (!db.objectStoreNames.contains(BrowserKeyStorage.#STORE_NAME)) {
+      db.createObjectStore(BrowserKeyStorage.#STORE_NAME);
+    }
   }
 
   async #useStore(mode: IDBTransactionMode = "readwrite") {
@@ -42,13 +79,11 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
 
   async loadKeyPair(): Promise<JwkKeyPair | undefined> {
     const store = await this.#useStore("readonly");
-    const request = store.getAll();
+    const request = store.get(BrowserKeyStorage.#KEY);
 
     return new Promise<JwkKeyPair | undefined>((resolve, reject) => {
       request.onsuccess = () => {
-        const keyPair = request.result.length
-          ? (request.result[0] as JwkKeyPair)
-          : undefined;
+        const keyPair = request.result as JwkKeyPair | undefined;
         resolve(keyPair);
       };
       request.onerror = () => {

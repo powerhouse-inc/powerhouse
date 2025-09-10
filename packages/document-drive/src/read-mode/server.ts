@@ -76,12 +76,12 @@ export function ReadModeServer(
       return this.#readModeStorage.fetchDrive(id);
     }
 
-    fetchDocument<TDocument extends PHDocument>(
+    fetchDocument<TState extends PHBaseState = PHBaseState>(
       driveId: string,
       documentId: string,
       documentType: string,
     ) {
-      return this.#readModeStorage.fetchDocument<TDocument>(
+      return this.#readModeStorage.fetchDocument<TState>(
         driveId,
         documentId,
         documentType,

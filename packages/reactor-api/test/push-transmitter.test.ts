@@ -106,9 +106,8 @@ describe("Push Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(remoteDrive.state.global).toStrictEqual(
-        result.document?.state.global,
-      );
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(remoteDrive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     const syncUnits = listenerManager?.getListenerState(
@@ -160,18 +159,22 @@ describe("Push Transmitter", () => {
         global: 0,
         local: -1,
       });
-      expect(remoteDrive.state.global).toStrictEqual(
-        result.document?.state.global,
-      );
+      const resultDrive = result.document as DocumentDriveDocument;
+      expect(remoteDrive.state.global).toStrictEqual(resultDrive.state.global);
     });
 
     await vi.waitFor(async () => {
-      const remoteDocument = await remoteReactor.getDocument(documentId);
+      const remoteDocument = (await remoteReactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(remoteDocument)).toStrictEqual({
         global: -1,
         local: -1,
       });
-      expect(remoteDocument.state.global).toStrictEqual(document.state.global);
+      const resultDocument = document as DocumentModelDocument;
+      expect(remoteDocument.state.global).toStrictEqual(
+        resultDocument.state.global,
+      );
     });
 
     const syncUnits = listenerManager?.getListenerState(
@@ -224,13 +227,16 @@ describe("Push Transmitter", () => {
     );
 
     await vi.waitFor(async () => {
-      const remoteDocument = await remoteReactor.getDocument(documentId);
+      const remoteDocument = (await remoteReactor.getDocument(
+        documentId,
+      )) as DocumentModelDocument;
       expect(getDocumentScopeIndexes(remoteDocument)).toStrictEqual({
         global: 0,
         local: -1,
       });
+      const resultDocument = result.document as DocumentDriveDocument;
       expect(remoteDocument.state.global).toStrictEqual(
-        result.document?.state.global,
+        resultDocument.state.global,
       );
     });
 

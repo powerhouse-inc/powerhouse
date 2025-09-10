@@ -37,8 +37,12 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              state: doc.state.global,
-              stateJSON: doc.state.global,
+              // these will be ripped out in the future, but for now all doc models have global state
+              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+              state: (doc.state as any).global ?? {},
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+              stateJSON: (doc.state as any).global ?? "{}",
               revision: doc.header?.revision?.global ?? 0,
             };
           },
@@ -52,8 +56,12 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  state: doc.state.global,
-                  stateJSON: doc.state.global,
+                  // these will be ripped out in the future, but for now all doc models have global state
+                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                  state: (doc.state as any).global ?? {},
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+                  stateJSON: (doc.state as any).global ?? "{}",
                   revision: doc.header?.revision?.global ?? 0,
                 };
               }),

@@ -15,7 +15,7 @@ import type { VetraPackageDocument } from "./gen/types.js";
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...VetraPackageActions };
 
-export const module: DocumentModelModule<VetraPackageDocument> = {
+export const module: DocumentModelModule<VetraPackagePHState> = {
   reducer,
   actions,
   utils,

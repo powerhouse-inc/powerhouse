@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 
 describe("PRUNE operation", () => {
   it.skip("should prune first 4 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -55,7 +55,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune last 3 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );
@@ -92,7 +92,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should prune 2 operations", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );
@@ -130,7 +130,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should undo pruned state", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );
@@ -170,7 +170,7 @@ describe("PRUNE operation", () => {
   });
 
   it.skip("should redo pruned state", async () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       testCreateBaseState({ count: 0 }, { name: "" }),
     );

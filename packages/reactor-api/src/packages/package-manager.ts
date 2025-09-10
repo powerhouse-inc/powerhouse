@@ -102,11 +102,11 @@ export class PackageManager implements IPackageManager {
 
     // static prereqs
     documentModelModuleMap.set("document-drive", [
-      driveDocumentModelModule as DocumentModelModule,
+      driveDocumentModelModule as unknown as DocumentModelModule,
     ]);
 
     documentModelModuleMap.set("document-model", [
-      documentModelDocumentModelModule as DocumentModelModule,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
     ]);
 
     for (const pkg of packages) {

@@ -30,7 +30,7 @@ const defaultVetraSwitchboardOptions: Partial<StartServerOptions> = {
     slug: "vetra",
     global: {
       name: "Vetra",
-      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreiccw6piv55gk6pkbfzlhj2snfsncjz5fmmlue5njsukuaeapffggi",
+      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreibf2xokjqqtomqjd2w2xxmmhvogq4262csevclxh6sbrjgmjfre5u",
     },
     preferredEditor: "vetra-drive-app",
     local: {

@@ -99,9 +99,7 @@ async function addGenerateTransmitter(
   config: PowerhouseConfig,
 ) {
   const processor: IProcessor = {
-    onStrands: async function (
-      strands: InternalTransmitterUpdate<DocumentModelDocument>[],
-    ) {
+    onStrands: async function (strands: InternalTransmitterUpdate[]) {
       const documentPaths = new Set<string>();
       for (const strand of strands) {
         documentPaths.add(

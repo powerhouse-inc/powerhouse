@@ -83,10 +83,12 @@ export async function buildOperationSignature(
   return [...params, `0x${ab2hex(signature)}`];
 }
 
-export async function buildSignedAction<TDocument extends PHDocument>(
+export async function buildSignedAction<
+  TState extends PHBaseState = PHBaseState,
+>(
   action: Action,
-  reducer: Reducer<TDocument>,
-  document: TDocument,
+  reducer: Reducer<TState>,
+  document: PHDocument<TState>,
   signer: ActionSigner,
   signHandler: ActionSigningHandler,
 ) {

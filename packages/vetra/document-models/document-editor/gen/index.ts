@@ -3,3 +3,11 @@ export * from "./document-model.js";
 export * from "./object.js";
 export * from "./types.js";
 export * as actions from "./creators.js";
+export type { DocumentEditorPHState } from "./ph-factories.js";
+export {
+  createDocumentEditorDocument,
+  createState,
+  defaultPHState,
+  defaultGlobalState,
+  defaultLocalState,
+} from "./ph-factories.js";

@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
-force: true
+unless_exists: true
 ---
 import { type IRelationalDb } from "document-drive";
 import { RelationalDbProcessor } from "document-drive";
@@ -11,8 +11,6 @@ import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTyp
 <% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 import { up } from "./migrations.js";
 import { type DB } from "./schema.js";
-
-type DocumentType = <% if(documentTypes.length) { %><%= documentTypes.map(type => `${documentTypesMap[type].name}Document`).join(" | ") %> <% } else { %>PHDocument<% } %>;
 
 export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   static override getNamespace(driveId: string): string {
@@ -25,7 +23,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   }
 
   override async onStrands(
-    strands: InternalTransmitterUpdate<DocumentType>[],
+    strands: InternalTransmitterUpdate[],
   ): Promise<void> {
     if (strands.length === 0) {
       return;
@@ -40,7 +38,7 @@ export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
         await this.relationalDb
           .insertInto("todo")
           .values({
-            task: `${strand.documentId}-${operation.index}: ${operation.type}`,
+            task: `${strand.documentId}-${operation.index}: ${operation.action.type}`,
             status: true,
           })
           .onConflict((oc) => oc.column("task").doNothing())

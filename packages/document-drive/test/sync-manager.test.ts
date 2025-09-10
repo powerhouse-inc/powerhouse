@@ -18,7 +18,10 @@ import {
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 
-const documentModels = [DocumentModel, DocumentDrive] as DocumentModelModule[];
+const documentModels = [
+  DocumentModel,
+  DocumentDrive,
+] as DocumentModelModule<any>[];
 
 describe("Synchronization Manager with memory adapters", () => {
   function initSyncManager() {

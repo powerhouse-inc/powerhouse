@@ -182,17 +182,17 @@ export async function requestPublicDrive(
 export async function fetchDocument<TDocument extends PHDocument>(
   url: string,
   documentId: string,
-  documentModelModule: DocumentModelModule<TDocument>,
+  documentModelModule: DocumentModelModule<TState>,
 ): Promise<
   GraphQLResult<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>
 > {
-  const { documentModel, utils } = documentModelModule;
+  const { documentModel } = documentModelModule;
   const name = pascalCase(documentModel.name);
   const stateFields = generateDocumentStateQueryFields(documentModel, name);
   const result = await requestGraphql<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>(
     url,
     gql`
@@ -241,34 +241,33 @@ export async function fetchDocument<TDocument extends PHDocument>(
         `,
     { id: documentId },
   );
-  const document: any = result.document
-    ? {
-        clipboard: result.document.clipboard,
-        header: result.document.header,
-        initialState: utils.createState({
-          global: result.document.initialState,
-        }),
-        operations: {
-          global: result.document.operations.map(({ inputText, ...o }) => ({
-            ...o,
-            error: o.error ?? undefined,
-            scope: "global",
-            input: JSON.parse(inputText) as PHDocument,
-          })),
-          local: [],
-        },
-        state: result.document.state,
-      }
-    : null;
 
   if (result?.document?.attachments) {
     document.attachments = result.document.attachments;
   }
 
+  const document: DocumentGraphQLResult<TState> = {
+    clipboard: result.document.clipboard,
+    header: result.document.header,
+    initialState: result.document.initialState,
+    /** @ts-expect-error */
+    operations: {
+      global: result.document.operations.map(({ inputText, ...o }) => ({
+        ...o,
+        error: o.error ?? undefined,
+        scope: "global",
+        input: JSON.parse(inputText) as PHDocument<TState>,
+      })),
+      local: [],
+    },
+    state: result.document.state,
+    attachments: result.document.attachments,
+  };
+
   return {
     ...result,
     document,
   } as GraphQLResult<{
-    document: DocumentGraphQLResult<TDocument>;
+    document: DocumentGraphQLResult<TState>;
   }>;
 }

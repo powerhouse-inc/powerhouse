@@ -10,15 +10,13 @@ unless_exists: true
 import { type ProcessorRecord, type IProcessorHostModule, type ProcessorFactory } from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 
-// Import other processor factories here as they are generated
+// Import processor factories here as they are generated
 
 export const processorFactory = (module: IProcessorHostModule) => {
   // Initialize all processor factories once with the module
   const factories: Array<ProcessorFactory> = [];
   
-  // Add all processor factories
-  
-  // Add other processors here as they are generated
+  // Add processors here as they are generated
   
   // Return the inner function that will be called for each drive
   return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {

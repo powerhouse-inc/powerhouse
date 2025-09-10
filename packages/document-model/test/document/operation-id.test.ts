@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Document Operation ID", () => {
   let document: CountDocument;
-  let initialState: BaseStateFromDocument<CountDocument>;
+  let initialState: CountPHState;
 
   beforeEach(() => {
     initialState = testCreateBaseState({ count: 0 }, { name: "" });
@@ -116,7 +116,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -154,7 +154,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,
@@ -198,7 +198,7 @@ describe("Document Operation ID", () => {
       document.operations,
     );
 
-    const replayedDoc = replayOperations<CountDocument>(
+    const replayedDoc = replayOperations<CountPHState>(
       initialState,
       clearedOperations,
       baseCountReducer,

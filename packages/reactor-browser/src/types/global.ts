@@ -61,10 +61,6 @@ export type AppConfig = {
 declare global {
   interface Window {
     reactor?: IDocumentDriveServer | undefined;
-    phStorage?: IDriveOperationStorage &
-      IDocumentOperationStorage &
-      IDocumentStorage &
-      IDocumentAdminStorage;
     connectCrypto?: IConnectCrypto | undefined;
     did?: DID | undefined;
     renown?: IRenown | undefined;

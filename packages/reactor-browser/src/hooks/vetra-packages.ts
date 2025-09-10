@@ -13,10 +13,12 @@ import {
 import type { ImportScriptModule, SubgraphModule } from "document-model";
 import { useSyncExternalStore } from "react";
 
-export function useVetraPackages(): VetraPackage[] | undefined {
+const defaultVetraPackages: VetraPackage[] = [];
+
+export function useVetraPackages(): VetraPackage[] {
   return useSyncExternalStore(
     subscribeToVetraPackages,
-    () => window.vetraPackages,
+    () => window.vetraPackages || defaultVetraPackages,
   );
 }
 
@@ -28,16 +30,13 @@ export function useDocumentModelModules():
   | VetraDocumentModelModule[]
   | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.documentModelModules)
-    .filter((module) => module !== undefined);
+  return vetraPackages.flatMap((pkg) => pkg.modules.documentModelModules || []);
 }
 
 export function useEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.editorModules)
-    .filter((module) => module !== undefined)
+    .flatMap((pkg) => pkg.modules.editorModules || [])
     .filter(
       (module) => !module.documentTypes.includes("powerhouse/document-drive"),
     );
@@ -46,8 +45,7 @@ export function useEditorModules(): VetraEditorModule[] | undefined {
 export function useDriveEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.editorModules)
-    .filter((module) => module !== undefined)
+    .flatMap((pkg) => pkg.modules.editorModules || [])
     .filter((module) =>
       module.documentTypes.includes("powerhouse/document-drive"),
     );
@@ -57,14 +55,14 @@ export function useDocumentModelModuleById(
   id: string | null | undefined,
 ): VetraDocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find((module) => module.documentModel.id === id);
+  return documentModelModules.find((module) => module.documentModel.id === id);
 }
 
 export function useEditorModuleById(
   id: string | null | undefined,
 ): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
-  return editorModules?.find((module) => module.id === id);
+  return editorModules.find((module) => module.id === id);
 }
 
 export function useFallbackEditorModule(
@@ -72,17 +70,19 @@ export function useFallbackEditorModule(
 ): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
-  const modulesForType = editorModules?.filter((module) =>
+  if (editorModules.length === 0) return undefined;
+
+  const modulesForType = editorModules.filter((module) =>
     module.documentTypes.includes(documentType),
   );
-  return modulesForType?.[0];
+  return modulesForType[0];
 }
 
 export function useDriveEditorModuleById(
   id: string | null | undefined,
 ): VetraEditorModule | undefined {
   const driveEditorModules = useDriveEditorModules();
-  return driveEditorModules?.find((module) => module.id === id);
+  return driveEditorModules.find((module) => module.id === id);
 }
 
 export function useDefaultDriveEditorModule(): VetraEditorModule | undefined {
@@ -97,7 +97,8 @@ export function useEditorModulesForDocumentType(
 ) {
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
-  const modulesForType = editorModules?.filter((module) =>
+
+  const modulesForType = editorModules.filter((module) =>
     module.documentTypes.includes(documentType),
   );
   return modulesForType;
@@ -117,14 +118,10 @@ export function useProcessors(): Processors[] | undefined {
 
 export function useSubgraphModules(): SubgraphModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.subgraphModules)
-    .filter((module) => module !== undefined);
+  return vetraPackages.flatMap((pkg) => pkg.modules.subgraphModules || []);
 }
 
 export function useImportScriptModules(): ImportScriptModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.importScriptModules)
-    .filter((module) => module !== undefined);
+  return vetraPackages.flatMap((pkg) => pkg.modules.importScriptModules || []);
 }

@@ -17,7 +17,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   const storageLayer = new MemoryStorage();
 

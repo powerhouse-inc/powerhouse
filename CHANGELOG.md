@@ -1,3 +1,274 @@
+## 4.1.0-dev.50 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** do not overwrite existing processors ([4c74b8c4d](https://github.com/powerhouse-inc/powerhouse/commit/4c74b8c4d))
+- **design-system:** improve drop zone validation and event handling ([75cd1e4c6](https://github.com/powerhouse-inc/powerhouse/commit/75cd1e4c6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.49 (2025-09-09)
+
+### 🩹 Fixes
+
+- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
+- **reactor-browser:** set driveId to type of phid ([4d7cb2fbf](https://github.com/powerhouse-inc/powerhouse/commit/4d7cb2fbf))
+- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.48 (2025-09-09)
+
+### 🚀 Features
+
+- e2e integration test of document drive actions ([7b15c6c74](https://github.com/powerhouse-inc/powerhouse/commit/7b15c6c74))
+- added job execution handle ([4fadd6638](https://github.com/powerhouse-inc/powerhouse/commit/4fadd6638))
+- drain, block, unblock on queue ([77ad8f9bc](https://github.com/powerhouse-inc/powerhouse/commit/77ad8f9bc))
+- moving to job execution handles ([f91c3a759](https://github.com/powerhouse-inc/powerhouse/commit/f91c3a759))
+- tests for job execution handle ([5af69c190](https://github.com/powerhouse-inc/powerhouse/commit/5af69c190))
+- update queue to use job handles ([acbe50ee1](https://github.com/powerhouse-inc/powerhouse/commit/acbe50ee1))
+
+### 🩹 Fixes
+
+- fix eventbus benchmarks, remove old benchmark ([5a85f498e](https://github.com/powerhouse-inc/powerhouse/commit/5a85f498e))
+- automated linting fixes ([d9c123692](https://github.com/powerhouse-inc/powerhouse/commit/d9c123692))
+- tons of linting fixes ([38c7981e3](https://github.com/powerhouse-inc/powerhouse/commit/38c7981e3))
+- more linting issues ([5dd874517](https://github.com/powerhouse-inc/powerhouse/commit/5dd874517))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+- **reactor-browser:** use fallback when window.showSaveFilePicker is not available ([78164031c](https://github.com/powerhouse-inc/powerhouse/commit/78164031c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.47 (2025-09-06)
+
+### 🚀 Features
+
+- **reactor-browser:** accept documentId on dispatchActions ([a579dd53c](https://github.com/powerhouse-inc/powerhouse/commit/a579dd53c))
+
+### 🩹 Fixes
+
+- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
+- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
+- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
+- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
+- **reactor-browser:** do not show all nodes on drive root ([da55217c8](https://github.com/powerhouse-inc/powerhouse/commit/da55217c8))
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Callme-T
+- Frank
+
+## 4.1.0-dev.46 (2025-09-05)
+
+### 🚀 Features
+
+- queue now queues by doc id ([afc03e437](https://github.com/powerhouse-inc/powerhouse/commit/afc03e437))
+- wip dependency graph ([939e41076](https://github.com/powerhouse-inc/powerhouse/commit/939e41076))
+- added robust dependency system to queue ([4aca91494](https://github.com/powerhouse-inc/powerhouse/commit/4aca91494))
+- plug in persistence ([5af292734](https://github.com/powerhouse-inc/powerhouse/commit/5af292734))
+- **reactor-api:** added nodeName to document query ([3d303c7e2](https://github.com/powerhouse-inc/powerhouse/commit/3d303c7e2))
+- **reactor-browser:** accept documentId on dispatchActions ([a579dd53c](https://github.com/powerhouse-inc/powerhouse/commit/a579dd53c))
+
+### 🩹 Fixes
+
+- build errors ([97b4853a3](https://github.com/powerhouse-inc/powerhouse/commit/97b4853a3))
+- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
+- **connect:** build issues ([858a36b99](https://github.com/powerhouse-inc/powerhouse/commit/858a36b99))
+- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
+- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
+- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-api:** node not found ([6c5a24a4e](https://github.com/powerhouse-inc/powerhouse/commit/6c5a24a4e))
+- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
+- **reactor-browser:** do not show all nodes on drive root ([da55217c8](https://github.com/powerhouse-inc/powerhouse/commit/da55217c8))
+- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
+- **reactor-browser,renown,connect:** add bearer token to switchboard link ([59f35e3b7](https://github.com/powerhouse-inc/powerhouse/commit/59f35e3b7))
+- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Callme-T
+- Frank
+
+## 5.0.0-staging.1 (2025-09-04)
+
+This was a version bump only, there were no code changes.
+
+## 4.1.0-dev.44 (2025-09-04)
+
+### 🚀 Features
+
+- **reactor-browser,connect:** reduced jwt expiry time to 10seconds ([a833a71fe](https://github.com/powerhouse-inc/powerhouse/commit/a833a71fe))
+- **switchboard:** updated readme ([9659cf035](https://github.com/powerhouse-inc/powerhouse/commit/9659cf035))
+
+### 🩹 Fixes
+
+- **connect:** only show add drive modal when apps are loaded ([b888806fb](https://github.com/powerhouse-inc/powerhouse/commit/b888806fb))
+- **connect:** import document model editor styles ([#1808](https://github.com/powerhouse-inc/powerhouse/pull/1808))
+- **reactor-api:** auth flow ([bbda4f2a1](https://github.com/powerhouse-inc/powerhouse/commit/bbda4f2a1))
+- **reactor-api:** disable cache ([7fa75b69f](https://github.com/powerhouse-inc/powerhouse/commit/7fa75b69f))
+- **reactor-api:** auth enabled false ([ff9ddfc58](https://github.com/powerhouse-inc/powerhouse/commit/ff9ddfc58))
+- **renown:** automatically login after reload ([f20dc4fcc](https://github.com/powerhouse-inc/powerhouse/commit/f20dc4fcc))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.43 (2025-09-02)
+
+### 🚀 Features
+
+- first mutation queued... ([a678882a3](https://github.com/powerhouse-inc/powerhouse/commit/a678882a3))
+- **connect,reactor-browser,renown:** added jwt expiry ([ec9483c1c](https://github.com/powerhouse-inc/powerhouse/commit/ec9483c1c))
+- **reactor-api:** added renown credential auth check ([af266ae5b](https://github.com/powerhouse-inc/powerhouse/commit/af266ae5b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 4.1.0-dev.42 (2025-09-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** use proper issuer field ([a1e36efe0](https://github.com/powerhouse-inc/powerhouse/commit/a1e36efe0))
+- **reactor-api:** use issuer field ([495a93337](https://github.com/powerhouse-inc/powerhouse/commit/495a93337))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.41 (2025-09-02)
+
+### 🚀 Features
+
+- **reactor-api:** added auth service ([a0863f6e3](https://github.com/powerhouse-inc/powerhouse/commit/a0863f6e3))
+
+### 🩹 Fixes
+
+- **document-drive:** add linux-musl binary target for prisma ([079b0cf04](https://github.com/powerhouse-inc/powerhouse/commit/079b0cf04))
+- **document-drive:** prisma build ([7884368a2](https://github.com/powerhouse-inc/powerhouse/commit/7884368a2))
+- **document-drive:** install openssl ([89f21529e](https://github.com/powerhouse-inc/powerhouse/commit/89f21529e))
+- **switchboard, connect:** fetch proper tag ([79a0bc967](https://github.com/powerhouse-inc/powerhouse/commit/79a0bc967))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.40 (2025-09-02)
+
+### 🩹 Fixes
+
+- **switchboard:** added openssl to dockerfile ([a10230c60](https://github.com/powerhouse-inc/powerhouse/commit/a10230c60))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.39 (2025-09-02)
+
+### 🩹 Fixes
+
+- **switchboard:** added db push to switchboard entrypoint ([d109e4afb](https://github.com/powerhouse-inc/powerhouse/commit/d109e4afb))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.38 (2025-08-30)
+
+### 🚀 Features
+
+- implementing find facade on IReactor ([eed25fdae](https://github.com/powerhouse-inc/powerhouse/commit/eed25fdae))
+- reactor find fixes ([9560ccb0f](https://github.com/powerhouse-inc/powerhouse/commit/9560ccb0f))
+- gql-gen spec ([5bf2c7226](https://github.com/powerhouse-inc/powerhouse/commit/5bf2c7226))
+- **reactor:** impstubbing out initial interface and types ([b74b194f9](https://github.com/powerhouse-inc/powerhouse/commit/b74b194f9))
+- **reactor:** we have a reactor facade ([7a61e68ab](https://github.com/powerhouse-inc/powerhouse/commit/7a61e68ab))
+- **reactor:** update mutate on facade ([aab0d7553](https://github.com/powerhouse-inc/powerhouse/commit/aab0d7553))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.37 (2025-08-29)
+
+### 🩹 Fixes
+
+- fixing synchronization post-refactor ([a4ad046e0](https://github.com/powerhouse-inc/powerhouse/commit/a4ad046e0))
+- enhance codegen processor reliability and error handling ([8baef31d6](https://github.com/powerhouse-inc/powerhouse/commit/8baef31d6))
+- **reactor-api:** loading local modules ([26e3e30a6](https://github.com/powerhouse-inc/powerhouse/commit/26e3e30a6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.36 (2025-08-28)
+
+### 🩹 Fixes
+
+- **reactor-browser:** root issue is creating a new array every time getSnapshot was called, plus some cleanup ([d7b5c5636](https://github.com/powerhouse-inc/powerhouse/commit/d7b5c5636))
+- **reactor-browser:** we need to better handle errors in the IDB implementation, this is throwing ([42fcaf7a8](https://github.com/powerhouse-inc/powerhouse/commit/42fcaf7a8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.35 (2025-08-27)
+
+### 🚀 Features
+
+- replaced vetra icon svg ([bb61632ea](https://github.com/powerhouse-inc/powerhouse/commit/bb61632ea))
+- **ph-cmd:** add dynamic package detection for use command ([#1792](https://github.com/powerhouse-inc/powerhouse/pull/1792))
+
+### 🩹 Fixes
+
+- linter fixes ([7dc6fac02](https://github.com/powerhouse-inc/powerhouse/commit/7dc6fac02))
+- fixing push/pull tests ([fa3c8f8e7](https://github.com/powerhouse-inc/powerhouse/commit/fa3c8f8e7))
+- **builder-tools:** fixes based on type changes ([61f95be48](https://github.com/powerhouse-inc/powerhouse/commit/61f95be48))
+- **codegen:** updating codegen with type fix ([3dc9b5f2d](https://github.com/powerhouse-inc/powerhouse/commit/3dc9b5f2d))
+- **common:** type refactor for common ([c52c700b9](https://github.com/powerhouse-inc/powerhouse/commit/c52c700b9))
+- **reactor-api:** updates for type shuffle ([44da3c0c2](https://github.com/powerhouse-inc/powerhouse/commit/44da3c0c2))
+- **reactor-mcp:** updates for type shuffle ([fc9d5c660](https://github.com/powerhouse-inc/powerhouse/commit/fc9d5c660))
+- **switchboard, ph-cli:** slight type fixes ([b1bf76f1b](https://github.com/powerhouse-inc/powerhouse/commit/b1bf76f1b))
+- **vetra:** regenerate and fix all document models ([b28d67aac](https://github.com/powerhouse-inc/powerhouse/commit/b28d67aac))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.34 (2025-08-26)
+
+### 🩹 Fixes
+
+- updated document editor templates ([470583a25](https://github.com/powerhouse-inc/powerhouse/commit/470583a25))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.33 (2025-08-21)
 
 ### 🚀 Features

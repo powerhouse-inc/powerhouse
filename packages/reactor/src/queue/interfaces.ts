@@ -20,19 +20,22 @@ export interface IQueue {
    * @param documentId - The document ID to get jobs for
    * @param scope - The scope to get jobs for
    * @param branch - The branch to get jobs for
-   * @returns Promise that resolves to the next job or null if no jobs available
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
   dequeue(
     documentId: string,
     scope: string,
     branch: string,
-  ): Promise<Job | null>;
+    signal?: AbortSignal,
+  ): Promise<IJobExecutionHandle | null>;
 
   /**
    * Get the next available job from any queue.
-   * @returns Promise that resolves to the next job or null if no jobs available
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Promise that resolves to the next job execution handle or null if no jobs available
    */
-  dequeueNext(): Promise<Job | null>;
+  dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null>;
 
   /**
    * Get the current size of the queue for a specific document/scope/branch.
@@ -70,4 +73,49 @@ export interface IQueue {
    * @returns Promise that resolves when all queues are cleared
    */
   clearAll(): Promise<void>;
+
+  /**
+   * Check if there are any jobs in the queue.
+   * @returns Promise that resolves to true if there are jobs, false otherwise
+   */
+  hasJobs(): Promise<boolean>;
+
+  /**
+   * Mark a job as completed.
+   * @param jobId - The ID of the job to mark as completed
+   * @returns Promise that resolves when the job is marked as completed
+   */
+  completeJob(jobId: string): Promise<void>;
+
+  /**
+   * Mark a job as failed.
+   * @param jobId - The ID of the job to mark as failed
+   * @param error - Optional error message
+   * @returns Promise that resolves when the job is marked as failed
+   */
+  failJob(jobId: string, error?: string): Promise<void>;
+
+  /**
+   * Retry a failed job.
+   * @param jobId - The ID of the job to retry
+   * @param error - Optional error message from the failure
+   * @returns Promise that resolves when the job is requeued for retry
+   */
+  retryJob(jobId: string, error?: string): Promise<void>;
+
+  /**
+   * Returns true if and only if all jobs have been resolved.
+   */
+  get isDrained(): boolean;
+
+  /**
+   * Blocks the queue from accepting new jobs.
+   * @param onDrained - Optional callback to call when the queue is drained
+   */
+  block(onDrained?: () => void): void;
+
+  /**
+   * Unblocks the queue from accepting new jobs.
+   */
+  unblock(): void;
 }

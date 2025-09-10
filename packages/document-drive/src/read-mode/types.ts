@@ -61,12 +61,12 @@ export interface IReadModeDriveService {
 
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError>;
 
-  fetchDocument<TDocument extends PHDocument>(
+  fetchDocument<TState extends PHBaseState = PHBaseState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | TDocument
+    | PHDocument<TState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError
@@ -75,6 +75,6 @@ export interface IReadModeDriveService {
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined>;
 }
 
-export type GetDocumentModelModule = <TDocument extends PHDocument>(
+export type GetDocumentModelModule = (
   documentType: string,
-) => DocumentModelModule<TDocument>;
+) => DocumentModelModule<any>;

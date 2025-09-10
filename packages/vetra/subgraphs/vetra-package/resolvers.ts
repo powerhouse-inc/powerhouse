@@ -16,13 +16,16 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
             const docId: string = args.docId || "";
             const doc = await reactor.getDocument(driveId, docId);
+
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              state: doc.state.global,
-              stateJSON: doc.state.global,
-              revision: doc.header.revision["global"] ?? 0,
+              // these will be ripped out in the future, but for now all doc models have global state
+              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+              state: (doc.state as any).global ?? {},
+              stateJSON: (doc.state as any).global ?? "{}",
+              revision: doc.header.revision.global ?? 0,
             };
           },
           getDocuments: async (args: any) => {
@@ -35,9 +38,11 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  state: doc.state.global,
-                  stateJSON: doc.state.global,
-                  revision: doc.header.revision["global"] ?? 0,
+                  // these will be ripped out in the future, but for now all doc models have global state
+                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
+                  state: (doc.state as any).global ?? {},
+                  stateJSON: (doc.state as any).global ?? "{}",
+                  revision: doc.header.revision.global ?? 0,
                 };
               }),
             );
@@ -89,7 +94,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageName({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageDescription: async (_: any, args: any) => {
@@ -103,7 +108,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageDescription({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageCategory: async (_: any, args: any) => {
@@ -117,7 +122,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageCategory({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageAuthor: async (_: any, args: any) => {
@@ -131,7 +136,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageAuthor({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageAuthorName: async (_: any, args: any) => {
@@ -145,7 +150,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageAuthorName({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageAuthorWebsite: async (_: any, args: any) => {
@@ -159,7 +164,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageAuthorWebsite({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_addPackageKeyword: async (_: any, args: any) => {
@@ -173,7 +178,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.addPackageKeyword({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_removePackageKeyword: async (_: any, args: any) => {
@@ -187,7 +192,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.removePackageKeyword({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageGithubUrl: async (_: any, args: any) => {
@@ -201,7 +206,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageGithubUrl({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
 
       VetraPackage_setPackageNpmUrl: async (_: any, args: any) => {
@@ -215,7 +220,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
           actions.setPackageNpmUrl({ ...args.input }),
         );
 
-        return (doc.header.revision["global"] ?? 0) + 1;
+        return (doc.header.revision.global ?? 0) + 1;
       },
     },
   };

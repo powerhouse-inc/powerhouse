@@ -6,7 +6,6 @@ import {
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   DriveContextProvider,
-  getDriveSharingType,
   getSyncStatusSync,
   makeFolderNodeFromDrive,
   setSelectedNode,

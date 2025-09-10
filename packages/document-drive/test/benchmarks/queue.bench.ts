@@ -19,7 +19,7 @@ import { bench, type BenchOptions, describe } from "vitest";
 const documentModels = [
   driveDocumentModelModule,
   documentModelDocumentModelModule,
-] as DocumentModelModule[];
+] as DocumentModelModule<any>[];
 
 const BENCH_OPTIONS: BenchOptions = {
   iterations: 10,

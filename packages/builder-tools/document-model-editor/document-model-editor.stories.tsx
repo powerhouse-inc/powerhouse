@@ -222,7 +222,8 @@ const { CreateDocumentStory: WithBackgroundUpdates } = createDocumentStory(
       backgroundUpdateActions: [
         (document) => {
           const id = uuidv7().split("-").at(-1);
-          const unsafeGlobalState = document.state.global as {
+          // eslint-disable-next-line
+          const unsafeGlobalState = (document.state as any).global as {
             specifications: DocumentSpecification[];
           };
           const oldStateSchema =
@@ -247,7 +248,8 @@ type TestDefinition${id} {
         },
         (document) => {
           const id = uuidv7().split("-").at(-1);
-          const unsafeLocalState = document.state.local as {
+          // eslint-disable-next-line
+          const unsafeLocalState = (document.state as any).local as {
             specifications: DocumentSpecification[];
           };
           const oldStateSchema =
@@ -271,7 +273,8 @@ type TestLocalDefinition${id} {
           };
         },
         (document) => {
-          const unsafeGlobalState = document.state.global as {
+          // eslint-disable-next-line
+          const unsafeGlobalState = (document.state as any).global as {
             specifications: DocumentSpecification[];
           };
           const moduleIndex =
@@ -289,7 +292,8 @@ type TestLocalDefinition${id} {
           };
         },
         (document) => {
-          const unsafeGlobalState = document.state.global as {
+          // eslint-disable-next-line
+          const unsafeGlobalState = (document.state as any).global as {
             specifications: DocumentSpecification[];
           };
           const modules = unsafeGlobalState.specifications[0].modules;

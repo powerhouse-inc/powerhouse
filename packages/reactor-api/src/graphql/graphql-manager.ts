@@ -84,8 +84,54 @@ export class GraphQLManager {
       bodyParser.urlencoded({ extended: true, limit: "50mb" }),
     );
 
-    this.app.use("/", (req, res, next) => this.coreRouter(req, res, next));
-    this.app.use("/", (req, res, next) => this.reactorRouter(req, res, next));
+    this.app.use("/", (req, res, next) => {
+      this.setAdditionalContextFields({
+        user: req.user,
+        isAdmin: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.admins
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isUser: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.users
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isGuest: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.guests
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+      });
+      this.coreRouter(req, res, next);
+    });
+    this.app.use("/", (req, res, next) => {
+      this.setAdditionalContextFields({
+        user: req.user,
+        isAdmin: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.admins
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isUser: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.users
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isGuest: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.guests
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+      });
+      this.reactorRouter(req, res, next);
+    });
 
     await this.#setupCoreSubgraphs("graphql");
 

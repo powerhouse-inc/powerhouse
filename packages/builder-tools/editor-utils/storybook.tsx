@@ -56,8 +56,8 @@ export type DocumentStory = StoryObj<EditorStoryComponent>;
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
 // Default createState function for PHDocument
-const defaultPHDocumentCreateState: CreateState<PHDocument> = (state) => {
-  return state as BaseStateFromDocument<PHDocument>;
+const defaultPHDocumentCreateState: CreateState = (state) => {
+  return state as PHBaseState;
 };
 
 export function createDocumentStory(
@@ -103,7 +103,7 @@ export function createDocumentStory(
       const [error, setError] = useState<unknown>();
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentReducer<PHDocument>(
+      const [document, _dispatch] = useDocumentReducer(
         reducer,
         args.document,
         (error) => {
@@ -175,7 +175,7 @@ export function createDocumentStory(
     args: {
       document: baseCreateDocument(
         defaultPHDocumentCreateState,
-        initialState as Partial<BaseStateFromDocument<PHDocument>>,
+        initialState as Partial<PHBaseState>,
       ),
       user: {
         address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",

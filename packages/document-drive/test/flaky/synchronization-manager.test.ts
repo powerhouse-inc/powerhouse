@@ -16,7 +16,7 @@ describe("Synchronization Units", () => {
   const documentModels = [
     DocumentModelLib,
     ...Object.values(DocumentModelsLibs),
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   beforeEach(() => {
     vi.useFakeTimers().setSystemTime(new Date("2024-01-01"));

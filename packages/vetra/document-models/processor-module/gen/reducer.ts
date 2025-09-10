@@ -5,7 +5,7 @@ import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 
-const stateReducer: StateReducer<ProcessorModuleDocument> = (
+export const stateReducer: StateReducer<ProcessorModulePHState> = (
   state,
   action,
   dispatch,
@@ -65,4 +65,4 @@ const stateReducer: StateReducer<ProcessorModuleDocument> = (
   }
 };
 
-export const reducer = createReducer<ProcessorModuleDocument>(stateReducer);
+export const reducer = createReducer<ProcessorModulePHState>(stateReducer);

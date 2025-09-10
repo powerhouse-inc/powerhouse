@@ -22,10 +22,10 @@ class SubgraphModule extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<SubgraphModuleDocument>>,
+    initialState?: Partial<SubgraphModulePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 }
 

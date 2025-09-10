@@ -1,14 +1,9 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
-force: true
+unless_exists: true
 ---
-import type { PHDocument } from "document-model";
 import { AnalyticsPath, AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/reactor-api";
-import { InternalTransmitterUpdate, IProcessor } from "document-drive";
-
-<% documentTypes.forEach(type => { _%>
-import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
-%><% }); _%>
+import { type InternalTransmitterUpdate, type IProcessor } from "document-drive";
 
 export class <%= pascalName %>Processor implements IProcessor {
   private readonly NAMESPACE = "<%= pascalName %>";
@@ -19,7 +14,7 @@ export class <%= pascalName %>Processor implements IProcessor {
     //
   }
 
-  async onStrands<TDocument extends PHDocument>(strands: InternalTransmitterUpdate<TDocument>[]): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     if (strands.length === 0) {
       return;
     }

@@ -38,6 +38,17 @@ import type {
   SynchronizationUnitNotFoundError,
   Trigger,
 } from "document-drive";
+import { DocumentAlreadyExistsError, childLogger } from "document-drive";
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  Signal,
+  SignalResult,
+} from "document-model";
 import {
   ConflictOperationError,
   DefaultDrivesManager,
@@ -138,6 +149,7 @@ export class BaseDocumentDriveServer
     processDocumentJob: async ({
       documentId,
       documentType,
+      header: inputHeader,
       initialState,
       options,
     }: DocumentJob): Promise<IOperationResult> => {
@@ -149,11 +161,15 @@ export class BaseDocumentDriveServer
       document.header.sig = header.sig;
       document.header.documentType = documentType;
 
+      if (inputHeader) {
+        document.header.meta = inputHeader.meta;
+      }
+
       try {
         const createdDocument = await this.createDocument(
           { document },
           options?.source ?? { type: "local" },
-          initialState?.header.meta,
+          document.header.meta,
         );
         return {
           status: "SUCCESS",
@@ -567,9 +583,7 @@ export class BaseDocumentDriveServer
     }
   }
 
-  protected getDocumentModelModule<TDocument extends PHDocument>(
-    documentType: string,
-  ) {
+  protected getDocumentModelModule(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
       (module) => module.documentModel.id === documentType,
     );
@@ -577,7 +591,7 @@ export class BaseDocumentDriveServer
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
-    return documentModelModule as unknown as DocumentModelModule<TDocument>;
+    return documentModelModule;
   }
 
   getDocumentModelModules() {
@@ -1001,7 +1015,7 @@ export class BaseDocumentDriveServer
 
     // if the document contains operations then
     // stores the operations in the storage
-    const operations = Object.values(document.operations).flat();
+    const operations = Object.values(document.operations).flat() as Operation[];
     if (operations.length) {
       if (isDocumentDrive(document)) {
         await this.legacyStorage.addDriveOperations(
@@ -1200,7 +1214,7 @@ export class BaseDocumentDriveServer
       return documentStorage;
     }
 
-    const documentModelModule = this.getDocumentModelModule<TDocument>(
+    const documentModelModule = this.getDocumentModelModule(
       documentStorage.header.documentType,
     );
 
@@ -1225,7 +1239,7 @@ export class BaseDocumentDriveServer
         checkHashes: options?.checkHashes ?? true,
         reuseOperationResultingState: options?.checkHashes ?? true,
       },
-    );
+    ) as TDocument;
   }
 
   private async _performOperation(
@@ -1270,7 +1284,7 @@ export class BaseDocumentDriveServer
     newDocument = documentModelModule.reducer(
       newDocument,
       operation.action,
-      (signal) => {
+      (signal: Signal) => {
         let handler: (() => Promise<unknown>) | undefined = undefined;
         switch (signal.type) {
           case "CREATE_CHILD_DOCUMENT":
@@ -1283,6 +1297,7 @@ export class BaseDocumentDriveServer
             handler = () => this.addChild(documentId, signal.input.newId);
             break;
         }
+
         if (handler) {
           operationSignals.push(() =>
             handler().then((result) => ({ signal, result }) as SignalResult),
@@ -1441,7 +1456,8 @@ export class BaseDocumentDriveServer
       jobId = await this.queueManager.addJob({
         documentId: id,
         documentType,
-        initialState: document,
+        initialState: document?.state,
+        header: document?.header,
         options,
       });
     } catch (error) {

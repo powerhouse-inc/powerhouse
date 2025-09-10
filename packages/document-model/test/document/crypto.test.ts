@@ -79,7 +79,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with empty previousState", () => {
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -118,7 +118,7 @@ describe("Crypto utils", () => {
   });
 
   it("should build signature with previousState", () => {
-    let document = baseCreateDocument<CountDocument>(
+    let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -176,7 +176,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -184,7 +184,7 @@ describe("Crypto utils", () => {
 
     const action = increment();
     const reducer = ((
-      document: CountDocument,
+      document: PHDocument<CountPHState>,
       action: Action,
       dispatch?: SignalDispatch,
       options?: ReducerOptions,
@@ -195,7 +195,7 @@ describe("Crypto utils", () => {
       documentWithOp.operations.global.at(-1)!.id = "123";
 
       return documentWithOp;
-    }) as PHReducer;
+    }) as Reducer<CountPHState>;
 
     const operation = await buildSignedAction(
       action,
@@ -253,14 +253,14 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
 
     const operation = await buildSignedAction(
       { ...increment() /*, id: "123"*/ },
-      countReducer as PHReducer,
+      countReducer as Reducer<CountPHState>,
       document,
       actionSigner(
         { address: "0x123", chainId: 1, networkId: "1" },
@@ -316,7 +316,7 @@ describe("Crypto utils", () => {
     );
     const publicKey = `0x${ab2hex(publicKeyRaw)}`;
 
-    const document = baseCreateDocument<CountDocument>(
+    const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       createCountState(),
     );
@@ -324,7 +324,7 @@ describe("Crypto utils", () => {
 
     const operation = await buildSignedAction(
       { ...increment() /*, id: "123"*/ },
-      countReducer as PHReducer,
+      countReducer as Reducer<CountPHState>,
       document,
       actionSigner(
         { address: "0x123", chainId: 1, networkId: "1" },

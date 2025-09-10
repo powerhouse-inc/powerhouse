@@ -9,10 +9,16 @@ import type {
 } from "document-model";
 import { createAction, createReducer, defaultBaseState } from "document-model";
 
+// Test state type that extends PHBaseState with global and local fields
+export type TestPHState = PHBaseState & {
+  global: any;
+  local: any;
+};
+
 /**
- * Default createState function for PHDocument
+ * Default createState function for test documents
  */
-export const defaultPHDocumentCreateState: CreateState<PHDocument> = (
+export const defaultPHDocumentCreateState: CreateState<TestPHState> = (
   state,
 ) => {
   return {
@@ -40,20 +46,26 @@ export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
 export const wrappedEmptyReducer = createReducer(emptyReducer);
 
 /**
- * Creates a default base state with the required auth and document properties
+ * Creates a test state with the required auth and document properties
  * @param global - The global state (defaults to empty object)
  * @param local - The local state (defaults to empty object)
  */
 export function testCreateBaseState<TGlobal, TLocal>(
   global: TGlobal,
   local: TLocal,
-): BaseState<TGlobal, TLocal> {
+): PHBaseState & { global: TGlobal; local: TLocal } {
   return {
     ...defaultBaseState(),
     global,
     local,
   };
 }
+
+// Type for count document state
+export type CountPHState = PHBaseState & {
+  global: CountState;
+  local: CountLocalState;
+};
 
 /**
  * Creates a default count base state for testing
@@ -68,7 +80,7 @@ export function createCountState(
 /**
  * CreateState function for CountDocument to use with baseCreateDocument
  */
-export const createCountDocumentState: CreateState<CountDocument> = (state) => {
+export const createCountDocumentState: CreateState<CountPHState> = (state) => {
   return {
     ...defaultBaseState(),
     global: { count: 0, ...state?.global },
@@ -90,9 +102,8 @@ export type CountAction =
   | SetLocalNameAction
   | ErrorAction;
 
-export type CountDocument = PHDocument<CountState, CountLocalState>;
+export type CountDocument = PHDocument<CountPHState>;
 export type CountState = { count: number };
-
 export type CountLocalState = { name: string };
 
 export const increment = () => createAction<IncrementAction>("INCREMENT", {});
@@ -110,10 +121,7 @@ export const setLocalName = (name: string) =>
     "local",
   );
 
-export const baseCountReducer: StateReducer<CountDocument> = (
-  state,
-  action,
-) => {
+export const baseCountReducer: StateReducer<CountPHState> = (state, action) => {
   switch (action.type) {
     case "INCREMENT":
       state.global.count += 1;
@@ -131,7 +139,7 @@ export const baseCountReducer: StateReducer<CountDocument> = (
   }
 };
 
-export const mutableCountReducer: StateReducer<CountDocument> = (
+export const mutableCountReducer: StateReducer<CountPHState> = (
   state,
   action,
 ) => {
@@ -158,7 +166,7 @@ export const mutableCountReducer: StateReducer<CountDocument> = (
   }
 };
 
-export const countReducer = createReducer<CountDocument>(baseCountReducer);
+export const countReducer = createReducer<CountPHState>(baseCountReducer);
 
 export const mapOperations = (operations: Operation[]) => {
   return operations.map(({ action: { input, type, scope }, index, skip }) => ({

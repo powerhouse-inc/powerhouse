@@ -10,6 +10,11 @@ export type PKHDid = {
   address: `0x${string}`;
 };
 
+export interface CreateBearerTokenOptions {
+  expiresIn?: number;
+  aud?: string;
+}
+
 export function parsePkhDid(did: string): PKHDid {
   const parts = did.split(":");
   if (!did.startsWith("did:pkh:") || parts.length !== 5) {
@@ -35,7 +40,18 @@ export function parsePkhDid(did: string): PKHDid {
 
 export async function verifyAuthBearerToken(jwt: string) {
   try {
-    const verified = await verifyCredential(jwt, getResolver());
+    const now = parseInt(String(Date.now() / 1000));
+    const verified = await verifyCredential(jwt, getResolver(), {
+      policies: {
+        now: parseInt(String(Date.now() / 1000)),
+        expirationDate: true,
+        issuanceDate: true,
+      },
+    });
+
+    if (verified.payload.exp && verified.payload.exp! < now) {
+      return false;
+    }
     return verified;
   } catch (e) {
     console.error(e);
@@ -48,6 +64,7 @@ export async function createAuthBearerToken(
   networkId: string,
   address: string,
   issuer: Issuer,
+  options?: CreateBearerTokenOptions,
 ) {
   const vcPayload: JwtCredentialPayload = {
     sub: issuer.did,
@@ -60,9 +77,12 @@ export async function createAuthBearerToken(
         address,
       },
     },
+    aud: options?.aud,
   };
 
-  const jwt = await createVerifiableCredentialJwt(vcPayload, issuer);
+  const jwt = await createVerifiableCredentialJwt(vcPayload, issuer, {
+    expiresIn: options?.expiresIn,
+  });
   return jwt;
 }
 export const getResolver = () => {

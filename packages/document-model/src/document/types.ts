@@ -119,24 +119,21 @@ export type ReducerOptions = {
  * A pure function that takes an action and the previous state
  * of the document and returns the new state.
  */
-export type Reducer<TDocument extends PHDocument> = (
-  document: TDocument,
+export type Reducer<TState extends PHBaseState = PHBaseState> = (
+  document: PHDocument<TState>,
   action: Action,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
-) => TDocument;
+) => PHDocument<TState>;
 
-export type PHReducer<TDocument extends PHDocument = PHDocument> =
-  Reducer<TDocument>;
-
-export type StateReducer<TDocument extends PHDocument> = (
-  state: Draft<BaseStateFromDocument<TDocument>>,
+export type StateReducer<TState extends PHBaseState = PHBaseState> = (
+  state: Draft<TState>,
   action: Action,
   dispatch?: SignalDispatch,
-) => BaseStateFromDocument<TDocument> | undefined;
+) => TState | undefined;
 
-export type PHStateReducer<TDocument extends PHDocument = PHDocument> =
-  StateReducer<TDocument>;
+export type PHStateReducer<TState extends PHBaseState = PHBaseState> =
+  StateReducer<TState>;
 
 /**
  * An operation that was applied to a {@link BaseDocument}.
@@ -211,28 +208,11 @@ export type AttachmentInput = Attachment & {
  */
 export type FileRegistry = Record<AttachmentRef, Attachment>;
 
-export type BaseState<TGlobalState, TLocalState> = PHBaseState & {
-  /**
-   * Use {@link PHBaseState} `document` instead.
-   */
-  global: TGlobalState;
-
-  /**
-   * Not a requirement for BaseState, but could be in extended states.
-   */
-  local: TLocalState;
-};
-
 export type PartialState<TState> = TState | Partial<TState>;
 
-export type CreateState<TDocument extends PHDocument> = (
-  state?: PartialState<
-    BaseState<
-      PartialState<GlobalStateFromDocument<TDocument>>,
-      PartialState<LocalStateFromDocument<TDocument>>
-    >
-  >,
-) => BaseStateFromDocument<TDocument>;
+export type CreateState<TState extends PHBaseState = PHBaseState> = (
+  state?: PartialState<TState>,
+) => TState;
 
 export type SaveToFileHandle = (
   document: PHDocument,
@@ -245,18 +225,18 @@ export type SaveToFile = (
   name?: string,
 ) => string | Promise<string>;
 
-export type LoadFromInput<TDocument extends BaseDocument<any, any>> = (
+export type LoadFromInput<TState extends PHBaseState = PHBaseState> = (
   input: FileInput,
-) => TDocument | Promise<TDocument>;
+) => PHDocument<TState> | Promise<PHDocument<TState>>;
 
-export type LoadFromFile<TDocument extends BaseDocument<any, any>> = (
+export type LoadFromFile<TState extends PHBaseState = PHBaseState> = (
   path: string,
-) => TDocument | Promise<TDocument>;
+) => PHDocument<TState> | Promise<PHDocument<TState>>;
 
-export type CreateDocument<TDocument extends BaseDocument<any, any>> = (
-  initialState?: Partial<PHBaseState>,
-  createState?: CreateState<TDocument>,
-) => TDocument;
+export type CreateDocument<TState extends PHBaseState = PHBaseState> = (
+  initialState?: Partial<TState>,
+  createState?: CreateState<TState>,
+) => PHDocument<TState>;
 
 export type DocumentOperations = Record<string, Operation[]>;
 
@@ -288,10 +268,9 @@ export type ActionVerificationHandler = (
  * @remarks
  * This type is extended by all Document models.
  *
- * @typeParam Data - The type of the document data attribute.
- * @typeParam A - The type of the actions supported by the Document.
+ * @typeParam TState - The type of the document state.
  */
-export type BaseDocument<TDocumentState, TLocalState> = {
+export type BaseDocument<TState extends PHBaseState = PHBaseState> = {
   /** The header of the document. */
   header: PHDocumentHeader;
 
@@ -299,10 +278,10 @@ export type BaseDocument<TDocumentState, TLocalState> = {
   history: PHDocumentHistory;
 
   /** The document model specific state. */
-  state: BaseState<TDocumentState, TLocalState>;
+  state: TState;
 
   /** The initial state of the document, enabling replaying operations. */
-  initialState: BaseState<TDocumentState, TLocalState>;
+  initialState: TState;
 
   /** The operations history of the document. */
   operations: DocumentOperations;
@@ -314,10 +293,8 @@ export type BaseDocument<TDocumentState, TLocalState> = {
   attachments?: FileRegistry;
 };
 
-export type PHDocument<
-  TGlobalState = unknown,
-  TLocalState = unknown,
-> = BaseDocument<TGlobalState, TLocalState>;
+export type PHDocument<TState extends PHBaseState = PHBaseState> =
+  BaseDocument<TState>;
 
 /**
  * String type representing an attachment in a Document.
@@ -327,7 +304,7 @@ export type PHDocument<
  */
 export type AttachmentRef = string; // TODO `attachment://${string}`;
 
-export type DocumentModelUtils<TDocument extends PHDocument> = {
+export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
   fileExtension: string;
   createState: CreateState<TDocument>;
   createDocument: CreateDocument<TDocument>;
@@ -444,9 +421,9 @@ export type Manifest = {
   apps?: App[];
 };
 
-export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
+export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   manifest: Manifest;
-  documentModels: DocumentModelModule<TDocument>[];
+  documentModels: DocumentModelModule<TState>[];
   editors: EditorModule[];
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
@@ -454,22 +431,10 @@ export type DocumentModelLib<TDocument extends PHDocument = PHDocument> = {
 
 export type ValidationError = { message: string; details: object };
 
-type ExtractPHDocumentGenerics<T> =
-  T extends BaseDocument<infer DocumentState, infer LocalState>
-    ? {
-        documentState: DocumentState;
-        action: Action;
-
-        // deprecated
-        globalState: DocumentState;
-        localState: LocalState;
-      }
-    : never;
-
-export type DocumentModelModule<TDocument extends PHDocument = PHDocument> = {
-  reducer: Reducer<TDocument>;
+export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
+  reducer: Reducer<TState>;
   actions: Record<string, (input: any) => Action>;
-  utils: DocumentModelUtils<TDocument>;
+  utils: DocumentModelUtils<TState>;
   documentModel: DocumentModelState;
 };
 

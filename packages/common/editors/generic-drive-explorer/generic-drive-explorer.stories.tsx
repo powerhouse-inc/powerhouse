@@ -4,7 +4,7 @@ import Editor from "./editor.js";
 
 const { meta: _meta, CreateDocumentStory } = createDriveStory(Editor);
 
-const meta = {
+const meta: Meta<typeof Editor> = {
   ..._meta,
   title: "Generic Drive Explorer",
 } as Meta<typeof Editor>;

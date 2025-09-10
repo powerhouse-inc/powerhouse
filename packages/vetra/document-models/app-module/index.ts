@@ -15,7 +15,7 @@ import type { AppModuleDocument } from "./gen/types.js";
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...AppModuleActions };
 
-export const module: DocumentModelModule<AppModuleDocument> = {
+export const module: DocumentModelModule<AppModulePHState> = {
   reducer,
   actions,
   utils,

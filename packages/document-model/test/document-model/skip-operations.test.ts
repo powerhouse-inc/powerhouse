@@ -527,7 +527,7 @@ describe("Document Operations", () => {
       );
       document = documentModelReducer(document, setModelId({ id: "<id>" }));
 
-      const replayedDoc = replayOperations<DocumentModelDocument>(
+      const replayedDoc = replayOperations<DocumentModelPHState>(
         document.initialState,
         garbageCollectDocumentOperations(document.operations),
         documentModelStateReducer,

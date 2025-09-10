@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/factory.ts"
-force: true
+unless_exists: true
 ---
 import { type ProcessorRecord } from "document-drive";
 import { type IProcessorHostModule } from "document-drive";

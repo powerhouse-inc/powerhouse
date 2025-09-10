@@ -24,7 +24,6 @@ import {
 import type {
   Action,
   AttachmentInput,
-  BaseStateFromDocument,
   DocumentOperations,
   FileRegistry,
   Operation,
@@ -488,9 +487,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
     const doc = {
       header,
-      initialState: JSON.parse(
-        dbDoc.initialState,
-      ) as BaseStateFromDocument<TDocument>,
+      initialState: JSON.parse(dbDoc.initialState) as TDocument["initialState"],
       operations: operationsByScope,
       clipboard: [],
       attachments: {},

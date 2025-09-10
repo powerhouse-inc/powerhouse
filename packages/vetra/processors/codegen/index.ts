@@ -35,9 +35,7 @@ export class CodegenProcessor implements IProcessor {
     }
   }
 
-  async onStrands<TDocument extends DocumentModelDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     logger.debug(">>> onStrands", strands);
 
     // Filter strands to only include those that should be processed

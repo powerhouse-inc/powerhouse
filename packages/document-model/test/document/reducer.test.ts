@@ -25,7 +25,9 @@ describe("Base reducer", () => {
   });
 
   it("should update revision", async () => {
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     const newDocument = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -39,7 +41,9 @@ describe("Base reducer", () => {
 
   it("should update lastModified", async () => {
     vi.useFakeTimers();
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     await new Promise((r) => {
       setTimeout(r, 100);
       vi.runOnlyPendingTimers();
@@ -61,7 +65,9 @@ describe("Base reducer", () => {
 
   it("should update global operations list", async () => {
     vi.useFakeTimers({ now: new Date("2023-01-01") });
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     const newDocument = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -110,13 +116,17 @@ describe("Base reducer", () => {
   });
 
   it("should set document name", async () => {
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     const newDocument = wrappedEmptyReducer(document, setName("Document"));
     expect(newDocument.header.name).toBe("Document");
   });
 
   it("should throw error on invalid base action", async () => {
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     expect(() =>
       wrappedEmptyReducer(
         document,
@@ -131,7 +141,9 @@ describe("Base reducer", () => {
 
   it("should dispatch trigger action", async () => {
     expect.assertions(3);
-    const document = baseCreateDocument(defaultPHDocumentCreateState);
+    const document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
 
     const id = generateId();
     const reducer = createReducer((_state, action, dispatch) => {
@@ -163,7 +175,9 @@ describe("Base reducer", () => {
   });
 
   it("should throw an error when there is a missing index operation", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     document = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -207,7 +221,9 @@ describe("Base reducer", () => {
   });
 
   it("should throw an error when there is a missing index operation + skip", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     document = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -252,7 +268,9 @@ describe("Base reducer", () => {
   });
 
   it("should not throw an error when there is a valid index operation + skip", () => {
-    let document = baseCreateDocument(defaultPHDocumentCreateState);
+    let document = baseCreateDocument<TestPHState>(
+      defaultPHDocumentCreateState,
+    );
     document = wrappedEmptyReducer(
       document,
       fakeAction({
@@ -304,7 +322,7 @@ describe("Base reducer", () => {
   it("should not throw errors from reducer", () => {
     const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(
+    let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       initialState,
     );
@@ -320,7 +338,7 @@ describe("Base reducer", () => {
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
     const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(
+    let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       initialState,
     );
@@ -336,7 +354,7 @@ describe("Base reducer", () => {
   it("should include error message into error operation prop", () => {
     const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(
+    let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       initialState,
     );
@@ -373,7 +391,7 @@ describe("Base reducer", () => {
   it("should not include error message in successful operations", () => {
     const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
-    let document = baseCreateDocument<CountDocument>(
+    let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
       initialState,
     );

@@ -65,7 +65,7 @@ export class DriveSubgraph extends BaseSubgraph {
     type Query {
       system: System
       drive: DriveInfo
-      document(id: String!): IDocument
+      document(id: String!): DriveDocument
       documents: [String!]!
     }
 
@@ -311,7 +311,16 @@ export class DriveSubgraph extends BaseSubgraph {
             documentModel.id === document.header.documentType,
         );
 
-        const globalState = document.state.global;
+        let node: Node | undefined;
+        const driveDocument = await this.reactor.getDrive(driveId);
+        if (driveDocument?.state?.global?.nodes) {
+          node = driveDocument.state.global.nodes.find(
+            (node) => node.id === id,
+          );
+        }
+
+        // eslint-disable-next-line
+        const globalState = (document.state as any).global;
         if (!globalState)
           throw new Error("Document was found with no global state");
 
@@ -319,7 +328,7 @@ export class DriveSubgraph extends BaseSubgraph {
           (dm?.documentModel.name || "").replaceAll("/", " "),
         );
 
-        return responseForDocument(document, typeName);
+        return responseForDocument(document, typeName, node?.name);
       },
       system: () => ({ sync: {} }),
     },
@@ -411,17 +420,19 @@ export class DriveSubgraph extends BaseSubgraph {
         const strands: InternalStrandUpdate[] = strandsGql.map((strandGql) => {
           return {
             operations: strandGql.operations.map((op) => ({
-              ...op,
-              input: JSON.parse(op.input) as DocumentModelInput,
+              index: op.index,
               skip: op.skip ?? 0,
-              scope: strandGql.scope,
-              branch: "main",
+              timestampUtcMs: op.timestampUtcMs,
+              hash: op.hash,
+              id: op.id,
+              // Map GraphQL context to Action.context (only signer is defined in schema)
               action: {
                 id: op.actionId,
+                type: op.type,
                 timestampUtcMs: op.timestampUtcMs,
                 scope: strandGql.scope,
-                type: op.type,
                 input: JSON.parse(op.input) as DocumentModelInput,
+                context: op.context,
               },
             })) as Operation[],
             documentId: strandGql.documentId,
@@ -510,7 +521,7 @@ export class DriveSubgraph extends BaseSubgraph {
           operations: update.operations.map((op) => ({
             index: op.index,
             skip: op.skip,
-            name: op.type,
+            // no extra name field; GraphQL schema exposes `type`
             input: JSON.stringify(op.input),
             hash: op.hash,
             timestampUtcMs: op.timestampUtcMs,

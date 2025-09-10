@@ -1,16 +1,17 @@
 import type {
   Action,
   ActionErrorCallback,
+  PHBaseState,
   PHDocument,
   Reducer,
 } from "document-model";
 import { useState } from "react";
 
-export function useDocumentReducer<TDocument extends PHDocument>(
-  reducer: Reducer<TDocument>,
-  initialState: TDocument,
+export function useDocumentReducer<TState extends PHBaseState = PHBaseState>(
+  reducer: Reducer<TState>,
+  initialState: PHDocument<TState>,
   onError?: (error: unknown) => void,
-): readonly [TDocument, (action: Action) => void] {
+): readonly [PHDocument<TState>, (action: Action) => void] {
   const [state, setState] = useState(initialState);
 
   const dispatch = (action: Action, onErrorCallback?: ActionErrorCallback) => {

@@ -22,10 +22,10 @@ class ProcessorModule extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<ProcessorModuleDocument>>,
+    initialState?: Partial<ProcessorModulePHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 }
 

@@ -12,7 +12,7 @@ describe("Internal Listener", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   async function buildReactor() {
     const builder = new ReactorBuilder(documentModels);

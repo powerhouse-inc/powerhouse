@@ -15,7 +15,7 @@ import type { SubgraphModuleDocument } from "./gen/types.js";
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...SubgraphModuleActions };
 
-export const module: DocumentModelModule<SubgraphModuleDocument> = {
+export const module: DocumentModelModule<SubgraphModulePHState> = {
   reducer,
   actions,
   utils,

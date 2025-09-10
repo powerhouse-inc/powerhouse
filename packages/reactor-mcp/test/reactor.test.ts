@@ -28,7 +28,7 @@ async function createReactor() {
   const builder = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[]);
+  ] as unknown as DocumentModelModule[]);
 
   const reactor = builder.build();
   await reactor.initialize();

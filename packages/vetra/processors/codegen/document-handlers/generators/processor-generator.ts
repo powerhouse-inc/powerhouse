@@ -54,9 +54,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as ProcessorModuleState;
 
     // Check if we have a valid processor name, type, document types, and it's confirmed

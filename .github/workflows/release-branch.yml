@@ -95,8 +95,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
-      # - name: Publish to npm
-      #   run: pnpm nx release publish --projects='apps/*,packages/*,clis/*' --tag=${{ env.TAG }}
-      #   shell: bash
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+  deploy:
+    name: Deploy to environment
+    needs: build-and-publish
+    uses: "./.github/workflows/deploy-powerhouse.yml"
+    secrets: inherit

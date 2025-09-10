@@ -19,7 +19,39 @@ export const initialGlobalState: AppModuleState = {
 };
 export const initialLocalState: AppModuleLocalState = {};
 
-const utils: DocumentModelUtils<AppModuleDocument> = {
+export const createState: CreateState<AppModulePHState> = (state) => {
+  return {
+    ...defaultBaseState(),
+    global: { ...initialGlobalState, ...(state?.global ?? {}) },
+    local: { ...initialLocalState, ...(state?.local ?? {}) },
+  };
+};
+
+export const createDocument: CreateDocument<AppModulePHState> = (state) => {
+  const document = baseCreateDocument(createState, state);
+  document.header.documentType = "powerhouse/app";
+  // for backwards compatibility, but this is NOT a valid signed document id
+  document.header.id = generateId();
+  return document;
+};
+
+export const saveToFile = (document: any, path: string, name?: string) => {
+  return baseSaveToFile(document, path, ".phdm", name);
+};
+
+export const saveToFileHandle = (document: any, input: any) => {
+  return baseSaveToFileHandle(document, input);
+};
+
+export const loadFromFile: LoadFromFile<AppModulePHState> = (path) => {
+  return baseLoadFromFile(path, reducer);
+};
+
+export const loadFromInput: LoadFromInput<AppModulePHState> = (input) => {
+  return baseLoadFromInput(input, reducer);
+};
+
+const utils = {
   fileExtension: ".phdm",
   createState(state) {
     return {

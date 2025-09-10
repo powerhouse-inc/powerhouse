@@ -83,9 +83,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
    * Abstract method that derived classes must implement.
    * This is where the business logic for processing document operations should be implemented.
    */
-  abstract onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void>;
+  abstract onStrands(strands: InternalTransmitterUpdate[]): Promise<void>;
 
   /**
    * Called when the processor is disconnected.

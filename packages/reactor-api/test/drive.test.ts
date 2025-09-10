@@ -178,6 +178,8 @@ describe("DriveSubgraph", () => {
       context as any,
     );
 
+    console.log(document);
+
     expect(document).toMatchObject({
       ...mockDocumentData.header,
       // default

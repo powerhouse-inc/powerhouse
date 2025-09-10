@@ -38,7 +38,7 @@ describe("processOperations", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
 
   let server: BaseDocumentDriveServer;
   beforeEach(async () => {
@@ -114,7 +114,7 @@ describe("processOperations", () => {
     const document = await buildFile(operations);
 
     expect(document.operations.global.length).toBe(operations.length);
-    expect(document.state.global).toMatchObject({
+    expect((document.state as any).global).toMatchObject({
       name: "test",
       id: "test",
     });
@@ -133,7 +133,9 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.document.state.global).toMatchObject({ name: "test" });
+    expect((result.document.state as any).global).toMatchObject({
+      name: "test",
+    });
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(1);
     expect(result.operationsApplied).toMatchObject(
@@ -161,7 +163,7 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test2",
       id: "test2",
       extension: "test2",
@@ -189,7 +191,7 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test",
       id: "",
     });
@@ -230,7 +232,7 @@ describe("processOperations", () => {
       operations,
     );
 
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test",
       id: "",
       extension: "",
@@ -274,7 +276,7 @@ describe("processOperations", () => {
     );
     expect(result.operationsApplied.length).toBe(0);
     expect(result.document.operations.global.length).toBe(3);
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test",
       id: "test",
       extension: "test",
@@ -326,7 +328,7 @@ describe("processOperations", () => {
     );
     expect(result.operationsApplied.length).toBe(2);
     expect(result.document.operations.global.length).toBe(5);
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test4",
       id: "test",
       extension: "test",
@@ -358,7 +360,7 @@ describe("processOperations", () => {
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(2);
     expect(result.document.operations.global.length).toBe(4);
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test2",
       id: "test",
       extension: "test",
@@ -402,7 +404,7 @@ describe("processOperations", () => {
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(2);
     expect(result.document.operations.global.length).toBe(5);
-    expect(result.document.state.global).toMatchObject({
+    expect((result.document.state as any).global).toMatchObject({
       name: "test5",
       id: "test",
       extension: "test",
@@ -424,7 +426,7 @@ describe("processOperations", () => {
 
     document = await server.getDocument<DocumentModelDocument>(documentId);
 
-    expect(document.state.global.name).toBe("test");
+    expect((document.state as any).global.name).toBe("test");
     expect(document.operations.global.length).toBe(1);
     expect(document.operations.global).toMatchObject([
       {
@@ -516,7 +518,7 @@ describe("processOperations", () => {
 
     const operations = document.operations.global.slice(-4);
 
-    expect(document.state.global).toMatchObject({
+    expect((document.state as any).global).toMatchObject({
       name: "2",
       id: "4",
     });
@@ -590,7 +592,7 @@ describe("processOperations", () => {
 
     const operations = finalDocument.operations.global.slice(-4);
 
-    expect(finalDocument.state.global).toMatchObject({
+    expect((finalDocument.state as any).global).toMatchObject({
       name: "2",
       id: "4",
     });

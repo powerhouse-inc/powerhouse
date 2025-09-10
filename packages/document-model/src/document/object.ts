@@ -22,13 +22,9 @@ import {
  * @typeparam T - The type of data stored in the document.
  * @typeparam A - The type of action the document can take.
  */
-export abstract class BaseDocumentClass<
-  TGlobalState,
-  TLocalState,
-  TCustomAction extends Action,
-> {
-  protected _document: BaseDocument<TGlobalState, TLocalState>;
-  private _reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>;
+export abstract class BaseDocumentClass<TState extends PHBaseState> {
+  protected _document: PHDocument<TState>;
+  private _reducer: Reducer<TState>;
   private _signalDispatch?: SignalDispatch;
 
   /**
@@ -37,8 +33,8 @@ export abstract class BaseDocumentClass<
    * @param document - The initial state of the document.
    */
   constructor(
-    reducer: Reducer<BaseDocument<TGlobalState, TLocalState>>,
-    document: BaseDocument<TGlobalState, TLocalState>,
+    reducer: Reducer<TState>,
+    document: PHDocument<TState>,
     signalDispatch?: SignalDispatch,
   ) {
     this._reducer = reducer;
@@ -51,7 +47,7 @@ export abstract class BaseDocumentClass<
    * @param action - The action to dispatch.
    * @returns The Document instance.
    */
-  protected dispatch(action: TCustomAction, options?: ReducerOptions) {
+  protected dispatch(action: Action, options?: ReducerOptions) {
     this._document = this._reducer(
       this._document,
       action,
@@ -141,7 +137,7 @@ export abstract class BaseDocumentClass<
    * @param name - The new name of the document.
    */
   public setName(name: string) {
-    this.dispatch(setName(name) as TCustomAction);
+    this.dispatch(setName(name));
     return this;
   }
 
@@ -150,7 +146,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to revert.
    */
   public undo(count: number) {
-    this.dispatch(undo(count) as TCustomAction);
+    this.dispatch(undo(count));
     return this;
   }
 
@@ -159,7 +155,7 @@ export abstract class BaseDocumentClass<
    * @param count - The number of actions to reapply.
    */
   public redo(count: number) {
-    this.dispatch(redo(count) as TCustomAction);
+    this.dispatch(redo(count));
     return this;
   }
   /**
@@ -180,16 +176,11 @@ export abstract class BaseDocumentClass<
   public loadState(
     state: {
       name: string;
-      state: BaseState<TGlobalState, TLocalState>;
+      state: TState;
     },
     operations: number,
   ) {
-    this.dispatch(
-      loadState(
-        { name: state.name, ...state.state },
-        operations,
-      ) as TCustomAction,
-    );
+    this.dispatch(loadState({ name: state.name, ...state.state }, operations));
     return this;
   }
 }

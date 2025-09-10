@@ -139,22 +139,18 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
-  if (auth?.enabled) {
-    graphqlManager.setAdditionalContextFields({
-      isGuest: (address: string) =>
-        auth.enabled && auth.guests?.includes(address.toLowerCase()),
-      isUser: (address: string) =>
-        auth.enabled && auth.users?.includes(address.toLowerCase()),
-      isAdmin: (address: string) =>
-        auth.enabled && auth.admins?.includes(address.toLowerCase()),
-    });
-  } else {
-    graphqlManager.setAdditionalContextFields({
-      isGuest: (address: string) => true,
-      isUser: (address: string) => true,
-      isAdmin: (address: string) => true,
-    });
-  }
+
+  // Create auth service for context fields
+  const authService = new AuthService({
+    enabled: auth?.enabled ?? false,
+    guests: auth?.guests ?? [],
+    users: auth?.users ?? [],
+    admins: auth?.admins ?? [],
+  });
+
+  graphqlManager.setAdditionalContextFields(
+    authService.getAdditionalContextFields(),
+  );
   return graphqlManager;
 }
 
@@ -294,66 +290,19 @@ export async function startAPI(
   }
 
   const all = [...admins, ...users, ...guests];
-
+  const authService = new AuthService({
+    enabled: authEnabled,
+    guests,
+    users,
+    admins,
+  });
   // add auth middleware if auth is enabled
   if (authEnabled) {
-    // set admin, users and guest list
     logger.info("Setting up Auth middleware");
-    app.use(async (req, res, next) => {
-      if (!authEnabled || req.method === "OPTIONS" || req.method === "GET") {
-        next();
-        return;
-      }
 
-      req.admins = admins;
-      req.users = users;
-      req.guests = guests;
-
-      const token = req.headers.authorization?.split(" ")[1];
-      if (!token) {
-        res.status(400).json({ error: "Missing authorization token" });
-        return;
-      }
-
-      const verified = await verifyAuthBearerToken(token);
-      if (!verified) {
-        res.status(401).json({ error: "Verification failed" });
-        return;
-      }
-
-      const { address, chainId, networkId } = verified.verifiableCredential
-        .credentialSubject as {
-        address: string;
-        chainId: number;
-        networkId: string;
-      };
-
-      // @todo: check renown eth credential
-
-      if (!address || !chainId || !networkId) {
-        res.status(401).json({ error: "Missing credentials" });
-        return;
-      }
-      req.user = {
-        address: address.toLowerCase(),
-        chainId,
-        networkId,
-      };
-
-      graphqlManager.setAdditionalContextFields({
-        user: {
-          address: address.toLowerCase(),
-          chainId,
-          networkId,
-        },
-      });
-
-      if (!all.includes(req.user.address)) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
-
-      next();
+    // Apply auth middleware to all routes including GraphQL
+    app.use((req, res, next) => {
+      authService.authenticate(req as AuthenticatedRequest, res, next);
     });
   }
 

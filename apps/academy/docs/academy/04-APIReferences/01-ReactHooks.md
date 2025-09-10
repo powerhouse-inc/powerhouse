@@ -70,9 +70,10 @@ To set the selected document/folder, we provide a function `setSelectedNode` whi
 ## Hooks
 
 <details>
-<summary>Reactor</summary>
+<summary>useReactor</summary>
+
 ```ts
-function useReactor(): Reactor | undefined
+function useReactor(): Reactor | undefined;
 ```
 
 Returns the reactor instance.
@@ -80,7 +81,7 @@ Returns the reactor instance.
 Usage
 
 ```jsx
-import { useReactor } from '@powerhousedao/state`
+import { useReactor } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const reactor = useReactor();
@@ -129,7 +130,7 @@ Usage
 import { useDriveById } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const driveById = useDriveById();
+  const driveById = useDriveById("some-id");
 }
 ```
 
@@ -142,7 +143,7 @@ function MyEditorComponent() {
 function useSelectedDrive(): DocumentDriveDocument | undefined;
 ```
 
-Returns the selected drive. You can use the selected drive with `setSelectedDrive`.
+Returns the selected drive. You can set the selected drive with `setSelectedDrive`.
 
 Usage
 
@@ -157,7 +158,7 @@ function MyEditorComponent() {
 </details>
 
 <details>
-<summary>drive properties convenience hooks</summary>
+<summary>Drive Properties Convenience Hooks</summary>
 
 We provide hooks for accessing various properties on the drive object for your convenience. These use the above hooks to get a drive and then return properties in the object.
 
@@ -408,12 +409,12 @@ Returns the path to the selected node. Useful for navigational components like b
 Usage
 
 ```jsx
-import { useSelectedNodePath } from '@powerhousedao/state';
+import { useSelectedNodePath } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const nodes = useSelectedNodePath();
 
-  return <Breadcrumbs nodes={nodes}>
+  return <Breadcrumbs nodes={nodes} />;
 }
 ```
 
@@ -443,20 +444,24 @@ Returns the file (document) child nodes for the selected drive or folder.
 Usage
 
 ```jsx
-import { useChildNodes, useFolderChildNodes, useFileChildNodes } from '@powerhousedao/state';
+import {
+  useChildNodes,
+  useFolderChildNodes,
+  useFileChildNodes,
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const nodes = useChildNodes();
-  const fileNodes = useChildFileNodes();
-  const folderNodes = useChildFolderNodes();
+  const fileNodes = useFileChildNodes();
+  const folderNodes = useFolderChildNodes();
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
+      <FilesAndFolders nodes={nodes} />
+      <Files fileNodes={fileNodes} />
+      <Folders folderNodes={folderNodes} />
     </div>
- )
+  );
 }
 ```
 
@@ -486,21 +491,25 @@ Returns the file (document) child nodes for a drive or folder by id.
 Usage
 
 ```jsx
-import { useChildNodesForId, useFolderChildNodesForId, useFileChildNodesForId } from '@powerhousedao/state';
+import {
+  useChildNodesForId,
+  useFolderChildNodesForId,
+  useFileChildNodesForId,
+} from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const driveOrFolderId = 'some-drive-or-folder-id';
+  const driveOrFolderId = "some-drive-or-folder-id";
   const nodes = useChildNodesForId(driveOrFolderId);
   const fileNodes = useFileChildNodesForId(driveOrFolderId);
   const folderNodes = useFolderChildNodesForId(driveOrFolderId);
 
   return (
     <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
+      <FilesAndFolders nodes={nodes} />
+      <Files fileNodes={fileNodes} />
+      <Folders folderNodes={folderNodes} />
     </div>
- )
+  );
 }
 ```
 
@@ -543,7 +552,7 @@ function MyEditorComponent() {
 
 </details>
 
-### Vetra packages and modules
+### Vetra Packages and Modules
 
 Vetra packages hold code which can plug into your Connect application. This includes common default modules like the document model document model editor and document drive document model, as well as the modules from your local project and the various packages you have installed.
 

@@ -36,14 +36,11 @@ export class InternalTransmitter implements ITransmitter {
       taskQueueMethod === undefined ? runAsap : taskQueueMethod;
   }
 
-  async #buildInternalOperationUpdate<TDocument extends PHDocument>(
+  async #buildInternalOperationUpdate(
     strand: StrandUpdate,
-  ): Promise<InternalOperationUpdate<TDocument>[]> {
-    const operations: InternalOperationUpdate<TDocument>[] = [];
-    const stateByIndex = new Map<
-      number,
-      GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>
-    >();
+  ): Promise<InternalOperationUpdate[]> {
+    const operations: InternalOperationUpdate[] = [];
+    const stateByIndex = new Map<number, PHBaseState>();
 
     const getStateByIndex = async (index: number) => {
       const state = stateByIndex.get(index);
@@ -59,10 +56,7 @@ export class InternalTransmitter implements ITransmitter {
       };
       const document = await (strand.documentId === strand.driveId
         ? this.drive.getDrive(strand.driveId, getDocumentOptions)
-        : this.drive.getDocument<TDocument>(
-            strand.documentId,
-            getDocumentOptions,
-          ));
+        : this.drive.getDocument(strand.documentId, getDocumentOptions));
 
       if (index < 0) {
         stateByIndex.set(index, (document.initialState as any)[strand.scope]);
@@ -111,7 +105,7 @@ export class InternalTransmitter implements ITransmitter {
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
         const document = await this.drive.getDocument(strand.documentId);
-        const state = operations.at(-1)?.state ?? {};
+        const state = operations.at(-1)?.state ?? ({} as PHBaseState);
         updates.push({
           ...strand,
           documentType: document.header.documentType,

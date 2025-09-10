@@ -15,11 +15,7 @@ import {
 } from "./creators.js";
 import type { DocumentEditorAction } from "../actions.js";
 
-export default class DocumentEditor_BaseOperations extends BaseDocumentClass<
-  DocumentEditorState,
-  DocumentEditorLocalState,
-  DocumentEditorAction
-> {
+export default class DocumentEditor_BaseOperations extends BaseDocumentClass<DocumentEditorPHState> {
   public setEditorName(input: SetEditorNameInput) {
     return this.dispatch(setEditorName(input));
   }

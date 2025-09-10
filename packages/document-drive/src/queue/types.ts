@@ -10,7 +10,8 @@ export interface BaseJob {
 
 export interface DocumentJob extends Omit<BaseJob, "actions"> {
   documentType: string;
-  initialState?: PHDocument;
+  header?: Partial<PHDocumentHeader>;
+  initialState?: Partial<PHBaseState>;
 }
 
 export interface OperationJob extends BaseJob {

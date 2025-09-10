@@ -19,9 +19,7 @@ export abstract class BaseDocumentGen {
    * Generate code for the given document
    * Must be implemented by each specific document generator
    */
-  abstract generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void>;
+  abstract generate(strand: InternalTransmitterUpdate): Promise<void>;
 
   /**
    * Check if this generator supports the given document type

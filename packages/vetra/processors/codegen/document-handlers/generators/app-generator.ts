@@ -45,9 +45,7 @@ export class AppGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): Promise<void> {
+  async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as AppModuleState;
 
     // Check if we have a valid app name and it's confirmed

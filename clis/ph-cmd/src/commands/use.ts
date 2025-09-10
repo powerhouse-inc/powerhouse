@@ -16,44 +16,109 @@ import {
 export const ORG = "@powerhousedao";
 
 // Special packages that don't use the @powerhousedao organization
-export const SPECIAL_PACKAGES = ["document-model", "document-drive"];
-
-// Dynamically list all packages, clis, and apps
-export const PACKAGES = [
-  "common",
-  "design-system",
-  "reactor-browser",
-  "builder-tools",
-  "codegen",
-  "reactor-api",
-  "reactor-local",
-  "reactor-mcp",
-  "scalars",
-  "switchboard-gui",
-  "renown",
-  "config",
-  "vetra",
-  ...SPECIAL_PACKAGES,
+export const SPECIAL_PACKAGES = [
+  "document-model",
+  "document-drive",
+  "@renown/sdk",
 ];
 
-export const CLIS = ["ph-cli", "ph-cmd"];
-
-export const APPS = ["switchboard", "connect"];
-
-export const PH_PROJECT_DEPENDENCIES = [
-  ...PACKAGES.filter((pkg) => !SPECIAL_PACKAGES.includes(pkg)).map(
-    (dependency) => `${ORG}/${dependency}`,
-  ),
-  ...SPECIAL_PACKAGES,
-  ...CLIS.map((dependency) => `${ORG}/${dependency}`),
-  ...APPS.map((dependency) => `${ORG}/${dependency}`),
+// Packages to exclude from dynamic detection (external dependencies)
+export const EXCLUDED_PACKAGES = [
+  "@powerhousedao/document-engineering",
+  "@powerhousedao/diff-analyzer",
+  "@powerhousedao/analytics-engine-core",
+  "@powerhousedao/analytics-engine-graphql",
+  "@powerhousedao/analytics-engine-pg",
+  "@powerhousedao/analytics-engine-browser",
+  "@powerhousedao/analytics-engine-knex",
 ];
 
-export const PH_PROJECT_LOCAL_DEPENDENCIES = [
-  ...PACKAGES.map((dependency) => path.join("packages", dependency)),
-  ...CLIS.map((dependency) => path.join("clis", dependency)),
-  ...APPS.map((dependency) => path.join("apps", dependency)),
-];
+/**
+ * Detects all Powerhouse packages from package.json dependencies
+ * @param packageJson - The parsed package.json object
+ * @returns Array of package names to process
+ */
+export function detectPowerhousePackages(packageJson: {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}): string[] {
+  const allDependencies = {
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+  };
+
+  const powerhousePackages: string[] = [];
+
+  // Find all @powerhousedao packages (excluding document-engineering)
+  Object.keys(allDependencies).forEach((dep) => {
+    if (dep.startsWith(ORG + "/") && !EXCLUDED_PACKAGES.includes(dep)) {
+      powerhousePackages.push(dep);
+    }
+  });
+
+  // Add special packages if they exist
+  SPECIAL_PACKAGES.forEach((pkg) => {
+    if (allDependencies[pkg]) {
+      powerhousePackages.push(pkg);
+    }
+  });
+
+  return powerhousePackages;
+}
+
+/**
+ * Maps a package name to its monorepo directory path by reading package.json files
+ * @param packageName - The package name (e.g., '@powerhousedao/common' or 'document-model')
+ * @param localPath - The base path to the monorepo
+ * @returns The full path to the package directory
+ */
+export function mapPackageToMonorepoPath(
+  packageName: string,
+  localPath: string,
+): string {
+  // Search in all possible locations
+  const searchDirs = [
+    path.join(localPath, "packages"),
+    path.join(localPath, "apps"),
+    path.join(localPath, "clis"),
+  ];
+
+  for (const searchDir of searchDirs) {
+    if (!existsSync(searchDir)) continue;
+
+    try {
+      // Read all subdirectories
+      const subdirs = readdirSync(searchDir, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
+
+      // Check each subdirectory's package.json
+      for (const subdir of subdirs) {
+        const packageJsonPath = path.join(searchDir, subdir, "package.json");
+        if (existsSync(packageJsonPath)) {
+          try {
+            const content = readFileSync(packageJsonPath, "utf-8");
+            const pkg = JSON.parse(content) as { name?: string };
+            if (pkg.name === packageName) {
+              return path.join(searchDir, subdir);
+            }
+          } catch {
+            // Ignore invalid package.json files
+          }
+        }
+      }
+    } catch {
+      // Ignore errors reading directory
+      continue;
+    }
+  }
+
+  // Fallback to old behavior if not found
+  const baseName = packageName.startsWith(ORG + "/")
+    ? packageName.substring(ORG.length + 1)
+    : packageName;
+  return path.join(localPath, "packages", baseName);
+}
 
 export const ENV_MAP = {
   dev: "dev",
@@ -89,31 +154,21 @@ export const updatePackageJson = async (
     devDependencies?: Record<string, string>;
   };
 
-  const existingDependencies = {
-    ...(packageJson.dependencies || {}),
-    ...(packageJson.devDependencies || {}),
-  };
+  // Detect all Powerhouse packages from the current package.json
+  const powerhousePackages = detectPowerhousePackages(packageJson);
 
   const dependencies: string[] = [];
 
   if (localPath) {
-    // For local path, only include dependencies that exist in package.json
-    PH_PROJECT_LOCAL_DEPENDENCIES.forEach((dependency) => {
-      const fullPath = path.join(localPath, dependency);
-      const packageName = path.basename(dependency);
-      const depName = SPECIAL_PACKAGES.includes(packageName)
-        ? packageName
-        : `${ORG}/${packageName}`;
-      if (existingDependencies[depName]) {
-        dependencies.push(fullPath);
-      }
+    // For local path, map each detected package to its monorepo path
+    powerhousePackages.forEach((packageName) => {
+      const fullPath = mapPackageToMonorepoPath(packageName, localPath);
+      dependencies.push(fullPath);
     });
   } else {
-    // For remote dependencies, only include those that exist in package.json
-    PH_PROJECT_DEPENDENCIES.forEach((dependency) => {
-      if (existingDependencies[dependency]) {
-        dependencies.push(`${dependency}@${ENV_MAP[env]}`);
-      }
+    // For remote dependencies, add version tags
+    powerhousePackages.forEach((packageName) => {
+      dependencies.push(`${packageName}@${ENV_MAP[env]}`);
     });
   }
 
@@ -235,6 +290,7 @@ export function useCommand(program: Command): Command {
         process.exit(1);
         return false;
       }
+      return true;
     },
   );
 }

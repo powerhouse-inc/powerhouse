@@ -136,12 +136,12 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
 
   // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
-  fetchDocument<TDocument extends PHDocument>(
+  fetchDocument<TState extends PHBaseState>(
     driveId: string,
     documentId: string,
     documentType: string,
   ): Promise<
-    | TDocument
+    | PHDocument<TState>
     | DocumentModelNotFoundError
     | ReadDriveNotFoundError
     | ReadDocumentNotFoundError

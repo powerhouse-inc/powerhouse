@@ -21,7 +21,7 @@ describe("Internal Listener", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[];
+  ] as DocumentModelModule<any>[];
   const driveId = generateId();
 
   async function buildServer(processor: IProcessor) {
@@ -154,7 +154,7 @@ describe("Internal Listener", () => {
           }),
         ],
         scope: "global",
-        state: result.document!.state.global,
+        state: (result.document!.state as any).global,
       }),
       expect.objectContaining({
         branch: "main",

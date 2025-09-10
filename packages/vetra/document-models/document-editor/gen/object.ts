@@ -22,10 +22,10 @@ class DocumentEditor extends BaseDocumentClass<
   static fileExtension = ".phdm";
 
   constructor(
-    initialState?: Partial<BaseStateFromDocument<DocumentEditorDocument>>,
+    initialState?: Partial<DocumentEditorPHState>,
     dispatch?: SignalDispatch,
   ) {
-    super(reducer, utils.createDocument(initialState), dispatch);
+    super(reducer, createDocument(initialState), dispatch);
   }
 }
 

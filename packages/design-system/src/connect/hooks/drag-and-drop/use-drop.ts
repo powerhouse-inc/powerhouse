@@ -15,6 +15,7 @@ export function useDrop(props: Props) {
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     setIsDropTarget(true);
   }, []);
 
@@ -25,7 +26,18 @@ export function useDrop(props: Props) {
   const onDrop = useCallback(
     async (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      event.stopPropagation();
+
+      const dropTarget = event.target as HTMLElement;
+      const closestDropZone = dropTarget.closest("[data-drop-zone]");
+
+      const dropZoneId = node?.id || "root";
+      const closestDropZoneId =
+        closestDropZone?.getAttribute("data-drop-zone") || "root";
+
+      if (closestDropZoneId !== dropZoneId) {
+        setIsDropTarget(false);
+        return;
+      }
 
       try {
         const droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
@@ -54,15 +66,20 @@ export function useDrop(props: Props) {
         setIsDropTarget(false);
       }
     },
-    [onAddFile, onCopyNode, onMoveNode, parent],
+    [onAddFile, onCopyNode, onMoveNode, parent, node?.id],
   );
 
   return useMemo(() => {
     return {
       isDropTarget,
-      dropProps: { onDragOver, onDragLeave, onDrop },
+      dropProps: {
+        onDragOver,
+        onDragLeave,
+        onDrop,
+        "data-drop-zone": node?.id || "root",
+      },
     };
-  }, [isDropTarget, onDragLeave, onDragOver, onDrop]);
+  }, [isDropTarget, onDragLeave, onDragOver, onDrop, node?.id]);
 }
 
 function getDroppedFiles(items: DataTransferItemList) {

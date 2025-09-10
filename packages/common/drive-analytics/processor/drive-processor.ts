@@ -39,9 +39,7 @@ export class DriveAnalyticsProcessor implements IProcessor {
     //
   }
 
-  async onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[],
-  ): Promise<void> {
+  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
     if (strands.length === 0) {
       return;
     }

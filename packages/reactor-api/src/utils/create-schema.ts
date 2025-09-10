@@ -173,6 +173,17 @@ export const getDocumentModelTypeDefs = (
     }
     ${dmSchema.replaceAll(";", "")}
 
+    type DriveDocument implements IDocument {
+      id: String!
+      name: String!
+      documentType: String!
+      revision: Int!
+      created: DateTime!
+      lastModified: DateTime!
+      operations(first: Int, skip: Int): [Operation!]!
+      stateJSON: JSONObject
+    }
+
     ${typeDefs}
   `;
 

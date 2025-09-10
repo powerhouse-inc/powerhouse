@@ -5,7 +5,7 @@ import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
 
-const stateReducer: StateReducer<SubgraphModuleDocument> = (
+export const stateReducer: StateReducer<SubgraphModulePHState> = (
   state,
   action,
   dispatch,
@@ -38,4 +38,4 @@ const stateReducer: StateReducer<SubgraphModuleDocument> = (
   }
 };
 
-export const reducer = createReducer<SubgraphModuleDocument>(stateReducer);
+export const reducer = createReducer<SubgraphModulePHState>(stateReducer);

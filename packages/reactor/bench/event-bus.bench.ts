@@ -12,11 +12,9 @@ const TEST_DATA = { message: "test event", timestampUtcMs: Date.now() };
 /**
  * Creates a synchronous subscriber that performs minimal work
  */
-function createSyncSubscriber(id: string) {
-  return (type: number, data: any) => {
-    // Minimal synchronous work
-    const result = data.timestampUtcMs + id.length;
-    return result;
+function createSyncSubscriber() {
+  return () => {
+    //
   };
 }
 
@@ -29,7 +27,6 @@ function createAsyncSubscriber(id: string, delayMs = 0) {
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-    return data.timestampUtcMs + id.length;
   };
 }
 
@@ -41,10 +38,6 @@ function createMixedSubscriber(id: string, asyncProbability = 0.5) {
     if (Math.random() < asyncProbability) {
       // Async path with minimal delay
       await new Promise((resolve) => setImmediate(resolve));
-      return data.timestampUtcMs + id.length;
-    } else {
-      // Sync path
-      return data.timestampUtcMs + id.length;
     }
   };
 }
@@ -56,7 +49,7 @@ function setupSyncEventBus(subscriberCount: number): EventBus {
   const eventBus = new EventBus();
 
   for (let i = 0; i < subscriberCount; i++) {
-    eventBus.subscribe(EVENT_TYPE_SYNC, createSyncSubscriber(`sync-${i}`));
+    eventBus.subscribe(EVENT_TYPE_SYNC, createSyncSubscriber());
   }
 
   return eventBus;
@@ -69,10 +62,7 @@ function setupAsyncEventBus(subscriberCount: number, delayMs = 0): EventBus {
   const eventBus = new EventBus();
 
   for (let i = 0; i < subscriberCount; i++) {
-    eventBus.subscribe(
-      EVENT_TYPE_ASYNC,
-      createAsyncSubscriber(`async-${i}`, delayMs),
-    );
+    eventBus.subscribe(EVENT_TYPE_ASYNC, createAsyncSubscriber(delayMs));
   }
 
   return eventBus;
@@ -90,7 +80,7 @@ function setupMixedEventBus(
   for (let i = 0; i < subscriberCount; i++) {
     eventBus.subscribe(
       EVENT_TYPE_MIXED,
-      createMixedSubscriber(`mixed-${i}`, asyncProbability),
+      createMixedSubscriber(asyncProbability),
     );
   }
 
@@ -302,7 +292,7 @@ describe("EventBus Subscription Management Performance", () => {
       const eventBus = new EventBus();
       const unsubscribe = eventBus.subscribe(
         EVENT_TYPE_SYNC,
-        createSyncSubscriber("temp"),
+        createSyncSubscriber(),
       );
       unsubscribe();
     },
@@ -317,10 +307,7 @@ describe("EventBus Subscription Management Performance", () => {
 
       for (let i = 0; i < 10; i++) {
         unsubscribes.push(
-          eventBus.subscribe(
-            EVENT_TYPE_SYNC,
-            createSyncSubscriber(`temp-${i}`),
-          ),
+          eventBus.subscribe(EVENT_TYPE_SYNC, createSyncSubscriber()),
         );
       }
 
@@ -339,10 +326,7 @@ describe("EventBus Subscription Management Performance", () => {
 
       for (let i = 0; i < 100; i++) {
         unsubscribes.push(
-          eventBus.subscribe(
-            EVENT_TYPE_SYNC,
-            createSyncSubscriber(`temp-${i}`),
-          ),
+          eventBus.subscribe(EVENT_TYPE_SYNC, createSyncSubscriber()),
         );
       }
 
@@ -356,21 +340,19 @@ describe("EventBus Subscription Management Performance", () => {
 
 describe("EventBus Error Handling Performance", () => {
   function createErrorSubscriber(shouldError: boolean) {
-    return (type: number, data: any) => {
+    return () => {
       if (shouldError) {
         throw new Error("Test error");
       }
-      return data.timestampUtcMs;
     };
   }
 
   function createAsyncErrorSubscriber(shouldError: boolean) {
-    return async (type: number, data: any) => {
+    return async () => {
       await new Promise((resolve) => setTimeout(resolve, 1));
       if (shouldError) {
         throw new Error("Test async error");
       }
-      return data.timestampUtcMs;
     };
   }
 
@@ -399,7 +381,7 @@ describe("EventBus Error Handling Performance", () => {
     async () => {
       try {
         await errorEventBus.emit(EVENT_TYPE_SYNC, TEST_DATA);
-      } catch (error) {
+      } catch {
         // Expected error
       }
     },
@@ -411,7 +393,7 @@ describe("EventBus Error Handling Performance", () => {
     async () => {
       try {
         await asyncErrorEventBus.emit(EVENT_TYPE_ASYNC, TEST_DATA);
-      } catch (error) {
+      } catch {
         // Expected error
       }
     },

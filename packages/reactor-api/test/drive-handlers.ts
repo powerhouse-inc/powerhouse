@@ -6,14 +6,22 @@ import { DriveSubgraph } from "@powerhousedao/reactor-api";
 export const createDriveHandlers = (
   reactor: IDocumentDriveServer,
   driveId: string,
-) => {
-  const driveSubgraph = new DriveSubgraph({ reactor } as any);
-  const { Query, Mutation, Sync } = driveSubgraph.resolvers as any;
+): GraphQLHandler[] => {
+  const driveSubgraph = new DriveSubgraph({
+    reactor,
+  } as unknown as SubgraphArgs);
+  // eslint-disable-next-line
+  const { Query, Mutation, Sync } = driveSubgraph.resolvers as unknown as {
+    Query: any;
+    Mutation: any;
+    Sync: any;
+  };
   const context = { driveId, isUser: () => true, isAdmin: () => true };
 
   return [
     graphql.query("getDrive", async ({ variables }) =>
       HttpResponse.json({
+        // eslint-disable-next-line
         data: { drive: await Query.drive(undefined, variables, context) },
       }),
     ),
@@ -22,6 +30,7 @@ export const createDriveHandlers = (
       async ({ variables }) =>
         HttpResponse.json({
           data: {
+            // eslint-disable-next-line
             pushUpdates: await Mutation.pushUpdates(
               undefined,
               variables,
@@ -35,7 +44,9 @@ export const createDriveHandlers = (
       async ({ variables }) =>
         HttpResponse.json({
           data: {
+            // eslint-disable-next-line
             registerPullResponderListener:
+              // eslint-disable-next-line
               await Mutation.registerPullResponderListener(
                 undefined,
                 variables,
@@ -51,6 +62,7 @@ export const createDriveHandlers = (
           data: {
             system: {
               sync: {
+                // eslint-disable-next-line
                 strands: await Sync.strands(undefined, variables, context),
               },
             },
@@ -62,6 +74,7 @@ export const createDriveHandlers = (
       async ({ variables }) =>
         HttpResponse.json({
           data: {
+            // eslint-disable-next-line
             acknowledge: await Mutation.acknowledge(
               undefined,
               variables,

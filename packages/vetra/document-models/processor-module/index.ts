@@ -15,7 +15,7 @@ import type { ProcessorModuleDocument } from "./gen/types.js";
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...ProcessorModuleActions };
 
-export const module: DocumentModelModule<ProcessorModuleDocument> = {
+export const module: DocumentModelModule<ProcessorModulePHState> = {
   reducer,
   actions,
   utils,

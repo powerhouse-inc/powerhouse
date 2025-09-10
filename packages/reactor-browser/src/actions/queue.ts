@@ -34,7 +34,7 @@ export async function queueActions(
 }
 
 export async function queueOperations(
-  document: PHDocument | undefined,
+  documentId: string,
   operationOrOperations: Operation[] | Operation | undefined,
 ) {
   if (!operationOrOperations) {
@@ -49,18 +49,8 @@ export async function queueOperations(
   if (!reactor) {
     return;
   }
-  if (!document) {
-    logger.error("No document found");
-    return;
-  }
-  const deduplicatedOperations = deduplicateOperations(
-    document.operations,
-    operations,
-  );
-  const result = await reactor.queueOperations(
-    document.header.id,
-    deduplicatedOperations,
-  );
+
+  const result = await reactor.queueOperations(documentId, operations);
   if (result.status !== "SUCCESS") {
     logger.error(result.error);
   }
@@ -150,24 +140,21 @@ export function deduplicateOperations(
 }
 
 export async function uploadOperations(
-  document: PHDocument | undefined,
+  documentId: string,
+  allOperations: DocumentOperations,
   pushOperations: (
-    document: PHDocument,
+    documentId: string,
     operations: Operation[],
   ) => Promise<PHDocument | undefined>,
-  options?: { waitForSync?: boolean; operationsLimit?: number },
+  options?: { operationsLimit?: number },
 ) {
-  if (!document) {
-    logger.error("No document found");
-    return;
-  }
   const operationsLimit = options?.operationsLimit || 50;
 
   logger.verbose(
-    `uploadDocumentOperations(documentId:${document.header.id}, ops: ${Object.keys(document.operations).join(",")}, limit:${operationsLimit})`,
+    `uploadDocumentOperations(documentId:${documentId}, ops: ${Object.keys(allOperations).join(",")}, limit:${operationsLimit})`,
   );
 
-  for (const operations of Object.values(document.operations)) {
+  for (const operations of Object.values(allOperations)) {
     for (let i = 0; i < operations.length; i += operationsLimit) {
       logger.verbose(
         `uploadDocumentOperations:for(i:${i}, ops:${operations.length}, limit:${operationsLimit}): START`,
@@ -179,31 +166,15 @@ export async function uploadOperations(
       }
       const scope = operation.action.scope;
 
-      /*
-          TODO: check why the waitForUpdate promise does not resolve after the first iteration
-          if (options?.waitForSync) {
-              void pushOperations(drive, documentId, chunk);
-              await waitForUpdate(
-                  10000,
-                  documentId,
-                  scope,
-                  operation.index,
-                  reactor,
-              );
-          } else {
-              await pushOperations(drive, documentId, chunk);
-          }
-          */
-
-      await pushOperations(document, chunk);
+      await pushOperations(documentId, chunk);
 
       logger.verbose(
-        `uploadDocumentOperations:for:waitForUpdate(${document.header.id}:${scope} rev ${operation.index}): NEXT`,
+        `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
       );
     }
   }
 
   logger.verbose(
-    `uploadDocumentOperations:for:waitForUpdate(${document.header.id}): END`,
+    `uploadDocumentOperations:for:waitForUpdate(${documentId}): END`,
   );
 }

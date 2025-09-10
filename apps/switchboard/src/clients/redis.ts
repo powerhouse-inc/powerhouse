@@ -1,4 +1,5 @@
-import { createClient, type RedisClientType } from "redis";
+import type { RedisClientType } from "redis";
+import { createClient } from "redis";
 
 export let redisClient: RedisClientType | undefined;
 export const initRedis = async (
