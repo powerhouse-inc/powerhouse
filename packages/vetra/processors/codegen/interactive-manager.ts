@@ -16,7 +16,7 @@ export class InteractiveManager {
   private processingConfirmation = false;
   private strandQueue = new Map<string, QueuedStrand>();
 
-  constructor(interactiveMode: boolean = false) {
+  constructor(interactiveMode = false) {
     this.isInteractiveMode = interactiveMode;
   }
 

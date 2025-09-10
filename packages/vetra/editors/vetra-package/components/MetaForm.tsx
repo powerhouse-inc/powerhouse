@@ -32,15 +32,15 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
     githubRepository: initialGithubRepository,
     npmPackage: initialNpmPackage,
     keywords: initialKeywords,
-    onNameChange, 
+    onNameChange,
     onDescriptionChange,
-    onCategoryChange, 
-    onPublisherChange, 
-    onPublisherUrlChange, 
-    onGithubRepositoryChange, 
+    onCategoryChange,
+    onPublisherChange,
+    onPublisherUrlChange,
+    onGithubRepositoryChange,
     onNpmPackageChange,
     onAddKeyword,
-    onRemoveKeyword
+    onRemoveKeyword,
   } = props;
 
   const [name, setName] = useState(initialName);
@@ -48,9 +48,11 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
   const [category, setCategory] = useState(initialCategory);
   const [publisher, setPublisher] = useState(initialPublisher);
   const [publisherUrl, setPublisherUrl] = useState(initialPublisherUrl);
-  const [githubRepository, setGithubRepository] = useState(initialGithubRepository);
+  const [githubRepository, setGithubRepository] = useState(
+    initialGithubRepository,
+  );
   const [npmPackage, setNpmPackage] = useState(initialNpmPackage);
-  
+
   // Keywords state
   const [keywords, setKeywords] = useState<Keyword[]>(initialKeywords);
   const [keywordInput, setKeywordInput] = useState("");
@@ -64,32 +66,32 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
   useDebounce(npmPackage, onNpmPackageChange, 300);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 bg-white">
+    <div className="grid grid-cols-1 gap-6 bg-white p-6 lg:grid-cols-3">
       {/* Left Column */}
       <div className="space-y-6">
         {/* Name Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Name
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* Description Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Description
           </label>
           <textarea
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -98,17 +100,17 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
       <div className="space-y-6">
         {/* Category Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Category
           </label>
-          <select 
+          <select
             value={category}
             onChange={(e) => {
               const newValue = e.target.value;
               setCategory(newValue);
               onCategoryChange?.(newValue);
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Not selected</option>
             <option value="Productivity">Productivity</option>
@@ -123,33 +125,33 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Publisher Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Publisher
           </label>
           <input
             type="text"
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* Publisher URL Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Publisher URL
           </label>
           <input
             type="text"
             value={publisherUrl}
             onChange={(e) => setPublisherUrl(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* Keywords Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Keywords
           </label>
           <div className="space-y-2">
@@ -158,25 +160,25 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && keywordInput.trim()) {
+                if (e.key === "Enter" && keywordInput.trim()) {
                   e.preventDefault();
                   const newKeyword = {
                     id: Date.now().toString(), // Generate a unique ID
-                    label: keywordInput.trim()
+                    label: keywordInput.trim(),
                   };
                   setKeywords([...keywords, newKeyword]);
                   onAddKeyword?.(newKeyword);
-                  setKeywordInput('');
+                  setKeywordInput("");
                 }
               }}
               placeholder="Type a keyword and press Enter"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div className="flex flex-wrap gap-2 p-3 border border-gray-300 rounded-md min-h-[80px]">
+            <div className="flex min-h-[80px] flex-wrap gap-2 rounded-md border border-gray-300 p-3">
               {keywords.map((keyword) => (
-                <span 
+                <span
                   key={keyword.id}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 border border-blue-300"
+                  className="inline-flex items-center rounded border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
                 >
                   {keyword.label}
                   <button
@@ -199,69 +201,69 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
       <div className="space-y-6">
         {/* Github Repository Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Github Repository
           </label>
           <input
             type="text"
             value={githubRepository}
             onChange={(e) => setGithubRepository(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* NPM-package Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             NPM-package
           </label>
           <input
             type="text"
             value={npmPackage}
             onChange={(e) => setNpmPackage(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         {/* Version Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Version
           </label>
           <input
             type="text"
             placeholder="1.0.0-dev"
             readOnly
-            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
           />
         </div>
 
         {/* License Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             License
           </label>
           <input
             type="text"
             placeholder="AGPL-3.0-only"
             readOnly
-            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
           />
         </div>
 
         {/* Install with Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
             Install with:
           </label>
           <input
             type="text"
             placeholder="@powerhousedao/todo-demo-package"
             readOnly
-            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+            className="w-full cursor-not-allowed rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
           />
         </div>
       </div>
     </div>
   );
-}
+};

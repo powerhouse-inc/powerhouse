@@ -1,8 +1,8 @@
-import { type FileNode } from 'document-drive';
-import type React from 'react';
-import { DOCUMENT_TYPES } from '../document-types.js';
-import { ModuleAccordion } from './ModuleAccordion.js';
-import { ModuleList } from './ModuleList.js';
+import { type FileNode } from "document-drive";
+import type React from "react";
+import { DOCUMENT_TYPES } from "../document-types.js";
+import { ModuleAccordion } from "./ModuleAccordion.js";
+import { ModuleList } from "./ModuleList.js";
 
 interface DataIntegrationsColumnProps {
   subgraphs: FileNode[];
@@ -14,9 +14,9 @@ interface DataIntegrationsColumnProps {
   onOpenDocument?: (node: FileNode) => void;
 }
 
-export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({ 
-  subgraphs, 
-  processors, 
+export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
+  subgraphs,
+  processors,
   codegenProcessors,
   onAddSubgraph,
   onAddProcessor,
@@ -25,12 +25,14 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="text-sm font-normal text-gray-700 mb-4">3. Data Integrations</h3>
-      <div className="bg-zinc-50 rounded-md border border-zinc-200">
+      <h3 className="mb-4 text-sm font-normal text-gray-700">
+        3. Data Integrations
+      </h3>
+      <div className="rounded-md border border-zinc-200 bg-zinc-50">
         <ModuleAccordion
           title="Subgraphs"
           count={subgraphs.length}
-          onAdd={onAddSubgraph || (() => console.log('Add subgraph clicked'))}
+          onAdd={onAddSubgraph || (() => console.log("Add subgraph clicked"))}
           defaultOpen={true}
           headerClassName="m-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-md"
         >
@@ -44,7 +46,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
         <ModuleAccordion
           title="Processors"
           count={processors.length}
-          onAdd={onAddProcessor || (() => console.log('Add processor clicked'))}
+          onAdd={onAddProcessor || (() => console.log("Add processor clicked"))}
           defaultOpen={true}
           headerClassName="m-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-md"
         >
@@ -58,7 +60,10 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
         <ModuleAccordion
           title="Codegen Processor"
           count={codegenProcessors.length}
-          onAdd={onAddCodegenProcessor || (() => console.log('Add codegen processor clicked'))}
+          onAdd={
+            onAddCodegenProcessor ||
+            (() => console.log("Add codegen processor clicked"))
+          }
           defaultOpen={true}
           headerClassName="m-4 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-md"
         >

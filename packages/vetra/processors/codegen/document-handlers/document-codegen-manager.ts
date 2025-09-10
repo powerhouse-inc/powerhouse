@@ -21,7 +21,7 @@ export class DocumentCodegenManager {
 
   constructor(
     private config: Config,
-    interactiveMode: boolean = false,
+    interactiveMode = false,
   ) {
     this.interactiveManager = new InteractiveManager(interactiveMode);
   }
@@ -156,7 +156,7 @@ export class DocumentCodegenManager {
       // Non-interactive mode: use debouncing per document instance
       // Create unique key for this specific document instance
       const timerKey = `${documentType}:${strand.documentId}`;
-      
+
       // Clear any existing debounce timer for this document instance
       const existingTimer = this.debounceTimers.get(timerKey);
       if (existingTimer) {

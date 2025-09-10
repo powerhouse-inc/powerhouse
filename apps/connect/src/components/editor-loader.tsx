@@ -1,30 +1,30 @@
-import { DefaultEditorLoader } from '@powerhousedao/design-system';
+import { DefaultEditorLoader } from "@powerhousedao/design-system";
 import {
-    type ComponentProps,
-    type ReactNode,
-    useEffect,
-    useState,
-} from 'react';
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 
 type Props = ComponentProps<typeof DefaultEditorLoader> & {
-    loadingTimeout?: number;
-    customEditorLoader?: ReactNode;
+  loadingTimeout?: number;
+  customEditorLoader?: ReactNode;
 };
 export function EditorLoader(props: Props) {
-    const [showLoading, setShowLoading] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
 
-    // only shows the loader after some time has passed
-    useEffect(() => {
-        setTimeout(() => {
-            setShowLoading(true);
-        }, props.loadingTimeout ?? 200);
-    }, [props]);
+  // only shows the loader after some time has passed
+  useEffect(() => {
+    setTimeout(() => {
+      setShowLoading(true);
+    }, props.loadingTimeout ?? 200);
+  }, [props]);
 
-    if (!showLoading) return null;
+  if (!showLoading) return null;
 
-    const { customEditorLoader, ...defaultProps } = props;
+  const { customEditorLoader, ...defaultProps } = props;
 
-    if (customEditorLoader) return <>{customEditorLoader}</>;
+  if (customEditorLoader) return <>{customEditorLoader}</>;
 
-    return <DefaultEditorLoader {...defaultProps} />;
+  return <DefaultEditorLoader {...defaultProps} />;
 }

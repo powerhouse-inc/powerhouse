@@ -1,243 +1,242 @@
-import connectConfig from '#connect-config';
+import connectConfig from "#connect-config";
 import {
-    useProcessorManager,
-    useProcessors,
-    useRelationalDb,
-    type Processors,
-} from '@powerhousedao/reactor-browser';
-import type { IAnalyticsStore } from '@powerhousedao/reactor-browser/analytics';
+  useProcessorManager,
+  useProcessors,
+  useRelationalDb,
+  type Processors,
+} from "@powerhousedao/reactor-browser";
+import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
 import {
-    AnalyticsProvider,
-    useAnalyticsStoreAsync,
-} from '@powerhousedao/reactor-browser/analytics/context';
+  AnalyticsProvider,
+  useAnalyticsStoreAsync,
+} from "@powerhousedao/reactor-browser/analytics/context";
 import {
-    live,
-    useSetPGliteDB,
-    type PGlite,
-    type PGliteWithLive,
-} from '@powerhousedao/reactor-browser/pglite';
-import { childLogger } from 'document-drive';
-import type { ProcessorManager } from 'document-drive/processors/processor-manager';
-import { type IRelationalDb } from 'document-drive/processors/types';
-import { generateId, type PHDocumentHeader } from 'document-model';
-import { useEffect, useRef, type PropsWithChildren } from 'react';
+  live,
+  useSetPGliteDB,
+  type PGlite,
+  type PGliteWithLive,
+} from "@powerhousedao/reactor-browser/pglite";
+import { childLogger } from "document-drive";
+import type { ProcessorManager } from "document-drive/processors/processor-manager";
+import { type IRelationalDb } from "document-drive/processors/types";
+import { generateId, type PHDocumentHeader } from "document-model";
+import { useEffect, useRef, type PropsWithChildren } from "react";
 
-const logger = childLogger(['reactor-analytics']);
+const logger = childLogger(["reactor-analytics"]);
 
 function createPgLiteFactoryWorker(databaseName: string) {
-    return async () => {
-        const PGWorker = (await import('../workers/pglite-worker.js?worker'))
-            .default;
+  return async () => {
+    const PGWorker = (await import("../workers/pglite-worker.js?worker"))
+      .default;
 
-        const { PGliteWorker } = await import(
-            '@powerhousedao/reactor-browser/pglite'
-        );
+    const { PGliteWorker } = await import(
+      "@powerhousedao/reactor-browser/pglite"
+    );
 
-        const worker = new PGWorker({
-            name: 'pglite-worker',
-        });
+    const worker = new PGWorker({
+      name: "pglite-worker",
+    });
 
-        worker.onmessage = event => {
-            logger.verbose(event.data);
-        };
-
-        worker.onerror = event => {
-            logger.error(event.message);
-            throw event.error;
-        };
-
-        const pgLiteWorker = new PGliteWorker(worker, {
-            meta: {
-                databaseName,
-            },
-            extensions: {
-                live,
-            },
-        });
-
-        await pgLiteWorker.waitReady;
-
-        return pgLiteWorker as unknown as PGlite;
+    worker.onmessage = (event) => {
+      logger.verbose(event.data);
     };
+
+    worker.onerror = (event) => {
+      logger.error(event.message);
+      throw event.error;
+    };
+
+    const pgLiteWorker = new PGliteWorker(worker, {
+      meta: {
+        databaseName,
+      },
+      extensions: {
+        live,
+      },
+    });
+
+    await pgLiteWorker.waitReady;
+
+    return pgLiteWorker as unknown as PGlite;
+  };
 }
 
 async function registerExternalProcessors(
-    manager: ProcessorManager,
-    analyticsStore: IAnalyticsStore,
-    relationalDb: IRelationalDb,
-    processorName: string,
-    processorFactory: Processors,
+  manager: ProcessorManager,
+  analyticsStore: IAnalyticsStore,
+  relationalDb: IRelationalDb,
+  processorName: string,
+  processorFactory: Processors,
 ) {
-    return await manager.registerFactory(
-        processorName,
-        processorFactory({ analyticsStore, relationalDb }),
-    );
+  return await manager.registerFactory(
+    processorName,
+    processorFactory({ analyticsStore, relationalDb }),
+  );
 }
 
 async function registerDiffAnalyzer(
-    manager: ProcessorManager,
-    analyticsStore: IAnalyticsStore,
+  manager: ProcessorManager,
+  analyticsStore: IAnalyticsStore,
 ) {
-    const { processorFactory } = await import(
-        '@powerhousedao/diff-analyzer/processors'
-    );
+  const { processorFactory } = await import(
+    "@powerhousedao/diff-analyzer/processors"
+  );
 
-    const wrappedFactory = (driveHeader: PHDocumentHeader) => {
-        return processorFactory({ analyticsStore })(driveHeader.id);
-    };
+  const wrappedFactory = (driveHeader: PHDocumentHeader) => {
+    return processorFactory({ analyticsStore })(driveHeader.id);
+  };
 
-    return await manager.registerFactory(
-        '@powerhousedao/diff-analyzer',
-        wrappedFactory,
-    );
+  return await manager.registerFactory(
+    "@powerhousedao/diff-analyzer",
+    wrappedFactory,
+  );
 }
 
 async function registerDriveAnalytics(
-    manager: ProcessorManager,
-    analyticsStore: IAnalyticsStore,
+  manager: ProcessorManager,
+  analyticsStore: IAnalyticsStore,
 ) {
-    const { processorFactory } = await import(
-        '@powerhousedao/common/drive-analytics'
-    );
+  const { processorFactory } = await import(
+    "@powerhousedao/common/drive-analytics"
+  );
 
-    return await manager.registerFactory(
-        '@powerhousedao/common/drive-analytics',
-        processorFactory({ analyticsStore }),
-    );
+  return await manager.registerFactory(
+    "@powerhousedao/common/drive-analytics",
+    processorFactory({ analyticsStore }),
+  );
 }
 
 export function DiffAnalyzerProcessor() {
-    const store = useAnalyticsStoreAsync();
-    const manager = useProcessorManager();
-    const hasRegistered = useRef(false);
+  const store = useAnalyticsStoreAsync();
+  const manager = useProcessorManager();
+  const hasRegistered = useRef(false);
 
-    useEffect(() => {
-        if (!store.data || !manager || hasRegistered.current) {
-            return;
-        }
+  useEffect(() => {
+    if (!store.data || !manager || hasRegistered.current) {
+      return;
+    }
 
-        hasRegistered.current = true;
-        registerDiffAnalyzer(manager, store.data).catch(logger.error);
-    }, [store.data, manager]);
+    hasRegistered.current = true;
+    registerDiffAnalyzer(manager, store.data).catch(logger.error);
+  }, [store.data, manager]);
 
-    return null;
+  return null;
 }
 
 export function DriveAnalyticsProcessor() {
-    const store = useAnalyticsStoreAsync();
-    const manager = useProcessorManager();
-    const hasRegistered = useRef(false);
+  const store = useAnalyticsStoreAsync();
+  const manager = useProcessorManager();
+  const hasRegistered = useRef(false);
 
-    useEffect(() => {
-        if (!store.data || !manager || hasRegistered.current) {
-            return;
-        }
+  useEffect(() => {
+    if (!store.data || !manager || hasRegistered.current) {
+      return;
+    }
 
-        hasRegistered.current = true;
-        registerDriveAnalytics(manager, store.data)
-            .then(() => {
-                logger.verbose('Drive analytics processor registered');
-            })
-            .catch(logger.error);
-    }, [store.data, manager]);
+    hasRegistered.current = true;
+    registerDriveAnalytics(manager, store.data)
+      .then(() => {
+        logger.verbose("Drive analytics processor registered");
+      })
+      .catch(logger.error);
+  }, [store.data, manager]);
 
-    return null;
+  return null;
 }
 
 export function ExternalProcessors() {
-    const processors = useProcessors();
-    const store = useAnalyticsStoreAsync();
-    const relationalDb = useRelationalDb();
-    const manager = useProcessorManager();
-    const hasRegistered = useRef(false);
+  const processors = useProcessors();
+  const store = useAnalyticsStoreAsync();
+  const relationalDb = useRelationalDb();
+  const manager = useProcessorManager();
+  const hasRegistered = useRef(false);
 
-    useEffect(() => {
-        if (
-            !store.data ||
-            !manager ||
-            hasRegistered.current ||
-            processors.length === 0 ||
-            !relationalDb.db
-        ) {
-            return;
-        }
+  useEffect(() => {
+    if (
+      !store.data ||
+      !manager ||
+      hasRegistered.current ||
+      processors.length === 0 ||
+      !relationalDb.db
+    ) {
+      return;
+    }
 
-        hasRegistered.current = true;
+    hasRegistered.current = true;
 
-        for (const processor of processors) {
-            registerExternalProcessors(
-                manager,
-                store.data,
-                relationalDb.db,
-                generateId(),
-                processor,
-            ).catch(logger.error);
-        }
-    }, [store.data, manager, relationalDb, processors]);
+    for (const processor of processors) {
+      registerExternalProcessors(
+        manager,
+        store.data,
+        relationalDb.db,
+        generateId(),
+        processor,
+      ).catch(logger.error);
+    }
+  }, [store.data, manager, relationalDb, processors]);
 
-    return null;
+  return null;
 }
 
 export function ProcessorManagerProvider({ children }: PropsWithChildren) {
-    const pgLiteFactory = connectConfig.analytics.useWorker
-        ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
-        : undefined;
+  const pgLiteFactory = connectConfig.analytics.useWorker
+    ? createPgLiteFactoryWorker(connectConfig.analytics.databaseName)
+    : undefined;
 
-    const setPGliteDB = useSetPGliteDB();
+  const setPGliteDB = useSetPGliteDB();
 
-    // Initialize and handle PGlite factory
-    useEffect(() => {
-        if (!pgLiteFactory) {
-            // If no factory, set to not loading with null db
-            setPGliteDB({
-                db: null,
-                isLoading: false,
-                error: null,
-            });
-            return;
-        }
+  // Initialize and handle PGlite factory
+  useEffect(() => {
+    if (!pgLiteFactory) {
+      // If no factory, set to not loading with null db
+      setPGliteDB({
+        db: null,
+        isLoading: false,
+        error: null,
+      });
+      return;
+    }
 
-        // Resolve the factory
-        pgLiteFactory()
-            .then(db => {
-                setPGliteDB({
-                    db: db as unknown as PGliteWithLive,
-                    isLoading: false,
-                    error: null,
-                });
-            })
-            .catch((err: unknown) => {
-                const error =
-                    err instanceof Error ? err : new Error(String(err));
-                setPGliteDB({
-                    db: null,
-                    isLoading: false,
-                    error,
-                });
-            });
-    }, []);
+    // Resolve the factory
+    pgLiteFactory()
+      .then((db) => {
+        setPGliteDB({
+          db: db as unknown as PGliteWithLive,
+          isLoading: false,
+          error: null,
+        });
+      })
+      .catch((err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setPGliteDB({
+          db: null,
+          isLoading: false,
+          error,
+        });
+      });
+  }, []);
 
-    return (
-        <AnalyticsProvider
-            options={{
-                databaseName: connectConfig.analytics.databaseName,
-                pgLiteFactory,
-            }}
-        >
-            <>
-                {connectConfig.analytics.diffProcessorEnabled && (
-                    <DiffAnalyzerProcessor />
-                )}
-                {connectConfig.analytics.driveAnalyticsEnabled && (
-                    <DriveAnalyticsProcessor />
-                )}
-                {connectConfig.analytics.externalProcessorsEnabled && (
-                    <ExternalProcessors />
-                )}
-                {children}
-            </>
-        </AnalyticsProvider>
-    );
+  return (
+    <AnalyticsProvider
+      options={{
+        databaseName: connectConfig.analytics.databaseName,
+        pgLiteFactory,
+      }}
+    >
+      <>
+        {connectConfig.analytics.diffProcessorEnabled && (
+          <DiffAnalyzerProcessor />
+        )}
+        {connectConfig.analytics.driveAnalyticsEnabled && (
+          <DriveAnalyticsProcessor />
+        )}
+        {connectConfig.analytics.externalProcessorsEnabled && (
+          <ExternalProcessors />
+        )}
+        {children}
+      </>
+    </AnalyticsProvider>
+  );
 }
 
 export default ProcessorManagerProvider;

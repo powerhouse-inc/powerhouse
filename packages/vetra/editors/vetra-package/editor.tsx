@@ -3,7 +3,7 @@ import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import {
   type VetraPackageDocument,
-  actions
+  actions,
 } from "../../document-models/vetra-package/index.js";
 import { MetaForm } from "./components/MetaForm.js";
 
@@ -14,61 +14,76 @@ export default function Editor(props: IProps) {
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const unsafeCastOfDocument = document as VetraPackageDocument;
 
-  const onNameChange = useCallback((name: string) => {
-    if (!unsafeCastOfDocument.state.global.name && !name) return;
-    if (name === unsafeCastOfDocument.state.global.name) return;
+  const onNameChange = useCallback(
+    (name: string) => {
+      if (!unsafeCastOfDocument.state.global.name && !name) return;
+      if (name === unsafeCastOfDocument.state.global.name) return;
 
-    dispatch(actions.setPackageName({ name }));
-    
-  }, [unsafeCastOfDocument.state.global.name]);
+      dispatch(actions.setPackageName({ name }));
+    },
+    [unsafeCastOfDocument.state.global.name],
+  );
 
-  const onDescriptionChange = useCallback((description: string) => {
-    if (!unsafeCastOfDocument.state.global.description && !description) return;
-    if (description === unsafeCastOfDocument.state.global.description) return;
+  const onDescriptionChange = useCallback(
+    (description: string) => {
+      if (!unsafeCastOfDocument.state.global.description && !description)
+        return;
+      if (description === unsafeCastOfDocument.state.global.description) return;
 
-    dispatch(actions.setPackageDescription({ description }));
-    
-  }, [unsafeCastOfDocument.state.global.description]);
+      dispatch(actions.setPackageDescription({ description }));
+    },
+    [unsafeCastOfDocument.state.global.description],
+  );
 
-  const onCategoryChange = useCallback((category: string) => {
-    if (!unsafeCastOfDocument.state.global.category && !category) return;
-    if (category === unsafeCastOfDocument.state.global.category) return;
+  const onCategoryChange = useCallback(
+    (category: string) => {
+      if (!unsafeCastOfDocument.state.global.category && !category) return;
+      if (category === unsafeCastOfDocument.state.global.category) return;
 
-    dispatch(actions.setPackageCategory({ category }));
-    
-  }, [unsafeCastOfDocument.state.global.category]);
+      dispatch(actions.setPackageCategory({ category }));
+    },
+    [unsafeCastOfDocument.state.global.category],
+  );
 
-  const onPublisherChange = useCallback((name: string) => {
-    if (!unsafeCastOfDocument.state.global.author.name && !name) return;
-    if (name === unsafeCastOfDocument.state.global.author.name) return;
+  const onPublisherChange = useCallback(
+    (name: string) => {
+      if (!unsafeCastOfDocument.state.global.author.name && !name) return;
+      if (name === unsafeCastOfDocument.state.global.author.name) return;
 
-    dispatch(actions.setPackageAuthorName({ name }));
-    
-  }, [unsafeCastOfDocument.state.global.author.name]);
+      dispatch(actions.setPackageAuthorName({ name }));
+    },
+    [unsafeCastOfDocument.state.global.author.name],
+  );
 
-  const onPublisherUrlChange = useCallback((website: string) => {
-    if (!unsafeCastOfDocument.state.global.author.website && !website) return;
-    if (website === unsafeCastOfDocument.state.global.author.website) return;
+  const onPublisherUrlChange = useCallback(
+    (website: string) => {
+      if (!unsafeCastOfDocument.state.global.author.website && !website) return;
+      if (website === unsafeCastOfDocument.state.global.author.website) return;
 
-    dispatch(actions.setPackageAuthorWebsite({ website }));
-    
-  }, [unsafeCastOfDocument.state.global.author.website]);
+      dispatch(actions.setPackageAuthorWebsite({ website }));
+    },
+    [unsafeCastOfDocument.state.global.author.website],
+  );
 
-  const onGithubRepositoryChange = useCallback((url: string) => {
-    if (!unsafeCastOfDocument.state.global.githubUrl && !url) return;
-    if (url === unsafeCastOfDocument.state.global.githubUrl) return;
+  const onGithubRepositoryChange = useCallback(
+    (url: string) => {
+      if (!unsafeCastOfDocument.state.global.githubUrl && !url) return;
+      if (url === unsafeCastOfDocument.state.global.githubUrl) return;
 
-    dispatch(actions.setPackageGithubUrl({ url }));
-    
-  }, [unsafeCastOfDocument.state.global.githubUrl]);
+      dispatch(actions.setPackageGithubUrl({ url }));
+    },
+    [unsafeCastOfDocument.state.global.githubUrl],
+  );
 
-  const onNpmPackageChange = useCallback((url: string) => {
-    if (!unsafeCastOfDocument.state.global.npmUrl && !url) return;
-    if (url === unsafeCastOfDocument.state.global.npmUrl) return;
+  const onNpmPackageChange = useCallback(
+    (url: string) => {
+      if (!unsafeCastOfDocument.state.global.npmUrl && !url) return;
+      if (url === unsafeCastOfDocument.state.global.npmUrl) return;
 
-    dispatch(actions.setPackageNpmUrl({ url }));
-    
-  }, [unsafeCastOfDocument.state.global.npmUrl]);
+      dispatch(actions.setPackageNpmUrl({ url }));
+    },
+    [unsafeCastOfDocument.state.global.npmUrl],
+  );
 
   const onAddKeyword = useCallback((keyword: { id: string; label: string }) => {
     dispatch(actions.addPackageKeyword(keyword));
