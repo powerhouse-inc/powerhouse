@@ -13,7 +13,7 @@
     "test:all:ci": "pnpm --filter !document-drive -r --no-bail test",
     "storybook:all": "pnpm -r --no-bail run build-storybook",
     "check:all": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm storybook:all && pnpm test:all",
-    "check:all:ci": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm storybook:all && pnpm test:all:ci",
+    "check:all:ci": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm test:all:ci && pnpm storybook:all",
     "simulate-fresh-git-clone": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "simulate-check-all-ci": "pnpm simulate-fresh-git-clone && pnpm i --frozen-lockfile && pnpm check:all:ci"
   },
