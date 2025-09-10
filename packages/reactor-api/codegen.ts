@@ -33,7 +33,7 @@ const config: CodegenConfig = {
           DateTime: "string | Date",
         },
         strictScalars: true,
-        importFrom: "./graphql",
+        importFrom: "./graphql.js",
       },
     },
   },
