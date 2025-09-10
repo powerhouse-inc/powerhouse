@@ -25,7 +25,14 @@ const config: CodegenConfig = {
       },
     },
     "./src/graphql/reactor/generated/sdk.ts": {
-      plugins: ["typescript-generic-sdk"],
+      plugins: [
+        {
+          add: {
+            content: "import * as Types from './graphql.js';",
+          },
+        },
+        "typescript-generic-sdk",
+      ],
       config: {
         documentMode: "documentNode",
       },
