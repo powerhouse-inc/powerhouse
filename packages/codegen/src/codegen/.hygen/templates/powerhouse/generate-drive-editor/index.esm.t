@@ -12,7 +12,11 @@ export const module: DriveEditorModule = {
     id: "<%= appId || 'drive-editor-id' %>",
     disableExternalControls: true,
     documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    showSwitchboardLink: true,<%_ if (dragAndDropEnabled) { _%>
+    dragAndDrop: {
+      enabled: true,
+      documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],
+    },<%_ } _%>
   },
 };
 

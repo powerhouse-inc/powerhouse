@@ -73,5 +73,9 @@ export type DriveEditorModule = {
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
+    dragAndDrop?: {
+      enabled?: boolean;
+      documentTypes?: string[];
+    };
   };
 };
