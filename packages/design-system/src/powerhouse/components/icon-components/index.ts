@@ -40,6 +40,7 @@ import Danger from "./Danger.js";
 import DescendenceModified from "./DescendenceModified.js";
 import Disconnect from "./Disconnect.js";
 import Discord from "./Discord.js";
+import DocumentIcons from "./DocumentIcons.js";
 import DocumentModel from "./DocumentModel.js";
 import DownloadFile from "./DownloadFile.js";
 import Drive from "./Drive.js";
@@ -158,6 +159,7 @@ export const iconNames = [
   "DescendenceModified",
   "Disconnect",
   "Discord",
+  "DocumentIcons",
   "DocumentModel",
   "DownloadFile",
   "Drive",
@@ -280,6 +282,7 @@ export const iconComponents: Record<
   DescendenceModified,
   Disconnect,
   Discord,
+  DocumentIcons,
   DocumentModel,
   DownloadFile,
   Drive,

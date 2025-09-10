@@ -8,6 +8,7 @@ export * from "./disclosure/index.js";
 export * from "./divider/index.js";
 export * from "./document-timeline/index.js";
 export * from "./document-toolbar/index.js";
+export * from "./drop-zone/index.js";
 export * from "./dropdown-menu/index.js";
 export * from "./editor-action-buttons/index.js";
 export * from "./editor-undo-redo-buttons/index.js";
