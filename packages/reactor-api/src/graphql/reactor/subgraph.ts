@@ -5,7 +5,7 @@ import fs from "fs";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import path from "path";
-import { type Resolvers } from "./generated/graphql.js";
+import { type Resolvers } from "./gen/graphql.js";
 
 export class ReactorSubgraph extends Subgraph {
   private logger = childLogger([

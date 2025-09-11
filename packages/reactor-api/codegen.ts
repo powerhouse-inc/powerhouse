@@ -3,7 +3,7 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 const config: CodegenConfig = {
   schema: "./src/graphql/reactor/*.graphql",
   generates: {
-    "./src/graphql/reactor/generated/graphql.ts": {
+    "./src/graphql/reactor/gen/graphql.ts": {
       plugins: [
         {
           add: {

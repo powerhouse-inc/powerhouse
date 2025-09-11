@@ -1,5 +1,5 @@
 import { print, type DocumentNode } from "graphql";
-import type { Requester } from "./generated/graphql.js";
+import type { Requester } from "./gen/graphql.js";
 
 export type FetchLike = (
   input: URL | string,

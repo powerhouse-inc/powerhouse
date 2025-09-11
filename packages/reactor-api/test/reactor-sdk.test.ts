@@ -1,9 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { print } from "graphql";
-import { createFetchRequester, type FetchLike } from "../src/graphql/reactor/requester.js";
-import { createValidatingRequester } from "../src/graphql/reactor/requester.with-zod.js";
-import { createReactorSdk } from "../src/graphql/reactor/sdk.factory.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createReactorClient } from "../src/graphql/reactor/factory.js";
 import { GetDocumentDocument } from "../src/graphql/reactor/operations.js";
+import {
+  createFetchRequester,
+  type FetchLike,
+} from "../src/graphql/reactor/requester.js";
+import { createValidatingRequester } from "../src/graphql/reactor/requester.with-zod.js";
 
 describe("ReactorSDK", () => {
   describe("createFetchRequester", () => {
@@ -17,7 +20,7 @@ describe("ReactorSDK", () => {
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: { test: "result" }
+          data: { test: "result" },
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
@@ -25,7 +28,7 @@ describe("ReactorSDK", () => {
       const requester = createFetchRequester(
         "https://api.test.com/graphql",
         mockFetch,
-        { "Authorization": "Bearer token123" }
+        { Authorization: "Bearer token123" },
       );
 
       const variables = { identifier: "doc-123", view: { branch: "main" } };
@@ -36,7 +39,7 @@ describe("ReactorSDK", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "Authorization": "Bearer token123",
+          Authorization: "Bearer token123",
         },
         body: JSON.stringify({
           query: print(GetDocumentDocument),
@@ -56,45 +59,45 @@ describe("ReactorSDK", () => {
 
       const requester = createFetchRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
-      await expect(
-        requester(GetDocumentDocument, {}, {})
-      ).rejects.toThrow("GraphQL HTTP 500");
+      await expect(requester(GetDocumentDocument, {}, {})).rejects.toThrow(
+        "GraphQL HTTP 500",
+      );
     });
 
     it("should handle GraphQL errors", async () => {
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          errors: [{ message: "Field not found" }]
+          errors: [{ message: "Field not found" }],
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
       const requester = createFetchRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
-      await expect(
-        requester(GetDocumentDocument, {}, {})
-      ).rejects.toThrow('[{"message":"Field not found"}]');
+      await expect(requester(GetDocumentDocument, {}, {})).rejects.toThrow(
+        '[{"message":"Field not found"}]',
+      );
     });
 
     it("should work without custom headers", async () => {
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: { test: "result" }
+          data: { test: "result" },
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
       const requester = createFetchRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
       await requester(GetDocumentDocument, {}, {});
@@ -131,26 +134,26 @@ describe("ReactorSDK", () => {
             parentId: null,
           },
           childIds: [],
-        }
+        },
       };
 
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: validDocumentResponse
+          data: validDocumentResponse,
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
       const requester = createValidatingRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
       const result = await requester(
         GetDocumentDocument,
         { identifier: "doc-123" },
-        {}
+        {},
       );
 
       expect(result).toEqual(validDocumentResponse);
@@ -164,49 +167,49 @@ describe("ReactorSDK", () => {
             // Missing required fields like name, documentType, etc.
           },
           childIds: "not-an-array", // Should be array
-        }
+        },
       };
 
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: malformedResponse
+          data: malformedResponse,
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
       const requester = createValidatingRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
       await expect(
-        requester(GetDocumentDocument, { identifier: "doc-123" }, {})
+        requester(GetDocumentDocument, { identifier: "doc-123" }, {}),
       ).rejects.toThrow(); // Should throw Zod validation error
     });
 
     it("should handle null document response", async () => {
       const nullDocumentResponse = {
-        document: null
+        document: null,
       };
 
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: nullDocumentResponse
+          data: nullDocumentResponse,
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
       const requester = createValidatingRequester(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
       const result = await requester(
         GetDocumentDocument,
         { identifier: "nonexistent" },
-        {}
+        {},
       );
 
       expect(result).toEqual(nullDocumentResponse);
@@ -235,21 +238,21 @@ describe("ReactorSDK", () => {
             parentId: null,
           },
           childIds: [],
-        }
+        },
       };
 
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: validDocumentResponse
+          data: validDocumentResponse,
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
-      const sdk = createReactorSdk(
+      const sdk = createReactorClient(
         "https://api.test.com/graphql",
         mockFetch,
-        { "Authorization": "Bearer token123" }
+        { Authorization: "Bearer token123" },
       );
 
       // Test that SDK has the expected methods
@@ -259,7 +262,7 @@ describe("ReactorSDK", () => {
       // Test actual call
       const result = await sdk.GetDocument({
         identifier: "doc-123",
-        view: { branch: "main" }
+        view: { branch: "main" },
       });
 
       expect(result).toEqual(validDocumentResponse);
@@ -269,7 +272,7 @@ describe("ReactorSDK", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "Authorization": "Bearer token123",
+          Authorization: "Bearer token123",
         },
         body: expect.stringContaining("GetDocument"),
       });
@@ -279,14 +282,14 @@ describe("ReactorSDK", () => {
       const mockResponse = {
         ok: true,
         json: vi.fn().mockResolvedValue({
-          data: { document: null }
+          data: { document: null },
         }),
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
-      const sdk = createReactorSdk(
+      const sdk = createReactorClient(
         "https://api.test.com/graphql",
-        mockFetch
+        mockFetch,
       );
 
       await sdk.GetDocument({ identifier: "test" });

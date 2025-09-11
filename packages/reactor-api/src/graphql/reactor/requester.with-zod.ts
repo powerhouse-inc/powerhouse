@@ -4,7 +4,7 @@ import type {
   JobInfo,
   PhDocumentResultPage,
   Requester,
-} from "./generated/graphql.js";
+} from "./gen/graphql.js";
 import { createFetchRequester, type FetchLike } from "./requester.js";
 import {
   DocumentModelResultPageDTO,
