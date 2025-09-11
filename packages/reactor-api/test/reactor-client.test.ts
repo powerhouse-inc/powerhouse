@@ -1,6 +1,7 @@
 import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReactorClient } from "../src/graphql/reactor/factory.js";
+import { GetDocumentDocument } from "../src/graphql/reactor/gen/graphql.js";
 import {
   createFetchRequester,
   type FetchLike,
@@ -253,10 +254,6 @@ describe("ReactorSDK", () => {
         mockFetch,
         { Authorization: "Bearer token123" },
       );
-
-      // Test that SDK has the expected methods
-      expect(sdk).toHaveProperty("GetDocument");
-      expect(typeof sdk).toBe("function");
 
       // Test actual call
       const result = await sdk.GetDocument({

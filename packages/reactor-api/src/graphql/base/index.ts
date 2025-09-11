@@ -1,6 +1,5 @@
 import type { GraphQLManager } from "#graphql/graphql-manager.js";
 import type { ISubgraph, SubgraphArgs } from "#graphql/types.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IDocumentDriveServer } from "document-drive";
 import type { IRelationalDb } from "document-drive/processors/types";
 import type { DocumentNode } from "graphql";
@@ -20,13 +19,11 @@ export class Subgraph implements ISubgraph {
     }
   `;
   reactor: IDocumentDriveServer;
-  reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
-    this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
     this.path = args.path ?? "";

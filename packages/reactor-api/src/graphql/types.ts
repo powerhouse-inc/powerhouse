@@ -1,5 +1,4 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IDocumentDriveServer } from "document-drive";
 import type { IRelationalDb } from "document-drive/processors/types";
 import type { DocumentNode } from "graphql";
@@ -33,7 +32,6 @@ export type ISubgraph = {
 
 export type SubgraphArgs = {
   reactor: IDocumentDriveServer;
-  reactorClient: IReactorClient;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
