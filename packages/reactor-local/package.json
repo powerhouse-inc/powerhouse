@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "5.0.0-staging.9",
+  "version": "5.0.0-staging.10",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
