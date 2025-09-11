@@ -298,7 +298,7 @@ describe("EventBus", () => {
   });
 
   describe("unsubscribe safety", () => {
-    it("should be safe to call unsubscribe multiple times", () => {
+    it("should be safe to call unsubscribe multiple times", async () => {
       const eventBus = new EventBus();
       const eventType = 1;
       let callCount = 0;
@@ -308,7 +308,7 @@ describe("EventBus", () => {
       });
 
       // Emit event before unsubscribing
-      eventBus.emit(eventType, { data: "test" });
+      await eventBus.emit(eventType, { data: "test" });
       expect(callCount).toBe(1);
 
       // Call unsubscribe multiple times
@@ -320,7 +320,7 @@ describe("EventBus", () => {
       expect(() => unsubscribe()).not.toThrow();
 
       // Emit again to verify unsubscribe worked
-      eventBus.emit(eventType, { data: "test" });
+      await eventBus.emit(eventType, { data: "test" });
       expect(callCount).toBe(1); // Should still be 1
     });
 
