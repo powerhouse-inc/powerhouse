@@ -107,6 +107,9 @@ export async function createDocumentAndFillBasicData(
     await page.keyboard.press("Backspace");
 
     await page.locator(".cm-content").first().fill(data.global.schema);
+
+    await page.getByText("Global State Schema").first().click();
+
     await page.locator(".cm-content").nth(1).fill(data.global.initialState);
 
     await page.getByText("Global State Schema").first().click();

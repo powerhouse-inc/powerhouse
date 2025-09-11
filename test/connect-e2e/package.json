@@ -33,6 +33,7 @@
     "graphql-request": "^6.1.0",
     "graphql-tag": "^2.12.6",
     "jszip": "^3.10.1",
+    "monocart-coverage-reports": "^2.12.8",
     "react": "18",
     "react-dom": "18",
     "uuid": "^11.1.0",
