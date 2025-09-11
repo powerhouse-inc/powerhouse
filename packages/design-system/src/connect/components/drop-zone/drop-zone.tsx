@@ -3,6 +3,8 @@ import type { Node } from "document-drive";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
+import { useUploadTracker } from "./use-upload-tracker.js";
+import { type OnAddFileWithProgress } from "./utils.js";
 
 export type DropZoneProps = ComponentPropsWithoutRef<"div"> & {
   readonly title?: string;
@@ -10,10 +12,7 @@ export type DropZoneProps = ComponentPropsWithoutRef<"div"> & {
   readonly node?: Node;
   readonly enable?: boolean;
   readonly children?: ReactNode;
-  readonly onAddFile?: (
-    file: File,
-    parent: Node | undefined,
-  ) => Promise<void> | void;
+  readonly onAddFile?: OnAddFileWithProgress;
   readonly onMoveNode?: (
     src: Node,
     target: Node | undefined,
@@ -38,9 +37,20 @@ export function DropZone(props: DropZoneProps) {
     ...delegatedProps
   } = props;
 
+  // Upload tracking with the new hook
+  const { uploadsArray, uploadsCount, createUploadHandler } =
+    useUploadTracker();
+
+  // TODO: Remove this
+  console.log("uploadsArray", uploadsArray);
+  console.log("uploadsCount", uploadsCount);
+
+  // Create the upload handler from the hook
+  const handleAddFile = createUploadHandler(onAddFile) ?? (async () => {});
+
   const { isDropTarget, dropProps } = useDrop({
     node,
-    onAddFile: onAddFile ?? (async () => {}),
+    onAddFile: handleAddFile,
     onMoveNode: onMoveNode ?? (async () => {}),
     onCopyNode: onCopyNode ?? (async () => {}),
     trackNestedDrag: true,

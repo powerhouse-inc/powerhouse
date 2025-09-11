@@ -22,7 +22,23 @@ const meta: Meta<typeof DropZone> = {
         </div>
       </div>
     ),
-    onAddFile: action("onAddFile"),
+    onAddFile: async (file, parent, onProgress) => {
+      action("onAddFile")(file, parent, onProgress);
+      // Mock progress updates
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      onProgress?.({ stage: "loading", progress: 0 });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      onProgress?.({ stage: "uploading", progress: 50 });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      onProgress?.({ stage: "complete", progress: 100 });
+      // Return mock FileNode
+      return {
+        id: "mock-file-id",
+        name: file.name,
+        kind: "file",
+        parentFolder: "mock-parent-id",
+      };
+    },
     onMoveNode: action("onMoveNode"),
     onCopyNode: action("onCopyNode"),
   },
@@ -38,5 +54,3 @@ export const Disabled: Story = {
     enable: false,
   },
 };
-
-
