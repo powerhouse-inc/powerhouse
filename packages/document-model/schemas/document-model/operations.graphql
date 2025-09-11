@@ -1,48 +1,48 @@
 input AddOperationInput {
-    moduleId: ID!
-    id: ID!
-    name: String!
-    schema: String
-    description: String
-    template: String
-    reducer: String
+  moduleId: ID!
+  id: ID!
+  name: String!
+  schema: String
+  description: String
+  template: String
+  reducer: String
 }
 
 input SetOperationNameInput {
-    id: ID!
-    name: String
+  id: ID!
+  name: String
 }
 
 input SetOperationSchemaInput {
-    id: ID!
-    schema: String
+  id: ID!
+  schema: String
 }
 
 input SetOperationDescriptionInput {
-    id: ID!
-    description: String
+  id: ID!
+  description: String
 }
 
 input SetOperationTemplateInput {
-    id: ID!
-    template: String
+  id: ID!
+  template: String
 }
 
 input SetOperationReducerInput {
-    id: ID!
-    reducer: String
+  id: ID!
+  reducer: String
 }
 
 input MoveOperationInput {
-    operationId: ID!
-    newModuleId: ID!
+  operationId: ID!
+  newModuleId: ID!
 }
 
 input DeleteOperationInput {
-    id: ID!
+  id: ID!
 }
 
 input ReorderModuleOperationsInput {
-    moduleId: ID!
-    order: [ID!]!
+  moduleId: ID!
+  order: [ID!]!
 }

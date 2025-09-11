@@ -1,11 +1,10 @@
-import { type Action, type Operation } from "#document/types.js";
+import type { Action, Operation } from "#document/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { noop, redo, undo } from "../../src/document/actions/creators.js";
 import { processUndoRedo } from "../../src/document/reducer.js";
 import { baseCreateDocument } from "../../src/document/utils/base.js";
+import type { CountAction, CountDocument } from "../helpers.js";
 import {
-  type CountAction,
-  type CountDocument,
   countReducer,
   createTestState,
   createCountDocumentState,

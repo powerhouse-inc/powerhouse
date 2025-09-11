@@ -1,12 +1,8 @@
-import { type IDocumentDriveServer } from "document-drive";
-import {
-  HttpResponse,
-  graphql,
-  type GraphQLHandler,
-  type GraphQLQuery,
-} from "msw";
+import type { IDocumentDriveServer } from "document-drive";
+import type { GraphQLHandler, GraphQLQuery } from "msw";
+import { HttpResponse, graphql } from "msw";
 import { DriveSubgraph } from "../src/graphql/drive/index.js";
-import { type SubgraphArgs } from "../src/graphql/index.js";
+import type { SubgraphArgs } from "../src/graphql/index.js";
 
 export const createDriveHandlers = (
   reactor: IDocumentDriveServer,

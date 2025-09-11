@@ -1,5 +1,5 @@
 import { safeParseSdl } from "#document-model-editor/context/schema-context";
-import { type Diagnostic } from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
 import { pascalCase, sentenceCase } from "change-case";
 import { Kind } from "graphql";
 

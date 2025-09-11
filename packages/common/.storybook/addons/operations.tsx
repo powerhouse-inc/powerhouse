@@ -14,7 +14,8 @@ const OperationsPanel = (
     .concat(operations.local)
     .sort(
       (op1, op2) =>
-        new Date(op1.timestampUtcMs).getTime() - new Date(op2.timestampUtcMs).getTime(),
+        new Date(op1.timestampUtcMs).getTime() -
+        new Date(op2.timestampUtcMs).getTime(),
     );
   return (
     <table

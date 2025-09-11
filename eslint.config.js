@@ -53,6 +53,7 @@ export default tseslint.config(
       "packages/document-drive/src/storage/prisma/client/",
       "clis/ph-cli/test/utils.test.ts",
       "apps/connect/public/*.js",
+      "packages/reactor-api/codegen.ts",
     ],
   },
   {
@@ -82,7 +83,7 @@ export default tseslint.config(
         "error",
         {
           prefer: "type-imports",
-          fixStyle: "inline-type-imports",
+          fixStyle: "separate-type-imports",
         },
       ],
       "@typescript-eslint/array-type": "off",

@@ -1,6 +1,6 @@
-import { type IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
-import { type ProcessorRecord } from "document-drive/processors/types";
-import { type PHDocumentHeader } from "document-model";
+import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
+import type { ProcessorRecord } from "document-drive/processors/types";
+import type { PHDocumentHeader } from "document-model";
 
 import { DocumentAnalyticsProcessor } from "./document-processor.js";
 import { DriveAnalyticsProcessor } from "./drive-processor.js";

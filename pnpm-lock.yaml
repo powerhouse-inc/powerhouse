@@ -225,13 +225,6 @@ importers:
         version: 5.9.2
 
   apps/connect:
-    optionalDependencies:
-      '@esbuild/linux-x64':
-        specifier: ^0.21.4
-        version: 0.21.5
-      '@rollup/rollup-linux-x64-musl':
-        specifier: 4.14.3
-        version: 4.14.3
     devDependencies:
       '@didtools/key-webcrypto':
         specifier: ^0.2.0
@@ -395,6 +388,13 @@ importers:
       xvfb-maybe:
         specifier: ^0.2.1
         version: 0.2.1
+    optionalDependencies:
+      '@esbuild/linux-x64':
+        specifier: ^0.21.4
+        version: 0.21.5
+      '@rollup/rollup-linux-x64-musl':
+        specifier: 4.14.3
+        version: 4.14.3
 
   apps/switchboard:
     dependencies:
@@ -731,7 +731,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.3
-        version: 0.12.3(encoding@0.1.13)(graphql@16.11.0)
+        version: 0.12.3(graphql@16.11.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -1265,7 +1265,7 @@ importers:
         version: 6.1.0(encoding@0.1.13)(graphql@16.11.0)
       helia:
         specifier: ^5.3.0
-        version: 5.5.1(bufferutil@4.0.9)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
+        version: 5.5.1(bufferutil@4.0.9)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10)
       json-stringify-deterministic:
         specifier: ^1.0.12
         version: 1.0.12
@@ -1293,22 +1293,6 @@ importers:
       zod:
         specifier: ^3.24.3
         version: 3.25.76
-    optionalDependencies:
-      '@prisma/client':
-        specifier: 5.17.0
-        version: 5.17.0(prisma@5.17.0)
-      localforage:
-        specifier: ^1.10.0
-        version: 1.10.0
-      redis:
-        specifier: ^4.6.15
-        version: 4.7.1
-      sequelize:
-        specifier: ^6.37.3
-        version: 6.37.7(sqlite3@5.1.7)
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
     devDependencies:
       '@anatine/zod-mock':
         specifier: ^3.14.0
@@ -1349,6 +1333,22 @@ importers:
       webdriverio:
         specifier: ^9.0.9
         version: 9.19.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      '@prisma/client':
+        specifier: 5.17.0
+        version: 5.17.0(prisma@5.17.0)
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      redis:
+        specifier: ^4.6.15
+        version: 4.7.1
+      sequelize:
+        specifier: ^6.37.3
+        version: 6.37.7(sqlite3@5.1.7)
+      sqlite3:
+        specifier: ^5.1.7
+        version: 5.1.7
 
   packages/document-model:
     dependencies:
@@ -1392,6 +1392,9 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       jest:
         specifier: ^30.0.5
         version: 30.0.5(@types/node@22.17.2)(babel-plugin-macros@3.1.0)(esbuild-register@3.6.0(esbuild@0.25.9))(ts-node@10.9.1(@swc/core@1.11.31(@swc/helpers@0.5.17))(@types/node@22.17.2)(typescript@5.9.2))
@@ -1441,6 +1444,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.2.17
         version: 0.2.17
+      '@graphql-typed-document-node/core':
+        specifier: ^3.2.0
+        version: 3.2.0(graphql@16.11.0)
       '@originjs/vite-plugin-commonjs':
         specifier: ^1.0.3
         version: 1.0.3
@@ -1501,9 +1507,6 @@ importers:
       graphql:
         specifier: ^16.11.0
         version: 16.11.0
-      graphql-request:
-        specifier: ^6.1.0
-        version: 6.1.0(encoding@0.1.13)(graphql@16.11.0)
       graphql-type-json:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.11.0)
@@ -1544,6 +1547,36 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
     devDependencies:
+      '@graphql-codegen/cli':
+        specifier: ^5.0.0
+        version: 5.0.7(@parcel/watcher@2.5.1)(@types/node@22.17.2)(bufferutil@4.0.9)(crossws@0.3.5)(encoding@0.1.13)(enquirer@2.4.1)(graphql@16.11.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@graphql-codegen/client-preset':
+        specifier: ^4.1.0
+        version: 4.8.3(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-codegen/typed-document-node':
+        specifier: ^5.0.1
+        version: 5.1.2(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-codegen/typescript':
+        specifier: ^4.0.1
+        version: 4.1.6(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-codegen/typescript-generic-sdk':
+        specifier: ^4.0.2
+        version: 4.0.2(encoding@0.1.13)(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)
+      '@graphql-codegen/typescript-graphql-request':
+        specifier: ^6.2.0
+        version: 6.3.0(encoding@0.1.13)(graphql-request@6.1.0(encoding@0.1.13)(graphql@16.11.0))(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)
+      '@graphql-codegen/typescript-operations':
+        specifier: ^4.0.1
+        version: 4.6.1(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-codegen/typescript-resolvers':
+        specifier: ^4.0.1
+        version: 4.5.2(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-tools/graphql-file-loader':
+        specifier: ^8.0.0
+        version: 8.0.22(graphql@16.11.0)
+      '@graphql-tools/load':
+        specifier: ^8.0.0
+        version: 8.1.2(graphql@16.11.0)
       '@types/body-parser':
         specifier: ^1.19.5
         version: 1.19.6
@@ -1565,9 +1598,15 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.15.5
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       esbuild:
         specifier: ^0.24.0
         version: 0.24.2
+      graphql-codegen-typescript-validation-schema:
+        specifier: ^0.12.0
+        version: 0.12.1(encoding@0.1.13)(graphql@16.11.0)
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.11.0)
@@ -2349,6 +2388,12 @@ packages:
     resolution: {integrity: sha512-YBDiuAX9i1lLc6GeTy1m7DGLFn/gMnvXqlalOIMjM7DeOgIacEjjfwPqb0M1CQ2v11HhR15d1NmxJoRCfrNqcA==}
     engines: {node: '>=14'}
 
+  '@ardatan/relay-compiler@12.0.0':
+    resolution: {integrity: sha512-9anThAaj1dQr6IGmzBMcfzOQKTa5artjuPmw8NYK/fiGEMjADbSguBY2FMDykt+QhilR3wc9VA/3yVju7JHg7Q==}
+    hasBin: true
+    peerDependencies:
+      graphql: '*'
+
   '@ardatan/relay-compiler@12.0.3':
     resolution: {integrity: sha512-mBDFOGvAoVlWaWqs3hm1AciGHSQE1rqFc/liZTyYz/Oek9yZdT5H26pH2zAFuEiTiBVPPyMuqf5VjOFPI2DGsQ==}
     hasBin: true
@@ -2503,6 +2548,13 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0
 
+  '@babel/plugin-proposal-class-properties@7.18.6':
+    resolution: {integrity: sha512-cumfXOF0+nzZrrN8Rf0t7M+tF6sZc7vhQwYQck9q1/5w2OExlD+b4v4RpMJFaV1Z7WcDRgO6FqvxqxGlwo+RHQ==}
+    engines: {node: '>=6.9.0'}
+    deprecated: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
   '@babel/plugin-proposal-decorators@7.28.0':
     resolution: {integrity: sha512-zOiZqvANjWDUaUS9xMxbMcK/Zccztbe/6ikvUXaG9nsPH3w6qh5UaPGAnirI/WhIbZ8m3OHU0ReyPrknG+ZKeg==}
     engines: {node: '>=6.9.0'}
@@ -2512,6 +2564,13 @@ packages:
   '@babel/plugin-proposal-export-default-from@7.27.1':
     resolution: {integrity: sha512-hjlsMBl1aJc5lp8MoCDEZCiYzlgdRAShOjAfRw6X+GlpLpUPU7c3XNLsKFZbQk/1cRzBlJ7CXg3xJAJMrFa1Uw==}
     engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
+  '@babel/plugin-proposal-object-rest-spread@7.20.7':
+    resolution: {integrity: sha512-d2S98yCiLxDVmBmE8UjGcfPvNEUbA1U5q5WxaWFUGRzJSVAZqm5W6MbPct0jxnegUZ0niLeNX+IOzEs7wYg9Dg==}
+    engines: {node: '>=6.9.0'}
+    deprecated: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-object-rest-spread instead.
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
@@ -4535,6 +4594,11 @@ packages:
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
 
+  '@graphql-codegen/plugin-helpers@3.1.2':
+    resolution: {integrity: sha512-emOQiHyIliVOIjKVKdsI5MXj312zmRDwmHpyUTZMjfpvxq/UVAHUJIVdVf+lnjjrI+LXBTgMlTWTgHQfmICxjg==}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+
   '@graphql-codegen/plugin-helpers@5.1.1':
     resolution: {integrity: sha512-28GHODK2HY1NhdyRcPP3sCz0Kqxyfiz7boIZ8qIxFYmpLYnlDgiYok5fhFLVSZihyOpCs4Fa37gVHf/Q4I2FEg==}
     engines: {node: '>=16'}
@@ -4557,8 +4621,33 @@ packages:
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
 
+  '@graphql-codegen/typescript-generic-sdk@4.0.2':
+    resolution: {integrity: sha512-LuchzgBfOujkwXLhS549N5SsCFRGVB3BFzqEFNaeKa+l9PgRSqysQuSuqNZQXFh+fwPo8Oy+6EWq3t1m5iI4Fw==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+      graphql-tag: ^2.0.0
+
+  '@graphql-codegen/typescript-graphql-request@6.3.0':
+    resolution: {integrity: sha512-IX42XakdcbGosIQo0jkH/4Tj5hk5smDmACYHMJbuSAA9vlcJNHkl3LGyG1Ggy2qVSI20nmNMaxpTg74SSyb4Yg==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+      graphql-request: ^6.0.0 || ^7.0.0
+      graphql-tag: ^2.0.0
+
   '@graphql-codegen/typescript-operations@4.6.1':
     resolution: {integrity: sha512-k92laxhih7s0WZ8j5WMIbgKwhe64C0As6x+PdcvgZFMudDJ7rPJ/hFqJ9DCRxNjXoHmSjnr6VUuQZq4lT1RzCA==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+      graphql-sock: ^1.0.0
+    peerDependenciesMeta:
+      graphql-sock:
+        optional: true
+
+  '@graphql-codegen/typescript-resolvers@4.5.2':
+    resolution: {integrity: sha512-u7Zz30UmtJCOmfAIcCYefS/3lE8LK7bF0COPz4VOva5v/EuxmLNCFreCuj4dztEZzBmuwJOJRm278MAxiz0fzg==}
     engines: {node: '>=16'}
     peerDependencies:
       graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
@@ -4572,6 +4661,11 @@ packages:
     engines: {node: '>=16'}
     peerDependencies:
       graphql: ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+
+  '@graphql-codegen/visitor-plugin-common@2.13.8':
+    resolution: {integrity: sha512-IQWu99YV4wt8hGxIbBQPtqRuaWZhkQRG2IZKbMoSvh0vGeWb3dB0n0hSgKaOOxDY+tljtOf9MTcUYvJslQucMQ==}
+    peerDependencies:
+      graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
 
   '@graphql-codegen/visitor-plugin-common@4.1.2':
     resolution: {integrity: sha512-yk7iEAL1kYZ2Gi/pvVjdsZhul5WsYEM4Zcgh2Ev15VicMdJmPHsMhNUsZWyVJV0CaQCYpNOFlGD/11Ea3pn4GA==}
@@ -4757,6 +4851,11 @@ packages:
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
+  '@graphql-tools/optimize@1.4.0':
+    resolution: {integrity: sha512-dJs/2XvZp+wgHH8T5J2TqptT9/6uVzIYvA6uFACha+ufvdMBedkfR4b4GbT8jAKLRARiqRTxy3dctnwkTM2tdw==}
+    peerDependencies:
+      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
   '@graphql-tools/optimize@2.0.0':
     resolution: {integrity: sha512-nhdT+CRGDZ+bk68ic+Jw1OZ99YCDIKYA5AlVAnBHJvMawSx9YQqQAIj4refNc1/LRieGiuWvhbG3jvPVYho0Dg==}
     engines: {node: '>=16.0.0'}
@@ -4766,6 +4865,11 @@ packages:
   '@graphql-tools/prisma-loader@8.0.17':
     resolution: {integrity: sha512-fnuTLeQhqRbA156pAyzJYN0KxCjKYRU5bz1q/SKOwElSnAU4k7/G1kyVsWLh7fneY78LoMNH5n+KlFV8iQlnyg==}
     engines: {node: '>=16.0.0'}
+    peerDependencies:
+      graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+
+  '@graphql-tools/relay-operation-optimizer@6.5.18':
+    resolution: {integrity: sha512-mc5VPyTeV+LwiM+DNvoDQfPqwQYhPV/cl5jOBjTgSniyaq8/86aODfMkrE2OduhQ5E00hqrkuL2Fdrgk0w1QJg==}
     peerDependencies:
       graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
 
@@ -9549,6 +9653,9 @@ packages:
   babel-plugin-syntax-hermes-parser@0.29.1:
     resolution: {integrity: sha512-2WFYnoWGdmih1I1J5eIqxATOeycOqRwYxAQBu3cUu/rhwInwHUg7k60AFNbuGjSDL8tje5GDrAnxzRLcu2pYcA==}
 
+  babel-plugin-syntax-trailing-function-commas@7.0.0-beta.0:
+    resolution: {integrity: sha512-Xj9XuRuz3nTSbaTXWv3itLOcxyF4oPD8douBBmj7U9BBC6nEBYfyOJYQMf/8PJAFotC62UY5dFfIGEPr7WswzQ==}
+
   babel-plugin-transform-flow-enums@0.0.2:
     resolution: {integrity: sha512-g4aaCrDDOsWjbm0PUUeVnkcVd6AKJsVc/MbnPhEotEpkeJQP6b8nzewohQi7+QS8UyPehOhGWn0nOwjvWpmMvQ==}
 
@@ -9570,6 +9677,11 @@ packages:
     resolution: {integrity: sha512-E/VlAEzRrsLEb2+dv8yp3bo4scof3l9nR4lrld+Iy5NyVqgVYUJnDAmunkhPMisRI32Qc4iRiz425d8vM++2fg==}
     peerDependencies:
       '@babel/core': ^7.0.0 || ^8.0.0-0
+
+  babel-preset-fbjs@3.4.0:
+    resolution: {integrity: sha512-9ywCsCvo1ojrw0b+XYk7aFvTH6D9064t0RIL1rtMf3nsa02Xw41MS7sZw216Im35xj/UY0PDBQsa1brUDDF1Ow==}
+    peerDependencies:
+      '@babel/core': ^7.0.0
 
   babel-preset-jest@29.6.3:
     resolution: {integrity: sha512-0B3bhxR6snWXJZtR/RliHTDPRgn1sNHOR0yVtq/IiQFyuOVjFS+wuio/R4gSNkyYmKmJB4wGZv2NZanmKmTnNA==}
@@ -12465,6 +12577,11 @@ packages:
 
   graphlib@2.1.8:
     resolution: {integrity: sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==}
+
+  graphql-codegen-typescript-validation-schema@0.12.1:
+    resolution: {integrity: sha512-EP9ZNWR/VA9P5+Y4vaTOCWPrlvtRCDYCWukhtKyrDV9lqmOEQQbC+R/86CW59wJ1OOxUFtxtmlOQqHyx25rGlA==}
+    peerDependencies:
+      graphql: ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
 
   graphql-config@4.5.0:
     resolution: {integrity: sha512-x6D0/cftpLUJ0Ch1e5sj1TZn6Wcxx4oMfmhaG9shM0DKajA9iR+j1z86GSTQ19fShbGvrSSvbIQsHku6aQ6BBw==}
@@ -18236,6 +18353,9 @@ packages:
   tslib@1.9.3:
     resolution: {integrity: sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==}
 
+  tslib@2.4.1:
+    resolution: {integrity: sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==}
+
   tslib@2.5.3:
     resolution: {integrity: sha512-mSxlJJwl3BMEQCUNnxXBU9jP4JBktcEGhURcPR6VQVlnP0FdDEsIaz0C35dXNGLyRfrATNofF0F5p2KPxQgB+w==}
 
@@ -19484,7 +19604,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(encoding@0.1.13)(graphql@16.11.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(graphql@16.11.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.11.0)
@@ -19874,6 +19994,30 @@ snapshots:
 
   '@apollo/utils.withrequired@2.0.1': {}
 
+  '@ardatan/relay-compiler@12.0.0(encoding@0.1.13)(graphql@16.11.0)':
+    dependencies:
+      '@babel/core': 7.28.3
+      '@babel/generator': 7.28.3
+      '@babel/parser': 7.28.3
+      '@babel/runtime': 7.28.3
+      '@babel/traverse': 7.28.3
+      '@babel/types': 7.28.2
+      babel-preset-fbjs: 3.4.0(@babel/core@7.28.3)
+      chalk: 4.1.2
+      fb-watchman: 2.0.2
+      fbjs: 3.0.5(encoding@0.1.13)
+      glob: 7.2.3
+      graphql: 16.11.0
+      immutable: 3.7.6
+      invariant: 2.2.4
+      nullthrows: 1.1.1
+      relay-runtime: 12.0.0(encoding@0.1.13)
+      signedsource: 1.0.0
+      yargs: 15.4.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
   '@ardatan/relay-compiler@12.0.3(encoding@0.1.13)(graphql@16.11.0)':
     dependencies:
       '@babel/generator': 7.28.3
@@ -20099,6 +20243,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@babel/plugin-proposal-class-properties@7.18.6(@babel/core@7.28.3)':
+    dependencies:
+      '@babel/core': 7.28.3
+      '@babel/helper-create-class-features-plugin': 7.28.3(@babel/core@7.28.3)
+      '@babel/helper-plugin-utils': 7.27.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@babel/plugin-proposal-decorators@7.28.0(@babel/core@7.28.3)':
     dependencies:
       '@babel/core': 7.28.3
@@ -20112,6 +20264,15 @@ snapshots:
     dependencies:
       '@babel/core': 7.28.3
       '@babel/helper-plugin-utils': 7.27.1
+
+  '@babel/plugin-proposal-object-rest-spread@7.20.7(@babel/core@7.28.3)':
+    dependencies:
+      '@babel/compat-data': 7.28.0
+      '@babel/core': 7.28.3
+      '@babel/helper-compilation-targets': 7.27.2
+      '@babel/helper-plugin-utils': 7.27.1
+      '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.28.3)
+      '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.28.3)
 
   '@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2(@babel/core@7.28.3)':
     dependencies:
@@ -22953,6 +23114,16 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@graphql-codegen/plugin-helpers@3.1.2(graphql@16.11.0)':
+    dependencies:
+      '@graphql-tools/utils': 9.2.1(graphql@16.11.0)
+      change-case-all: 1.0.15
+      common-tags: 1.8.2
+      graphql: 16.11.0
+      import-from: 4.0.0
+      lodash: 4.17.21
+      tslib: 2.4.1
+
   '@graphql-codegen/plugin-helpers@5.1.1(graphql@16.11.0)':
     dependencies:
       '@graphql-tools/utils': 10.9.1(graphql@16.11.0)
@@ -22988,11 +23159,48 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@graphql-codegen/typescript-generic-sdk@4.0.2(encoding@0.1.13)(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)':
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 3.1.2(graphql@16.11.0)
+      '@graphql-codegen/visitor-plugin-common': 2.13.8(encoding@0.1.13)(graphql@16.11.0)
+      auto-bind: 4.0.0
+      graphql: 16.11.0
+      graphql-tag: 2.12.6(graphql@16.11.0)
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
+  '@graphql-codegen/typescript-graphql-request@6.3.0(encoding@0.1.13)(graphql-request@6.1.0(encoding@0.1.13)(graphql@16.11.0))(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)':
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 3.1.2(graphql@16.11.0)
+      '@graphql-codegen/visitor-plugin-common': 2.13.8(encoding@0.1.13)(graphql@16.11.0)
+      auto-bind: 4.0.0
+      graphql: 16.11.0
+      graphql-request: 6.1.0(encoding@0.1.13)(graphql@16.11.0)
+      graphql-tag: 2.12.6(graphql@16.11.0)
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
+
   '@graphql-codegen/typescript-operations@4.6.1(encoding@0.1.13)(graphql@16.11.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
       '@graphql-codegen/typescript': 4.1.6(encoding@0.1.13)(graphql@16.11.0)
       '@graphql-codegen/visitor-plugin-common': 5.8.0(encoding@0.1.13)(graphql@16.11.0)
+      auto-bind: 4.0.0
+      graphql: 16.11.0
+      tslib: 2.6.3
+    transitivePeerDependencies:
+      - encoding
+
+  '@graphql-codegen/typescript-resolvers@4.5.2(encoding@0.1.13)(graphql@16.11.0)':
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
+      '@graphql-codegen/typescript': 4.1.6(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-codegen/visitor-plugin-common': 5.8.0(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-tools/utils': 10.9.1(graphql@16.11.0)
       auto-bind: 4.0.0
       graphql: 16.11.0
       tslib: 2.6.3
@@ -23009,6 +23217,23 @@ snapshots:
       tslib: 2.6.3
     transitivePeerDependencies:
       - encoding
+
+  '@graphql-codegen/visitor-plugin-common@2.13.8(encoding@0.1.13)(graphql@16.11.0)':
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 3.1.2(graphql@16.11.0)
+      '@graphql-tools/optimize': 1.4.0(graphql@16.11.0)
+      '@graphql-tools/relay-operation-optimizer': 6.5.18(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-tools/utils': 9.2.1(graphql@16.11.0)
+      auto-bind: 4.0.0
+      change-case-all: 1.0.15
+      dependency-graph: 0.11.0
+      graphql: 16.11.0
+      graphql-tag: 2.12.6(graphql@16.11.0)
+      parse-filepath: 1.0.2
+      tslib: 2.4.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   '@graphql-codegen/visitor-plugin-common@4.1.2(encoding@0.1.13)(graphql@16.11.0)':
     dependencies:
@@ -23344,6 +23569,11 @@ snapshots:
       graphql: 16.11.0
       tslib: 2.8.1
 
+  '@graphql-tools/optimize@1.4.0(graphql@16.11.0)':
+    dependencies:
+      graphql: 16.11.0
+      tslib: 2.8.1
+
   '@graphql-tools/optimize@2.0.0(graphql@16.11.0)':
     dependencies:
       graphql: 16.11.0
@@ -23377,6 +23607,16 @@ snapshots:
       - supports-color
       - uWebSockets.js
       - utf-8-validate
+
+  '@graphql-tools/relay-operation-optimizer@6.5.18(encoding@0.1.13)(graphql@16.11.0)':
+    dependencies:
+      '@ardatan/relay-compiler': 12.0.0(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-tools/utils': 9.2.1(graphql@16.11.0)
+      graphql: 16.11.0
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   '@graphql-tools/relay-operation-optimizer@7.0.21(encoding@0.1.13)(graphql@16.11.0)':
     dependencies:
@@ -24546,7 +24786,7 @@ snapshots:
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
 
-  '@libp2p/webrtc@5.2.23(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))':
+  '@libp2p/webrtc@5.2.23(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
       '@chainsafe/libp2p-noise': 16.1.4
@@ -24578,7 +24818,7 @@ snapshots:
       protons-runtime: 5.6.0
       race-event: 1.6.1
       race-signal: 1.1.3
-      react-native-webrtc: 124.0.6(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))
+      react-native-webrtc: 124.0.6(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))
       uint8-varint: 2.0.4
       uint8arraylist: 2.4.8
       uint8arrays: 5.1.0
@@ -28267,10 +28507,10 @@ snapshots:
       nullthrows: 1.1.1
       yargs: 17.7.2
 
-  '@react-native/community-cli-plugin@0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+  '@react-native/community-cli-plugin@0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
     dependencies:
       '@react-native/dev-middleware': 0.81.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@react-native/metro-config': 0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@react-native/metro-config': 0.81.0(@babel/core@7.28.3)
       debug: 4.4.1(supports-color@8.1.1)
       invariant: 2.2.4
       metro: 0.83.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -28315,7 +28555,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+  '@react-native/metro-config@0.81.0(@babel/core@7.28.3)':
     dependencies:
       '@react-native/js-polyfills': 0.81.0
       '@react-native/metro-babel-transformer': 0.81.0(@babel/core@7.28.3)
@@ -28323,18 +28563,16 @@ snapshots:
       metro-runtime: 0.83.1
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.81.0': {}
 
-  '@react-native/virtualized-lists@0.81.0(@types/react@19.1.10)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
+  '@react-native/virtualized-lists@0.81.0(@types/react@19.1.10)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)':
     dependencies:
       invariant: 2.2.4
       nullthrows: 1.1.1
       react: 19.1.1
-      react-native: 0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
+      react-native: 0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
     optionalDependencies:
       '@types/react': 19.1.10
 
@@ -30323,7 +30561,7 @@ snapshots:
 
   '@types/minimatch@6.0.0':
     dependencies:
-      minimatch: 3.1.2
+      minimatch: 10.0.3
 
   '@types/mkdirp@0.5.2':
     dependencies:
@@ -32344,6 +32582,8 @@ snapshots:
     dependencies:
       hermes-parser: 0.29.1
 
+  babel-plugin-syntax-trailing-function-commas@7.0.0-beta.0: {}
+
   babel-plugin-transform-flow-enums@0.0.2(@babel/core@7.28.3):
     dependencies:
       '@babel/plugin-syntax-flow': 7.27.1(@babel/core@7.28.3)
@@ -32379,6 +32619,39 @@ snapshots:
       '@babel/plugin-syntax-optional-chaining': 7.8.3(@babel/core@7.28.3)
       '@babel/plugin-syntax-private-property-in-object': 7.14.5(@babel/core@7.28.3)
       '@babel/plugin-syntax-top-level-await': 7.14.5(@babel/core@7.28.3)
+
+  babel-preset-fbjs@3.4.0(@babel/core@7.28.3):
+    dependencies:
+      '@babel/core': 7.28.3
+      '@babel/plugin-proposal-class-properties': 7.18.6(@babel/core@7.28.3)
+      '@babel/plugin-proposal-object-rest-spread': 7.20.7(@babel/core@7.28.3)
+      '@babel/plugin-syntax-class-properties': 7.12.13(@babel/core@7.28.3)
+      '@babel/plugin-syntax-flow': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.28.3)
+      '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-block-scoped-functions': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-block-scoping': 7.28.0(@babel/core@7.28.3)
+      '@babel/plugin-transform-classes': 7.28.3(@babel/core@7.28.3)
+      '@babel/plugin-transform-computed-properties': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-destructuring': 7.28.0(@babel/core@7.28.3)
+      '@babel/plugin-transform-flow-strip-types': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-for-of': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-function-name': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-literals': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-member-expression-literals': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-modules-commonjs': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-object-super': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.28.3)
+      '@babel/plugin-transform-property-literals': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-react-display-name': 7.28.0(@babel/core@7.28.3)
+      '@babel/plugin-transform-react-jsx': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-shorthand-properties': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-spread': 7.27.1(@babel/core@7.28.3)
+      '@babel/plugin-transform-template-literals': 7.27.1(@babel/core@7.28.3)
+      babel-plugin-syntax-trailing-function-commas: 7.0.0-beta.0
+    transitivePeerDependencies:
+      - supports-color
 
   babel-preset-jest@29.6.3(@babel/core@7.28.3):
     dependencies:
@@ -35868,6 +36141,17 @@ snapshots:
     dependencies:
       lodash: 4.17.21
 
+  graphql-codegen-typescript-validation-schema@0.12.1(encoding@0.1.13)(graphql@16.11.0):
+    dependencies:
+      '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
+      '@graphql-codegen/schema-ast': 4.0.0(graphql@16.11.0)
+      '@graphql-codegen/visitor-plugin-common': 4.1.2(encoding@0.1.13)(graphql@16.11.0)
+      '@graphql-tools/utils': 10.9.1(graphql@16.11.0)
+      graphlib: 2.1.8
+      graphql: 16.11.0
+    transitivePeerDependencies:
+      - encoding
+
   graphql-config@4.5.0(@types/node@22.17.2)(bufferutil@4.0.9)(encoding@0.1.13)(graphql@16.11.0)(utf-8-validate@5.0.10):
     dependencies:
       '@graphql-tools/graphql-file-loader': 7.5.17(graphql@16.11.0)
@@ -36226,7 +36510,7 @@ snapshots:
 
   headers-polyfill@4.0.3: {}
 
-  helia@5.5.1(bufferutil@4.0.9)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10):
+  helia@5.5.1(bufferutil@4.0.9)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10):
     dependencies:
       '@chainsafe/libp2p-noise': 16.1.4
       '@chainsafe/libp2p-yamux': 7.0.4
@@ -36251,7 +36535,7 @@ snapshots:
       '@libp2p/tcp': 10.1.18
       '@libp2p/tls': 2.2.6
       '@libp2p/upnp-nat': 3.1.21
-      '@libp2p/webrtc': 5.2.23(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))
+      '@libp2p/webrtc': 5.2.23(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))
       '@libp2p/websockets': 9.2.18(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@multiformats/dns': 1.0.6
       blockstore-core: 5.0.4
@@ -39957,7 +40241,7 @@ snapshots:
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
       '@noble/curves': 1.8.1
-      '@noble/hashes': 1.7.1
+      '@noble/hashes': 1.8.0
       '@scure/bip32': 1.6.2
       '@scure/bip39': 1.5.4
       abitype: 1.0.8(typescript@5.9.2)(zod@3.25.76)
@@ -41395,25 +41679,25 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  react-native-webrtc@124.0.6(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)):
+  react-native-webrtc@124.0.6(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)):
     dependencies:
       base64-js: 1.5.1
       debug: 4.3.4
       event-target-shim: 6.0.2
-      react-native: 0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
+      react-native: 0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - supports-color
 
-  react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10):
+  react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10):
     dependencies:
       '@jest/create-cache-key-function': 29.7.0
       '@react-native/assets-registry': 0.81.0
       '@react-native/codegen': 0.81.0(@babel/core@7.28.3)
-      '@react-native/community-cli-plugin': 0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@react-native/community-cli-plugin': 0.81.0(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@react-native/gradle-plugin': 0.81.0
       '@react-native/js-polyfills': 0.81.0
       '@react-native/normalize-colors': 0.81.0
-      '@react-native/virtualized-lists': 0.81.0(@types/react@19.1.10)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3)(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
+      '@react-native/virtualized-lists': 0.81.0(@types/react@19.1.10)(react-native@0.81.0(@babel/core@7.28.3)(@react-native/metro-config@0.81.0(@babel/core@7.28.3))(@types/react@19.1.10)(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@5.0.10))(react@19.1.1)
       abort-controller: 3.0.0
       anser: 1.4.10
       ansi-regex: 5.0.1
@@ -43360,6 +43644,8 @@ snapshots:
   tslib@1.14.1: {}
 
   tslib@1.9.3: {}
+
+  tslib@2.4.1: {}
 
   tslib@2.5.3: {}
 

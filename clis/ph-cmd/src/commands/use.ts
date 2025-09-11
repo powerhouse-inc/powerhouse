@@ -1,13 +1,13 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { useHelp } from "../help.js";
-import { type CommandActionType } from "../types.js";
+import type { CommandActionType } from "../types.js";
+import type { PackageManager } from "../utils/index.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   installDependency,
-  type PackageManager,
   resolvePackageManagerOptions,
   updateDependencyVersionString,
   withCustomHelp,

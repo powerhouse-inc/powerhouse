@@ -1,5 +1,5 @@
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { type Config } from "./types.js";
+import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { Config } from "./types.js";
 
 /**
  * Abstract base class for document generators

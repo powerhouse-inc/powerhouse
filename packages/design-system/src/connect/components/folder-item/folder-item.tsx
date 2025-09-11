@@ -1,22 +1,20 @@
+import type { NodeOption, SyncStatus, TNodeActions } from "#connect";
 import {
   ConnectDropdownMenu,
   defaultFolderOptions,
   DELETE,
   DUPLICATE,
   NodeInput,
-  type NodeOption,
   nodeOptionsMap,
   READ,
   RENAME,
-  type SyncStatus,
   SyncStatusIcon,
-  type TNodeActions,
   useDrag,
   useDrop,
   WRITE,
 } from "#connect";
 import { Icon } from "#powerhouse";
-import { type FolderNode, type Node, type SharingType } from "document-drive";
+import type { FolderNode, Node, SharingType } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 

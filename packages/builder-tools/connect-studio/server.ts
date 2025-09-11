@@ -15,15 +15,11 @@ import viteReact from "@vitejs/plugin-react";
 import fs from "node:fs";
 import { dirname, join, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  createLogger,
-  createServer,
-  searchForWorkspaceRoot,
-  type InlineConfig,
-} from "vite";
+import type { InlineConfig } from "vite";
+import { createLogger, createServer, searchForWorkspaceRoot } from "vite";
 import { viteEnvs } from "vite-envs";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
-import { type StartServerOptions } from "./types.js";
+import type { StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings
 const logger = createLogger();

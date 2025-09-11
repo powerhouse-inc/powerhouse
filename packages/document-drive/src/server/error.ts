@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { type ErrorStatus, type SynchronizationUnitId } from "./types.js";
+import type { ErrorStatus, SynchronizationUnitId } from "./types.js";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(

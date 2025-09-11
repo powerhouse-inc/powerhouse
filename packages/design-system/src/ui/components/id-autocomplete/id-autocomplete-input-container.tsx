@@ -8,9 +8,8 @@ import { sharedValueTransformers } from "../../lib/shared-value-transformers.js"
 import type { InputBaseProps } from "../../types.js";
 import { Input } from "../input/index.js";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
-import ValueTransformer, {
-  type TransformerType,
-} from "../value-transformer/value-transformer.js";
+import type { TransformerType } from "../value-transformer/value-transformer.js";
+import ValueTransformer from "../value-transformer/value-transformer.js";
 import type { IdAutocompleteOption } from "./types.js";
 
 interface IdAutocompleteInputContainerProps

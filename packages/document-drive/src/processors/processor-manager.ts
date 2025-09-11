@@ -1,13 +1,13 @@
-import {
-  type IProcessorManager,
-  type ProcessorFactory,
-  type ProcessorRecord,
+import type {
+  IProcessorManager,
+  ProcessorFactory,
+  ProcessorRecord,
 } from "document-drive/processors/types";
 import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
-import {
-  type IDocumentDriveServer,
-  type IListenerManager,
-  type Listener,
+import type {
+  IDocumentDriveServer,
+  IListenerManager,
+  Listener,
 } from "document-drive/server/types";
 import { generateId } from "document-model";
 import { childLogger } from "../../index.js";

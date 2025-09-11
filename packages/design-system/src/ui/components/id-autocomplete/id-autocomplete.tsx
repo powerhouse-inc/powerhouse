@@ -11,9 +11,8 @@ import { FormLabel } from "../form-label/form-label.js";
 import { FormMessageList } from "../form-message/index.js";
 import { Input } from "../input/index.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
-import ValueTransformer, {
-  type TransformerType,
-} from "../value-transformer/value-transformer.js";
+import type { TransformerType } from "../value-transformer/value-transformer.js";
+import ValueTransformer from "../value-transformer/value-transformer.js";
 import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import { IdAutocompleteList } from "./id-autocomplete-list.js";

@@ -1,4 +1,5 @@
-import { SelectFieldRaw, type SelectOption } from "#ui";
+import type { SelectOption } from "#ui";
+import { SelectFieldRaw } from "#ui";
 import { twMerge } from "tailwind-merge";
 
 type Props = {

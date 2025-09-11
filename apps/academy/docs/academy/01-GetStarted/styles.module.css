@@ -101,23 +101,23 @@
   top: 18px;
 }
 
-:global([data-theme='dark']) .masteryTrackTitle {
+:global([data-theme="dark"]) .masteryTrackTitle {
   background-color: var(--ifm-card-background-color);
   border: 1px solid var(--ifm-color-emphasis-200);
 }
 
-:global([data-theme='dark']) .pathCard {
+:global([data-theme="dark"]) .pathCard {
   background: var(--ifm-card-background-color);
   border: 1px solid var(--ifm-color-emphasis-200);
 }
 
-:global([data-theme='dark']) :global(.path-button) {
+:global([data-theme="dark"]) :global(.path-button) {
   background: var(--ifm-color-emphasis-100);
   border-color: var(--ifm-color-emphasis-200);
   color: var(--ifm-font-color-primary);
 }
 
-:global([data-theme='dark']) :global(.path-button:hover) {
+:global([data-theme="dark"]) :global(.path-button:hover) {
   background: var(--ifm-color-emphasis-200);
   border-color: var(--ifm-color-emphasis-300);
 }

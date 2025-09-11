@@ -6,11 +6,12 @@
     "name": "Powerhouse",
     "url": "https://www.powerhouse.inc/"
   },
-"documentModels": [
+  "documentModels": [
     {
       "id": "powerhouse/todo",
       "name": "ToDo"
-    }],
+    }
+  ],
   "editors": [
     {
       "id": "powerhouse/todo-editor",

@@ -1,13 +1,13 @@
-import { type Context } from "#graphql/types.js";
+import type { Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import {
-  type GraphQLResolverMap,
-  type GraphQLSchemaModule,
+import type {
+  GraphQLResolverMap,
+  GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
-import { type IDocumentDriveServer } from "document-drive";
-import { type DocumentNode } from "graphql";
+import type { IDocumentDriveServer } from "document-drive";
+import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
 

@@ -1,4 +1,4 @@
-import { type ShutdownStatus } from "./types.js";
+import type { ShutdownStatus } from "./types.js";
 
 /**
  * Factory method to create a ShutdownStatus object

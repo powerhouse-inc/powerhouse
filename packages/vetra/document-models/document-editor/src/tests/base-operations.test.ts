@@ -7,12 +7,12 @@ import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import {
-  z,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetEditorNameInput
+import type {
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetEditorNameInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import type { DocumentEditorDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 
@@ -31,8 +31,12 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.setEditorName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("SET_EDITOR_NAME");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_EDITOR_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle addDocumentType operation", () => {
@@ -43,8 +47,12 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.addDocumentType(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_DOCUMENT_TYPE");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle removeDocumentType operation", () => {
@@ -61,7 +69,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "REMOVE_DOCUMENT_TYPE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

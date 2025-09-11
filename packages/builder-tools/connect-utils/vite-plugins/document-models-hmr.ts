@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { type PluginOption, type ViteDevServer } from "vite";
+import type { PluginOption, ViteDevServer } from "vite";
 import { IMPORT_SCRIPT_FILE } from "../constants.js";
 
 export const viteDocumentModelsHMR = (targetDir: string): PluginOption => {

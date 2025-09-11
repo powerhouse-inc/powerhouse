@@ -1,3 +1,8 @@
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  Node,
+} from "document-drive";
 import {
   addFile as baseAddFile,
   addFolder as baseAddFolder,
@@ -10,10 +15,8 @@ import {
   isFolderNode,
   logger,
   updateNode,
-  type DocumentDriveDocument,
-  type IDocumentDriveServer,
-  type Node,
 } from "document-drive";
+import type { DocumentOperations, PHDocument } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
@@ -21,8 +24,6 @@ import {
   createZip,
   generateId,
   replayDocument,
-  type DocumentOperations,
-  type PHDocument,
 } from "document-model";
 import {
   queueActions,

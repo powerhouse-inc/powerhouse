@@ -1,4 +1,5 @@
-import { type ModalPropsMapping, modals, type ModalType } from "#rwa";
+import type { ModalPropsMapping, ModalType } from "#rwa";
+import { modals } from "#rwa";
 import React, { useCallback, useContext, useMemo, useState } from "react";
 
 type MapModalProps<T> = {

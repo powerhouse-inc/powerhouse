@@ -9,5 +9,8 @@ export default defineConfig({
         .pathname,
       "#": new URL("./src/", import.meta.url).pathname,
     },
+    coverage: {
+      reporter: ["text", "json", "html"],
+    },
   },
 });

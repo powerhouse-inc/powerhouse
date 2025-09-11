@@ -8,16 +8,18 @@ assignees: ""
 
 ## Context / Background
 
-> Describe the context and motivation for this issue.   
+> Describe the context and motivation for this issue.
 
 ## Goals / What We Want to Achieve
 
 > A clear list of what this issue aims to accomplish.
+
 - [ ] Goal 1: What success looks like
 
 ## Proposed Solution / Implementation Plan
 
 > How do we think this will be implemented?
+
 - [ ] Step-by-step breakdown of work
 
 ## Acceptance Criteria / Definition of Done

@@ -343,11 +343,13 @@ describe("document model", () => {
 
       // Should have import for both InvalidStatusTransition and StatusAlreadySet errors in single import
       expect(generalReducerContent).toContain(
-        "import { InvalidStatusTransition, StatusAlreadySet } from \"../../gen/general/error.js\";",
+        'import { InvalidStatusTransition, StatusAlreadySet } from "../../gen/general/error.js";',
       );
 
       // Should contain the reducer code with both error usages
-      expect(generalReducerContent).toContain("throw new InvalidStatusTransition");
+      expect(generalReducerContent).toContain(
+        "throw new InvalidStatusTransition",
+      );
       expect(generalReducerContent).toContain("throw new StatusAlreadySet");
 
       // Check that the line-items module reducer imports DuplicateLineItem
@@ -359,15 +361,71 @@ describe("document model", () => {
         "reducers",
         "line-items.ts",
       );
-      const lineItemsReducerContent = readFileSync(lineItemsReducerPath, "utf-8");
+      const lineItemsReducerContent = readFileSync(
+        lineItemsReducerPath,
+        "utf-8",
+      );
 
       // Should have import for DuplicateLineItem error
       expect(lineItemsReducerContent).toContain(
-        "import { DuplicateLineItem } from \"../../gen/line-items/error.js\";",
+        'import { DuplicateLineItem } from "../../gen/line-items/error.js";',
       );
 
       // Should contain the reducer code with error usage
       expect(lineItemsReducerContent).toContain("throw new DuplicateLineItem");
+    },
+  );
+
+  it(
+    "should generate error codes for legacy documents with empty error codes",
+    { timeout: 10000 },
+    async () => {
+      await generateSchemas(srcPath, {
+        skipFormat: true,
+        outDir: path.join(outPath, "document-model"),
+      });
+
+      const testEmptyCodesDocumentModel = await loadDocumentModel(
+        path.join(srcPath, "test-empty-error-codes", "test-empty-error-codes.json"),
+      );
+
+      await generateDocumentModel(
+        testEmptyCodesDocumentModel,
+        path.join(outPath, "document-model"),
+        { skipFormat: true },
+      );
+
+      // Check that error codes are generated from error names
+      const testOperationsErrorPath = path.join(
+        outPath,
+        "document-model",
+        "test-empty-codes",
+        "gen",
+        "test-operations",
+        "error.ts",
+      );
+      const testOperationsErrorContent = readFileSync(testOperationsErrorPath, "utf-8");
+
+      // Check that error codes are generated from names in PascalCase when empty
+      expect(testOperationsErrorContent).toContain("export type ErrorCode =");
+      expect(testOperationsErrorContent).toContain("'InvalidValue'");
+      expect(testOperationsErrorContent).toContain("'EmptyValue'");
+      
+      // Check that error classes are generated
+      expect(testOperationsErrorContent).toContain(
+        "export class InvalidValue extends Error implements ReducerError",
+      );
+      expect(testOperationsErrorContent).toContain(
+        "export class EmptyValue extends Error implements ReducerError",
+      );
+      
+      // Verify error code constants are set properly in PascalCase
+      expect(testOperationsErrorContent).toContain(
+        "errorCode = 'InvalidValue' as ErrorCode",
+      );
+      expect(testOperationsErrorContent).toContain(
+        "errorCode = 'EmptyValue' as ErrorCode",
+      );
     },
   );
 });

@@ -14,7 +14,6 @@ Each application is designed to be modular yet complementary, ensuring smooth da
 
 ![Powerhouse Host Apps Interaction](./images/PowerhouseArchitecture.png)
 
-
 ## How the Five Applications Work Together
 
 The Powerhouse ecosystem functions as a decentralized operating system, where each of the four core applications works in synergy to ensure seamless collaboration, structured data management, and automated workflows. Each application has a distinct purpose, yet their interconnectivity is what makes the system powerful.

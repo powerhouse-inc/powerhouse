@@ -1,16 +1,16 @@
-import { type ImportScriptModule, type SubgraphModule } from "document-model";
+import type { ImportScriptModule, SubgraphModule } from "document-model";
 import { useSyncExternalStore } from "react";
 import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
 import {
   dispatchSetVetraPackagesEvent,
   subscribeToVetraPackages,
 } from "../events/vetra-packages.js";
-import {
-  type Processors,
-  type VetraDocumentModelModule,
-  type VetraEditorModule,
-  type VetraPackage,
-  type VetraProcessorModule,
+import type {
+  Processors,
+  VetraDocumentModelModule,
+  VetraEditorModule,
+  VetraPackage,
+  VetraProcessorModule,
 } from "../types/vetra.js";
 
 const defaultVetraPackages: VetraPackage[] = [];

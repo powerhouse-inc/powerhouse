@@ -1,3 +1,4 @@
+import type { SyncStatus } from "#connect";
 import {
   CONFLICT,
   ERROR,
@@ -5,11 +6,11 @@ import {
   MISSING,
   SUCCESS,
   SYNCING,
-  type SyncStatus,
 } from "#connect";
-import { Icon, type IconName } from "#powerhouse";
+import type { IconName } from "#powerhouse";
+import { Icon } from "#powerhouse";
 
-import { type ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 const syncIcons: Record<SyncStatus, IconName> = {

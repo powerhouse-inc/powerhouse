@@ -1,32 +1,32 @@
 input SetStateSchemaInput {
-    scope: String!
-    schema: String!
+  scope: String!
+  schema: String!
 }
 
 input SetInitialStateInput {
-    scope: String!
-    initialValue: String!
+  scope: String!
+  initialValue: String!
 }
 
 input AddStateExampleInput {
-    scope: String!
-    id: ID!
-    insertBefore: ID
-    example: String!
+  scope: String!
+  id: ID!
+  insertBefore: ID
+  example: String!
 }
 
 input UpdateStateExampleInput {
-    scope: String!
-    id: ID!
-    newExample: String!
+  scope: String!
+  id: ID!
+  newExample: String!
 }
 
 input DeleteStateExampleInput {
-    scope: String!
-    id: ID!
+  scope: String!
+  id: ID!
 }
 
 input ReorderStateExamplesInput {
-    scope: String!
-    order: [ID!]!
+  scope: String!
+  order: [ID!]!
 }

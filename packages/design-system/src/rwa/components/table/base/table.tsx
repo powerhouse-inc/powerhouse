@@ -1,15 +1,17 @@
 import { Icon } from "#powerhouse";
+import type {
+  SortDirection,
+  TableColumn,
+  TableItemType,
+  TableName,
+  TableProps,
+} from "#rwa";
 import {
   ItemNumberCell,
   MoreDetailsCell,
   RWATableCell,
   RWATableRow,
-  type SortDirection,
   TableBase,
-  type TableColumn,
-  type TableItemType,
-  type TableName,
-  type TableProps,
   columnsByTableName,
   defaultColumnCountByTableWidth,
   handleTableDatum,

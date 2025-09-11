@@ -1,7 +1,7 @@
+import type { TableColumn } from "#rwa";
 import {
   RWATableCell,
   RWATableRow,
-  type TableColumn,
   TableWithForm,
   handleTableDatum,
   sumTotalForProperty,

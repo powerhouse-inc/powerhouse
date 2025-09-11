@@ -10,7 +10,10 @@ import SynchronizationManager from "../src/server/sync-manager.js";
 import { MemoryStorage } from "../src/storage/memory.js";
 import { fakeAction } from "./utils.js";
 
-const documentModels = [DocumentModel, DocumentDrive] as DocumentModelModule<any>[];
+const documentModels = [
+  DocumentModel,
+  DocumentDrive,
+] as DocumentModelModule<any>[];
 
 describe("Synchronization Manager with memory adapters", () => {
   function initSyncManager() {

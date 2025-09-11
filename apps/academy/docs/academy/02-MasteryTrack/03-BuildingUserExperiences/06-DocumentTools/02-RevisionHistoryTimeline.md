@@ -9,23 +9,25 @@ To enable the timeline feature in your document editor, you need to set `timelin
 ```typescript
 // editors/to-do-list/index.ts
 export const module: EditorModule<ToDoDocument> = {
-  Component: Editor as unknown as FC<EditorProps<ToDoDocument> & Record<string, unknown>>,
+  Component: Editor as unknown as FC<
+    EditorProps<ToDoDocument> & Record<string, unknown>
+  >,
   documentTypes: ["powerhouse/todo"],
   config: {
     id: "editor-id",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,
-    timelineEnabled: true,  // Enable timeline feature
+    timelineEnabled: true, // Enable timeline feature
   },
 };
 ```
 
 This setting enables the timeline button in the document toolbar.
 
-:::warning Heads Up! 
-The revision history timeline will only become visible once your document model has some operations or 'history'. 
-Add a few to-do's or some data in the model you are working on and the revision history timeline button in the Document Toolbar will be activated. 
+:::warning Heads Up!
+The revision history timeline will only become visible once your document model has some operations or 'history'.
+Add a few to-do's or some data in the model you are working on and the revision history timeline button in the Document Toolbar will be activated.
 Click the button to see the timeline expand and see the first history 'candle' appear.
 :::
 
@@ -64,7 +66,8 @@ const timelineItems = useTimelineItems(documentId);
 3. Track the selected timeline item in state:
 
 ```typescript
-const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
+const [selectedTimelineItem, setSelectedTimelineItem] =
+  useState<TimelineItem | null>(null);
 ```
 
 4. Pass the timeline items to the DocumentToolbar and handle item selection:
@@ -104,18 +107,30 @@ In your document editor (e.g., `editors/to-do-list/editor.tsx`), you need to han
 1. Extract timeline-related properties from the context:
 
 ```typescript
-const { readMode = false, selectedTimelineRevision, getDocumentRevision } = context;
+const {
+  readMode = false,
+  selectedTimelineRevision,
+  getDocumentRevision,
+} = context;
 ```
 
 2. Fetch the document at the selected revision when in read mode:
 
 ```typescript
-const [readModeDocument, setReadModeDocument] = useState<ToDoDocument | null>(null);
+const [readModeDocument, setReadModeDocument] = useState<ToDoDocument | null>(
+  null,
+);
 
 useEffect(() => {
   const getReadModeDocument = async () => {
-    if (getDocumentRevision && readMode && typeof selectedTimelineRevision === 'number') {
-      const document = await getDocumentRevision({ revisions: { global: selectedTimelineRevision } });
+    if (
+      getDocumentRevision &&
+      readMode &&
+      typeof selectedTimelineRevision === "number"
+    ) {
+      const document = await getDocumentRevision({
+        revisions: { global: selectedTimelineRevision },
+      });
       setReadModeDocument(document);
     } else if (!readMode) {
       setReadModeDocument(null);

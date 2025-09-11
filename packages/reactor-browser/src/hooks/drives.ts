@@ -1,11 +1,11 @@
-import {
-  type DocumentDriveDocument,
-  type DocumentDrivePHState,
-  type SharingType,
-  type Trigger,
+import type {
+  DocumentDriveDocument,
+  DocumentDrivePHState,
+  SharingType,
+  Trigger,
 } from "document-drive";
 import { getDriveSharingType } from "document-drive/server/utils";
-import { type PHDocument } from "document-model";
+import type { PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
   dispatchSetSelectedDriveIdEvent,

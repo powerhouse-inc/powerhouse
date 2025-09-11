@@ -152,9 +152,7 @@ const dimensions = {
   asset: AnalyticsPath.fromString(
     `sky/rwas/assets/t-bills/${fixedIncomeTransaction.assetId}`,
   ),
-  portfolio: AnalyticsPath.fromString(
-    `sky/rwas/portfolios/${documentId}`,
-  ),
+  portfolio: AnalyticsPath.fromString(`sky/rwas/portfolios/${documentId}`),
 };
 
 // create the series values
@@ -202,9 +200,7 @@ With variables:
     "granularity": "annual",
     "start": "2024-01-01",
     "end": "2025-01-01",
-    "metrics": [
-      "AssetBalance",
-    ],
+    "metrics": ["AssetBalance"],
     "dimensions": [
       {
         "name": "asset",
@@ -220,14 +216,17 @@ With variables:
 
 The RWA processor example pulls information from operation _inputs_ to insert analytics data. Another use case might be to capture meta-analytics from the states themselves.
 
-This processor listens to all documents of type `powerhouse/document-drive`, and since the `document-drive` is itself implemented on top of the document model core systems, this means that we can process all virtual file system operations.  This processor count basic usage metrics using document operations and states.
+This processor listens to all documents of type `powerhouse/document-drive`, and since the `document-drive` is itself implemented on top of the document model core systems, this means that we can process all virtual file system operations. This processor count basic usage metrics using document operations and states.
 
 ```typescript
 import { IAnalyticsStore } from "@powerhousedao/reactor-api";
 import { AnalyticsPath } from "@powerhousedao/reactor-api";
 import { AnalyticsSeriesInput } from "@powerhousedao/reactor-api";
 import { InternalTransmitterUpdate, IProcessor } from "document-drive";
-import { AddFileInput, DeleteNodeInput } from "document-drive/drive-document-model/gen/types";
+import {
+  AddFileInput,
+  DeleteNodeInput,
+} from "document-drive/drive-document-model/gen/types";
 import { PHDocument } from "document-model";
 import { DateTime } from "luxon";
 
@@ -247,91 +246,103 @@ export class DriveProcessorProcessor implements IProcessor {
   constructor(private readonly analyticsStore: IAnalyticsStore) {
     //
   }
-  
+
   async onStrands<TDocument extends PHDocument>(
-    strands: InternalTransmitterUpdate<TDocument>[]
+    strands: InternalTransmitterUpdate<TDocument>[],
   ): Promise<void> {
     if (strands.length === 0) {
       return;
     }
 
-    const values:AnalyticsSeriesInput[] = [];
+    const values: AnalyticsSeriesInput[] = [];
 
     for (const strand of strands) {
       const operations = strand.operations;
-      await Promise.all(operations.map((operation) => {
-        const source = AnalyticsPath.fromString(`switchboard/default/${strand.driveId}`);
-    
-        const start = DateTime.fromISO(operation.timestamp);
-        const dimensions: any = {
-          documentType: AnalyticsPath.fromString(`document/type/powerhouse/document-drive`),
-        };
+      await Promise.all(
+        operations.map((operation) => {
+          const source = AnalyticsPath.fromString(
+            `switchboard/default/${strand.driveId}`,
+          );
 
-        if (operation.index === 0) {
-          this.analyticsStore.clearSeriesBySource(source);
-        }
-    
-        switch (operation.type) {
-          case "ADD_FILE": {
-            // count documents of each type (ADD_FILE, input.documentType)
-    
-            // lookup node in state
-            const input = operation.input as AddFileInput;
-            const node = findNode(strand.state, input.id);
-            if (!node) {
-              return Promise.resolve();
+          const start = DateTime.fromISO(operation.timestamp);
+          const dimensions: any = {
+            documentType: AnalyticsPath.fromString(
+              `document/type/powerhouse/document-drive`,
+            ),
+          };
+
+          if (operation.index === 0) {
+            this.analyticsStore.clearSeriesBySource(source);
+          }
+
+          switch (operation.type) {
+            case "ADD_FILE": {
+              // count documents of each type (ADD_FILE, input.documentType)
+
+              // lookup node in state
+              const input = operation.input as AddFileInput;
+              const node = findNode(strand.state, input.id);
+              if (!node) {
+                return Promise.resolve();
+              }
+
+              dimensions["kind"] = AnalyticsPath.fromString(
+                `document/kind/${node.kind}`,
+              );
+
+              // increment by adding a 1
+              values.push({
+                source,
+                start,
+                value: 1,
+                metric: "Count",
+                dimensions,
+              });
+
+              break;
             }
-    
-            dimensions["kind"] = AnalyticsPath.fromString(`document/kind/${node.kind}`);
-    
-            // increment by adding a 1
-            values.push({
-              source,
-              start,
-              value: 1,
-              metric: "Count",
-              dimensions,
-            });
-            
-            break;
-          }
-          case "ADD_FOLDER": {
-            dimensions["kind"] = AnalyticsPath.fromString("document/kind/folder");
-    
-            // increment by adding a 1
-            values.push({
-              source,
-              start,
-              value: 1,
-              metric: "Count",
-              dimensions,
-            });
-            
-            break;
-          }
-          case "DELETE_NODE": {
-            // the operation only contains the id, so lookup deleted item type in previous state
-            const input = operation.input as DeleteNodeInput;
-            const node = findNode(operation.previousState, input.id);
-            if (!node) {
-              return Promise.resolve();
+            case "ADD_FOLDER": {
+              dimensions["kind"] = AnalyticsPath.fromString(
+                "document/kind/folder",
+              );
+
+              // increment by adding a 1
+              values.push({
+                source,
+                start,
+                value: 1,
+                metric: "Count",
+                dimensions,
+              });
+
+              break;
             }
-    
-            dimensions["kind"] = AnalyticsPath.fromString(`document/kind/${node.kind}`);
-    
-            // decrement by adding a -1
-            values.push({
-              source,
-              start,
-              value: -1,
-              metric: "Count",
-              dimensions,
-            });
-    
-            break;
+            case "DELETE_NODE": {
+              // the operation only contains the id, so lookup deleted item type in previous state
+              const input = operation.input as DeleteNodeInput;
+              const node = findNode(operation.previousState, input.id);
+              if (!node) {
+                return Promise.resolve();
+              }
+
+              dimensions["kind"] = AnalyticsPath.fromString(
+                `document/kind/${node.kind}`,
+              );
+
+              // decrement by adding a -1
+              values.push({
+                source,
+                start,
+                value: -1,
+                metric: "Count",
+                dimensions,
+              });
+
+              break;
+            }
           }
-        }
-      }));
+        }),
+      );
     }
 
     await this.analyticsStore.addSeriesValues(values);
@@ -462,9 +473,12 @@ Now, we can define the dimensions we want to group by. We can imagine that we wi
 
 ```ts
 const totalSpendOnHeadcount = useAnalyticsQuery({
-  start, end, granularity, metrics,
+  start,
+  end,
+  granularity,
+  metrics,
   select: {
-    contributor: "/billing-statement/contributor"
+    contributor: "/billing-statement/contributor",
   },
   lod: {
     contributor: 3,
@@ -483,7 +497,7 @@ const totalSpend = useAnalyticsQuery({
   granularity: "total", // <--- this means we'll get results for the entire time period
   metrics: ["Cash", "Powt"],
   select: {
-    budget: "/billing-statement"
+    budget: "/billing-statement",
   },
   lod: {
     budget: 0, // <--- this means we'll get all results lumped together
@@ -496,7 +510,7 @@ const monthlySpendByBudget = useAnalyticsQuery({
   granularity: "monthly", // <--- this means we'll get results grouped by month
   metrics: ["Cash", "Powt"],
   select: {
-    budget: "/billing-statement/budget"
+    budget: "/billing-statement/budget",
   },
   lod: {
     budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
@@ -509,7 +523,7 @@ const monthlySpendByCategory = useAnalyticsQuery({
   granularity: "monthly", // <--- this means we'll get results grouped by month
   metrics: ["Cash", "Powt"],
   select: {
-    category: "/billing-statement/category"
+    category: "/billing-statement/category",
   },
   lod: {
     category: 3, // <--- this means we'll get results grouped by "/billing-statement/category/category1", "/billing-statement/category/category2", etc.
@@ -522,7 +536,7 @@ const yearlySpendByBudget = useAnalyticsQuery({
   granularity: "yearly", // <--- this means we'll get results grouped by year
   metrics: ["Cash", "Powt"],
   select: {
-    budget: "/billing-statement/budget"
+    budget: "/billing-statement/budget",
   },
   lod: {
     budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
@@ -535,7 +549,7 @@ const monthlySpendByBudget = useAnalyticsQuery({
   granularity: "monthly", // <--- this means we'll get results grouped by month
   metrics: ["Cash", "Powt"],
   select: {
-    budget: "/billing-statement/budget"
+    budget: "/billing-statement/budget",
   },
   lod: {
     budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
@@ -548,7 +562,7 @@ const last30DaysSpendByBudget = useAnalyticsQuery({
   granularity: "day", // <--- this means we'll get results grouped by day
   metrics: ["Cash", "Powt"],
   select: {
-    budget: "/billing-statement/budget"
+    budget: "/billing-statement/budget",
   },
   lod: {
     budget: 3, // <--- this means we'll get results grouped by "/billing-statement/budget/budget1", "/billing-statement/budget/budget2", etc.
@@ -568,10 +582,10 @@ For instance, say we take our monthly spend by category query:
 const monthlySpendByCategory = useAnalyticsQuery({
   start,
   end,
-  granularity: "monthly", 
+  granularity: "monthly",
   metrics: ["Cash", "Powt"],
   select: {
-    category: "/billing-statement/category"
+    category: "/billing-statement/category",
   },
   lod: {
     category: 3,
@@ -583,31 +597,36 @@ This gives us the results we're looking for but, by design, there may be many di
 
 ```ts
 // this source will match all analytics updates from any document in the drive
-const driveSource = AnalyticsPath.fromString(`billing-statement/${drive.header.id}`);
+const driveSource = AnalyticsPath.fromString(
+  `billing-statement/${drive.header.id}`,
+);
 
 // this source will match all analytics updates from a specific document in a drive
-const documentSource = AnalyticsPath.fromString(`billing-statement/${drive.header.id}/${document.header.id}`);
+const documentSource = AnalyticsPath.fromString(
+  `billing-statement/${drive.header.id}/${document.header.id}`,
+);
 ```
 
 ```ts
 const { state, data: drive } = useSelectedDrive();
 
-const results = useAnalyticsQuery({
-  start, end,
-  granularity: "monthly", 
-  metrics: ["Cash", "Powt"],
-  select: {
-    category: "/billing-statement/category"
+const results = useAnalyticsQuery(
+  {
+    start,
+    end,
+    granularity: "monthly",
+    metrics: ["Cash", "Powt"],
+    select: {
+      category: "/billing-statement/category",
+    },
+    lod: {
+      category: 3,
+    },
   },
-  lod: {
-    category: 3,
+  {
+    sources: [`/billing-statement/${drive.header.id}/`],
   },
-},
-{
-  sources: [
-   `/billing-statement/${drive.header.id}/` 
-  ],
-});
+);
 ```
 
 ### `IProcessor`
@@ -617,6 +636,3 @@ Now that we have designed out our data, we can open up `line-item-processor/inde
 ```ts
 
 ```
-
-
-

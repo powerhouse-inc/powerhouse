@@ -1,11 +1,11 @@
-import type { Module, Operation } from "document-model";
+import type { Module } from "document-model";
+import { useCallback } from "react";
+import type { DocumentActionHandlers } from "../types/documents.js";
+import { ensureValidOperationSchemaInputName } from "../utils/linting.js";
 import { GraphqlEditor } from "./code-editors/graphql-editor.js";
 import { OperationDescriptionForm } from "./operation-description-form.js";
 import { OperationErrors } from "./operation-errors.js";
 import { OperationForm } from "./operation-form.js";
-import { ensureValidOperationSchemaInputName } from "../utils/linting.js";
-import { useCallback } from "react";
-import { type DocumentActionHandlers } from "../types/documents.js";
 
 export type WrappedHandlers = DocumentActionHandlers & {
   addOperationAndInitialSchema: (

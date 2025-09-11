@@ -21,8 +21,6 @@ type TestDocState {
   value: String!
 }
 
-
-
 # base_operations
 
 input SetTestIdInput {

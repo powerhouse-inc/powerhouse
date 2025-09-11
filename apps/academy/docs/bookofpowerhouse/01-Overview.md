@@ -20,7 +20,7 @@ Powerhouse is an initiative at the intersection of software development, legal i
   ></iframe>
 </div>
 
-Book of Powerhouse Outline: 
+Book of Powerhouse Outline:
 
 1. General Framework and Philosophy
 2. Powerhouse Software Architecture

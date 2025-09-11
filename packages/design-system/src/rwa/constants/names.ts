@@ -1,4 +1,4 @@
-import { type TableName } from "#rwa";
+import type { TableName } from "#rwa";
 
 const SERVICE_PROVIDER_FEE_TYPE = "SERVICE_PROVIDER_FEE_TYPE";
 const FIXED_INCOME_TYPE = "FIXED_INCOME_TYPE";

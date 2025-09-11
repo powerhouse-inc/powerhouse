@@ -8,7 +8,7 @@ import {
   DocumentModelModule,
   Operation,
   setModelName,
-  setStateSchema
+  setStateSchema,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
@@ -80,7 +80,9 @@ describe("Document operations", () => {
     it("should reject invalid operation", async () => {
       const document = await buildFile();
 
-      const result = await server.addOperation("1", "1", 
+      const result = await server.addOperation(
+        "1",
+        "1",
         buildOperation(
           documentModelDocumentModelModule.reducer,
           document,

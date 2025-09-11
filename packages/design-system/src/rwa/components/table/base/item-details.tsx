@@ -1,9 +1,9 @@
 import { Icon } from "#powerhouse";
+import type { TableName } from "#rwa";
 import {
   FormInputs,
   RWAButton,
   tableLabels,
-  type TableName,
   useDependentItemProps,
   useEditorContext,
   useModal,

@@ -8,20 +8,20 @@ assignees: ""
 
 ## Summary
 
-*What part of the documentation needs improvement? Please specify sections or pages if possible.*
+_What part of the documentation needs improvement? Please specify sections or pages if possible._
 
 ## Current Issue or Shortcoming
 
-*What is unclear, missing, or outdated in the existing docs? Include quotes or screenshots if relevant.*
+_What is unclear, missing, or outdated in the existing docs? Include quotes or screenshots if relevant._
 
 ## Proposed Changes
 
-*Provide your suggested changes, clarifications, or additions. If it's a small fix, include the updated text or outline.*
+_Provide your suggested changes, clarifications, or additions. If it's a small fix, include the updated text or outline._
 
 ## Impact
 
-*Explain how these changes will benefit users or maintainers. Does it clarify a common confusion, fix broken instructions, etc.?*
+_Explain how these changes will benefit users or maintainers. Does it clarify a common confusion, fix broken instructions, etc.?_
 
 ## Additional Context
 
-*Add any other details or references that might be helpful (e.g., related issues, external resources, or links).*
+_Add any other details or references that might be helpful (e.g., related issues, external resources, or links)._

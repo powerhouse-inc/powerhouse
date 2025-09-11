@@ -1,18 +1,20 @@
 # Powerhouse CLI
 
-### Installing the Powerhouse CLI 
-:::tip
-The **Powerhouse CLI tool** is the only essential tool to install on this page. Install it with the command below.    
+### Installing the Powerhouse CLI
 
-You can find all of the commands on this page, similar to what would displayed when using ph --help or ph *command* --help. 
-Use the table of content or the search function to find what you are looking for.   
+:::tip
+The **Powerhouse CLI tool** is the only essential tool to install on this page. Install it with the command below.
+
+You can find all of the commands on this page, similar to what would displayed when using ph --help or ph _command_ --help.
+Use the table of content or the search function to find what you are looking for.
 
 The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides essential commands for managing Powerhouse projects. You can get access to the Powerhouse ecosystem tools by installing them globally.
 
 ```bash
 pnpm install -g ph-cmd
-``` 
- :::
+```
+
+:::
 
 <!-- AUTO-GENERATED-CLI-COMMANDS-START -->\n<!-- This content is automatically generated. Do not edit directly. -->\n### ph-cmd Commands\n\n- [Init](#init)
 - [Setup Globals](#setup-globals)

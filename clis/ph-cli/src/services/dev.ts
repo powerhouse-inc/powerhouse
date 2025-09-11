@@ -1,10 +1,12 @@
-import { type ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
 import { blue, green, red } from "colorette";
-import { type ChildProcessWithoutNullStreams, fork } from "node:child_process";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getConfig } from "../utils.js";
-import { DefaultReactorOptions, type ReactorOptions } from "./reactor.js";
+import type { ReactorOptions } from "./reactor.js";
+import { DefaultReactorOptions } from "./reactor.js";
 
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));

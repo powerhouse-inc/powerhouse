@@ -11,7 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "../command/command.js";
-import { type SelectProps } from "../enum-field/types.js";
+import type { SelectProps } from "../enum-field/types.js";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;

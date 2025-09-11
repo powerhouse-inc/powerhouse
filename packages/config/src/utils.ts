@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { DEFAULT_CONFIG, type PowerhouseConfig } from "./powerhouse.js";
+import type { PowerhouseConfig } from "./powerhouse.js";
+import { DEFAULT_CONFIG } from "./powerhouse.js";
 
 export function getConfig(path = "./powerhouse.config.json") {
   let config: PowerhouseConfig = { ...DEFAULT_CONFIG };

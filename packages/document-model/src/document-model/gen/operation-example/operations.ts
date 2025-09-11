@@ -1,8 +1,8 @@
 import {
-    AddOperationExampleAction,
-    UpdateOperationExampleAction,
-    DeleteOperationExampleAction,
-    ReorderOperationExamplesAction,
+  AddOperationExampleAction,
+  UpdateOperationExampleAction,
+  DeleteOperationExampleAction,
+  ReorderOperationExamplesAction,
 } from "./actions.js";
 import { DocumentModelState } from "../types.js";
 

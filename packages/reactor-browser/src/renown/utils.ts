@@ -1,11 +1,11 @@
-import { type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import { logger } from "document-drive";
-import { type IConnectCrypto } from "../crypto/index.js";
+import type { IConnectCrypto } from "../crypto/index.js";
 import {
   dispatchSetLoginStatusEvent,
   dispatchSetUserEvent,
 } from "../events/user.js";
-import { type Reactor } from "../types/reactor.js";
+import type { Reactor } from "../types/reactor.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {

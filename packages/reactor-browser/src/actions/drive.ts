@@ -1,3 +1,13 @@
+import type {
+  DocumentDriveDocument,
+  DriveInput,
+  Listener,
+  PullResponderTrigger,
+  RemoteDriveOptions,
+  SharingType,
+  SyncStatus,
+  Trigger,
+} from "document-drive";
 import {
   PullResponderTransmitter,
   SynchronizationUnitNotFoundError,
@@ -6,14 +16,6 @@ import {
   setAvailableOffline,
   setDriveName,
   setSharingType,
-  type DocumentDriveDocument,
-  type DriveInput,
-  type Listener,
-  type PullResponderTrigger,
-  type RemoteDriveOptions,
-  type SharingType,
-  type SyncStatus,
-  type Trigger,
 } from "document-drive";
 import {
   createGlobalState,

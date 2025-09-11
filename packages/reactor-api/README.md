@@ -21,32 +21,36 @@ npm install @powerhousedao/reactor-api
 ## Quick Start
 
 ```typescript
-import { startAPI } from '@powerhousedao/reactor-api';
+import { startAPI } from "@powerhousedao/reactor-api";
 
 const api = await startAPI(reactor, {
   port: 3000,
-  dbPath: './data',
+  dbPath: "./data",
   auth: {
     enabled: true,
-    admins: ['0x...'],
-    users: ['0x...'],
-    guests: ['0x...']
-  }
+    admins: ["0x..."],
+    users: ["0x..."],
+    guests: ["0x..."],
+  },
 });
 ```
 
 ## Core Components
 
 ### API Server
+
 The API server provides a robust Express-based implementation with GraphQL support, authentication middleware, and HTTPS capabilities.
 
 ### Package Manager
+
 Manages document models, subgraphs, and processors through a flexible loading system that supports multiple package sources.
 
 ### GraphQL Manager
+
 Handles GraphQL operations, subgraph management, and schema composition using Apollo Server.
 
 ### Processor Manager
+
 Manages document processors and their lifecycle, including registration and event handling.
 
 ## Configuration
@@ -67,10 +71,12 @@ type Options = {
     users: string[];
     admins: string[];
   };
-  https?: {
-    keyPath: string;
-    certPath: string;
-  } | boolean;
+  https?:
+    | {
+        keyPath: string;
+        certPath: string;
+      }
+    | boolean;
   packageLoader?: IPackageLoader;
 };
 ```

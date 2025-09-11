@@ -66,6 +66,7 @@ ph init --package-manager pnpm
 ```
 
 #### Options:
+
 - `-p, --project`: Name of the project
 - `-i, --interactive`: Run the command in interactive mode
 - `-v, --version`: Specify development version to use (defaults to "main")
@@ -93,6 +94,7 @@ ph use latest --package-manager pnpm
 ```
 
 #### Options:
+
 - `--package-manager <packageManager>`: Force package manager to use
 - `--debug`: Show additional logs
 
@@ -119,6 +121,7 @@ ph update --debug
 ```
 
 #### Options:
+
 - `--force <env>`: Force update to latest available version for the environment specified (dev, prod, latest)
 - `--package-manager <packageManager>`: Force package manager to use
 - `--debug`: Show additional logs
@@ -134,6 +137,7 @@ ph setup-globals --debug
 ```
 
 #### Options:
+
 - `--debug`: Show additional logs
 
 ## Global Options
@@ -209,6 +213,7 @@ This project is licensed under the terms specified in the [LICENSE](LICENSE) fil
 ## Support
 
 For support, please:
+
 1. Check the [documentation](https://docs.powerhouse.com)
 2. Open an [issue](https://github.com/powerhouse/ph-cmd/issues)
 3. Join our [Discord community](https://discord.gg/powerhouse)

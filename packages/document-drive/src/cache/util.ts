@@ -1,4 +1,4 @@
-import { type PHDocument } from "document-model";
+import type { PHDocument } from "document-model";
 
 // Deletes the resulting state on all operations in a document.
 // NOTE: THE RESULT IS THE CACHES MUTATE DOCUMENTS

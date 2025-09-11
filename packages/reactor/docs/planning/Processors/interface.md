@@ -1,10 +1,9 @@
 # Interface
 
 ```tsx
-
 type DocumentUpdateEvent = {
   operations: Operation[];
-}
+};
 
 /**
  * Describes an object that can respond to operation updates.
@@ -13,9 +12,7 @@ export interface IProcessor {
   /**
    * Processes a list of updates.
    */
-  update(
-    updates: DocumentUpdateEvent[],
-  ): Promise<void>;
+  update(updates: DocumentUpdateEvent[]): Promise<void>;
 
   /**
    * Called when the processor is starting up. This is generally meant to

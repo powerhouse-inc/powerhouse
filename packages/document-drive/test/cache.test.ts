@@ -387,9 +387,9 @@ describe("LRU Cache Specific Tests", () => {
     const doc2 = await cache.getDocument("doc-2");
 
     expect(doc1).toBeDefined();
-    expect(((doc1?.state as any).global as DocumentModelState).description).toBe(
-      "y".repeat(100),
-    );
+    expect(
+      ((doc1?.state as any).global as DocumentModelState).description,
+    ).toBe("y".repeat(100));
     expect(doc2).toBeDefined(); // Should not be evicted as cache size wasn't exceeded
   });
 

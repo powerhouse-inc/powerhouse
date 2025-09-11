@@ -4,6 +4,6 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "types": ["cypress", "node"],
     "strict": true
-    },
-    "include": ["**/*.ts"],
-  }
+  },
+  "include": ["**/*.ts"]
+}

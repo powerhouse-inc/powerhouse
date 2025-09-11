@@ -1,10 +1,8 @@
 import { createDefaultRules } from "@graphql-tools/utils";
+import type { DefinitionNode, DocumentNode, GraphQLSchema } from "graphql";
 import {
   buildASTSchema,
   buildSchema,
-  type DefinitionNode,
-  type DocumentNode,
-  type GraphQLSchema,
   Kind,
   parse,
   printSchema,

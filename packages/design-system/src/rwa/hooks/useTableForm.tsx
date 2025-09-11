@@ -1,4 +1,5 @@
-import { type FormHookProps, useFormInputs, useSubmit } from "#rwa";
+import type { FormHookProps } from "#rwa";
+import { useFormInputs, useSubmit } from "#rwa";
 import { useMemo } from "react";
 
 export function useTableForm(props: FormHookProps) {

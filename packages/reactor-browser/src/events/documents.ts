@@ -1,5 +1,5 @@
-import { type PHDocument } from "document-model";
-import { type SetDocumentsEvent } from "./types.js";
+import type { PHDocument } from "document-model";
+import type { SetDocumentsEvent } from "./types.js";
 
 export function dispatchSetDocumentsEvent(documents: PHDocument[] | undefined) {
   const event = new CustomEvent("ph:setDocuments", {

@@ -48,16 +48,17 @@ Review the generated template and modify it to better suit your document model:
 ### About the drive app template
 
 The default template provides a solid foundation. It contains:
+
 - A tree structure navigation panel
 - Basic file/folder operations
-- Standard layout components   
+- Standard layout components
 
 But the real power comes from tailoring the interface to your specific document models.
 Now, let's implement a specific example for the to-do list we've been working on throughout this guide.
 
 ## Implementation example: To-do drive explorer
 
-This example demonstrates how to create a To-do Drive Explorer application using the Powerhouse platform. 
+This example demonstrates how to create a To-do Drive Explorer application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
 :::warning Heads-up!
@@ -69,6 +70,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 <summary>Prepare your Powerhouse Project to create a custom drive</summary>
 
 ### 1. Create a To-do document model:
+
 - Initialize a new project with `ph init` and give it a project name.
 
 - Start by running Connect locally with `ph connect`
@@ -77,20 +79,23 @@ If not, you can follow the shortened guide below to prepare your project for thi
 - Place the downloaded file in the root of your project directory.
 - Generate the document model:
 
-   ```bash
-   ph generate todolist.phdm.zip
-   ```
+  ```bash
+  ph generate todolist.phdm.zip
+  ```
 
-###  2. Add the reducer code:
+### 2. Add the reducer code:
+
 - Copy the code from [`base-operations.ts`](https://github.com/powerhouse-inc/todo-demo-package/blob/production/document-models/to-do-list/src/reducers/base-operations.ts)
 - Paste it into `document-models/to-do/src/reducers/base-operations.ts`
 
 ### 3. Generate a document editor:
+
 ```bash
 ph generate --editor ToDoList --document-types powerhouse/todolist
 ```
 
 ### 4. Add the editor code:
+
 - Copy the code from [`editor.tsx`](https://github.com/powerhouse-inc/todo-demo-package/blob/production/editors/to-do-list/editor.tsx)
 - Paste it into `editors/to-do-list/editor.tsx`
 </details>
@@ -99,6 +104,7 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 ## Generate the drive explorer app
 
 ### 1. Generate a drive explorer app:
+
 ```bash
 ph generate --drive-editor todo-drive-explorer
 ```
@@ -109,37 +115,36 @@ ph generate --drive-editor todo-drive-explorer
 
 ```json
 {
-    "name": "To-do List Package",
-    "description": "A simple todo list with a dedicated Drive Explorer App",
-    "category": "Productivity",
-    "publisher": {
-       "name": "Powerhouse",
-       "url": "https://www.powerhouse.inc/"
-    },
-    "documentModels": [
-        {
-            "id": "to-do-list",
-            "name": "To-do List"
-        }
-    ],
-    "editors": [
-        {
-            "id": "to-do-list-editor",
-            "name": "To-do List Editor",
-            "documentTypes": ["todo-list"]
-        }
-    ],
-    "apps": [
-       {
-          "id": "todo-drive-explorer",
-          "name": "To-do Drive App",
-          "driveEditor": "todo-drive-explorer"
-       }
-    ],
-    "subgraphs": [],
-    "importScripts": []
+  "name": "To-do List Package",
+  "description": "A simple todo list with a dedicated Drive Explorer App",
+  "category": "Productivity",
+  "publisher": {
+    "name": "Powerhouse",
+    "url": "https://www.powerhouse.inc/"
+  },
+  "documentModels": [
+    {
+      "id": "to-do-list",
+      "name": "To-do List"
     }
-
+  ],
+  "editors": [
+    {
+      "id": "to-do-list-editor",
+      "name": "To-do List Editor",
+      "documentTypes": ["todo-list"]
+    }
+  ],
+  "apps": [
+    {
+      "id": "todo-drive-explorer",
+      "name": "To-do Drive App",
+      "driveEditor": "todo-drive-explorer"
+    }
+  ],
+  "subgraphs": [],
+  "importScripts": []
+}
 ```
 
 ### 3. Remove Unnecessary Default Components:
@@ -155,7 +160,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
 
 ### 4. Create custom components for your drive explorer:
 
-   - Next, create the following files. These will define the data types for our to-do items and provide the custom React components for our Drive Explorer.
+- Next, create the following files. These will define the data types for our to-do items and provide the custom React components for our Drive Explorer.
 
 <details>
 <summary>Create `editors/todo-drive-explorer/types/todo.ts`</summary>
@@ -174,6 +179,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
          global: ToDoListDocument["state"]["global"];
       };
       ```
+
 </details>
 
 <details>
@@ -213,355 +219,360 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
             </div>
          </div>
       );
-      }; 
+      };
       ```
       </details>
 
    <details>
    <summary>Update `editors/todo-drive-explorer/components/DriveExplorer.tsx`</summary>
 
-   This is the main component of our Drive Explorer. It fetches all `powerhouse/todo` documents from the drive, displays them in a table with their progress, and allows a user to click on a document to open it in the `EditorContainer`. It also includes a button to create new documents.
+This is the main component of our Drive Explorer. It fetches all `powerhouse/todo` documents from the drive, displays them in a table with their progress, and allows a user to click on a document to open it in the `EditorContainer`. It also includes a button to create new documents.
 
-   ```typescript
-   import { useCallback, useState, useRef, useEffect, useMemo } from "react";
-   import type { FileNode, GetDocumentOptions, Node } from "document-drive";
-   import { EditorContainer, EditorContainerProps } from "./EditorContainer.js";
-   import type { DocumentModelModule } from "document-model";
-   import { CreateDocumentModal } from "@powerhousedao/design-system";
-   import { CreateDocument } from "./CreateDocument.js";
-   import { type DriveEditorContext, useDriveContext } from "@powerhousedao/reactor-browser";
-   import { ProgressBar } from "./ProgressBar.js";
+```typescript
+import { useCallback, useState, useRef, useEffect, useMemo } from "react";
+import type { FileNode, GetDocumentOptions, Node } from "document-drive";
+import { EditorContainer, EditorContainerProps } from "./EditorContainer.js";
+import type { DocumentModelModule } from "document-model";
+import { CreateDocumentModal } from "@powerhousedao/design-system";
+import { CreateDocument } from "./CreateDocument.js";
+import { type DriveEditorContext, useDriveContext } from "@powerhousedao/reactor-browser";
+import { ProgressBar } from "./ProgressBar.js";
 
-   import { type ToDoState } from "../types/todo.js"
+import { type ToDoState } from "../types/todo.js"
 
-   interface DriveExplorerProps {
-   driveId: string;
-   nodes: Node[];
-   onAddFolder: (name: string, parentFolder?: string) => void;
-   onDeleteNode: (nodeId: string) => void;
-   renameNode: (nodeId: string, name: string) => void;
-   onCopyNode: (nodeId: string, targetName: string, parentId?: string) => void;
-   context: DriveEditorContext;
-   }
+interface DriveExplorerProps {
+driveId: string;
+nodes: Node[];
+onAddFolder: (name: string, parentFolder?: string) => void;
+onDeleteNode: (nodeId: string) => void;
+renameNode: (nodeId: string, name: string) => void;
+onCopyNode: (nodeId: string, targetName: string, parentId?: string) => void;
+context: DriveEditorContext;
+}
 
-   export function DriveExplorer({
-   driveId,
-   nodes,
-   context,
-   }: DriveExplorerProps) {
-   const { getDocumentRevision } = context;
-   
-   const [activeDocumentId, setActiveDocumentId] = useState<
-      string | undefined
-   >();
-   const [openModal, setOpenModal] = useState(false);
-   const selectedDocumentModel = useRef<DocumentModelModule | null>(null);
-   const { addDocument, documentModels, useDriveDocumentStates } = useDriveContext();
+export function DriveExplorer({
+driveId,
+nodes,
+context,
+}: DriveExplorerProps) {
+const { getDocumentRevision } = context;
 
-   const [state, fetchDocuments] = useDriveDocumentStates({ driveId });
+const [activeDocumentId, setActiveDocumentId] = useState<
+   string | undefined
+>();
+const [openModal, setOpenModal] = useState(false);
+const selectedDocumentModel = useRef<DocumentModelModule | null>(null);
+const { addDocument, documentModels, useDriveDocumentStates } = useDriveContext();
 
-   useEffect(() => {
-      fetchDocuments(driveId).catch(console.error);
-   }, [activeDocumentId]);
+const [state, fetchDocuments] = useDriveDocumentStates({ driveId });
 
-   const { todoNodes } = useMemo(() => {
-      return Object.keys(state).reduce(
-         (acc, curr) => {
-         const document = state[curr];
-         if (document.documentType.startsWith("powerhouse/todo")) {
-            acc.todoNodes[curr] = document as ToDoState;
-         }
+useEffect(() => {
+   fetchDocuments(driveId).catch(console.error);
+}, [activeDocumentId]);
 
-         return acc;
-         },
-         {
-         todoNodes: {} as Record<string, ToDoState>,
-         },
+const { todoNodes } = useMemo(() => {
+   return Object.keys(state).reduce(
+      (acc, curr) => {
+      const document = state[curr];
+      if (document.documentType.startsWith("powerhouse/todo")) {
+         acc.todoNodes[curr] = document as ToDoState;
+      }
+
+      return acc;
+      },
+      {
+      todoNodes: {} as Record<string, ToDoState>,
+      },
+   );
+}, [state]);
+
+
+const handleEditorClose = useCallback(() => {
+   setActiveDocumentId(undefined);
+}, []);
+
+const onCreateDocument = useCallback(
+   async (fileName: string) => {
+      setOpenModal(false);
+
+      const documentModel = selectedDocumentModel.current;
+      if (!documentModel) return;
+
+      const node = await addDocument(
+      driveId,
+      fileName,
+      documentModel.documentModel.id,
       );
-   }, [state]);
+
+      selectedDocumentModel.current = null;
+      setActiveDocumentId(node.id);
+   },
+   [addDocument, driveId],
+);
+
+const onSelectDocumentModel = useCallback(
+   (documentModel: DocumentModelModule) => {
+      selectedDocumentModel.current = documentModel;
+      setOpenModal(true);
+   },
+   [],
+);
+
+const onGetDocumentRevision = useCallback(
+   (options?: GetDocumentOptions) => {
+      if (!activeDocumentId) return;
+      return getDocumentRevision?.(activeDocumentId, options);
+   },
+   [getDocumentRevision, activeDocumentId],
+);
+
+const filteredDocumentModels = documentModels;
 
 
-   const handleEditorClose = useCallback(() => {
-      setActiveDocumentId(undefined);
-   }, []);
+const fileNodes = nodes.filter((node) => node.kind === "file") as FileNode[];
+// Get the active document info from nodes
+const activeDocument = activeDocumentId
+   ? fileNodes.find((file) => file.id === activeDocumentId)
+   : undefined;
 
-   const onCreateDocument = useCallback(
-      async (fileName: string) => {
-         setOpenModal(false);
+const documentModelModule = activeDocument
+   ? context.getDocumentModelModule(activeDocument.documentType)
+   : null;
 
-         const documentModel = selectedDocumentModel.current;
-         if (!documentModel) return;
-
-         const node = await addDocument(
-         driveId,
-         fileName,
-         documentModel.documentModel.id,
-         );
-
-         selectedDocumentModel.current = null;
-         setActiveDocumentId(node.id);
-      },
-      [addDocument, driveId],
-   );
-
-   const onSelectDocumentModel = useCallback(
-      (documentModel: DocumentModelModule) => {
-         selectedDocumentModel.current = documentModel;
-         setOpenModal(true);
-      },
-      [],
-   );
-
-   const onGetDocumentRevision = useCallback(
-      (options?: GetDocumentOptions) => {
-         if (!activeDocumentId) return;
-         return getDocumentRevision?.(activeDocumentId, options);
-      },
-      [getDocumentRevision, activeDocumentId],
-   );
-
-   const filteredDocumentModels = documentModels;
+const editorModule = activeDocument
+   ? context.getEditor(activeDocument.documentType)
+   : null;
 
 
-   const fileNodes = nodes.filter((node) => node.kind === "file") as FileNode[];
-   // Get the active document info from nodes
-   const activeDocument = activeDocumentId
-      ? fileNodes.find((file) => file.id === activeDocumentId)
-      : undefined;
+return (
+   <div className="flex h-full">
+      {/* Main Content */}
+      <div className="flex-1 p-4 overflow-y-auto">
+      {activeDocument && documentModelModule && editorModule ? (
+            <EditorContainer
+            context={{
+               ...context,
+               getDocumentRevision: onGetDocumentRevision,
+            }}
+            documentId={activeDocumentId!}
+            documentType={activeDocument.documentType}
+            driveId={driveId}
+            onClose={handleEditorClose}
+            title={activeDocument.name}
+            documentModelModule={documentModelModule}
+            editorModule={editorModule}
+            />
+      ) : (
+         <>
+            <h2 className="text-lg font-semibold mb-4">ToDos:</h2>
+            <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+               <thead className="bg-gray-50">
+                  <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tasks</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                  </tr>
+               </thead>
+               <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.entries(todoNodes).map(([documentId, todoNode]) => (
+                  <tr key={documentId} className="hover:bg-gray-50">
+                     <td className="px-6 py-4 whitespace-nowrap">
+                        <div
+                        onClick={() => setActiveDocumentId(documentId)}
+                        className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                        >
+                        {documentId}
+                        </div>
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {todoNode.documentType}
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {todoNode.global.stats.total}
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {todoNode.global.stats.checked}
+                     </td>
+                     <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="w-32">
+                        <ProgressBar
+                           value={todoNode.global.stats.checked}
+                           max={todoNode.global.stats.total}
+                        />
+                        </div>
+                     </td>
+                  </tr>
+                  ))}
+               </tbody>
+            </table>
+            </div>
 
-   const documentModelModule = activeDocument
-      ? context.getDocumentModelModule(activeDocument.documentType)
-      : null;
-
-   const editorModule = activeDocument
-      ? context.getEditor(activeDocument.documentType)
-      : null;
-
-
-   return (
-      <div className="flex h-full">
-         {/* Main Content */}
-         <div className="flex-1 p-4 overflow-y-auto">
-         {activeDocument && documentModelModule && editorModule ? (
-               <EditorContainer
-               context={{
-                  ...context,
-                  getDocumentRevision: onGetDocumentRevision,
-               }}
-               documentId={activeDocumentId!}
-               documentType={activeDocument.documentType}
-               driveId={driveId}
-               onClose={handleEditorClose}
-               title={activeDocument.name}
-               documentModelModule={documentModelModule}
-               editorModule={editorModule}
-               />
-         ) : (
-            <>
-               <h2 className="text-lg font-semibold mb-4">ToDos:</h2>
-               <div className="overflow-x-auto">
-               <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                     <tr>
-                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document ID</th>
-                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Type</th>
-                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tasks</th>
-                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
-                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                     {Object.entries(todoNodes).map(([documentId, todoNode]) => (
-                     <tr key={documentId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                           <div 
-                           onClick={() => setActiveDocumentId(documentId)}
-                           className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                           >
-                           {documentId}
-                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                           {todoNode.documentType}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                           {todoNode.global.stats.total}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                           {todoNode.global.stats.checked}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                           <div className="w-32">
-                           <ProgressBar 
-                              value={todoNode.global.stats.checked} 
-                              max={todoNode.global.stats.total} 
-                           />
-                           </div>
-                        </td>
-                     </tr>
-                     ))}
-                  </tbody>
-               </table>
-               </div>
-
-               {/* Create Document Section */}
-               <CreateDocument
-               createDocument={onSelectDocumentModel}
-               documentModels={filteredDocumentModels}
-               />
-            </>
-         )}
-         </div>
-
-         {/* Create Document Modal */}
-         <CreateDocumentModal
-         onContinue={onCreateDocument}
-         onOpenChange={(open) => setOpenModal(open)}
-         open={openModal}
-         />
+            {/* Create Document Section */}
+            <CreateDocument
+            createDocument={onSelectDocumentModel}
+            documentModels={filteredDocumentModels}
+            />
+         </>
+      )}
       </div>
-   );
-   }
-   ```
-   </details>
 
+      {/* Create Document Modal */}
+      <CreateDocumentModal
+      onContinue={onCreateDocument}
+      onOpenChange={(open) => setOpenModal(open)}
+      open={openModal}
+      />
+   </div>
+);
+}
+```
+
+   </details>
 
    <details>
    <summary>Update `editors/todo-drive-explorer/components/EditorContainer.tsx`</summary>
 
-   This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`to-do-list` editor in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`to-do-list` editor in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
 
-   ```typescript
-   import {
-   useDriveContext,
-   exportDocument,
-   type User,
-   type DriveEditorContext,
-   } from "@powerhousedao/reactor-browser";
-   import {
-   documentModelDocumentModelModule,
-   type DocumentModelModule,
-   type EditorContext,
-   type EditorProps,
-   type PHDocument,
-   type EditorModule,
-   type Operation,
-   } from "document-model";
-   import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
-   import {
-   DocumentToolbar,
-   RevisionHistory,
-   DefaultEditorLoader,
-   generateLargeTimeline,
-   type TimelineItem,
-   } from "@powerhousedao/design-system";
-   import { useState, Suspense, type FC, useCallback } from "react";
+```typescript
+import {
+useDriveContext,
+exportDocument,
+type User,
+type DriveEditorContext,
+} from "@powerhousedao/reactor-browser";
+import {
+documentModelDocumentModelModule,
+type DocumentModelModule,
+type EditorContext,
+type EditorProps,
+type PHDocument,
+type EditorModule,
+type Operation,
+} from "document-model";
+import { useTimelineItems, getRevisionFromDate } from "@powerhousedao/common";
+import {
+DocumentToolbar,
+RevisionHistory,
+DefaultEditorLoader,
+generateLargeTimeline,
+type TimelineItem,
+} from "@powerhousedao/design-system";
+import { useState, Suspense, type FC, useCallback } from "react";
 
-   export interface EditorContainerProps {
-   driveId: string;
-   documentId: string;
-   documentType: string;
-   onClose: () => void;
-   title: string;
-   context: Omit<DriveEditorContext, "getDocumentRevision"> &
-      Pick<EditorContext, "getDocumentRevision">;
-   documentModelModule: DocumentModelModule<PHDocument>;
-   editorModule: EditorModule;
+export interface EditorContainerProps {
+driveId: string;
+documentId: string;
+documentType: string;
+onClose: () => void;
+title: string;
+context: Omit<DriveEditorContext, "getDocumentRevision"> &
+   Pick<EditorContext, "getDocumentRevision">;
+documentModelModule: DocumentModelModule<PHDocument>;
+editorModule: EditorModule;
+}
+
+export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
+const { driveId, documentId, documentType, onClose, title, context, documentModelModule, editorModule } = props;
+
+const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
+const [showRevisionHistory, setShowRevisionHistory] = useState(false);
+const { useDocumentEditorProps } = useDriveContext();
+const user = context.user as User | undefined;
+const timelineItems = useTimelineItems(documentId);
+
+const { dispatch, error, document } = useDocumentEditorProps({
+   documentId,
+   documentType,
+   driveId,
+   documentModelModule,
+   user,
+});
+
+const onExport = useCallback(async () => {
+   if (document) {
+      const ext = documentModelModule.documentModel.extension;
+      await exportDocument(document, title, ext);
    }
+}, [document?.revision.global, document?.revision.local]);
 
-   export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-   const { driveId, documentId, documentType, onClose, title, context, documentModelModule, editorModule } = props;
+const loadingContent = (
+   <div className="flex-1 flex justify-center items-center h-full">
+      <DefaultEditorLoader />
+   </div>
+);
 
-   const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
-   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
-   const { useDocumentEditorProps } = useDriveContext();
-   const user = context.user as User | undefined;
-   const timelineItems = useTimelineItems(documentId);
+if (!document) return loadingContent;
 
-   const { dispatch, error, document } = useDocumentEditorProps({
-      documentId,
-      documentType,
-      driveId,
-      documentModelModule,
-      user,
-   });
+const moduleWithComponent = editorModule as EditorModule<PHDocument>;
+const EditorComponent = moduleWithComponent.Component;
 
-   const onExport = useCallback(async () => {
-      if (document) {
-         const ext = documentModelModule.documentModel.extension;
-         await exportDocument(document, title, ext);
-      }
-   }, [document?.revision.global, document?.revision.local]);
-
-   const loadingContent = (
-      <div className="flex-1 flex justify-center items-center h-full">
-         <DefaultEditorLoader />
-      </div>
-   );
-
-   if (!document) return loadingContent;
-
-   const moduleWithComponent = editorModule as EditorModule<PHDocument>;
-   const EditorComponent = moduleWithComponent.Component;
-
-   return showRevisionHistory ? (
-      <RevisionHistory
-         documentId={documentId}
-         documentTitle={title}
-         globalOperations={document.operations.global}
-         key={documentId}
-         localOperations={document.operations.local}
-         onClose={() => setShowRevisionHistory(false)}
+return showRevisionHistory ? (
+   <RevisionHistory
+      documentId={documentId}
+      documentTitle={title}
+      globalOperations={document.operations.global}
+      key={documentId}
+      localOperations={document.operations.local}
+      onClose={() => setShowRevisionHistory(false)}
+   />
+) : (
+   <Suspense fallback={loadingContent}>
+      <DocumentToolbar
+      onClose={onClose}
+      onExport={onExport}
+      onShowRevisionHistory={() => setShowRevisionHistory(true)}
+      onSwitchboardLinkClick={() => {}}
+      title={title}
+      timelineButtonVisible
+      timelineItems={timelineItems.data}
+      onTimelineItemClick={setSelectedTimelineItem}
       />
-   ) : (
-      <Suspense fallback={loadingContent}>
-         <DocumentToolbar
-         onClose={onClose}
-         onExport={onExport}
-         onShowRevisionHistory={() => setShowRevisionHistory(true)}
-         onSwitchboardLinkClick={() => {}}
-         title={title}
-         timelineButtonVisible
-         timelineItems={timelineItems.data}
-         onTimelineItemClick={setSelectedTimelineItem}
-         />
-         <EditorComponent
-         context={{
-            ...context,
-            readMode: !!selectedTimelineItem,
-            selectedTimelineRevision: getRevisionFromDate(
-               selectedTimelineItem?.startDate,
-               selectedTimelineItem?.endDate,
-               document.operations.global,
-            ),
-         }}
-         dispatch={dispatch}
-         document={document}
-         error={error}
-         />
-      </Suspense>
-   );
-   };
-   ```
+      <EditorComponent
+      context={{
+         ...context,
+         readMode: !!selectedTimelineItem,
+         selectedTimelineRevision: getRevisionFromDate(
+            selectedTimelineItem?.startDate,
+            selectedTimelineItem?.endDate,
+            document.operations.global,
+         ),
+      }}
+      dispatch={dispatch}
+      document={document}
+      error={error}
+      />
+   </Suspense>
+);
+};
+```
+
    </details>
 
 - In case you are getting stuck and want to verify your progress with the reference repository you can find the example repository of the [Todo-demo-package here](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository)
-### 3. Run the application:
-- With the code for our Drive App in place, it's time to see it in action. Run Connect in Studio mode:
-   ```bash
-   ph connect
-   ```
 
-   ![Todo Drive Explorer Demo](https://raw.githubusercontent.com/powerhouse-inc/todo-drive-explorer/9a87871e61460e73ddf8635fd756a0cd991306d6/demo.gif)
+### 3. Run the application:
+
+- With the code for our Drive App in place, it's time to see it in action. Run Connect in Studio mode:
+
+  ```bash
+  ph connect
+  ```
+
+  ![Todo Drive Explorer Demo](https://raw.githubusercontent.com/powerhouse-inc/todo-drive-explorer/9a87871e61460e73ddf8635fd756a0cd991306d6/demo.gif)
 
 ### Now it's your turn!
+
 Start building your own drive apps, explorers or experiences.
 Congratulations on completing this tutorial!
 You've successfully built a custom Drive Explorer, enhancing the way users interact with document models.
 
 Now, take a moment to think about the possibilities!
+
 - What **unique Drive Experiences** could you create for your own projects?
 - How can you tailor interfaces and streamline workflows to unlock the full potential of your document models?
 
 The Powerhouse platform provides the tools. It's time to start building!
-

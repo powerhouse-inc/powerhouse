@@ -75,6 +75,8 @@ type PHDocument {
   parentId: String
 }
 
+// TODO: Add Action type with JSONObject as input.
+
 type PHDocumentResultPage {
   items: [PHDocument!]!
   totalCount: Int!
@@ -121,10 +123,7 @@ type Query {
   ): DocumentModelResultPage!
 
   # Get a specific document by ID or slug
-  document(
-    identifier: String!
-    view: ViewFilterInput
-  ): DocumentWithChildren
+  document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
 
   # Get children of a document
   documentChildren(
@@ -153,10 +152,7 @@ type Query {
 
 type Mutation {
   # Create a new document
-  createDocument(
-    document: JSONObject!
-    parentIdentifier: String
-  ): PHDocument!
+  createDocument(document: JSONObject!, parentIdentifier: String): PHDocument!
 
   # Create an empty document of specified type
   createEmptyDocument(
@@ -208,16 +204,10 @@ type Mutation {
   ): MoveChildrenResult!
 
   # Delete a single document
-  deleteDocument(
-    identifier: String!
-    propagate: PropagationMode
-  ): Boolean!
+  deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!
 
   # Delete multiple documents
-  deleteDocuments(
-    identifiers: [String!]!
-    propagate: PropagationMode
-  ): Boolean!
+  deleteDocuments(identifiers: [String!]!, propagate: PropagationMode): Boolean!
 }
 
 type Subscription {
@@ -228,15 +218,14 @@ type Subscription {
   ): DocumentChangeEvent!
 
   # Subscribe to job changes
-  jobChanges(
-    jobId: String!
-  ): JobChangeEvent!
+  jobChanges(jobId: String!): JobChangeEvent!
 }
 ```
 
 ## Resolver Mapping
 
 ### Query Resolvers
+
 - `documentModels` → `IReactorClient.getDocumentModels`
 - `document` → `IReactorClient.get`
 - `documentChildren` → `IReactorClient.getChildren`
@@ -245,6 +234,7 @@ type Subscription {
 - `jobStatus` → `IReactorClient.getJobStatus`
 
 ### Mutation Resolvers
+
 - `createDocument` → `IReactorClient.create`
 - `createEmptyDocument` → `IReactorClient.createEmpty`
 - `mutateDocument` → `IReactorClient.mutate`
@@ -257,6 +247,7 @@ type Subscription {
 - `deleteDocuments` → `IReactorClient.deleteDocuments`
 
 ### Subscription Resolvers
+
 - `documentChanges` → `IReactorClient.subscribe`
 
 ## Usage Examples
@@ -281,11 +272,13 @@ query GetPhSkyDocumentModels {
 ```
 
 **Variables:**
+
 ```json
 {}
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -296,7 +289,9 @@ query GetPhSkyDocumentModels {
           "name": "Document Drive",
           "namespace": "@ph-sky",
           "version": "1.0.0",
-          "specification": { /* model specification */ }
+          "specification": {
+            /* model specification */
+          }
         }
       ],
       "totalCount": 1,
@@ -326,6 +321,7 @@ mutation CreateDocumentDrive($document: JSONObject!, $parentId: String) {
 ```
 
 **Variables:**
+
 ```json
 {
   "document": {
@@ -342,6 +338,7 @@ mutation CreateDocumentDrive($document: JSONObject!, $parentId: String) {
 ```
 
 **Alternative - Create Empty Document:**
+
 ```graphql
 mutation CreateEmptyDocumentDrive($parentId: String) {
   createEmptyDocument(
@@ -364,12 +361,12 @@ mutation CreateEmptyDocumentDrive($parentId: String) {
 ### 3. Getting All Child Documents with Paging
 
 ```graphql
-query GetChildDocuments($parentId: String!, $paging: PagingInput, $view: ViewFilterInput) {
-  documentChildren(
-    parentIdentifier: $parentId
-    paging: $paging
-    view: $view
-  ) {
+query GetChildDocuments(
+  $parentId: String!
+  $paging: PagingInput
+  $view: ViewFilterInput
+) {
+  documentChildren(parentIdentifier: $parentId, paging: $paging, view: $view) {
     items {
       id
       slug
@@ -390,6 +387,7 @@ query GetChildDocuments($parentId: String!, $paging: PagingInput, $view: ViewFil
 ```
 
 **Variables:**
+
 ```json
 {
   "parentId": "parent-document-id",
@@ -404,6 +402,7 @@ query GetChildDocuments($parentId: String!, $paging: PagingInput, $view: ViewFil
 ```
 
 **For next page:**
+
 ```json
 {
   "parentId": "parent-document-id",
@@ -420,7 +419,11 @@ query GetChildDocuments($parentId: String!, $paging: PagingInput, $view: ViewFil
 ### 4. Submitting a Mutation (Asynchronous)
 
 ```graphql
-mutation SubmitDocumentMutation($docId: String!, $actions: [JSONObject!]!, $view: ViewFilterInput) {
+mutation SubmitDocumentMutation(
+  $docId: String!
+  $actions: [JSONObject!]!
+  $view: ViewFilterInput
+) {
   mutateDocumentAsync(
     documentIdentifier: $docId
     actions: $actions
@@ -430,6 +433,7 @@ mutation SubmitDocumentMutation($docId: String!, $actions: [JSONObject!]!, $view
 ```
 
 **Variables:**
+
 ```json
 {
   "docId": "document-id-or-slug",
@@ -468,6 +472,7 @@ query CheckJobStatus($jobId: String!) {
 ```
 
 **Variables:**
+
 ```json
 {
   "jobId": "job-id-from-async-mutation"
@@ -477,7 +482,10 @@ query CheckJobStatus($jobId: String!) {
 ### 6. Subscribing to Document Changes
 
 ```graphql
-subscription WatchDocumentChanges($search: SearchFilterInput!, $view: ViewFilterInput) {
+subscription WatchDocumentChanges(
+  $search: SearchFilterInput!
+  $view: ViewFilterInput
+) {
   documentChanges(search: $search, view: $view) {
     type
     documents {
@@ -496,6 +504,7 @@ subscription WatchDocumentChanges($search: SearchFilterInput!, $view: ViewFilter
 ```
 
 **Variables:**
+
 ```json
 {
   "search": {
@@ -517,12 +526,13 @@ All resolvers forward errors from the underlying `IReactorClient` methods as Gra
 - **Validation errors**: When document state validation fails
 
 Example error response:
+
 ```json
 {
   "errors": [
     {
       "message": "Document not found",
-      "locations": [{"line": 2, "column": 3}],
+      "locations": [{ "line": 2, "column": 3 }],
       "path": ["document"],
       "extensions": {
         "code": "DOCUMENT_NOT_FOUND",

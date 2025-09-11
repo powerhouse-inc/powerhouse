@@ -1,4 +1,4 @@
-import { type StoryObj } from "@storybook/react";
+import type { StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { Toggle } from "./toggle.js";
 

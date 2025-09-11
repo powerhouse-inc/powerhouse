@@ -1,17 +1,17 @@
-import {
-  type FormInputsByTableName,
-  type Operation,
-  type TableItemType,
-  type TableName,
-  useEditorContext,
+import type {
+  FormInputsByTableName,
+  Operation,
+  TableItemType,
+  TableName,
 } from "#rwa";
+import { useEditorContext } from "#rwa";
 import { useCallback, useEffect, useMemo } from "react";
-import {
-  type DefaultValues,
-  type FieldValues,
-  type SubmitHandler,
-  useForm,
+import type {
+  DefaultValues,
+  FieldValues,
+  SubmitHandler,
 } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useDefaultFormValues } from "./useDefaultFormValues.js";
 
 function useWrappedForm<TValues extends FieldValues>(defaultValues: TValues) {

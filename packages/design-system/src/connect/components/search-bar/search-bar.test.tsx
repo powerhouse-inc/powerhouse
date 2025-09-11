@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { it, vi } from "vitest";
-import { ConnectSearchBar, type ConnectSearchBarProps } from "./search-bar.js";
+import type { ConnectSearchBarProps } from "./search-bar.js";
+import { ConnectSearchBar } from "./search-bar.js";
 
 const filterItems: ConnectSearchBarProps["filterItems"] = [
   {

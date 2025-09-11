@@ -23,7 +23,7 @@ This means that there are some edge cases in which, on crash or shutdown, the `I
 
 ### Links
 
-* [Interface](interface.md)
+- [Interface](interface.md)
 
 ### Notes
 

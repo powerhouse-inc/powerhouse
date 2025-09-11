@@ -1,14 +1,14 @@
+import type { AddLocalDriveInput, AddRemoteDriveInput } from "#connect";
 import {
   AddLocalDriveForm,
-  type AddLocalDriveInput,
   AddRemoteDriveForm,
-  type AddRemoteDriveInput,
   TabContent,
   Tabs,
 } from "#connect";
-import { type DivProps, Modal } from "#powerhouse";
-import { type App } from "document-model";
-import { type ComponentPropsWithoutRef } from "react";
+import type { DivProps } from "#powerhouse";
+import { Modal } from "#powerhouse";
+import type { App } from "document-model";
+import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;

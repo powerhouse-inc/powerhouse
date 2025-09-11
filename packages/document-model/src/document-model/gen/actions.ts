@@ -21,5 +21,4 @@ export type DocumentModelAction =
   | DocumentModelOperationErrorAction
   | DocumentModelOperationExampleAction
   | DocumentModelOperationAction
-  | DocumentModelStateAction
-  ;
+  | DocumentModelStateAction;

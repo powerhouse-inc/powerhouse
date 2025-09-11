@@ -12,5 +12,5 @@
 
 ### Links
 
-* [Interface](interface.md)
-* [Usage](usage.md)
+- [Interface](interface.md)
+- [Usage](usage.md)

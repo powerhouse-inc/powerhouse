@@ -1,14 +1,11 @@
-import {
-  actions as BaseActions,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { actions as BaseActions } from "document-model";
 import { documentModel } from "./gen/document-model.js";
-import {
-  actions as DocumentDriveActions,
-  type DocumentDrivePHState,
-} from "./gen/index.js";
+import type { DocumentDrivePHState } from "./gen/index.js";
+import { actions as DocumentDriveActions } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
-import genUtils, { type DocumentDriveUtils } from "./gen/utils.js";
+import type { DocumentDriveUtils } from "./gen/utils.js";
+import genUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 
 const utils = { ...genUtils, ...customUtils } satisfies DocumentDriveUtils;

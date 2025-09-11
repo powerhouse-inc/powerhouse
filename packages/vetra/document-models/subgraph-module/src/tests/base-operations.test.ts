@@ -6,7 +6,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import utils from "../../gen/utils.js";
-import { z, type SetSubgraphNameInput } from "../../gen/schema/index.js";
+import type { SetSubgraphNameInput } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
 import * as creators from "../../gen/base-operations/creators.js";
 import type { SubgraphModuleDocument } from "../../gen/types.js";
@@ -26,8 +27,12 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.setSubgraphName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("SET_SUBGRAPH_NAME");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_SUBGRAPH_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

@@ -1,22 +1,24 @@
+import type {
+  CashAsset,
+  EditorAction,
+  EditorDispatcher,
+  FixedIncome,
+  Operation,
+  RealWorldAssetsState,
+  TableItemType,
+  TableName,
+} from "#rwa";
 import {
-  type CashAsset,
-  type EditorAction,
-  type EditorDispatcher,
-  type FixedIncome,
   getActionOperationType,
   getCashAsset,
   getFixedIncomeAssets,
   getStateKeyForTableName,
   getTableNameFor,
   makeTableData,
-  type Operation,
-  type RealWorldAssetsState,
-  type TableItemType,
-  type TableName,
 } from "#rwa";
+import type { ReactNode } from "react";
 import {
   createContext,
-  type ReactNode,
   useCallback,
   useContext,
   useEffect,

@@ -1,38 +1,38 @@
-import {
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-  type DocumentDriveLocalState,
-  type LegacyAddFileAction,
-  type ListenerCallInfo,
-  type ListenerFilter,
-  type Trigger,
+import type {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  DocumentDriveLocalState,
+  LegacyAddFileAction,
+  ListenerCallInfo,
+  ListenerFilter,
+  Trigger,
 } from "#drive-document-model/gen/types";
-import { type IReadModeDriveServer } from "#read-mode/types";
-import { type IDefaultDrivesManager } from "#utils/default-drives-manager";
-import { type DriveInfo } from "#utils/graphql";
-import { type RunAsap } from "#utils/run-asap";
-import {
-  type Action,
-  type ActionContext,
-  type DocumentModelModule,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type ReducerOptions,
+import type { IReadModeDriveServer } from "#read-mode/types";
+import type { IDefaultDrivesManager } from "#utils/default-drives-manager";
+import type { DriveInfo } from "#utils/graphql";
+import type { RunAsap } from "#utils/run-asap";
+import type {
+  Action,
+  ActionContext,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  ReducerOptions,
 } from "document-model";
-import { type Unsubscribe } from "nanoevents";
-import { type SignalResult } from "../../../document-model/src/document/signal.js";
-import { type BaseDocumentDriveServer } from "./base-server.js";
-import {
-  type OperationError,
-  type SynchronizationUnitNotFoundError,
+import type { Unsubscribe } from "nanoevents";
+import type { SignalResult } from "../../../document-model/src/document/signal.js";
+import type { BaseDocumentDriveServer } from "./base-server.js";
+import type {
+  OperationError,
+  SynchronizationUnitNotFoundError,
 } from "./error.js";
-import {
-  type ITransmitter,
-  type StrandUpdateSource,
+import type {
+  ITransmitter,
+  StrandUpdateSource,
 } from "./listener/transmitter/types.js";
-import { type ISyncUnitMap } from "./sync-unit-map.js";
+import type { ISyncUnitMap } from "./sync-unit-map.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 

@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface SubgraphIconProps {
   width?: number;
@@ -9,7 +9,7 @@ interface SubgraphIconProps {
 export const SubgraphIcon: React.FC<SubgraphIconProps> = ({
   width = 40,
   height = 48,
-  className = ''
+  className = "",
 }) => {
   return (
     <svg
@@ -31,10 +31,7 @@ export const SubgraphIcon: React.FC<SubgraphIconProps> = ({
           strokeWidth="1.5"
         />
       </g>
-      <path
-        d="M23 0L32 9H27C24.7909 9 23 7.20914 23 5V0Z"
-        fill="#3292ED"
-      />
+      <path d="M23 0L32 9H27C24.7909 9 23 7.20914 23 5V0Z" fill="#3292ED" />
       <path
         d="M20.5882 22.603V17.1091L15.9729 14.3438L11.3575 17.1091V22.603L15.9729 25.3684L20.5882 22.603Z"
         stroke="#3292ED"
@@ -142,12 +139,7 @@ export const SubgraphIcon: React.FC<SubgraphIconProps> = ({
           />
           <feOffset dy="-1" />
           <feGaussianBlur stdDeviation="0.5" />
-          <feComposite
-            in2="hardAlpha"
-            operator="arithmetic"
-            k2="-1"
-            k3="1"
-          />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
           <feColorMatrix
             type="matrix"
             values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0"

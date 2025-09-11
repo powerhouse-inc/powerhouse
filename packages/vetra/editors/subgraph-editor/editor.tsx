@@ -1,10 +1,8 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  type SubgraphModuleDocument,
-  actions
-} from "../../document-models/subgraph-module/index.js";
+import type { SubgraphModuleDocument } from "../../document-models/subgraph-module/index.js";
+import { actions } from "../../document-models/subgraph-module/index.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 
 export type IProps = EditorProps;
@@ -14,10 +12,13 @@ export default function Editor(props: IProps) {
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const unsafeCastOfDocument = document as SubgraphModuleDocument;
 
-  const onNameChange = useCallback((name: string) => {
-    if (name === unsafeCastOfDocument.state.global.name) return;
-    dispatch(actions.setSubgraphName({ name }));
-  }, [unsafeCastOfDocument.state.global.name, dispatch]);
+  const onNameChange = useCallback(
+    (name: string) => {
+      if (name === unsafeCastOfDocument.state.global.name) return;
+      dispatch(actions.setSubgraphName({ name }));
+    },
+    [unsafeCastOfDocument.state.global.name, dispatch],
+  );
 
   const onConfirm = useCallback(() => {
     dispatch(actions.setSubgraphStatus({ status: "CONFIRMED" }));

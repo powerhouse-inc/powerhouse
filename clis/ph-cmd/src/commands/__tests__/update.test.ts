@@ -3,11 +3,11 @@ import * as childProcess from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProjectInfo } from "../../utils/index.js";
 import {
   findContainerDirectory,
   getPackageManagerFromLockfile,
   getProjectInfo,
-  type ProjectInfo,
 } from "../../utils/index.js";
 import { updateCommand } from "../update.js";
 

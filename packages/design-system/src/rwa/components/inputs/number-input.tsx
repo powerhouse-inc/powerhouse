@@ -1,12 +1,12 @@
 import { RWATableTextInput } from "#rwa";
-import { type ComponentPropsWithRef } from "react";
-import {
-  type Control,
-  Controller,
-  type ControllerProps,
-  type FieldValues,
-  type Path,
+import type { ComponentPropsWithRef } from "react";
+import type {
+  Control,
+  ControllerProps,
+  FieldValues,
+  Path,
 } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { twMerge } from "tailwind-merge";
 

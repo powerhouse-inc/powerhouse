@@ -1,4 +1,4 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { generateMergedHelp } from "../utils/index.js";
 
 /**

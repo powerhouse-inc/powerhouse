@@ -1,42 +1,44 @@
 /* eslint-disable @typescript-eslint/no-deprecated */
 // TODO remove this when drive methods are deleted
-import { type AddFileAction } from "#drive-document-model/gen/actions";
+import type { AddFileAction } from "#drive-document-model/gen/actions";
 import {
   removeListener,
   removeTrigger,
   setSharingType,
 } from "#drive-document-model/gen/creators";
 import { createDocumentDriveDocument } from "#drive-document-model/gen/ph-factories";
-import { type LegacyAddFileAction } from "#drive-document-model/module";
-import {
-  isActionJob,
-  isDocumentJob,
-  isOperationJob,
-  type ActionJob,
-  type DocumentJob,
-  type IQueueManager,
-  type Job,
-  type OperationJob,
+import type { LegacyAddFileAction } from "#drive-document-model/module";
+import type {
+  ActionJob,
+  DocumentJob,
+  IQueueManager,
+  Job,
+  OperationJob,
 } from "#queue/types";
+import { isActionJob, isDocumentJob, isOperationJob } from "#queue/types";
 import { ReadModeServer } from "#read-mode/server";
-import {
-  type IDocumentStorage,
-  type IDriveOperationStorage,
-} from "#storage/types";
-import {
-  DefaultDrivesManager,
-  type IDefaultDrivesManager,
-} from "#utils/default-drives-manager";
+import type { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
+import type { IDefaultDrivesManager } from "#utils/default-drives-manager";
+import { DefaultDrivesManager } from "#utils/default-drives-manager";
 import { requestPublicDriveWithTokenFromReactor } from "#utils/graphql";
 import { isDocumentDrive, runAsapAsync } from "#utils/misc";
 import { RunAsap } from "#utils/run-asap";
-import {
-  DocumentAlreadyExistsError,
-  childLogger,
-  type DocumentDriveAction,
-  type DocumentDriveDocument,
-  type Trigger,
+import type {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  Trigger,
 } from "document-drive";
+import { DocumentAlreadyExistsError, childLogger } from "document-drive";
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  Signal,
+  SignalResult,
+} from "document-model";
 import {
   attachBranch,
   createPresignedHeader,
@@ -51,55 +53,42 @@ import {
   skipHeaderOperations,
   sortOperations,
   validateHeader,
-  type Action,
-  type DocumentModelModule,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type Signal,
-  type SignalResult,
 } from "document-model";
 import { ClientError } from "graphql-request";
-import { type Unsubscribe } from "nanoevents";
-import { type ICache } from "../cache/types.js";
-import {
-  ConflictOperationError,
-  OperationError,
-  type SynchronizationUnitNotFoundError,
-} from "./error.js";
-import {
-  PullResponderTransmitter,
-  type CancelPullLoop,
-} from "./listener/transmitter/pull-responder.js";
+import type { Unsubscribe } from "nanoevents";
+import type { ICache } from "../cache/types.js";
+import type { SynchronizationUnitNotFoundError } from "./error.js";
+import { ConflictOperationError, OperationError } from "./error.js";
+import type { CancelPullLoop } from "./listener/transmitter/pull-responder.js";
+import { PullResponderTransmitter } from "./listener/transmitter/pull-responder.js";
 import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
-import { type StrandUpdateSource } from "./listener/transmitter/types.js";
-import {
-  DefaultListenerManagerOptions,
-  type AddOperationOptions,
-  type Constructor,
-  type CreateDocumentInput,
-  type DocumentDriveServerOptions,
-  type DriveEvents,
-  type DriveInput,
-  type DriveOperationResult,
-  type GetDocumentOptions,
-  type IBaseDocumentDriveServer,
-  type IEventEmitter,
-  type IListenerManager,
-  type IOperationResult,
-  type ISynchronizationManager,
-  type Listener,
-  type ListenerState,
-  type Mixin,
-  type OperationUpdate,
-  type RemoteDriveAccessLevel,
-  type RemoteDriveOptions,
-  type StrandUpdate,
-  type SyncStatus,
-  type SyncUnitStatusObject,
-  type SynchronizationUnit,
+import type { StrandUpdateSource } from "./listener/transmitter/types.js";
+import type {
+  AddOperationOptions,
+  Constructor,
+  CreateDocumentInput,
+  DocumentDriveServerOptions,
+  DriveEvents,
+  DriveInput,
+  DriveOperationResult,
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  IEventEmitter,
+  IListenerManager,
+  IOperationResult,
+  ISynchronizationManager,
+  Listener,
+  ListenerState,
+  Mixin,
+  OperationUpdate,
+  RemoteDriveAccessLevel,
+  RemoteDriveOptions,
+  StrandUpdate,
+  SyncStatus,
+  SyncUnitStatusObject,
+  SynchronizationUnit,
 } from "./types.js";
+import { DefaultListenerManagerOptions } from "./types.js";
 import {
   filterOperationsByRevision,
   isAtRevision,

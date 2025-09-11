@@ -4,8 +4,6 @@ Processors are objects that allow document-model authors to respond to operation
 
 ## Eventual Consistency
 
-
-
 ## Links
 
-* [Interface](interface.md)
+- [Interface](interface.md)

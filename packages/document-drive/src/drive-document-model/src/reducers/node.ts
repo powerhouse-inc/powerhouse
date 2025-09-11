@@ -6,8 +6,8 @@
 
 import { DocumentIdValidationError } from "#server/error";
 import { isValidDocumentId } from "#storage/utils";
-import { type DocumentDriveNodeOperations } from "../../gen/node/operations.js";
-import { type FileNode } from "../../gen/types.js";
+import type { DocumentDriveNodeOperations } from "../../gen/node/operations.js";
+import type { FileNode } from "../../gen/types.js";
 import {
   getDescendants,
   handleTargetNameCollisions,

@@ -1,14 +1,14 @@
-import { type IReadModeDriveServer } from "#read-mode/types";
-import {
-  type DefaultRemoteDriveInfo,
-  type DocumentDriveServerOptions,
-  type DriveEvents,
-  type IBaseDocumentDriveServer,
-  type RemoteDriveAccessLevel,
-  type RemoveDriveStrategy,
-  type RemoveOldRemoteDrivesOption,
+import type { IReadModeDriveServer } from "#read-mode/types";
+import type {
+  DefaultRemoteDriveInfo,
+  DocumentDriveServerOptions,
+  DriveEvents,
+  IBaseDocumentDriveServer,
+  RemoteDriveAccessLevel,
+  RemoveDriveStrategy,
+  RemoveOldRemoteDrivesOption,
 } from "#server/types";
-import { type DocumentDriveDocument } from "../drive-document-model/gen/types.js";
+import type { DocumentDriveDocument } from "../drive-document-model/gen/types.js";
 import { requestPublicDriveWithTokenFromReactor } from "./graphql.js";
 import { logger } from "./logger.js";
 

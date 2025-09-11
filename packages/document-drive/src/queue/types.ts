@@ -1,4 +1,4 @@
-import { type AddOperationOptions, type IOperationResult } from "#server/types";
+import type { AddOperationOptions, IOperationResult } from "#server/types";
 import type {
   Action,
   Operation,

@@ -8,6 +8,7 @@ Ensure type-safe, stable, and validated communication across the system’s Grap
 
 Today, mapping between GraphQL payloads and domain `Operation` is manual and performed in multiple places, making it fragile to shape drift.
 What broke:
+
 - The PullResponder query omitted `actionId` in `operations`, yet the domain `Operation.action.id` expects it. This allowed compilation but produced `undefined` at runtime.
 - In the DriveSubgraph resolver, we spread GraphQL op fields into domain `Operation`, accidentally placing `type` at the operation root and duplicating `scope/branch` at the wrong level, rather than under `action`.
 - Tests didn’t fail because:
@@ -19,20 +20,18 @@ What broke:
 
 We will use **The Guild’s GraphQL Code Generator** ecosystem with the following stack:
 
-* **@graphql-codegen/client-preset**
+- **@graphql-codegen/client-preset**
   Generates typed `DocumentNode`s, operations, and helpers. Ensures compile-time safety for fragments and operations.
 
-* **@graphql-codegen/typescript** + **@graphql-codegen/typescript-operations**
+- **@graphql-codegen/typescript** + **@graphql-codegen/typescript-operations**
   Provides TypeScript definitions for schema types and operations.
 
-* **Fetcher Plugin** (choose based on client needs):
+- **Fetcher Plugin** (choose based on client needs):
+  - **`typescript-graphql-request`** → Lightweight, auto-typed SDK for Node/Browser clients.
+  - **`typescript-react-apollo`** → If integrating directly with Apollo Client.
 
-  * **`typescript-graphql-request`** → Lightweight, auto-typed SDK for Node/Browser clients.
-  * **`typescript-react-apollo`** → If integrating directly with Apollo Client.
-
-* **Runtime Validation Plugin**:
-
-  * **`typescript-validation-schema` (Zod)** → Generates Zod parsers to validate GraphQL responses, dropping unknown fields.
+- **Runtime Validation Plugin**:
+  - **`typescript-validation-schema` (Zod)** → Generates Zod parsers to validate GraphQL responses, dropping unknown fields.
 
 This will help us achieve the following:
 
@@ -47,12 +46,12 @@ This will help us achieve the following:
 // packages/sync/strands.example.ts
 // One place: the typed GraphQL document, DTOs + validation, and the consumer call.
 
-import { GraphQLClient } from 'graphql-request';
-import { z } from 'zod';
+import { GraphQLClient } from "graphql-request";
+import { z } from "zod";
 
 // Typed document is created by the client preset (generated helpers)
-import { graphql } from '@/generated/gql';
-import type { StrandsQuery } from '@/generated/graphql';
+import { graphql } from "@/generated/gql";
+import type { StrandsQuery } from "@/generated/graphql";
 
 // 1) GraphQL operation (typed DocumentNode via client preset)
 export const StrandsDocument = graphql(/* GraphQL */ `
@@ -76,8 +75,15 @@ export const StrandsDocument = graphql(/* GraphQL */ `
             index
             context {
               signer {
-                user { address networkId chainId }
-                app { name key }
+                user {
+                  address
+                  networkId
+                  chainId
+                }
+                app {
+                  name
+                  key
+                }
                 signatures
               }
             }
@@ -89,15 +95,21 @@ export const StrandsDocument = graphql(/* GraphQL */ `
 `);
 
 // 2) DTOs + runtime validation (unknown fields dropped)
-const SignerDTO = z.object({
-  user: z
-    .object({ address: z.string(), networkId: z.string(), chainId: z.string() })
-    .partial({})
-    .nullable()
-    .optional(),
-  app: z.object({ name: z.string(), key: z.string() }).nullable().optional(),
-  signatures: z.array(z.string()),
-}).strip();
+const SignerDTO = z
+  .object({
+    user: z
+      .object({
+        address: z.string(),
+        networkId: z.string(),
+        chainId: z.string(),
+      })
+      .partial({})
+      .nullable()
+      .optional(),
+    app: z.object({ name: z.string(), key: z.string() }).nullable().optional(),
+    signatures: z.array(z.string()),
+  })
+  .strip();
 
 const OperationDTO = z
   .object({
@@ -137,7 +149,7 @@ export function toStrandsDTO(q: StrandsQuery): TStrand[] {
 export async function fetchStrands(
   url: string,
   headers: Record<string, string>,
-  listenerId: string
+  listenerId: string,
 ): Promise<TStrand[]> {
   const client = new GraphQLClient(url, { headers });
   const q = await client.request(StrandsDocument, { listenerId });

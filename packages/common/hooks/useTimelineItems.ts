@@ -1,9 +1,11 @@
+import type {
+  GroupedPeriodResults,
+  UseAnalyticsQueryResult,
+} from "@powerhousedao/reactor-browser/analytics";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
-  type GroupedPeriodResults,
-  type UseAnalyticsQueryResult,
   useAnalyticsQuery,
 } from "@powerhousedao/reactor-browser/analytics";
 

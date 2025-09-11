@@ -1,11 +1,11 @@
-import { type DocumentModelState } from "#document-model/gen/types.js";
+import type { DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
-import { type DocumentAction } from "./actions/types.js";
-import {
-  type PHBaseState,
-  type PHDocumentHeader,
-  type PHDocumentHistory,
+import type { DocumentAction } from "./actions/types.js";
+import type {
+  PHBaseState,
+  PHDocumentHeader,
+  PHDocumentHistory,
 } from "./ph-types.js";
 import type {
   CreateChildDocumentInput,
@@ -13,7 +13,7 @@ import type {
   SignalDispatch,
   SignalResult,
 } from "./signal.js";
-import { type FileInput } from "./utils/file.js";
+import type { FileInput } from "./utils/file.js";
 export type { PHBaseState } from "./ph-types.js";
 export type { NOOPAction } from "./schema/types.js";
 export type {
@@ -387,6 +387,7 @@ export type EditorModule = {
   documentTypes: string[];
   config: {
     id: string;
+    name?: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;

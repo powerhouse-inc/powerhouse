@@ -1,19 +1,18 @@
 # Interface
 
 ```tsx
-
 /**
  * Job execution statuses
  */
 export enum JobStatus {
   /** Job is queued but not yet started */
-  PENDING = 'PENDING',
+  PENDING = "PENDING",
   /** Job is currently being executed */
-  RUNNING = 'RUNNING',
+  RUNNING = "RUNNING",
   /** Job completed successfully */
-  COMPLETED = 'COMPLETED',
+  COMPLETED = "COMPLETED",
   /** Job failed (may be retried) */
-  FAILED = 'FAILED',
+  FAILED = "FAILED",
 }
 
 export type Job = {
@@ -50,25 +49,25 @@ export type JobExecutionConfig = {
 export type JobResult = {
   /** The job that was executed */
   job: Job;
-  
+
   /** Whether the job executed successfully */
   success: boolean;
-  
+
   /** Timestamp when the job execution completed */
   completedAt: string;
-  
+
   /** Duration of job execution in milliseconds */
   duration: number;
 
   /** The list of operations that were created, if successful, empty if not */
   operations: Operation[];
-  
+
   /** Any additional metadata from the execution */
   metadata?: Record<string, any>;
 
   /** The error code if the job failed */
   errorCode?: number;
-  
+
   /** Error message if the job failed */
   errorMessage?: string;
 };
@@ -79,13 +78,13 @@ export type JobResult = {
 export type JobExecutorManagerConfig = {
   /** Maximum number of concurrent jobs to execute */
   maxConcurrency?: number;
-  
+
   /** Maximum time in milliseconds a job can run before being considered timed out */
   jobTimeout?: number;
-  
+
   /** Base delay in milliseconds for exponential backoff retries */
   retryBaseDelay?: number;
-  
+
   /** Maximum delay in milliseconds for exponential backoff retries */
   retryMaxDelay?: number;
 };
@@ -93,13 +92,13 @@ export type JobExecutorManagerConfig = {
 export type JobExecutionConfig = {
   /** Maximum time in milliseconds a job can run before being considered timed out */
   jobTimeout?: number;
-  
+
   /** Base delay in milliseconds for exponential backoff retries */
   retryBaseDelay?: number;
-  
+
   /** Maximum delay in milliseconds for exponential backoff retries */
   retryMaxDelay?: number;
-}
+};
 
 export interface IReducer {
   /**
@@ -115,13 +114,17 @@ export interface IReducer {
 export interface IJobExecutor {
   /**
    * Executes a job.
-   * 
+   *
    * @param job - The job to execute
    * @param config - Configuration options for the job execution
    * @param signal - Optional abort signal to cancel the promise. This does NOT cancel the job execution.
    * @returns Promise that resolves to the job result
    */
-  execute(job: Job, config?: JobExecutionConfig, signal?: AbortSignal): Promise<JobResult>;
+  execute(
+    job: Job,
+    config?: JobExecutionConfig,
+    signal?: AbortSignal,
+  ): Promise<JobResult>;
 }
 
 /**
@@ -130,16 +133,16 @@ export interface IJobExecutor {
 export interface IJobExecutorManager {
   /**
    * Start the job executor.
-   * 
+   *
    * Begins listening for 'jobAvailable' events from the event bus and executing jobs when capacity allows.
-   * 
+   *
    * @param config - Configuration options for the executor
    * @param signal - Optional abort signal to cancel the request
-   * 
+   *
    * @returns Promise that resolves when the executor is started
    */
   start(config?: JobExecutorManagerConfig, signal?: AbortSignal): Promise<void>;
-  
+
   /**
    * Stop the job executor.
    * Gracefully stops listening for events and waits for current jobs to complete.
@@ -148,7 +151,7 @@ export interface IJobExecutorManager {
    * @returns Promise that resolves when the executor is stopped
    */
   stop(graceful?: boolean, signal?: AbortSignal): Promise<void>;
-  
+
   /**
    * Get the current status of the job executor.
    * @param signal - Optional abort signal to cancel the request
@@ -163,7 +166,7 @@ export interface IJobExecutorManager {
     lastJobCompletedAt?: string;
     uptime?: number;
   }>;
-  
+
   /**
    * Get statistics about job execution performance.
    * @param signal - Optional abort signal to cancel the request
@@ -175,7 +178,7 @@ export interface IJobExecutorManager {
     jobsPerSecond: number;
     queueBacklog: number;
   }>;
-  
+
   /**
    * Pause job execution.
    * Stops processing new jobs but keeps the executor running.
@@ -183,7 +186,7 @@ export interface IJobExecutorManager {
    * @returns Promise that resolves when execution is paused
    */
   pause(signal?: AbortSignal): Promise<void>;
-  
+
   /**
    * Resume job execution.
    * Resumes processing jobs from the queue.
@@ -194,11 +197,11 @@ export interface IJobExecutorManager {
 
   /**
    * Watch for a job to complete.
-   * 
+   *
    * If the job is already completed, the promise will resolve immediately.
-   * 
+   *
    * If the job does not exist, the promise will reject.
-   * 
+   *
    * @param jobId - The id of the job to watch
    * @param signal - Optional abort signal to cancel the request
    * @returns Promise that resolves to the job result

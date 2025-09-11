@@ -4,7 +4,7 @@ import { beforeAll, bench, describe } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
-import { type Job } from "../src/queue/types.js";
+import type { Job } from "../src/queue/types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import {
   createDocumentModelAction,

@@ -1,4 +1,4 @@
-import { type ICache } from "#cache/types";
+import type { ICache } from "#cache/types";
 import { PrismaStorage } from "#storage/prisma/prisma";
 import { PrismaClient } from "./client/index.js";
 

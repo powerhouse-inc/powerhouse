@@ -1,7 +1,7 @@
-import { type Command } from "commander";
+import type { Command } from "commander";
 import { generateHelp } from "../help.js";
-import { type GenerateOptions } from "../services/generate.js";
-import { type CommandActionType } from "../types.js";
+import type { GenerateOptions } from "../services/generate.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startGenerate(

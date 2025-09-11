@@ -1,12 +1,8 @@
 import React from "react";
-import {
-  RadioGroupField,
-  type RadioGroupFieldProps,
-} from "../radio-group-field/radio-group-field.js";
-import {
-  SelectField,
-  type SelectFieldProps,
-} from "../select-field/select-field.js";
+import type { RadioGroupFieldProps } from "../radio-group-field/radio-group-field.js";
+import { RadioGroupField } from "../radio-group-field/radio-group-field.js";
+import type { SelectFieldProps } from "../select-field/select-field.js";
+import { SelectField } from "../select-field/select-field.js";
 
 export type EnumFieldProps =
   | ({

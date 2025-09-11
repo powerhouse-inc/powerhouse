@@ -1,5 +1,5 @@
 import ImgPowerhouse from "#assets/powerhouse-rounded.png";
-import { type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useEnsAvatar, useEnsName } from "wagmi";
 
 type Props = {

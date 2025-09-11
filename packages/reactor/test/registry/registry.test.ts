@@ -1,8 +1,6 @@
 import { driveDocumentModelModule } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   DocumentModelRegistry,

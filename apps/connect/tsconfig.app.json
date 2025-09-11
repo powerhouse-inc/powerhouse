@@ -1,41 +1,41 @@
 {
-    "extends": "../../tsconfig.options.json",
-    "compilerOptions": {
-        "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-        "target": "ES2020",
-        "useDefineForClassFields": true,
-        "lib": ["ESNext", "DOM", "DOM.Iterable"],
-        "module": "ESNext",
-        "skipLibCheck": true,
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
 
-        /* Bundler mode */
-        "moduleResolution": "bundler",
-        "allowImportingTsExtensions": true,
-        "isolatedModules": true,
-        "moduleDetection": "force",
-        "noEmit": true,
-        "jsx": "react-jsx",
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
 
-        "resolveJsonModule": true,
-        "paths": {
-            "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
-            "#assets/*": ["./assets/*"],
-            "#connect-config": ["./src/connect.config.js"],
-            "#services": ["./src/services/index.ts"],
-            "#hooks": ["./src/hooks/index.ts"],
-            "#store": ["./src/store/index.ts"],
-            "#utils": ["./src/utils/index.ts"],
-            "#components": ["./src/components/index.ts"],
-            "#context": ["./src/context/index.ts"]
-        },
-        "types": [
-            "vite/client",
-            "vite-plugin-svgr/client",
-            "@types/wicg-file-system-access",
-            "vite-envs"
-        ],
-        "experimentalDecorators": true
+    "resolveJsonModule": true,
+    "paths": {
+      "PH:EXTERNAL_PACKAGES": ["./custom.d.ts"],
+      "#assets/*": ["./assets/*"],
+      "#connect-config": ["./src/connect.config.js"],
+      "#services": ["./src/services/index.ts"],
+      "#hooks": ["./src/hooks/index.ts"],
+      "#store": ["./src/store/index.ts"],
+      "#utils": ["./src/utils/index.ts"],
+      "#components": ["./src/components/index.ts"],
+      "#context": ["./src/context/index.ts"]
     },
-    "include": ["src", "e2e-tests", "custom.d.ts"],
-    "exclude": ["src/workers/*.ts"]
+    "types": [
+      "vite/client",
+      "vite-plugin-svgr/client",
+      "@types/wicg-file-system-access",
+      "vite-envs"
+    ],
+    "experimentalDecorators": true
+  },
+  "include": ["src", "e2e-tests", "custom.d.ts"],
+  "exclude": ["src/workers/*.ts"]
 }

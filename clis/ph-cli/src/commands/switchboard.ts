@@ -1,8 +1,8 @@
-import { type SwitchboardReactor } from "@powerhousedao/switchboard/server";
-import { type Command } from "commander";
+import type { SwitchboardReactor } from "@powerhousedao/switchboard/server";
+import type { Command } from "commander";
 import { switchboardHelp } from "../help.js";
-import { type ReactorOptions } from "../services/reactor.js";
-import { type CommandActionType } from "../types.js";
+import type { ReactorOptions } from "../services/reactor.js";
+import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 type SwitchboardOptions = ReactorOptions & {

@@ -1,12 +1,12 @@
-name: 'Chromatic DSPOT'
+name: "Chromatic DSPOT"
 
 on:
   push:
     branches:
       - dspot-scalars
   pull_request:
-        branches: ['dspot-scalars']
-        types: [opened, synchronize]
+    branches: ["dspot-scalars"]
+    types: [opened, synchronize]
   workflow_dispatch:
 
 env:

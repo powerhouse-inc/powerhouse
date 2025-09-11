@@ -1,4 +1,4 @@
-import { type Operation } from "document-model";
+import type { Operation } from "document-model";
 
 export const getRevisionFromDate = (
   startDate?: Date,

@@ -3,7 +3,6 @@
 See the [Jobs](../Jobs/index.md) doc for a detailed specification on `Job`s.
 
 ```tsx
-
 const QueueEventTypes = {
   JOB_AVAILABLE: 10000,
 };
@@ -46,8 +45,8 @@ type QueueParameters = {
   resultingHash?: string;
 
   /** The list of job ids that this job depends on */
-  dependsOn?: string[]
-}
+  dependsOn?: string[];
+};
 
 interface IJobExecutionHandle {
   get job(): Job;
@@ -65,7 +64,7 @@ export interface IQueue {
 
   /**
    * Blocks the queue from accepting new jobs.
-   * 
+   *
    * @param onDrained - Optional callback to call when the queue is drained
    */
   block(onDrained?: () => void): void;
@@ -74,17 +73,17 @@ export interface IQueue {
    * Unblocks the queue from accepting new jobs.
    */
   unblock(): void;
-  
+
   /**
    * Adds a new set of actions to the queue, and returns a job id.
-   * 
+   *
    * @param params - The parameters for the job to add to the queue
    * @param dependsOn - The list of job ids that this job depends on
-   * 
+   *
    * @returns The job id
    */
   enqueue(params: QueueParameters): string;
-  
+
   /**
    * Get the next job to execute for a specific document/scope/branch combination.
    * @param documentId - The document ID to get jobs for

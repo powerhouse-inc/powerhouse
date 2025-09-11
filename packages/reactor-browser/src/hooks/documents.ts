@@ -1,4 +1,4 @@
-import { type PHDocument } from "document-model";
+import type { PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import { useDispatch } from "./dispatch.js";
 import { useFileNodes, useSelectedNodeId } from "./nodes.js";

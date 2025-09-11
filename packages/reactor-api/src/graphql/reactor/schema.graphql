@@ -1,0 +1,270 @@
+# Scalar types
+scalar JSONObject
+scalar DateTime
+
+# Input types
+input PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input SearchFilterInput {
+  type: String
+  parentId: String
+  identifiers: [String!]
+}
+
+# Enums
+enum PropagationMode {
+  CASCADE
+  ORPHAN
+}
+
+enum DocumentChangeType {
+  CREATED
+  DELETED
+  UPDATED
+  PARENT_ADDED
+  PARENT_REMOVED
+  CHILD_ADDED
+  CHILD_REMOVED
+}
+
+# Object types
+type DocumentModelState {
+  id: String!
+  name: String!
+  namespace: String
+  version: String
+  specification: JSONObject
+}
+
+type DocumentModelResultPage {
+  items: [DocumentModelState!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type PHDocument {
+  id: String!
+  slug: String
+  name: String!
+  documentType: String!
+  state: JSONObject!
+  revision: Int!
+  created: DateTime!
+  lastModified: DateTime!
+  parentId: String
+}
+
+type PHDocumentResultPage {
+  items: [PHDocument!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentWithChildren {
+  document: PHDocument!
+  childIds: [String!]!
+}
+
+type MoveChildrenResult {
+  source: PHDocument!
+  target: PHDocument!
+}
+
+type JobInfo {
+  id: String!
+  status: String!
+  result: JSONObject
+  error: String
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+type DocumentChangeEvent {
+  type: DocumentChangeType!
+  documents: [PHDocument!]!
+  context: DocumentChangeContext
+}
+
+type DocumentChangeContext {
+  parentId: String
+  childId: String
+}
+
+type JobChangeEvent {
+  jobId: String!
+  status: String!
+  result: JSONObject
+  error: String
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type ActionContext {
+  signer: Signer
+}
+
+type Action {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject
+  scope: String!
+  attachments: [AttachmentInput!]
+  context: ActionContext
+}
+
+type AttachmentInput {
+  data: String!
+  mimeType: String!
+  hash: String!
+  extension: String
+  fileName: String
+}
+
+type Query {
+  # Get document models for a namespace
+  documentModels(
+    namespace: String
+    paging: PagingInput
+  ): DocumentModelResultPage!
+
+  # Get a specific document by ID or slug
+  document(
+    identifier: String!
+    view: ViewFilterInput
+  ): DocumentWithChildren
+
+  # Get children of a document
+  documentChildren(
+    parentIdentifier: String!
+    view: ViewFilterInput
+    paging: PagingInput
+  ): PHDocumentResultPage!
+
+  # Get parents of a document
+  documentParents(
+    childIdentifier: String!
+    view: ViewFilterInput
+    paging: PagingInput
+  ): PHDocumentResultPage!
+
+  # Find documents by search criteria
+  findDocuments(
+    search: SearchFilterInput!
+    view: ViewFilterInput
+    paging: PagingInput
+  ): PHDocumentResultPage!
+
+  # Get job status
+  jobStatus(jobId: String!): JobInfo
+}
+
+type Mutation {
+  # Create a new document
+  createDocument(
+    document: JSONObject!
+    parentIdentifier: String
+  ): PHDocument!
+
+  # Create an empty document of specified type
+  createEmptyDocument(
+    documentType: String!
+    parentIdentifier: String
+  ): PHDocument!
+
+  # Apply actions to a document (synchronous)
+  mutateDocument(
+    documentIdentifier: String!
+    actions: [JSONObject!]!
+    view: ViewFilterInput
+  ): PHDocument!
+
+  # Submit actions to a document (asynchronous)
+  mutateDocumentAsync(
+    documentIdentifier: String!
+    actions: [JSONObject!]!
+    view: ViewFilterInput
+  ): String!
+
+  # Rename a document
+  renameDocument(
+    documentIdentifier: String!
+    name: String!
+    view: ViewFilterInput
+  ): PHDocument!
+
+  # Add children to a document
+  addChildren(
+    parentIdentifier: String!
+    documentIdentifiers: [String!]!
+    view: ViewFilterInput
+  ): PHDocument!
+
+  # Remove children from a document
+  removeChildren(
+    parentIdentifier: String!
+    documentIdentifiers: [String!]!
+    view: ViewFilterInput
+  ): PHDocument!
+
+  # Move children between documents
+  moveChildren(
+    sourceParentIdentifier: String!
+    targetParentIdentifier: String!
+    documentIdentifiers: [String!]!
+    view: ViewFilterInput
+  ): MoveChildrenResult!
+
+  # Delete a single document
+  deleteDocument(
+    identifier: String!
+    propagate: PropagationMode
+  ): Boolean!
+
+  # Delete multiple documents
+  deleteDocuments(
+    identifiers: [String!]!
+    propagate: PropagationMode
+  ): Boolean!
+}
+
+type Subscription {
+  # Subscribe to document changes
+  documentChanges(
+    search: SearchFilterInput!
+    view: ViewFilterInput
+  ): DocumentChangeEvent!
+
+  # Subscribe to job changes
+  jobChanges(
+    jobId: String!
+  ): JobChangeEvent!
+}

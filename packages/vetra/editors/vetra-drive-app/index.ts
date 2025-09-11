@@ -1,4 +1,4 @@
-import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+import type { DriveEditorModule } from "@powerhousedao/reactor-browser";
 import Editor from "./editor.js";
 
 export const module: DriveEditorModule = {
@@ -6,6 +6,7 @@ export const module: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "vetra-drive-app",
+    name: "Vetra Drive App",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,

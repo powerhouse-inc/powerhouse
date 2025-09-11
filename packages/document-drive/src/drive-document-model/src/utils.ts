@@ -1,8 +1,8 @@
-import {
-  type CopyNodeInput,
-  type FileNode,
-  type FolderNode,
-  type Node,
+import type {
+  CopyNodeInput,
+  FileNode,
+  FolderNode,
+  Node,
 } from "../gen/types.js";
 
 export function isFileNode(node: Node): node is FileNode {

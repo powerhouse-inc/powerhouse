@@ -1,12 +1,12 @@
-import { type FileNode } from 'document-drive';
-import type React from 'react';
-import { DOCUMENT_TYPES } from '../document-types.js';
-import { AddNewIcon } from '../icons/AddNewIcon.js';
-import { AppIcon } from '../icons/AppIcon.js';
-import { DocModelIcon } from '../icons/DocModelIcon.js';
-import { EditorIcon } from '../icons/EditorIcon.js';
-import { ProcessorIcon } from '../icons/ProcessorIcon.js';
-import { SubgraphIcon } from '../icons/SubgraphIcon.js';
+import type { FileNode } from "document-drive";
+import type React from "react";
+import { DOCUMENT_TYPES } from "../document-types.js";
+import { AddNewIcon } from "../icons/AddNewIcon.js";
+import { AppIcon } from "../icons/AppIcon.js";
+import { DocModelIcon } from "../icons/DocModelIcon.js";
+import { EditorIcon } from "../icons/EditorIcon.js";
+import { ProcessorIcon } from "../icons/ProcessorIcon.js";
+import { SubgraphIcon } from "../icons/SubgraphIcon.js";
 interface ModuleItemProps {
   fileNode: FileNode;
   onClick: (file: FileNode) => void;
@@ -25,7 +25,7 @@ const getIconForDocumentType = (documentType: string) => {
       return ProcessorIcon;
     case DOCUMENT_TYPES.documentApp:
       return AppIcon;
-    case 'new':
+    case "new":
       return AddNewIcon;
     default:
       return DocModelIcon;
@@ -35,23 +35,23 @@ const getIconForDocumentType = (documentType: string) => {
 export const ModuleItem: React.FC<ModuleItemProps> = ({
   fileNode,
   onClick,
-  className = ''
+  className = "",
 }) => {
   const IconComponent = getIconForDocumentType(fileNode.documentType);
 
   return (
     <button
       onClick={() => onClick(fileNode)}
-      className={`flex items-center gap-3 p-1 w-full text-left hover:bg-zinc-200 rounded-md transition-colors bg-zinc-100 ${className}`}
+      className={`flex w-full items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200 ${className}`}
     >
       <div className="flex-shrink-0">
         <IconComponent />
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium text-gray-900 truncate">
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-sm font-medium text-gray-900">
           {fileNode.name}
         </h3>
-        <p className="text-xs text-gray-500 truncate">
+        <p className="truncate text-xs text-gray-500">
           {fileNode.documentType}
         </p>
       </div>

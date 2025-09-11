@@ -1,13 +1,15 @@
 "use client";
 
 import { cn } from "#powerhouse";
+import type {
+  TooltipContentProps,
+  TooltipProps as TooltipPrimitiveProps,
+} from "@radix-ui/react-tooltip";
 import {
   Content,
   Portal,
   Provider,
   Root,
-  type TooltipContentProps,
-  type TooltipProps as TooltipPrimitiveProps,
   Trigger,
 } from "@radix-ui/react-tooltip";
 import * as React from "react";

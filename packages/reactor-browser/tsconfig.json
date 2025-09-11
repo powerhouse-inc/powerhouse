@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "lib": ["ESNext", "dom", "dom.iterable"],
-    "jsx": "react-jsx",
+    "jsx": "react-jsx"
   },
   "files": [],
   "references": [

@@ -1,7 +1,9 @@
-import { AddLocalDriveForm, type AddLocalDriveInput, Divider } from "#connect";
-import { type DivProps, Icon, Modal } from "#powerhouse";
-import { type App } from "document-model";
-import { type ComponentPropsWithoutRef } from "react";
+import type { AddLocalDriveInput } from "#connect";
+import { AddLocalDriveForm, Divider } from "#connect";
+import type { DivProps } from "#powerhouse";
+import { Icon, Modal } from "#powerhouse";
+import type { App } from "document-model";
+import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;

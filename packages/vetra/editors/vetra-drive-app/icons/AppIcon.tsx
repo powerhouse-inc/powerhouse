@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 interface AppIconProps {
   width?: number;
@@ -9,7 +9,7 @@ interface AppIconProps {
 export const AppIcon: React.FC<AppIconProps> = ({
   width = 40,
   height = 48,
-  className = ''
+  className = "",
 }) => {
   return (
     <svg
@@ -31,10 +31,7 @@ export const AppIcon: React.FC<AppIconProps> = ({
           strokeWidth="1.5"
         />
       </g>
-      <path
-        d="M23 0L32 9H27C24.7909 9 23 7.20914 23 5V0Z"
-        fill="#FF891D"
-      />
+      <path d="M23 0L32 9H27C24.7909 9 23 7.20914 23 5V0Z" fill="#FF891D" />
       <path
         d="M10.75 17.917H13.917V14.75H10.75V17.917ZM15.417 18C15.417 18.7824 14.7824 19.417 14 19.417H10.667C9.88459 19.417 9.25 18.7824 9.25 18V14.667C9.25 13.8846 9.88459 13.25 10.667 13.25H14C14.7824 13.25 15.417 13.8846 15.417 14.667V18Z"
         fill="#FF891D"
@@ -99,12 +96,7 @@ export const AppIcon: React.FC<AppIconProps> = ({
           />
           <feOffset dy="-1" />
           <feGaussianBlur stdDeviation="0.5" />
-          <feComposite
-            in2="hardAlpha"
-            operator="arithmetic"
-            k2="-1"
-            k3="1"
-          />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
           <feColorMatrix
             type="matrix"
             values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0"

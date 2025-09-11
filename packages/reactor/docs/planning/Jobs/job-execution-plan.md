@@ -1,11 +1,13 @@
 # Job Execution Plan - Phase 4 Implementation
 
 ## Overview
+
 This document outlines the plan for implementing proper job execution in the Reactor's `IJobExecutor`, specifically focusing on integrating document model reducers to process actions and generate operations.
 
 ## Current State Analysis
 
 ### Legacy Implementation (document-drive/base-server.ts)
+
 The current system processes actions through the following flow:
 
 1. **Action Queuing**: Actions are queued via `_queueActions()` which creates an `ActionJob`
@@ -18,12 +20,13 @@ The current system processes actions through the following flow:
 4. **Storage**: Operations are written to storage
 
 ### Key Components from Legacy
+
 ```typescript
 // Simplified version of _buildOperations
 private _buildOperations(document: PHDocument, actions: Action[]): Operation[] {
   const operations: Operation[] = [];
   const { reducer } = this.getDocumentModelModule(document.header.documentType);
-  
+
   for (const action of actions) {
     document = reducer(document, action);
     const operation = document.operations[action.scope].slice().pop();
@@ -39,13 +42,17 @@ private _buildOperations(document: PHDocument, actions: Action[]): Operation[] {
 ## Phase 4 Implementation Requirements
 
 ### 1. JobExecutor Enhancement
+
 The `IJobExecutor` implementation needs to:
+
 - Load the appropriate document model module based on document type
 - Apply actions through the reducer to generate operations
 - Write operations to storage (initially legacy storage, later dual-write)
 
 ### 2. Dependencies Required
+
 The JobExecutor will need access to:
+
 - **Document Model Registry**: To retrieve reducers for document types
 - **Document Storage**: To read current document state
 - **Operation Storage**: To write generated operations (Phase 4: legacy storage)
@@ -54,7 +61,7 @@ The JobExecutor will need access to:
 ### 3. Job Processing Flow
 
 ```
-Job (containing Action) 
+Job (containing Action)
   ↓
 JobExecutor.executeJob()
   ↓
@@ -69,32 +76,34 @@ JobExecutor.executeJob()
 ## Implementation Steps
 
 ### Step 1: Create DocumentModelRegistry
+
 See [Document Model Registry](Jobs/document-model-registry.md) for detailed design and implementation of the registry component.
 
 ### Step 2: Implement Job Processing Logic
+
 ```typescript
 class JobExecutor implements IJobExecutor {
   private async performJobExecution(job: Job): Promise<JobResult> {
     // 1. Load document
     const document = await this.documentStorage.get(job.documentId);
-    
+
     // 2. Get reducer
     const module = this.registry.getModule(document.header.documentType);
     const { reducer } = module;
-    
+
     // 3. Apply action
     const updatedDocument = reducer(document, job.operation.action);
-    
+
     // 4. Extract operation
     const operations = updatedDocument.operations[job.scope];
     const newOperation = operations[operations.length - 1];
-    
+
     // 5. Store operation (Phase 4: legacy storage)
     await this.operationStorage.addOperation(job.documentId, newOperation);
-    
+
     // 6. Update document in storage
     await this.documentStorage.set(job.documentId, updatedDocument);
-    
+
     return { success: true, operation: newOperation };
   }
 }
@@ -103,6 +112,7 @@ class JobExecutor implements IJobExecutor {
 ### Step 3: Testing Strategy
 
 #### Unit Tests for JobExecutor
+
 1. **Test reducer integration**:
    - Mock document storage
    - Mock operation storage
@@ -118,6 +128,7 @@ class JobExecutor implements IJobExecutor {
    - Test multiple actions in sequence
 
 #### Integration Tests
+
 1. **End-to-end mutation flow**:
    - Call `reactor.mutate()`
    - Poll job status
@@ -127,14 +138,17 @@ class JobExecutor implements IJobExecutor {
 ## Migration Path
 
 ### Phase 4: Legacy Storage Integration
+
 - JobExecutor writes to legacy `IDriveOperationStorage`
 - Validates the pipeline works with existing storage
 
 ### Phase 5: Dual-Write Implementation
+
 - JobExecutor writes to both legacy and new `IOperationStore`
 - Enables validation between old and new systems
 
 ### Phase 6+: New Storage Primary
+
 - Switch to new `IOperationStore` as primary
 - Legacy storage becomes read-only via adapters
 

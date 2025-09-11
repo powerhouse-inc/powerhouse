@@ -6,19 +6,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import utils from "../../gen/utils.js";
-import {
-  z,
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
-  type SetPackageAuthorInput,
-  type SetPackageAuthorNameInput,
-  type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
-  type SetPackageGithubUrlInput,
-  type SetPackageNpmUrlInput,
+import type {
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
 } from "../../gen/schema/index.js";
+import { z } from "../../gen/schema/index.js";
 import { reducer } from "../../gen/reducer.js";
 import * as creators from "../../gen/base-operations/creators.js";
 import type { VetraPackageDocument } from "../../gen/types.js";
@@ -38,8 +38,12 @@ describe("BaseOperations Operations", () => {
     const updatedDocument = reducer(document, creators.setPackageName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("SET_PACKAGE_NAME");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageDescription operation", () => {
@@ -56,7 +60,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_DESCRIPTION",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageCategory operation", () => {
@@ -73,7 +79,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_CATEGORY",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageAuthor operation", () => {
@@ -87,7 +95,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_AUTHOR",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageAuthorName operation", () => {
@@ -104,7 +114,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_AUTHOR_NAME",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageAuthorWebsite operation", () => {
@@ -121,7 +133,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_AUTHOR_WEBSITE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle addPackageKeyword operation", () => {
@@ -138,7 +152,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "ADD_PACKAGE_KEYWORD",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle removePackageKeyword operation", () => {
@@ -155,7 +171,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "REMOVE_PACKAGE_KEYWORD",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageGithubUrl operation", () => {
@@ -172,7 +190,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_GITHUB_URL",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
   it("should handle setPackageNpmUrl operation", () => {
@@ -186,7 +206,9 @@ describe("BaseOperations Operations", () => {
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_PACKAGE_NPM_URL",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

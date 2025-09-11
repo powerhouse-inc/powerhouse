@@ -1,12 +1,11 @@
 import { Tooltip, TooltipProvider } from "#connect";
-import { type GroupTransactionFormInputs, RWATableTextInput } from "#rwa";
+import type { GroupTransactionFormInputs } from "#rwa";
+import { RWATableTextInput } from "#rwa";
 import { getIsTransaction } from "#services";
-import {
-  type ComponentPropsWithRef,
-  type ForwardedRef,
-  forwardRef,
-} from "react";
-import { type Control, useWatch } from "react-hook-form";
+import type { ComponentPropsWithRef, ForwardedRef } from "react";
+import { forwardRef } from "react";
+import type { Control } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 
 export const TransactionReference = forwardRef(function TransactionReference(
   props: ComponentPropsWithRef<typeof RWATableTextInput> & {

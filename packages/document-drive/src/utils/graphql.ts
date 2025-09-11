@@ -1,17 +1,22 @@
-import {
-  type DocumentDriveLocalState,
-  type FileNode,
-  type FolderNode,
+import type {
+  DocumentDriveLocalState,
+  FileNode,
+  FolderNode,
 } from "#drive-document-model/gen/types";
-import { type IBaseDocumentDriveServer } from "#server/types";
+import type { IBaseDocumentDriveServer } from "#server/types";
 import { pascalCase } from "change-case";
-import {
-  type DocumentModelModule,
-  type DocumentModelState,
-  type Operation,
-  type PHBaseState,
-  type PHDocument,
+import type {
+  DocumentModelModule,
+  DocumentModelState,
+  Operation,
+  PHBaseState,
+  PHDocument,
 } from "document-model";
+import type {
+  BuildSchemaOptions,
+  GraphQLOutputType,
+  ParseOptions,
+} from "graphql";
 import {
   GraphQLError,
   GraphQLList,
@@ -20,9 +25,6 @@ import {
   GraphQLScalarType,
   GraphQLUnionType,
   buildSchema,
-  type BuildSchemaOptions,
-  type GraphQLOutputType,
-  type ParseOptions,
 } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
 import { logger } from "./logger.js";

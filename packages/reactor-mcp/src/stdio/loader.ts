@@ -1,8 +1,9 @@
 import { childLogger } from "document-drive";
-import { type DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { createServer, type ViteDevServer } from "vite";
+import type { ViteDevServer } from "vite";
+import { createServer } from "vite";
 
 interface IPackageLoader {
   load(): Promise<DocumentModelModule[]>;

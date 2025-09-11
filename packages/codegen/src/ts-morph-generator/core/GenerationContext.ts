@@ -1,8 +1,8 @@
-import {
-  type DocumentModelState,
-  type Operation as ModuleOperation,
+import type {
+  DocumentModelState,
+  Operation as ModuleOperation,
 } from "document-model/document-model/gen/schema/types";
-import { type Project } from "ts-morph";
+import type { Project } from "ts-morph";
 
 // Use the actual module type from document model specs
 export type ModuleSpec = DocumentModelState["specifications"][0]["modules"][0];

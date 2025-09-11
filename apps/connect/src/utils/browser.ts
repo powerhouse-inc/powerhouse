@@ -1,9 +1,9 @@
 export function getBasePath() {
-    if (typeof document === 'undefined') {
-        return '/';
-    }
+  if (typeof document === "undefined") {
+    return "/";
+  }
 
-    const baseEl = document.querySelector('base');
-    const href = baseEl?.getAttribute('href');
-    return href || '/';
+  const baseEl = document.querySelector("base");
+  const href = baseEl?.getAttribute("href");
+  return href || "/";
 }

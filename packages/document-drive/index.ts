@@ -1,7 +1,7 @@
 import InMemoryCache from "#cache/memory";
-import { type DocumentDrivePHState } from "#drive-document-model/gen/index";
+import type { DocumentDrivePHState } from "#drive-document-model/gen/index";
 import DriveUtils from "#drive-document-model/gen/utils";
-import { type CreateState } from "document-model";
+import type { CreateState } from "document-model";
 export type { DocumentDriveAction } from "#drive-document-model/gen/actions";
 export {
   addFile,

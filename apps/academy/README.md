@@ -1,8 +1,8 @@
 # Website
 
 This documentation website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
-To contribute to the documentation please work on a feature branch in case of big refactors, and build & serve before pushing to the development branch. 
-Pushing from the dev branch to the main branch will trigger an auto deployment in Heroku for the staging deployment. 
+To contribute to the documentation please work on a feature branch in case of big refactors, and build & serve before pushing to the development branch.
+Pushing from the dev branch to the main branch will trigger an auto deployment in Heroku for the staging deployment.
 
 ### Installation
 
@@ -16,7 +16,7 @@ $ npm install
 $ npm run dev
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server. The server will break upon broken links or big navigation/relinking. 
+This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server. The server will break upon broken links or big navigation/relinking.
 
 ### Build
 

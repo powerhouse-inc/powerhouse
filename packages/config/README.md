@@ -33,9 +33,9 @@ See the [logging documentation](../document-drive/docs/logging.md) for a compreh
 
 These options affect the `ph reactor` command.
 
-| Name | Description |
-|------|---------------|
-| `port` | The port at which to receive traffic. |
-| `storage.type` | Configures the storage layer of reactor. Use `memory`, `filesystem`, `browser`, or `postgres`. |
-| `storage.postgresUrl` | If `postgres` is configured as the storage layer, this defines the postgres connection string. Eg - `postgresql://postgres:postgres@localhost:5444/postgres`. |
-| `storage.filesystemPath` | If `filesystem` is configured as the storage layer, this defines the root folder. |
+| Name                     | Description                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `port`                   | The port at which to receive traffic.                                                                                                                         |
+| `storage.type`           | Configures the storage layer of reactor. Use `memory`, `filesystem`, `browser`, or `postgres`.                                                                |
+| `storage.postgresUrl`    | If `postgres` is configured as the storage layer, this defines the postgres connection string. Eg - `postgresql://postgres:postgres@localhost:5444/postgres`. |
+| `storage.filesystemPath` | If `filesystem` is configured as the storage layer, this defines the root folder.                                                                             |

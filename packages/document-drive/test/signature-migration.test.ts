@@ -126,7 +126,7 @@ describe.each(storageLayers)(
             sharingType: null,
             triggers: [],
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.slug = driveId;
@@ -177,7 +177,7 @@ describe.each(storageLayers)(
             sharingType: null,
             triggers: [],
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.name = "name";
@@ -254,7 +254,7 @@ describe.each(storageLayers)(
             sharingType: null,
             triggers: [],
           },
-        )
+        ),
       );
       drive.header.id = driveId;
       drive.header.slug = driveId;

@@ -1,5 +1,5 @@
 import { logger } from "document-drive";
-import { type Action, type PHDocument } from "document-model";
+import type { Action, PHDocument } from "document-model";
 import { dispatchActions } from "../actions/dispatch.js";
 
 export function useDispatch(document: PHDocument | undefined) {

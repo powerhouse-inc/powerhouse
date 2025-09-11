@@ -1,6 +1,6 @@
-import { type User } from "document-model";
-import { type LoginStatus } from "../types/global.js";
-import { type SetLoginStatusEvent, type SetUserEvent } from "./types.js";
+import type { User } from "document-model";
+import type { LoginStatus } from "../types/global.js";
+import type { SetLoginStatusEvent, SetUserEvent } from "./types.js";
 
 export function dispatchSetLoginStatusEvent(
   loginStatus: LoginStatus | undefined,

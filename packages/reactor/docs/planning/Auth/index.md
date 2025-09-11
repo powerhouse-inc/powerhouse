@@ -34,14 +34,13 @@ type ScopePermission = {
   exclude: string[];
 
   // Default behavior when an action is not in include/exclude lists
-  default: 'allow' | 'deny';
+  default: "allow" | "deny";
 };
 
 type AuthScope = {
   // Permissions per scope name (e.g., 'header', 'document')
   scopes: Record<string, ScopePermission>;
 };
-
 ```
 
 #### Composability
@@ -75,4 +74,3 @@ const combinedAuthScope = graph.aggregate(
 ```
 
 The resulting `combinedAuthScope` object can be used to determine if the current user has access to the document.
-
