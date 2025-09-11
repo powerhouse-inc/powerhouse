@@ -1,3 +1,32 @@
+## 4.1.0-dev.51 (2025-09-11)
+
+### 🚀 Features
+
+- **reactor-api:** tests for each level of the reactor gql sdk ([1e52b761e](https://github.com/powerhouse-inc/powerhouse/commit/1e52b761e))
+- **reactor-api:** creating an sdk factory ([34151d5d2](https://github.com/powerhouse-inc/powerhouse/commit/34151d5d2))
+- **reactor-api:** generate sdk ([ec107015c](https://github.com/powerhouse-inc/powerhouse/commit/ec107015c))
+- **reactor-api:** initial gql codegen ([3db9e9778](https://github.com/powerhouse-inc/powerhouse/commit/3db9e9778))
+- **monorepo:** make format consistent across ignores ([98469560f](https://github.com/powerhouse-inc/powerhouse/commit/98469560f))
+- **monorepo:** use consistent separate type imports ([6fd4ac0f4](https://github.com/powerhouse-inc/powerhouse/commit/6fd4ac0f4))
+
+### 🩹 Fixes
+
+- whoops, adding generated code ([ffb6ca373](https://github.com/powerhouse-inc/powerhouse/commit/ffb6ca373))
+- linting fixes ([27fe7d397](https://github.com/powerhouse-inc/powerhouse/commit/27fe7d397))
+- annoyingly, you have to add ignores to the root eslint ([bb6d993bd](https://github.com/powerhouse-inc/powerhouse/commit/bb6d993bd))
+- **reactor-api:** fixing more linter issues ([aeb093426](https://github.com/powerhouse-inc/powerhouse/commit/aeb093426))
+- **reactor-api:** fixing linter issues ([5c0f1a074](https://github.com/powerhouse-inc/powerhouse/commit/5c0f1a074))
+- **reactor-api:** adding a tools tsconfig that doesn't emit so we can support codegen.ts ([5898dc822](https://github.com/powerhouse-inc/powerhouse/commit/5898dc822))
+- **reactor-api:** fix import issue in generated gql ([bad71a0cc](https://github.com/powerhouse-inc/powerhouse/commit/bad71a0cc))
+- **reactor-api:** pass generated code through prettier and eslint ([1624548c0](https://github.com/powerhouse-inc/powerhouse/commit/1624548c0))
+- **docs:** improve document hooks documentation ([d05fcb835](https://github.com/powerhouse-inc/powerhouse/commit/d05fcb835))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Callme-T
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.50 (2025-09-09)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
