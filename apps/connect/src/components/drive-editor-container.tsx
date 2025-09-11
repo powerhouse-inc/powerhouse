@@ -1,4 +1,3 @@
-import connectConfig from "#connect-config";
 import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
 import { GenericDriveExplorer } from "@powerhousedao/common";
 import {

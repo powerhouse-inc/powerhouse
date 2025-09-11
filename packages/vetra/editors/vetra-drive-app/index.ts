@@ -6,6 +6,7 @@ export const module: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "vetra-drive-app",
+    name: "Vetra Drive App",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,

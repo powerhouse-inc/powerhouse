@@ -6,6 +6,7 @@ export const GenericDriveExplorer: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "GenericDriveExplorer",
+    name: "Drive Explorer App",
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,
