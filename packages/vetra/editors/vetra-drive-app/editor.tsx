@@ -1,4 +1,4 @@
-import { WagmiContext } from "@powerhousedao/design-system";
+import { useDrop, WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
@@ -19,7 +19,7 @@ export type IProps = DriveEditorProps;
 export function BaseEditor(props: IProps) {
   const { context, document } = props;
   const unsafeCastOfDocument = document as DocumentDriveDocument;
-  const { showCreateDocumentModal } = useDriveContext();
+  const { showCreateDocumentModal, onAddFile } = useDriveContext();
   const driveId = unsafeCastOfDocument.header.id;
   const documentModels = useDocumentModelModules();
   const fileNodes = unsafeCastOfDocument.state.global.nodes.filter(
@@ -59,11 +59,24 @@ export function BaseEditor(props: IProps) {
   );
 
   const onCreatePackageFile = useCallback(() => {
-    addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage);
+    addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage).catch(
+      console.error,
+    );
   }, [driveId]);
 
+  const { isDropTarget, dropProps } = useDrop({
+    node: undefined,
+    onAddFile,
+    onCopyNode: () => console.warn("Copy node not allowed"),
+    onMoveNode: () => console.warn("Move node not allowed"),
+  });
+
   return (
-    <div className="bg-white" style={{ height: "100%" }}>
+    <div
+      {...dropProps}
+      style={{ height: "100%" }}
+      className={`bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-[''] ${isDropTarget ? "hover:after:opacity-30" : ""}`}
+    >
       <DriveExplorer
         documentModels={docModelsNodes}
         editors={docEditorsNodes}
