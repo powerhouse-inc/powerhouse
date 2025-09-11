@@ -1,63 +1,36 @@
 {
-  "state": {
-    "document": {
-      "id": "",
+  "auth": {},
+  "document": {
+    "version": "1.0.0"
+  },
+  "global": {
+    "id": "",
+    "name": "",
+    "extension": "",
+    "description": "",
+    "author": {
       "name": "",
-      "extension": "",
-      "description": "",
-      "author": {
-        "name": "",
-        "website": ""
-      },
-      "specifications": [
-        {
-          "version": 1,
-          "changeLog": [],
-          "state": {
-            "global": {
-              "schema": "",
-              "initialValue": "",
-              "examples": []
-            },
-            "local": {
-              "schema": "",
-              "initialValue": "",
-              "examples": []
-            }
-          },
-          "modules": []
-        }
-      ]
+      "website": ""
     },
-    "global": {
-      "id": "",
-      "name": "",
-      "extension": "",
-      "description": "",
-      "author": {
-        "name": "",
-        "website": ""
-      },
-      "specifications": [
-        {
-          "version": 1,
-          "changeLog": [],
-          "state": {
-            "global": {
-              "schema": "",
-              "initialValue": "",
-              "examples": []
-            },
-            "local": {
-              "schema": "",
-              "initialValue": "",
-              "examples": []
-            }
+    "specifications": [
+      {
+        "version": 1,
+        "changeLog": [],
+        "state": {
+          "global": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
           },
-          "modules": []
-        }
-      ]
-    },
-    "local": {}
-  }
+          "local": {
+            "schema": "",
+            "initialValue": "",
+            "examples": []
+          }
+        },
+        "modules": []
+      }
+    ]
+  },
+  "local": {}
 }

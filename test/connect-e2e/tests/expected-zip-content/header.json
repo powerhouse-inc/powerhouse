@@ -1,18 +1,18 @@
 {
-  "id": "b221840a-6229-4e1e-b01f-6b3b72e591bc",
+  "id": "d220f2c5-688f-404a-978a-ea67a193f2a8",
   "sig": {
     "publicKey": {},
     "nonce": ""
   },
   "documentType": "powerhouse/document-model",
-  "createdAtUtcIso": "2025-06-27T18:07:11.979Z",
-  "slug": "b221840a-6229-4e1e-b01f-6b3b72e591bc",
-  "name": "",
+  "createdAtUtcIso": "2025-09-11T14:21:09.980Z",
+  "slug": "d220f2c5-688f-404a-978a-ea67a193f2a8",
+  "name": "ToDoDocument",
   "branch": "main",
   "revision": {
     "document": 0,
     "global": 24
   },
-  "lastModifiedAtUtcIso": "2025-06-27T18:07:14.369Z",
+  "lastModifiedAtUtcIso": "2025-09-11T14:21:12.548Z",
   "meta": {}
 }

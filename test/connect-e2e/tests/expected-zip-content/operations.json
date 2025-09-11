@@ -1,312 +1,549 @@
 {
   "global": [
     {
+      "id": "1db13ae1-4f1d-4f19-aef7-a12f7442f05a",
+      "timestampUtcMs": "2025-09-11T14:21:10.061Z",
       "type": "SET_MODEL_NAME",
       "input": {
         "name": "ToDoDocument"
       },
       "scope": "global",
-      "id": "476cfc73-1e5d-4c0f-afbd-599851918bc8",
-      "index": 0,
-      "timestamp": "2025-06-11T17:06:25.585Z",
+      "action": {
+        "id": "af622d26-fab4-41ff-be97-c8d489770675",
+        "timestampUtcMs": "2025-09-11T14:21:10.051Z",
+        "type": "SET_MODEL_NAME",
+        "input": {
+          "name": "ToDoDocument"
+        },
+        "scope": "global"
+      },
       "hash": "P9WLZOlueGiInIn/EwxsIajeZWQ=",
+      "index": 0,
       "skip": 0
     },
     {
+      "id": "200d7d6a-afe5-4295-97de-8144830dd0a5",
+      "timestampUtcMs": "2025-09-11T14:21:10.061Z",
       "type": "SET_STATE_SCHEMA",
       "input": {
         "schema": "type ToDoDocumentState {\n  \"Add your global state fields here\"\n  _placeholder: String\n}",
         "scope": "global"
       },
       "scope": "global",
-      "id": "21d2f217-235a-48a3-b804-f1fda4d8372f",
-      "index": 1,
-      "timestamp": "2025-06-11T17:06:25.585Z",
+      "action": {
+        "id": "666ef5eb-0b8c-4de6-a4ee-9ddafe707505",
+        "timestampUtcMs": "2025-09-11T14:21:10.051Z",
+        "type": "SET_STATE_SCHEMA",
+        "input": {
+          "schema": "type ToDoDocumentState {\n  \"Add your global state fields here\"\n  _placeholder: String\n}",
+          "scope": "global"
+        },
+        "scope": "global"
+      },
       "hash": "nAzvxl70iZ3pwuF/+mo/GJ0/ops=",
+      "index": 1,
       "skip": 0
     },
     {
+      "id": "3396f424-322a-4841-8a4d-8bcd24dbf0fa",
+      "timestampUtcMs": "2025-09-11T14:21:10.164Z",
       "type": "SET_MODEL_ID",
       "input": {
         "id": "powerhouse/todo"
       },
       "scope": "global",
-      "id": "e7ae9ddd-de6a-4985-ad8a-b0e51ccb7295",
-      "index": 2,
-      "timestamp": "2025-06-11T17:06:25.660Z",
+      "action": {
+        "id": "c7cf3f39-89ab-4f9a-8956-430e427cf4d9",
+        "timestampUtcMs": "2025-09-11T14:21:10.164Z",
+        "type": "SET_MODEL_ID",
+        "input": {
+          "id": "powerhouse/todo"
+        },
+        "scope": "global"
+      },
       "hash": "PgylcKdKxfAv+dPmIGP1u/e6O+U=",
+      "index": 2,
       "skip": 0
     },
     {
+      "id": "7b1a3552-7693-4270-9025-c93e481e09de",
+      "timestampUtcMs": "2025-09-11T14:21:10.212Z",
       "type": "SET_AUTHOR_NAME",
       "input": {
         "authorName": "Powerhouse"
       },
       "scope": "global",
-      "id": "dea2dd6d-776e-4de6-a4c5-c00191394f13",
-      "index": 3,
-      "timestamp": "2025-06-11T17:06:25.725Z",
+      "action": {
+        "id": "c6096a7f-d032-49cc-8e37-e1c49a01632a",
+        "timestampUtcMs": "2025-09-11T14:21:10.212Z",
+        "type": "SET_AUTHOR_NAME",
+        "input": {
+          "authorName": "Powerhouse"
+        },
+        "scope": "global"
+      },
       "hash": "mYUaLRVerPJl8msqO0aEIWui/OI=",
+      "index": 3,
       "skip": 0
     },
     {
+      "id": "86d6970a-ac66-4bfe-be9d-0f8c15a4aa83",
+      "timestampUtcMs": "2025-09-11T14:21:10.248Z",
       "type": "SET_MODEL_DESCRIPTION",
       "input": {
         "description": "ToDo Document Model"
       },
       "scope": "global",
-      "id": "46a85a77-5e4f-4258-b490-9ff5e353b48d",
-      "index": 4,
-      "timestamp": "2025-06-11T17:06:25.810Z",
+      "action": {
+        "id": "9f374e6e-8edc-40ca-a282-15f55cdfc3b3",
+        "timestampUtcMs": "2025-09-11T14:21:10.248Z",
+        "type": "SET_MODEL_DESCRIPTION",
+        "input": {
+          "description": "ToDo Document Model"
+        },
+        "scope": "global"
+      },
       "hash": "lKNvuR0Pew/ST2q895vrZPEAX7k=",
+      "index": 4,
       "skip": 0
     },
     {
+      "id": "0b6c80b7-8830-499e-b0ed-50a5a0907986",
+      "timestampUtcMs": "2025-09-11T14:21:10.298Z",
       "type": "SET_AUTHOR_WEBSITE",
       "input": {
         "authorWebsite": "https://www.powerhouse.inc"
       },
       "scope": "global",
-      "id": "d660752a-e3c1-4180-8039-2738012e1cbc",
-      "index": 5,
-      "timestamp": "2025-06-11T17:06:25.858Z",
+      "action": {
+        "id": "f183f1dd-dc65-4aab-9c97-afb9911ae90b",
+        "timestampUtcMs": "2025-09-11T14:21:10.298Z",
+        "type": "SET_AUTHOR_WEBSITE",
+        "input": {
+          "authorWebsite": "https://www.powerhouse.inc"
+        },
+        "scope": "global"
+      },
       "hash": "2zKG16iVThsKENow3lDLhLEp1TM=",
+      "index": 5,
       "skip": 0
     },
     {
+      "id": "0ba52680-0dd8-4ef6-aa3e-7c19a9ecee6c",
+      "timestampUtcMs": "2025-09-11T14:21:10.346Z",
       "type": "SET_MODEL_EXTENSION",
       "input": {
         "extension": ".phdm"
       },
       "scope": "global",
-      "id": "14e695f6-ebe9-41d2-979a-7623151fb0b6",
-      "index": 6,
-      "timestamp": "2025-06-11T17:06:25.910Z",
+      "action": {
+        "id": "48a47d77-401c-4f00-979f-8eba9ad9f365",
+        "timestampUtcMs": "2025-09-11T14:21:10.346Z",
+        "type": "SET_MODEL_EXTENSION",
+        "input": {
+          "extension": ".phdm"
+        },
+        "scope": "global"
+      },
       "hash": "RFhOw9vup+B6H4olmg8+ng8dyWg=",
+      "index": 6,
       "skip": 0
     },
     {
+      "id": "b3418387-424a-4559-bd9a-57fe48d85d5c",
+      "timestampUtcMs": "2025-09-11T14:21:10.441Z",
       "type": "SET_STATE_SCHEMA",
       "input": {
         "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
         "scope": "global"
       },
       "scope": "global",
-      "id": "7ec40365-deba-4630-877b-ec468d434f9e",
+      "action": {
+        "id": "82db3a73-3d05-4e6a-bea4-abed37a72f31",
+        "timestampUtcMs": "2025-09-11T14:21:10.441Z",
+        "type": "SET_STATE_SCHEMA",
+        "input": {
+          "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+          "scope": "global"
+        },
+        "scope": "global"
+      },
+      "hash": "mimCdV8uMFHksxd3vPr5Ve63kt4=",
       "index": 7,
-      "timestamp": "2025-06-11T17:06:25.994Z",
-      "hash": "mimCdV8uMFHksxd3vPr5Ve63kt4=",
       "skip": 0
     },
     {
+      "id": "fd495a93-d3b6-4ff8-b6c7-dc85a540620b",
+      "timestampUtcMs": "2025-09-11T14:21:10.445Z",
       "type": "SET_STATE_SCHEMA",
       "input": {
         "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
         "scope": "global"
       },
       "scope": "global",
-      "id": "5b6bdc33-87b5-4b2f-9ed6-c5687e9da5a0",
-      "index": 8,
-      "timestamp": "2025-06-11T17:06:25.995Z",
+      "action": {
+        "id": "ca5a6508-6173-445e-aed0-db5b3fd21229",
+        "timestampUtcMs": "2025-09-11T14:21:10.441Z",
+        "type": "SET_STATE_SCHEMA",
+        "input": {
+          "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+          "scope": "global"
+        },
+        "scope": "global"
+      },
       "hash": "mimCdV8uMFHksxd3vPr5Ve63kt4=",
+      "index": 8,
       "skip": 0
     },
     {
+      "id": "52a93984-3f9b-4726-8e94-cd5a5396e74f",
+      "timestampUtcMs": "2025-09-11T14:21:10.493Z",
       "type": "SET_INITIAL_STATE",
       "input": {
         "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
         "scope": "global"
       },
       "scope": "global",
-      "id": "09155006-608e-489f-a782-a219350af138",
+      "action": {
+        "id": "95a1db8b-3197-4da7-b4aa-53a427237686",
+        "timestampUtcMs": "2025-09-11T14:21:10.493Z",
+        "type": "SET_INITIAL_STATE",
+        "input": {
+          "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+          "scope": "global"
+        },
+        "scope": "global"
+      },
+      "hash": "cNgDypoLnsmkmtjUgOC9XFhFrjw=",
       "index": 9,
-      "timestamp": "2025-06-11T17:06:26.036Z",
-      "hash": "cNgDypoLnsmkmtjUgOC9XFhFrjw=",
       "skip": 0
     },
     {
+      "id": "2cd14f4e-83fc-4da1-90ab-781e85e6af13",
+      "timestampUtcMs": "2025-09-11T14:21:10.495Z",
       "type": "SET_INITIAL_STATE",
       "input": {
         "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
         "scope": "global"
       },
       "scope": "global",
-      "id": "de3df978-ce05-473b-a8b3-985d52969f65",
-      "index": 10,
-      "timestamp": "2025-06-11T17:06:26.037Z",
+      "action": {
+        "id": "62cc9331-3fad-4e5d-9922-a9d7c8196399",
+        "timestampUtcMs": "2025-09-11T14:21:10.493Z",
+        "type": "SET_INITIAL_STATE",
+        "input": {
+          "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+          "scope": "global"
+        },
+        "scope": "global"
+      },
       "hash": "cNgDypoLnsmkmtjUgOC9XFhFrjw=",
+      "index": 10,
       "skip": 0
     },
     {
+      "id": "00763eea-ef72-452d-bd3d-6ba50248aada",
+      "timestampUtcMs": "2025-09-11T14:21:10.998Z",
       "type": "ADD_MODULE",
       "input": {
-        "id": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "id": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
         "name": "base_operations"
       },
       "scope": "global",
-      "id": "a84987e5-f119-4355-8a29-71e294241266",
+      "action": {
+        "id": "fafe0234-2274-447e-897c-8edcc673bdb8",
+        "timestampUtcMs": "2025-09-11T14:21:10.996Z",
+        "type": "ADD_MODULE",
+        "input": {
+          "id": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
+          "name": "base_operations"
+        },
+        "scope": "global"
+      },
+      "hash": "PyMRrCzAB93Q7XFUGNhWc5tzBPI=",
       "index": 11,
-      "timestamp": "2025-06-11T17:06:26.545Z",
-      "hash": "iVhTd5K5qLBNNLRyloDMRDzYLMU=",
       "skip": 0
     },
     {
+      "id": "eb04734a-49ca-4c8a-a167-a34d76ae734d",
+      "timestampUtcMs": "2025-09-11T14:21:11.038Z",
       "type": "ADD_OPERATION",
       "input": {
-        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
-        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
+        "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
         "name": "ADD_TODO_ITEM_INPUT"
       },
       "scope": "global",
-      "id": "b796e38a-7f6b-489f-8e86-e2dcbcb63c74",
+      "action": {
+        "id": "ecec3539-0497-4dcb-95d6-10dbd2d0db1a",
+        "timestampUtcMs": "2025-09-11T14:21:11.037Z",
+        "type": "ADD_OPERATION",
+        "input": {
+          "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
+          "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
+          "name": "ADD_TODO_ITEM_INPUT"
+        },
+        "scope": "global"
+      },
+      "hash": "+0JHUMphyuNBgGvVUQjT6cxy31w=",
       "index": 12,
-      "timestamp": "2025-06-11T17:06:26.566Z",
-      "hash": "lDexFsfSeK4UrW0vPno1yWuq7HM=",
       "skip": 0
     },
     {
+      "id": "d670cbfa-e1b6-4335-8280-f109d523ff50",
+      "timestampUtcMs": "2025-09-11T14:21:11.045Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
         "schema": "input AddTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
       },
       "scope": "global",
-      "id": "27ea99ee-9ab9-4cdf-b5e3-d69b39664482",
+      "action": {
+        "id": "7dd3ca5b-06d3-4005-967e-724dcd662a85",
+        "timestampUtcMs": "2025-09-11T14:21:11.038Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
+          "schema": "input AddTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+        },
+        "scope": "global"
+      },
+      "hash": "0ZzNR07fnjYZ+EJScabWCwxXLsc=",
       "index": 13,
-      "timestamp": "2025-06-11T17:06:26.579Z",
-      "hash": "t1d0yF3VjIHrm9+0YxEMeiYem9M=",
       "skip": 0
     },
     {
+      "id": "14936707-a6e2-4b56-8ab7-8cf1248d2118",
+      "timestampUtcMs": "2025-09-11T14:21:11.160Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
         "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
       },
       "scope": "global",
-      "id": "f0464748-7961-4c14-ad51-a5cd9b766576",
+      "action": {
+        "id": "cce24ea7-6a0b-4888-819b-f2838230b49d",
+        "timestampUtcMs": "2025-09-11T14:21:11.159Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
+          "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "rebrpjk8cGXaiiAbcCv+C4Xdgo0=",
       "index": 14,
-      "timestamp": "2025-06-11T17:06:26.720Z",
-      "hash": "vDGNOikDy8dRu+x1bk/FRX5CUkI=",
       "skip": 0
     },
     {
+      "id": "94ce847f-35b6-4c3e-a5f7-ae4bf93ba600",
+      "timestampUtcMs": "2025-09-11T14:21:11.162Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "3de15c61-7c6f-4376-992d-93cb4be53cde",
+        "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
         "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
       },
       "scope": "global",
-      "id": "20c4a12f-6be1-4a02-85b4-b24328c57742",
+      "action": {
+        "id": "0ce734a4-a07b-48a7-ad55-4600e8011229",
+        "timestampUtcMs": "2025-09-11T14:21:11.160Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
+          "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "rebrpjk8cGXaiiAbcCv+C4Xdgo0=",
       "index": 15,
-      "timestamp": "2025-06-11T17:06:26.721Z",
-      "hash": "vDGNOikDy8dRu+x1bk/FRX5CUkI=",
       "skip": 0
     },
     {
+      "id": "b18d8e7e-d3fa-4bb9-adde-e7d84b00917a",
+      "timestampUtcMs": "2025-09-11T14:21:11.663Z",
       "type": "ADD_OPERATION",
       "input": {
-        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
-        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
+        "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
         "name": "UPDATE_TODO_ITEM_INPUT"
       },
       "scope": "global",
-      "id": "134bd100-ac02-403c-abda-5a1e8f076d81",
+      "action": {
+        "id": "520e289b-c630-4993-b114-0bfe9a9d2e89",
+        "timestampUtcMs": "2025-09-11T14:21:11.662Z",
+        "type": "ADD_OPERATION",
+        "input": {
+          "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
+          "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
+          "name": "UPDATE_TODO_ITEM_INPUT"
+        },
+        "scope": "global"
+      },
+      "hash": "iLA0PtemQzn8nG9vTes9lCZe6Qw=",
       "index": 16,
-      "timestamp": "2025-06-11T17:06:27.229Z",
-      "hash": "+SUFXzJ88FvHhmhArq5ZusGhNug=",
       "skip": 0
     },
     {
+      "id": "8f0c1dbc-1a58-4ec4-9ccd-f99de7df16d3",
+      "timestampUtcMs": "2025-09-11T14:21:11.677Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
         "schema": "input UpdateTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
       },
       "scope": "global",
-      "id": "7a576c7c-3056-46dd-8bf1-0b40def9450b",
+      "action": {
+        "id": "54a6eb1f-cd31-4f1a-be66-13007daab038",
+        "timestampUtcMs": "2025-09-11T14:21:11.663Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
+          "schema": "input UpdateTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+        },
+        "scope": "global"
+      },
+      "hash": "x84WsNFSfeULlyn6vCD9j/fDlkA=",
       "index": 17,
-      "timestamp": "2025-06-11T17:06:27.251Z",
-      "hash": "/YjcxsoMumdvuUPAdIR6kW/C2Ts=",
       "skip": 0
     },
     {
+      "id": "8c17342e-d233-4dc8-9661-bc0f99d3215c",
+      "timestampUtcMs": "2025-09-11T14:21:11.776Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
         "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
       },
       "scope": "global",
-      "id": "bbf3e2e3-119e-4251-a26a-75e4e5d47eb5",
+      "action": {
+        "id": "185b561c-2fe5-4603-a258-d49eff2985ad",
+        "timestampUtcMs": "2025-09-11T14:21:11.775Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
+          "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "8DvwRUYCK7jgcks1mVCqDLAsAMM=",
       "index": 18,
-      "timestamp": "2025-06-11T17:06:27.371Z",
-      "hash": "+gto6s0XQgWNts7eP9ZYspyBvg0=",
       "skip": 0
     },
     {
+      "id": "7c54658f-b4ca-41fc-a48b-928f79635dbb",
+      "timestampUtcMs": "2025-09-11T14:21:11.777Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "b96cf444-a066-4a4c-964e-00ab3c3c7b40",
+        "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
         "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
       },
       "scope": "global",
-      "id": "6dfe07f6-0f35-4143-9cb0-0076005e4a88",
+      "action": {
+        "id": "a3822098-ceee-4ec5-b76b-abeeae5a90ca",
+        "timestampUtcMs": "2025-09-11T14:21:11.775Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
+          "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "8DvwRUYCK7jgcks1mVCqDLAsAMM=",
       "index": 19,
-      "timestamp": "2025-06-11T17:06:27.372Z",
-      "hash": "+gto6s0XQgWNts7eP9ZYspyBvg0=",
       "skip": 0
     },
     {
+      "id": "120af54e-e1f4-4304-8094-6aee4c37948a",
+      "timestampUtcMs": "2025-09-11T14:21:12.399Z",
       "type": "ADD_OPERATION",
       "input": {
-        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
-        "moduleId": "8554c49a-6c76-440b-a58e-69b90e1d6645",
+        "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
+        "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
         "name": "DELETE_TODO_ITEM_INPUT"
       },
       "scope": "global",
-      "id": "935710a1-0d24-4353-8f56-472033cb0914",
+      "action": {
+        "id": "e942013b-fbb4-4278-a346-138d531a3e44",
+        "timestampUtcMs": "2025-09-11T14:21:12.397Z",
+        "type": "ADD_OPERATION",
+        "input": {
+          "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
+          "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
+          "name": "DELETE_TODO_ITEM_INPUT"
+        },
+        "scope": "global"
+      },
+      "hash": "W7CPjbL3XkJ0KYazBW0iBnGLJ8s=",
       "index": 20,
-      "timestamp": "2025-06-11T17:06:27.881Z",
-      "hash": "jXP9BqdJEfjtMC688oqxYvnH0qw=",
       "skip": 0
     },
     {
+      "id": "8a87787a-3ee0-4cf6-8e7f-2d7c45a34416",
+      "timestampUtcMs": "2025-09-11T14:21:12.413Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
         "schema": "input DeleteTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
       },
       "scope": "global",
-      "id": "cfbe6a5c-ae9b-43bf-9f56-b18629ee3dbf",
+      "action": {
+        "id": "8fa7b137-c683-4f00-a3f8-ecab893a00a2",
+        "timestampUtcMs": "2025-09-11T14:21:12.397Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
+          "schema": "input DeleteTodoItemInputInput {\n  \"Add your inputs here\"\n  _placeholder: String\n}"
+        },
+        "scope": "global"
+      },
+      "hash": "eMnwKg3XvY4A1nYKVYzGhQcwTYc=",
       "index": 21,
-      "timestamp": "2025-06-11T17:06:27.896Z",
-      "hash": "k/diqcoIRvzFm3WIcvifE9Q73ik=",
       "skip": 0
     },
     {
+      "id": "8b518a76-17bf-4903-9c03-c880b8a1b3e7",
+      "timestampUtcMs": "2025-09-11T14:21:12.543Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
         "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
       },
       "scope": "global",
-      "id": "d82dd7b3-853e-49c1-8a4b-5d4a380efb42",
+      "action": {
+        "id": "82c2b3fc-0477-4434-b78c-4099628f3efb",
+        "timestampUtcMs": "2025-09-11T14:21:12.543Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
+          "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "1yevh9wthlJc2/K6ER5u8aVXoJs=",
       "index": 22,
-      "timestamp": "2025-06-11T17:06:28.035Z",
-      "hash": "1beBrkN5N4/hZ5wT3gfZ59ZfJp0=",
       "skip": 0
     },
     {
+      "id": "642907c4-7578-4607-accc-75405249a4d7",
+      "timestampUtcMs": "2025-09-11T14:21:12.548Z",
       "type": "SET_OPERATION_SCHEMA",
       "input": {
-        "id": "4ac6ca42-328b-403e-a4d2-80e9a2f83f99",
+        "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
         "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
       },
       "scope": "global",
-      "id": "b92917fe-105c-4f92-a097-f14ceb480f66",
+      "action": {
+        "id": "c27342b4-5ae5-47c1-b7fc-24f6f8d35bc6",
+        "timestampUtcMs": "2025-09-11T14:21:12.543Z",
+        "type": "SET_OPERATION_SCHEMA",
+        "input": {
+          "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
+          "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n"
+        },
+        "scope": "global"
+      },
+      "hash": "1yevh9wthlJc2/K6ER5u8aVXoJs=",
       "index": 23,
-      "timestamp": "2025-06-11T17:06:28.035Z",
-      "hash": "1beBrkN5N4/hZ5wT3gfZ59ZfJp0=",
       "skip": 0
     }
   ],

@@ -1,32 +1,7 @@
 {
+  "auth": {},
   "document": {
-    "id": "",
-    "name": "",
-    "extension": "",
-    "description": "",
-    "author": {
-      "name": "",
-      "website": ""
-    },
-    "specifications": [
-      {
-        "version": 1,
-        "changeLog": [],
-        "state": {
-          "global": {
-            "schema": "",
-            "initialValue": "",
-            "examples": []
-          },
-          "local": {
-            "schema": "",
-            "initialValue": "",
-            "examples": []
-          }
-        },
-        "modules": []
-      }
-    ]
+    "version": "1.0.0"
   },
   "global": {
     "id": "powerhouse/todo",
@@ -55,12 +30,12 @@
         },
         "modules": [
           {
-            "id": "42a63008-0e7a-43a0-b7fb-94074e5b3b18",
+            "id": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
             "name": "base_operations",
             "description": "",
             "operations": [
               {
-                "id": "c0b09acf-8269-411f-9eb4-6ba6839690c2",
+                "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
                 "name": "ADD_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n",
@@ -71,7 +46,7 @@
                 "scope": "global"
               },
               {
-                "id": "e9cc5859-d9fb-4a98-9557-0a29c1cd6320",
+                "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
                 "name": "UPDATE_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n",
@@ -82,7 +57,7 @@
                 "scope": "global"
               },
               {
-                "id": "1ded1716-5f1e-4c04-a8ec-86ac8cd240c4",
+                "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
                 "name": "DELETE_TODO_ITEM_INPUT",
                 "description": "",
                 "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n",

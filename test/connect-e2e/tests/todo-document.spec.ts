@@ -330,6 +330,7 @@ function removeDynamicFields(obj: unknown): unknown {
     "moduleId",
     "createdAtUtcIso",
     "lastModifiedAtUtcIso",
+    "timestampUtcMs",
   ];
 
   if (!obj || typeof obj !== "object") return obj;
