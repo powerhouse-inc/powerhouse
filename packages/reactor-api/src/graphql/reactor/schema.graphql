@@ -268,3 +268,4 @@ type Subscription {
     jobId: String!
   ): JobChangeEvent!
 }
+

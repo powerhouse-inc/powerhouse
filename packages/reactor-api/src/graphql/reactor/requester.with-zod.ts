@@ -9,7 +9,7 @@ import type {
   DocumentWithChildren,
   JobInfo,
   Requester,
-} from "./generated/sdk.js";
+} from "./generated/graphql.js";
 import {
   type DocumentModelResultPage,
   type PhDocumentResultPage,

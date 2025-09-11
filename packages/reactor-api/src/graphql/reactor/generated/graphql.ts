@@ -5,6 +5,9 @@ import {
   GraphQLScalarTypeConfig,
 } from "graphql";
 import { Context } from "../../types.js";
+import { z } from "zod";
+import { DocumentNode } from "graphql";
+import gql from "graphql-tag";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -306,390 +309,6 @@ export type SubscriptionJobChangesArgs = {
 export type ViewFilterInput = {
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
   readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
-};
-
-export type PhDocumentFieldsFragment = {
-  readonly id: string;
-  readonly slug?: string | null | undefined;
-  readonly name: string;
-  readonly documentType: string;
-  readonly state: any;
-  readonly revision: number;
-  readonly created: string | Date;
-  readonly lastModified: string | Date;
-  readonly parentId?: string | null | undefined;
-};
-
-export type GetDocumentModelsQueryVariables = Exact<{
-  namespace?: InputMaybe<Scalars["String"]["input"]>;
-  paging?: InputMaybe<PagingInput>;
-}>;
-
-export type GetDocumentModelsQuery = {
-  readonly documentModels: {
-    readonly totalCount: number;
-    readonly hasNextPage: boolean;
-    readonly hasPreviousPage: boolean;
-    readonly cursor?: string | null | undefined;
-    readonly items: ReadonlyArray<{
-      readonly id: string;
-      readonly name: string;
-      readonly namespace?: string | null | undefined;
-      readonly version?: string | null | undefined;
-      readonly specification?: any | null | undefined;
-    }>;
-  };
-};
-
-export type GetDocumentQueryVariables = Exact<{
-  identifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type GetDocumentQuery = {
-  readonly document?:
-    | {
-        readonly childIds: ReadonlyArray<string>;
-        readonly document: {
-          readonly id: string;
-          readonly slug?: string | null | undefined;
-          readonly name: string;
-          readonly documentType: string;
-          readonly state: any;
-          readonly revision: number;
-          readonly created: string | Date;
-          readonly lastModified: string | Date;
-          readonly parentId?: string | null | undefined;
-        };
-      }
-    | null
-    | undefined;
-};
-
-export type GetDocumentChildrenQueryVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-  paging?: InputMaybe<PagingInput>;
-}>;
-
-export type GetDocumentChildrenQuery = {
-  readonly documentChildren: {
-    readonly totalCount: number;
-    readonly hasNextPage: boolean;
-    readonly hasPreviousPage: boolean;
-    readonly cursor?: string | null | undefined;
-    readonly items: ReadonlyArray<{
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    }>;
-  };
-};
-
-export type GetDocumentParentsQueryVariables = Exact<{
-  childIdentifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-  paging?: InputMaybe<PagingInput>;
-}>;
-
-export type GetDocumentParentsQuery = {
-  readonly documentParents: {
-    readonly totalCount: number;
-    readonly hasNextPage: boolean;
-    readonly hasPreviousPage: boolean;
-    readonly cursor?: string | null | undefined;
-    readonly items: ReadonlyArray<{
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    }>;
-  };
-};
-
-export type FindDocumentsQueryVariables = Exact<{
-  search: SearchFilterInput;
-  view?: InputMaybe<ViewFilterInput>;
-  paging?: InputMaybe<PagingInput>;
-}>;
-
-export type FindDocumentsQuery = {
-  readonly findDocuments: {
-    readonly totalCount: number;
-    readonly hasNextPage: boolean;
-    readonly hasPreviousPage: boolean;
-    readonly cursor?: string | null | undefined;
-    readonly items: ReadonlyArray<{
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    }>;
-  };
-};
-
-export type GetJobStatusQueryVariables = Exact<{
-  jobId: Scalars["String"]["input"];
-}>;
-
-export type GetJobStatusQuery = {
-  readonly jobStatus?:
-    | {
-        readonly id: string;
-        readonly status: string;
-        readonly result?: any | null | undefined;
-        readonly error?: string | null | undefined;
-        readonly createdAt: string | Date;
-        readonly completedAt?: string | Date | null | undefined;
-      }
-    | null
-    | undefined;
-};
-
-export type CreateDocumentMutationVariables = Exact<{
-  document: Scalars["JSONObject"]["input"];
-  parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
-}>;
-
-export type CreateDocumentMutation = {
-  readonly createDocument: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type CreateEmptyDocumentMutationVariables = Exact<{
-  documentType: Scalars["String"]["input"];
-  parentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
-}>;
-
-export type CreateEmptyDocumentMutation = {
-  readonly createEmptyDocument: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type MutateDocumentMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type MutateDocumentMutation = {
-  readonly mutateDocument: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type MutateDocumentAsyncMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type MutateDocumentAsyncMutation = {
-  readonly mutateDocumentAsync: string;
-};
-
-export type RenameDocumentMutationVariables = Exact<{
-  documentIdentifier: Scalars["String"]["input"];
-  name: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type RenameDocumentMutation = {
-  readonly renameDocument: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type AddChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type AddChildrenMutation = {
-  readonly addChildren: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type RemoveChildrenMutationVariables = Exact<{
-  parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type RemoveChildrenMutation = {
-  readonly removeChildren: {
-    readonly id: string;
-    readonly slug?: string | null | undefined;
-    readonly name: string;
-    readonly documentType: string;
-    readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
-    readonly parentId?: string | null | undefined;
-  };
-};
-
-export type MoveChildrenMutationVariables = Exact<{
-  sourceParentIdentifier: Scalars["String"]["input"];
-  targetParentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type MoveChildrenMutation = {
-  readonly moveChildren: {
-    readonly source: {
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    };
-    readonly target: {
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    };
-  };
-};
-
-export type DeleteDocumentMutationVariables = Exact<{
-  identifier: Scalars["String"]["input"];
-  propagate?: InputMaybe<PropagationMode>;
-}>;
-
-export type DeleteDocumentMutation = { readonly deleteDocument: boolean };
-
-export type DeleteDocumentsMutationVariables = Exact<{
-  identifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
-  propagate?: InputMaybe<PropagationMode>;
-}>;
-
-export type DeleteDocumentsMutation = { readonly deleteDocuments: boolean };
-
-export type DocumentChangesSubscriptionVariables = Exact<{
-  search: SearchFilterInput;
-  view?: InputMaybe<ViewFilterInput>;
-}>;
-
-export type DocumentChangesSubscription = {
-  readonly documentChanges: {
-    readonly type: DocumentChangeType;
-    readonly documents: ReadonlyArray<{
-      readonly id: string;
-      readonly slug?: string | null | undefined;
-      readonly name: string;
-      readonly documentType: string;
-      readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
-      readonly parentId?: string | null | undefined;
-    }>;
-    readonly context?:
-      | {
-          readonly parentId?: string | null | undefined;
-          readonly childId?: string | null | undefined;
-        }
-      | null
-      | undefined;
-  };
-};
-
-export type JobChangesSubscriptionVariables = Exact<{
-  jobId: Scalars["String"]["input"];
-}>;
-
-export type JobChangesSubscription = {
-  readonly jobChanges: {
-    readonly jobId: string;
-    readonly status: string;
-    readonly result?: any | null | undefined;
-    readonly error?: string | null | undefined;
-  };
 };
 
 export type WithIndex<TObject> = TObject & Record<string, any>;
@@ -1306,3 +925,57 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   SignerUser?: SignerUserResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
 }>;
+
+export type Requester<C = {}> = <R, V>(
+  doc: DocumentNode,
+  vars?: V,
+  options?: C,
+) => Promise<R> | AsyncIterable<R>;
+export function getSdk<C>(requester: Requester<C>) {
+  return {};
+}
+export type Sdk = ReturnType<typeof getSdk>;
+
+type Properties<T> = Required<{
+  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+}>;
+
+type definedNonNullAny = {};
+
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
+  v !== undefined && v !== null;
+
+export const definedNonNullAnySchema = z
+  .any()
+  .refine((v) => isDefinedNonNullAny(v));
+
+export const DocumentChangeTypeSchema = z.nativeEnum(DocumentChangeType);
+
+export const PropagationModeSchema = z.nativeEnum(PropagationMode);
+
+export function PagingInputSchema(): z.ZodObject<Properties<PagingInput>> {
+  return z.object({
+    cursor: z.string().nullish(),
+    limit: z.number().nullish(),
+    offset: z.number().nullish(),
+  });
+}
+
+export function SearchFilterInputSchema(): z.ZodObject<
+  Properties<SearchFilterInput>
+> {
+  return z.object({
+    identifiers: z.array(z.string()).nullish(),
+    parentId: z.string().nullish(),
+    type: z.string().nullish(),
+  });
+}
+
+export function ViewFilterInputSchema(): z.ZodObject<
+  Properties<ViewFilterInput>
+> {
+  return z.object({
+    branch: z.string().nullish(),
+    scopes: z.array(z.string()).nullish(),
+  });
+}
