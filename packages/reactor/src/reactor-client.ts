@@ -7,13 +7,14 @@ import type {
 
 import type { IReactorClient } from "./interfaces/reactor-client.js";
 import type { IReactor } from "./interfaces/reactor.js";
-import type {
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  PropagationMode,
-  SearchFilter,
-  ViewFilter,
+import {
+  JobStatus,
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type SearchFilter,
+  type ViewFilter,
 } from "./shared/types.js";
 
 /**
@@ -95,7 +96,7 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelState>> {
-    throw new Error("Method not implemented.");
+    return this.reactor.getDocumentModels(namespace, paging, signal);
   }
 
   /**
@@ -109,7 +110,13 @@ export class ReactorClient implements IReactorClient {
     document: TDocument;
     childIds: string[];
   }> {
-    throw new Error("Method not implemented.");
+    // First try to get by ID
+    try {
+      return await this.reactor.get<TDocument>(identifier, view, signal);
+    } catch (error) {
+      // If failed, try to get by slug
+      return await this.reactor.getBySlug<TDocument>(identifier, view, signal);
+    }
   }
 
   /**
@@ -145,7 +152,7 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    throw new Error("Method not implemented.");
+    return this.reactor.find(search, view, paging, signal);
   }
 
   /**
@@ -191,7 +198,36 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    throw new Error("Method not implemented.");
+    // Sign actions if signer is provided
+    let signedActions = actions;
+    if (this.signer) {
+      signedActions = await Promise.all(
+        actions.map(async (action) => {
+          const signature = await this.signer!.sign(action, signal);
+          return {
+            ...action,
+            context: {
+              ...action.context,
+              signer: {
+                user: {
+                  address: signature[0],
+                  networkId: "",
+                  chainId: 0,
+                },
+                app: {
+                  name: "",
+                  key: "",
+                },
+                signatures: [signature],
+              },
+            },
+          };
+        }),
+      );
+    }
+
+    // Note: reactor.mutate doesn't use view or signal currently
+    return this.reactor.mutate(documentIdentifier, signedActions);
   }
 
   /**
@@ -215,7 +251,20 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    throw new Error("Method not implemented.");
+    // Call reactor.addChildren to get JobInfo
+    const jobInfo = await this.reactor.addChildren(
+      parentIdentifier,
+      documentIdentifiers,
+      view,
+      signal,
+    );
+
+    // Wait for job completion
+    await this.waitForJob(jobInfo, signal);
+
+    // Fetch and return updated parent document
+    const result = await this.get<PHDocument>(parentIdentifier, view, signal);
+    return result.document;
   }
 
   /**
@@ -227,7 +276,20 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    throw new Error("Method not implemented.");
+    // Call reactor.removeChildren to get JobInfo
+    const jobInfo = await this.reactor.removeChildren(
+      parentIdentifier,
+      documentIdentifiers,
+      view,
+      signal,
+    );
+
+    // Wait for job completion
+    await this.waitForJob(jobInfo, signal);
+
+    // Fetch and return updated parent document
+    const result = await this.get<PHDocument>(parentIdentifier, view, signal);
+    return result.document;
   }
 
   /**
@@ -254,7 +316,18 @@ export class ReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // Call reactor.deleteDocument to get JobInfo
+    const jobInfo = await this.reactor.deleteDocument(
+      identifier,
+      propagate,
+      signal,
+    );
+
+    // Wait for job completion
+    await this.waitForJob(jobInfo, signal);
+
+    // Return void
+    return;
   }
 
   /**
@@ -272,7 +345,7 @@ export class ReactorClient implements IReactorClient {
    * Retrieves the status of a job
    */
   async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
-    throw new Error("Method not implemented.");
+    return this.reactor.getJobStatus(jobId, signal);
   }
 
   /**
@@ -282,7 +355,28 @@ export class ReactorClient implements IReactorClient {
     jobId: string | JobInfo,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    throw new Error("Method not implemented.");
+    const id = typeof jobId === "string" ? jobId : jobId.id;
+
+    // Poll job status until completion
+    while (true) {
+      // Check if aborted
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      const jobInfo = await this.reactor.getJobStatus(id, signal);
+
+      // Check if job is complete (success or failure)
+      if (
+        jobInfo.status === JobStatus.COMPLETED ||
+        jobInfo.status === JobStatus.FAILED
+      ) {
+        return jobInfo;
+      }
+
+      // Wait a bit before polling again
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
   }
 
   /**
