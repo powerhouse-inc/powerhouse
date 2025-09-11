@@ -3,9 +3,10 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/hooks/useOnDropFile.ts"
 unless_exists: true
 ---
 import {
-  addFile,
+  addFileWithProgress,
   useSelectedDrive,
   useSelectedFolder,
+  type FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 
@@ -15,14 +16,25 @@ export const useOnDropFile = () => {
   const selectedFolder = useSelectedFolder();
 
   const onDropFile = useCallback(
-    async (file: File) => {
-      if (!selectedDriveId) return;
+    async (file: File, onProgress?: FileUploadProgressCallback) => {
+      if (!selectedDriveId) {
+        console.warn("No selected drive - upload skipped");
+        return;
+      }
 
       const fileName = file.name.replace(/\..+/gim, "");
+      const targetNodeId = selectedFolder?.id;
 
-      return await addFile(file, selectedDriveId, fileName, selectedFolder?.id);
+      // Return the FileNode directly from addFileWithProgress
+      return await addFileWithProgress(
+        file,
+        selectedDriveId,
+        fileName,
+        targetNodeId,
+        onProgress,
+      );
     },
-    [addFile, selectedDriveId, selectedFolder],
+    [selectedDriveId, selectedFolder],
   );
 
   return onDropFile;
