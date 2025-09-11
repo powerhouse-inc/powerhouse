@@ -194,7 +194,16 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    throw new Error("Method not implemented.");
+    const jobInfo = await this.reactor.mutate(documentIdentifier, actions);
+
+    await this.waitForJob(jobInfo, signal);
+
+    const document = await this.get<TDocument>(
+      documentIdentifier,
+      view,
+      signal,
+    );
+    return document.document;
   }
 
   /**

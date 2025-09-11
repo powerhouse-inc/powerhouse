@@ -100,8 +100,8 @@ export class JobAwaiter implements IJobAwaiter {
 
   private startInterval(): void {
     if (this.intervalId === null && this.pendingJobs.size > 0) {
-      this.intervalId = setInterval(() => {
-        this.checkPendingJobs();
+      this.intervalId = setInterval(async () => {
+        await this.checkPendingJobs();
       }, this.pollIntervalMs);
       // Check immediately as well - schedule it for next tick
       setTimeout(() => this.checkPendingJobs(), 0);

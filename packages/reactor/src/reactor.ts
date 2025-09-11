@@ -311,14 +311,17 @@ export class Reactor implements IReactor {
   /**
    * Creates a document
    */
-  async create(document: PHDocument, signal?: AbortSignal): Promise<JobStatus> {
+  async create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo> {
     try {
       // BaseDocumentDriveServer uses addDocument, not createDocument
       // addDocument adds an existing document to a drive
       await this.driveServer.addDocument(document);
     } catch {
       // TODO: Phase 4 - This will return a job that can be retried
-      return JobStatus.FAILED;
+      return {
+        id: uuidv4(),
+        status: JobStatus.FAILED,
+      };
     }
 
     if (signal?.aborted) {
@@ -327,7 +330,10 @@ export class Reactor implements IReactor {
 
     // Return success status
     // TODO: Phase 4 - This will return a job that goes through the queue
-    return JobStatus.COMPLETED;
+    return {
+      id: uuidv4(),
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**

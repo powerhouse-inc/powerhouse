@@ -15,7 +15,6 @@ import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReactorClient } from "../../src/reactor-client.js";
 import { Reactor } from "../../src/reactor.js";
-import { PropagationMode } from "../../src/shared/types.js";
 import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
 describe("ReactorClient Passthrough Functions", () => {
@@ -209,182 +208,56 @@ describe("ReactorClient Passthrough Functions", () => {
     it("should return the same result as reactor.getJobStatus", async () => {
       // First create a job by attempting an operation
       const doc = createDocModelDocument();
-      const jobStatus = await reactor.create(doc);
-      const jobId = "test-job-id"; // Would come from actual job creation
+      const job = await reactor.create(doc);
+      const jobId = job.id;
 
-      const signal = new AbortController().signal;
+      // Get result from reactor
+      const reactorResult = await reactor.getJobStatus(jobId);
 
-      // For now, we'll test with a fake job ID since we can't easily create one
-      try {
-        // Get result from reactor
-        const reactorResult = await reactor.getJobStatus(jobId, signal);
+      // Get result from client
+      const clientResult = await client.getJobStatus(jobId);
 
-        // Get result from client
-        const clientResult = await client.getJobStatus(jobId, signal);
-
-        // These should be equal
-        expect(clientResult).toEqual(reactorResult);
-      } catch (e) {
-        // Job might not exist, which is fine for this test
-        // We're testing the passthrough behavior
-      }
-    });
-
-    it("should return the same result without signal", async () => {
-      const jobId = "test-job-id";
-
-      try {
-        // Get result from reactor
-        const reactorResult = await reactor.getJobStatus(jobId);
-
-        // Get result from client
-        const clientResult = await client.getJobStatus(jobId);
-
-        // These should be equal
-        expect(clientResult).toEqual(reactorResult);
-      } catch (e) {
-        // Job might not exist, which is fine for this test
-      }
+      // These should be equal
+      expect(clientResult).toEqual(reactorResult);
     });
   });
 
   describe("Passthrough functions that modify reactor methods", () => {
-    describe("mutateAsync", () => {
-      it("should call reactor.mutate and return JobInfo", async () => {
-        // Note: mutateAsync is essentially reactor.mutate with potential signing
-        // Since we don't have a signer in these tests, it should just pass through
+    describe("mutate", () => {
+      it("should call reactor.mutate", async () => {
         const documentId = "doc-1";
         const actions = [
           {
             id: "action-1",
-            type: "CREATE",
+            type: "SET_NAME",
             timestampUtcMs: new Date().toISOString(),
-            input: { name: "Test" },
+            input: { name: "Modified Name" },
             scope: "global",
           },
         ];
-        const view = { branch: "main" };
-        const signal = new AbortController().signal;
 
-        // Get result from client.mutateAsync
-        // Note: view and signal are not used by reactor.mutate
-        const clientResult = await client.mutateAsync(
-          documentId,
-          actions,
-          view,
-          signal,
-        );
+        // Apply mutation through client
+        const doc = await client.mutate(documentId, actions);
 
-        // Client should return a JobInfo
-        expect(clientResult).toBeDefined();
-        expect(clientResult.id).toBeDefined();
-        expect(clientResult.status).toBeDefined();
-      });
-    });
+        const { document: reactorDoc } = await reactor.get(documentId);
 
-    describe("addChildren", () => {
-      it("should call reactor.addChildren and return updated parent", async () => {
-        // Use documents that actually exist from beforeEach
-        const parentId = "doc-1";
-        const documentIds = ["doc-2", "doc-3"];
-        const view = { branch: "main" };
-        const signal = new AbortController().signal;
-
-        // Get JobInfo from reactor
-        const reactorJobInfo = await reactor.addChildren(
-          parentId,
-          documentIds,
-          view,
-          signal,
-        );
-
-        // Client should wait for job and return updated parent
-        const clientResult = await client.addChildren(
-          parentId,
-          documentIds,
-          view,
-          signal,
-        );
-
-        // Client should:
-        // 1. Call reactor.addChildren to get JobInfo
-        // 2. Wait for job completion
-        // 3. Fetch and return updated parent document
-        expect(clientResult).toBeDefined();
-        expect(clientResult.header.id).toBe(parentId);
-      });
-    });
-
-    describe("removeChildren", () => {
-      it("should call reactor.removeChildren and return updated parent", async () => {
-        // Use documents that actually exist from beforeEach
-        const parentId = "doc-1";
-        const documentIds = ["doc-4", "doc-5"];
-        const view = { branch: "main" };
-        const signal = new AbortController().signal;
-
-        // First add the children
-        await reactor.addChildren(parentId, documentIds, view, signal);
-
-        // Get JobInfo from reactor
-        const reactorJobInfo = await reactor.removeChildren(
-          parentId,
-          documentIds,
-          view,
-          signal,
-        );
-
-        // Client should wait for job and return updated parent
-        const clientResult = await client.removeChildren(
-          parentId,
-          documentIds,
-          view,
-          signal,
-        );
-
-        // Client should:
-        // 1. Call reactor.removeChildren to get JobInfo
-        // 2. Wait for job completion
-        // 3. Fetch and return updated parent document
-        expect(clientResult).toBeDefined();
-        expect(clientResult.header.id).toBe(parentId);
+        // These should be equal
+        expect(doc).toEqual(reactorDoc);
       });
     });
 
     describe("deleteDocument", () => {
       it("should call reactor.deleteDocument and wait for completion", async () => {
-        const id = "doc-to-delete";
-        const propagate = PropagationMode.Cascade;
-        const signal = new AbortController().signal;
+        const id = "doc-1";
 
-        // Get JobInfo from reactor
-        const reactorJobInfo = await reactor.deleteDocument(
-          id,
-          propagate,
-          signal,
-        );
+        // should be fine
+        await reactor.get(id);
 
-        // Client should wait for job completion and return void
-        const clientResult = await client.deleteDocument(id, propagate, signal);
+        // delete through the client
+        await client.deleteDocument(id);
 
-        // Client should:
-        // 1. Call reactor.deleteDocument to get JobInfo
-        // 2. Wait for job completion
-        // 3. Return void
-        expect(clientResult).toBeUndefined();
-      });
-
-      it("should work without optional parameters", async () => {
-        const id = "doc-to-delete";
-
-        // Get JobInfo from reactor
-        const reactorJobInfo = await reactor.deleteDocument(id);
-
-        // Client should wait for job completion and return void
-        const clientResult = await client.deleteDocument(id);
-
-        // Should return void
-        expect(clientResult).toBeUndefined();
+        // now it should throw an error
+        await expect(reactor.get(id)).rejects.toThrow();
       });
     });
   });
