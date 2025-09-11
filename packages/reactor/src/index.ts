@@ -2,6 +2,13 @@
 export { type IReactorClient } from "./interfaces/reactor-client.js";
 export { type IReactor } from "./interfaces/reactor.js";
 export { Reactor } from "./reactor.js";
+export {
+  ReactorClient,
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type ISigner,
+  type IReactorSubscriptionManager,
+} from "./reactor-client.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,
