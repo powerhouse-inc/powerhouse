@@ -5,7 +5,7 @@ export { ReactorSubgraph } from "./index.js";
 export { createReactorSdk } from "./sdk.factory.js";
 
 // DTO exports
-export * from "./dtos.js";
+export * from "./validation.js";
 
 // Operation exports
 export * from "./operations.js";

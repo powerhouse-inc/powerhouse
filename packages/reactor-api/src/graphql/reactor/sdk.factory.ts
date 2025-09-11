@@ -1,4 +1,4 @@
-import { getSdk } from "./generated/sdk.js";
+import { getSdk } from "./generated/graphql.js";
 import { type FetchLike } from "./requester.js";
 import { createValidatingRequester } from "./requester.with-zod.js";
 

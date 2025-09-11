@@ -1,20 +1,17 @@
 import { Kind, type DocumentNode, type OperationDefinitionNode } from "graphql";
-import {
-  toDocumentModelResultPageDTO,
-  toDocumentWithChildrenDTO,
-  toJobInfoDTO,
-  toPHDocumentResultPageDTO,
-} from "./dtos.js";
 import type {
-  DocumentWithChildren,
+  DocumentModelResultPage,
   JobInfo,
+  PhDocumentResultPage,
   Requester,
 } from "./generated/graphql.js";
-import {
-  type DocumentModelResultPage,
-  type PhDocumentResultPage,
-} from "./operations.js";
 import { createFetchRequester, type FetchLike } from "./requester.js";
+import {
+  DocumentModelResultPageDTO,
+  DocumentWithChildrenDTO,
+  JobInfoDTO,
+  PHDocumentResultPageDTO,
+} from "./validation.js";
 
 export function createValidatingRequester(
   url: string,
@@ -42,40 +39,40 @@ export function createValidatingRequester(
       switch (operationName) {
         case "GetDocument":
           if (dataObj.document) {
-            toDocumentWithChildrenDTO(dataObj.document as DocumentWithChildren);
+            DocumentWithChildrenDTO.parse(dataObj.document);
           }
           break;
         case "GetDocumentModels":
           if (dataObj.documentModels) {
-            toDocumentModelResultPageDTO(
+            DocumentModelResultPageDTO.parse(
               dataObj.documentModels as DocumentModelResultPage,
             );
           }
           break;
         case "GetDocumentChildren":
           if (dataObj.documentChildren) {
-            toPHDocumentResultPageDTO(
+            PHDocumentResultPageDTO.parse(
               dataObj.documentChildren as PhDocumentResultPage,
             );
           }
           break;
         case "GetDocumentParents":
           if (dataObj.documentParents) {
-            toPHDocumentResultPageDTO(
+            PHDocumentResultPageDTO.parse(
               dataObj.documentParents as PhDocumentResultPage,
             );
           }
           break;
         case "FindDocuments":
           if (dataObj.findDocuments) {
-            toPHDocumentResultPageDTO(
+            PHDocumentResultPageDTO.parse(
               dataObj.findDocuments as PhDocumentResultPage,
             );
           }
           break;
         case "GetJobStatus":
           if (dataObj.jobStatus) {
-            toJobInfoDTO(dataObj.jobStatus as JobInfo);
+            JobInfoDTO.parse(dataObj.jobStatus as JobInfo);
           }
           break;
         // Mutations and other operations can be added here as needed
