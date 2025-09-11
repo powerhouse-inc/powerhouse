@@ -84,6 +84,7 @@
     "devcert": "^1.2.2",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",

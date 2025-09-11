@@ -7,15 +7,15 @@
     "directory": "packages/reactor"
   },
   "type": "module",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/src/index.js"
   },
   "imports": {
     "#*": "./dist/src/*"
   },
   "files": [
-    "./dist"
+    "./dist/src"
   ],
   "scripts": {
     "build": "pnpm run build:tsc",
