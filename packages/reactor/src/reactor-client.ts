@@ -7,8 +7,8 @@ import type {
 
 import type { IReactorClient } from "./interfaces/reactor-client.js";
 import type { IReactor } from "./interfaces/reactor.js";
+import { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 import {
-  JobStatus,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
@@ -77,15 +77,23 @@ export class ReactorClient implements IReactorClient {
   private reactor: IReactor;
   private signer?: ISigner;
   private subscriptionManager?: IReactorSubscriptionManager;
+  private jobAwaiter: IJobAwaiter;
 
   constructor(
     reactor: IReactor,
     signer?: ISigner,
     subscriptionManager?: IReactorSubscriptionManager,
+    jobAwaiter?: IJobAwaiter,
   ) {
     this.reactor = reactor;
     this.signer = signer;
     this.subscriptionManager = subscriptionManager;
+    // Use provided jobAwaiter or create default one
+    this.jobAwaiter =
+      jobAwaiter ||
+      new JobAwaiter((jobId, signal) =>
+        this.reactor.getJobStatus(jobId, signal),
+      );
   }
 
   /**
@@ -356,27 +364,7 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const id = typeof jobId === "string" ? jobId : jobId.id;
-
-    // Poll job status until completion
-    while (true) {
-      // Check if aborted
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      const jobInfo = await this.reactor.getJobStatus(id, signal);
-
-      // Check if job is complete (success or failure)
-      if (
-        jobInfo.status === JobStatus.COMPLETED ||
-        jobInfo.status === JobStatus.FAILED
-      ) {
-        return jobInfo;
-      }
-
-      // Wait a bit before polling again
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    return this.jobAwaiter.waitForJob(id, signal);
   }
 
   /**

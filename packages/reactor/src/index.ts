@@ -9,6 +9,7 @@ export {
   type ISigner,
   type IReactorSubscriptionManager,
 } from "./reactor-client.js";
+export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,
