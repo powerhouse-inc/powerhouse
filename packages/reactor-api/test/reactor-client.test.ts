@@ -1,7 +1,6 @@
 import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReactorClient } from "../src/graphql/reactor/factory.js";
-import { GetDocumentDocument } from "../src/graphql/reactor/operations.js";
 import {
   createFetchRequester,
   type FetchLike,
@@ -216,14 +215,14 @@ describe("ReactorSDK", () => {
     });
   });
 
-  describe("createReactorSdk integration", () => {
+  describe("createReactorClient integration", () => {
     let mockFetch: FetchLike;
 
     beforeEach(() => {
       mockFetch = vi.fn();
     });
 
-    it("should create SDK with typed methods", async () => {
+    it("should create client with typed methods", async () => {
       const validDocumentResponse = {
         document: {
           document: {
@@ -257,7 +256,7 @@ describe("ReactorSDK", () => {
 
       // Test that SDK has the expected methods
       expect(sdk).toHaveProperty("GetDocument");
-      expect(typeof sdk.GetDocument).toBe("function");
+      expect(typeof sdk).toBe("function");
 
       // Test actual call
       const result = await sdk.GetDocument({

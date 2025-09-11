@@ -2,20 +2,15 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
   schema: "./src/graphql/reactor/*.graphql",
+  documents: ["./src/graphql/reactor/operations.graphql"],
   generates: {
     "./src/graphql/reactor/gen/graphql.ts": {
       plugins: [
-        {
-          add: {
-            content: "/* eslint-disable */",
-          },
-        },
         "typescript",
         "typescript-operations",
         "typescript-resolvers",
-        "typescript-generic-sdk",
-        "typed-document-node",
         "typescript-validation-schema",
+        "typescript-generic-sdk",
       ],
       config: {
         contextType: "../../types.js#Context",
@@ -35,6 +30,7 @@ const config: CodegenConfig = {
         immutableTypes: true,
         maybeValue: "T | null | undefined",
         schema: "zod",
+        gqlImport: "graphql-tag#gql",
       },
     },
   },

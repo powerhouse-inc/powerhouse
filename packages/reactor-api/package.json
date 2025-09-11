@@ -28,7 +28,7 @@
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/generated/*.ts && eslint --fix src/graphql/reactor/generated/*.ts",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch"
   },
   "publishConfig": {
