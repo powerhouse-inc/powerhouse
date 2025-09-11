@@ -129,7 +129,7 @@ export class InMemoryQueue implements IQueue {
     await this.eventBus.emit(QueueEventTypes.JOB_AVAILABLE, eventData);
   }
 
-  async dequeue(
+  dequeue(
     documentId: string,
     scope: string,
     branch: string,
@@ -138,14 +138,18 @@ export class InMemoryQueue implements IQueue {
     const queueKey = this.createQueueKey(documentId, scope, branch);
     const queue = this.queues.get(queueKey);
 
+    if (signal?.aborted) {
+      return Promise.reject(new Error("Operation aborted"));
+    }
+
     if (!queue || queue.length === 0) {
-      return null;
+      return Promise.resolve(null);
     }
 
     // Find the first job with met dependencies
     const job = this.getNextJobWithMetDependencies(queue);
     if (!job) {
-      return null; // No job with met dependencies
+      return Promise.resolve(null);
     }
 
     // Remove job from queue
@@ -168,18 +172,22 @@ export class InMemoryQueue implements IQueue {
       onStart: () => {
         // Job is now running
       },
-      onComplete: () => {
-        this.completeJob(job.id);
+      onComplete: async () => {
+        await this.completeJob(job.id);
       },
-      onFail: (reason: string) => {
-        this.failJob(job.id, reason);
+      onFail: async (reason: string) => {
+        await this.failJob(job.id, reason);
       },
     });
 
-    return handle;
+    return Promise.resolve(handle);
   }
 
-  async dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null> {
+  dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null> {
+    if (signal?.aborted) {
+      return Promise.reject(new Error("Operation aborted"));
+    }
+
     // Find the first non-empty queue for a document that's not currently executing
     for (const [queueKey, queue] of this.queues.entries()) {
       if (queue.length > 0) {
@@ -212,44 +220,40 @@ export class InMemoryQueue implements IQueue {
             onStart: () => {
               // Job is now running
             },
-            onComplete: () => {
-              this.completeJob(job.id);
+            onComplete: async () => {
+              await this.completeJob(job.id);
             },
-            onFail: (reason: string) => {
-              this.failJob(job.id, reason);
+            onFail: async (reason: string) => {
+              await this.failJob(job.id, reason);
             },
           });
 
-          return handle;
+          return Promise.resolve(handle);
         }
       }
     }
 
-    return null;
+    return Promise.resolve(null);
   }
 
-  async size(
-    documentId: string,
-    scope: string,
-    branch: string,
-  ): Promise<number> {
+  size(documentId: string, scope: string, branch: string): Promise<number> {
     const queueKey = this.createQueueKey(documentId, scope, branch);
     const queue = this.queues.get(queueKey);
-    return queue ? queue.length : 0;
+    return Promise.resolve(queue ? queue.length : 0);
   }
 
-  async totalSize(): Promise<number> {
+  totalSize(): Promise<number> {
     let total = 0;
     for (const queue of this.queues.values()) {
       total += queue.length;
     }
-    return total;
+    return Promise.resolve(total);
   }
 
-  async remove(jobId: string): Promise<boolean> {
+  remove(jobId: string): Promise<boolean> {
     const queueKey = this.jobIdToQueueKey.get(jobId);
     if (!queueKey) {
-      return false;
+      return Promise.resolve(false);
     }
 
     const queue = this.queues.get(queueKey);
@@ -257,7 +261,7 @@ export class InMemoryQueue implements IQueue {
       // Clean up orphaned index entry
       this.jobIdToQueueKey.delete(jobId);
       this.jobIndex.delete(jobId);
-      return false;
+      return Promise.resolve(false);
     }
 
     const jobIdx = queue.findIndex((job) => job.id === jobId);
@@ -265,7 +269,7 @@ export class InMemoryQueue implements IQueue {
       // Clean up orphaned index entry
       this.jobIdToQueueKey.delete(jobId);
       this.jobIndex.delete(jobId);
-      return false;
+      return Promise.resolve(false);
     }
 
     // Remove job from queue
@@ -280,14 +284,10 @@ export class InMemoryQueue implements IQueue {
       this.queues.delete(queueKey);
     }
 
-    return true;
+    return Promise.resolve(true);
   }
 
-  async clear(
-    documentId: string,
-    scope: string,
-    branch: string,
-  ): Promise<void> {
+  clear(documentId: string, scope: string, branch: string): Promise<void> {
     const queueKey = this.createQueueKey(documentId, scope, branch);
     const queue = this.queues.get(queueKey);
 
@@ -301,9 +301,11 @@ export class InMemoryQueue implements IQueue {
       // Remove the queue
       this.queues.delete(queueKey);
     }
+
+    return Promise.resolve();
   }
 
-  async clearAll(): Promise<void> {
+  clearAll(): Promise<void> {
     // Clear all job indices
     this.jobIdToQueueKey.clear();
     this.jobIndex.clear();
@@ -311,12 +313,14 @@ export class InMemoryQueue implements IQueue {
 
     // Clear all queues
     this.queues.clear();
+
+    return Promise.resolve();
   }
 
-  async hasJobs(): Promise<boolean> {
-    return (
+  hasJobs(): Promise<boolean> {
+    return Promise.resolve(
       this.queues.size > 0 &&
-      Array.from(this.queues.values()).some((q) => q.length > 0)
+        Array.from(this.queues.values()).some((q) => q.length > 0),
     );
   }
 
@@ -350,6 +354,12 @@ export class InMemoryQueue implements IQueue {
       this.markJobComplete(jobId, documentId);
     }
 
+    // update the job lastError
+    const job = this.jobIndex.get(jobId);
+    if (job) {
+      job.lastError = error;
+    }
+
     // Remove from job index
     this.jobIndex.delete(jobId);
 
@@ -367,6 +377,9 @@ export class InMemoryQueue implements IQueue {
     if (!job) {
       return;
     }
+
+    // update the job lastError
+    job.lastError = error;
 
     // Mark it as no longer executing if it was
     const documentId = this.jobIdToDocId.get(jobId);

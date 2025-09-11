@@ -28,7 +28,7 @@
     "bench": "vitest bench",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/generated/*.ts && eslint --fix src/graphql/reactor/generated/*.ts",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch"
   },
   "publishConfig": {
@@ -84,6 +84,7 @@
     "devcert": "^1.2.2",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
