@@ -59,23 +59,26 @@ export type IDriveContext = {
   showDeleteNodeModal: (node: Node) => void;
 };
 
+export type DriveEditorConfig = {
+  id: string;
+  name?: string;
+  disableExternalControls?: boolean;
+  documentToolbarEnabled?: boolean;
+  showSwitchboardLink?: boolean;
+  dragAndDrop?: {
+    enabled?: boolean;
+    documentTypes?: string[];
+  };
+};
+
 export type DriveEditorProps = {
   document: PHDocument;
   context: IDriveContext;
+  editorConfig?: DriveEditorConfig;
 };
 
 export type DriveEditorModule = {
   Component: FC<DriveEditorProps>;
   documentTypes: string[];
-  config: {
-    id: string;
-    name?: string;
-    disableExternalControls?: boolean;
-    documentToolbarEnabled?: boolean;
-    showSwitchboardLink?: boolean;
-    dragAndDrop?: {
-      enabled?: boolean;
-      documentTypes?: string[];
-    };
-  };
+  config: DriveEditorConfig;
 };
