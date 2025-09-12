@@ -43,7 +43,7 @@ export async function renameFolder(
   await page.getByRole("menu").first().waitFor({ state: "visible" });
 
   // Click Rename option
-  await page.click("text=Rename");
+  await page.getByRole("menuitem", { name: "Rename" }).click();
 
   // Fill in the new name and press Enter
   await page.fill('input[type="text"]', newName);

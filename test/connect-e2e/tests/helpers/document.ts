@@ -110,9 +110,11 @@ export async function createDocumentAndFillBasicData(
 
     await page.getByText("Global State Schema").first().click();
 
+    await page.waitForTimeout(500);
+
     await page.locator(".cm-content").nth(1).fill(data.global.initialState);
 
-    await page.getByText("Global State Schema").first().click();
+    await page.getByText("global state initial value").first().click();
     await page.waitForTimeout(500);
   }
 

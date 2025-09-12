@@ -16,6 +16,7 @@ export const REACTOR_URL = "http://127.0.0.1:4001";
  */
 export default defineConfig({
   testDir: "./tests",
+  outputDir: "test-results",
   /* Global setup and teardown for codegen */
   globalSetup: "./global-setup.ts",
   globalTeardown: "./global-teardown.ts",
@@ -34,9 +35,12 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: "http://127.0.0.1:3000",
 
+    acceptDownloads: true,
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
-    acceptDownloads: true,
+    video: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
 
   /* Configure projects for major browsers */
