@@ -1,7 +1,7 @@
-// import { connectConfig } from "@powerhousedao/connect/config";
+import { connectConfig } from "@powerhousedao/connect/config";
 import { useSyncExternalStore } from "react";
 
-const namespace = "test";
+const namespace = connectConfig.routerBasename;
 
 const ACCEPTED_COOKIES_KEY_STORAGE = `${namespace}:acceptedCookies`;
 
