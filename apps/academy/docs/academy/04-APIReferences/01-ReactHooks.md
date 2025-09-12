@@ -45,30 +45,6 @@ Learn more about the [Drive Editors](/academy/MasteryTrack/BuildingUserExperienc
 
 All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents. Learn more about the [Reactor](/academy/Architecture/WorkingWithTheReactor)
 
-### Selected drives, folders and documents
-
-In the application, there are certain items that can be set as "selected".
-
-- selected drive
-- selected folder
-- selected document
-
-We provide hooks for getting the selected item for each:
-
-`useSelectedDrive`
-`useSelectedFolder`
-`useSelectedDocument`
-
-Folders and documents are part of a given drive, so they will both be undefined if the selected drive is undefined.
-
-_Either_ a folder or a document can be selected but not both, so if one is defined then the other will be undefined.
-
-To set the selected drive, we provide a function `setSelectedDrive` which takes either a `DocumentDriveDocument` or a `DocumentDriveDocument['header']['slug']`.
-
-To set the selected document/folder, we provide a function `setSelectedNode` which returns a setter function which can be used for _both_ documents and folders. This function takes either a `Node` or a slug which can be the url slug or the node's id.
-
-## Hooks
-
 <details>
 <summary>useReactor</summary>
 
@@ -186,7 +162,7 @@ function useDriveSharingType(
   driveId: string | null | undefined,
 ): SharingType | undefined;
 
-/** Returns  whether a drive is available offline. */
+/** Returns whether a drive is available offline. */
 function useDriveAvailableOffline(driveId: string | null | undefined): boolean;
 ```
 
