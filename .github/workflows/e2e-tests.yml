@@ -53,9 +53,9 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/connect-e2e
 
-      - name: Start Connect
-        run: npx nx run connect-e2e:connect &
-        shell: bash
+      # - name: Start Connect
+      #   run: npx nx run connect-e2e:connect &
+      #   shell: bash
 
       - name: Wait for Connect to be ready
         run: |
