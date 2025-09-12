@@ -104,7 +104,6 @@ export const selectSidebarItem = (item: string) => {
 
 export const addPublicDrive = (url: string) => {
   cy.intercept("POST", url, (req) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (req.body.operationName === "getDrive") {
       req.alias = "graphqlQuery";
     }

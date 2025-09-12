@@ -1,5 +1,5 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
-import {
+import type {
+  Action,
   AddOperationErrorInput,
   DeleteOperationErrorInput,
   ReorderOperationErrorsInput,
@@ -7,7 +7,7 @@ import {
   SetOperationErrorDescriptionInput,
   SetOperationErrorNameInput,
   SetOperationErrorTemplateInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type AddOperationErrorAction = Action & {
   type: "ADD_OPERATION_ERROR";

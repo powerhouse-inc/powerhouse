@@ -1,6 +1,6 @@
 import { generateManifest, generateSubgraph } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { InternalTransmitterUpdate } from "document-drive";
 import type { SubgraphModuleState } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";

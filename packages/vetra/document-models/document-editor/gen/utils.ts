@@ -1,72 +1,55 @@
+import type { DocumentModelUtils } from "document-model";
 import {
-  type CreateDocument,
-  type CreateState,
-  type LoadFromFile,
-  type LoadFromInput,
   baseCreateDocument,
-  baseSaveToFile,
   baseSaveToFileHandle,
-  baseLoadFromFile,
   baseLoadFromInput,
   defaultBaseState,
   generateId,
 } from "document-model";
-import {
-  type DocumentEditorState,
-  type DocumentEditorLocalState,
+import type {
+  DocumentEditorGlobalState,
+  DocumentEditorLocalState,
 } from "./types.js";
-import { DocumentEditorPHState } from "./ph-factories.js";
+import type { DocumentEditorPHState } from "./types.js";
 import { reducer } from "./reducer.js";
 
-export const initialGlobalState: DocumentEditorState = {
+export const initialGlobalState: DocumentEditorGlobalState = {
   name: "",
   documentTypes: [],
   status: "DRAFT",
 };
 export const initialLocalState: DocumentEditorLocalState = {};
 
-export const createState: CreateState<DocumentEditorPHState> = (state) => {
-  return {
-    ...defaultBaseState(),
-    global: { ...initialGlobalState, ...(state?.global ?? {}) },
-    local: { ...initialLocalState, ...(state?.local ?? {}) },
-  };
-};
-
-export const createDocument: CreateDocument<DocumentEditorPHState> = (
-  state,
-) => {
-  const document = baseCreateDocument(createState, state);
-  document.header.documentType = "powerhouse/document-editor";
-  // for backwards compatibility, but this is NOT a valid signed document id
-  document.header.id = generateId();
-  return document;
-};
-
-export const saveToFile = (document: any, path: string, name?: string) => {
-  return baseSaveToFile(document, path, ".phdm", name);
-};
-
-export const saveToFileHandle = (document: any, input: any) => {
-  return baseSaveToFileHandle(document, input);
-};
-
-export const loadFromFile: LoadFromFile<DocumentEditorPHState> = (path) => {
-  return baseLoadFromFile(path, reducer);
-};
-
-export const loadFromInput: LoadFromInput<DocumentEditorPHState> = (input) => {
-  return baseLoadFromInput(input, reducer);
-};
-
-const utils = {
+const utils: DocumentModelUtils<DocumentEditorPHState> = {
   fileExtension: ".phdm",
-  createState,
-  createDocument,
-  saveToFile,
-  saveToFileHandle,
-  loadFromFile,
-  loadFromInput,
+  createState(state) {
+    return {
+      ...defaultBaseState(),
+      global: { ...initialGlobalState, ...state?.global },
+      local: { ...initialLocalState, ...state?.local },
+    };
+  },
+  createDocument(state) {
+    const document = baseCreateDocument(utils.createState, state);
+
+    document.header.documentType = "powerhouse/document-editor";
+
+    // for backwards compatibility, but this is NOT a valid signed document id
+    document.header.id = generateId();
+
+    return document;
+  },
+  saveToFileHandle(document, input) {
+    return baseSaveToFileHandle(document, input);
+  },
+  loadFromInput(input) {
+    return baseLoadFromInput(input, reducer);
+  },
 };
+
+export const createDocument = utils.createDocument;
+export const createState = utils.createState;
+export const saveToFileHandle = utils.saveToFileHandle;
+export const loadFromInput = utils.loadFromInput;
 
 export default utils;

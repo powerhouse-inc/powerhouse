@@ -1,8 +1,8 @@
-import { Subgraph } from "@powerhousedao/reactor-api";
-import { schema } from "./schema.js";
+import { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { getResolvers } from "./resolvers.js";
+import { schema } from "./schema.js";
 
-export class DocumentEditorSubgraph extends Subgraph {
+export class DocumentEditorSubgraph extends BaseSubgraph {
   name = "document-editor";
   typeDefs = schema;
   resolvers = getResolvers(this);

@@ -1,4 +1,4 @@
-import { wagmiConfig as defaultWagmiConfig } from "#services";
+import { wagmiConfig as defaultWagmiConfig } from "@powerhousedao/design-system";
 import type { QueryClientProviderProps } from "@tanstack/react-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";

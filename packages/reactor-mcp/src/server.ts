@@ -1,6 +1,6 @@
-import { createReactorMcpProvider } from "#tools/reactor.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { IDocumentDriveServer } from "document-drive";
+import { createReactorMcpProvider } from "./tools/reactor.js";
 
 export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
 There are 5 main concepts to know of: 
@@ -66,7 +66,6 @@ export async function createServer(
   // server.registerTool("getDocumentModels", toolSchema, callback);
   Object.entries(reactorProvider.tools).forEach(
     ([toolName, { callback, ...schema }]) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       server.registerTool(toolName, schema as any, callback as any);
     },
   );

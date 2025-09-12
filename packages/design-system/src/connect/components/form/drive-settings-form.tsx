@@ -4,13 +4,14 @@ import {
   Disclosure,
   Divider,
   DriveNameInput,
+  Icon,
   Label,
   LocationInfo,
+  PowerhouseButton,
   PUBLIC,
   SharingTypeFormInput,
   SWITCHBOARD,
-} from "#connect";
-import { Button, Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
@@ -92,9 +93,9 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
       ) : (
         <>
           <Divider className="my-3" />
-          <Button className="mb-4 w-full" type="submit">
+          <PowerhouseButton className="mb-4 w-full" type="submit">
             Confirm
-          </Button>
+          </PowerhouseButton>
         </>
       )}
     </form>

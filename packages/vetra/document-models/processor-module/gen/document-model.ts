@@ -1,6 +1,6 @@
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 
-export const documentModel: DocumentModelState = {
+export const documentModel: DocumentModelGlobalState = {
   id: "powerhouse/processor",
   name: "Processor Module",
   extension: ".phdm",

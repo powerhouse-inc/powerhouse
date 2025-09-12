@@ -1,7 +1,8 @@
+import { isLogLevel } from "@powerhousedao/config";
 import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
-import { isLogLevel, logger, setLogLevel } from "document-drive/utils/logger";
-import pkg from "../package.json" with { type: "json" };
-import { getBasePath } from "./utils/browser";
+import { logger, setLogLevel } from "document-drive";
+import pkg from "../package.copy.json" with { type: "json" };
+import { getBasePath } from "@powerhousedao/connect";
 
 const version = pkg.version;
 const APP_VERSION = import.meta.env.APP_VERSION || version;
@@ -70,7 +71,7 @@ const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
 setLogLevel(LOG_LEVEL);
 logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
-export default {
+export const connectConfig = {
   appVersion: APP_VERSION,
   studioMode: PH_CONNECT_STUDIO_MODE.toString() === "true",
   warnOutdatedApp: WARN_OUTDATED_APP === "true",
@@ -115,4 +116,4 @@ export default {
   },
   gaTrackingId: GA_TRACKING_ID,
   phCliVersion: PH_CONNECT_CLI_VERSION,
-};
+} as const;

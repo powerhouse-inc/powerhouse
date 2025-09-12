@@ -20,7 +20,7 @@ export class DocumentCodegenFactory {
    */
   static createManager(
     config: Config,
-    interactiveMode = false,
+    interactiveMode: boolean = false,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 
@@ -47,7 +47,7 @@ export class DocumentCodegenFactory {
   static createManagerWithGenerators(
     config: Config,
     generators: Array<new (config: Config) => any>,
-    interactiveMode = false,
+    interactiveMode: boolean = false,
   ): DocumentCodegenManager {
     const manager = new DocumentCodegenManager(config, interactiveMode);
 

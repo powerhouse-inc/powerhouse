@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 
 export type OperationProps = {
   readonly operationType: string;
@@ -16,11 +15,11 @@ export function Operation(props: OperationProps) {
   );
 
   return (
-    <Tooltip content={tooltipContent}>
+    <ConnectTooltip content={tooltipContent}>
       <span className="flex cursor-pointer items-center gap-2 text-xs">
         {operationType}
         <Icon className="text-gray-300" name="Braces" size={16} />
       </span>
-    </Tooltip>
+    </ConnectTooltip>
   );
 }

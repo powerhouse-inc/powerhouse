@@ -1,4 +1,4 @@
-import type { ActionOutputFor } from "#rwa";
+import type { ActionOutputFor } from "@powerhousedao/design-system";
 import {
   mockAccounts,
   mockFixedIncomes,
@@ -10,7 +10,7 @@ import {
   mockStateWithData,
   RWAEditor,
   RWAEditorContextProvider,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
@@ -68,7 +68,7 @@ export const WithoutData: Story = {
           transactions: [
             ...prev.transactions,
             {
-              ...mockGroupTransactions[0],
+              ...mockGroupTransactions()[0],
               id: `new-${Date.now()}`,
             },
           ],
@@ -155,7 +155,7 @@ export const WithManyItems: Story = {
       transactions: [
         ...mockStateWithData.transactions,
         ...Array.from({ length: 100 }, (_, i) => ({
-          ...mockGroupTransactions[0],
+          ...mockGroupTransactions()[0],
           id: `new-${i}`,
         })),
       ],

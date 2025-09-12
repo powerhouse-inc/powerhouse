@@ -1,21 +1,21 @@
-import type { PHBaseState } from "#document/ph-types.js";
+import type {
+  Action,
+  LoadStateAction,
+  NOOPAction,
+  PHBaseState,
+  RedoAction,
+  SchemaPruneAction,
+  SetNameAction,
+  UndoAction,
+} from "document-model";
 import {
+  createAction,
   LoadStateActionInputSchema,
   PruneActionInputSchema,
   RedoActionInputSchema,
   SetNameActionInputSchema,
   UndoActionInputSchema,
-} from "../schema/zod.js";
-import type { Action } from "../types.js";
-import { createAction } from "../utils/base.js";
-import type {
-  LoadStateAction,
-  NOOPAction,
-  PruneAction,
-  RedoAction,
-  SetNameAction,
-  UndoAction,
-} from "./types.js";
+} from "document-model";
 
 /**
  * Changes the name of the document.
@@ -73,12 +73,8 @@ export const redo = (count = 1, scope = "global") =>
  * @param end - Index of the last operation to prune
  * @category Actions
  */
-export const prune = (
-  start?: number | undefined,
-  end?: number | undefined,
-  scope = "global",
-) =>
-  createAction<PruneAction>(
+export const prune = (start?: number, end?: number, scope = "global") =>
+  createAction<SchemaPruneAction>(
     "PRUNE",
     { start, end },
     undefined,

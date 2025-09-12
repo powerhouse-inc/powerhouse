@@ -1,5 +1,8 @@
-import type { PageItem, UsePaginationBaseResult } from "#powerhouse";
-import { Icon } from "#powerhouse";
+import type {
+  PageItem,
+  UsePaginationBaseResult,
+} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import { PaginationButton } from "./pagination-button.js";
 
 export type PaginationEvent = {

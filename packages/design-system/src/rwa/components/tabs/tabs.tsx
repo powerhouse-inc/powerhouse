@@ -1,10 +1,10 @@
-import { EditorActionButtons } from "#connect";
 import {
+  EditorActionButtons,
   OtherTab,
   PortfolioTab,
   TransactionsTab,
   useEditorContext,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
 

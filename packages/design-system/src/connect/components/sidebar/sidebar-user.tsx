@@ -1,4 +1,4 @@
-import { ENSAvatar } from "#connect";
+import { ENSAvatar } from "@powerhousedao/design-system";
 import { useEnsName } from "wagmi";
 import {
   AccountPopover,

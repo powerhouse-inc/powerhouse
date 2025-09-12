@@ -1,9 +1,9 @@
-import type { Module } from "document-model";
+import type { ModuleSpecification } from "document-model";
 import { useCallback, useId, useState } from "react";
 import { OperationErrorForm } from "./operation-error-form.js";
 
 type Props = {
-  operation: Module["operations"][number];
+  operation: ModuleSpecification["operations"][number];
   addOperationError: (
     operationId: string,
     errorName: string,

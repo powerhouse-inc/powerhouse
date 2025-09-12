@@ -1,7 +1,13 @@
-import type { AddLocalDriveInput } from "#connect";
-import { AddLocalDriveForm, Divider } from "#connect";
-import type { DivProps } from "#powerhouse";
-import { Icon, Modal } from "#powerhouse";
+import type {
+  AddLocalDriveInput,
+  DivProps,
+} from "@powerhousedao/design-system";
+import {
+  AddLocalDriveForm,
+  Divider,
+  Icon,
+  Modal,
+} from "@powerhousedao/design-system";
 import type { App } from "document-model";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

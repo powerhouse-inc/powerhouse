@@ -1,17 +1,20 @@
-import { addFolder } from "#drive-document-model/gen/creators";
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { EventQueueManager } from "#queue/event";
-import { IQueueManager } from "#queue/types";
-import { ReactorBuilder } from "#server/builder";
-import { MemoryStorage } from "#storage/memory";
+import {
+  addFolder,
+  buildOperations,
+  driveCreateDocument,
+  driveDocumentModelModule,
+  EventQueueManager,
+  type IQueueManager,
+  MemoryStorage,
+  ReactorBuilder,
+} from "document-drive";
 import {
   createPresignedHeader,
   documentModelDocumentModelModule,
-  DocumentModelModule,
+  type DocumentModelModule,
   generateId,
 } from "document-model";
-import { bench, BenchOptions, describe } from "vitest";
-import { buildOperations } from "../utils.js";
+import { bench, type BenchOptions, describe } from "vitest";
 
 const documentModels = [
   driveDocumentModelModule,
@@ -26,12 +29,12 @@ const BENCH_OPTIONS: BenchOptions = {
 
 describe("Process Operations", () => {
   const driveId = generateId();
-  const driveDocument = driveDocumentModelModule.utils.createDocument();
+  const driveDocument = driveCreateDocument();
   const header = createPresignedHeader(
     driveId,
     driveDocument.header.documentType,
   );
-  const drive = driveDocumentModelModule.utils.createDocument();
+  const drive = driveCreateDocument();
   drive.header = header;
   const operations = buildOperations(
     driveDocumentModelModule.reducer,

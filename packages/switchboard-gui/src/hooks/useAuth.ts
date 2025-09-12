@@ -1,5 +1,5 @@
 import { jwtDecode } from "jwt-decode";
-import useWallet from "./useWallet";
+import useWallet from "./useWallet.js";
 import { create } from "zustand";
 import {
   ApolloClient,
@@ -7,7 +7,7 @@ import {
   createHttpLink,
   gql,
 } from "@apollo/client";
-import { useEffect } from "react";
+import { useEffect } from "preact/hooks";
 import { setContext } from "@apollo/client/link/context";
 // import { env } from '../../env';
 
@@ -83,8 +83,6 @@ const useAuth = () => {
   const httpLink = createHttpLink({
     uri: "/system",
   });
-
-  /* eslint-disable */
 
   const authLink = setContext((_, { headers }) => {
     return {

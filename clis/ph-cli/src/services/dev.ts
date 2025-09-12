@@ -1,10 +1,10 @@
-import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
 import { blue, green, red } from "colorette";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getConfig } from "../utils.js";
+import { getConfig } from "@powerhousedao/config/node";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
@@ -29,7 +29,6 @@ function spawnLocalSwitchboard(options?: ReactorOptions) {
 
   return new Promise<{ driveUrl: string }>((resolve) => {
     child.on("message", (message) => {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       const text = message.toString();
 
       if (text.startsWith("driveUrl:")) {

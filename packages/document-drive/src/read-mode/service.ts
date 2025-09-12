@@ -1,27 +1,28 @@
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { DocumentModelNotFoundError } from "#server/error";
-import { fetchDocument, requestPublicDrive } from "#utils/graphql";
+import type {
+  DocumentDrivePHState,
+  GetDocumentModelModule,
+  IReadModeDriveService,
+  ReadDrive,
+  ReadDriveContext,
+  ReadDriveOptions,
+} from "document-drive";
+import {
+  DocumentModelNotFoundError,
+  driveDocumentModelModule,
+  driveDocumentType,
+  fetchDocument,
+  ReadDocumentNotFoundError,
+  ReadDriveError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+  requestPublicDrive,
+} from "document-drive";
 import type {
   DocumentModelModule,
   PHBaseState,
   PHDocument,
 } from "document-model";
 import type { GraphQLError } from "graphql";
-import { driveDocumentType } from "../drive-document-model/constants.js";
-import type { DocumentDrivePHState } from "../drive-document-model/gen/index.js";
-import {
-  ReadDocumentNotFoundError,
-  ReadDriveError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-} from "./errors.js";
-import type {
-  GetDocumentModelModule,
-  IReadModeDriveService,
-  ReadDrive,
-  ReadDriveContext,
-  ReadDriveOptions,
-} from "./types.js";
 
 export class ReadModeService implements IReadModeDriveService {
   #getDocumentModelModule: GetDocumentModelModule;
@@ -126,7 +127,7 @@ export class ReadModeService implements IReadModeDriveService {
       return new ReadDocumentNotFoundError(driveId, documentId);
     }
 
-    return document;
+    return document as unknown as PHDocument<TState>;
   }
 
   async addReadDrive(url: string, options?: ReadDriveOptions): Promise<void> {
@@ -145,7 +146,7 @@ export class ReadModeService implements IReadModeDriveService {
       throw new ReadDriveNotFoundError(id);
     }
     this.#drives.set(id, {
-      drive: result,
+      drive: result as unknown as ReadDrive,
       context: {
         ...options,
         url,

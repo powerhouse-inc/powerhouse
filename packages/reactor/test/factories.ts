@@ -7,7 +7,7 @@ import {
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
-} from "document-drive/storage/types";
+} from "document-drive";
 import type {
   Action,
   DocumentModelModule,

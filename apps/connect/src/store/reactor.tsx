@@ -1,5 +1,8 @@
-import connectConfig from "#connect-config";
-import { createBrowserDocumentDriveServer, createBrowserStorage } from "#utils";
+import {
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
   dispatchSetAppConfigEvent,
@@ -24,8 +27,8 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
 import { logger } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
-import type { IDocumentAdminStorage } from "document-drive/storage/types";
+import { ProcessorManager } from "document-drive";
+import type { IDocumentAdminStorage } from "document-drive";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
 

@@ -1,7 +1,7 @@
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
-} from "document-drive/storage/types";
+} from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";

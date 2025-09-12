@@ -1,5 +1,5 @@
+import { subscribeToAppConfig } from "@powerhousedao/reactor-browser";
 import { useSyncExternalStore } from "react";
-import { subscribeToAppConfig } from "../events/config.js";
 
 export function useAppConfig() {
   return useSyncExternalStore(subscribeToAppConfig, () => window.phAppConfig);

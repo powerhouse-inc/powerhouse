@@ -1,4 +1,4 @@
-import { tableNames, TableWithForm } from "#rwa";
+import { tableNames, TableWithForm } from "@powerhousedao/design-system";
 import { AccountsTable } from "../table/accounts/index.js";
 
 export function OtherTab() {

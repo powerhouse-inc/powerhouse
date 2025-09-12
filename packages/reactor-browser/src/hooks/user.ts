@@ -1,5 +1,8 @@
+import {
+  subscribeToLoginStatus,
+  subscribeToUser,
+} from "@powerhousedao/reactor-browser";
 import { useSyncExternalStore } from "react";
-import { subscribeToLoginStatus, subscribeToUser } from "../events/user.js";
 import { useAllowList } from "./config.js";
 
 export function useUser() {

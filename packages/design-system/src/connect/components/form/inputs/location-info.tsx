@@ -1,6 +1,5 @@
-import type { DriveLocation } from "#connect";
-import { locationInfoByLocation } from "#connect";
-import type { DivProps } from "#powerhouse";
+import type { DivProps, DriveLocation } from "@powerhousedao/design-system";
+import { locationInfoByLocation } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 type LocationInfoProps = DivProps & {

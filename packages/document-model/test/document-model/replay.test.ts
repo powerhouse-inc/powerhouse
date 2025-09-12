@@ -1,19 +1,15 @@
-import { noop } from "../../src/document/actions/creators.js";
-import type { BaseDocument } from "../../src/document/types.js";
-import {
-  createReducer,
-  replayDocument,
-} from "../../src/document/utils/base.js";
-import type { CountPHState } from "../helpers.js";
+import type { PHDocument } from "document-model";
+import { createReducer, noop, replayDocument } from "document-model";
+import type { CountPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,
   createCountState,
   increment,
-} from "../helpers.js";
+} from "document-model/test";
 describe("DocumentModel Class", () => {
   const initialState = createCountState();
-  const initialDocument: BaseDocument<CountPHState> = {
+  const initialDocument: PHDocument<CountPHState> = {
     header: {
       id: "",
       sig: { publicKey: {}, nonce: "" },

@@ -1,4 +1,4 @@
-import type { IconName } from "#powerhouse";
+import type { IconName } from "@powerhousedao/design-system";
 
 export interface Currency {
   ticker: string;

@@ -1,23 +1,25 @@
-import type { DocumentModelDocument, DocumentModelState } from "document-model";
-import { documentModelLoadFromFile } from "document-model";
+import type {
+  DocumentModelDocument,
+  DocumentModelGlobalState,
+  DocumentModelPHState,
+} from "document-model";
+import { documentModelReducer } from "document-model";
+import { baseLoadFromFile } from "document-model/node";
 import fs from "node:fs";
 import { format } from "prettier";
-
 export async function loadDocumentModel(
   path: string,
-): Promise<DocumentModelState> {
-  let documentModel: DocumentModelState;
+): Promise<DocumentModelGlobalState> {
+  let documentModel: DocumentModelGlobalState;
   try {
     if (!path) {
       throw new Error("Document model file not specified");
     } else if (path.endsWith(".zip")) {
-      const file = await documentModelLoadFromFile(path);
+      const file = await baseLoadFromFile(path, documentModelReducer);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
       const data = fs.readFileSync(path, "utf-8");
-      const parsedData = JSON.parse(data) as
-        | DocumentModelDocument
-        | DocumentModelState;
+      const parsedData = JSON.parse(data) as DocumentModelDocument;
       if ("state" in parsedData) {
         documentModel = parsedData.state.global;
       } else {

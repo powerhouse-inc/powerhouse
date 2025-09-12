@@ -1,5 +1,5 @@
 import type { EditorModule } from "document-model";
-import { DocumentModelEditor } from "./editor.js";
+import { DocumentModelEditor } from "@powerhousedao/builder-tools/editor";
 
 export const documentModelEditorModule: EditorModule = {
   Component: DocumentModelEditor,

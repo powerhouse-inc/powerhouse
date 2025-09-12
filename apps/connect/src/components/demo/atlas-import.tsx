@@ -1,11 +1,11 @@
-import AtlasIcon from "#assets/icons/Atlas-Logomark.svg?react";
-import RefreshIcon from "#assets/icons/refresh.svg?react";
-import { Button } from "@powerhousedao/design-system";
+import AtlasIcon from "@powerhousedao/connect/assets/icons/Atlas-Logomark.svg?react";
+import RefreshIcon from "@powerhousedao/connect/assets/icons/refresh.svg?react";
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import { addRemoteDrive, useReactor } from "@powerhousedao/reactor-browser";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "../../services/toast";
+import { toast } from "../../services/toast.js";
 
 const REACTOR_URL = "https://apps.powerhouse.io/sky-atlas/staging/switchboard";
 const MIN_LOADING_TIME = 2000;
@@ -149,7 +149,7 @@ export function AtlasImport() {
                 Forking Atlas scope...
               </div>
             )}
-            <Button
+            <PowerhouseButton
               onClick={
                 hasError
                   ? window.location.reload.bind(window.location)
@@ -169,7 +169,7 @@ export function AtlasImport() {
               ) : (
                 "Continue"
               )}
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
       </div>

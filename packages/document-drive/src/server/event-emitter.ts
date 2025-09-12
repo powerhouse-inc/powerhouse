@@ -1,6 +1,6 @@
+import type { DriveEvents, IEventEmitter } from "document-drive";
 import type { Unsubscribe } from "nanoevents";
 import { createNanoEvents } from "nanoevents";
-import type { DriveEvents, IEventEmitter } from "./types.js";
 
 export class DefaultEventEmitter implements IEventEmitter {
   private emitter = createNanoEvents<DriveEvents>();

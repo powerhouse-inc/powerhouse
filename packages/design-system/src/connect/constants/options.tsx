@@ -3,8 +3,8 @@ import type {
   NodeOption,
   NormalNodeOption,
   OptionMetadata,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 
 export const NEW = "NEW";
 export const DUPLICATE = "DUPLICATE";

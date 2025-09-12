@@ -1,5 +1,5 @@
+import type { DocumentOperations, Operation } from "document-model";
 import stringify from "safe-stable-stringify";
-import type { DocumentOperations, Operation } from "../types.js";
 import { generateId } from "./crypto.js";
 
 export type OperationIndex = {
@@ -205,7 +205,6 @@ export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
 
 // TODO: implement better operation equality function
 export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
   const a = op1 as any;
   const b = op2 as any;
 
@@ -224,7 +223,6 @@ export function operationsAreEqual<TOp>(op1: TOp, op2: TOp): boolean {
     scope: b.scope ?? null,
     input: b.input ?? null,
   };
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
   return stringify(aComparable) === stringify(bComparable);
 }

@@ -1,5 +1,8 @@
-import type { CodeExample, ScopeState } from "../../gen/schema/types.js";
-import type { DocumentModelStateOperations } from "../../gen/state/operations.js";
+import type {
+  CodeExample,
+  DocumentModelStateOperations,
+  ScopeState,
+} from "document-model";
 
 const exampleSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};
@@ -8,7 +11,7 @@ const exampleSorter = (order: string[]) => {
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 
-export const reducer: DocumentModelStateOperations = {
+export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
   setStateSchemaOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
     if (Object.keys(latestSpec.state).includes(action.input.scope)) {

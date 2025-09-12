@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type {
   ClearIndicatorProps,

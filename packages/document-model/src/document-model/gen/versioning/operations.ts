@@ -1,31 +1,31 @@
-import {
+import type {
   AddChangeLogItemAction,
-  UpdateChangeLogItemAction,
   DeleteChangeLogItemAction,
-  ReorderChangeLogItemsAction,
+  DocumentModelGlobalState,
   ReleaseNewVersionAction,
-} from "./actions.js";
-import { DocumentModelState } from "../types.js";
+  ReorderChangeLogItemsAction,
+  UpdateChangeLogItemAction,
+} from "document-model";
 
 export interface DocumentModelVersioningOperations {
   addChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddChangeLogItemAction,
   ) => void;
   updateChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: UpdateChangeLogItemAction,
   ) => void;
   deleteChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteChangeLogItemAction,
   ) => void;
   reorderChangeLogItemsOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderChangeLogItemsAction,
   ) => void;
   releaseNewVersionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReleaseNewVersionAction,
   ) => void;
 }

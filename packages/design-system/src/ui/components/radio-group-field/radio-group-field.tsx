@@ -1,15 +1,19 @@
-import React, { useId } from "react";
-import { cn } from "../../lib/index.js";
-import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
-import type { RadioGroupProps } from "../enum-field/types.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/message-list.js";
-import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
-import { RadioGroup } from "./radio-group.js";
-import { Radio } from "./radio.js";
-
+import type {
+  FieldErrorHandling,
+  InputBaseProps,
+  RadioGroupProps,
+} from "@powerhousedao/design-system";
+import {
+  cn,
+  FormLabel,
+  FormMessageList,
+  Radio,
+  RadioGroup,
+  withFieldValidation,
+} from "@powerhousedao/design-system";
+import { type HTMLAttributes, type Ref, forwardRef, useId } from "react";
 type RadioGroupFieldBaseProps = Omit<
-  React.HTMLAttributes<HTMLDivElement>,
+  HTMLAttributes<HTMLDivElement>,
   | keyof InputBaseProps<string>
   | keyof FieldErrorHandling
   | keyof RadioGroupProps
@@ -23,10 +27,7 @@ export type RadioGroupFieldProps = RadioGroupFieldBaseProps &
   FieldErrorHandling &
   RadioGroupProps;
 
-const RadioGroupFieldRaw = React.forwardRef<
-  HTMLDivElement,
-  RadioGroupFieldProps
->(
+const RadioGroupFieldRaw = forwardRef<HTMLDivElement, RadioGroupFieldProps>(
   (
     {
       autoFocus,
@@ -106,7 +107,13 @@ const RadioGroupFieldRaw = React.forwardRef<
   },
 );
 
-export const RadioGroupField =
-  withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
+export const RadioGroupField = forwardRef(function RadioGroupField(
+  props: RadioGroupFieldProps,
+  ref: Ref<HTMLDivElement>,
+) {
+  const Component =
+    withFieldValidation<RadioGroupFieldProps>(RadioGroupFieldRaw);
+  return <Component {...props} ref={ref} />;
+});
 
 RadioGroupField.displayName = "RadioGroupField";

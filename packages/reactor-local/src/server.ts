@@ -1,9 +1,9 @@
 import { isLogLevel } from "@powerhousedao/config";
-import { startAPI } from "@powerhousedao/reactor-api";
 import {
+  startAPI,
   startViteServer,
   VitePackageLoader,
-} from "@powerhousedao/reactor-api/packages/vite-loader";
+} from "@powerhousedao/reactor-api";
 import type { DefaultRemoteDriveInput } from "document-drive";
 import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
 import dotenv from "dotenv";

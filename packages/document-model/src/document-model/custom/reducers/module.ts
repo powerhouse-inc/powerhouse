@@ -1,14 +1,16 @@
-import type { DocumentModelModuleOperations } from "../../gen/module/operations.js";
-import type { Module } from "../../gen/schema/types.js";
+import type {
+  DocumentModelModuleOperations,
+  ModuleSpecification,
+} from "document-model";
 
 const moduleSorter = (order: string[]) => {
   const mapping: Record<string, number> = {};
   order.forEach((key, index) => (mapping[key] = index));
-  return (a: Module, b: Module) =>
+  return (a: ModuleSpecification, b: ModuleSpecification) =>
     (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
 };
 
-export const reducer: DocumentModelModuleOperations = {
+export const documentModelModuleReducer: DocumentModelModuleOperations = {
   addModuleOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
     latestSpec.modules.push({

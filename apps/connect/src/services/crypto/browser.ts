@@ -1,7 +1,7 @@
 import type {
   JsonWebKeyPairStorage,
   JwkKeyPair,
-} from "@powerhousedao/reactor-browser/crypto/index";
+} from "@powerhousedao/reactor-browser";
 
 export class BrowserKeyStorage implements JsonWebKeyPairStorage {
   static #DB_NAME = "browserKeyDB";

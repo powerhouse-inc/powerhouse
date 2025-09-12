@@ -4,18 +4,8 @@ import type {
   PullResponderTransmitter,
   StrandUpdate,
 } from "document-drive";
-import { operationsToRevision } from "document-drive/utils/misc";
-import type { Operation } from "document-model";
-
-// define types
-export type InternalStrandUpdate = {
-  operations: Operation[];
-  documentId: string;
-  documentType: string;
-  driveId: string;
-  scope: string;
-  branch: string;
-};
+import { operationsToRevision } from "document-drive";
+import type { InternalStrandUpdate } from "@powerhousedao/reactor-api";
 
 // processes a strand update and returns a listener revision
 export const processPushUpdate = async (

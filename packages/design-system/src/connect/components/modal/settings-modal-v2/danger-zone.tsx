@@ -1,8 +1,9 @@
-import { Icon } from "#powerhouse";
-import { cn } from "#ui";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { capitalCase } from "change-case";
-import type { DocumentDriveDocument } from "document-drive";
-import { getDriveSharingType } from "document-drive/server/utils";
+import {
+  getDriveSharingType,
+  type DocumentDriveDocument,
+} from "document-drive";
 import { useState } from "react";
 import { CLOUD, PUBLIC } from "../../../constants/drives.js";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";

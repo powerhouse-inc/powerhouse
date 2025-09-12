@@ -6,7 +6,7 @@ import {
   isDocumentAction,
   createReducer,
 } from "document-model";
-import { SubgraphModulePHState } from "./ph-factories.js";
+import type { SubgraphModulePHState } from "./types.js";
 import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";

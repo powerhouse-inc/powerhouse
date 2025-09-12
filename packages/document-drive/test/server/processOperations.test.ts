@@ -1,27 +1,31 @@
+import type { Action, DocumentModelModule, Operation } from "document-model";
 import {
-  Action,
-  DocumentModelDocument,
+  documentModelCreateDocument,
   documentModelDocumentModelModule,
-  DocumentModelModule,
   documentModelReducer,
   garbageCollect,
   generateId,
-  Operation,
   setModelExtension,
   setModelId,
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { addFile } from "#drive-document-model/gen/creators";
-import { BaseDocumentDriveServer } from "#server/base-server";
-import { createPresignedHeader } from "document-model";
-import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { IOperationResult } from "../../src/server/types.js";
-import { BasicClient, buildOperation, buildOperations } from "../utils.js";
+import type {
+  BaseDocumentDriveServer,
+  DocumentDriveDocument,
+  IOperationResult,
+} from "document-drive";
+import {
+  addFile,
+  BasicClient,
+  buildOperation,
+  buildOperations,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+  ReactorBuilder,
+} from "document-drive";
+import { createPresignedHeader, undo } from "document-model";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -47,9 +51,10 @@ describe("processOperations", () => {
 
   const driveId = generateId();
   const documentId = generateId();
+
   function createDocumentModel() {
     return {
-      ...documentModelDocumentModelModule.utils.createDocument(),
+      ...documentModelCreateDocument(),
       header: createPresignedHeader(
         documentId,
         documentModelDocumentModelModule.documentModel.id,
@@ -75,17 +80,17 @@ describe("processOperations", () => {
     await server.addDriveOperation(
       driveId,
       buildOperation(
-        documentDriveReducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: documentId,
           name: "test",
           documentType: "powerhouse/document-model",
         }),
-      ) as Operation,
+      ),
     );
 
-    let document = await server.getDocument<DocumentModelDocument>(documentId);
+    let document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     if (initialOperations.length > 0) {
       await server.addOperations(
@@ -93,7 +98,7 @@ describe("processOperations", () => {
         buildOperations(documentModelReducer, document, initialOperations),
       );
 
-      document = await server.getDocument<DocumentModelDocument>(documentId);
+      document = await server.getDocument<DocumentDriveDocument>(documentId);
     }
 
     return document;
@@ -418,7 +423,7 @@ describe("processOperations", () => {
 
     expect(resultOp1.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentModelDocument>(documentId);
+    document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     expect((document.state as any).global.name).toBe("test");
     expect(document.operations.global.length).toBe(1);
@@ -436,7 +441,7 @@ describe("processOperations", () => {
 
     const resultOp2 = await server.addOperation(documentId, operation);
 
-    document = await server.getDocument<DocumentModelDocument>(documentId);
+    document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     expect(resultOp2.status).toBe("SUCCESS");
     expect(resultOp2.operations.length).toBe(1);
@@ -482,7 +487,7 @@ describe("processOperations", () => {
 
     expect(resultOp1.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentModelDocument>(documentId);
+    document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     const operation2 = buildOperation(
       documentModelReducer,
@@ -495,7 +500,7 @@ describe("processOperations", () => {
 
     expect(resultOp2.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentModelDocument>(documentId);
+    document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     const operation3 = buildOperation(
       documentModelReducer,
@@ -508,7 +513,7 @@ describe("processOperations", () => {
 
     expect(resultOp3.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentModelDocument>(documentId);
+    document = await server.getDocument<DocumentDriveDocument>(documentId);
 
     const operations = document.operations.global.slice(-4);
 
@@ -582,7 +587,7 @@ describe("processOperations", () => {
 
     // Check the final state of the document
     const finalDocument =
-      await server.getDocument<DocumentModelDocument>(documentId);
+      await server.getDocument<DocumentDriveDocument>(documentId);
 
     const operations = finalDocument.operations.global.slice(-4);
 
@@ -647,7 +652,7 @@ describe("processOperations", () => {
     expect(pushOperationResult.status).toBe("SUCCESS");
 
     const finalDocument =
-      await server.getDocument<DocumentModelDocument>(documentId);
+      await server.getDocument<DocumentDriveDocument>(documentId);
 
     const clientDocument = client1.getDocument();
     expect(clientDocument.operations.global.length).toBe(1);

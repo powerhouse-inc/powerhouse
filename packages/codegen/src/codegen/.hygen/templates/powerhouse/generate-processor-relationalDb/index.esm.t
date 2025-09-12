@@ -2,9 +2,13 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 unless_exists: true
 ---
-import { type IRelationalDb } from "document-drive/processors/types";
-import { RelationalDbProcessor } from "document-drive/processors/relational";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { type IRelationalDb } from "document-drive";
+import { RelationalDbProcessor } from "document-drive";
+import { type InternalTransmitterUpdate } from "document-drive";
+<% documentTypes.forEach(type => { _%>
+import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
+%><% }); _%>
+<% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 import { up } from "./migrations.js";
 import { type DB } from "./schema.js";
 

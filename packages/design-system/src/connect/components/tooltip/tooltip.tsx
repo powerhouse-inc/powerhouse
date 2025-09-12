@@ -16,7 +16,7 @@ type Props = TooltipProps & {
   readonly sideOffset?: number;
 };
 
-export function Tooltip(props: Props) {
+export function ConnectTooltip(props: Props) {
   const {
     children,
     content,
@@ -55,4 +55,4 @@ export function Tooltip(props: Props) {
   );
 }
 
-export const TooltipProvider = Provider;
+export const ConnectTooltipProvider = Provider;

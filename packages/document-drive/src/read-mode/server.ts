@@ -1,16 +1,16 @@
-import type { DocumentDriveServerConstructor } from "#server/base-server";
-import type { RemoteDriveOptions } from "#server/types";
-import { logger } from "#utils/logger";
-import type { PHBaseState } from "document-model";
-import type { ReadDriveSlugNotFoundError } from "./errors.js";
-import { ReadModeService } from "./service.js";
 import type {
+  DocumentDriveServerConstructor,
   IReadModeDriveServer,
   IReadModeDriveService,
   ReadDrive,
   ReadDriveOptions,
   ReadDrivesListener,
-} from "./types.js";
+  ReadDriveSlugNotFoundError,
+  RemoteDriveOptions,
+} from "document-drive";
+import { logger } from "document-drive";
+import type { PHBaseState } from "document-model";
+import { ReadModeService } from "./service.js";
 
 export function ReadModeServer(
   Base: DocumentDriveServerConstructor,
@@ -22,7 +22,6 @@ export function ReadModeServer(
     #listeners = new Set<ReadDrivesListener>();
 
     constructor(...args: any[]) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       super(...args);
 
       this.#readModeStorage = new ReadModeService(

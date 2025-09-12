@@ -1,12 +1,11 @@
-import type { DocumentOperations, Operation, PHDocument } from "document-model";
-import type { DocumentDriveDocument } from "../../index.js";
 import type {
   CreateDocumentInput,
   RevisionsFilter,
-  SharingType,
   StrandUpdate,
   SynchronizationUnitId,
-} from "./types.js";
+} from "document-drive";
+import type { DocumentOperations, Operation, PHDocument } from "document-model";
+import type { DocumentDriveDocument, SharingType } from "../../index.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],
@@ -117,7 +116,6 @@ export function resolveCreateDocumentInputId(
   input: CreateDocumentInput<PHDocument>,
 ) {
   if ("id" in input) {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     return input.id;
   } else if ("header" in input) {
     return input.header.id;

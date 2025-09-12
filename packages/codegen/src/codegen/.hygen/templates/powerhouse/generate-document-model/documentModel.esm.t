@@ -2,6 +2,6 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/document-model.ts"
 force: true
 ---
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 
-export const documentModel: DocumentModelState = <%- documentModel %>;
+export const documentModel: DocumentModelGlobalState = <%- documentModel %>;

@@ -15,45 +15,45 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./document-models": {
-      "types": "./dist/document-models/index.d.ts",
-      "default": "./dist/document-models/index.js"
+      "import": "./dist/document-models/index.js",
+      "types": "./dist/document-models/index.d.ts"
+    },
+    "./document-models/*.js": {
+      "import": "./dist/document-models/*.js",
+      "types": "./dist/document-models/*.d.ts"
     },
     "./editors": {
-      "types": "./dist/editors/index.d.ts",
-      "default": "./dist/editors/index.js"
+      "import": "./dist/editors/index.js",
+      "types": "./dist/editors/index.d.ts"
     },
     "./subgraphs": {
-      "types": "./dist/subgraphs/index.d.ts",
-      "default": "./dist/subgraphs/index.js"
+      "import": "./dist/subgraphs/index.js",
+      "types": "./dist/subgraphs/index.d.ts"
     },
     "./processors": {
-      "types": "./dist/processors/index.d.ts",
-      "default": "./dist/processors/index.js"
+      "import": "./dist/processors/index.js",
+      "types": "./dist/processors/index.d.ts"
     },
     "./manifest": {
-      "types": "./dist/manifest.d.ts",
-      "default": "./dist/manifest.js"
+      "import": "./dist/manifest.js",
+      "types": "./dist/manifest.d.ts"
     },
     "./vetra-drive-app": {
-      "types": "./dist/editors/vetra-drive-app/index.d.ts",
-      "default": "./dist/editors/vetra-drive-app/index.js"
+      "import": "./dist/editors/vetra-drive-app/index.js",
+      "types": "./dist/editors/vetra-drive-app/index.d.ts"
     },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "lint": "eslint .",
-    "build:tsc": "tsc",
-    "build:tsc:watch": "tsc --watch",
+    "tsc": "tsc",
+    "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "build:css:watch": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css --watch",
-    "build": "npm run build:tsc && npm run build:css",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
@@ -100,8 +100,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.0.15",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0",
     "vite": "^6.2.3",
     "vitest": "^3.0.9"
   },

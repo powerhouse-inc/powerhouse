@@ -1,4 +1,3 @@
-import type { BaseProps } from "#editors/utils/index";
 import type { TNodeActions } from "@powerhousedao/design-system";
 import { FolderItem, useDrop } from "@powerhousedao/design-system";
 import {
@@ -8,6 +7,7 @@ import {
 import type { FolderNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
+import type { BaseProps } from "../../utils/index.js";
 import FileContentView from "./file-content-view.js";
 import { DriveLayout } from "./layout.js";
 

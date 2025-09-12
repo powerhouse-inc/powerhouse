@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { TooltipProvider } from "../../tooltip/index.js";
+import { ConnectTooltipProvider } from "../../tooltip/index.js";
 import { globalOperations, localOperations } from "../mocks.js";
 import { Timeline } from "./timeline.js";
 
@@ -20,9 +20,9 @@ export const Default: Story = {
   },
   render(args) {
     return (
-      <TooltipProvider>
+      <ConnectTooltipProvider>
         <Timeline {...args} />
-      </TooltipProvider>
+      </ConnectTooltipProvider>
     );
   },
 };

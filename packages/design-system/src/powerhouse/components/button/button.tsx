@@ -2,15 +2,15 @@ import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
-export type ButtonProps = ComponentPropsWithRef<"button"> & {
+export type PowerhouseButtonProps = ComponentPropsWithRef<"button"> & {
   readonly color?: "light" | "dark" | "red" | "blue";
   readonly size?: "small" | "medium";
   readonly icon?: React.JSX.Element;
   readonly iconPosition?: "left" | "right";
 };
 
-export const Button = forwardRef(function Button(
-  props: ButtonProps,
+export const PowerhouseButton = forwardRef(function PowerhouseButton(
+  props: PowerhouseButtonProps,
   ref: ForwardedRef<HTMLButtonElement>,
 ) {
   const {

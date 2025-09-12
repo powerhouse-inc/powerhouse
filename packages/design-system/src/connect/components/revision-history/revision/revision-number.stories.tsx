@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { TooltipProvider } from "../../tooltip/index.js";
+import { ConnectTooltipProvider } from "../../tooltip/index.js";
 import { RevisionNumber } from "./revision-number.js";
 
 const meta = {
@@ -19,9 +19,9 @@ export const Default: Story = {
   },
   render(args) {
     return (
-      <TooltipProvider>
+      <ConnectTooltipProvider>
         <RevisionNumber {...args} />
-      </TooltipProvider>
+      </ConnectTooltipProvider>
     );
   },
 };

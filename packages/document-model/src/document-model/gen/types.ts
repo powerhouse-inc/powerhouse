@@ -1,10 +1,9 @@
-import type { PHDocument } from "../../document/types.js";
-import type { DocumentModelAction } from "./actions.js";
-import { DocumentModelPHState } from "./ph-factories.js";
-import type {
-  DocumentModelLocalState,
-  DocumentModelState,
-} from "./schema/types.js";
-
-export type DocumentModelDocument = PHDocument<DocumentModelPHState>;
-export { DocumentModelAction, DocumentModelLocalState, DocumentModelState };
+export type * from "./actions.js";
+export type * from "./header/types.js";
+export type * from "./module/types.js";
+export type * from "./operation-error/types.js";
+export type * from "./operation-example/types.js";
+export type * from "./operation/types.js";
+export type * from "./schema/types.js";
+export type * from "./state/types.js";
+export type * from "./versioning/types.js";

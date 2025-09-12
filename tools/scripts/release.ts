@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-floating-promises */
 import fs from "fs";
 import { releaseChangelog, releasePublish, releaseVersion } from "nx/release";
 import semver, { ReleaseType } from "semver";

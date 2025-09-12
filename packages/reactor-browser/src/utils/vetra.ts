@@ -1,18 +1,18 @@
 import type {
-  DocumentModelLib,
-  DocumentModelModule,
-  EditorModule,
-  Manifest,
-} from "document-model";
-import { generateId } from "document-model";
-import type {
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraMeta,
   VetraModules,
   VetraPackage,
   VetraPackageManifest,
-} from "../types/vetra.js";
+} from "@powerhousedao/reactor-browser";
+import type {
+  DocumentModelLib,
+  DocumentModelModule,
+  EditorModule,
+  Manifest,
+} from "document-model";
+import { generateId } from "document-model";
 
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,

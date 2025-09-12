@@ -1,10 +1,10 @@
-import type { Module } from "document-model";
+import type { ModuleSpecification } from "document-model";
 import { toLowercaseSnakeCase } from "../schemas/inputs.js";
 import { TextField } from "./text-field.js";
 
 type Props = {
-  modules?: Module[];
-  module?: Module;
+  modules?: ModuleSpecification[];
+  module?: ModuleSpecification;
   onAddModule: (name: string) => Promise<string | undefined>;
   updateModuleName: (id: string, name: string) => void;
 };

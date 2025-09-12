@@ -1,6 +1,12 @@
-import { Pagination, usePagination } from "#powerhouse";
-import type { TableColumn, TableName } from "#rwa";
-import { ItemDetails, Table, useEditorContext, useTableData } from "#rwa";
+import type { TableColumn, TableName } from "@powerhousedao/design-system";
+import {
+  ItemDetails,
+  Pagination,
+  Table,
+  useEditorContext,
+  usePagination,
+  useTableData,
+} from "@powerhousedao/design-system";
 
 type Props = {
   readonly tableName: TableName;

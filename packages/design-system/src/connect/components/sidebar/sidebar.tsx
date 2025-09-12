@@ -1,5 +1,5 @@
-import type { SidebarProps } from "#powerhouse";
-import { Sidebar, SidebarPanel } from "#powerhouse";
+import type { SidebarProps } from "@powerhousedao/design-system";
+import { Sidebar, SidebarPanel } from "@powerhousedao/design-system";
 import type { ConnectSidebarFooterProps } from "./sidebar-footer.js";
 import { ConnectSidebarFooter } from "./sidebar-footer.js";
 import type { ConnectSidebarHeaderProps } from "./sidebar-header.js";

@@ -1,6 +1,6 @@
+import type { IDriveContext } from "@powerhousedao/reactor-browser";
 import type { PropsWithChildren } from "react";
 import { createContext, useContext } from "react";
-import type { IDriveContext } from "../types/drive-editor.js";
 
 const DriveContext = createContext<IDriveContext | undefined>(undefined);
 

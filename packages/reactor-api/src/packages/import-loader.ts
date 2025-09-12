@@ -1,11 +1,8 @@
-import type { SubgraphClass } from "#graphql/index.js";
-import type { IPackageLoader } from "#types.js";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-} from "document-drive/processors/types";
 import type { DocumentModelModule } from "document-model";
+import type { IPackageLoader } from "../types.js";
 import {
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,

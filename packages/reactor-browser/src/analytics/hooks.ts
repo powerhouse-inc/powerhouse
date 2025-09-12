@@ -20,7 +20,7 @@ import {
   useAnalyticsEngineAsync,
   useAnalyticsStoreAsync,
   useAnalyticsStoreOptions,
-} from "./context.js";
+} from "@powerhousedao/reactor-browser";
 
 function useAnalyticsQueryWrapper<TQueryFnData = unknown, TData = TQueryFnData>(
   options: Omit<UseQueryOptions<TQueryFnData, Error, TData>, "queryFn"> & {

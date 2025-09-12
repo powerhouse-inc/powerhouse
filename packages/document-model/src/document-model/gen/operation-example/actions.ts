@@ -1,10 +1,10 @@
-import { Action, ActionWithAttachment } from "../../../document/types.js";
-import {
+import type {
+  Action,
   AddOperationExampleInput,
   DeleteOperationExampleInput,
   ReorderOperationExamplesInput,
   UpdateOperationExampleInput,
-} from "../schema/types.js";
+} from "document-model";
 
 export type AddOperationExampleAction = Action & {
   type: "ADD_OPERATION_EXAMPLE";

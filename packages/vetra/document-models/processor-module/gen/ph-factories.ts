@@ -1,27 +1,17 @@
 /**
  * Factory methods for creating ProcessorModuleDocument instances
  */
-
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 import type {
   ProcessorModuleDocument,
   ProcessorModuleLocalState,
-  ProcessorModuleState,
+  ProcessorModuleGlobalState,
+  ProcessorModulePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type ProcessorModulePHState = PHBaseState & {
-  global: ProcessorModuleState;
-  local: ProcessorModuleLocalState;
-};
-
-export function defaultGlobalState(): ProcessorModuleState {
+export function defaultGlobalState(): ProcessorModuleGlobalState {
   return {
     name: "",
     type: "",
@@ -43,12 +33,12 @@ export function defaultPHState(): ProcessorModulePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<ProcessorModuleState>,
-): ProcessorModuleState {
+  state?: Partial<ProcessorModuleGlobalState>,
+): ProcessorModuleGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as ProcessorModuleState;
+  } as ProcessorModuleGlobalState;
 }
 
 export function createLocalState(
@@ -62,7 +52,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<ProcessorModuleState>,
+  globalState?: Partial<ProcessorModuleGlobalState>,
   localState?: Partial<ProcessorModuleLocalState>,
 ): ProcessorModulePHState {
   return {
@@ -81,7 +71,7 @@ export function createProcessorModuleDocument(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<ProcessorModuleState>;
+    global?: Partial<ProcessorModuleGlobalState>;
     local?: Partial<ProcessorModuleLocalState>;
   }>,
 ): ProcessorModuleDocument {

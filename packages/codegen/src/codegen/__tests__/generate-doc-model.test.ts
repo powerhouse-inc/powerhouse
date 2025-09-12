@@ -386,7 +386,11 @@ describe("document model", () => {
       });
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
-        path.join(srcPath, "test-empty-error-codes", "test-empty-error-codes.json"),
+        path.join(
+          srcPath,
+          "test-empty-error-codes",
+          "test-empty-error-codes.json",
+        ),
       );
 
       await generateDocumentModel(
@@ -404,13 +408,16 @@ describe("document model", () => {
         "test-operations",
         "error.ts",
       );
-      const testOperationsErrorContent = readFileSync(testOperationsErrorPath, "utf-8");
+      const testOperationsErrorContent = readFileSync(
+        testOperationsErrorPath,
+        "utf-8",
+      );
 
       // Check that error codes are generated from names in PascalCase when empty
       expect(testOperationsErrorContent).toContain("export type ErrorCode =");
       expect(testOperationsErrorContent).toContain("'InvalidValue'");
       expect(testOperationsErrorContent).toContain("'EmptyValue'");
-      
+
       // Check that error classes are generated
       expect(testOperationsErrorContent).toContain(
         "export class InvalidValue extends Error implements ReducerError",
@@ -418,7 +425,7 @@ describe("document model", () => {
       expect(testOperationsErrorContent).toContain(
         "export class EmptyValue extends Error implements ReducerError",
       );
-      
+
       // Verify error code constants are set properly in PascalCase
       expect(testOperationsErrorContent).toContain(
         "errorCode = 'InvalidValue' as ErrorCode",

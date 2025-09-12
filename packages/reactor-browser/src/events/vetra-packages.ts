@@ -1,5 +1,5 @@
+import type { VetraPackage } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
-import type { VetraPackage } from "../types/vetra.js";
 import type { SetVetraPackagesEvent } from "./types.js";
 
 export function dispatchSetVetraPackagesEvent(

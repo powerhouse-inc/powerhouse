@@ -1,18 +1,18 @@
-import type { NodeOption, TNodeActions } from "#connect";
+import type { NodeOption, TNodeActions } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
   defaultFileOptions,
   DELETE,
   DUPLICATE,
   getDocumentIconSrc,
+  Icon,
   NodeInput,
   nodeOptionsMap,
   READ,
   RENAME,
   useDrag,
   WRITE,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";

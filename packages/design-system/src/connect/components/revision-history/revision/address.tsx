@@ -1,5 +1,9 @@
-import { ENSAvatar, formatEthAddress, Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import {
+  ConnectTooltip,
+  ENSAvatar,
+  formatEthAddress,
+  Icon,
+} from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
 
 export type AddressProps = {
@@ -35,11 +39,11 @@ export function Address(props: AddressProps) {
   );
 
   return (
-    <Tooltip content={tooltipContent}>
+    <ConnectTooltip content={tooltipContent}>
       <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg bg-gray-100 p-1 text-xs text-slate-100">
         <ENSAvatar address={address} chainId={chainId} />
         {shortenedAddress}
       </span>
-    </Tooltip>
+    </ConnectTooltip>
   );
 }

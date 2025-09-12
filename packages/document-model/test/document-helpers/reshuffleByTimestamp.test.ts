@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reshuffleByTimestamp } from "../../src/document/utils/document-helpers.js";
+import { reshuffleByTimestamp } from "document-model";
 import { buildOperations } from "./utils.js";
 
 describe("reshuffleByTimestamp", () => {

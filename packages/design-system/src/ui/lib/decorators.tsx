@@ -1,11 +1,9 @@
-import { Button } from "#powerhouse";
+import { Button, Checkbox, Form } from "@powerhousedao/design-system";
 import type { Decorator } from "@storybook/react";
 import type { Args, DecoratorFunction } from "@storybook/types";
 import { format } from "date-fns";
 import { useCallback, useId, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { Checkbox } from "../components/checkbox/checkbox.js";
-import { Form } from "../components/form/index.js";
 
 function _isValidRegex(pattern: unknown): boolean {
   try {

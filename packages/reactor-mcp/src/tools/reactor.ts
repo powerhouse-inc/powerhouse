@@ -1,7 +1,6 @@
 import type { IDocumentDriveServer } from "document-drive";
-import type { DocumentModelState } from "document-model";
-import { generateId } from "document-model";
-import { DocumentModelStateSchema } from "document-model/document-model/gen/schema/zod";
+import type { DocumentModelGlobalState } from "document-model";
+import { DocumentModelGlobalStateSchema, generateId } from "document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -272,9 +271,9 @@ export const getDocumentModelSchemaTool = {
     type: z.string().describe("Type of the document model"),
   },
   outputSchema: {
-    schema: DocumentModelStateSchema().describe(
+    schema: DocumentModelGlobalStateSchema().describe(
       "Schema of the document model",
-    ) as z.ZodObject<Properties<DocumentModelState>>,
+    ) as z.ZodObject<Properties<DocumentModelGlobalState>>,
   },
 } as const satisfies ToolSchema;
 
@@ -305,7 +304,6 @@ type ToolRecord<T extends readonly ToolSchema[]> = {
 };
 
 // All tools array for type inference
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allTools = [
   getDocumentTool,
   createDocumentTool,

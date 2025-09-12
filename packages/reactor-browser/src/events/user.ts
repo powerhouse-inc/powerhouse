@@ -1,5 +1,5 @@
+import type { LoginStatus } from "@powerhousedao/reactor-browser";
 import type { User } from "document-model";
-import type { LoginStatus } from "../types/global.js";
 import type { SetLoginStatusEvent, SetUserEvent } from "./types.js";
 
 export function dispatchSetLoginStatusEvent(

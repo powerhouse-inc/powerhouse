@@ -1,3 +1,9 @@
+import {
+  getUserPermissions,
+  queueActions,
+  queueOperations,
+  uploadOperations,
+} from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
@@ -25,12 +31,6 @@ import {
   generateId,
   replayDocument,
 } from "document-model";
-import {
-  queueActions,
-  queueOperations,
-  uploadOperations,
-} from "../actions/queue.js";
-import { getUserPermissions } from "../utils/user.js";
 
 export function downloadFile(document: PHDocument, fileName: string) {
   const zip = createZip(document);

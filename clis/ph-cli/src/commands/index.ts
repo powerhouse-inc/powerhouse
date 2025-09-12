@@ -1,32 +1,13 @@
-import type { Command } from "commander";
-import { connectCommand } from "./connect.js";
-// import { devCommand } from "./dev.js";
-import { generateCommand } from "./generate.js";
-import { helpCommand } from "./help.js";
-import { inspectCommand } from "./inspect.js";
-import { installCommand } from "./install.js";
-import { listCommand } from "./list.js";
-import { reactorCommand } from "./reactor.js";
-import { serviceCommand } from "./service.js";
-import { switchboardCommand } from "./switchboard.js";
-import { uninstallCommand } from "./uninstall.js";
-import { vetraCommand } from "./vetra.js";
-
-export const commands = [
-  // devCommand,
-  connectCommand,
-  generateCommand,
-  reactorCommand,
-  helpCommand,
-  installCommand,
-  uninstallCommand,
-  serviceCommand,
-  listCommand,
-  inspectCommand,
-  switchboardCommand,
-  vetraCommand,
-];
-
-export default function registerCommands(program: Command) {
-  commands.forEach((command) => command(program));
-}
+export * from "./connect.js";
+export * from "./dev.js";
+export * from "./generate.js";
+export * from "./help.js";
+export * from "./inspect.js";
+export * from "./install.js";
+export * from "./list.js";
+export * from "./reactor.js";
+export * from "./register-commands.js";
+export * from "./service.js";
+export * from "./switchboard.js";
+export * from "./uninstall.js";
+export * from "./vetra.js";

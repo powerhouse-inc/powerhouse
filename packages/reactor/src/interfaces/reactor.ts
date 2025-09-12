@@ -1,6 +1,6 @@
 import type {
   Action,
-  DocumentModelState,
+  DocumentModelGlobalState,
   Operation,
   PHDocument,
 } from "document-model";
@@ -40,7 +40,7 @@ export interface IReactor {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>>;
+  ): Promise<PagedResults<DocumentModelGlobalState>>;
 
   /**
    * Retrieves a specific PHDocument by id

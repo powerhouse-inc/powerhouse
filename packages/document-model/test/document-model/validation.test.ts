@@ -1,42 +1,33 @@
+import type {
+  DocumentModelPHState,
+  ModuleSpecification,
+  OperationSpecification,
+  ValidationError,
+} from "document-model";
 import {
+  documentModelCreateDocument,
+  documentModelReducer,
+  setStateSchema,
   validateInitialState,
   validateModule,
   validateModuleOperation,
   validateModules,
   validateStateSchemaName,
-} from "#document-model/custom/utils.js";
-import { setStateSchema } from "#document-model/gen/creators.js";
-import {
-  documentModelState,
-  initialLocalState,
-} from "#document-model/gen/constants.js";
-import { reducer } from "#document-model/gen/reducer.js";
-import type { Module, Operation } from "#document-model/gen/schema/types.js";
-import { DocumentModelDocument } from "#document-model/gen/types.js";
-import { createDocument } from "#document-model/gen/utils.js";
-import { defaultBaseState } from "#document/ph-factories.js";
-import type { ValidationError } from "#document/types.js";
+} from "document-model";
 
 describe("DocumentModel Validation Error", () => {
   const documentName = "testDocument";
-  let doc = createDocument();
+  let doc = documentModelCreateDocument();
 
   beforeEach(() => {
-    doc = createDocument({
-      ...defaultBaseState(),
-      global: {
-        ...documentModelState,
-        id: "test-id",
-        name: documentName,
-        description: "test description",
-        extension: "phdm",
-        author: {
-          name: "test author",
-          website: "www.test.com",
-        },
-      },
-      local: initialLocalState,
-    });
+    doc = documentModelCreateDocument({
+      id: "test-id",
+      name: documentName,
+      description: "test description",
+      extension: "phdm",
+      authorName: "test author",
+      authorWebsite: "www.test.com",
+    } as Partial<DocumentModelPHState>);
   });
 
   describe("initial state", () => {
@@ -100,7 +91,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should not return errors when Global State Name is the same as the document name", () => {
-      const newDoc = reducer(
+      const newDoc = documentModelReducer(
         doc,
         setStateSchema({
           scope: "global",
@@ -117,7 +108,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should not return errors when Local State Name is the same as the document name", () => {
-      const newDoc = reducer(
+      const newDoc = documentModelReducer(
         doc,
         setStateSchema({
           scope: "local",
@@ -137,7 +128,7 @@ describe("DocumentModel Validation Error", () => {
     it("should return errors when global state name type is not the same as the document name", () => {
       let errors: ValidationError[] = [];
 
-      const newDoc = reducer(
+      const newDoc = documentModelReducer(
         doc,
         setStateSchema({
           scope: "global",
@@ -153,7 +144,7 @@ describe("DocumentModel Validation Error", () => {
         ),
       ];
 
-      const newDoc2 = reducer(
+      const newDoc2 = documentModelReducer(
         doc,
         setStateSchema({
           scope: "global",
@@ -175,7 +166,7 @@ describe("DocumentModel Validation Error", () => {
     it("should return errors when local state name type is not the same as the document name", () => {
       let errors: ValidationError[] = [];
 
-      const newDoc = reducer(
+      const newDoc = documentModelReducer(
         doc,
         setStateSchema({
           scope: "local",
@@ -191,7 +182,7 @@ describe("DocumentModel Validation Error", () => {
         ),
       ];
 
-      const newDoc2 = reducer(
+      const newDoc2 = documentModelReducer(
         newDoc,
         setStateSchema({
           scope: "local",
@@ -208,7 +199,7 @@ describe("DocumentModel Validation Error", () => {
         ),
       ];
 
-      const newDoc3 = reducer(
+      const newDoc3 = documentModelReducer(
         newDoc2,
         setStateSchema({
           scope: "local",
@@ -231,7 +222,7 @@ describe("DocumentModel Validation Error", () => {
 
   describe("module", () => {
     it("should report error when module has no name defined", () => {
-      const mod: Module = {
+      const mod: ModuleSpecification = {
         name: "",
         description: "test description",
         id: "test-id",
@@ -257,7 +248,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should report error when module has no operations defined", () => {
-      const mod: Module = {
+      const mod: ModuleSpecification = {
         name: "test-module",
         description: "test description",
         id: "test-id",
@@ -271,7 +262,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should not report errors when module is valid", () => {
-      const mod: Module = {
+      const mod: ModuleSpecification = {
         name: "test-module",
         description: "test description",
         id: "test-id",
@@ -298,7 +289,7 @@ describe("DocumentModel Validation Error", () => {
 
   describe("operation", () => {
     it("should report an error when operation name is not defined", () => {
-      const operation: Operation = {
+      const operation: OperationSpecification = {
         description: "",
         id: "",
         errors: [],
@@ -317,7 +308,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should report an error when operation schema is not defined", () => {
-      const operation: Operation = {
+      const operation: OperationSpecification = {
         description: "",
         id: "",
         errors: [],
@@ -336,7 +327,7 @@ describe("DocumentModel Validation Error", () => {
     });
 
     it("should not report errors when operation is valid", () => {
-      const operation: Operation = {
+      const operation: OperationSpecification = {
         description: "",
         id: "",
         errors: [],

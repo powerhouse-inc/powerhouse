@@ -21,8 +21,8 @@ function createSyncSubscriber() {
 /**
  * Creates an asynchronous subscriber with configurable delay
  */
-function createAsyncSubscriber(delayMs = 0) {
-  return async () => {
+function createAsyncSubscriber(id: string, delayMs = 0) {
+  return async (type: number, data: any) => {
     // Simulate async work
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -33,8 +33,8 @@ function createAsyncSubscriber(delayMs = 0) {
 /**
  * Creates a subscriber that randomly decides to be sync or async
  */
-function createMixedSubscriber(asyncProbability = 0.5) {
-  return async () => {
+function createMixedSubscriber(id: string, asyncProbability = 0.5) {
+  return async (type: number, data: any) => {
     if (Math.random() < asyncProbability) {
       // Async path with minimal delay
       await new Promise((resolve) => setImmediate(resolve));
@@ -62,7 +62,7 @@ function setupAsyncEventBus(subscriberCount: number, delayMs = 0): EventBus {
   const eventBus = new EventBus();
 
   for (let i = 0; i < subscriberCount; i++) {
-    eventBus.subscribe(EVENT_TYPE_ASYNC, createAsyncSubscriber(delayMs));
+    eventBus.subscribe(EVENT_TYPE_ASYNC, createAsyncSubscriber(delayMs.toString()));
   }
 
   return eventBus;
@@ -80,7 +80,7 @@ function setupMixedEventBus(
   for (let i = 0; i < subscriberCount; i++) {
     eventBus.subscribe(
       EVENT_TYPE_MIXED,
-      createMixedSubscriber(asyncProbability),
+      createMixedSubscriber(asyncProbability.toString()),
     );
   }
 

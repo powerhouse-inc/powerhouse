@@ -1,5 +1,5 @@
-import type { SidebarFooterProps } from "#powerhouse";
-import { Icon, SidebarFooter } from "#powerhouse";
+import type { SidebarFooterProps } from "@powerhousedao/design-system";
+import { Icon, SidebarFooter } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";

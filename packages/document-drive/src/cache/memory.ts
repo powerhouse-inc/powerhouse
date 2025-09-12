@@ -1,19 +1,11 @@
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import type {
+  DocumentDriveDocument,
+  ICache,
+  ICacheStorage,
+  ICacheStorageManager,
+} from "document-drive";
+import { trimResultingState } from "document-drive";
 import type { PHDocument } from "document-model";
-import type { ICache } from "./types.js";
-import { trimResultingState } from "./util.js";
-
-export interface ICacheStorage<Value = unknown> {
-  get(key: string): Value | undefined;
-  set(key: string, value: Value): this;
-  delete(key: string): boolean;
-  clear(): void;
-}
-
-export interface ICacheStorageManager {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  createStorage<Value extends {}>(): ICacheStorage<Value>;
-}
 
 export class CacheStorageManager implements ICacheStorageManager {
   private index = 0;
@@ -49,7 +41,7 @@ export class CacheStorageManager implements ICacheStorageManager {
   }
 }
 
-class InMemoryCache implements ICache {
+export class InMemoryCache implements ICache {
   private cacheStorageManager: ICacheStorageManager;
   private idToDocument: ICacheStorage<PHDocument>;
   private idToDrive: ICacheStorage<DocumentDriveDocument>;
@@ -138,5 +130,3 @@ class InMemoryCache implements ICache {
     return this.deleteDrive(driveId);
   }
 }
-
-export default InMemoryCache;

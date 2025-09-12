@@ -1,3 +1,4 @@
+export * from "./browser.js";
 export * from "./document-editor-debug-tools.js";
 export * from "./drive-sections.js";
 export * from "./join.js";

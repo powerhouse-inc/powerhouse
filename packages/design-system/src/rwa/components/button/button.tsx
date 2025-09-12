@@ -1,9 +1,12 @@
-import type { ButtonProps } from "#powerhouse";
-import { Button, mergeClassNameProps } from "#powerhouse";
+import type { PowerhouseButtonProps } from "@powerhousedao/design-system";
+import {
+  PowerhouseButton,
+  mergeClassNameProps,
+} from "@powerhousedao/design-system";
 
-export const RWAButton: React.FC<ButtonProps> = (props) => {
+export const RWAButton: React.FC<PowerhouseButtonProps> = (props) => {
   return (
-    <Button
+    <PowerhouseButton
       color="light"
       size="small"
       {...mergeClassNameProps(
@@ -12,6 +15,6 @@ export const RWAButton: React.FC<ButtonProps> = (props) => {
       )}
     >
       {props.children}
-    </Button>
+    </PowerhouseButton>
   );
 };

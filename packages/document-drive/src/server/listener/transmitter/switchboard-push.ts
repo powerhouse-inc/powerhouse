@@ -1,14 +1,18 @@
 import type {
+  GraphQLResult,
   IListenerManager,
+  ITransmitter,
   ListenerRevision,
   StrandUpdate,
-} from "#server/types";
-import type { GraphQLResult } from "#utils/graphql";
-import { gql, requestGraphql } from "#utils/graphql";
-import { childLogger } from "#utils/logger";
-import { operationsToRevision } from "#utils/misc";
+  StrandUpdateSource,
+} from "document-drive";
+import {
+  childLogger,
+  gql,
+  operationsToRevision,
+  requestGraphql,
+} from "document-drive";
 import stringify from "json-stringify-deterministic";
-import type { ITransmitter, StrandUpdateSource } from "./types.js";
 
 const SYNC_OPS_BATCH_LIMIT = 10;
 

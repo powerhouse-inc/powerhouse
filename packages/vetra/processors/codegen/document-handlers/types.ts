@@ -1,5 +1,5 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { InternalTransmitterUpdate } from "document-drive";
 
 export interface DocumentHandler {
   documentType: string;

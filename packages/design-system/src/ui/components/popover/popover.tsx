@@ -1,4 +1,4 @@
-import { cn } from "#powerhouse";
+import { cn } from "@powerhousedao/design-system";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import React from "react";
 

@@ -25,7 +25,7 @@ export class BaseStorage<
   get<Key extends keyof T>(key: Key): T[Key] {
     return this.#store.get(this.#buildKey(key));
   }
-  set<Key extends keyof T>(key: Key, value?: T[Key] | undefined): void {
+  set<Key extends keyof T>(key: Key, value?: T[Key]): void {
     return this.#store.set(this.#buildKey(key), value);
   }
   delete<Key extends keyof T>(key: Key): void {

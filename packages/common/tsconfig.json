@@ -1,18 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "node",
-      "vitest/globals",
-      "@types/wicg-file-system-access",
-      "@storybook/types"
-    ],
+    "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
     "outDir": "./dist",
-    "jsx": "react-jsx",
-    "lib": ["ESNext", "dom", "dom.iterable"],
-    "resolveJsonModule": true
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
-  "include": ["**/*", "./package.json"],
+  "include": ["**/*"],
   "exclude": ["dist", "node_modules", "storybook-static"],
   "references": [
     {

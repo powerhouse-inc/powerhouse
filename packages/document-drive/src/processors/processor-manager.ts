@@ -1,17 +1,17 @@
 import type {
+  IDocumentDriveServer,
+  IListenerManager,
   IProcessorManager,
   ProcessorFactory,
   ProcessorRecord,
-} from "document-drive/processors/types";
-import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
-import type {
-  IDocumentDriveServer,
-  IListenerManager,
-  Listener,
-} from "document-drive/server/types";
+  ServerListener,
+} from "document-drive";
+import {
+  childLogger,
+  InternalTransmitter,
+  isRelationalDbProcessor,
+} from "document-drive";
 import { generateId } from "document-model";
-import { childLogger } from "../../index.js";
-import { isRelationalDbProcessor } from "./relational.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([
@@ -21,7 +21,7 @@ export class ProcessorManager implements IProcessorManager {
 
   private processorsByDrive = new Map<string, ProcessorRecord[]>();
   private idToFactory = new Map<string, ProcessorFactory>();
-  private identifierToListeners = new Map<string, Listener[]>();
+  private identifierToListeners = new Map<string, ServerListener[]>();
 
   constructor(
     private listeners: IListenerManager,
@@ -127,7 +127,7 @@ export class ProcessorManager implements IProcessorManager {
       }
 
       const id = generateId();
-      const listener: Listener = {
+      const listener: ServerListener = {
         driveId,
         listenerId: id,
         block: false,

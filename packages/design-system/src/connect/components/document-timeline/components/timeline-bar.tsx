@@ -1,7 +1,4 @@
-/* eslint-disable react/jsx-max-depth */
-/* eslint-disable react/jsx-no-bind */
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
@@ -104,7 +101,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
           <div className="size-[3px] rounded-full bg-gray-500" />
         </div>
       ) : (
-        <Tooltip
+        <ConnectTooltip
           className="rounded-md bg-gray-900 text-white"
           content={tooltipContent}
           open={open}
@@ -139,7 +136,7 @@ export const TimelineBar: React.FC<TimelineBarProps> = ({
               ></div>
             </div>
           </div>
-        </Tooltip>
+        </ConnectTooltip>
       )}
     </div>
   );

@@ -1,11 +1,8 @@
-import type { SubgraphClass } from "#graphql/index.js";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-} from "document-drive/processors/types";
 import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -69,7 +66,8 @@ async function loadDependency<T = unknown>(
   try {
     // vite does not support this, but that's okay as we have provided the
     // vite-loader for this purpose
-    const module = (await import(/* @vite-ignore */ fullPath)) as T;
+
+    const module = await import(/* @vite-ignore */ fullPath);
     return module;
   } catch (e) {
     // Handle module not found errors with fallback resolution

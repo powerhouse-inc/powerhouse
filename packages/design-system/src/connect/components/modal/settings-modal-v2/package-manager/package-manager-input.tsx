@@ -1,9 +1,9 @@
-import type { IconName } from "#powerhouse";
-import { Button, Icon } from "#powerhouse";
+import type { IconName } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 
-import type { IdAutocompleteProps } from "#ui";
-import { IdAutocomplete, Input } from "#ui";
 import type { PowerhousePackage } from "@powerhousedao/config";
+import type { IdAutocompleteProps } from "@powerhousedao/design-system";
+import { IdAutocomplete, Input } from "@powerhousedao/design-system";
 import { useCallback, useMemo, useState } from "react";
 
 export type PackageManagerInputProps = {
@@ -84,7 +84,6 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
               o.packageName.toLowerCase().includes(userInput.toLowerCase()),
             ) ?? [],
           renderOption: (option) => (
-            // eslint-disable-next-line react/jsx-props-no-spreading
             <PackageItem {...(option as unknown as PowerhousePackage)} />
           ),
         };
@@ -104,16 +103,15 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
             disabled={loading}
           />
         ) : (
-          // eslint-disable-next-line react/jsx-props-no-spreading
           <IdAutocomplete {...autoCompleteOptions} onChange={setValue} />
         )}
-        <Button
+        <PowerhouseButton
           className="h-9 rounded-md text-sm"
           onClick={handleSubmit}
           disabled={loading}
         >
           Install
-        </Button>
+        </PowerhouseButton>
       </div>
       <p className="mb-3 ml-2 h-3 text-sm text-red-800">{errorMessage}</p>
     </div>

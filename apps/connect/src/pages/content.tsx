@@ -1,5 +1,5 @@
-import connectConfig from "#connect-config";
-import { useShowAddDriveModal } from "#hooks";
+import { useShowAddDriveModal } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   HomeScreen,
   HomeScreenAddDriveItem,

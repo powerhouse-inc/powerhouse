@@ -1,5 +1,4 @@
-import connectConfig from "../connect.config.js";
-import type { ServiceWorkerMessage } from "../service-worker.js";
+import { connectConfig } from "@powerhousedao/connect/config";
 
 const VERSION_CHECK_INTERVAL =
   parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL) || 60 * 60 * 1000; // 1 hour;
@@ -9,15 +8,6 @@ const basePath = connectConfig.routerBasename;
 const serviceWorkerScriptPath = [basePath, "service-worker.js"]
   .join("/")
   .replace(/\/{2,}/gm, "/");
-
-export interface IServiceWorkerMessageData {
-  type: string;
-}
-
-export interface ServiceWorkerEvent<T extends IServiceWorkerMessageData>
-  extends ExtendableMessageEvent {
-  data: T;
-}
 
 class ServiceWorkerManager {
   ready = false;
@@ -32,12 +22,17 @@ class ServiceWorkerManager {
     this.debug = debug;
   }
 
-  #handleServiceWorkerMessage(event: MessageEvent | ServiceWorkerMessage) {
+  #handleServiceWorkerMessage(
+    event: MessageEvent<{
+      type: "NEW_VERSION_AVAILABLE";
+      version: string;
+      requiresHardRefresh: boolean;
+    }>,
+  ) {
     if (this.debug) {
       console.log("ServiceWorker message: ", event);
     }
-    const message =
-      "type" in event.data ? (event as ServiceWorkerMessage) : null;
+    const message = "type" in event.data ? event : null;
     switch (message?.data.type) {
       case "NEW_VERSION_AVAILABLE": {
         if (message.data.version === connectConfig.appVersion) {

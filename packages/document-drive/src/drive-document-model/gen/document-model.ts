@@ -1,6 +1,6 @@
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 
-export const documentModel: DocumentModelState = {
+export const driveDocumentModel: DocumentModelGlobalState = {
   id: "powerhouse/document-drive",
   name: "DocumentDrive",
   extension: "phdd",

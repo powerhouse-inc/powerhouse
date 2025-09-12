@@ -1,4 +1,4 @@
-import { useInitSentry } from "#hooks";
+import { useInitSentry } from "@powerhousedao/connect";
 
 interface SentryProviderProps {
   children?: React.ReactNode;

@@ -1,34 +1,19 @@
-import type { IReadModeDriveServer } from "#read-mode/types";
 import type {
   DefaultRemoteDriveInfo,
+  DocumentDriveDocument,
   DocumentDriveServerOptions,
-  DriveEvents,
   IBaseDocumentDriveServer,
+  IDefaultDrivesManager,
+  IReadModeDriveServer,
+  IServerDelegateDrivesManager,
   RemoteDriveAccessLevel,
   RemoveDriveStrategy,
   RemoveOldRemoteDrivesOption,
-} from "#server/types";
-import type { DocumentDriveDocument } from "../drive-document-model/gen/types.js";
-import { requestPublicDriveWithTokenFromReactor } from "./graphql.js";
-import { logger } from "./logger.js";
-
-export interface IServerDelegateDrivesManager {
-  emit: (...args: Parameters<DriveEvents["defaultRemoteDrive"]>) => void;
-  detachDrive: (driveId: string) => Promise<void>;
-}
+} from "document-drive";
+import { logger, requestPublicDriveWithTokenFromReactor } from "document-drive";
 
 function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
   return typeof (obj as IReadModeDriveServer).getReadDrives === "function";
-}
-
-export interface IDefaultDrivesManager {
-  initializeDefaultRemoteDrives(): Promise<void>;
-  getDefaultRemoteDrives(): Map<string, DefaultRemoteDriveInfo>;
-  setDefaultDriveAccessLevel(
-    url: string,
-    level: RemoteDriveAccessLevel,
-  ): Promise<void>;
-  setAllDefaultDrivesAccessLevel(level: RemoteDriveAccessLevel): Promise<void>;
 }
 
 export class DefaultDrivesManager implements IDefaultDrivesManager {

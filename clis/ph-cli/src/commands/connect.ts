@@ -1,11 +1,8 @@
 import type {
   ConnectBuildOptions,
   ConnectPreviewOptions,
-} from "@powerhousedao/builder-tools/connect-build";
-import {
-  buildConnect,
-  previewConnect,
-} from "@powerhousedao/builder-tools/connect-build";
+} from "@powerhousedao/builder-tools";
+import { buildConnect, previewConnect } from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,

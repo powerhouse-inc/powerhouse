@@ -7,25 +7,16 @@
     "directory": "packages/reactor"
   },
   "type": "module",
+  "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
-  "exports": {
-    ".": "./dist/src/index.js"
-  },
-  "imports": {
-    "#*": "./dist/src/*"
-  },
   "files": [
-    "./dist/src"
+    "dist"
   ],
   "scripts": {
-    "build": "pnpm run build:tsc",
-    "build:tsc": "tsc --build",
-    "prebuild": "pnpm run clean",
-    "test": "vitest run",
+    "tsc": "tsc",
     "lint": "eslint",
-    "bench": "vitest bench --run",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "test": "vitest run",
+    "bench": "vitest bench --run"
   },
   "publishConfig": {
     "access": "public"
@@ -39,7 +30,6 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
     "vitest": "^3.1.2"
   }
 }

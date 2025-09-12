@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterDuplicatedOperations } from "../../src/document/utils/document-helpers.js";
+import { filterDuplicatedOperations } from "document-model";
 import { buildOperations } from "./utils.js";
 
 describe("filterDuplicatedOperations", () => {

@@ -2,12 +2,15 @@ import type {
   DocumentStory,
   EditorStoryArgs,
   EditorStoryProps,
-} from "@powerhousedao/builder-tools/editor-utils";
-import { createDocumentStory } from "@powerhousedao/builder-tools/editor-utils";
+} from "@powerhousedao/builder-tools";
+import { createDocumentStory } from "@powerhousedao/builder-tools";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import type { Decorator, Meta } from "@storybook/react";
-import { driveDocumentModelModule } from "document-drive";
-import { createState } from "document-drive/drive-document-model/gen/index";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveGlobalState,
+  type DocumentDriveLocalState,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { defaultBaseState } from "document-model";
 
@@ -23,7 +26,12 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
   const story = createDocumentStory(
     Editor,
     driveDocumentModelModule.reducer,
-    initialState ?? createState(defaultBaseState(), { name: "Powerhouse" }),
+    initialState ??
+      driveDocumentModelModule.utils.createState({
+        ...defaultBaseState(),
+        global: { name: "Powerhouse" } as DocumentDriveGlobalState,
+        local: {} as DocumentDriveLocalState,
+      }),
     additionalStoryArgs,
     [
       (Story, context) => (

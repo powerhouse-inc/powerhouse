@@ -18,7 +18,7 @@ export class BrowserStorage<
     return undefined;
   }
 
-  set<Key extends keyof T>(key: Key, value?: T[Key] | undefined): void {
+  set<Key extends keyof T>(key: Key, value?: T[Key]): void {
     return value
       ? localStorage.setItem(this.#buildKey(key), JSON.stringify(value))
       : localStorage.removeItem(this.#buildKey(key));

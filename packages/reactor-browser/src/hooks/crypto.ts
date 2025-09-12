@@ -1,5 +1,8 @@
+import {
+  subscribeToConnectCrypto,
+  subscribeToDid,
+} from "@powerhousedao/reactor-browser";
 import { useSyncExternalStore } from "react";
-import { subscribeToConnectCrypto, subscribeToDid } from "../events/index.js";
 
 export function useConnectCrypto() {
   const connectCrypto = useSyncExternalStore(

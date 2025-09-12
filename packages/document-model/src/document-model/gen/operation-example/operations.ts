@@ -1,26 +1,26 @@
-import {
+import type {
   AddOperationExampleAction,
-  UpdateOperationExampleAction,
   DeleteOperationExampleAction,
+  DocumentModelGlobalState,
   ReorderOperationExamplesAction,
-} from "./actions.js";
-import { DocumentModelState } from "../types.js";
+  UpdateOperationExampleAction,
+} from "document-model";
 
 export interface DocumentModelOperationExampleOperations {
   addOperationExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddOperationExampleAction,
   ) => void;
   updateOperationExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: UpdateOperationExampleAction,
   ) => void;
   deleteOperationExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteOperationExampleAction,
   ) => void;
   reorderOperationExamplesOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderOperationExamplesAction,
   ) => void;
 }

@@ -3,8 +3,8 @@ import type {
   GroupTransaction,
   ServiceProviderFeeType,
   TableName,
-} from "#rwa";
-import { useEditorContext } from "#rwa";
+} from "@powerhousedao/design-system";
+import { useEditorContext } from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export type DependentItemProps = {

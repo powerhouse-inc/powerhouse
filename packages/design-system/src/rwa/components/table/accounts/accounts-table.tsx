@@ -1,6 +1,9 @@
-import { Icon } from "#powerhouse";
-import type { TableColumn } from "#rwa";
-import { tableNames, useEditorContext } from "#rwa";
+import type { TableColumn } from "@powerhousedao/design-system";
+import {
+  Icon,
+  tableNames,
+  useEditorContext,
+} from "@powerhousedao/design-system";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";
 import { RWATableCell, RWATableRow, TableWithForm } from "../base/index.js";

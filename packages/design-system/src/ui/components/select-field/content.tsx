@@ -1,17 +1,15 @@
-/* eslint-disable react/jsx-max-depth */
-import { Icon } from "#powerhouse";
-import { useCommandState } from "cmdk";
-import type React from "react";
-import { useEffect } from "react";
-import { cn } from "../../lib/index.js";
+import type { SelectProps } from "@powerhousedao/design-system";
 import {
+  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "../command/command.js";
-import type { SelectProps } from "../enum-field/types.js";
+  Icon,
+} from "@powerhousedao/design-system";
+import { useCommandState } from "cmdk";
+import React, { useEffect } from "react";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;

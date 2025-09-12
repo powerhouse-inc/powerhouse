@@ -1,6 +1,8 @@
-import { Icon, Modal } from "#powerhouse";
-import type { DependentItemProps, TableName } from "#rwa";
-import { tableLabels } from "#rwa";
+import type {
+  DependentItemProps,
+  TableName,
+} from "@powerhousedao/design-system";
+import { Icon, Modal, tableLabels } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { memo, useCallback } from "react";
 

@@ -1,5 +1,8 @@
-import { addExternalPackage, removeExternalPackage } from "#services";
-import { PH_PACKAGES } from "@powerhousedao/config/packages";
+import { PH_PACKAGES } from "@powerhousedao/config";
+import {
+  addExternalPackage,
+  removeExternalPackage,
+} from "@powerhousedao/connect";
 import { PackageManager as BasePackageManager } from "@powerhousedao/design-system";
 import {
   makeVetraPackageManifest,
@@ -7,7 +10,7 @@ import {
   useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import type { Manifest } from "document-model";
-import type React from "react";
+import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const LOCAL_REACTOR_VALUE = "local-reactor";

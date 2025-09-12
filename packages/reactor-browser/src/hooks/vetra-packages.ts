@@ -1,17 +1,17 @@
-import type { ImportScriptModule, SubgraphModule } from "document-model";
-import { useSyncExternalStore } from "react";
-import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
-import {
-  dispatchSetVetraPackagesEvent,
-  subscribeToVetraPackages,
-} from "../events/vetra-packages.js";
 import type {
   Processors,
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraPackage,
   VetraProcessorModule,
-} from "../types/vetra.js";
+} from "@powerhousedao/reactor-browser";
+import {
+  DEFAULT_DRIVE_EDITOR_ID,
+  dispatchSetVetraPackagesEvent,
+  subscribeToVetraPackages,
+} from "@powerhousedao/reactor-browser";
+import type { ImportScriptModule, SubgraphModule } from "document-model";
+import { useSyncExternalStore } from "react";
 
 const defaultVetraPackages: VetraPackage[] = [];
 
@@ -26,12 +26,14 @@ export function setVetraPackages(packages: VetraPackage[]) {
   dispatchSetVetraPackagesEvent(packages);
 }
 
-export function useDocumentModelModules(): VetraDocumentModelModule[] {
+export function useDocumentModelModules():
+  | VetraDocumentModelModule[]
+  | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages.flatMap((pkg) => pkg.modules.documentModelModules || []);
 }
 
-export function useEditorModules(): VetraEditorModule[] {
+export function useEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
     .flatMap((pkg) => pkg.modules.editorModules || [])
@@ -40,7 +42,7 @@ export function useEditorModules(): VetraEditorModule[] {
     );
 }
 
-export function useDriveEditorModules(): VetraEditorModule[] {
+export function useDriveEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
     .flatMap((pkg) => pkg.modules.editorModules || [])
@@ -49,35 +51,41 @@ export function useDriveEditorModules(): VetraEditorModule[] {
     );
 }
 
-export function useDocumentModelModuleById(id: string | null | undefined) {
+export function useDocumentModelModuleById(
+  id: string | null | undefined,
+): VetraDocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules.find((module) => module.documentModel.id === id);
+  return documentModelModules?.find((module) => module.documentModel.id === id);
 }
 
-export function useEditorModuleById(id: string | null | undefined) {
+export function useEditorModuleById(
+  id: string | null | undefined,
+): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
-  return editorModules.find((module) => module.id === id);
+  return editorModules?.find((module) => module.id === id);
 }
 
 export function useFallbackEditorModule(
   documentType: string | null | undefined,
-) {
+): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
-  if (editorModules.length === 0) return undefined;
+  if (editorModules?.length === 0) return undefined;
 
-  const modulesForType = editorModules.filter((module) =>
+  const modulesForType = editorModules?.filter((module) =>
     module.documentTypes.includes(documentType),
   );
-  return modulesForType[0];
+  return modulesForType?.[0];
 }
 
-export function useDriveEditorModuleById(id: string | null | undefined) {
+export function useDriveEditorModuleById(
+  id: string | null | undefined,
+): VetraEditorModule | undefined {
   const driveEditorModules = useDriveEditorModules();
-  return driveEditorModules.find((module) => module.id === id);
+  return driveEditorModules?.find((module) => module.id === id);
 }
 
-export function useDefaultDriveEditorModule() {
+export function useDefaultDriveEditorModule(): VetraEditorModule | undefined {
   const defaultDriveEditorModule = useDriveEditorModuleById(
     DEFAULT_DRIVE_EDITOR_ID,
   );
@@ -90,28 +98,30 @@ export function useEditorModulesForDocumentType(
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
 
-  const modulesForType = editorModules.filter((module) =>
+  const modulesForType = editorModules?.filter((module) =>
     module.documentTypes.includes(documentType),
   );
   return modulesForType;
 }
 
-export function useProcessorModules(): VetraProcessorModule[] {
+export function useProcessorModules(): VetraProcessorModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages.flatMap((pkg) => pkg.modules.processorModules || []);
+  return vetraPackages
+    ?.flatMap((pkg) => pkg.modules.processorModules)
+    .filter((module) => module !== undefined);
 }
 
-export function useProcessors(): Processors[] {
+export function useProcessors(): Processors[] | undefined {
   const processorModules = useProcessorModules();
-  return processorModules.flatMap((module) => module.processors);
+  return processorModules?.flatMap((module) => module.processors);
 }
 
-export function useSubgraphModules(): SubgraphModule[] {
+export function useSubgraphModules(): SubgraphModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages.flatMap((pkg) => pkg.modules.subgraphModules || []);
 }
 
-export function useImportScriptModules(): ImportScriptModule[] {
+export function useImportScriptModules(): ImportScriptModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages.flatMap((pkg) => pkg.modules.importScriptModules || []);
 }

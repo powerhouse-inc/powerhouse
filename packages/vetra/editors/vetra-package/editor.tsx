@@ -11,6 +11,7 @@ export default function Editor(props: IProps) {
   const { document: initialDocument } = props;
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const unsafeCastOfDocument = document as VetraPackageDocument;
+  console.log(">>>>> document:", unsafeCastOfDocument.state.global);
 
   const onNameChange = useCallback(
     (name: string) => {

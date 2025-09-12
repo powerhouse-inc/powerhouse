@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ConnectDropdownMenu } from "./dropdown-menu.js";
 
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import { useState } from "react";
 
 const meta = {

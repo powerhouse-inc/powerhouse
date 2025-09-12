@@ -1,11 +1,8 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import { isSubgraphClass } from "@powerhousedao/reactor-api";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-} from "document-drive/processors/types";
 import type { DocumentModelModule } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";

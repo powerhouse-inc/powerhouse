@@ -1,27 +1,17 @@
 /**
  * Factory methods for creating VetraPackageDocument instances
  */
-
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 import type {
   VetraPackageDocument,
   VetraPackageLocalState,
-  VetraPackageState,
+  VetraPackageGlobalState,
+  VetraPackagePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type VetraPackagePHState = PHBaseState & {
-  global: VetraPackageState;
-  local: VetraPackageLocalState;
-};
-
-export function defaultGlobalState(): VetraPackageState {
+export function defaultGlobalState(): VetraPackageGlobalState {
   return {
     name: null,
     description: null,
@@ -49,12 +39,12 @@ export function defaultPHState(): VetraPackagePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<VetraPackageState>,
-): VetraPackageState {
+  state?: Partial<VetraPackageGlobalState>,
+): VetraPackageGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as VetraPackageState;
+  } as VetraPackageGlobalState;
 }
 
 export function createLocalState(
@@ -68,7 +58,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<VetraPackageState>,
+  globalState?: Partial<VetraPackageGlobalState>,
   localState?: Partial<VetraPackageLocalState>,
 ): VetraPackagePHState {
   return {
@@ -87,7 +77,7 @@ export function createVetraPackageDocument(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<VetraPackageState>;
+    global?: Partial<VetraPackageGlobalState>;
     local?: Partial<VetraPackageLocalState>;
   }>,
 ): VetraPackageDocument {

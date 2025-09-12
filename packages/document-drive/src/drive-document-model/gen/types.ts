@@ -1,22 +1,21 @@
-import type { Action, PHDocument } from "document-model";
-import type { DocumentDriveAction } from "./actions.js";
-import { DocumentDrivePHState } from "./ph-factories.js";
 import type {
   AddFileInput,
-  DocumentDriveLocalState,
-  DocumentDriveState,
+  DocumentDriveDriveAction,
+  DocumentDriveNodeAction,
+  DocumentDrivePHState,
   InputMaybe,
   Scalars,
-} from "./schema/types.js";
+} from "document-drive";
+import type { Action, PHDocument } from "document-model";
 
-export { z } from "./schema/index.js";
+export type * from "./drive/types.js";
+export type * from "./node/types.js";
 export type * from "./schema/types.js";
-export type {
-  DocumentDriveAction,
-  DocumentDriveLocalState,
-  DocumentDrivePHState,
-  DocumentDriveState,
-};
+
+export type DocumentDriveAction =
+  | DocumentDriveNodeAction
+  | DocumentDriveDriveAction;
+
 export type DocumentDriveDocument = PHDocument<DocumentDrivePHState>;
 
 export type LegacySynchronizationUnit = {

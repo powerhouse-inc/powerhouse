@@ -1,9 +1,13 @@
 import type {
+  GetStrandsOptions,
   ListenerFilter,
+  ListenerRevision,
+  OperationUpdate,
   PullResponderTriggerData,
+  StrandUpdate,
   Trigger,
-} from "#drive-document-model/gen/types";
-import type { ListenerRevision, StrandUpdate } from "#server/types";
+} from "document-drive";
+import type { Operation, PHBaseState } from "document-model";
 
 export type StrandUpdateSource =
   | {
@@ -28,3 +32,41 @@ export type PullResponderTrigger = Omit<Trigger, "data" | "type"> & {
   data: PullResponderTriggerData;
   type: "PullResponder";
 };
+
+export type InternalOperationUpdate<TState extends PHBaseState = PHBaseState> =
+  Omit<Operation, "scope"> & {
+    state: TState;
+    previousState: TState;
+  };
+
+export type InternalTransmitterUpdate = {
+  driveId: string;
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+  operations: InternalOperationUpdate[];
+  state: any;
+};
+
+export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
+  input: string;
+};
+
+export type PullStrandsGraphQL = {
+  system: {
+    sync: {
+      strands: StrandUpdateGraphQL[];
+    };
+  };
+};
+
+export type CancelPullLoop = () => void;
+
+export type StrandUpdateGraphQL = Omit<StrandUpdate, "operations"> & {
+  operations: OperationUpdateGraphQL[];
+};
+
+export interface IPullResponderTransmitter extends ITransmitter {
+  getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
+}

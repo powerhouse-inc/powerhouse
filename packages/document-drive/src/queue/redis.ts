@@ -6,7 +6,7 @@
 //   type IQueueManager,
 //   type IServerDelegate,
 //   type Job,
-// } from "./types.js";
+// } from "document-drive";
 
 // export class RedisQueue<T> implements IQueue<T> {
 //   private id: string;

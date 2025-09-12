@@ -1,16 +1,15 @@
+import type { ICache } from "document-drive";
+import {
+  createBaseState,
+  driveCreateDocument,
+  InMemoryCache,
+  LRUCacheStorage,
+} from "document-drive";
+import type { DocumentModelGlobalState } from "document-model";
+import { documentModelCreateDocument, generateId } from "document-model";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";
-import {
-  createDocument as createDocumentModelDocument,
-  DocumentModelState,
-  generateId,
-} from "../../document-model/index.js";
-import { LRUCacheStorage } from "../src/cache/lru.js";
-import InMemoryCache from "../src/cache/memory.js";
-import { ICache } from "../src/cache/types.js";
-import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
-import { createBaseState } from "./utils.js";
 
 const initRedis = async () => {
   const redisClient = createClient({
@@ -62,7 +61,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
   describe("document operations", () => {
     it("should set and get a document", async ({ expect }) => {
       const documentId = "test-document-id";
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
 
       await cache.setDocument(documentId, document);
       const retrievedDocument = await cache.getDocument(documentId);
@@ -85,7 +84,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
     it("should delete a document", async ({ expect }) => {
       const documentId = "document-to-delete";
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
 
       await cache.setDocument(documentId, document);
       const deletionResult = await cache.deleteDocument(documentId);
@@ -110,7 +109,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
   describe("drive operations", () => {
     it("should set and get a drive", async ({ expect }) => {
       const driveId = "test-drive-id";
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
 
       await cache.setDrive(driveId, drive);
       const retrievedDrive = await cache.getDrive(driveId);
@@ -132,7 +131,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
     });
 
     it("should delete a drive", async ({ expect }) => {
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       const driveId = drive.header.id;
 
       // Set slug for slug deletion logic
@@ -161,7 +160,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
   describe("drive by slug operations", () => {
     it("should set and get a drive by slug", async ({ expect }) => {
       const slug = "test-slug";
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       const driveId = drive.header.id;
 
       drive.header.id = driveId;
@@ -187,7 +186,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 
     it("should delete a drive by slug", async ({ expect }) => {
       const slug = "slug-to-delete";
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       drive.header.slug = slug;
 
       await cache.setDriveBySlug(slug, drive);
@@ -215,7 +214,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect,
     }) => {
       const slug = "test-slug";
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       const driveId = drive.header.id;
 
       // Set slug for consistency
@@ -239,7 +238,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       expect,
     }) => {
       const slug = "test-slug";
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       const driveId = drive.header.id;
 
       // Set slug for slug deletion logic
@@ -261,10 +260,10 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
       const documentId = generateId();
       const driveId = documentId;
 
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
       document.header.id = documentId;
 
-      const drive = createDriveDocument();
+      const drive = driveCreateDocument();
       drive.header.id = driveId;
 
       await cache.setDocument(documentId, document);
@@ -289,7 +288,7 @@ describe.each(cacheImplementations)("%s", (_, buildCache) => {
 describe("LRU Cache Specific Tests", () => {
   // Helper functions for test data
   function createTestDocument() {
-    return createDocumentModelDocument(
+    return documentModelCreateDocument(
       createBaseState(
         {
           id: `doc`,
@@ -305,7 +304,7 @@ describe("LRU Cache Specific Tests", () => {
   }
 
   function createTestDrive() {
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     drive.state.global.nodes = new Array(10).fill(0).map((_, i) => ({
       id: `node-${i}`,
       name: `Node ${i}`,
@@ -388,7 +387,7 @@ describe("LRU Cache Specific Tests", () => {
 
     expect(doc1).toBeDefined();
     expect(
-      ((doc1?.state as any).global as DocumentModelState).description,
+      ((doc1?.state as any).global as DocumentModelGlobalState).description,
     ).toBe("y".repeat(100));
     expect(doc2).toBeDefined(); // Should not be evicted as cache size wasn't exceeded
   });

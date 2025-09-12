@@ -1,3 +1,4 @@
+import { useUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   BaseDocumentDriveServer,
   IDocumentDriveServer,
@@ -5,9 +6,9 @@ import type {
   ReadDocumentNotFoundError,
   ReadDrive,
   ReadDriveContext,
-  ReadDriveSlugNotFoundError,
   ReadDrivesListener,
   ReadDrivesListenerUnsubscribe,
+  ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
 import { ReadDriveNotFoundError } from "document-drive";
@@ -15,7 +16,6 @@ import type { PHBaseState, PHDocument } from "document-model";
 import fastIsDeepEqual from "fast-deep-equal";
 import type { FC, ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { useUserPermissions } from "../hooks/user.js";
 
 const logger = {
   error: console.error,
@@ -57,7 +57,6 @@ function checkServer<
 }
 
 function bindClassMethods(instance: any) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const prototype = Object.getPrototypeOf(instance);
   const propertyNames = Object.getOwnPropertyNames(prototype);
 
@@ -68,7 +67,6 @@ function bindClassMethods(instance: any) {
       typeof descriptor.value === "function" &&
       name !== "constructor"
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       instance[name] = instance[name].bind(instance);
     }
   });
@@ -90,21 +88,25 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     this.server = documentDrive;
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   migrateReadDrive(id: string, options: RemoteDriveOptions) {
     return this.server!.migrateReadDrive(id, options);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   addReadDrive(url: string, options?: RemoteDriveOptions) {
     return this.server!.addReadDrive(url, options);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   getReadDrives(): Promise<string[]> {
     return this.server!.getReadDrives();
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   getReadDriveBySlug(
     slug: string,
@@ -112,11 +114,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.getReadDriveBySlug(slug);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   getReadDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
     return this.server!.getReadDrive(id);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   getReadDriveContext(
     id: string,
@@ -124,11 +128,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.getReadDriveContext(id);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   fetchDrive(id: string): Promise<ReadDrive | ReadDriveNotFoundError> {
     return this.server!.fetchDrive(id);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   fetchDocument<TState extends PHBaseState>(
     driveId: string,
@@ -143,11 +149,13 @@ class ReadModeContextImpl implements Omit<IReadModeContext, "readDrives"> {
     return this.server!.fetchDocument(driveId, documentId, documentType);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   deleteReadDrive(id: string): Promise<ReadDriveNotFoundError | undefined> {
     return this.server!.deleteReadDrive(id);
   }
 
+  // @ts-expect-error - the definition for this directive is wrong, see number of arguments
   @checkServer
   onReadDrivesUpdate(
     listener: ReadDrivesListener,

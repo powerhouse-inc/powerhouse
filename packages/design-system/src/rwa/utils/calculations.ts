@@ -1,5 +1,9 @@
-import type { FixedIncome, FixedIncomeType, GroupTransaction } from "#rwa";
-import { ASSET_PURCHASE, ASSET_SALE } from "#rwa";
+import type {
+  FixedIncome,
+  FixedIncomeType,
+  GroupTransaction,
+} from "@powerhousedao/design-system";
+import { ASSET_PURCHASE, ASSET_SALE } from "@powerhousedao/design-system";
 import { all, create } from "mathjs";
 
 type NumericKeys<T> = {

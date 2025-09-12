@@ -3,7 +3,7 @@ import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
-} from "document-drive/storage/types";
+} from "document-drive";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";

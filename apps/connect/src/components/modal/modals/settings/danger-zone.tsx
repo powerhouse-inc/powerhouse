@@ -8,7 +8,7 @@ import {
 import type { DocumentDriveDocument } from "document-drive";
 import { logger } from "document-drive";
 import { useTranslation } from "react-i18next";
-import { clearReactorStorage } from "../../../../store/reactor";
+import { clearReactorStorage } from "@powerhousedao/connect";
 import { useModal } from "../../modal.js";
 
 export const DangerZone: React.FC<{ onRefresh: () => void }> = ({

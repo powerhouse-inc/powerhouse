@@ -2,9 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "jsx": "react-jsx",
-    "types": ["vite/client", "react", "@storybook/types"]
+    "types": ["vite/client"]
   },
+  "include": ["**/*"],
   "references": [
     {
       "path": "../config"
@@ -14,7 +14,9 @@
     },
     {
       "path": "../design-system"
+    },
+    {
+      "path": "../reactor-browser"
     }
-  ],
-  "include": ["**/*"]
+  ]
 }

@@ -1,22 +1,21 @@
+import {
+  dispatchSetSelectedDriveIdEvent,
+  getDriveAvailableOffline,
+  getDriveSharingType,
+  subscribeToDrives,
+  subscribeToSelectedDriveId,
+  useDispatch,
+} from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
-  DocumentDrivePHState,
   SharingType,
   Trigger,
 } from "document-drive";
-import { getDriveSharingType } from "document-drive/server/utils";
-import type { PHDocument } from "document-model";
+import type { Action } from "document-model";
 import { useSyncExternalStore } from "react";
-import {
-  dispatchSetSelectedDriveIdEvent,
-  subscribeToDrives,
-  subscribeToSelectedDriveId,
-} from "../events/index.js";
-import { getDriveAvailableOffline } from "../utils/drives.js";
-import { useDispatch } from "./dispatch.js";
 
 /** Returns the drives for a reactor. */
-export function useDrives(): PHDocument<DocumentDrivePHState>[] | undefined {
+export function useDrives(): DocumentDriveDocument[] | undefined {
   const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
   return drives;
 }
@@ -25,8 +24,10 @@ export function useDriveById(driveId: string | undefined | null) {
   const drives = useDrives();
   const drive = drives?.find((drive) => drive.header.id === driveId);
   const [document, dispatch] = useDispatch(drive);
-  const unsafeDrive = document as DocumentDriveDocument | undefined;
-  return [unsafeDrive, dispatch] as const;
+  return [document, dispatch] as [
+    DocumentDriveDocument | undefined,
+    (actionOrActions: Action | Action[] | undefined) => void,
+  ];
 }
 
 export function useSelectedDriveId() {

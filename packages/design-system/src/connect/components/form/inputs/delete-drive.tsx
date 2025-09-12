@@ -1,5 +1,8 @@
-import { DriveNameInput } from "#connect";
-import { Button, Icon } from "#powerhouse";
+import {
+  DriveNameInput,
+  Icon,
+  PowerhouseButton,
+} from "@powerhousedao/design-system";
 import type { DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
 
@@ -34,17 +37,17 @@ export function DeleteDrive(props: DeleteDriveProps) {
         value={driveNameInput}
       />
       <div className="flex gap-3">
-        <Button className="w-full" color="light" onClick={onCancel}>
+        <PowerhouseButton className="w-full" color="light" onClick={onCancel}>
           Cancel
-        </Button>
-        <Button
+        </PowerhouseButton>
+        <PowerhouseButton
           className="w-full"
           color="red"
           disabled={!isAllowedToDelete}
           onClick={deleteDrive}
         >
           Delete
-        </Button>
+        </PowerhouseButton>
       </div>
     </div>
   );

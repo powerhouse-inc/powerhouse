@@ -1,4 +1,4 @@
-import { compressToEncodedURIComponent } from "lz-string";
+import * as lzString from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
   if (!driveUrl) {
@@ -67,22 +67,12 @@ export function buildDocumentSubgraphQuery(
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery();
   const variables = { documentId, driveId: driveSlug };
-  const queryData: {
-    document: string;
-    variables: string;
-    headers?: string;
-  } = {
-    document: query.trim(),
-    variables: JSON.stringify(variables, null, 2),
-  };
-
-  if (authToken) {
-    queryData.headers = JSON.stringify({
-      Authorization: `Bearer ${authToken}`,
-    });
-  }
-
-  return compressToEncodedURIComponent(JSON.stringify(queryData));
+  return lzString.compressToEncodedURIComponent(
+    JSON.stringify({
+      document: query.trim(),
+      variables: JSON.stringify(variables, null, 2),
+    }),
+  );
 }
 
 export function buildDocumentSubgraphUrl(

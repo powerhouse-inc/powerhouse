@@ -65,7 +65,7 @@ type DocumentSpecification {
   changeLog: [String!]!
 }
 
-type DocumentModelState {
+type DocumentModelGlobalState {
   name: String!
   id: String!
   extension: String!
@@ -79,78 +79,78 @@ type DocumentModelState {
 #
 type Mutation {
   # Document Model Header
-  setModelName(input: SetModelNameInput!): DocumentModelState!
-  setModelId(input: SetModelIdInput!): DocumentModelState!
-  setModelExtension(input: SetModelExtensionInput!): DocumentModelState!
-  setModelDescription(input: SetModelDescriptionInput!): DocumentModelState!
-  setAuthorName(input: SetAuthorNameInput!): DocumentModelState!
-  setAuthorWebsite(input: SetAuthorWebsiteInput!): DocumentModelState!
+  setModelName(input: SetModelNameInput!): DocumentModelGlobalState!
+  setModelId(input: SetModelIdInput!): DocumentModelGlobalState!
+  setModelExtension(input: SetModelExtensionInput!): DocumentModelGlobalState!
+  setModelDescription(input: SetModelDescriptionInput!): DocumentModelGlobalState!
+  setAuthorName(input: SetAuthorNameInput!): DocumentModelGlobalState!
+  setAuthorWebsite(input: SetAuthorWebsiteInput!): DocumentModelGlobalState!
 
   # Document Model Versioning
-  addChangeLogItemInput(input: AddChangeLogItemInput): DocumentModelState!
-  updateChangeLogItemInput(input: UpdateChangeLogItemInput): DocumentModelState!
-  deleteChangeLogItemInput(input: DeleteChangeLogItemInput): DocumentModelState!
+  addChangeLogItemInput(input: AddChangeLogItemInput): DocumentModelGlobalState!
+  updateChangeLogItemInput(input: UpdateChangeLogItemInput): DocumentModelGlobalState!
+  deleteChangeLogItemInput(input: DeleteChangeLogItemInput): DocumentModelGlobalState!
   reorderChangeLogItemsInput(
     input: ReorderChangeLogItemsInput
-  ): DocumentModelState!
-  releaseNewVersion: DocumentModelState!
+  ): DocumentModelGlobalState!
+  releaseNewVersion: DocumentModelGlobalState!
 
   # Document State Model
-  setStateSchema(input: SetStateSchemaInput!): DocumentModelState!
-  setInitialState(input: SetInitialStateInput!): DocumentModelState!
-  addStateExample(input: AddStateExampleInput!): DocumentModelState!
-  updateStateExample(input: UpdateStateExampleInput!): DocumentModelState!
-  deleteStateExample(input: DeleteStateExampleInput!): DocumentModelState!
-  reorderStateExamples(input: ReorderStateExamplesInput!): DocumentModelState!
+  setStateSchema(input: SetStateSchemaInput!): DocumentModelGlobalState!
+  setInitialState(input: SetInitialStateInput!): DocumentModelGlobalState!
+  addStateExample(input: AddStateExampleInput!): DocumentModelGlobalState!
+  updateStateExample(input: UpdateStateExampleInput!): DocumentModelGlobalState!
+  deleteStateExample(input: DeleteStateExampleInput!): DocumentModelGlobalState!
+  reorderStateExamples(input: ReorderStateExamplesInput!): DocumentModelGlobalState!
 
   # Modules
-  addModule(input: AddModuleInput!): DocumentModelState!
-  setModuleName(input: SetModuleNameInput!): DocumentModelState!
-  setModuleDescription(input: SetModuleDescriptionInput!): DocumentModelState!
-  deleteModule(input: DeleteModuleInput!): DocumentModelState!
-  reorderModules(input: ReorderModulesInput!): DocumentModelState!
+  addModule(input: AddModuleInput!): DocumentModelGlobalState!
+  setModuleName(input: SetModuleNameInput!): DocumentModelGlobalState!
+  setModuleDescription(input: SetModuleDescriptionInput!): DocumentModelGlobalState!
+  deleteModule(input: DeleteModuleInput!): DocumentModelGlobalState!
+  reorderModules(input: ReorderModulesInput!): DocumentModelGlobalState!
 
   # Operations
-  addOperation(input: AddOperationInput!): DocumentModelState!
-  setOperationName(input: SetOperationNameInput!): DocumentModelState!
-  setOperationSchema(input: SetOperationSchemaInput!): DocumentModelState!
+  addOperation(input: AddOperationInput!): DocumentModelGlobalState!
+  setOperationName(input: SetOperationNameInput!): DocumentModelGlobalState!
+  setOperationSchema(input: SetOperationSchemaInput!): DocumentModelGlobalState!
   setOperationDescription(
     input: SetOperationDescriptionInput!
-  ): DocumentModelState!
-  setOperationTemplate(input: SetOperationTemplateInput!): DocumentModelState!
-  setOperationReducer(input: SetOperationReducerInput!): DocumentModelState!
-  moveOperation(input: MoveOperationInput!): DocumentModelState!
-  deleteOperation(input: DeleteOperationInput!): DocumentModelState!
+  ): DocumentModelGlobalState!
+  setOperationTemplate(input: SetOperationTemplateInput!): DocumentModelGlobalState!
+  setOperationReducer(input: SetOperationReducerInput!): DocumentModelGlobalState!
+  moveOperation(input: MoveOperationInput!): DocumentModelGlobalState!
+  deleteOperation(input: DeleteOperationInput!): DocumentModelGlobalState!
   reorderModuleOperations(
     input: ReorderModuleOperationsInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
 
   # Operation Errors
-  addOperationError(input: AddOperationErrorInput!): DocumentModelState!
-  setOperationErrorCode(input: SetOperationErrorCodeInput!): DocumentModelState!
-  setOperationErrorName(input: SetOperationErrorNameInput!): DocumentModelState!
+  addOperationError(input: AddOperationErrorInput!): DocumentModelGlobalState!
+  setOperationErrorCode(input: SetOperationErrorCodeInput!): DocumentModelGlobalState!
+  setOperationErrorName(input: SetOperationErrorNameInput!): DocumentModelGlobalState!
   setOperationErrorDescription(
     input: SetOperationErrorDescriptionInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
   setOperationErrorTemplate(
     input: SetOperationErrorTemplateInput!
-  ): DocumentModelState!
-  deleteOperationError(input: DeleteOperationErrorInput!): DocumentModelState!
+  ): DocumentModelGlobalState!
+  deleteOperationError(input: DeleteOperationErrorInput!): DocumentModelGlobalState!
   reorderOperationErrors(
     input: ReorderOperationErrorsInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
 
   # Operation Examples
-  addOperationExample(input: AddOperationExampleInput!): DocumentModelState!
+  addOperationExample(input: AddOperationExampleInput!): DocumentModelGlobalState!
   updateOperationExample(
     input: UpdateOperationExampleInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
   deleteOperationExample(
     input: DeleteOperationExampleInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
   reorderOperationExamples(
     input: ReorderOperationExamplesInput!
-  ): DocumentModelState!
+  ): DocumentModelGlobalState!
 }
 
 union DocumentModelInput =

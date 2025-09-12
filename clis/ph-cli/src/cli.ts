@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import registerCommands from "./commands/index.js";
+import { registerCommands } from "@powerhousedao/ph-cli";
 
 const program = new Command();
 
@@ -12,6 +12,7 @@ program
   .allowUnknownOption(true)
   .option("--verbose, --debug", "Enable debug mode");
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore build time version file
 import("./version.js")
   .then(({ version }: { version: string }) => program.version(version))
@@ -35,5 +36,6 @@ program.parseAsync(process.argv).catch((error: unknown) => {
       : typeof error === "string"
         ? error
         : JSON.stringify(error, null, 2);
+
   console.error(errorMessage);
 });

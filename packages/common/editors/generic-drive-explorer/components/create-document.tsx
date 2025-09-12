@@ -1,4 +1,4 @@
-import { Button } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import type { DocumentModelModule } from "document-model";
 
 interface CreateDocumentProps {
@@ -27,7 +27,7 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
         {documentModels?.map((doc) => {
           const spec = getDocumentSpec(doc);
           return (
-            <Button
+            <PowerhouseButton
               key={spec.id}
               color="light"
               title={spec.name}
@@ -35,7 +35,7 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
               onClick={() => createDocument(doc)}
             >
               <span className="text-sm">{spec.name}</span>
-            </Button>
+            </PowerhouseButton>
           );
         })}
       </div>

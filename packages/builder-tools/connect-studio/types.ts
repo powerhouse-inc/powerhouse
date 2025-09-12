@@ -1,4 +1,4 @@
-import type { LogLevel } from "@powerhousedao/config/powerhouse";
+import type { LogLevel } from "@powerhousedao/config";
 
 export type ConnectStudioOptions = {
   connectPath?: string;

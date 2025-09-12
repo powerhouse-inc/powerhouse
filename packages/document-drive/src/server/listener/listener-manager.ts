@@ -1,27 +1,29 @@
-import { OperationError } from "#server/error";
-import type { StrandUpdateSource } from "#server/listener/transmitter/types";
-import { SyncUnitMap } from "#server/sync-unit-map";
 import type {
   DriveUpdateErrorHandler,
   ErrorStatus,
   GetStrandsOptions,
   IListenerManager,
   ISynchronizationManager,
-  Listener,
+  ListenerFilter,
   ListenerManagerOptions,
   ListenerState,
   ListenerUpdate,
   OperationUpdate,
+  ServerListener,
   StrandUpdate,
+  StrandUpdateSource,
   SynchronizationUnit,
   SynchronizationUnitId,
   SyncronizationUnitState,
-} from "#server/types";
-import { DefaultListenerManagerOptions } from "#server/types";
-import type { ListenerFilter } from "document-drive";
-import { childLogger } from "document-drive";
+} from "document-drive";
+import {
+  childLogger,
+  DefaultListenerManagerOptions,
+  OperationError,
+  SyncUnitMap,
+} from "document-drive";
 
-import { debounce } from "./util.js";
+import { debounce } from "document-drive";
 
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;
@@ -79,7 +81,7 @@ export class ListenerManager implements IListenerManager {
     return this.listenerStateByDriveId.has(driveId);
   }
 
-  async setListener(driveId: string, listener: Listener) {
+  async setListener(driveId: string, listener: ServerListener) {
     this.logger.verbose(
       `setListener(drive: ${driveId}, listener: ${listener.listenerId})`,
     );
@@ -142,7 +144,7 @@ export class ListenerManager implements IListenerManager {
   async updateSynchronizationRevisions(
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
-    willUpdate?: (listeners: Listener[]) => void,
+    willUpdate?: (listeners: ServerListener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync = false,
   ) {
@@ -150,7 +152,7 @@ export class ListenerManager implements IListenerManager {
     // This method is called when processing an operation.
     // Should we decouple the operation processing from the sync?
     const driveListeners = this.listenerStateByDriveId.values();
-    const outdatedListeners: Listener[] = [];
+    const outdatedListeners: ServerListener[] = [];
     for (const [[_drive, listenerState]] of driveListeners) {
       if (
         outdatedListeners.find(
@@ -211,7 +213,7 @@ export class ListenerManager implements IListenerManager {
 
   private async _triggerUpdate(
     source: StrandUpdateSource,
-    willUpdate?: (listeners: Listener[]) => void,
+    willUpdate?: (listeners: ServerListener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     maxContinues = 500,
   ) {

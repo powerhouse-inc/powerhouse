@@ -1,6 +1,6 @@
 import type {
   Action,
-  DocumentModelState,
+  DocumentModelGlobalState,
   PHDocument,
   Signature,
 } from "document-model";
@@ -103,7 +103,7 @@ export class ReactorClient implements IReactorClient {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>> {
+  ): Promise<PagedResults<DocumentModelGlobalState>> {
     return this.reactor.getDocumentModels(namespace, paging, signal);
   }
 

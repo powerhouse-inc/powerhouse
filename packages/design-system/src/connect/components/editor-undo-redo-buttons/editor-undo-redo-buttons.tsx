@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 export type EditorUndoRedoButtonsProps = {

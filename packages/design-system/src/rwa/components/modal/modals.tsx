@@ -1,4 +1,7 @@
-import { RWACreateItemModal, RWADeleteItemModal } from "#rwa";
+import {
+  RWACreateItemModal,
+  RWADeleteItemModal,
+} from "@powerhousedao/design-system";
 
 export const modals = {
   createItem: RWACreateItemModal,

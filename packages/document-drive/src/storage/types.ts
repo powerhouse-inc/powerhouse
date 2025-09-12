@@ -1,5 +1,7 @@
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import type { SynchronizationUnitQuery } from "#server/types";
+import type {
+  DocumentDriveDocument,
+  SynchronizationUnitQuery,
+} from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 
 export type IStorageUnit = {
