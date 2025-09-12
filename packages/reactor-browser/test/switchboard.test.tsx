@@ -1,5 +1,6 @@
 // test suite for the switchboard hooks
 
+import { describe, it } from "vitest";
 import {
   buildDocumentSubgraphUrl,
   getDocumentGraphqlQuery,
@@ -20,27 +21,16 @@ describe("Switchboard hooks", () => {
   });
 
   it("should generate the proper query for a document type", () => {
-    const stateFields = generateDocumentStateQueryFields(
-      driveDocumentModelModule.documentModel,
-      "document",
-    );
-    expect(
-      getDocumentGraphqlQuery(driveDocumentModelModule.documentModel),
-    ).toBe(
-      `query getDocument($documentId: PHID!, $driveId: String) {
-  DocumentDrive {
-    getDocument(docId: $documentId, driveId: $driveId) {
+    expect(getDocumentGraphqlQuery()).toBe(
+      `query getDocument($documentId: String!) {
+  document(id: $documentId) {
       id
-      created
       lastModified
       name
       revision
-      state {
-        ${stateFields}
-      }
+      stateJSON
     }
-  }
-}`,
+  }`,
     );
   });
 
@@ -48,10 +38,9 @@ describe("Switchboard hooks", () => {
     const url = buildDocumentSubgraphUrl(
       "https://example.com/d/123",
       "test-document",
-      driveDocumentModelModule.documentModel,
     );
     expect(url).toBe(
-      "https://example.com/graphql/document-drive?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RACgBJsUAhABoiTPAEsAbgg5cAyiklISASiLAAOkiJEqLWhUkyN23brKVqreszljmNdmFFhjszg-cd1Wned0JMDMAoig8BABDFARg-wCAG0iAZxQAWQgwCQAzCViQgKRIxALzCKkJZIkIJFLdVOiEU3jQosQiJEyEZI0iADoBohqiRxsAfQAxCASwfAA5Lt6gjuKmgGsJJDAiAAdIiNQpmfwiAF9+weHR2kmJBIQF2aXttvXN7evUABUCHaa9g4oI6zPBnMESKA1OpnUqnEJwpCnEDCEBSfYSSIAI3uyQwID8uk04GstA4RK4RJiqQAtJ8UEThCEiW5pB5yUQiQBGABMAGYidokacgA",
+      "https://example.com/d/123?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RAyingJZISAQgCURYAB0kRIsxqo6-TkSbVWKDuKkzZe5dL16ANgEMAzigCyEMPwBm-BGENGiSU4ldG8CAG785vwQSN56lqYoCABS3ADyAHJhAL6uySAANCB+pgKmAEbGCOYYIDqykuDqtByVXJVRlgC08hqVGa6VYAJ+CLUYRJUAjABMAMyV0unJQA",
     );
   });
 });

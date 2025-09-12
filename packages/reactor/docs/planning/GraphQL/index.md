@@ -75,6 +75,8 @@ type PHDocument {
   parentId: String
 }
 
+// TODO: Add Action type with JSONObject as input.
+
 type PHDocumentResultPage {
   items: [PHDocument!]!
   totalCount: Int!

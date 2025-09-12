@@ -3,12 +3,13 @@ import {
   buildDocumentSubgraphUrl,
   exportFile,
   setSelectedNode,
-  useDocumentModelModuleById,
+  useConnectCrypto,
   useDriveIsRemote,
   useDriveRemoteUrl,
   useParentFolder,
   useSelectedDocument,
   useSelectedDrive,
+  useUser,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
@@ -23,10 +24,10 @@ export function DocumentEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
   const parentFolder = useParentFolder(selectedDocument?.header.id);
-  const documentType = selectedDocument?.header.documentType;
   const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
   const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
-  const documentModelModule = useDocumentModelModuleById(documentType);
+  const connectCrypto = useConnectCrypto();
+  const user = useUser();
 
   const exportDocument = (document: PHDocument) => {
     const validationErrors = validateDocument(document);
@@ -79,15 +80,20 @@ export function DocumentEditorContainer() {
             return;
           }
 
-          if (!documentModelModule) {
-            console.error("No document model found");
-            return;
-          }
+          // @todo: add environment variable for token expiration
+          const token = user?.address
+            ? await connectCrypto?.getBearerToken(
+                remoteUrl,
+                user.address,
+                false,
+                { expiresIn: 600 },
+              )
+            : undefined;
 
           const url = buildDocumentSubgraphUrl(
             remoteUrl,
             selectedDocument.header.id,
-            documentModelModule.documentModel,
+            token,
           );
           try {
             openUrl(url);
@@ -96,7 +102,7 @@ export function DocumentEditorContainer() {
           }
         }
       : undefined;
-  }, [isRemoteDrive, remoteUrl, selectedDocument, documentModelModule]);
+  }, [isRemoteDrive, remoteUrl, selectedDocument]);
 
   if (!selectedDocument) return null;
 

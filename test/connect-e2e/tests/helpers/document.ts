@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { camelCase } from "change-case";
 
 export interface DocumentBasicData {
   documentType: string;
@@ -106,6 +107,9 @@ export async function createDocumentAndFillBasicData(
     await page.keyboard.press("Backspace");
 
     await page.locator(".cm-content").first().fill(data.global.schema);
+
+    await page.getByText("Global State Schema").first().click();
+
     await page.locator(".cm-content").nth(1).fill(data.global.initialState);
 
     await page.getByText("Global State Schema").first().click();
@@ -127,21 +131,20 @@ export async function createDocumentAndFillBasicData(
           .fill(operation.name);
         await page.keyboard.press("Enter");
 
-        await page
-          .locator(".mt-4.grid.grid-cols-2.gap-x-12")
-          .last()
-          .locator(".cm-editor")
-          .click();
+        const operationInputName = camelCase(operation.name);
+
+        const operationEditor = page
+          .locator(".cm-content", {
+            hasText: operationInputName,
+          })
+          .first();
+
+        await operationEditor.click();
 
         await page.keyboard.press("Meta+A"); // Use 'Control+A' on Windows if needed
         await page.keyboard.press("Backspace");
 
-        await page
-          .locator(".mt-4.grid.grid-cols-2.gap-x-12")
-          .last()
-          .locator(".cm-content")
-          .first()
-          .fill(operation.schema);
+        await page.keyboard.insertText(operation.schema);
 
         await page.keyboard.press("Enter");
         await page.getByText("Global State Schema").first().click();

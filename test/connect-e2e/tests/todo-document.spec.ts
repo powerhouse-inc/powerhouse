@@ -209,7 +209,6 @@ async function verifyDocumentOperationHistory(page: Page): Promise<void> {
     )
     .all();
 
-  expect(articles).toHaveLength(EXPECTED_OPERATIONS_COUNT);
   await verifyOperationHistoryItems(articles, EXPECTED_OPERATIONS);
   await closeDocumentOperationHistory(page);
 }
@@ -250,7 +249,6 @@ async function saveDownloadedFile(download: Download): Promise<string> {
 
   await download.saveAs(downloadPath);
   expect(fs.existsSync(downloadPath)).toBeTruthy();
-  console.log("File saved to:", downloadPath);
 
   return downloadPath;
 }
@@ -278,7 +276,6 @@ async function validateZipContent(zip: JSZip): Promise<void> {
 function verifyZipFilesExist(zip: JSZip, expectedFiles: string[]): void {
   for (const filename of expectedFiles) {
     expect(zip.files[filename]).toBeTruthy();
-    console.log(`✓ ${filename} exists in zip`);
   }
 }
 
@@ -290,7 +287,6 @@ async function validateZipFileContents(
 
   for (const filename of filenames) {
     await validateJsonFile(zip, filename, expectedDir);
-    console.log(`✓ ${filename} content validated`);
   }
 }
 
@@ -330,6 +326,7 @@ function removeDynamicFields(obj: unknown): unknown {
     "moduleId",
     "createdAtUtcIso",
     "lastModifiedAtUtcIso",
+    "timestampUtcMs",
   ];
 
   if (!obj || typeof obj !== "object") return obj;

@@ -7,14 +7,17 @@ import {
 } from "@powerhousedao/design-system";
 import {
   setSelectedDrive,
+  useDriveEditorModuleById,
   useDrives,
   useSelectedDocument,
   useSelectedDrive,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "document-drive";
 import { DocumentEditorContainer } from "../components/document-editor-container.js";
 import { DriveEditorContainer } from "../components/drive-editor-container.js";
 import { DriveIcon } from "../components/drive-icon.js";
+
 export default function Content() {
   const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
@@ -38,6 +41,22 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
   );
 }
 
+function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
+  const editorModule = useDriveEditorModuleById(
+    drive.header.meta?.preferredEditor,
+  );
+  const description = editorModule?.name || "Drive Explorer App";
+  return (
+    <HomeScreenItem
+      key={drive.header.id}
+      title={drive.state.global.name}
+      description={description}
+      icon={<DriveIcon drive={drive} />}
+      onClick={() => setSelectedDrive(drive)}
+    />
+  );
+}
+
 function HomeScreenContainer() {
   const drives = useDrives();
   const showAddDriveModal = useShowAddDriveModal();
@@ -46,15 +65,7 @@ function HomeScreenContainer() {
   return (
     <HomeScreen>
       {drives?.map((drive) => {
-        return (
-          <HomeScreenItem
-            key={drive.header.id}
-            title={drive.state.global.name}
-            description={"Drive Explorer App"}
-            icon={<DriveIcon drive={drive} />}
-            onClick={() => setSelectedDrive(drive)}
-          />
-        );
+        return <DriveItem key={drive.header.id} drive={drive} />;
       })}
       {config.drives.addDriveEnabled && (
         <HomeScreenAddDriveItem onClick={showAddDriveModal} />

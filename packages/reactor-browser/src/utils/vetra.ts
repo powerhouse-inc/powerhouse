@@ -1,4 +1,11 @@
 import type {
+  DocumentModelLib,
+  DocumentModelModule,
+  EditorModule,
+  Manifest,
+} from "document-model";
+import { generateId } from "document-model";
+import type {
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraMeta,
@@ -31,8 +38,11 @@ export function convertLegacyLibToVetraPackage(
       documentModelModules: legacyLib.documentModels.map(
         convertLegacyDocumentModelModuleToVetraDocumentModelModule,
       ),
-      editorModules: legacyLib.editors.map(
-        convertLegacyEditorModuleToVetraEditorModule,
+      editorModules: legacyLib.editors.map((editor) =>
+        convertLegacyEditorModuleToVetraEditorModule(
+          editor,
+          legacyLib.manifest,
+        ),
       ),
     },
   };
@@ -67,15 +77,28 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
 
 export function convertLegacyEditorModuleToVetraEditorModule(
   legacyEditorModule: EditorModule,
+  manifest?: Manifest,
 ): VetraEditorModule {
   const config = legacyEditorModule.config;
-  const unsafeNameFromConfig = config.id;
-  const unsafeIdFromConfig = unsafeNameFromConfig;
+  const unsafeIdFromConfig = config.id;
+
+  // check for app using this drive editor and use its name
+  const appName = manifest?.apps?.find(
+    (app) => app.driveEditor === config.id,
+  )?.name;
+
+  // if no app found and editor has no name defined then build the name from the id
+  const nameFromId = unsafeIdFromConfig
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+  const name = appName || config.name || nameFromId;
+
   const documentTypes = legacyEditorModule.documentTypes;
   const Component = legacyEditorModule.Component;
   const vetraEditorModule: VetraEditorModule = {
     id: unsafeIdFromConfig,
-    name: unsafeNameFromConfig,
+    name,
     documentTypes,
     Component,
     config,

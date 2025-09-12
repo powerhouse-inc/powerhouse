@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "4.1.0-dev.50",
+  "version": "4.1.0-dev.52",
   "description": "",
   "type": "module",
   "repository": {
@@ -17,7 +17,9 @@
     "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest run",
-    "bench": "vitest bench"
+    "bench": "vitest bench",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
+    "codegen:watch": "graphql-codegen --config codegen.ts --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -26,6 +28,16 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/client-preset": "^4.1.0",
+    "@graphql-codegen/typed-document-node": "^5.0.1",
+    "@graphql-codegen/typescript": "^4.0.1",
+    "@graphql-codegen/typescript-generic-sdk": "^4.0.2",
+    "@graphql-codegen/typescript-graphql-request": "^6.2.0",
+    "@graphql-codegen/typescript-operations": "^4.0.1",
+    "@graphql-codegen/typescript-resolvers": "^4.0.1",
+    "@graphql-tools/graphql-file-loader": "^8.0.0",
+    "@graphql-tools/load": "^8.0.0",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -33,7 +45,9 @@
     "@types/ms": "^0.7.34",
     "@types/node": "^24.3.0",
     "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^3.2.4",
     "esbuild": "^0.24.0",
+    "graphql-codegen-typescript-validation-schema": "^0.12.0",
     "graphql-tag": "^2.12.6",
     "msw": "^2.7.3",
     "tinybench": "^3.1.1",
@@ -45,6 +59,7 @@
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
     "@electric-sql/pglite": "^0.2.17",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/analytics-engine-graphql": "^0.4.0",
@@ -59,13 +74,13 @@
     "devcert": "^1.2.2",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.25.0",
     "drizzle-orm": "^0.34.1",
     "ethers": "^6.0.8",
     "express": "^4.21.1",
     "graphql": "^16.11.0",
-    "graphql-request": "^6.1.0",
     "graphql-type-json": "^0.3.2",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",

@@ -69,6 +69,7 @@ export type DriveEditorModule = {
   documentTypes: string[];
   config: {
     id: string;
+    name?: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;

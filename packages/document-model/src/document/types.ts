@@ -375,6 +375,7 @@ export type EditorModule = {
   documentTypes: string[];
   config: {
     id: string;
+    name?: string;
     disableExternalControls?: boolean;
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;

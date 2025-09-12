@@ -24,12 +24,18 @@ module.exports = {
 
     const errors = actions.reduce((acc, action) => {
       action.errors.forEach((error) => {
-        const existingError = acc.find((e) => e.code === error.code);
+        // Fallback: If error code is empty, generate it from the error name in PascalCase
+        const errorCode = error.code || pascalCase(error.name || "");
+        const normalizedError = { ...error, code: errorCode };
+
+        const existingError = acc.find((e) => e.code === errorCode);
         if (!existingError) {
-          acc.push(error);
-        } else if (JSON.stringify(existingError) !== JSON.stringify(error)) {
+          acc.push(normalizedError);
+        } else if (
+          JSON.stringify(existingError) !== JSON.stringify(normalizedError)
+        ) {
           console.warn(
-            `Warning: Duplicate error code "${error.code}" with different fields found`,
+            `Warning: Duplicate error code "${errorCode}" with different fields found`,
           );
         }
       });

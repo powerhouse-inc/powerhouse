@@ -302,13 +302,7 @@ export async function createTestReactorSetup(
   const jobExecutor = new SimpleJobExecutor(registry, storage, storage);
 
   // Create reactor
-  const reactor = new Reactor(
-    driveServer,
-    storage,
-    eventBus,
-    queue,
-    jobExecutor,
-  );
+  const reactor = new Reactor(driveServer, storage, queue);
 
   return {
     reactor,

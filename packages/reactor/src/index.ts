@@ -1,6 +1,15 @@
 // Reactor Interface and Implementation
+export { type IReactorClient } from "./interfaces/reactor-client.js";
 export { type IReactor } from "./interfaces/reactor.js";
 export { Reactor } from "./reactor.js";
+export {
+  ReactorClient,
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type ISigner,
+  type IReactorSubscriptionManager,
+} from "./reactor-client.js";
+export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,

@@ -8,8 +8,6 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import type { IEventBus } from "./events/interfaces.js";
-import type { IJobExecutor } from "./executor/interfaces.js";
 import type { IReactor } from "./interfaces/reactor.js";
 import type { IQueue } from "./queue/interfaces.js";
 import type { Job } from "./queue/types.js";
@@ -46,24 +44,17 @@ export class Reactor implements IReactor {
   private documentStorage: IDocumentStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
-  private eventBus: IEventBus;
   private queue: IQueue;
-  private jobExecutor: IJobExecutor;
-  private jobExecutorStarted = false;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
     documentStorage: IDocumentStorage,
-    eventBus: IEventBus,
     queue: IQueue,
-    jobExecutor: IJobExecutor,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
-    this.eventBus = eventBus;
     this.queue = queue;
-    this.jobExecutor = jobExecutor;
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -318,14 +309,17 @@ export class Reactor implements IReactor {
   /**
    * Creates a document
    */
-  async create(document: PHDocument, signal?: AbortSignal): Promise<JobStatus> {
+  async create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo> {
     try {
       // BaseDocumentDriveServer uses addDocument, not createDocument
       // addDocument adds an existing document to a drive
       await this.driveServer.addDocument(document);
     } catch {
       // TODO: Phase 4 - This will return a job that can be retried
-      return JobStatus.FAILED;
+      return {
+        id: uuidv4(),
+        status: JobStatus.FAILED,
+      };
     }
 
     if (signal?.aborted) {
@@ -334,7 +328,10 @@ export class Reactor implements IReactor {
 
     // Return success status
     // TODO: Phase 4 - This will return a job that goes through the queue
-    return JobStatus.COMPLETED;
+    return {
+      id: uuidv4(),
+      status: JobStatus.COMPLETED,
+    };
   }
 
   /**
@@ -377,9 +374,6 @@ export class Reactor implements IReactor {
    * Applies a list of actions to a document
    */
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
-    // Ensure the job executor is running
-    this.ensureJobExecutorRunning();
-
     // Create jobs for each action/operation
     const jobs: Job[] = actions.map((action, index) => ({
       id: uuidv4(),
@@ -532,19 +526,6 @@ export class Reactor implements IReactor {
       status: JobStatus.FAILED,
       error: "Job tracking not yet implemented",
     });
-  }
-
-  /**
-   * Starts the job executor if not already running.
-   * Called automatically when the first job is enqueued.
-   */
-  private ensureJobExecutorRunning(): void {
-    if (!this.jobExecutorStarted) {
-      // For new simplified executor, no start method needed
-      // The executor just executes jobs when called
-      // The manager (if used) handles listening to queue events
-      this.jobExecutorStarted = true;
-    }
   }
 
   /**

@@ -1,5 +1,4 @@
-import type { DocumentModelGlobalState } from "document-model";
-import lzString from "lz-string";
+import { compressToEncodedURIComponent } from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
   if (!driveUrl) {
@@ -48,9 +47,7 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
   return urlParts.join("/");
 }
 
-export function getDocumentGraphqlQuery(
-  documentModel: DocumentModelGlobalState,
-) {
+export function getDocumentGraphqlQuery() {
   return `query getDocument($documentId: String!) {
   document(id: $documentId) {
       id
@@ -59,18 +56,16 @@ export function getDocumentGraphqlQuery(
       revision
       stateJSON
     }
-  }
-`;
+  }`;
 }
 
 export function buildDocumentSubgraphQuery(
   driveUrl: string,
   documentId: string,
-  documentModel: DocumentModelGlobalState,
   authToken?: string,
 ) {
   const driveSlug = getSlugFromDriveUrl(driveUrl);
-  const query = getDocumentGraphqlQuery(documentModel);
+  const query = getDocumentGraphqlQuery();
   const variables = { documentId, driveId: driveSlug };
   return lzString.compressToEncodedURIComponent(
     JSON.stringify({
@@ -83,13 +78,11 @@ export function buildDocumentSubgraphQuery(
 export function buildDocumentSubgraphUrl(
   driveUrl: string,
   documentId: string,
-  documentModel: DocumentModelGlobalState,
   authToken?: string,
 ) {
   const encodedQuery = buildDocumentSubgraphQuery(
     driveUrl,
     documentId,
-    documentModel,
     authToken,
   );
   return `${driveUrl}?explorerURLState=${encodedQuery}`;

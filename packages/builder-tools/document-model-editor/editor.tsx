@@ -34,6 +34,8 @@ import {
   initializeModelSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
+import { pascalCase } from "change-case";
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 export function DocumentModelEditor(props: EditorProps) {
   const { document: initialDocument } = props;
@@ -250,7 +252,8 @@ export function DocumentModelEditor(props: EditorProps) {
           return;
         }
         const id = generateId();
-        dispatch(addOperationError({ id, operationId, errorName }));
+        const errorCode = pascalCase(errorName);
+        dispatch(addOperationError({ id, operationId, errorName, errorCode }));
         resolve(id);
       } catch (error) {
         console.error("Failed to add operation error:", error);
