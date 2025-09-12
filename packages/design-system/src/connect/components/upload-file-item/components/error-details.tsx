@@ -11,6 +11,8 @@ export function ErrorDetails(props: ErrorDetailsProps) {
   if (!(status === "failed" && errorDetails)) return null;
 
   return (
-    <div className="text-xs leading-[18px] text-gray-500">{errorDetails}</div>
+    <div className="break-words text-xs leading-[18px] text-gray-500">
+      {errorDetails}
+    </div>
   );
 }

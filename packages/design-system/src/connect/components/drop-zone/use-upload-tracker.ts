@@ -1,5 +1,5 @@
 import type { Node } from "document-drive";
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import {
   type FileUploadProgress,
   type OnAddFileWithProgress,
@@ -132,8 +132,42 @@ function uploadsReducer(
 }
 
 // Hook
-export function useUploadTracker() {
-  const [uploads, dispatch] = useReducer(uploadsReducer, {});
+export function useUploadTracker(useLocalStorage = false, driveId?: string) {
+  const getInitialState = useCallback((): UploadsState => {
+    if (useLocalStorage && driveId) {
+      try {
+        const stored = localStorage.getItem(`uploadTracker_${driveId}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as UploadsState;
+          return parsed;
+        }
+        return {};
+      } catch (error) {
+        console.error(
+          "Failed to load upload tracker from localStorage:",
+          error,
+        );
+        return {};
+      }
+    }
+    return {};
+  }, [useLocalStorage, driveId]);
+
+  const [uploads, dispatch] = useReducer(uploadsReducer, getInitialState());
+
+  // Save to localStorage whenever uploads change
+  useEffect(() => {
+    if (useLocalStorage && driveId) {
+      try {
+        localStorage.setItem(
+          `uploadTracker_${driveId}`,
+          JSON.stringify(uploads),
+        );
+      } catch (error) {
+        console.error("Failed to save upload tracker to localStorage:", error);
+      }
+    }
+  }, [uploads, useLocalStorage, driveId]);
 
   const createUploadHandler = useCallback(
     (onAddFile?: OnAddFileWithProgress) => {

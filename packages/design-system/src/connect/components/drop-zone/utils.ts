@@ -1,4 +1,5 @@
 import type { Node } from "document-drive";
+import type { UploadFileItemProps } from "../upload-file-item/index.js";
 
 // Upload tracking types
 export type UploadTracker = {
@@ -52,4 +53,45 @@ export function mapProgressStageToStatus(
     default:
       return "pending";
   }
+}
+
+export function mapUploadsToFileItems(
+  uploadsArray: (UploadTracker | undefined)[],
+  removeUpload: (uploadId: string) => void,
+  setSelectedNodeFn?: (nodeOrNodeSlug: Node | string | undefined) => void,
+): UploadFileItemProps[] {
+  return uploadsArray
+    .filter(
+      (upload): upload is NonNullable<typeof upload> => upload !== undefined,
+    )
+    .map((upload) => ({
+      fileName: upload.fileName,
+      fileSize: upload.fileSize,
+      status: upload.status,
+      progress: upload.progress,
+      errorDetails: upload.errorDetails,
+      onClose: () => {
+        removeUpload(upload.id);
+      },
+      onOpenDocument:
+        upload.status === "success"
+          ? () => {
+              if (upload.fileNode && setSelectedNodeFn) {
+                setSelectedNodeFn(upload.fileNode);
+              } else {
+                console.error(
+                  "Opening document for upload:",
+                  upload.id,
+                  "- fileNode not available or setSelectedNode not provided",
+                );
+              }
+            }
+          : undefined,
+      onFindResolution:
+        upload.status === "failed"
+          ? () => {
+              console.log("Finding resolution for upload:", upload.id);
+            }
+          : undefined,
+    }));
 }

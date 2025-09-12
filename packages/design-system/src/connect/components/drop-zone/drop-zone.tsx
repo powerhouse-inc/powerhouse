@@ -3,7 +3,7 @@ import type { Node } from "document-drive";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
-import { UploadFileList } from "../upload-file-list/index.js";
+import { UploadFileListContainer } from "./upload-file-list-container.js";
 import { useUploadTracker } from "./use-upload-tracker.js";
 import { type OnAddFileWithProgress } from "./utils.js";
 
@@ -22,6 +22,11 @@ export type DropZoneProps = ComponentPropsWithoutRef<"div"> & {
     src: Node,
     target: Node | undefined,
   ) => Promise<void> | void;
+  readonly setSelectedNode?: (
+    nodeOrNodeSlug: Node | string | undefined,
+  ) => void;
+  readonly useLocalStorage?: boolean;
+  readonly driveId?: string;
 };
 
 export function DropZone(props: DropZoneProps) {
@@ -34,17 +39,21 @@ export function DropZone(props: DropZoneProps) {
     onAddFile,
     onMoveNode,
     onCopyNode,
+    setSelectedNode,
+    useLocalStorage = false,
+    driveId,
     className,
     ...delegatedProps
   } = props;
 
   // Upload tracking with the new hook
-  const { uploadsArray, uploadsCount, createUploadHandler, clearAllUploads } =
-    useUploadTracker();
-
-  // TODO: Remove this
-  console.log("uploadsArray", uploadsArray);
-  console.log("uploadsCount", uploadsCount);
+  const {
+    uploadsArray,
+    uploadsCount,
+    createUploadHandler,
+    clearAllUploads,
+    removeUpload,
+  } = useUploadTracker(useLocalStorage, driveId);
 
   // Create the upload handler from the hook
   const handleAddFile = createUploadHandler(onAddFile) ?? (async () => {});
@@ -85,13 +94,13 @@ export function DropZone(props: DropZoneProps) {
       )}
 
       {/* Upload File List - positioned at bottom right */}
-      {uploadsCount > 0 && (
-        <UploadFileList
-          items={[]}
-          onClose={clearAllUploads}
-          className="fixed bottom-4 right-4 z-[1001]"
-        />
-      )}
+      <UploadFileListContainer
+        uploadsArray={uploadsArray}
+        uploadsCount={uploadsCount}
+        removeUpload={removeUpload}
+        clearAllUploads={clearAllUploads}
+        setSelectedNode={setSelectedNode}
+      />
     </div>
   );
 }

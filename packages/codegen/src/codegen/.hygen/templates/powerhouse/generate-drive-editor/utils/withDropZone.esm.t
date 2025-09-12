@@ -7,6 +7,7 @@ import type {
   DriveEditorProps,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
+import { setSelectedNode } from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
 import { useOnDropFile } from "../hooks/useOnDropFile.js";
 
@@ -26,7 +27,13 @@ export function withDropZone<T extends DriveEditorProps>(
 
     if (props.editorConfig?.dragAndDrop?.enabled) {
       return (
-        <DropZone onAddFile={onAddFile} style={{ height: "100%" }}>
+        <DropZone
+          onAddFile={onAddFile}
+          setSelectedNode={setSelectedNode}
+          driveId={props.document.header.id}
+          useLocalStorage={false}
+          style={{ height: "100%" }}
+        >
           <WrappedComponent {...props} />
         </DropZone>
       );

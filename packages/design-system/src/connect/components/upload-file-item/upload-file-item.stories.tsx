@@ -63,6 +63,17 @@ export const Failed: Story = {
   },
 };
 
+export const FailedZipFile: Story = {
+  ...Template,
+  args: {
+    fileName: "corrupted-archive.zip",
+    fileSize: "2.3 MB",
+    status: "failed",
+    errorDetails:
+      "Can't find end of central directory : is this a zip file ? If it is, see https://stuk.github.io/jszip/documentation/howto/read_zip.html",
+  },
+};
+
 export const PendingResolution: Story = {
   ...Template,
   args: {
