@@ -35,7 +35,6 @@ import {
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 import { pascalCase } from "change-case";
-import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 export function DocumentModelEditor(props: EditorProps) {
   const { document: initialDocument } = props;

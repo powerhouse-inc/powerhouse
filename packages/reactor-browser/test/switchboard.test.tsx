@@ -1,15 +1,10 @@
 // test suite for the switchboard hooks
 
-import { describe, it } from "vitest";
 import {
   buildDocumentSubgraphUrl,
   getDocumentGraphqlQuery,
   getSwitchboardGatewayUrlFromDriveUrl,
 } from "@powerhousedao/reactor-browser";
-import {
-  driveDocumentModelModule,
-  generateDocumentStateQueryFields,
-} from "document-drive";
 import { describe, it } from "vitest";
 
 describe("Switchboard hooks", () => {

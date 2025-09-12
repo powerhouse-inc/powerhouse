@@ -1,11 +1,4 @@
 import type {
-  DocumentModelLib,
-  DocumentModelModule,
-  EditorModule,
-  Manifest,
-} from "document-model";
-import { generateId } from "document-model";
-import type {
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraMeta,
@@ -17,6 +10,7 @@ import type {
   DocumentModelLib,
   DocumentModelModule,
   EditorModule,
+  Manifest,
 } from "document-model";
 import { generateId } from "document-model";
 

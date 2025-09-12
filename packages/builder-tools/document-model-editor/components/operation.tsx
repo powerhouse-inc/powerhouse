@@ -1,4 +1,4 @@
-import type { Module } from "document-model";
+import type { ModuleSpecification } from "document-model";
 import { useCallback } from "react";
 import type { DocumentActionHandlers } from "../types/documents.js";
 import { ensureValidOperationSchemaInputName } from "../utils/linting.js";

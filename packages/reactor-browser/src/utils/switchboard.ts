@@ -1,4 +1,4 @@
-import { compressToEncodedURIComponent } from "lz-string";
+import * as lzString from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
   if (!driveUrl) {
