@@ -6,7 +6,7 @@ import {
   generateId,
   setName,
 } from "document-model";
-import type { CountDocument } from "document-model/test";
+import type { CountPHState, TestPHState } from "document-model/test";
 import {
   countReducer,
   createCountDocumentState,

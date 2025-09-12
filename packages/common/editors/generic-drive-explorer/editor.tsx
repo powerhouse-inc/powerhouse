@@ -17,7 +17,10 @@ import {
   useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
+import {
+  getDriveSharingType,
+  type DocumentDriveDocument,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import React from "react";
 import { CreateDocument } from "./components/create-document.js";

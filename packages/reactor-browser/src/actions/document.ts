@@ -1,15 +1,14 @@
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-  Node,
-} from "document-drive";
 import {
   getUserPermissions,
   queueActions,
   queueOperations,
   uploadOperations,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument, Node } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  Node,
+} from "document-drive";
 import {
   addFile as baseAddFile,
   addFolder as baseAddFolder,
@@ -23,13 +22,12 @@ import {
   logger,
   updateNode,
 } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { DocumentOperations, PHDocument } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   createPresignedHeader,
   createZip,
-  defaultBaseState,
   generateId,
   replayDocument,
 } from "document-model";

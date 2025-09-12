@@ -1,9 +1,8 @@
-import type { BaseDocumentDriveServer } from "document-drive";
-import type { IDocumentStorage } from "document-drive/storage/types";
-import { AbortError } from "document-drive/utils/errors";
+import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
+import { AbortError } from "document-drive";
 import type {
   Action,
-  DocumentModelState,
+  DocumentModelGlobalState,
   Operation,
   PHBaseState,
   PHDocument,
@@ -92,14 +91,14 @@ export class Reactor implements IReactor {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>> {
+  ): Promise<PagedResults<DocumentModelGlobalState>> {
     // Get document model modules from the drive server
     // Note: BaseDocumentDriveServer provides modules, not model states
     // This is an adaptation layer that converts modules to states
     const modules = this.driveServer.getDocumentModelModules();
 
-    // Convert modules to DocumentModelState format
-    // TODO: Proper conversion when DocumentModelState structure is finalized
+    // Convert modules to DocumentModelGlobalState format
+    // TODO: Proper conversion when DocumentModelGlobalState structure is finalized
     const filteredModels = modules
       .filter(
         (module) =>
@@ -114,7 +113,7 @@ export class Reactor implements IReactor {
             author: module.documentModel.author,
             description: module.documentModel.description || "",
             specifications: module.documentModel.specifications,
-          }) as DocumentModelState,
+          }) as DocumentModelGlobalState,
       );
 
     // Apply paging
@@ -173,7 +172,6 @@ export class Reactor implements IReactor {
     // to the underlying store, but is here now for the interface.
     for (const scope in document.state) {
       if (!matchesScope(view, scope)) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete document.state[scope as keyof PHBaseState];
       }
     }
@@ -579,7 +577,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -650,7 +647,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -725,7 +721,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -802,7 +797,6 @@ export class Reactor implements IReactor {
       // Apply view filter
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }

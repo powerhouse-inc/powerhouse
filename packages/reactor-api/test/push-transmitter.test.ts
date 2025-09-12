@@ -5,6 +5,7 @@ import {
   testSetupReactor,
 } from "@powerhousedao/reactor-api";
 import type {
+  DocumentDriveDocument,
   IDocumentDriveServer,
   IListenerManager,
   ServerListener,
@@ -19,6 +20,8 @@ import {
   documentModelCreateDocument,
   generateId,
   setAuthorName,
+  type DocumentModelDocument,
+  type DocumentModelGlobalState,
 } from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

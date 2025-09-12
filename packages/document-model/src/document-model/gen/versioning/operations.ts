@@ -1,7 +1,7 @@
 import type {
   AddChangeLogItemAction,
   DeleteChangeLogItemAction,
-  DocumentModelState,
+  DocumentModelGlobalState,
   ReleaseNewVersionAction,
   ReorderChangeLogItemsAction,
   UpdateChangeLogItemAction,
@@ -9,23 +9,23 @@ import type {
 
 export interface DocumentModelVersioningOperations {
   addChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddChangeLogItemAction,
   ) => void;
   updateChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: UpdateChangeLogItemAction,
   ) => void;
   deleteChangeLogItemOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteChangeLogItemAction,
   ) => void;
   reorderChangeLogItemsOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderChangeLogItemsAction,
   ) => void;
   releaseNewVersionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReleaseNewVersionAction,
   ) => void;
 }

@@ -14,7 +14,7 @@ import {
   withCustomHelp,
 } from "../utils/index.js";
 import type { Environment } from "./use.js";
-import { ENV_MAP, PH_PROJECT_DEPENDENCIES, updatePackageJson } from "./use.js";
+import { detectPowerhousePackages, ENV_MAP, updatePackageJson } from "./use.js";
 
 type PackageJson = {
   dependencies?: Record<string, string>;

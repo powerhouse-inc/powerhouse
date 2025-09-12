@@ -1,8 +1,8 @@
 import type {
   Action,
-  BaseState,
   LoadStateAction,
   NOOPAction,
+  PHBaseState,
   RedoAction,
   SchemaPruneAction,
   SetNameAction,

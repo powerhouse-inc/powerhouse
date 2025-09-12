@@ -1,7 +1,7 @@
 import type { DocumentTypesMap } from "@powerhousedao/codegen";
 import { TSMorphCodeGenerator } from "@powerhousedao/codegen";
 import { pascalCase } from "change-case";
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -61,7 +61,7 @@ export async function generateAll(
   { watch = false, skipFormat = false, verbose = true, force = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
-  const documentModelStates: DocumentModelState[] = [];
+  const documentModelStates: DocumentModelGlobalState[] = [];
 
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
@@ -102,7 +102,7 @@ export async function generateAll(
 }
 
 export async function generateDocumentModel(
-  documentModelState: DocumentModelState,
+  documentModelState: DocumentModelGlobalState,
   dir: string,
   {
     watch = false,
@@ -227,7 +227,7 @@ export async function generateProcessor(
 
 export async function generateSubgraph(
   name: string,
-  documentModel: DocumentModelState | null,
+  documentModel: DocumentModelGlobalState | null,
   dir: string,
   { skipFormat = false, verbose = true } = {},
 ) {

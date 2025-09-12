@@ -1,7 +1,6 @@
 import { generateManifest, generateSubgraph } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { SubgraphModuleState } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -15,9 +14,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
   /**
    * Validate if this subgraph strand should be processed
    */
-  shouldProcess(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;

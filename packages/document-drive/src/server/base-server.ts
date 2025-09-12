@@ -38,17 +38,6 @@ import type {
   SynchronizationUnitNotFoundError,
   Trigger,
 } from "document-drive";
-import { DocumentAlreadyExistsError, childLogger } from "document-drive";
-import type {
-  Action,
-  DocumentModelModule,
-  Operation,
-  PHDocument,
-  PHDocumentHeader,
-  PHDocumentMeta,
-  Signal,
-  SignalResult,
-} from "document-model";
 import {
   ConflictOperationError,
   DefaultDrivesManager,
@@ -59,13 +48,13 @@ import {
   ReadModeServer,
   SwitchboardPushTransmitter,
   childLogger,
+  driveCreateDocument,
   filterOperationsByRevision,
   isActionJob,
   isAtRevision,
   isDocumentDrive,
   isDocumentJob,
   isOperationJob,
-  phFactoryDriveCreateDocument,
   removeListener,
   removeTrigger,
   requestPublicDriveWithTokenFromReactor,
@@ -79,6 +68,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
   PHDocumentMeta,
+  Signal,
   SignalResult,
 } from "document-model";
 import {
@@ -154,7 +144,7 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelCreateDocument(initialState?.state);
+      const document = documentModelCreateDocument(initialState);
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
@@ -622,9 +612,18 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
-    const document = phFactoryDriveCreateDocument({
-      global: input.global,
-      local: input.local,
+    const document = driveCreateDocument({
+      global: {
+        ...input.global,
+        nodes: [],
+        icon: null,
+      },
+      local: {
+        availableOffline: input.local?.availableOffline ?? false,
+        sharingType: input.local?.sharingType ?? "public",
+        listeners: [],
+        triggers: [],
+      },
     });
 
     if (input.id && input.id.length > 0) {

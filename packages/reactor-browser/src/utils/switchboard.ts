@@ -1,6 +1,4 @@
-import { kebabCase } from "change-case";
-import { generateDocumentStateQueryFields } from "document-drive";
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import lzString from "lz-string";
 
 export async function getDriveIdBySlug(driveUrl: string, slug: string) {
@@ -50,7 +48,9 @@ export function getSwitchboardGatewayUrlFromDriveUrl(driveUrl: string) {
   return urlParts.join("/");
 }
 
-export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
+export function getDocumentGraphqlQuery(
+  documentModel: DocumentModelGlobalState,
+) {
   return `query getDocument($documentId: String!) {
   document(id: $documentId) {
       id
@@ -66,7 +66,7 @@ export function getDocumentGraphqlQuery(documentModel: DocumentModelState) {
 export function buildDocumentSubgraphQuery(
   driveUrl: string,
   documentId: string,
-  documentModel: DocumentModelState,
+  documentModel: DocumentModelGlobalState,
   authToken?: string,
 ) {
   const driveSlug = getSlugFromDriveUrl(driveUrl);
@@ -83,7 +83,7 @@ export function buildDocumentSubgraphQuery(
 export function buildDocumentSubgraphUrl(
   driveUrl: string,
   documentId: string,
-  documentModel: DocumentModelState,
+  documentModel: DocumentModelGlobalState,
   authToken?: string,
 ) {
   const encodedQuery = buildDocumentSubgraphQuery(

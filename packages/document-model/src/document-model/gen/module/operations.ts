@@ -1,4 +1,4 @@
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import type {
   AddModuleAction,
   DeleteModuleAction,
@@ -9,23 +9,23 @@ import type {
 
 export interface DocumentModelModuleOperations {
   addModuleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddModuleAction,
   ) => void;
   setModuleNameOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModuleNameAction,
   ) => void;
   setModuleDescriptionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModuleDescriptionAction,
   ) => void;
   deleteModuleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteModuleAction,
   ) => void;
   reorderModulesOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderModulesAction,
   ) => void;
 }

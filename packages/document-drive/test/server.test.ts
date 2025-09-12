@@ -20,6 +20,8 @@ import {
   SynchronizationManager,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 import type {
   ActionContext,
   DocumentModelDocument,
@@ -35,8 +37,6 @@ import {
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { PrismaClient } from "document-drive/storage/prisma/client";
-import { PrismaStorage } from "document-drive/storage/prisma";
 
 const documentModels = baseDocumentModels;
 

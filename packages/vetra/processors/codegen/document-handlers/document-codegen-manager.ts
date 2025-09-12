@@ -1,5 +1,4 @@
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { QueuedStrand } from "../interactive-manager.js";
 import { InteractiveManager } from "../interactive-manager.js";
 import { logger } from "../logger.js";
@@ -228,7 +227,7 @@ export class DocumentCodegenManager {
    * Process a single strand (used internally by processQueuedStrands)
    */
   private async processStrand(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
+    strand: InternalTransmitterUpdate,
   ): Promise<void> {
     const documentType = strand.documentType;
     const generator = this.getGenerator(documentType);

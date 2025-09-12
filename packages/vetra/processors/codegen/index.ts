@@ -1,6 +1,5 @@
 import { getConfig } from "@powerhousedao/config/node";
 import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { logger } from "./logger.js";

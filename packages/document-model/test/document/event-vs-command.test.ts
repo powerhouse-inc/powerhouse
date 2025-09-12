@@ -5,6 +5,7 @@ import {
   defaultPHDocumentCreateState,
   fakeAction,
   wrappedEmptyReducer,
+  type TestPHState,
 } from "document-model/test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 

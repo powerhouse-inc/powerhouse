@@ -26,9 +26,22 @@ import {
   refreshReactorData,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
-import { logger, ProcessorManager } from "document-drive";
+import { logger } from "document-drive";
+import { ProcessorManager } from "document-drive";
+import type { IDocumentAdminStorage } from "document-drive";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
+
+let reactorStorage: IDocumentAdminStorage | undefined;
+
+function setReactorStorage(storage: IDocumentAdminStorage) {
+  reactorStorage = storage;
+}
+
+export async function clearReactorStorage() {
+  await reactorStorage?.clear();
+  return !!reactorStorage;
+}
 
 async function loadVetraPackages() {
   const commonPackage = await loadCommonPackage();
@@ -56,6 +69,9 @@ export async function createReactor() {
 
   // initialize storage
   const storage = createBrowserStorage(connectConfig.routerBasename);
+
+  // store storage for admin access
+  setReactorStorage(storage);
 
   // load vetra packages
   const vetraPackages = await loadVetraPackages();
@@ -139,12 +155,10 @@ export async function createReactor() {
     refreshReactorData(reactor).catch(logger.error);
   });
   reactor.on("driveOperationsAdded", (...args) => {
-    console.log("driveOperationsAdded", ...args);
     logger.verbose("driveOperationsAdded", ...args);
     refreshReactorData(reactor).catch(logger.error);
   });
   reactor.on("operationsAdded", (...args) => {
-    console.log("operationsAdded", ...args);
     logger.verbose("operationsAdded", ...args);
     refreshReactorData(reactor).catch(logger.error);
   });

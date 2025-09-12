@@ -1,6 +1,7 @@
 import type {
   Action,
   Operation,
+  PHBaseState,
   PHDocument,
   Reducer,
   ReducerOptions,
@@ -530,12 +531,12 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
  *
  * @returns The new reducer.
  */
-export function createReducer<TDocument extends PHDocument>(
-  stateReducer: StateReducer<TDocument>,
+export function createReducer<TState extends PHBaseState = PHBaseState>(
+  stateReducer: StateReducer<TState>,
   documentReducer = baseReducer,
-): Reducer<TDocument> {
-  const reducer: Reducer<TDocument> = (
-    document: TDocument,
+): Reducer<TState> {
+  const reducer: Reducer<TState> = (
+    document: PHDocument<TState>,
     action: Action,
     dispatch?: SignalDispatch,
     options?: ReducerOptions,

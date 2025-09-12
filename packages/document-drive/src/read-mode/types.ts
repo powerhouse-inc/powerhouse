@@ -9,7 +9,11 @@ import type {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  PHBaseState,
+  PHDocument,
+} from "document-model";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;

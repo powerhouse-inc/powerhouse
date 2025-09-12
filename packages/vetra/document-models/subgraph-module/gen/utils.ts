@@ -1,64 +1,29 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseLoadFromInput,
   baseSaveToFileHandle,
+  baseLoadFromInput,
   defaultBaseState,
   generateId,
 } from "document-model";
-import { reducer } from "./reducer.js";
 import type {
-  SubgraphModuleDocument,
+  SubgraphModuleGlobalState,
   SubgraphModuleLocalState,
-  SubgraphModuleState,
 } from "./types.js";
+import type { SubgraphModulePHState } from "./types.js";
+import { reducer } from "./reducer.js";
 
-export const initialGlobalState: SubgraphModuleState = {
+export const initialGlobalState: SubgraphModuleGlobalState = {
   name: "",
   status: "DRAFT",
 };
 export const initialLocalState: SubgraphModuleLocalState = {};
 
-export const createState: CreateState<SubgraphModulePHState> = (state) => {
-  return {
-    ...defaultBaseState(),
-    global: { ...initialGlobalState, ...(state?.global ?? {}) },
-    local: { ...initialLocalState, ...(state?.local ?? {}) },
-  };
-};
-
-export const createDocument: CreateDocument<SubgraphModulePHState> = (
-  state,
-) => {
-  const document = baseCreateDocument(createState, state);
-  document.header.documentType = "powerhouse/subgraph";
-  // for backwards compatibility, but this is NOT a valid signed document id
-  document.header.id = generateId();
-  return document;
-};
-
-export const saveToFile = (document: any, path: string, name?: string) => {
-  return baseSaveToFile(document, path, ".phdm", name);
-};
-
-export const saveToFileHandle = (document: any, input: any) => {
-  return baseSaveToFileHandle(document, input);
-};
-
-export const loadFromFile: LoadFromFile<SubgraphModulePHState> = (path) => {
-  return baseLoadFromFile(path, reducer);
-};
-
-export const loadFromInput: LoadFromInput<SubgraphModulePHState> = (input) => {
-  return baseLoadFromInput(input, reducer);
-};
-
-const utils = {
+const utils: DocumentModelUtils<SubgraphModulePHState> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
       ...defaultBaseState(),
-
       global: { ...initialGlobalState, ...state?.global },
       local: { ...initialLocalState, ...state?.local },
     };
@@ -80,5 +45,10 @@ const utils = {
     return baseLoadFromInput(input, reducer);
   },
 };
+
+export const createDocument = utils.createDocument;
+export const createState = utils.createState;
+export const saveToFileHandle = utils.saveToFileHandle;
+export const loadFromInput = utils.loadFromInput;
 
 export default utils;

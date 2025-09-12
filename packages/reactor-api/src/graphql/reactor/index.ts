@@ -1,5 +1,5 @@
-import { Subgraph } from "../index.js";
+import { BaseSubgraph } from "../base-subgraph.js";
 
-export class ReactorSubgraph extends Subgraph {
+export class ReactorSubgraph extends BaseSubgraph {
   name = "r/:reactor";
 }

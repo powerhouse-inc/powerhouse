@@ -1,5 +1,10 @@
 import type { AddOperationOptions, IOperationResult } from "document-drive";
-import type { Action, Operation, PHDocument } from "document-model";
+import type {
+  Action,
+  Operation,
+  PHBaseState,
+  PHDocumentHeader,
+} from "document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {

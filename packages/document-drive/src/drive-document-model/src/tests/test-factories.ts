@@ -2,8 +2,11 @@
  * Test factory methods for creating DocumentDriveDocument instances with custom state
  */
 
-import type { DocumentDriveDocument, Node } from "document-drive";
-import { phFactoryDriveCreateDocument } from "../../ph-factories.js";
+import {
+  driveCreateDocument,
+  type DocumentDriveDocument,
+  type Node,
+} from "document-drive";
 
 /**
  * Creates a DocumentDriveDocument with custom nodes in the global state
@@ -11,22 +14,11 @@ import { phFactoryDriveCreateDocument } from "../../ph-factories.js";
 export function createDocumentWithNodes(
   nodes: Partial<Node>[],
 ): DocumentDriveDocument {
-  return phFactoryDriveCreateDocument({
+  return driveCreateDocument({
     global: {
       nodes: nodes as Node[],
+      icon: null,
+      name: "",
     },
-  });
-}
-
-/**
- * Creates a DocumentDriveDocument with custom global and local state
- */
-export function createDocumentWithState(
-  globalState?: Partial<DocumentDriveDocument["state"]["global"]>,
-  localState?: Partial<DocumentDriveDocument["state"]["local"]>,
-): DocumentDriveDocument {
-  return phFactoryDriveCreateDocument({
-    global: globalState,
-    local: localState,
   });
 }

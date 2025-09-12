@@ -1,5 +1,5 @@
 import type { Job } from "../queue/types.js";
-import type { JobExecutorConfig, JobResult } from "./types.js";
+import type { ExecutorManagerStatus, JobResult } from "./types.js";
 
 /**
  * Simple interface for executing a job.

@@ -1,4 +1,4 @@
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { decompressFromEncodedURIComponent } from "lz-string";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDocumentSubgraphQuery } from "../src/utils/switchboard.js";
@@ -24,8 +24,7 @@ vi.mock("document-drive/utils/graphql", () => ({
 }));
 
 describe("buildDocumentSubgraphQuery", () => {
-  const mockDocumentModel: DocumentModelState = {
-    __typename: "DocumentModelState",
+  const mockDocumentModel: DocumentModelGlobalState = {
     name: "Test Document Model",
     id: "test-model-id",
     extension: ".test",
@@ -140,7 +139,7 @@ describe("buildDocumentSubgraphQuery", () => {
   });
 
   it("should handle document model with special characters in name", () => {
-    const specialModel: DocumentModelState = {
+    const specialModel: DocumentModelGlobalState = {
       ...mockDocumentModel,
       name: "Test/Model With Spaces",
     };

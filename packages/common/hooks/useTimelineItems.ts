@@ -1,7 +1,3 @@
-import type {
-  GroupedPeriodResults,
-  UseAnalyticsQueryResult,
-} from "@powerhousedao/reactor-browser/analytics";
 import {
   type GroupedPeriodResults,
   AnalyticsGranularity,

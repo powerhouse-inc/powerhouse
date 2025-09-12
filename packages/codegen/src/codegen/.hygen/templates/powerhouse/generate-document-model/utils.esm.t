@@ -2,28 +2,27 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/utils.ts"
 force: true
 ---
+import type {
+    DocumentModelUtils,
+} from "document-model";
 import { 
-    type CreateDocument,
-    type CreateState,
-    type LoadFromFile,
-    type LoadFromInput,
     baseCreateDocument,
     baseSaveToFileHandle,
     baseLoadFromInput,
     defaultBaseState,
     generateId,
  } from 'document-model';
-import { 
-  <%= 'type ' + h.changeCase.pascal(documentType) %>State,
-  <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState
+import type { 
+  <%= h.changeCase.pascal(documentType) %>GlobalState,
+  <%= h.changeCase.pascal(documentType) %>LocalState
 } from './types.js';
-import { <%= h.changeCase.pascal(documentType) %>PHState } from './ph-factories.js';
+import type { <%= h.changeCase.pascal(documentType) %>PHState } from './types.js';
 import { reducer } from './reducer.js';
 
-export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>State = <%- initialGlobalState %>;
+export const initialGlobalState: <%= h.changeCase.pascal(documentType) %>GlobalState = <%- initialGlobalState %>;
 export const initialLocalState: <%= h.changeCase.pascal(documentType) %>LocalState = <%- initialLocalState %>;
 
-const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>Document> = {
+const utils: DocumentModelUtils<<%= h.changeCase.pascal(documentType) %>PHState> = {
     fileExtension: '<%- fileExtension %>',
     createState(state) {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };

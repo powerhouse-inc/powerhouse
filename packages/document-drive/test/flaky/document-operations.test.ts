@@ -10,8 +10,8 @@ import {
 import {
   BaseAction,
   DocumentModelAction,
-  DocumentModelDocument,
   documentModelDocumentModelModule,
+  DocumentModelGlobalState,
   DocumentModelModule,
   Operation,
   setModelName,
@@ -58,7 +58,7 @@ describe("Document operations", () => {
 
     await server.addDriveOperation("1", operation);
 
-    return server.getDocument("1", "1") as Promise<DocumentModelDocument>;
+    return server.getDocument("1", "1") as Promise<DocumentModelGlobalState>;
   }
 
   describe("Operations", () => {
@@ -76,7 +76,10 @@ describe("Document operations", () => {
       );
       expect(result.status).toBe("SUCCESS");
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
       expect(document.state.global.name).toBe("test");
     });
 
@@ -156,7 +159,10 @@ describe("Document operations", () => {
       );
       expect(result.operations.length).toBe(3);
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
       expect(document.state.global).toEqual(
         expect.objectContaining({
           name: "test",
@@ -185,13 +191,16 @@ describe("Document operations", () => {
         document = (await server.getDocument(
           "1",
           "1",
-        )) as DocumentModelDocument;
+        )) as DocumentModelGlobalState;
 
         const op = buildOperation(reducer, document, action);
         await server.addOperation("1", "1", op);
       }
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
 
       return document;
     }

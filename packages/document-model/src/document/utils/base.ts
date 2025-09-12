@@ -1,6 +1,5 @@
 import type {
   Action,
-  BaseStateFromDocument,
   CreateState,
   DocumentAction,
   DocumentOperations,
@@ -60,7 +59,7 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
 ): PHDocument<TState> {
   const state = createState(initialState);
   const header = createPresignedHeader();
-  const phDocument: PHDocument = {
+  const phDocument: PHDocument<TState> = {
     header,
     state,
     initialState: state,

@@ -23,7 +23,7 @@ import {
   driveDocumentReducer,
 } from "document-drive";
 import {
-  DocumentModelDocument,
+  DocumentModelGlobalState,
   DocumentModelModule,
   Operation,
   documentModelDocumentModelModule,
@@ -380,7 +380,7 @@ describe("Document Drive Server interaction", () => {
       "1",
       buildOperation(
         documentModelDocumentModelModule.reducer,
-        remoteDocument as DocumentModelDocument,
+        remoteDocument as DocumentModelGlobalState,
         documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
@@ -389,7 +389,7 @@ describe("Document Drive Server interaction", () => {
       const connectDocument = (await connectServer.getDocument(
         "1",
         "1",
-      )) as DocumentModelDocument;
+      )) as DocumentModelGlobalState;
       expect(connectDocument.operations.global.length).toBe(1);
     });
 
@@ -420,7 +420,7 @@ describe("Document Drive Server interaction", () => {
     const connectDocument = (await connectServer.getDocument(
       "1",
       "1",
-    )) as DocumentModelDocument;
+    )) as DocumentModelGlobalState;
     expect(connectDocument.state.global.name).toBe("test");
 
     // @ts-expect-error - type expected by test is out of date
@@ -461,7 +461,7 @@ describe("Document Drive Server interaction", () => {
       "1",
       buildOperation(
         documentModelDocumentModelModule.reducer,
-        remoteDocument as DocumentModelDocument,
+        remoteDocument as DocumentModelGlobalState,
         documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
@@ -540,7 +540,7 @@ describe("Document Drive Server interaction", () => {
       "1",
       buildOperation(
         documentModelDocumentModelModule.reducer,
-        remoteDocument as DocumentModelDocument,
+        remoteDocument as DocumentModelGlobalState,
         documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );
@@ -596,7 +596,7 @@ describe("Document Drive Server interaction", () => {
       "1",
       buildOperation(
         documentModelDocumentModelModule.reducer,
-        remoteDocument as DocumentModelDocument,
+        remoteDocument as DocumentModelGlobalState,
         documentModelDocumentModelModule.actions.setModelName({
           name: "test 2",
         }),
@@ -671,7 +671,7 @@ describe("Document Drive Server interaction", () => {
       "1",
       buildOperation(
         documentModelDocumentModelModule.reducer,
-        remoteDocument as DocumentModelDocument,
+        remoteDocument as DocumentModelGlobalState,
         documentModelDocumentModelModule.actions.setModelName({ name: "test" }),
       ),
     );

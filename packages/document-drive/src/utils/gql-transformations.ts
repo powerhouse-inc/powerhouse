@@ -32,7 +32,6 @@ export function responseForDocument(
     lastModified: document.header.lastModifiedAtUtcIso,
     documentType: document.header.documentType,
     name: document.header.name,
-    nodeName,
     revision: document.header.revision.global || 0,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,

@@ -1,5 +1,4 @@
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { Config } from "./types.js";
 
 /**
@@ -45,9 +44,7 @@ export abstract class BaseDocumentGen {
    * Validate if this strand should be processed
    * Override this method in specific generators to add custom validation logic
    */
-  shouldProcess(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // Basic validation: ensure strand has required properties
     if (!strand.documentId || !strand.documentType) {
       return false;

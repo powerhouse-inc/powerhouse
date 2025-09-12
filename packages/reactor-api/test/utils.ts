@@ -30,7 +30,7 @@ export async function testSetupReactor() {
   const reactor = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as DocumentModelModule[]).build();
+  ] as unknown as DocumentModelModule[]).build();
   await reactor.initialize();
   return { reactor, listenerManager: reactor.listeners };
 }

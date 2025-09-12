@@ -4,7 +4,10 @@ import {
   getDocumentScopeIndexes,
   testSetupReactor,
 } from "@powerhousedao/reactor-api";
-import type { IDocumentDriveServer } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+} from "document-drive";
 import {
   addFile,
   addFolder,
@@ -12,9 +15,11 @@ import {
   driveDocumentModelModule,
   PullResponderTransmitter,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import {
+import type {
   DocumentModelDocument,
+  DocumentModelModule,
+} from "document-model";
+import {
   documentModelDocumentModelModule,
   generateId,
   setAuthorName,
@@ -49,9 +54,9 @@ describe("Pull Responder Transmitter", () => {
   async function setupTrigger() {
     const { reactor, listenerManager } = await testSetupReactor();
     reactor.setDocumentModelModules([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as DocumentModelModule[]);
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+      driveDocumentModelModule as unknown as DocumentModelModule,
+    ]);
     return PullResponderTransmitter.createPullResponderTrigger(
       driveId,
       remoteUrl,

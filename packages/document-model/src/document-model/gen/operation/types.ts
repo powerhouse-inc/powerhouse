@@ -1,7 +1,7 @@
 import type {
   AddOperationAction,
   DeleteOperationAction,
-  DocumentModelState,
+  DocumentModelGlobalState,
   MoveOperationAction,
   ReorderModuleOperationsAction,
   SetOperationDescriptionAction,
@@ -15,43 +15,43 @@ export type * from "./actions.js";
 
 export type DocumentModelOperationOperations = {
   addOperationOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddOperationAction,
   ) => void;
   setOperationNameOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationNameAction,
   ) => void;
   setOperationScopeOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationScopeAction,
   ) => void;
   setOperationSchemaOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationSchemaAction,
   ) => void;
   setOperationDescriptionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationDescriptionAction,
   ) => void;
   setOperationTemplateOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationTemplateAction,
   ) => void;
   setOperationReducerOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationReducerAction,
   ) => void;
   moveOperationOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: MoveOperationAction,
   ) => void;
   deleteOperationOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteOperationAction,
   ) => void;
   reorderModuleOperationsOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderModuleOperationsAction,
   ) => void;
 };

@@ -16,7 +16,7 @@ import {
   mutableCountReducer,
   setLocalName,
   testCreateBaseState,
-  type CountDocument,
+  type CountPHState,
 } from "document-model/test";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

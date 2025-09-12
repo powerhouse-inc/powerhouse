@@ -6,7 +6,7 @@ import {
   setName,
   undo,
 } from "document-model";
-import type { CountDocument } from "document-model/test";
+import type { CountPHState } from "document-model/test";
 import {
   countReducer,
   createCountDocumentState,

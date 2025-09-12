@@ -1,6 +1,12 @@
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model";
-import type { AppModuleDocument } from "./types.js";
+// TODO: remove eslint-disable rules once refactor is done
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import {
+  type StateReducer,
+  isDocumentAction,
+  createReducer,
+} from "document-model";
+import type { AppModulePHState } from "./types.js";
 import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";

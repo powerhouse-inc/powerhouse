@@ -1,6 +1,5 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { ProcessorModuleState } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -14,9 +13,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
   /**
    * Validate if this processor strand should be processed
    */
-  shouldProcess(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;

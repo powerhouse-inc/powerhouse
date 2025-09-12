@@ -1,5 +1,3 @@
-import type { DocumentOperations, Operation, PHDocument } from "document-model";
-import type { DocumentDriveDocument } from "../../index.js";
 import type {
   CreateDocumentInput,
   RevisionsFilter,
@@ -7,6 +5,7 @@ import type {
   SynchronizationUnitId,
 } from "document-drive";
 import type { DocumentOperations, Operation, PHDocument } from "document-model";
+import type { DocumentDriveDocument, SharingType } from "../../index.js";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],

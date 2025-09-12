@@ -1,17 +1,18 @@
 import type {
   Attachment,
   AttachmentInput,
+  PHBaseState,
   PHDocument,
   Reducer,
   ReplayDocumentOptions,
 } from "document-model";
 import { baseLoadFromInput, createZip } from "document-model";
+import mime from "mime/lite";
 import type { BinaryLike, RandomUUIDOptions } from "node:crypto";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-import mime from "mime/lite";
 
 function getFileAttributes(
   file: string,
@@ -67,11 +68,13 @@ export async function getRemoteFile(url: string): Promise<AttachmentInput> {
  * @returns A promise that resolves to the document state after applying all the operations.
  * @throws An error if the initial state or the operations history is not found in the ZIP file.
  */
-export async function baseLoadFromFile<TDocument extends PHDocument>(
+export async function baseLoadFromFile<
+  TState extends PHBaseState = PHBaseState,
+>(
   path: string,
-  reducer: Reducer<TDocument>,
+  reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
-): Promise<TDocument> {
+): Promise<PHDocument<TState>> {
   const file = readFileNode(path);
   return baseLoadFromInput(file, reducer, options);
 }

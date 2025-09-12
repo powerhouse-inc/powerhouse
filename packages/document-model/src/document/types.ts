@@ -1,5 +1,5 @@
 import type {
-  DocumentModelState,
+  DocumentModelGlobalState,
   PHBaseState,
   PHDocumentHeader,
   PHDocumentHistory,
@@ -306,9 +306,9 @@ export type AttachmentRef = string; // TODO `attachment://${string}`;
 
 export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
   fileExtension: string;
-  createState: CreateState<TDocument>;
-  createDocument: CreateDocument<TDocument>;
-  loadFromInput: LoadFromInput<TDocument>;
+  createState: CreateState<TState>;
+  createDocument: CreateDocument<TState>;
+  loadFromInput: LoadFromInput<TState>;
   saveToFileHandle: SaveToFileHandle;
 };
 
@@ -435,19 +435,5 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
   actions: Record<string, (input: any) => Action>;
   utils: DocumentModelUtils<TState>;
-  documentModel: DocumentModelState;
+  documentModel: DocumentModelGlobalState;
 };
-
-export type DocumentStateFromDocument<TDocument extends PHDocument> =
-  ExtractPHDocumentGenerics<TDocument>["documentState"];
-
-export type GlobalStateFromDocument<TDocument extends PHDocument> =
-  ExtractPHDocumentGenerics<TDocument>["globalState"];
-
-export type LocalStateFromDocument<TDocument extends PHDocument> =
-  ExtractPHDocumentGenerics<TDocument>["localState"];
-
-export type BaseStateFromDocument<TDocument extends PHDocument> = BaseState<
-  DocumentStateFromDocument<TDocument>,
-  LocalStateFromDocument<TDocument>
->;

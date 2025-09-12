@@ -1,5 +1,5 @@
 import type {
-  DocumentModelState,
+  DocumentModelGlobalState,
   ModuleSpecification,
   OperationErrorSpecification,
 } from "document-model";
@@ -25,7 +25,7 @@ export type CodegenOperation = {
 
 export interface GenerationContext {
   rootDir: string;
-  docModel: DocumentModelState;
+  docModel: DocumentModelGlobalState;
   module: ModuleSpecification;
   project: Project;
   operations: CodegenOperation[];

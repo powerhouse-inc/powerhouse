@@ -1,6 +1,7 @@
 import type {
   Action,
-  BaseState,
+  LoadStateActionInput,
+  PHBaseState,
   PHDocument,
   PruneActionInput,
   StateReducer,

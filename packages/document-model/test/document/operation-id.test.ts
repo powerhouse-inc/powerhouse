@@ -1,10 +1,9 @@
-import type { BaseStateFromDocument } from "document-model";
 import {
   baseCreateDocument,
   garbageCollectDocumentOperations,
   replayOperations,
 } from "document-model";
-import type { CountDocument } from "document-model/test";
+import type { CountDocument, CountPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,

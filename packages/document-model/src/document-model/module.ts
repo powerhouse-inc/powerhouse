@@ -18,7 +18,6 @@ import {
   documentModelLoadFromInput,
   documentModelReducer,
   documentModelSaveToFileHandle,
-  documentModelState,
   moveOperation,
   releaseNewVersion,
   reorderChangeLogItems,
@@ -51,6 +50,7 @@ import {
   updateOperationExample,
   updateStateExample,
 } from "document-model";
+import { documentModelState } from "./gen/document-model.js";
 
 const actions = {
   setAuthorName,

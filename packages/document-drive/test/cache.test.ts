@@ -5,7 +5,7 @@ import {
   InMemoryCache,
   LRUCacheStorage,
 } from "document-drive";
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { documentModelCreateDocument, generateId } from "document-model";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
@@ -387,7 +387,7 @@ describe("LRU Cache Specific Tests", () => {
 
     expect(doc1).toBeDefined();
     expect(
-      ((doc1?.state as any).global as DocumentModelState).description,
+      ((doc1?.state as any).global as DocumentModelGlobalState).description,
     ).toBe("y".repeat(100));
     expect(doc2).toBeDefined(); // Should not be evicted as cache size wasn't exceeded
   });

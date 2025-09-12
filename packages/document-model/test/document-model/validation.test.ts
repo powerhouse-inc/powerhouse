@@ -1,6 +1,5 @@
 import type {
-  BaseStateFromDocument,
-  DocumentModelDocument,
+  DocumentModelPHState,
   ModuleSpecification,
   OperationSpecification,
   ValidationError,
@@ -28,7 +27,7 @@ describe("DocumentModel Validation Error", () => {
       extension: "phdm",
       authorName: "test author",
       authorWebsite: "www.test.com",
-    } as Partial<BaseStateFromDocument<DocumentModelDocument>>);
+    } as Partial<DocumentModelPHState>);
   });
 
   describe("initial state", () => {

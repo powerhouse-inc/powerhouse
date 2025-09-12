@@ -1,7 +1,8 @@
-import type { Action } from "document-model";
 import type {
   AddListenerInput,
   AddTriggerInput,
+  DocumentDriveGlobalState,
+  DocumentDriveLocalState,
   RemoveListenerInput,
   RemoveTriggerInput,
   SetAvailableOfflineInput,
@@ -9,6 +10,7 @@ import type {
   SetDriveNameInput,
   SetSharingTypeInput,
 } from "document-drive";
+import type { Action, SignalDispatch } from "document-model";
 
 export type SetDriveNameAction = Action & {
   type: "SET_DRIVE_NAME";
@@ -52,20 +54,15 @@ export type DocumentDriveDriveAction =
   | RemoveListenerAction
   | AddTriggerAction
   | RemoveTriggerAction;
-import type {
-  DocumentDriveLocalState,
-  DocumentDriveState,
-} from "document-drive";
-import type { SignalDispatch } from "document-model";
 
 export interface DocumentDriveDriveOperations {
   setDriveNameOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: SetDriveNameAction,
     dispatch?: SignalDispatch,
   ) => void;
   setDriveIconOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: SetDriveIconAction,
     dispatch?: SignalDispatch,
   ) => void;

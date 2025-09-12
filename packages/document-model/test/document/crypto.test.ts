@@ -1,7 +1,8 @@
 import type {
   Action,
   ActionSigner,
-  PHReducer,
+  PHDocument,
+  Reducer,
   ReducerOptions,
   SignalDispatch,
   SigningParameters,
@@ -27,7 +28,7 @@ import {
   createCountDocumentState,
   createCountState,
   increment,
-  type CountDocument,
+  type CountPHState,
 } from "../helpers.js";
 
 /**

@@ -4,7 +4,7 @@ import {
   garbageCollectDocumentOperations,
   replayDocument,
   validateOperations,
-  type BaseStateFromDocument,
+  type PHBaseState,
   type DocumentOperations,
   type FileInput,
   type PHDocument,
@@ -24,7 +24,7 @@ export async function baseSaveToFileHandle(
   await writable.close();
 }
 
-export async function baseLoadFromInput<TDocument extends PHDocument>(
+export async function baseLoadFromInput<TState extends PHBaseState>(
   input: FileInput,
   reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,

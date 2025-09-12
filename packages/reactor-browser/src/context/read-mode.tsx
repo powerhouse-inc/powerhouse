@@ -12,7 +12,7 @@ import type {
   RemoteDriveOptions,
 } from "document-drive";
 import { ReadDriveNotFoundError } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { PHBaseState, PHDocument } from "document-model";
 import fastIsDeepEqual from "fast-deep-equal";
 import type { FC, ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";

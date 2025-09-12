@@ -1,4 +1,7 @@
-import type { DocumentModelState, ModuleSpecification } from "document-model";
+import type {
+  DocumentModelGlobalState,
+  ModuleSpecification,
+} from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
 import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
@@ -25,7 +28,7 @@ export class TSMorphCodeGenerator {
 
   constructor(
     private rootDir: string,
-    private docModels: DocumentModelState[],
+    private docModels: DocumentModelGlobalState[],
     options: CodeGeneratorOptions = { directories: {}, forceUpdate: false },
   ) {
     this.directories = {
@@ -119,7 +122,7 @@ export class TSMorphCodeGenerator {
   }
 
   private createGenerationContext(
-    docModel: DocumentModelState,
+    docModel: DocumentModelGlobalState,
     module: ModuleSpecification,
     forceUpdate = false,
   ): GenerationContext {

@@ -5,10 +5,10 @@ import type {
   GraphQLResult,
   IBaseDocumentDriveServer,
 } from "document-drive";
-import { logger } from "document-drive";
 import type {
+  DocumentModelGlobalState,
   DocumentModelModule,
-  DocumentModelState,
+  PHBaseState,
   PHDocument,
 } from "document-model";
 import type {
@@ -26,6 +26,7 @@ import {
   buildSchema,
 } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
+import { logger } from "./logger.js";
 
 export { gql } from "graphql-request";
 
@@ -106,7 +107,7 @@ function getFields(type: GraphQLOutputType, prefix: string): string {
 }
 
 export function generateDocumentStateQueryFields(
-  documentModelState: DocumentModelState,
+  documentModelState: DocumentModelGlobalState,
   prefix: string,
   options?: BuildSchemaOptions & ParseOptions,
 ): string {
@@ -179,7 +180,7 @@ export async function requestPublicDrive(
   return drive;
 }
 
-export async function fetchDocument<TDocument extends PHDocument>(
+export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
   url: string,
   documentId: string,
   documentModelModule: DocumentModelModule<TState>,
@@ -242,15 +243,15 @@ export async function fetchDocument<TDocument extends PHDocument>(
     { id: documentId },
   );
 
-  if (result?.document?.attachments) {
-    document.attachments = result.document.attachments;
+  if (!result.document) {
+    return { ...result, document: null };
   }
 
   const document: DocumentGraphQLResult<TState> = {
     clipboard: result.document.clipboard,
     header: result.document.header,
     initialState: result.document.initialState,
-    /** @ts-expect-error */
+    /** @ts-expect-error TODO: fix this */
     operations: {
       global: result.document.operations.map(({ inputText, ...o }) => ({
         ...o,

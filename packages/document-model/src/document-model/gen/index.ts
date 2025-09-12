@@ -1,8 +1,7 @@
 export * from "./constants.js";
-export * from "./document-model-core.js";
 export * from "./header/index.js";
 export * from "./module/index.js";
-export * from "./object.js";
+
 export * from "./operation-error/index.js";
 export * from "./operation-example/index.js";
 export * from "./operation/index.js";

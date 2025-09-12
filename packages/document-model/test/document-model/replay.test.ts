@@ -1,10 +1,6 @@
-import type { BaseDocument } from "document-model";
+import type { PHDocument } from "document-model";
 import { createReducer, noop, replayDocument } from "document-model";
-import type {
-  CountDocument,
-  CountLocalState,
-  CountState,
-} from "document-model/test";
+import type { CountPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,
@@ -13,7 +9,7 @@ import {
 } from "document-model/test";
 describe("DocumentModel Class", () => {
   const initialState = createCountState();
-  const initialDocument: BaseDocument<CountPHState> = {
+  const initialDocument: PHDocument<CountPHState> = {
     header: {
       id: "",
       sig: { publicKey: {}, nonce: "" },

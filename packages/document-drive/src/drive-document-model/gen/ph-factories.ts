@@ -3,16 +3,14 @@
  */
 
 import {
-  driveCreateDocument,
-  type DocumentDriveDocument,
+  type DocumentDriveGlobalState,
   type DocumentDriveLocalState,
   type DocumentDrivePHState,
-  type DocumentDriveState,
 } from "document-drive";
-import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
+import type { PHBaseState } from "document-model";
 import { createBaseState, defaultBaseState } from "document-model";
 
-export function defaultGlobalState(): DocumentDriveState {
+export function defaultGlobalState(): DocumentDriveGlobalState {
   return {
     icon: null,
     name: "",
@@ -38,12 +36,12 @@ export function defaultPHState(): DocumentDrivePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<DocumentDriveState>,
-): DocumentDriveState {
+  state?: Partial<DocumentDriveGlobalState>,
+): DocumentDriveGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as DocumentDriveState;
+  } as DocumentDriveGlobalState;
 }
 
 export function createLocalState(
@@ -57,7 +55,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<DocumentDriveState>,
+  globalState?: Partial<DocumentDriveGlobalState>,
   localState?: Partial<DocumentDriveLocalState>,
 ): DocumentDrivePHState {
   return {
@@ -65,28 +63,4 @@ export function createState(
     global: createGlobalState(globalState),
     local: createLocalState(localState),
   };
-}
-
-/**
- * Creates a DocumentDriveDocument with custom global and local state
- * This properly handles the PHBaseState requirements while allowing
- * document-specific state to be set.
- */
-export function phFactoryDriveCreateDocument(
-  state: Partial<{
-    auth?: Partial<PHAuthState>;
-    document?: Partial<PHDocumentState>;
-    global?: Partial<DocumentDriveState>;
-    local?: Partial<DocumentDriveLocalState>;
-  }>,
-): DocumentDriveDocument {
-  const document = driveCreateDocument(
-    createState(
-      createBaseState(state.auth, state.document),
-      state.global,
-      state.local,
-    ),
-  );
-
-  return document;
 }

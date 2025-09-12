@@ -5,17 +5,17 @@ import type {
   AddTriggerInput,
   CopyNodeInput,
   DeleteNodeInput,
+  DocumentDriveGlobalState,
   DocumentDriveLocalState,
-  DocumentDriveState,
   FileNode,
   FolderNode,
+  Listener,
   ListenerCallInfo,
   ListenerFilter,
   MoveNodeInput,
   PullResponderTriggerData,
   RemoveListenerInput,
   RemoveTriggerInput,
-  Listener,
   SetAvailableOfflineInput,
   SetDriveIconInput,
   SetDriveNameInput,
@@ -115,7 +115,7 @@ export function DocumentDriveLocalStateSchema(): z.ZodObject<
 }
 
 export function DocumentDriveStateSchema(): z.ZodObject<
-  Properties<DocumentDriveState>
+  Properties<DocumentDriveGlobalState>
 > {
   return z.object({
     __typename: z.literal("DocumentDriveState").optional(),

@@ -9,7 +9,7 @@ import {
   removeTrigger,
   renameNode,
   setSelectedNode,
-  useSelectedDrive,
+  useSelectedDriveId,
   useSelectedFolder,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
@@ -67,58 +67,65 @@ export function useDebugHandlers() {
 }
 
 export function useNodeActions(): TNodeActions {
-  const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const selectedParentFolder = useSelectedParentFolder();
+  const selectedDriveId = useSelectedDriveId();
 
   const onAddFile = useCallback(
     async (file: File, parent: Node | undefined) => {
-      if (!selectedDrive?.header.id) return;
+      if (!selectedDriveId) return;
 
       const fileName = file.name.replace(/\.zip$/gim, "");
 
-      return await addFile(file, selectedDrive.header.id, fileName, parent?.id);
+      return await addFile(file, selectedDriveId, fileName, parent?.id);
     },
-    [addFile, selectedDrive?.header.id],
+    [selectedDriveId],
   );
 
   const onAddFolder = useCallback(
     async (name: string, parent: { id: string } | undefined) => {
-      if (!selectedDrive?.header.id) return;
+      if (!selectedDriveId) return;
 
-      return await addFolder(selectedDrive.header.id, name, parent?.id);
+      return await addFolder(selectedDriveId, name, parent?.id);
     },
-    [addFolder, selectedDrive?.header.id],
+    [selectedDriveId],
   );
 
   const onRenameNode = useCallback(
     async (newName: string, node: Node): Promise<Node | undefined> => {
-      if (!selectedDrive?.header.id) return;
+      if (!selectedDriveId) return;
 
-      return await renameNode(selectedDrive.header.id, node.id, newName);
+      return await renameNode(selectedDriveId, node.id, newName);
     },
-    [renameNode, selectedDrive?.header.id],
+    [selectedDriveId],
   );
 
   const onCopyNode = useCallback(
     async (src: Node, target: Node | undefined) => {
-      await copyNode(src, target);
+      if (!selectedDriveId) return;
+      await copyNode(selectedDriveId, src, target);
     },
-    [copyNode],
+    [selectedDriveId],
   );
 
   const onMoveNode = useCallback(
     async (src: Node, target: Node | undefined) => {
-      await moveNode(src, target);
+      if (!selectedDriveId) return;
+      await moveNode(selectedDriveId, src, target);
     },
-    [moveNode],
+    [selectedDriveId],
   );
 
   const onDuplicateNode = useCallback(
     async (src: Node) => {
-      await copyNode(src, selectedFolder ?? selectedParentFolder);
+      if (!selectedDriveId) return;
+      await copyNode(
+        selectedDriveId,
+        src,
+        selectedFolder ?? selectedParentFolder,
+      );
     },
-    [copyNode, selectedFolder, selectedParentFolder],
+    [selectedDriveId, selectedFolder, selectedParentFolder],
   );
 
   const onAddAndSelectNewFolder = useCallback(
@@ -134,7 +141,7 @@ export function useNodeActions(): TNodeActions {
         setSelectedNode(newFolder);
       }
     },
-    [onAddFolder, selectedFolder, selectedParentFolder, setSelectedNode],
+    [onAddFolder, selectedFolder, selectedParentFolder],
   );
 
   return useMemo(

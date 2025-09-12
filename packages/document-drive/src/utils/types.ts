@@ -1,4 +1,5 @@
 import type { LogLevel } from "@powerhousedao/config";
+import type { Pick } from "@prisma/client/runtime/library";
 import type {
   DefaultRemoteDriveInfo,
   DocumentDriveLocalState,
@@ -8,12 +9,39 @@ import type {
   RemoteDriveAccessLevel,
 } from "document-drive";
 import type {
-  GlobalStateFromDocument,
   Operation,
+  PHBaseState,
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
 import type { GraphQLError } from "graphql";
+
+export type DriveState = DriveInfo &
+  Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {
+    nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
+  };
+
+export type DocumentGraphQLResult<TState extends PHBaseState = PHBaseState> =
+  PHDocument<TState> & {
+    revision: number;
+    state: TState;
+    initialState: TState;
+    operations: (Operation & {
+      inputText: string;
+    })[];
+  };
+export type ILogger = Pick<
+  Console,
+  "log" | "info" | "warn" | "error" | "debug"
+> & {
+  level: LogLevel | "env";
+  errorHandler: LoggerErrorHandler | undefined;
+
+  verbose: (message?: any, ...optionalParams: any[]) => void;
+};
+
+export type LoggerErrorHandler = (...data: any[]) => void;
+
 export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
   errors?: GraphQLError[];
 };
@@ -27,32 +55,6 @@ export type DriveInfo = {
     preferredEditor?: string;
   };
 };
-
-export type DriveState = DriveInfo &
-  Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {
-    nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
-  };
-
-export type DocumentGraphQLResult<TDocument extends PHDocument> = TDocument & {
-  revision: number;
-  state: GlobalStateFromDocument<TDocument>;
-  initialState: GlobalStateFromDocument<TDocument>;
-  operations: (Operation & {
-    inputText: string;
-  })[];
-};
-
-export type ILogger = Pick<
-  Console,
-  "log" | "info" | "warn" | "error" | "debug"
-> & {
-  level: LogLevel | "env";
-  errorHandler: LoggerErrorHandler | undefined;
-
-  verbose: (message?: any, ...optionalParams: any[]) => void;
-};
-
-export type LoggerErrorHandler = (...data: any[]) => void;
 
 export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
   id: string;

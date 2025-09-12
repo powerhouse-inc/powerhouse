@@ -5,17 +5,13 @@ import type {
 import { driveDocumentModelModule } from "document-drive";
 import type {
   Action,
-  BaseState,
   DocumentModelModule,
   Operation,
+  PHBaseState,
   PHDocument,
-  PHReducer,
+  Reducer,
 } from "document-model";
-import {
-  defaultBaseState,
-  documentModelDocumentModelModule,
-  generateId,
-} from "document-model";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import type { ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [

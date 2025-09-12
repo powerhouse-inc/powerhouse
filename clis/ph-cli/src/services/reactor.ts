@@ -16,7 +16,6 @@ import type {
   ServerListener,
 } from "document-drive";
 import { InternalTransmitter } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import { readFileSync } from "node:fs";
 
 export type ReactorOptions = StartServerOptions & {

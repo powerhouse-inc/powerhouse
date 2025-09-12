@@ -1,13 +1,12 @@
 import type {
   AddFileInput,
   DocumentDriveDriveAction,
-  DocumentDriveLocalState,
   DocumentDriveNodeAction,
-  DocumentDriveState,
+  DocumentDrivePHState,
   InputMaybe,
   Scalars,
 } from "document-drive";
-import type { Action, BaseState, PHDocument } from "document-model";
+import type { Action, PHDocument } from "document-model";
 
 export type * from "./drive/types.js";
 export type * from "./node/types.js";
@@ -17,14 +16,7 @@ export type DocumentDriveAction =
   | DocumentDriveNodeAction
   | DocumentDriveDriveAction;
 
-export type ExtendedDocumentDriveState = BaseState<
-  DocumentDriveState,
-  DocumentDriveLocalState
->;
-export type DocumentDriveDocument = PHDocument<
-  DocumentDriveState,
-  DocumentDriveLocalState
->;
+export type DocumentDriveDocument = PHDocument<DocumentDrivePHState>;
 
 export type LegacySynchronizationUnit = {
   branch: Scalars["String"]["output"];

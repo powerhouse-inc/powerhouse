@@ -7,12 +7,7 @@ import type {
   StrandUpdate,
   Trigger,
 } from "document-drive";
-import type {
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  Operation,
-  PHDocument,
-} from "document-model";
+import type { Operation, PHBaseState } from "document-model";
 
 export type StrandUpdateSource =
   | {
@@ -38,24 +33,20 @@ export type PullResponderTrigger = Omit<Trigger, "data" | "type"> & {
   type: "PullResponder";
 };
 
-export type InternalOperationUpdate<TDocument extends PHDocument> = Omit<
-  Operation,
-  "scope"
-> & {
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
-  previousState:
-    | GlobalStateFromDocument<TDocument>
-    | LocalStateFromDocument<TDocument>;
-};
+export type InternalOperationUpdate<TState extends PHBaseState = PHBaseState> =
+  Omit<Operation, "scope"> & {
+    state: TState;
+    previousState: TState;
+  };
 
-export type InternalTransmitterUpdate<TDocument extends PHDocument> = {
+export type InternalTransmitterUpdate = {
   driveId: string;
   documentId: string;
   documentType: string;
   scope: string;
   branch: string;
-  operations: InternalOperationUpdate<TDocument>[];
-  state: GlobalStateFromDocument<TDocument> | LocalStateFromDocument<TDocument>;
+  operations: InternalOperationUpdate[];
+  state: any;
 };
 
 export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {

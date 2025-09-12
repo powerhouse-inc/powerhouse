@@ -1,4 +1,4 @@
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, DocumentModelPHState } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 
 export const baseDocumentModelsMap: Record<

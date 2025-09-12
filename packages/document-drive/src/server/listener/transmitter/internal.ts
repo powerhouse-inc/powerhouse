@@ -11,12 +11,7 @@ import type {
   StrandUpdateSource,
 } from "document-drive";
 import { logger, operationsToRevision } from "document-drive";
-import type {
-  Action,
-  GlobalStateFromDocument,
-  LocalStateFromDocument,
-  PHDocument,
-} from "document-model";
+import type { Action, PHBaseState } from "document-model";
 import { runAsap, runAsapAsync } from "../../../utils/run-asap.js";
 
 export class InternalTransmitter implements ITransmitter {
@@ -87,8 +82,8 @@ export class InternalTransmitter implements ITransmitter {
 
       operations.push({
         ...operation,
-        state,
-        previousState,
+        state: state as PHBaseState,
+        previousState: previousState as PHBaseState,
         action,
       });
     }

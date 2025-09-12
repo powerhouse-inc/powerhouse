@@ -1,4 +1,4 @@
-import type { InputMaybe, Maybe, Scalars } from "document-model";
+import type { InputMaybe, Maybe, PHBaseState, Scalars } from "document-model";
 
 export type AddChangeLogItemInput = {
   __typename?: "AddChangeLogItemInput";
@@ -127,8 +127,7 @@ export type DocumentModelInput =
   | UpdateOperationExampleInput
   | UpdateStateExampleInput;
 
-export type DocumentModelState = {
-  __typename?: "DocumentModelState";
+export type DocumentModelGlobalState = {
   author: Author;
   description: Scalars["String"]["output"];
   extension: Scalars["String"]["output"];
@@ -137,12 +136,16 @@ export type DocumentModelState = {
   specifications: Array<DocumentSpecification>;
 };
 
+export type DocumentModelLocalState = {};
+export type DocumentModelPHState = PHBaseState & {
+  global: DocumentModelGlobalState;
+  local: DocumentModelLocalState;
+};
+
 export type ScopeState = {
   global: State;
   local: State;
 };
-
-export type DocumentModelLocalState = {};
 
 export type DocumentSpecification = {
   __typename?: "DocumentSpecification";
@@ -167,48 +170,48 @@ export type MoveOperationInput = {
 
 export type Mutation = {
   __typename?: "Mutation";
-  addChangeLogItemInput: DocumentModelState;
-  addModule: DocumentModelState;
-  addOperation: DocumentModelState;
-  addOperationError: DocumentModelState;
-  addOperationExample: DocumentModelState;
-  addStateExample: DocumentModelState;
-  deleteChangeLogItemInput: DocumentModelState;
-  deleteModule: DocumentModelState;
-  deleteOperation: DocumentModelState;
-  deleteOperationError: DocumentModelState;
-  deleteOperationExample: DocumentModelState;
-  deleteStateExample: DocumentModelState;
-  moveOperation: DocumentModelState;
-  releaseNewVersion: DocumentModelState;
-  reorderChangeLogItemsInput: DocumentModelState;
-  reorderModuleOperations: DocumentModelState;
-  reorderModules: DocumentModelState;
-  reorderOperationErrors: DocumentModelState;
-  reorderOperationExamples: DocumentModelState;
-  reorderStateExamples: DocumentModelState;
-  setAuthorName: DocumentModelState;
-  setAuthorWebsite: DocumentModelState;
-  setInitialState: DocumentModelState;
-  setModelDescription: DocumentModelState;
-  setModelExtension: DocumentModelState;
-  setModelId: DocumentModelState;
-  setModelName: DocumentModelState;
-  setModuleDescription: DocumentModelState;
-  setModuleName: DocumentModelState;
-  setOperationDescription: DocumentModelState;
-  setOperationErrorCode: DocumentModelState;
-  setOperationErrorDescription: DocumentModelState;
-  setOperationErrorName: DocumentModelState;
-  setOperationErrorTemplate: DocumentModelState;
-  setOperationName: DocumentModelState;
-  setOperationReducer: DocumentModelState;
-  setOperationSchema: DocumentModelState;
-  setOperationTemplate: DocumentModelState;
-  setStateSchema: DocumentModelState;
-  updateChangeLogItemInput: DocumentModelState;
-  updateOperationExample: DocumentModelState;
-  updateStateExample: DocumentModelState;
+  addChangeLogItemInput: DocumentModelGlobalState;
+  addModule: DocumentModelGlobalState;
+  addOperation: DocumentModelGlobalState;
+  addOperationError: DocumentModelGlobalState;
+  addOperationExample: DocumentModelGlobalState;
+  addStateExample: DocumentModelGlobalState;
+  deleteChangeLogItemInput: DocumentModelGlobalState;
+  deleteModule: DocumentModelGlobalState;
+  deleteOperation: DocumentModelGlobalState;
+  deleteOperationError: DocumentModelGlobalState;
+  deleteOperationExample: DocumentModelGlobalState;
+  deleteStateExample: DocumentModelGlobalState;
+  moveOperation: DocumentModelGlobalState;
+  releaseNewVersion: DocumentModelGlobalState;
+  reorderChangeLogItemsInput: DocumentModelGlobalState;
+  reorderModuleOperations: DocumentModelGlobalState;
+  reorderModules: DocumentModelGlobalState;
+  reorderOperationErrors: DocumentModelGlobalState;
+  reorderOperationExamples: DocumentModelGlobalState;
+  reorderStateExamples: DocumentModelGlobalState;
+  setAuthorName: DocumentModelGlobalState;
+  setAuthorWebsite: DocumentModelGlobalState;
+  setInitialState: DocumentModelGlobalState;
+  setModelDescription: DocumentModelGlobalState;
+  setModelExtension: DocumentModelGlobalState;
+  setModelId: DocumentModelGlobalState;
+  setModelName: DocumentModelGlobalState;
+  setModuleDescription: DocumentModelGlobalState;
+  setModuleName: DocumentModelGlobalState;
+  setOperationDescription: DocumentModelGlobalState;
+  setOperationErrorCode: DocumentModelGlobalState;
+  setOperationErrorDescription: DocumentModelGlobalState;
+  setOperationErrorName: DocumentModelGlobalState;
+  setOperationErrorTemplate: DocumentModelGlobalState;
+  setOperationName: DocumentModelGlobalState;
+  setOperationReducer: DocumentModelGlobalState;
+  setOperationSchema: DocumentModelGlobalState;
+  setOperationTemplate: DocumentModelGlobalState;
+  setStateSchema: DocumentModelGlobalState;
+  updateChangeLogItemInput: DocumentModelGlobalState;
+  updateOperationExample: DocumentModelGlobalState;
+  updateStateExample: DocumentModelGlobalState;
 };
 
 export type MutationAddChangeLogItemInputArgs = {

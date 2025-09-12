@@ -13,7 +13,7 @@ import InMemoryCache, {
   UpdateStatus,
 } from "document-drive";
 import {
-  DocumentModelDocument,
+  DocumentModelGlobalState,
   DocumentModelModule,
   Operation,
 } from "document-model";
@@ -355,7 +355,7 @@ describe("Document Drive Server with %s", () => {
     let document = (await server.getDocument(
       "1",
       "1.1",
-    )) as DocumentModelDocument;
+    )) as DocumentModelGlobalState;
     document = DocumentModelLib.reducer(
       document,
       DocumentModelActions.setName("Test"),
@@ -827,7 +827,7 @@ describe("Document Drive Server with %s", () => {
     let document = (await server.getDocument(
       "1",
       "1.1",
-    )) as DocumentModelDocument;
+    )) as DocumentModelGlobalState;
     expect(document.operations.global.length).toBe(0);
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -848,7 +848,10 @@ describe("Document Drive Server with %s", () => {
     expect(resultDelay.status).toBe("SUCCESS");
     expect(result.status).toBe("CONFLICT");
     expect(result.error).toBeInstanceOf(ConflictOperationError);
-    document = (await server.getDocument("1", "1.1")) as DocumentModelDocument;
+    document = (await server.getDocument(
+      "1",
+      "1.1",
+    )) as DocumentModelGlobalState;
     expect(document.operations.global.length).toBe(1);
     expect(document.operations.global[0]?.index).toBe(0);
     expect(document.state.global.specifications[0]?.modules[0]?.id).toBe("a");

@@ -4,9 +4,9 @@ import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
   Action,
   ActionContext,
-  BaseStateFromDocument,
   CreateState,
   EditorProps,
+  PHBaseState,
   PHDocument,
   Reducer,
 } from "document-model";

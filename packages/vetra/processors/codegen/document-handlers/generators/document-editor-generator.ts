@@ -1,7 +1,6 @@
 import { generateEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import type { DocumentEditorState } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
@@ -15,9 +14,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
   /**
    * Validate if this document editor strand should be processed
    */
-  shouldProcess(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;

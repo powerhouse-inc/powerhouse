@@ -1,6 +1,6 @@
-import type { DocumentModelState } from "./types.js";
+import type { DocumentModelGlobalState } from "./types.js";
 
-export const documentModelState: DocumentModelState = {
+export const documentModelState: DocumentModelGlobalState = {
   id: "powerhouse/document-model",
   name: "DocumentModel",
   extension: "phdm",
@@ -17,7 +17,7 @@ export const documentModelState: DocumentModelState = {
       state: {
         global: {
           schema:
-            "type CodeExample {\n    id: ID!\n    value: String!\n}\n\ntype OperationError {\n    id: ID!\n    code: String\n    name: String\n    description: String\n    template: String\n}\n\ntype Operation {\n    id: ID!\n    name: String\n    schema: String\n    description: String\n    template: String\n    errors: [OperationError!]!\n    examples: [CodeExample!]!\n    reducer: String\n    scope: String\n}\n\ntype Module {\n    id: ID!\n    name: String!\n    description: String\n    operations: [Operation!]!\n}\n\ntype State {\n    schema: String!\n    initialValue: String!\n    examples: [CodeExample!]!\n}\n\ntype ScopeState {\n    global: State!\n    local: State!\n}\n\ntype Author {\n    name: String!\n    website: String\n}\n\ntype DocumentSpecification {\n    version: Int!\n    state: ScopeState!\n    modules: [Module!]!\n    changeLog: [String!]!\n}\n\ntype DocumentModelState {\n    name: String!\n    id: String!\n    extension: String!\n    description: String!\n    author: Author!\n    specifications: [DocumentSpecification!]!\n}",
+            "type CodeExample {\n    id: ID!\n    value: String!\n}\n\ntype OperationError {\n    id: ID!\n    code: String\n    name: String\n    description: String\n    template: String\n}\n\ntype Operation {\n    id: ID!\n    name: String\n    schema: String\n    description: String\n    template: String\n    errors: [OperationError!]!\n    examples: [CodeExample!]!\n    reducer: String\n    scope: String\n}\n\ntype Module {\n    id: ID!\n    name: String!\n    description: String\n    operations: [Operation!]!\n}\n\ntype State {\n    schema: String!\n    initialValue: String!\n    examples: [CodeExample!]!\n}\n\ntype ScopeState {\n    global: State!\n    local: State!\n}\n\ntype Author {\n    name: String!\n    website: String\n}\n\ntype DocumentSpecification {\n    version: Int!\n    state: ScopeState!\n    modules: [Module!]!\n    changeLog: [String!]!\n}\n\ntype DocumentModelGlobalState {\n    name: String!\n    id: String!\n    extension: String!\n    description: String!\n    author: Author!\n    specifications: [DocumentSpecification!]!\n}",
           initialValue:
             '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
           examples: [],

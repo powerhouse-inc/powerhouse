@@ -62,7 +62,7 @@ function setupAsyncEventBus(subscriberCount: number, delayMs = 0): EventBus {
   const eventBus = new EventBus();
 
   for (let i = 0; i < subscriberCount; i++) {
-    eventBus.subscribe(EVENT_TYPE_ASYNC, createAsyncSubscriber(delayMs));
+    eventBus.subscribe(EVENT_TYPE_ASYNC, createAsyncSubscriber(delayMs.toString()));
   }
 
   return eventBus;
@@ -80,7 +80,7 @@ function setupMixedEventBus(
   for (let i = 0; i < subscriberCount; i++) {
     eventBus.subscribe(
       EVENT_TYPE_MIXED,
-      createMixedSubscriber(asyncProbability),
+      createMixedSubscriber(asyncProbability.toString()),
     );
   }
 

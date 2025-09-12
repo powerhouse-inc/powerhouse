@@ -1,5 +1,5 @@
 import type {
-  DocumentModelDocument,
+  DocumentModelPHState,
   StateReducer as TStateReducer,
 } from "document-model";
 import {
@@ -56,7 +56,7 @@ import {
 } from "document-model";
 import { createReducer } from "../../document/reducer.js";
 
-export const documentModelStateReducer: TStateReducer<DocumentModelDocument> = (
+export const documentModelStateReducer: TStateReducer<DocumentModelPHState> = (
   state,
   action,
 ) => {
@@ -415,6 +415,6 @@ export const documentModelStateReducer: TStateReducer<DocumentModelDocument> = (
   }
 };
 
-export const documentModelReducer = createReducer<DocumentModelDocument>(
+export const documentModelReducer = createReducer<DocumentModelPHState>(
   documentModelStateReducer,
 );

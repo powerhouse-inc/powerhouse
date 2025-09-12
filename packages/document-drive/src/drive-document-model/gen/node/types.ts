@@ -3,7 +3,7 @@ import type {
   AddFolderInput,
   CopyNodeInput,
   DeleteNodeInput,
-  DocumentDriveState,
+  DocumentDriveGlobalState,
   MoveNodeInput,
   UpdateFileInput,
   UpdateNodeInput,
@@ -47,37 +47,37 @@ export type DocumentDriveNodeAction =
 
 export interface DocumentDriveNodeOperations {
   addFileOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: AddFileAction,
     dispatch?: SignalDispatch,
   ) => void;
   addFolderOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: AddFolderAction,
     dispatch?: SignalDispatch,
   ) => void;
   deleteNodeOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: DeleteNodeAction,
     dispatch?: SignalDispatch,
   ) => void;
   updateFileOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: UpdateFileAction,
     dispatch?: SignalDispatch,
   ) => void;
   updateNodeOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: UpdateNodeAction,
     dispatch?: SignalDispatch,
   ) => void;
   copyNodeOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: CopyNodeAction,
     dispatch?: SignalDispatch,
   ) => void;
   moveNodeOperation: (
-    state: DocumentDriveState,
+    state: DocumentDriveGlobalState,
     action: MoveNodeAction,
     dispatch?: SignalDispatch,
   ) => void;

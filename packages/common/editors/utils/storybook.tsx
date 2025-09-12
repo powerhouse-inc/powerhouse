@@ -6,7 +6,11 @@ import type {
 import { createDocumentStory } from "@powerhousedao/builder-tools";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import type { Decorator, Meta } from "@storybook/react";
-import { driveDocumentModelModule } from "document-drive";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveGlobalState,
+  type DocumentDriveLocalState,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { defaultBaseState } from "document-model";
 
@@ -25,8 +29,8 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
     initialState ??
       driveDocumentModelModule.utils.createState({
         ...defaultBaseState(),
-        global: { name: "Powerhouse" },
-        local: {},
+        global: { name: "Powerhouse" } as DocumentDriveGlobalState,
+        local: {} as DocumentDriveLocalState,
       }),
     additionalStoryArgs,
     [

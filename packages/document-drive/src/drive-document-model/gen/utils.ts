@@ -1,21 +1,13 @@
 import type {
-  DocumentDriveDocument,
+  DocumentDriveGlobalState,
   DocumentDriveLocalState,
-  DocumentDriveState,
+  DocumentDrivePHState,
 } from "document-drive";
-import {
-  driveDocumentFileExtension,
-  driveDocumentReducer,
-  driveDocumentType,
-} from "document-drive";
+import { driveDocumentReducer, driveDocumentType } from "document-drive";
 import type {
-  BaseState,
   CreateDocument,
   CreateState,
-  LoadFromFile,
   LoadFromInput,
-  PartialState,
-  SaveToFile,
   SaveToFileHandle,
 } from "document-model";
 import {
@@ -26,7 +18,7 @@ import {
   generateId,
 } from "document-model";
 
-export const initialGlobalState: DocumentDriveState = {
+export const initialGlobalState: DocumentDriveGlobalState = {
   name: "",
   nodes: [],
   icon: null,
@@ -38,15 +30,8 @@ export const initialLocalState: DocumentDriveLocalState = {
   availableOffline: false,
 };
 
-export const driveCreateState: CreateState<DocumentDriveDocument> = (
-  state:
-    | PartialState<
-        BaseState<
-          PartialState<DocumentDriveState>,
-          PartialState<DocumentDriveLocalState>
-        >
-      >
-    | undefined,
+export const driveCreateState: CreateState<DocumentDrivePHState> = (
+  state: Partial<DocumentDrivePHState> | undefined,
 ) => {
   return {
     ...defaultBaseState(),
@@ -55,7 +40,7 @@ export const driveCreateState: CreateState<DocumentDriveDocument> = (
   };
 };
 
-export const driveCreateDocument: CreateDocument<DocumentDriveDocument> = (
+export const driveCreateDocument: CreateDocument<DocumentDrivePHState> = (
   state,
 ) => {
   const document = baseCreateDocument(driveCreateState, state);
@@ -72,7 +57,7 @@ export const driveSaveToFileHandle: SaveToFileHandle = (document, input) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const driveLoadFromInput: LoadFromInput<DocumentDriveDocument> = (
+export const driveLoadFromInput: LoadFromInput<DocumentDrivePHState> = (
   input,
 ) => {
   return baseLoadFromInput(input, driveDocumentReducer);

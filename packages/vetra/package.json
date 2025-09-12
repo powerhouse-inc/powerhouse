@@ -22,6 +22,10 @@
       "import": "./dist/document-models/index.js",
       "types": "./dist/document-models/index.d.ts"
     },
+    "./document-models/*.js": {
+      "import": "./dist/document-models/*.js",
+      "types": "./dist/document-models/*.d.ts"
+    },
     "./editors": {
       "import": "./dist/editors/index.js",
       "types": "./dist/editors/index.d.ts"

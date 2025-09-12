@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
 import type {
   Action,
-  BaseState,
   CreateState,
   Operation,
+  PHBaseState,
   PHDocument,
   StateReducer,
 } from "document-model";
@@ -39,7 +39,7 @@ export const fakeAction = (
   }) as Action;
 
 // Empty reducer that supports base actions
-export const emptyReducer: StateReducer<PHDocument> = (state, _action) => {
+export const emptyReducer: StateReducer<TestPHState> = (state, _action) => {
   return state;
 };
 
@@ -73,7 +73,7 @@ export type CountPHState = PHBaseState & {
 export function createCountState(
   count = 0,
   name = "",
-): BaseState<CountState, CountLocalState> {
+): PHBaseState & { global: CountState; local: CountLocalState } {
   return testCreateBaseState({ count }, { name });
 }
 

@@ -15,11 +15,9 @@ import {
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
   driveCreateState,
-  PullResponderTransmitter,
   setAvailableOffline,
   setDriveName,
   setSharingType,
-  SynchronizationUnitNotFoundError,
 } from "document-drive";
 import { generateId } from "document-model";
 import { queueActions } from "./queue.js";
@@ -34,12 +32,11 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
   }
-  const id = drive.id || generateId();
-  const driveInput = driveCreateState(drive);
+  const id = input.id || generateId();
   const newDrive = await reactor.addDrive(
     {
-      global: state.global,
-      local: state.local,
+      global: input.global,
+      local: input.local,
       id,
     },
     preferredEditor,

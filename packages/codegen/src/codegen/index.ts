@@ -5,7 +5,10 @@ import type {
 } from "@powerhousedao/config";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
-import type { DocumentModelModule, DocumentModelState } from "document-model";
+import type {
+  DocumentModelGlobalState,
+  DocumentModelModule,
+} from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";
@@ -27,7 +30,7 @@ export type CodegenOptions = {
   force?: boolean;
 };
 
-function generateGraphqlSchema(documentModel: DocumentModelState) {
+function generateGraphqlSchema(documentModel: DocumentModelGlobalState) {
   const spec =
     documentModel.specifications[documentModel.specifications.length - 1];
 
@@ -73,7 +76,7 @@ async function getDocumentTypesMap(
 
         const specRaw = fs.readFileSync(specPath, "utf-8");
         try {
-          const spec = JSON.parse(specRaw) as DocumentModelState;
+          const spec = JSON.parse(specRaw) as DocumentModelGlobalState;
           if (spec.id) {
             documentTypesMap[spec.id] = {
               name: pascalCase(name),
@@ -115,20 +118,20 @@ export async function generate(config: PowerhouseConfig) {
 }
 
 /**
- * Generates code from a DocumentModelState.
+ * Generates code from a DocumentModelGlobalState.
  *
  * @remarks
  * This is the core generation function that both generateFromFile and generateFromDocument
- * use internally. It handles the actual code generation from a DocumentModelState object.
+ * use internally. It handles the actual code generation from a DocumentModelGlobalState object.
  *
- * @param documentModel - The DocumentModelState containing the document model specification
+ * @param documentModel - The DocumentModelGlobalState containing the document model specification
  * @param config - The PowerhouseConfig configuration object
  * @param filePath - Optional file path for generateSubgraph (null if not from file)
  * @param options - Optional configuration for generation behavior
  * @returns A promise that resolves when code generation is complete
  */
 async function generateFromDocumentModel(
-  documentModel: DocumentModelState,
+  documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
   filePath?: string | null,
   options: CodegenOptions = {},
@@ -188,20 +191,20 @@ export async function generateFromFile(
 }
 
 /**
- * Generates code from a DocumentModelDocument object directly.
+ * Generates code from a DocumentModelGlobalState object directly.
  *
  * @remarks
  * This function performs the same code generation as generateFromFile but takes
- * a DocumentModelDocument object directly instead of loading from a file. This allows for
+ * a DocumentModelGlobalState object directly instead of loading from a file. This allows for
  * programmatic code generation without file I/O.
  *
- * @param documentModelDocument - The DocumentModelDocument object containing the document model
+ * @param documentModelDocument - The DocumentModelGlobalState object containing the document model
  * @param config - The PowerhouseConfig configuration object
  * @param options - Optional configuration for generation behavior (verbose logging, etc.)
  * @returns A promise that resolves when code generation is complete
  */
 export async function generateFromDocument(
-  documentModelState: DocumentModelState,
+  documentModelState: DocumentModelGlobalState,
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
@@ -244,7 +247,7 @@ export async function generateEditor(
 
 export async function generateSubgraphFromDocumentModel(
   name: string,
-  documentModel: DocumentModelState,
+  documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {

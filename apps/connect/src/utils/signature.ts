@@ -9,12 +9,12 @@ import type {
 } from "document-model";
 import { buildSignedAction } from "document-model";
 
-export async function signOperation<TDocument extends PHDocument>(
+export async function signOperation(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
   documentId: string,
-  document: TDocument,
-  reducer?: Reducer<TDocument>,
+  document: PHDocument,
+  reducer?: Reducer,
   user?: User,
 ): Promise<Operation> {
   if (!user) return operation;

@@ -1,3 +1,5 @@
+import type { PHBaseState } from "document-model";
+
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -94,10 +96,15 @@ export type DocumentDriveLocalState = {
   triggers: Array<Trigger>;
 };
 
-export type DocumentDriveState = {
+export type DocumentDriveGlobalState = {
   icon: Maybe<Scalars["String"]["output"]>;
   name: Scalars["String"]["output"];
   nodes: Array<Node>;
+};
+
+export type DocumentDrivePHState = PHBaseState & {
+  global: DocumentDriveGlobalState;
+  local: DocumentDriveLocalState;
 };
 
 export type FileNode = {

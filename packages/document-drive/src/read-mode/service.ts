@@ -1,6 +1,5 @@
 import type {
-  DocumentDriveDocument,
-  DocumentGraphQLResult,
+  DocumentDrivePHState,
   GetDocumentModelModule,
   IReadModeDriveService,
   ReadDrive,
@@ -18,7 +17,11 @@ import {
   ReadDriveSlugNotFoundError,
   requestPublicDrive,
 } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  PHBaseState,
+  PHDocument,
+} from "document-model";
 import type { GraphQLError } from "graphql";
 
 export class ReadModeService implements IReadModeDriveService {
@@ -124,7 +127,7 @@ export class ReadModeService implements IReadModeDriveService {
       return new ReadDocumentNotFoundError(driveId, documentId);
     }
 
-    return document;
+    return document as unknown as PHDocument<TState>;
   }
 
   async addReadDrive(url: string, options?: ReadDriveOptions): Promise<void> {
@@ -143,7 +146,7 @@ export class ReadModeService implements IReadModeDriveService {
       throw new ReadDriveNotFoundError(id);
     }
     this.#drives.set(id, {
-      drive: result,
+      drive: result as unknown as ReadDrive,
       context: {
         ...options,
         url,

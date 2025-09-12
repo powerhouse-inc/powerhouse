@@ -1,4 +1,4 @@
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDrivePHState } from "document-drive";
 import {
   documentDriveSchemas,
   driveReducer,
@@ -7,7 +7,7 @@ import {
 import type { Reducer, StateReducer } from "document-model";
 import { createReducer, isDocumentAction } from "document-model";
 
-const driveStateReducer: StateReducer<DocumentDriveDocument> = (
+const driveStateReducer: StateReducer<DocumentDrivePHState> = (
   state,
   action,
   dispatch,
@@ -160,5 +160,5 @@ const driveStateReducer: StateReducer<DocumentDriveDocument> = (
   }
 };
 
-export const driveDocumentReducer: Reducer<DocumentDriveDocument> =
-  createReducer<DocumentDriveDocument>(driveStateReducer);
+export const driveDocumentReducer: Reducer<DocumentDrivePHState> =
+  createReducer<DocumentDrivePHState>(driveStateReducer);

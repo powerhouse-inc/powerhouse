@@ -9,7 +9,7 @@ import type {
   RemoteDriveOptions,
 } from "document-drive";
 import { logger } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { PHBaseState } from "document-model";
 import { ReadModeService } from "./service.js";
 
 export function ReadModeServer(

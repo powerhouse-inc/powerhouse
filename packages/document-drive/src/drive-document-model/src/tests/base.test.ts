@@ -1,15 +1,13 @@
 import {
   addFolder,
   deleteNode,
-  DocumentDrive as DocumentDriveClass,
   driveCreateDocument,
   driveDocumentReducer,
   setAvailableOffline,
   setDriveName,
   setSharingType,
 } from "document-drive";
-import { type Signal } from "document-model";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {
     let documentDrive = driveCreateDocument();
@@ -52,46 +50,6 @@ describe("DocumentDrive Class", () => {
     );
 
     expect(documentDrive.state.global.nodes.length).toBe(0);
-  });
-
-  it("should add file", () => {
-    const documentDrive = new DocumentDriveClass();
-    documentDrive.addFile({
-      id: "1",
-      documentType: "test",
-      name: "document",
-    });
-
-    expect(documentDrive.state.global.nodes).toStrictEqual([
-      {
-        id: "1",
-        kind: "file",
-        parentFolder: null,
-        documentType: "test",
-        name: "document",
-      },
-    ]);
-  });
-
-  it("should trigger create child document signal", () => {
-    function dispatch(_signal: Signal) {}
-    const documentDrive = new DocumentDriveClass(undefined, dispatch);
-    const spy = vi.spyOn(documentDrive, "_signalDispatch");
-    documentDrive.addFile({
-      id: "1",
-      documentType: "test",
-      name: "document",
-    });
-
-    expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.lastCall!.shift()).toStrictEqual({
-      type: "CREATE_CHILD_DOCUMENT",
-      input: {
-        id: "1",
-        document: undefined,
-        documentType: "test",
-      },
-    });
   });
 
   it("should set local sharing type", () => {

@@ -13,6 +13,7 @@ import { pascalCase } from "change-case";
 import type {
   DocumentDriveDocument,
   DriveInfo,
+  Node,
   FileNode,
   ListenerFilter,
   ListenerRevision,

@@ -55,14 +55,14 @@ export function useDocumentModelModuleById(
   id: string | null | undefined,
 ): VetraDocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules.find((module) => module.documentModel.id === id);
+  return documentModelModules?.find((module) => module.documentModel.id === id);
 }
 
 export function useEditorModuleById(
   id: string | null | undefined,
 ): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
-  return editorModules.find((module) => module.id === id);
+  return editorModules?.find((module) => module.id === id);
 }
 
 export function useFallbackEditorModule(
@@ -70,19 +70,19 @@ export function useFallbackEditorModule(
 ): VetraEditorModule | undefined {
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
-  if (editorModules.length === 0) return undefined;
+  if (editorModules?.length === 0) return undefined;
 
-  const modulesForType = editorModules.filter((module) =>
+  const modulesForType = editorModules?.filter((module) =>
     module.documentTypes.includes(documentType),
   );
-  return modulesForType[0];
+  return modulesForType?.[0];
 }
 
 export function useDriveEditorModuleById(
   id: string | null | undefined,
 ): VetraEditorModule | undefined {
   const driveEditorModules = useDriveEditorModules();
-  return driveEditorModules.find((module) => module.id === id);
+  return driveEditorModules?.find((module) => module.id === id);
 }
 
 export function useDefaultDriveEditorModule(): VetraEditorModule | undefined {
@@ -98,7 +98,7 @@ export function useEditorModulesForDocumentType(
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
 
-  const modulesForType = editorModules.filter((module) =>
+  const modulesForType = editorModules?.filter((module) =>
     module.documentTypes.includes(documentType),
   );
   return modulesForType;

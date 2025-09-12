@@ -15,7 +15,7 @@ import type {
   DeleteOperationExampleInput,
   DeleteOperationInput,
   DeleteStateExampleInput,
-  DocumentModelState,
+  DocumentModelGlobalState,
   DocumentSpecification,
   ModuleSpecification,
   MoveOperationInput,
@@ -241,11 +241,11 @@ export function DocumentModelInputSchema() {
   ]);
 }
 
-export function DocumentModelStateSchema(): z.ZodObject<
-  Properties<DocumentModelState>
+export function DocumentModelGlobalStateSchema(): z.ZodObject<
+  Properties<DocumentModelGlobalState>
 > {
   return z.object({
-    __typename: z.literal("DocumentModelState").optional(),
+    __typename: z.literal("DocumentModelGlobalState").optional(),
     author: AuthorSchema(),
     description: z.string(),
     extension: z.string(),

@@ -1,6 +1,6 @@
 import type {
   DocumentDriveDocument,
-  DocumentDriveState,
+  DocumentDriveGlobalState,
   DocumentModelNotFoundError,
   ReadDriveContext,
 } from "document-drive";
@@ -10,7 +10,6 @@ import {
   driveCreateDocument,
   driveDocumentModelModule,
   driveDocumentReducer,
-  phFactoryDriveCreateDocument,
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
@@ -21,8 +20,8 @@ import {
 } from "document-drive";
 import type {
   DocumentModelDocument,
+  DocumentModelGlobalState,
   DocumentModelModule,
-  DocumentModelState,
   PHDocument,
 } from "document-model";
 import {
@@ -61,10 +60,10 @@ function getDocumentModelModule(id: string): DocumentModelModule<any> {
 
 function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
-  state: Partial<DocumentDriveState>,
+  state: Partial<DocumentDriveGlobalState>,
 ): DocumentDriveDocument {
-  const doc = phFactoryDriveCreateDocument({
-    global: state,
+  const doc = driveCreateDocument({
+    global: state as DocumentDriveGlobalState,
   });
   doc.header.id = id;
   doc.header.slug = slug;
@@ -73,11 +72,11 @@ function buildDriveDocument(
 }
 
 function buildModelDocument(
-  state: Partial<DocumentModelState>,
+  state: Partial<DocumentModelGlobalState>,
 ): DocumentModelDocument {
   return documentModelCreateDocument(
     documentModelCreateState({
-      global: state,
+      global: state as DocumentModelGlobalState,
     }),
   );
 }
@@ -347,7 +346,12 @@ describe.skip("Read mode methods", () => {
           nodes: [],
           icon: null,
         },
-        {},
+        {
+          availableOffline: false,
+          listeners: [],
+          sharingType: "LOCAL",
+          triggers: [],
+        },
       ),
     );
 

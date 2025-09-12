@@ -130,9 +130,9 @@ Domain modeling involves creating a conceptual model that mirrors the real-world
 
 ### Root Object Naming
 
-#### Use `DocumentModelState` as the Root Object
+#### Use `DocumentModelGlobalState` as the Root Object
 
-Name your root object `DocumentModelState` to clearly indicate the primary entry point for state management. This consistency makes your model more understandable and maintainable.
+Name your root object `DocumentModelGlobalState` to clearly indicate the primary entry point for state management. This consistency makes your model more understandable and maintainable.
 
 ```graphql
 

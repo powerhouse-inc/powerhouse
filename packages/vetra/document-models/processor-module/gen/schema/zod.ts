@@ -7,6 +7,7 @@ import type {
   SetProcessorNameInput,
   SetProcessorStatusInput,
   SetProcessorTypeInput,
+  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{

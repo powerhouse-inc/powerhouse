@@ -1,5 +1,4 @@
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import { createInterface } from "readline";
 import { logger } from "./logger.js";
 
@@ -28,9 +27,7 @@ export class InteractiveManager {
   /**
    * Add a strand to the queue, replacing any existing strand for the same document
    */
-  public queueStrand(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): void {
+  public queueStrand(strand: InternalTransmitterUpdate): void {
     const documentKey = this.getDocumentKey(
       strand.documentType,
       strand.documentId,

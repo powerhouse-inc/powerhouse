@@ -1,4 +1,7 @@
-import { createAuthBearerToken } from "@renown/sdk";
+import {
+  createAuthBearerToken,
+  type CreateBearerTokenOptions,
+} from "@renown/sdk";
 import { bytesToBase64url } from "did-jwt";
 import type { Issuer } from "did-jwt-vc";
 import {

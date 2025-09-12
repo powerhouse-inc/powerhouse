@@ -8,7 +8,6 @@ import {
   renderGraphqlPlayground,
 } from "@powerhousedao/reactor-api";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
-import { verifyAuthBearerToken } from "@renown/sdk";
 import devcert from "devcert";
 import type {
   DocumentDriveDocument,
@@ -36,6 +35,8 @@ import {
   getUniqueDocumentModels,
   PackageManager,
 } from "./packages/package-manager.js";
+import type { AuthenticatedRequest } from "./services/auth.service.js";
+import { AuthService } from "./services/auth.service.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 

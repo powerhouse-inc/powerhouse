@@ -5,7 +5,7 @@ import {
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelDocument, DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 
@@ -18,16 +18,14 @@ export class DocumentModelGenerator extends BaseDocumentGen {
   /**
    * Validate if this document model strand should be processed
    */
-  shouldProcess(
-    strand: InternalTransmitterUpdate<DocumentModelDocument>,
-  ): boolean {
+  shouldProcess(strand: InternalTransmitterUpdate): boolean {
     // First run base validation
     if (!super.shouldProcess(strand)) {
       return false;
     }
 
     // Validate document model state
-    const state = strand.state as DocumentModelState;
+    const state = strand.state as DocumentModelGlobalState;
     if (!state) {
       logger.debug(
         `>>> No state found for document model: ${strand.documentId}`,
@@ -48,7 +46,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as DocumentModelState;
+    const state = strand.state as DocumentModelGlobalState;
 
     // Validation is already done in shouldProcess, so we can proceed directly
     logger.info(
