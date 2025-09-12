@@ -35,7 +35,7 @@ vi.mock("../../utils/index.js", async (importOriginal) => {
   } as unknown;
 });
 
-describe.skip("useCommand", () => {
+describe("useCommand", () => {
   let program: Command;
 
   beforeEach(() => {
