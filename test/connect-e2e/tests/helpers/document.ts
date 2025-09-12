@@ -103,7 +103,7 @@ export async function createDocumentAndFillBasicData(
     await page.click(".cm-editor");
 
     // Select all and delete
-    await page.keyboard.press("Meta+A"); // Use 'Control+A' on Windows if needed
+    await page.keyboard.press("ControlOrMeta+A"); // Use 'Control+A' on Windows if needed
     await page.keyboard.press("Backspace");
 
     await page.locator(".cm-content").first().fill(data.global.schema);
@@ -143,7 +143,7 @@ export async function createDocumentAndFillBasicData(
 
         await operationEditor.click();
 
-        await page.keyboard.press("Meta+A"); // Use 'Control+A' on Windows if needed
+        await page.keyboard.press("ControlOrMeta+A"); // Use 'Control+A' on Windows if needed
         await page.keyboard.press("Backspace");
 
         await page.keyboard.insertText(operation.schema);

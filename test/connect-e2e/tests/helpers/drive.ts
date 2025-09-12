@@ -14,6 +14,17 @@ export async function createLocalDrive(page: Page, driveName: string) {
 
   await page.click(`text=Create New Drive`);
   const input = page.getByPlaceholder("Drive name");
+
+  // the model only opens when packages are loaded
+  for (let retry = 0; retry < 5; retry++) {
+    try {
+      await input.waitFor({ state: "visible", timeout: 500 * retry });
+      break;
+    } catch {
+      await page.click(`text=Create New Drive`);
+    }
+  }
+
   await input.fill(driveName);
 
   const submit = page
