@@ -1,5 +1,5 @@
 import type {
-  DocumentModelPHState,
+  DocumentModelDocument,
   PHDocument,
   ValidationError,
 } from "document-model";
@@ -15,8 +15,8 @@ export const validateDocument = (document: PHDocument) => {
     return errors;
   }
 
-  const state = document.state as DocumentModelPHState;
-  const specs = state.global.specifications[0];
+  const doc = document as DocumentModelDocument;
+  const specs = doc.state.global.specifications[0];
 
   // validate initial state errors
   const initialStateErrors = Object.keys(specs.state).reduce<ValidationError[]>(
@@ -48,7 +48,7 @@ export const validateDocument = (document: PHDocument) => {
         ...acc,
         ...validateStateSchemaName(
           specs.state[scope].schema,
-          document.header.name || state.global.name || "",
+          doc.header.name || doc.state.global?.name || "",
           !isGlobalScope ? scope : "",
           !isGlobalScope,
         ).map((err) => ({

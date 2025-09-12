@@ -3,24 +3,23 @@ import type {
   Action,
   ActionSigner,
   Operation,
+  PHBaseState,
   PHDocument,
   Reducer,
   User,
 } from "document-model";
 import { buildSignedAction } from "document-model";
 
-export async function signOperation(
+export async function signOperation<TState extends PHBaseState = PHBaseState>(
   operation: Operation,
   sign: (data: Uint8Array) => Promise<Uint8Array>,
   documentId: string,
-  document: PHDocument,
-  reducer?: Reducer,
+  document: PHDocument<TState>,
+  reducer?: Reducer<TState>,
   user?: User,
 ): Promise<Operation> {
   if (!user) return operation;
-  if (!operation.action) return operation;
-  if (!operation.action?.context) return operation;
-  if (!operation.action.context.signer) return operation;
+  if (!operation.action.context?.signer) return operation;
   if (!reducer) {
     logger.error(
       `Document model '${document.header.documentType}' does not have a reducer`,
