@@ -39,6 +39,9 @@ export async function renameFolder(
   // Click the options button (three dots)
   await page.click('button[aria-haspopup="menu"]');
 
+  // Wait for options menu to be visible
+  await page.getByRole("menu").first().waitFor({ state: "visible" });
+
   // Click Rename option
   await page.click("text=Rename");
 

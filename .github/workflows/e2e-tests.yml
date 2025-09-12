@@ -57,14 +57,14 @@ jobs:
       #   run: npx nx run connect-e2e:connect &
       #   shell: bash
 
-      - name: Wait for Connect to be ready
-        run: |
-          echo "Waiting for Connect service to start..."
-          sleep 10
-          echo "Checking if Connect is responding..."
-          curl --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:3000 || exit 1
-          echo "Connect service is ready!"
-        shell: bash
+      # - name: Wait for Connect to be ready
+      #   run: |
+      #     echo "Waiting for Connect service to start..."
+      #     sleep 10
+      #     echo "Checking if Connect is responding..."
+      #     curl --retry 10 --retry-delay 3 --retry-connrefused http://127.0.0.1:3000 || exit 1
+      #     echo "Connect service is ready!"
+      #   shell: bash
 
       - name: Run Playwright tests
         run: pnpm test:e2e
