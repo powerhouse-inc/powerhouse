@@ -15,7 +15,6 @@ vite.*.config.*.timestamp-*.mjs
 .cursor
 storybook-static
 .gitignore.local
-.env
 .ph
 CLAUDE.md
 .claude
