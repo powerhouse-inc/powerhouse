@@ -1,3 +1,15 @@
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🩹 Fixes
+
+- fixes before merge ([b6bfba102](https://github.com/powerhouse-inc/powerhouse/commit/b6bfba102))
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
