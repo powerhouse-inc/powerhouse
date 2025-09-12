@@ -14,8 +14,8 @@
     "storybook:all": "pnpm -r --no-bail run build-storybook",
     "check:all": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm storybook:all && pnpm test:all",
     "check:all:ci": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm test:all:ci && pnpm storybook:all",
-    "simulate-fresh-git-clone": "pnpm exec scripts/simulate-fresh-git-clone.sh",
-    "simulate-check-all-ci": "pnpm simulate-fresh-git-clone && pnpm i --frozen-lockfile && pnpm check:all:ci"
+    "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
+    "simulate-check-all-ci": "pnpm clean && pnpm i --frozen-lockfile && pnpm check:all:ci"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
