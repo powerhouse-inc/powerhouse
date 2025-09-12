@@ -50,6 +50,9 @@ type UploadAction =
       payload: {
         id: string;
       };
+    }
+  | {
+      type: "CLEAR_ALL_UPLOADS";
     };
 
 // Reducer function
@@ -117,6 +120,10 @@ function uploadsReducer(
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [action.payload.id]: removed, ...rest } = state;
       return rest;
+    }
+
+    case "CLEAR_ALL_UPLOADS": {
+      return {};
     }
 
     default:
@@ -191,6 +198,12 @@ export function useUploadTracker() {
     });
   }, []);
 
+  const clearAllUploads = useCallback(() => {
+    dispatch({
+      type: "CLEAR_ALL_UPLOADS",
+    });
+  }, []);
+
   const getUploadsArray = useCallback(() => {
     return Object.values(uploads);
   }, [uploads]);
@@ -205,5 +218,6 @@ export function useUploadTracker() {
     uploadsCount: getUploadsCount(),
     createUploadHandler,
     removeUpload,
+    clearAllUploads,
   };
 }

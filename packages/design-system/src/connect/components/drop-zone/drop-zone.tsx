@@ -3,6 +3,7 @@ import type { Node } from "document-drive";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
+import { UploadFileList } from "../upload-file-list/index.js";
 import { useUploadTracker } from "./use-upload-tracker.js";
 import { type OnAddFileWithProgress } from "./utils.js";
 
@@ -38,7 +39,7 @@ export function DropZone(props: DropZoneProps) {
   } = props;
 
   // Upload tracking with the new hook
-  const { uploadsArray, uploadsCount, createUploadHandler } =
+  const { uploadsArray, uploadsCount, createUploadHandler, clearAllUploads } =
     useUploadTracker();
 
   // TODO: Remove this
@@ -81,6 +82,15 @@ export function DropZone(props: DropZoneProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Upload File List - positioned at bottom right */}
+      {uploadsCount > 0 && (
+        <UploadFileList
+          items={[]}
+          onClose={clearAllUploads}
+          className="fixed bottom-4 right-4 z-[1001]"
+        />
       )}
     </div>
   );
