@@ -1,3 +1,7 @@
+## 4.1.0-dev.53 (2025-09-13)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.52 (2025-09-12)
 
 ### 🩹 Fixes

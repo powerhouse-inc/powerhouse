@@ -1,3 +1,15 @@
+## 4.1.0-dev.53 (2025-09-13)
+
+### 🩹 Fixes
+
+- **connect:** disable search bar by default ([bd05e44aa](https://github.com/powerhouse-inc/powerhouse/commit/bd05e44aa))
+- **connect-e2e:** make folder selection more specific ([7800b4696](https://github.com/powerhouse-inc/powerhouse/commit/7800b4696))
+- **connect-e2e:** fix flaky tests in CI ([d970bd4d3](https://github.com/powerhouse-inc/powerhouse/commit/d970bd4d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.52 (2025-09-12)
 
 ### 🚀 Features
