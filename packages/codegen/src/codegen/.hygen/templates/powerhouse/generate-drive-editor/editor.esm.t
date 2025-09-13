@@ -10,6 +10,7 @@ import {
   type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
 import { DriveExplorer } from "./components/DriveExplorer.js";
+import { withDropZone } from "./utils/withDropZone.js";
 
 /**
  * Base editor component that renders the drive explorer interface.
@@ -24,6 +25,8 @@ export function BaseEditor(props: DriveEditorProps) {
   );
 }
 
+const BaseEditorWithDropZone = withDropZone(BaseEditor);
+
 /**
  * Main editor entry point with required providers.
  */
@@ -35,7 +38,7 @@ export default function Editor(props: DriveEditorProps) {
     <DriveContextProvider value={props.context}>
       <WagmiContext>
         <AnalyticsProvider databaseName={analyticsDatabaseName}>
-          <BaseEditor {...props} />
+          <BaseEditorWithDropZone {...props} />
         </AnalyticsProvider>
       </WagmiContext>
     </DriveContextProvider>

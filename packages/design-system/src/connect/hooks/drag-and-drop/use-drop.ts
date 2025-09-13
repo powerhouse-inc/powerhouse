@@ -1,17 +1,30 @@
 import { UI_NODE } from "#connect";
 import type { Node } from "document-drive";
 import type { DragEvent } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 type Props = {
   node: Node | undefined;
   onAddFile: (file: File, parent: Node | undefined) => Promise<void> | void;
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void> | void;
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void> | void;
+  /**
+   * When true, uses drag depth tracking with onDragEnter/onDragLeave
+   * to avoid flicker when moving across child elements.
+   * Defaults to false to preserve legacy behavior.
+   */
+  trackNestedDrag?: boolean;
 };
 export function useDrop(props: Props) {
-  const { node, onAddFile, onCopyNode, onMoveNode } = props;
+  const {
+    node,
+    onAddFile,
+    onCopyNode,
+    onMoveNode,
+    trackNestedDrag = false,
+  } = props;
   const [isDropTarget, setIsDropTarget] = useState(false);
+  const dragDepthRef = useRef(0);
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -19,7 +32,23 @@ export function useDrop(props: Props) {
     setIsDropTarget(true);
   }, []);
 
-  const onDragLeave = useCallback(() => {
+  const onDragEnter = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current += 1;
+    setIsDropTarget(true);
+  }, []);
+
+  const onDragLeaveDepth = useCallback((event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDropTarget(false);
+    }
+  }, []);
+
+  const onDragLeaveSimple = useCallback(() => {
     setIsDropTarget(false);
   }, []);
 
@@ -63,23 +92,41 @@ export function useDrop(props: Props) {
       } catch (error) {
         console.error(error);
       } finally {
+        if (trackNestedDrag) dragDepthRef.current = 0;
         setIsDropTarget(false);
       }
     },
-    [onAddFile, onCopyNode, onMoveNode, parent, node?.id],
+    [onAddFile, onCopyNode, onMoveNode, parent, node?.id, trackNestedDrag],
   );
 
   return useMemo(() => {
+    const baseProps: Record<string, unknown> = {
+      onDragOver,
+      onDrop,
+      "data-drop-zone": node?.id || "root",
+    };
+
+    if (trackNestedDrag) {
+      baseProps.onDragEnter = onDragEnter;
+      baseProps.onDragLeave = onDragLeaveDepth;
+    } else {
+      baseProps.onDragLeave = onDragLeaveSimple;
+    }
+
     return {
       isDropTarget,
-      dropProps: {
-        onDragOver,
-        onDragLeave,
-        onDrop,
-        "data-drop-zone": node?.id || "root",
-      },
+      dropProps: baseProps,
     };
-  }, [isDropTarget, onDragLeave, onDragOver, onDrop, node?.id]);
+  }, [
+    isDropTarget,
+    node?.id,
+    onDragEnter,
+    onDragLeaveDepth,
+    onDragLeaveSimple,
+    onDragOver,
+    onDrop,
+    trackNestedDrag,
+  ]);
 }
 
 function getDroppedFiles(items: DataTransferItemList) {

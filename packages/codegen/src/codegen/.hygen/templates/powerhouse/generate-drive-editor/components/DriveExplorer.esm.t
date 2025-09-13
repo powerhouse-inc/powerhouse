@@ -19,8 +19,8 @@ import {
   useDriveContext,
   useDriveSharingType,
   useEditorModules,
-  useFileChildNodes,
-  useFolderChildNodes,
+  useFileChildNodesForId,
+  useFolderChildNodesForId,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
@@ -72,8 +72,10 @@ export function DriveExplorer(props: DriveEditorProps) {
     setSelectedNode,
   });
 
-  const folderChildren = useFolderChildNodes();
-  const fileChildren = useFileChildNodes();
+  const selectedNodeId = selectedFolder?.id || props.document.header.id;
+
+  const folderChildren = useFolderChildNodesForId(selectedNodeId);
+  const fileChildren = useFileChildNodesForId(selectedNodeId);
 
   // All folders for the sidebar tree view
   const allFolders = useAllFolderNodes();

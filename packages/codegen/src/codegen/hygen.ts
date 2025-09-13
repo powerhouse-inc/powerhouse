@@ -307,6 +307,10 @@ export async function generateDriveEditor(
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
+  dragAndDropOptions?: {
+    enabled: boolean;
+    documentTypes: string[];
+  },
 ) {
   // Generate the drive editor files
   const args = [
@@ -320,6 +324,16 @@ export async function generateDriveEditor(
 
   if (appId) {
     args.push("--app-id", appId);
+  }
+
+  if (dragAndDropOptions?.enabled) {
+    args.push("--drag-and-drop-enabled", "true");
+    if (dragAndDropOptions.documentTypes.length > 0) {
+      args.push(
+        "--drag-and-drop-document-types",
+        JSON.stringify(dragAndDropOptions.documentTypes),
+      );
+    }
   }
 
   await run(args, { skipFormat });
