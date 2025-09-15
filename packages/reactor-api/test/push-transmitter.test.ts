@@ -71,7 +71,6 @@ describe("Push Transmitter", () => {
     const { reactor } = await testSetupReactor();
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
-    console.log({ reactor, remoteReactor });
     server = setupServer(...createDriveHandlers(reactor, drive.header.id));
     server.listen({ onUnhandledRequest: "error" });
   });

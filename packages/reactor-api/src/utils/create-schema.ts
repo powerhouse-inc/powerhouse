@@ -4,12 +4,12 @@ import type {
   GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
+import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
-import type { Context } from "vm";
 
 export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,
