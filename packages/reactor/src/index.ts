@@ -1,8 +1,9 @@
 // Reactor Interface and Implementation
-export { ReactorClientBuilder } from "./builder.js";
 export { ReactorClient } from "./client/reactor-client.js";
 export { type IReactorClient } from "./client/types.js";
-export { Reactor } from "./reactor.js";
+export { ReactorClientBuilder } from "./core/builder.js";
+export { Reactor } from "./core/reactor.js";
+export { type IReactor } from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
@@ -16,7 +17,6 @@ export {
   type ShutdownStatus,
   type ViewFilter,
 } from "./shared/types.js";
-export { type IReactor } from "./types.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";

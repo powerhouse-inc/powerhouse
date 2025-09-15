@@ -1,5 +1,6 @@
 import type { Action, DocumentModelState, PHDocument } from "document-model";
 
+import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   type JobInfo,
@@ -11,7 +12,6 @@ import {
 } from "../shared/types.js";
 import type { ISigner } from "../signer/types.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import type { IReactor } from "../types.js";
 import type { DocumentChangeEvent, IReactorClient } from "./types.js";
 
 /**

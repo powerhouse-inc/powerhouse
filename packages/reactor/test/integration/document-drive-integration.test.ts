@@ -26,11 +26,11 @@ import type {
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import { Reactor } from "../../src/reactor.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";

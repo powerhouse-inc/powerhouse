@@ -9,9 +9,9 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import type { IQueue } from "./queue/interfaces.js";
-import type { Job } from "./queue/types.js";
-import { createMutableShutdownStatus } from "./shared/factories.js";
+import type { IQueue } from "../queue/interfaces.js";
+import type { Job } from "../queue/types.js";
+import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   JobInfo,
   PagedResults,
@@ -20,9 +20,9 @@ import type {
   SearchFilter,
   ShutdownStatus,
   ViewFilter,
-} from "./shared/types.js";
-import { JobStatus } from "./shared/types.js";
-import { matchesScope } from "./shared/utils.js";
+} from "../shared/types.js";
+import { JobStatus } from "../shared/types.js";
+import { matchesScope } from "../shared/utils.js";
 import type { IReactor } from "./types.js";
 import { filterByParentId, filterByType } from "./utils.js";
 
