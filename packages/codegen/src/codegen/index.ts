@@ -307,7 +307,7 @@ export async function generateDriveEditor(
   name: string,
   config: PowerhouseConfig,
   appId?: string,
-  dragAndDropOptions?: {
+  editorOptions?: {
     enabled: boolean;
     documentTypes: string[];
   },
@@ -319,7 +319,7 @@ export async function generateDriveEditor(
       skipFormat: config.skipFormat,
     },
     appId,
-    dragAndDropOptions,
+    editorOptions,
   );
 }
 

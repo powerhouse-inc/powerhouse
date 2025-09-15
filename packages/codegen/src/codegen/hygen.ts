@@ -307,7 +307,7 @@ export async function generateDriveEditor(
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
-  dragAndDropOptions?: {
+  editorOptions?: {
     enabled: boolean;
     documentTypes: string[];
   },
@@ -326,12 +326,12 @@ export async function generateDriveEditor(
     args.push("--app-id", appId);
   }
 
-  if (dragAndDropOptions?.enabled) {
+  if (editorOptions?.enabled) {
     args.push("--drag-and-drop-enabled", "true");
-    if (dragAndDropOptions.documentTypes.length > 0) {
+    if (editorOptions.documentTypes.length > 0) {
       args.push(
         "--drag-and-drop-document-types",
-        JSON.stringify(dragAndDropOptions.documentTypes),
+        JSON.stringify(editorOptions.documentTypes),
       );
     }
   }

@@ -65,9 +65,9 @@ export type DriveEditorConfig = {
   disableExternalControls?: boolean;
   documentToolbarEnabled?: boolean;
   showSwitchboardLink?: boolean;
+  documentTypes?: string[];
   dragAndDrop?: {
     enabled?: boolean;
-    documentTypes?: string[];
   };
 };
 
