@@ -30,10 +30,10 @@ import {
 import type { DocumentModelModule } from "document-model";
 import React from "react";
 
-export type GenericDriveExplorerEditorProps = DriveEditorProps &
+type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
-export function BaseEditor(props: GenericDriveExplorerEditorProps) {
+function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { document, className, children } = props;
   const unsafeCastOfDocument = document as DocumentDriveDocument;
 

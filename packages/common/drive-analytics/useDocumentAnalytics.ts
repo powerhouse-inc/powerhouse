@@ -1,9 +1,13 @@
-import type { AnalyticsQuery } from "@powerhousedao/analytics-engine-core";
+import type {
+  AnalyticsQuery,
+  GroupedPeriodResults,
+} from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
 import type { NodeTarget } from "@powerhousedao/common";
+import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser";
 import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
 import { DateTime } from "luxon";
 
@@ -26,7 +30,9 @@ export type UseDocumentAnalyticsOptions = {
   };
 };
 
-export const useDocumentAnalytics = (options: UseDocumentAnalyticsOptions) => {
+export const useDocumentAnalytics = (
+  options: UseDocumentAnalyticsOptions,
+): UseAnalyticsQueryResult<GroupedPeriodResults> => {
   const start = options.from
     ? DateTime.fromISO(options.from)
     : DateTime.now().startOf("day");
