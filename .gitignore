@@ -19,3 +19,4 @@ storybook-static
 CLAUDE.md
 .claude
 coverage/
+coverage-reports/
