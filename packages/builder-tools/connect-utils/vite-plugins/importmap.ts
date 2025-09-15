@@ -192,7 +192,7 @@ async function importFromNodeModules(
       target: "esnext",
       splitting: true,
       external: nodeModules.concat(Array.from(importMapDeps)), // Exclude dependencies already in import map
-      sourcemap: false,
+      sourcemap: true,
       minify: false,
     });
   };

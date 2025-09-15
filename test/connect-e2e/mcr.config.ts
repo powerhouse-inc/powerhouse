@@ -5,12 +5,18 @@ const dirname = import.meta.dirname;
 const rootDir = path.join(dirname, "../../");
 const connectDir = path.join(rootDir, "apps/connect/");
 
-// https://github.com/cenfun/monocart-coverage-reports
 const coverageOptions: CoverageReportOptions = {
   name: "Connect E2E Coverage Report",
-
-  reports: ["v8", "lcovonly"],
-
+  reports: [
+    "v8",
+    [
+      "raw",
+      {
+        outputDir: "raw",
+      },
+    ],
+  ],
+  lcov: true,
   filter: {
     "**/*.mp4": false,
     "**/*.png": false,
@@ -20,6 +26,17 @@ const coverageOptions: CoverageReportOptions = {
     "**/connect-e2e/**": false,
     "**/src/**": true,
     "**/**": true,
+  },
+  onEnd: async (results) => {
+    console.log(`Coverage report generated: ${results?.reportPath}`);
+  },
+  sourcePath: {
+    "packages/document-model/dist/src/document-model/custom/reducers/header.js":
+      "packages/document-model/src/document-model/custom/reducers/header.ts",
+  },
+  sourceMapResolver(url, defaultResolver) {
+    console.log(url);
+    return defaultResolver(url);
   },
   // sourcePath: (filePath, info) => {
   //   let srcFilePath = "";
