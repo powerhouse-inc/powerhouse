@@ -1,12 +1,14 @@
-import { Project } from "ts-morph";
-import { beforeEach, describe, expect, it } from "vitest";
 import type {
   CodegenOperation,
   GenerationContext,
-} from "../core/GenerationContext.js";
-import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
-import { DirectoryManager } from "../utilities/DirectoryManager.js";
-import { ImportManager } from "../utilities/ImportManager.js";
+} from "@powerhousedao/codegen";
+import {
+  DirectoryManager,
+  ImportManager,
+  ReducerGenerator,
+} from "@powerhousedao/codegen";
+import { Project } from "ts-morph";
+import { beforeEach, describe, expect, it } from "vitest";
 
 // Custom DirectoryManager for testing that works with in-memory file system
 class TestDirectoryManager extends DirectoryManager {

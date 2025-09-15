@@ -1,3 +1,8 @@
+import type {
+  CodegenOperation,
+  GenerationContext,
+} from "@powerhousedao/codegen";
+import { FileGenerator } from "@powerhousedao/codegen";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
 import type {
@@ -6,11 +11,6 @@ import type {
   SourceFile,
 } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import { FileGenerator } from "../core/FileGenerator.js";
-import type {
-  CodegenOperation,
-  GenerationContext,
-} from "../core/GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
   async generate(context: GenerationContext): Promise<void> {
