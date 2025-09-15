@@ -11,7 +11,7 @@ import {
 import type { ActionContext, Operation } from "document-model";
 import { generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
-import { PrismaClient } from "../src/storage/prisma/client/default.js";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 
 const prismaClient = new PrismaClient();
 

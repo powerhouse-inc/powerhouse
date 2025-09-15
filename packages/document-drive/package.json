@@ -26,8 +26,8 @@
       "types": "./dist/src/storage/prisma/prisma.d.ts"
     },
     "./storage/prisma/client": {
-      "import": "./src/storage/prisma/client/index.js",
-      "types": "./src/storage/prisma/client/index.d.ts"
+      "import": "./src/storage/prisma/client/default.js",
+      "types": "./src/storage/prisma/client/default.d.ts"
     },
     "./run-asap": {
       "import": "./dist/src/utils/run-asap.js",

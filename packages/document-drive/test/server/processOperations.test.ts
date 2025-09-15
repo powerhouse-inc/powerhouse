@@ -1,6 +1,10 @@
-import type { Action, DocumentModelModule, Operation } from "document-model";
+import type {
+  Action,
+  DocumentModelDocument,
+  DocumentModelModule,
+  Operation,
+} from "document-model";
 import {
-  documentModelCreateDocument,
   documentModelDocumentModelModule,
   documentModelReducer,
   garbageCollect,
@@ -8,14 +12,11 @@ import {
   setModelExtension,
   setModelId,
   setModelName,
+  undo,
 } from "document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import type {
-  BaseDocumentDriveServer,
-  DocumentDriveDocument,
-  IOperationResult,
-} from "document-drive";
+import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
 import {
   addFile,
   BasicClient,
@@ -25,7 +26,7 @@ import {
   driveDocumentReducer,
   ReactorBuilder,
 } from "document-drive";
-import { createPresignedHeader, undo } from "document-model";
+import { createPresignedHeader } from "document-model";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -51,10 +52,9 @@ describe("processOperations", () => {
 
   const driveId = generateId();
   const documentId = generateId();
-
   function createDocumentModel() {
     return {
-      ...documentModelCreateDocument(),
+      ...documentModelDocumentModelModule.utils.createDocument(),
       header: createPresignedHeader(
         documentId,
         documentModelDocumentModelModule.documentModel.id,
@@ -87,10 +87,10 @@ describe("processOperations", () => {
           name: "test",
           documentType: "powerhouse/document-model",
         }),
-      ),
+      ) as Operation,
     );
 
-    let document = await server.getDocument<DocumentDriveDocument>(documentId);
+    let document = await server.getDocument<DocumentModelDocument>(documentId);
 
     if (initialOperations.length > 0) {
       await server.addOperations(
@@ -98,7 +98,7 @@ describe("processOperations", () => {
         buildOperations(documentModelReducer, document, initialOperations),
       );
 
-      document = await server.getDocument<DocumentDriveDocument>(documentId);
+      document = await server.getDocument<DocumentModelDocument>(documentId);
     }
 
     return document;
@@ -423,7 +423,7 @@ describe("processOperations", () => {
 
     expect(resultOp1.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentDriveDocument>(documentId);
+    document = await server.getDocument<DocumentModelDocument>(documentId);
 
     expect((document.state as any).global.name).toBe("test");
     expect(document.operations.global.length).toBe(1);
@@ -441,7 +441,7 @@ describe("processOperations", () => {
 
     const resultOp2 = await server.addOperation(documentId, operation);
 
-    document = await server.getDocument<DocumentDriveDocument>(documentId);
+    document = await server.getDocument<DocumentModelDocument>(documentId);
 
     expect(resultOp2.status).toBe("SUCCESS");
     expect(resultOp2.operations.length).toBe(1);
@@ -487,7 +487,7 @@ describe("processOperations", () => {
 
     expect(resultOp1.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentDriveDocument>(documentId);
+    document = await server.getDocument<DocumentModelDocument>(documentId);
 
     const operation2 = buildOperation(
       documentModelReducer,
@@ -500,7 +500,7 @@ describe("processOperations", () => {
 
     expect(resultOp2.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentDriveDocument>(documentId);
+    document = await server.getDocument<DocumentModelDocument>(documentId);
 
     const operation3 = buildOperation(
       documentModelReducer,
@@ -513,7 +513,7 @@ describe("processOperations", () => {
 
     expect(resultOp3.status).toBe("SUCCESS");
 
-    document = await server.getDocument<DocumentDriveDocument>(documentId);
+    document = await server.getDocument<DocumentModelDocument>(documentId);
 
     const operations = document.operations.global.slice(-4);
 
@@ -587,7 +587,7 @@ describe("processOperations", () => {
 
     // Check the final state of the document
     const finalDocument =
-      await server.getDocument<DocumentDriveDocument>(documentId);
+      await server.getDocument<DocumentModelDocument>(documentId);
 
     const operations = finalDocument.operations.global.slice(-4);
 
@@ -652,7 +652,7 @@ describe("processOperations", () => {
     expect(pushOperationResult.status).toBe("SUCCESS");
 
     const finalDocument =
-      await server.getDocument<DocumentDriveDocument>(documentId);
+      await server.getDocument<DocumentModelDocument>(documentId);
 
     const clientDocument = client1.getDocument();
     expect(clientDocument.operations.global.length).toBe(1);
