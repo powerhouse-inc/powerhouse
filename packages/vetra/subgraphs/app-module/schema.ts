@@ -8,6 +8,7 @@ export const schema: DocumentNode = gql`
   type AppModuleState {
     name: String!
     status: StatusType!
+    documentTypes: [DocumentTypeItem!]
     dragAndDrop: DragAndDropSettings
   }
 
@@ -23,7 +24,6 @@ export const schema: DocumentNode = gql`
 
   type DragAndDropSettings {
     enabled: Boolean!
-    documentTypes: [DocumentTypeItem!]!
   }
 
   """
@@ -54,11 +54,6 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: AppModule_SetAppStatusInput
     ): Int
-    AppModule_setDragAndDropEnabled(
-      driveId: String
-      docId: PHID
-      input: AppModule_SetDragAndDropEnabledInput
-    ): Int
     AppModule_addDocumentType(
       driveId: String
       docId: PHID
@@ -68,6 +63,11 @@ export const schema: DocumentNode = gql`
       driveId: String
       docId: PHID
       input: AppModule_RemoveDocumentTypeInput
+    ): Int
+    AppModule_setDragAndDropEnabled(
+      driveId: String
+      docId: PHID
+      input: AppModule_SetDragAndDropEnabledInput
     ): Int
   }
 
@@ -80,18 +80,18 @@ export const schema: DocumentNode = gql`
   input AppModule_SetAppStatusInput {
     status: StatusType!
   }
-
-  """
-  Module: DndOperations
-  """
-  input AppModule_SetDragAndDropEnabledInput {
-    enabled: Boolean!
-  }
   input AppModule_AddDocumentTypeInput {
     id: OID!
     documentType: String!
   }
   input AppModule_RemoveDocumentTypeInput {
     id: OID!
+  }
+
+  """
+  Module: DndOperations
+  """
+  input AppModule_SetDragAndDropEnabledInput {
+    enabled: Boolean!
   }
 `;

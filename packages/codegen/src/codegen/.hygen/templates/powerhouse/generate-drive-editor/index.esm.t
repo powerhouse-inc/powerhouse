@@ -13,9 +13,9 @@ export const module: DriveEditorModule = {
     disableExternalControls: true,
     documentToolbarEnabled: true,
     showSwitchboardLink: true,<%_ if (dragAndDropEnabled) { _%>
+    documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],
     dragAndDrop: {
       enabled: true,
-      documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],
     },<%_ } _%>
   },
 };

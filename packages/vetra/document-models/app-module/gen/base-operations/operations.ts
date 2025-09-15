@@ -1,5 +1,10 @@
 import { type SignalDispatch } from "document-model";
-import { type SetAppNameAction, type SetAppStatusAction } from "./actions.js";
+import {
+  type SetAppNameAction,
+  type SetAppStatusAction,
+  type AddDocumentTypeAction,
+  type RemoveDocumentTypeAction,
+} from "./actions.js";
 import { type AppModuleState } from "../types.js";
 
 export interface AppModuleBaseOperationsOperations {
@@ -11,6 +16,16 @@ export interface AppModuleBaseOperationsOperations {
   setAppStatusOperation: (
     state: AppModuleState,
     action: SetAppStatusAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addDocumentTypeOperation: (
+    state: AppModuleState,
+    action: AddDocumentTypeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  removeDocumentTypeOperation: (
+    state: AppModuleState,
+    action: RemoveDocumentTypeAction,
     dispatch?: SignalDispatch,
   ) => void;
 }

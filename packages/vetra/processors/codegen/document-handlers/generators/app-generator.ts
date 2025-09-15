@@ -52,12 +52,15 @@ export class AppGenerator extends BaseDocumentGen {
         // Generate app ID using kebabCase
         const appId: string = kebabCase(state.name);
 
-        // Extract dragAndDrop settings if available
-        let dragAndDropOptions: { enabled: boolean; documentTypes: string[]; } | undefined;
+        // Extract editor settings if available
+        let editorOptions:
+          | { enabled: boolean; documentTypes: string[] }
+          | undefined;
         if (state.dragAndDrop?.enabled) {
-          dragAndDropOptions = {
+          editorOptions = {
             enabled: state.dragAndDrop.enabled,
-            documentTypes: state.dragAndDrop.documentTypes.map(item => item.documentType),
+            documentTypes:
+              state.documentTypes?.map((item) => item.documentType) || [],
           };
         }
 
@@ -66,7 +69,7 @@ export class AppGenerator extends BaseDocumentGen {
           state.name,
           this.config.PH_CONFIG,
           appId,
-          dragAndDropOptions
+          editorOptions,
         );
 
         logger.info(
