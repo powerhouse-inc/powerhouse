@@ -1,10 +1,10 @@
-import renownShortHover from "@powerhousedao/design-system/assets/renown-short-hover.png";
-import renownShort from "@powerhousedao/design-system/assets/renown-short.png";
-import { twMerge } from "tailwind-merge";
 import {
   AccountPopover,
   AccountPopoverLogin,
-} from "../account-popover/index.js";
+} from "@powerhousedao/design-system";
+import renownShortHover from "@powerhousedao/design-system/assets/renown-short-hover.png";
+import renownShort from "@powerhousedao/design-system/assets/renown-short.png";
+import { twMerge } from "tailwind-merge";
 
 export interface SidebarLoginProps {
   onLogin: (() => void) | undefined;

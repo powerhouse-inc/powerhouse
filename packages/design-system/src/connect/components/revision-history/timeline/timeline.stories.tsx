@@ -1,5 +1,5 @@
+import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectTooltipProvider } from "../../tooltip/index.js";
 import { globalOperations, localOperations } from "../mocks.js";
 import { Timeline } from "./timeline.js";
 
