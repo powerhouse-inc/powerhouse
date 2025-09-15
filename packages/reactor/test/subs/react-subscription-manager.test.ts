@@ -6,12 +6,21 @@ import {
   type PagedResults,
   type SearchFilter,
 } from "../../src/shared/types.js";
+import type {
+  ISubscriptionErrorHandler,
+  SubscriptionErrorContext,
+} from "../../src/subs/types.js";
 
 describe("ReactorSubscriptionManager", () => {
   let manager: ReactorSubscriptionManager;
+  let mockErrorHandler: ISubscriptionErrorHandler;
 
   beforeEach(() => {
-    manager = new ReactorSubscriptionManager();
+    // Use a mock error handler that doesn't throw for most tests
+    mockErrorHandler = {
+      handleError: vi.fn(),
+    };
+    manager = new ReactorSubscriptionManager(mockErrorHandler);
   });
 
   describe("Subscription Methods", () => {
@@ -708,6 +717,299 @@ describe("ReactorSubscriptionManager", () => {
       unsubscribe();
       manager.notifyDocumentsCreated(["doc3"]);
       expect(callback).toHaveBeenCalledTimes(1); // Still 1
+    });
+  });
+
+  describe("Error Handling and Guaranteed Delivery", () => {
+    let errorHandler: ISubscriptionErrorHandler;
+    let errorManager: ReactorSubscriptionManager;
+
+    beforeEach(() => {
+      errorHandler = {
+        handleError: vi.fn(),
+      };
+      errorManager = new ReactorSubscriptionManager(errorHandler);
+    });
+
+    describe("Document Created Events", () => {
+      it("should catch errors and continue delivering to other subscribers", () => {
+        const callback1 = vi.fn();
+        const callback2 = vi.fn().mockImplementation(() => {
+          throw new Error("Callback 2 error");
+        });
+        const callback3 = vi.fn();
+
+        errorManager.onDocumentCreated(callback1);
+        errorManager.onDocumentCreated(callback2);
+        errorManager.onDocumentCreated(callback3);
+
+        errorManager.notifyDocumentsCreated(["doc1"]);
+
+        // All callbacks should be called despite callback2 throwing
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(callback3).toHaveBeenCalledTimes(1);
+
+        // Error handler should be called for callback2
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(1);
+        expect(errorHandler.handleError).toHaveBeenCalledWith(
+          expect.any(Error),
+          expect.objectContaining({
+            eventType: "created",
+            subscriptionId: expect.stringContaining("created-") as unknown,
+            eventData: ["doc1"],
+          }),
+        );
+      });
+
+      it("should provide error context with filtered data", () => {
+        const callback = vi.fn().mockImplementation(() => {
+          throw new Error("Test error");
+        });
+
+        errorManager.onDocumentCreated(callback, { type: "Task" });
+
+        const documentIds = ["doc1", "doc2"];
+        const types = new Map([
+          ["doc1", "Task"],
+          ["doc2", "Document"],
+        ]);
+
+        errorManager.notifyDocumentsCreated(documentIds, types);
+
+        expect(errorHandler.handleError).toHaveBeenCalledWith(
+          expect.any(Error),
+          expect.objectContaining({
+            eventType: "created",
+            eventData: ["doc1"], // Only filtered doc
+          }),
+        );
+      });
+    });
+
+    describe("Document Deleted Events", () => {
+      it("should catch errors and continue delivering to other subscribers", () => {
+        const callback1 = vi.fn();
+        const callback2 = vi.fn().mockImplementation(() => {
+          throw new Error("Delete callback error");
+        });
+        const callback3 = vi.fn();
+
+        errorManager.onDocumentDeleted(callback1);
+        errorManager.onDocumentDeleted(callback2);
+        errorManager.onDocumentDeleted(callback3);
+
+        errorManager.notifyDocumentsDeleted(["doc1", "doc2"]);
+
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(callback3).toHaveBeenCalledTimes(1);
+
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(1);
+        expect(errorHandler.handleError).toHaveBeenCalledWith(
+          expect.any(Error),
+          expect.objectContaining({
+            eventType: "deleted",
+            eventData: ["doc1", "doc2"],
+          }),
+        );
+      });
+    });
+
+    describe("Document Updated Events", () => {
+      it("should catch errors and continue delivering to other subscribers", () => {
+        const callback1 = vi.fn();
+        const callback2 = vi.fn().mockImplementation(() => {
+          throw new Error("Update callback error");
+        });
+        const callback3 = vi.fn();
+
+        errorManager.onDocumentStateUpdated(callback1);
+        errorManager.onDocumentStateUpdated(callback2);
+        errorManager.onDocumentStateUpdated(callback3);
+
+        const doc: PHDocument = {
+          header: {
+            id: "doc1",
+            documentType: "Task",
+            slug: "task-1",
+          },
+        } as PHDocument;
+
+        errorManager.notifyDocumentsUpdated([doc]);
+
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(callback3).toHaveBeenCalledTimes(1);
+
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(1);
+        expect(errorHandler.handleError).toHaveBeenCalledWith(
+          expect.any(Error),
+          expect.objectContaining({
+            eventType: "updated",
+            eventData: [doc],
+          }),
+        );
+      });
+    });
+
+    describe("Relationship Changed Events", () => {
+      it("should catch errors and continue delivering to other subscribers", () => {
+        const callback1 = vi.fn();
+        const callback2 = vi.fn().mockImplementation(() => {
+          throw new Error("Relationship callback error");
+        });
+        const callback3 = vi.fn();
+
+        errorManager.onRelationshipChanged(callback1);
+        errorManager.onRelationshipChanged(callback2);
+        errorManager.onRelationshipChanged(callback3);
+
+        errorManager.notifyRelationshipChanged(
+          "parent1",
+          "child1",
+          RelationshipChangeType.Added,
+        );
+
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(callback3).toHaveBeenCalledTimes(1);
+
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(1);
+        expect(errorHandler.handleError).toHaveBeenCalledWith(
+          expect.any(Error),
+          expect.objectContaining({
+            eventType: "relationshipChanged",
+            eventData: {
+              parentId: "parent1",
+              childId: "child1",
+              changeType: RelationshipChangeType.Added,
+            },
+          }),
+        );
+      });
+    });
+
+    describe("Multiple Errors", () => {
+      it("should handle multiple errors in the same notification", () => {
+        const callback1 = vi.fn().mockImplementation(() => {
+          throw new Error("Error 1");
+        });
+        const callback2 = vi.fn();
+        const callback3 = vi.fn().mockImplementation(() => {
+          throw new Error("Error 3");
+        });
+
+        errorManager.onDocumentCreated(callback1);
+        errorManager.onDocumentCreated(callback2);
+        errorManager.onDocumentCreated(callback3);
+
+        errorManager.notifyDocumentsCreated(["doc1"]);
+
+        // All callbacks should be called
+        expect(callback1).toHaveBeenCalledTimes(1);
+        expect(callback2).toHaveBeenCalledTimes(1);
+        expect(callback3).toHaveBeenCalledTimes(1);
+
+        // Error handler should be called twice
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(2);
+      });
+
+      it("should handle errors across different event types", () => {
+        const createdCallback = vi.fn().mockImplementation(() => {
+          throw new Error("Created error");
+        });
+        const deletedCallback = vi.fn().mockImplementation(() => {
+          throw new Error("Deleted error");
+        });
+
+        errorManager.onDocumentCreated(createdCallback);
+        errorManager.onDocumentDeleted(deletedCallback);
+
+        errorManager.notifyDocumentsCreated(["doc1"]);
+        errorManager.notifyDocumentsDeleted(["doc2"]);
+
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(2);
+        expect(errorHandler.handleError).toHaveBeenNthCalledWith(
+          1,
+          expect.any(Error),
+          expect.objectContaining({ eventType: "created" }),
+        );
+        expect(errorHandler.handleError).toHaveBeenNthCalledWith(
+          2,
+          expect.any(Error),
+          expect.objectContaining({ eventType: "deleted" }),
+        );
+      });
+    });
+
+    describe("Default Error Handler", () => {
+      it("should throw enhanced errors with context", async () => {
+        const { DefaultSubscriptionErrorHandler } = await import(
+          "../../src/subs/default-error-handler.js"
+        );
+
+        const throwingHandler = new DefaultSubscriptionErrorHandler();
+        const throwingManager = new ReactorSubscriptionManager(throwingHandler);
+
+        const callback = vi.fn().mockImplementation(() => {
+          throw new Error("Test error");
+        });
+
+        throwingManager.onDocumentCreated(callback);
+
+        // The notification should throw because the default handler re-throws
+        expect(() => {
+          throwingManager.notifyDocumentsCreated(["doc1"]);
+        }).toThrow("Subscription error in created");
+      });
+
+      it("should handle non-Error objects in default handler", async () => {
+        const { DefaultSubscriptionErrorHandler } = await import(
+          "../../src/subs/default-error-handler.js"
+        );
+
+        const throwingHandler = new DefaultSubscriptionErrorHandler();
+        const throwingManager = new ReactorSubscriptionManager(throwingHandler);
+
+        const callback = vi.fn().mockImplementation(() => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw "string error"; // Throwing a non-Error object to test handling
+        });
+
+        throwingManager.onDocumentCreated(callback);
+
+        expect(() => {
+          throwingManager.notifyDocumentsCreated(["doc1"]);
+        }).toThrow("Subscription error in created");
+      });
+    });
+
+    describe("Error Handler receives correct subscription IDs", () => {
+      it("should pass unique subscription IDs to error handler", () => {
+        const callback1 = vi.fn().mockImplementation(() => {
+          throw new Error("Error 1");
+        });
+        const callback2 = vi.fn().mockImplementation(() => {
+          throw new Error("Error 2");
+        });
+
+        errorManager.onDocumentCreated(callback1);
+        errorManager.onDocumentCreated(callback2);
+
+        errorManager.notifyDocumentsCreated(["doc1"]);
+
+        expect(errorHandler.handleError).toHaveBeenCalledTimes(2);
+
+        const mockHandleError = vi.mocked(errorHandler.handleError);
+        const calls = mockHandleError.mock.calls;
+        const context1 = calls[0][1] as SubscriptionErrorContext;
+        const context2 = calls[1][1] as SubscriptionErrorContext;
+
+        expect(context1.subscriptionId).not.toBe(context2.subscriptionId);
+        expect(context1.subscriptionId).toContain("created-");
+        expect(context2.subscriptionId).toContain("created-");
+      });
     });
   });
 });

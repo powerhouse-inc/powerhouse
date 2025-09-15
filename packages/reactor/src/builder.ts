@@ -1,6 +1,8 @@
 import { ReactorClient } from "./client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 import type { ISigner } from "./signer/types.js";
+import { ReactorSubscriptionManager } from "./subs/react-subscription-manager.js";
+import { createDefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";
 import type { IReactorSubscriptionManager } from "./subs/types.js";
 import type { IReactor } from "./types.js";
 
@@ -44,8 +46,11 @@ export class ReactorClientBuilder {
       throw new Error("Signer is required to build ReactorClient");
     }
 
+    // Use default SubscriptionManager with default error handler if not provided
     if (!this.subscriptionManager) {
-      throw new Error("SubscriptionManager is required to build ReactorClient");
+      this.subscriptionManager = new ReactorSubscriptionManager(
+        createDefaultSubscriptionErrorHandler(),
+      );
     }
 
     if (!this.jobAwaiter) {

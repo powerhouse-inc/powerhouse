@@ -5,7 +5,10 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "../shared/types.js";
-import type { IReactorSubscriptionManager } from "./types.js";
+import type {
+  IReactorSubscriptionManager,
+  ISubscriptionErrorHandler,
+} from "./types.js";
 
 type DocumentCreatedCallback = (result: PagedResults<string>) => void;
 type DocumentDeletedCallback = (documentIds: string[]) => void;
@@ -42,6 +45,11 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
   >();
 
   private subscriptionCounter = 0;
+  private errorHandler: ISubscriptionErrorHandler;
+
+  constructor(errorHandler: ISubscriptionErrorHandler) {
+    this.errorHandler = errorHandler;
+  }
 
   onDocumentCreated(
     callback: DocumentCreatedCallback,
@@ -114,10 +122,18 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
       );
 
       if (filteredIds.length > 0) {
-        subscription.callback({
-          ...result,
-          results: filteredIds,
-        });
+        try {
+          subscription.callback({
+            ...result,
+            results: filteredIds,
+          });
+        } catch (error) {
+          this.errorHandler.handleError(error, {
+            eventType: "created",
+            subscriptionId: subscription.id,
+            eventData: filteredIds,
+          });
+        }
       }
     }
   }
@@ -139,7 +155,15 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
       );
 
       if (filteredIds.length > 0) {
-        subscription.callback(filteredIds);
+        try {
+          subscription.callback(filteredIds);
+        } catch (error) {
+          this.errorHandler.handleError(error, {
+            eventType: "deleted",
+            subscriptionId: subscription.id,
+            eventData: filteredIds,
+          });
+        }
       }
     }
   }
@@ -157,10 +181,18 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
       const filteredDocs = this.filterDocuments(documents, subscription.search);
 
       if (filteredDocs.length > 0) {
-        subscription.callback({
-          ...result,
-          results: filteredDocs,
-        });
+        try {
+          subscription.callback({
+            ...result,
+            results: filteredDocs,
+          });
+        } catch (error) {
+          this.errorHandler.handleError(error, {
+            eventType: "updated",
+            subscriptionId: subscription.id,
+            eventData: filteredDocs,
+          });
+        }
       }
     }
   }
@@ -183,7 +215,15 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
           subscription.search,
         )
       ) {
-        subscription.callback(parentId, childId, changeType);
+        try {
+          subscription.callback(parentId, childId, changeType);
+        } catch (error) {
+          this.errorHandler.handleError(error, {
+            eventType: "relationshipChanged",
+            subscriptionId: subscription.id,
+            eventData: { parentId, childId, changeType },
+          });
+        }
       }
     }
   }

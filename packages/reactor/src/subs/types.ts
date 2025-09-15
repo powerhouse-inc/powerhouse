@@ -7,6 +7,30 @@ import type {
 } from "../shared/types.js";
 
 /**
+ * Error handler for subscription callback errors
+ */
+export interface ISubscriptionErrorHandler {
+  /**
+   * Called when a subscription callback throws an error
+   * @param error - The error that was thrown
+   * @param context - Context about which subscription failed
+   */
+  handleError(error: unknown, context: SubscriptionErrorContext): void;
+}
+
+/**
+ * Context information about a subscription error
+ */
+export interface SubscriptionErrorContext {
+  /** The type of event that was being processed */
+  eventType: "created" | "deleted" | "updated" | "relationshipChanged";
+  /** The subscription ID that failed */
+  subscriptionId: string;
+  /** Optional additional data about the event */
+  eventData?: unknown;
+}
+
+/**
  * Interface for subscribing to document events in the reactor.
  */
 export interface IReactorSubscriptionManager {

@@ -49,22 +49,16 @@ describe("ReactorClient Passthrough Functions", () => {
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, queue);
 
-    // Create mock signer and subscription manager for testing
+    // Create mock signer for testing
     const mockSigner: ISigner = {
       sign: () => Promise.resolve(["mock-signature", "", "", "", ""]),
     };
-    const mockSubscriptionManager: IReactorSubscriptionManager = {
-      onDocumentCreated: () => () => {},
-      onDocumentDeleted: () => () => {},
-      onDocumentStateUpdated: () => () => {},
-      onRelationshipChanged: () => () => {},
-    };
 
     // Create ReactorClient using the builder
+    // The builder will use default subscription manager if not provided
     client = new ReactorClientBuilder()
       .withReactor(reactor)
       .withSigner(mockSigner)
-      .withSubscriptionManager(mockSubscriptionManager)
       .build();
 
     // Add some test documents through the reactor

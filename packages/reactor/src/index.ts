@@ -20,7 +20,15 @@ export { type IReactor } from "./types.js";
 
 // Subscription Manager
 export { ReactorSubscriptionManager } from "./subs/react-subscription-manager.js";
-export { type IReactorSubscriptionManager } from "./subs/types.js";
+export {
+  DefaultSubscriptionErrorHandler,
+  createDefaultSubscriptionErrorHandler,
+} from "./subs/default-error-handler.js";
+export {
+  type IReactorSubscriptionManager,
+  type ISubscriptionErrorHandler,
+  type SubscriptionErrorContext,
+} from "./subs/types.js";
 
 // Event Bus
 export { EventBus } from "./events/event-bus.js";
