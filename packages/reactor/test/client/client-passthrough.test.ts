@@ -7,19 +7,16 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import { ReactorClientBuilder } from "../../src/builder.js";
+import type { IReactorClient } from "../../src/client/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
-import type { IReactorClient } from "../../src/interfaces/reactor-client.js";
-import type { IReactor } from "../../src/interfaces/reactor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import {
-  ReactorClient,
-  ReactorClientBuilder,
-  type ISigner,
-  type IReactorSubscriptionManager,
-} from "../../src/reactor-client.js";
 import { Reactor } from "../../src/reactor.js";
+import type { ISigner } from "../../src/signer/types.js";
+import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
+import type { IReactor } from "../../src/types.js";
 import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
 describe("ReactorClient Passthrough Functions", () => {
@@ -54,7 +51,7 @@ describe("ReactorClient Passthrough Functions", () => {
 
     // Create mock signer and subscription manager for testing
     const mockSigner: ISigner = {
-      sign: async () => ["mock-signature"],
+      sign: () => Promise.resolve(["mock-signature", "", "", "", ""]),
     };
     const mockSubscriptionManager: IReactorSubscriptionManager = {};
 

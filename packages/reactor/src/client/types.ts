@@ -9,7 +9,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 
-import type { DocumentChangeEvent } from "../reactor-client.js";
+import type { DocumentChangeEvent } from "./reactor-client.js";
 
 /**
  * The ReactorClient interface that wraps lower-level APIs to provide

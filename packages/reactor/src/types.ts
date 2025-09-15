@@ -13,7 +13,7 @@ import type {
   SearchFilter,
   ShutdownStatus,
   ViewFilter,
-} from "../shared/types.js";
+} from "./shared/types.js";
 
 /**
  * The main Reactor interface that serves as a facade for document operations.
