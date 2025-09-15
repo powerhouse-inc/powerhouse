@@ -13,11 +13,11 @@ import {
   isDocumentJob,
   isOperationJob,
   logger,
+  MemoryQueue,
 } from "document-drive";
 import { generateId } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 import { createNanoEvents } from "nanoevents";
-import { MemoryQueue } from "./base.js";
 
 type DocId = string;
 
