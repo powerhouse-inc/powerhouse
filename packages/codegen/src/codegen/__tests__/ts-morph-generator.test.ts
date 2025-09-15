@@ -1,13 +1,15 @@
+import {
+  loadDocumentModel,
+  TSMorphCodeGenerator,
+} from "@powerhousedao/codegen";
 import fs from "fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { TSMorphCodeGenerator } from "@powerhousedao/codegen";
-import { loadDocumentModel } from "../utils.js";
+import { expectedProOperationsV3Content } from "./fixtures/expected-reducer-content-v3.js";
 import {
   expectedBaseOperationsContent,
   expectedProOperationsContent,
 } from "./fixtures/expected-reducer-content.js";
-import { expectedProOperationsV3Content } from "./fixtures/expected-reducer-content-v3.js";
 
 describe("ts-morph generator", () => {
   const srcPath = path.join(
