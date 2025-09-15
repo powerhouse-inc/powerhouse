@@ -198,30 +198,6 @@ export class ReactorSubscriptionManager implements IReactorSubscriptionManager {
     this.relationshipSubscriptions.clear();
   }
 
-  /**
-   * Get the count of active subscriptions
-   */
-  getSubscriptionCounts(): {
-    created: number;
-    deleted: number;
-    updated: number;
-    relationship: number;
-    total: number;
-  } {
-    const created = this.createdSubscriptions.size;
-    const deleted = this.deletedSubscriptions.size;
-    const updated = this.updatedSubscriptions.size;
-    const relationship = this.relationshipSubscriptions.size;
-
-    return {
-      created,
-      deleted,
-      updated,
-      relationship,
-      total: created + deleted + updated + relationship,
-    };
-  }
-
   private filterDocumentIds(
     documentIds: string[],
     search?: SearchFilter,
