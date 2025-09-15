@@ -1,2 +1,2 @@
-export * from "./cn.js";
-export * from "./fixedForwardRef.js";
+export { cn } from "./cn.js";
+export { fixedForwardRef } from "./fixedForwardRef.js";

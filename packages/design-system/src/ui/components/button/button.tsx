@@ -1,13 +1,8 @@
+import { cn } from "../../../utils/cn.js";
 import { Slot } from "@radix-ui/react-slot";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
-import clsx, { type ClassValue } from "clsx";
-import React from "react";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { forwardRef } from "react";
 
 const buttonVariants = cva(
   cn(
@@ -39,7 +34,7 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant, className, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
