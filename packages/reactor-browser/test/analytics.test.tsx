@@ -1,7 +1,5 @@
-import {
-  MemoryAnalyticsStore,
-  type BrowserAnalyticsStore,
-} from "@powerhousedao/analytics-engine-browser";
+import type { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,

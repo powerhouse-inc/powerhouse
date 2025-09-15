@@ -3,7 +3,7 @@ import type {
   ListenerFilter,
   RelationalDbProcessor,
 } from "document-drive";
-import type { PHDocument, PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "document-model";
 import type { Kysely, QueryCreator } from "kysely";
 
 // TODO: Add @powerhousedao/analytics-engine-core dependency when needed

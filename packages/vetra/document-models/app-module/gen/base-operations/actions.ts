@@ -1,4 +1,4 @@
-import { type Action } from "document-model";
+import type { Action } from "document-model";
 import type { SetAppNameInput, SetAppStatusInput } from "../types.js";
 
 export type SetAppNameAction = Action & {

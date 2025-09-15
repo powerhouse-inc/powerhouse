@@ -3,16 +3,14 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-import {
-  actions as BaseActions,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { actions as BaseActions } from "document-model";
+import { documentModel } from "./gen/document-model.js";
 import { actions as DocumentEditorActions } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
-import { documentModel } from "./gen/document-model.js";
+import type { DocumentEditorPHState } from "./gen/types.js";
 import genUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
-import type { DocumentEditorPHState } from "./gen/types.js";
 
 const utils = { ...genUtils, ...customUtils };
 const actions = { ...BaseActions, ...DocumentEditorActions };
@@ -24,7 +22,7 @@ export const module: DocumentModelModule<DocumentEditorPHState> = {
   documentModel,
 };
 
-export { reducer, actions, utils, documentModel };
+export { actions, documentModel, reducer, utils };
 
 export * from "./gen/types.js";
 export * from "./src/utils.js";

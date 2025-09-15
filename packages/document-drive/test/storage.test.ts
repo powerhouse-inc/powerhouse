@@ -13,11 +13,8 @@ import {
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
-import {
-  documentModelCreateDocument,
-  generateId,
-  type DocumentModelDocument,
-} from "document-model";
+import type { DocumentModelDocument } from "document-model";
+import { documentModelCreateDocument, generateId } from "document-model";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { describe, it } from "vitest";

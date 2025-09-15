@@ -2,11 +2,8 @@
  * Test factory methods for creating DocumentDriveDocument instances with custom state
  */
 
-import {
-  driveCreateDocument,
-  type DocumentDriveDocument,
-  type Node,
-} from "document-drive";
+import type { DocumentDriveDocument, Node } from "document-drive";
+import { driveCreateDocument } from "document-drive";
 
 /**
  * Creates a DocumentDriveDocument with custom nodes in the global state

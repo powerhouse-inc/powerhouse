@@ -31,11 +31,7 @@ import type {
 import type { IRenown, User } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
-  IDocumentAdminStorage,
   IDocumentDriveServer,
-  IDocumentOperationStorage,
-  IDocumentStorage,
-  IDriveOperationStorage,
   ProcessorManager,
 } from "document-drive";
 import type { PHDocument } from "document-model";

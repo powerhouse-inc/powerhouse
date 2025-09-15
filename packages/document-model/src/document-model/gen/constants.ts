@@ -1,6 +1,6 @@
-import {
-  type DocumentModelGlobalState,
-  type DocumentModelLocalState,
+import type {
+  DocumentModelGlobalState,
+  DocumentModelLocalState,
 } from "document-model";
 
 export const documentModelState: DocumentModelGlobalState = {

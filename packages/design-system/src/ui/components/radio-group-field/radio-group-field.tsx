@@ -11,7 +11,8 @@ import {
   RadioGroup,
   withFieldValidation,
 } from "@powerhousedao/design-system";
-import { type HTMLAttributes, type Ref, forwardRef, useId } from "react";
+import type { HTMLAttributes, Ref } from "react";
+import { forwardRef, useId } from "react";
 type RadioGroupFieldBaseProps = Omit<
   HTMLAttributes<HTMLDivElement>,
   | keyof InputBaseProps<string>

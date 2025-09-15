@@ -1,9 +1,7 @@
 import { cn, ConnectDropdownMenu, Icon } from "@powerhousedao/design-system";
 import { capitalCase } from "change-case";
-import {
-  getDriveSharingType,
-  type DocumentDriveDocument,
-} from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
+import { getDriveSharingType } from "document-drive";
 import { useState } from "react";
 
 type ModifyDrivesProps = {

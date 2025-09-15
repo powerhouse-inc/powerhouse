@@ -22,13 +22,13 @@ import {
   verify,
   verifyOperationSignature,
 } from "document-model";
+import type { CountPHState } from "document-model/test";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   countReducer,
   createCountDocumentState,
   createCountState,
   increment,
-  type CountPHState,
 } from "../helpers.js";
 
 /**

@@ -1,9 +1,6 @@
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-  type PHDocument,
-} from "document-model";
+import type { DocumentModelModule, PHDocument } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { ExpectStatic } from "vitest";
 
 export function expectUTCTimestamp(expect: ExpectStatic): unknown {

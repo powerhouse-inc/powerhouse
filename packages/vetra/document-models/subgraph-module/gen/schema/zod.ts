@@ -2,9 +2,9 @@ import { z } from "zod";
 import type {
   SetSubgraphNameInput,
   SetSubgraphStatusInput,
-  StatusType,
   SubgraphModuleState,
 } from "./types.js";
+import { StatusType } from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

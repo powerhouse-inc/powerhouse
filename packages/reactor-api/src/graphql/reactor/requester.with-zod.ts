@@ -1,11 +1,13 @@
-import { Kind, type DocumentNode, type OperationDefinitionNode } from "graphql";
+import type { DocumentNode, OperationDefinitionNode } from "graphql";
+import { Kind } from "graphql";
 import type {
   DocumentModelResultPage,
   JobInfo,
   PhDocumentResultPage,
   Requester,
 } from "./gen/graphql.js";
-import { createFetchRequester, type FetchLike } from "./requester.js";
+import type { FetchLike } from "./requester.js";
+import { createFetchRequester } from "./requester.js";
 import {
   DocumentModelResultPageDTO,
   DocumentWithChildrenDTO,

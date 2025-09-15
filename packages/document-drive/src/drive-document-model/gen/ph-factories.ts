@@ -2,10 +2,10 @@
  * Factory methods for creating DocumentDriveDocument instances
  */
 
-import {
-  type DocumentDriveGlobalState,
-  type DocumentDriveLocalState,
-  type DocumentDrivePHState,
+import type {
+  DocumentDriveGlobalState,
+  DocumentDriveLocalState,
+  DocumentDrivePHState,
 } from "document-drive";
 import type { PHBaseState } from "document-model";
 import { createBaseState, defaultBaseState } from "document-model";

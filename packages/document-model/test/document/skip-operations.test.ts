@@ -5,6 +5,7 @@ import {
   replayOperations,
   setName,
 } from "document-model";
+import type { CountPHState, TestPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,
@@ -16,8 +17,6 @@ import {
   mapOperations,
   testCreateBaseState,
   wrappedEmptyReducer,
-  type CountPHState,
-  type TestPHState,
 } from "document-model/test";
 import { describe } from "vitest";
 

@@ -1,3 +1,4 @@
+import type { DocumentModelPHState } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelReducer,
@@ -10,7 +11,6 @@ import {
   setModelExtension,
   setModelId,
   setModelName,
-  type DocumentModelPHState,
 } from "document-model";
 import { expect } from "vitest";
 

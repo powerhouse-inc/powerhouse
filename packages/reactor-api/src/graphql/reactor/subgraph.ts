@@ -5,7 +5,7 @@ import { gql } from "graphql-tag";
 import path from "path";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
-import { type Resolvers } from "./gen/graphql.js";
+import type { Resolvers } from "./gen/graphql.js";
 
 export class ReactorSubgraph extends BaseSubgraph {
   private logger = childLogger([

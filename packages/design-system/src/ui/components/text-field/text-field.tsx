@@ -4,7 +4,8 @@ import type {
   WithDifference,
 } from "@powerhousedao/design-system";
 import { TextInput, withFieldValidation } from "@powerhousedao/design-system";
-import { forwardRef, type Ref } from "react";
+import type { Ref } from "react";
+import { forwardRef } from "react";
 
 export type TextFieldProps = TextInputProps &
   FieldErrorHandling &

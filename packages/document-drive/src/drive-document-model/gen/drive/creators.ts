@@ -8,15 +8,17 @@ import type {
   SetDriveNameAction,
   SetSharingTypeAction,
 } from "document-drive";
+import type {
+  AddListenerInput,
+  AddTriggerInput,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
+} from "document-drive";
 import {
-  type AddListenerInput,
-  type AddTriggerInput,
-  type RemoveListenerInput,
-  type RemoveTriggerInput,
-  type SetAvailableOfflineInput,
-  type SetDriveIconInput,
-  type SetDriveNameInput,
-  type SetSharingTypeInput,
   AddListenerInputSchema,
   AddTriggerInputSchema,
   RemoveListenerInputSchema,

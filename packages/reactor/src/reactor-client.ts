@@ -7,14 +7,15 @@ import type {
 
 import type { IReactorClient } from "./interfaces/reactor-client.js";
 import type { IReactor } from "./interfaces/reactor.js";
-import { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
-import {
-  type JobInfo,
-  type PagedResults,
-  type PagingOptions,
-  type PropagationMode,
-  type SearchFilter,
-  type ViewFilter,
+import type { IJobAwaiter } from "./shared/awaiter.js";
+import { JobAwaiter } from "./shared/awaiter.js";
+import type {
+  JobInfo,
+  PagedResults,
+  PagingOptions,
+  PropagationMode,
+  SearchFilter,
+  ViewFilter,
 } from "./shared/types.js";
 
 /**

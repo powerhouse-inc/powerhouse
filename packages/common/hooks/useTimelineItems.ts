@@ -1,5 +1,5 @@
+import type { GroupedPeriodResults } from "@powerhousedao/analytics-engine-core";
 import {
-  type GroupedPeriodResults,
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";

@@ -16,12 +16,11 @@ import {
   requestPublicDrive,
   SwitchboardPushTransmitter,
 } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
 import {
   documentModelCreateDocument,
   generateId,
   setAuthorName,
-  type DocumentModelDocument,
-  type DocumentModelGlobalState,
 } from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

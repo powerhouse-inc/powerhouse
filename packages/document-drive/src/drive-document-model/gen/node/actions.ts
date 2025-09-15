@@ -8,7 +8,7 @@ import type {
   UpdateFileInput,
   UpdateNodeInput,
 } from "document-drive";
-import { type Action, type SignalDispatch } from "document-model";
+import type { Action, SignalDispatch } from "document-model";
 
 export type AddFileAction = Action & { type: "ADD_FILE"; input: AddFileInput };
 export type AddFolderAction = Action & {

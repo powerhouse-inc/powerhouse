@@ -1,8 +1,5 @@
-import {
-  DriveSubgraph,
-  testSetupReactor,
-  type SubgraphArgs,
-} from "@powerhousedao/reactor-api";
+import type { SubgraphArgs } from "@powerhousedao/reactor-api";
+import { DriveSubgraph, testSetupReactor } from "@powerhousedao/reactor-api";
 import {
   driveCreateDocument,
   driveDocumentModelModule,
@@ -11,7 +8,7 @@ import {
 import {
   documentModelDocumentModelModule,
   generateId,
-  type DocumentModelModule,
+  DocumentModelModule,
 } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 

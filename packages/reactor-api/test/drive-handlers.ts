@@ -1,4 +1,5 @@
-import { DriveSubgraph, type SubgraphArgs } from "@powerhousedao/reactor-api";
+import type { SubgraphArgs } from "@powerhousedao/reactor-api";
+import { DriveSubgraph } from "@powerhousedao/reactor-api";
 import type { IDocumentDriveServer } from "document-drive";
 import type { GraphQLHandler, GraphQLQuery } from "msw";
 import { graphql, HttpResponse } from "msw";

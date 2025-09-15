@@ -1,28 +1,28 @@
 import { createAction } from "document-model";
-import {
-  z,
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
-  type SetPackageAuthorInput,
-  type SetPackageAuthorNameInput,
-  type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
-  type SetPackageGithubUrlInput,
-  type SetPackageNpmUrlInput,
+import type {
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
 } from "../types.js";
-import {
-  type SetPackageNameAction,
-  type SetPackageDescriptionAction,
-  type SetPackageCategoryAction,
-  type SetPackageAuthorAction,
-  type SetPackageAuthorNameAction,
-  type SetPackageAuthorWebsiteAction,
-  type AddPackageKeywordAction,
-  type RemovePackageKeywordAction,
-  type SetPackageGithubUrlAction,
-  type SetPackageNpmUrlAction,
+import { z } from "../types.js";
+import type {
+  SetPackageNameAction,
+  SetPackageDescriptionAction,
+  SetPackageCategoryAction,
+  SetPackageAuthorAction,
+  SetPackageAuthorNameAction,
+  SetPackageAuthorWebsiteAction,
+  AddPackageKeywordAction,
+  RemovePackageKeywordAction,
+  SetPackageGithubUrlAction,
+  SetPackageNpmUrlAction,
 } from "./actions.js";
 
 export const setPackageName = (input: SetPackageNameInput) =>

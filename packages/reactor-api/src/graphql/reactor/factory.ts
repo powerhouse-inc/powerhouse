@@ -1,5 +1,5 @@
 import { getSdk } from "./gen/graphql.js";
-import { type FetchLike } from "./requester.js";
+import type { FetchLike } from "./requester.js";
 import { createValidatingRequester } from "./requester.with-zod.js";
 
 export function createReactorClient(

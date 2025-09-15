@@ -6,8 +6,8 @@ import type {
   RemoveDocumentTypeInput,
   SetEditorNameInput,
   SetEditorStatusInput,
-  StatusType,
 } from "./types.js";
+import { StatusType } from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

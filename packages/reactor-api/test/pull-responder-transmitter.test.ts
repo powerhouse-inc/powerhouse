@@ -12,18 +12,10 @@ import {
   addFile,
   addFolder,
   driveCreateDocument,
-  driveDocumentModelModule,
   PullResponderTransmitter,
 } from "document-drive";
-import type {
-  DocumentModelDocument,
-  DocumentModelModule,
-} from "document-model";
-import {
-  documentModelDocumentModelModule,
-  generateId,
-  setAuthorName,
-} from "document-model";
+import type { DocumentModelDocument } from "document-model";
+import { generateId, setAuthorName } from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

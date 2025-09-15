@@ -1,15 +1,17 @@
 import type { ReplayDocumentOptions } from "document-model";
+import type {
+  PHBaseState,
+  DocumentOperations,
+  FileInput,
+  PHDocument,
+  PHDocumentHeader,
+  Reducer,
+} from "document-model";
 import {
   createZip,
   garbageCollectDocumentOperations,
   replayDocument,
   validateOperations,
-  type PHBaseState,
-  type DocumentOperations,
-  type FileInput,
-  type PHDocument,
-  type PHDocumentHeader,
-  type Reducer,
 } from "document-model";
 import JSZip from "jszip";
 

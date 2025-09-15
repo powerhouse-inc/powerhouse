@@ -8,6 +8,7 @@ import {
 } from "document-model";
 import { generateUUIDNode, getLocalFile, hashNode } from "document-model/node";
 
+import type { CountPHState } from "document-model/test";
 import {
   countReducer,
   createCountDocumentState,
@@ -16,7 +17,6 @@ import {
   mutableCountReducer,
   setLocalName,
   testCreateBaseState,
-  type CountPHState,
 } from "document-model/test";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

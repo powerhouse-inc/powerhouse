@@ -8,7 +8,6 @@ import type {
   RelationalDbProcessorFilter,
 } from "document-drive";
 import { relationalDbToQueryBuilder } from "document-drive";
-import type { PHDocument } from "document-model";
 
 const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
 
