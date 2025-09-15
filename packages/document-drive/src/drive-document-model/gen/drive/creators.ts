@@ -1,32 +1,39 @@
-import { createAction } from "document-model";
 import type {
-  SetDriveNameInput,
-  SetDriveIconInput,
-  SetSharingTypeInput,
-  SetAvailableOfflineInput,
-  AddListenerInput,
-  RemoveListenerInput,
-  AddTriggerInput,
-  RemoveTriggerInput,
-} from "document-drive";
-import { documentDriveSchemas } from "document-drive";
-import type {
-  SetDriveNameAction,
-  SetDriveIconAction,
-  SetSharingTypeAction,
-  SetAvailableOfflineAction,
   AddListenerAction,
-  RemoveListenerAction,
   AddTriggerAction,
+  RemoveListenerAction,
   RemoveTriggerAction,
+  SetAvailableOfflineAction,
+  SetDriveIconAction,
+  SetDriveNameAction,
+  SetSharingTypeAction,
 } from "document-drive";
+import {
+  type AddListenerInput,
+  type AddTriggerInput,
+  type RemoveListenerInput,
+  type RemoveTriggerInput,
+  type SetAvailableOfflineInput,
+  type SetDriveIconInput,
+  type SetDriveNameInput,
+  type SetSharingTypeInput,
+  AddListenerInputSchema,
+  AddTriggerInputSchema,
+  RemoveListenerInputSchema,
+  RemoveTriggerInputSchema,
+  SetAvailableOfflineInputSchema,
+  SetDriveIconInputSchema,
+  SetDriveNameInputSchema,
+  SetSharingTypeInputSchema,
+} from "document-drive";
+import { createAction } from "document-model";
 
 export const setDriveName = (input: SetDriveNameInput) =>
   createAction<SetDriveNameAction>(
     "SET_DRIVE_NAME",
     { ...input },
     undefined,
-    documentDriveSchemas.SetDriveNameInputSchema,
+    SetDriveNameInputSchema,
     "global",
   );
 
@@ -35,7 +42,7 @@ export const setDriveIcon = (input: SetDriveIconInput) =>
     "SET_DRIVE_ICON",
     { ...input },
     undefined,
-    documentDriveSchemas.SetDriveIconInputSchema,
+    SetDriveIconInputSchema,
     "global",
   );
 
@@ -44,7 +51,7 @@ export const setSharingType = (input: SetSharingTypeInput) =>
     "SET_SHARING_TYPE",
     { ...input },
     undefined,
-    documentDriveSchemas.SetSharingTypeInputSchema,
+    SetSharingTypeInputSchema,
     "local",
   );
 
@@ -53,7 +60,7 @@ export const setAvailableOffline = (input: SetAvailableOfflineInput) =>
     "SET_AVAILABLE_OFFLINE",
     { ...input },
     undefined,
-    documentDriveSchemas.SetAvailableOfflineInputSchema,
+    SetAvailableOfflineInputSchema,
     "local",
   );
 
@@ -62,7 +69,7 @@ export const addListener = (input: AddListenerInput) =>
     "ADD_LISTENER",
     { ...input },
     undefined,
-    documentDriveSchemas.AddListenerInputSchema,
+    AddListenerInputSchema,
     "local",
   );
 
@@ -71,7 +78,7 @@ export const removeListener = (input: RemoveListenerInput) =>
     "REMOVE_LISTENER",
     { ...input },
     undefined,
-    documentDriveSchemas.RemoveListenerInputSchema,
+    RemoveListenerInputSchema,
     "local",
   );
 
@@ -80,7 +87,7 @@ export const addTrigger = (input: AddTriggerInput) =>
     "ADD_TRIGGER",
     { ...input },
     undefined,
-    documentDriveSchemas.AddTriggerInputSchema,
+    AddTriggerInputSchema,
     "local",
   );
 
@@ -89,6 +96,6 @@ export const removeTrigger = (input: RemoveTriggerInput) =>
     "REMOVE_TRIGGER",
     { ...input },
     undefined,
-    documentDriveSchemas.RemoveTriggerInputSchema,
+    RemoveTriggerInputSchema,
     "local",
   );
