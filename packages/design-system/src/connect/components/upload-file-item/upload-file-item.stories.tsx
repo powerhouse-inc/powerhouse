@@ -13,6 +13,20 @@ const meta: Meta<typeof UploadFileItem> = {
       control: "select",
       options: ["success", "failed", "pending", "uploading"],
     },
+    documentType: {
+      control: "select",
+      options: [
+        undefined,
+        "analytics-processor",
+        "relational-processor",
+        "codegen-processor",
+        "app",
+        "document-model",
+        "editor",
+        "package",
+        "subgraph",
+      ],
+    },
     progress: {
       control: { type: "range", min: 0, max: 100, step: 1 },
     },
@@ -150,5 +164,71 @@ export const Interactive: Story = {
           "Interactive story with all handlers. You can click the buttons to see the actions in the Actions panel.",
       },
     },
+  },
+};
+
+export const AppModule: Story = {
+  ...Template,
+  args: {
+    fileName: "MyApp.phdm",
+    fileSize: "1.5 MB",
+    status: "success",
+    documentType: "app",
+    onOpenDocument: fn(),
+  },
+};
+
+export const DocumentModelModule: Story = {
+  ...Template,
+  args: {
+    fileName: "BudgetModel.phdm",
+    fileSize: "2.2 MB",
+    status: "success",
+    documentType: "document-model",
+    onOpenDocument: fn(),
+  },
+};
+
+export const EditorModule: Story = {
+  ...Template,
+  args: {
+    fileName: "CustomEditor.phdm",
+    fileSize: "3.1 MB",
+    status: "success",
+    documentType: "editor",
+    onOpenDocument: fn(),
+  },
+};
+
+export const ProcessorModules: Story = {
+  ...Template,
+  args: {
+    fileName: "DataProcessor.phdm",
+    fileSize: "1.8 MB",
+    status: "success",
+    documentType: "analytics-processor",
+    onOpenDocument: fn(),
+  },
+};
+
+export const PackageModule: Story = {
+  ...Template,
+  args: {
+    fileName: "UtilPackage.phdm",
+    fileSize: "0.9 MB",
+    status: "success",
+    documentType: "package",
+    onOpenDocument: fn(),
+  },
+};
+
+export const SubgraphModule: Story = {
+  ...Template,
+  args: {
+    fileName: "APISubgraph.phdm",
+    fileSize: "2.7 MB",
+    status: "success",
+    documentType: "subgraph",
+    onOpenDocument: fn(),
   },
 };

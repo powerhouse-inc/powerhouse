@@ -1,19 +1,58 @@
-import { Icon } from "#powerhouse";
+import { Icon, type IconName } from "#powerhouse";
 import { type ComponentPropsWithoutRef } from "react";
+
+export type DocumentTypeIcon =
+  | "analytics-processor"
+  | "relational-processor"
+  | "codegen-processor"
+  | "app"
+  | "document-model"
+  | "editor"
+  | "package"
+  | "subgraph";
 
 type HeaderProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
   readonly fileSize: string;
+  readonly documentType?: DocumentTypeIcon;
   readonly onClose?: () => void;
 };
 
+function getDocumentIcon(documentType?: DocumentTypeIcon): IconName {
+  switch (documentType) {
+    case "analytics-processor":
+      return "AnalyticsProcessorModule";
+    case "relational-processor":
+      return "RelationalProcessorModule";
+    case "codegen-processor":
+      return "CodegenProcessorModule";
+    case "app":
+      return "AppModule";
+    case "document-model":
+      return "DocumentModelModule";
+    case "editor":
+      return "EditorModule";
+    case "package":
+      return "PackageModule";
+    case "subgraph":
+      return "SubgraphModule";
+    default:
+      return "PowerhouseDocumentModule";
+  }
+}
+
 export function Header(props: HeaderProps) {
-  const { fileName, fileSize, onClose, ...delegatedProps } = props;
+  const { fileName, fileSize, documentType, onClose, ...delegatedProps } =
+    props;
 
   return (
     <div className="flex items-center gap-2" {...delegatedProps}>
       <div className="flex h-9 w-7 flex-shrink-0 items-center justify-center">
-        <Icon name="DocumentModel" size={48} className="text-gray-600" />
+        <Icon
+          name={getDocumentIcon(documentType)}
+          size={48}
+          className="text-gray-600"
+        />
       </div>
 
       <div className="flex flex-1 flex-col gap-0.5">
