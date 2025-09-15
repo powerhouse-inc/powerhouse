@@ -1,6 +1,6 @@
 // Reactor Interface and Implementation
-export { ReactorClient } from "./client/reactor-client.js";
 export { ReactorClientBuilder } from "./builder.js";
+export { ReactorClient } from "./client/reactor-client.js";
 export { type IReactorClient } from "./client/types.js";
 export { Reactor } from "./reactor.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
@@ -19,11 +19,8 @@ export {
 export { type IReactor } from "./types.js";
 
 // Subscription Manager
+export { DefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";
 export { ReactorSubscriptionManager } from "./subs/react-subscription-manager.js";
-export {
-  DefaultSubscriptionErrorHandler,
-  createDefaultSubscriptionErrorHandler,
-} from "./subs/default-error-handler.js";
 export {
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
