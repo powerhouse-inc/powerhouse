@@ -1,10 +1,17 @@
 #!/usr/bin/env node
+import {
+  EventBus,
+  InMemoryQueue,
+  Reactor,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import { startAPI } from "@powerhousedao/reactor-api";
 import {
   VitePackageLoader,
   startViteServer,
 } from "@powerhousedao/reactor-api/packages/vite-loader";
 import * as Sentry from "@sentry/node";
+import type { BaseDocumentDriveServer } from "document-drive";
 import {
   InMemoryCache,
   ReactorBuilder,
@@ -14,6 +21,7 @@ import RedisCache from "document-drive/cache/redis";
 import { DocumentAlreadyExistsError } from "document-drive/server/error";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
+import type { IDocumentStorage } from "document-drive/storage/types";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
@@ -70,7 +78,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     ? storageFactory.build()
     : new FilesystemStorage(path.join(process.cwd(), dbUrl));
 
-  const reactor = new ReactorBuilder([
+  const driveServer = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ] as unknown as DocumentModelModule[])
@@ -79,7 +87,15 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     .build();
 
   // init drive server
-  await reactor.initialize();
+  await driveServer.initialize();
+
+  const queue = new InMemoryQueue(new EventBus());
+  const reactor = new Reactor(
+    driveServer as unknown as BaseDocumentDriveServer,
+    storage as unknown as IDocumentStorage,
+    queue,
+  );
+  const client = new ReactorClientBuilder().withReactor(reactor).build();
 
   const dbPath = dbUrl.startsWith("postgresql") ? dbUrl : ".ph/read-storage";
 
@@ -87,7 +103,11 @@ async function initServer(serverPort: number, options: StartServerOptions) {
 
   // Create default drive if provided
   if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(reactor, options.drive, serverPort);
+    defaultDriveUrl = await addDefaultDrive(
+      driveServer,
+      options.drive,
+      serverPort,
+    );
   }
 
   // start vite server if dev mode is enabled
@@ -104,7 +124,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
   // Start the API with the reactor and options
-  const api = await startAPI(reactor, {
+  const api = await startAPI(driveServer, client, {
     express: app,
     port: serverPort,
     dbPath: options.dbPath ?? dbPath,
@@ -125,7 +145,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   if (remoteDrives.length > 0) {
     for (const remoteDriveUrl of remoteDrives) {
       try {
-        await reactor.addRemoteDrive(remoteDriveUrl, {
+        await driveServer.addRemoteDrive(remoteDriveUrl, {
           availableOffline: true,
           sharingType: "public",
           listeners: [],
@@ -155,7 +175,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   return {
     defaultDriveUrl,
     api,
-    reactor,
+    reactor: driveServer,
   };
 }
 
