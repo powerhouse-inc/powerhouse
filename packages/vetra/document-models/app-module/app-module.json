@@ -13,8 +13,8 @@
             "changeLog": [],
             "state": {
                 "global": {
-                    "schema": "type AppModuleState {\n  name: String!\n  status: StatusType!\n  dragAndDrop: DragAndDropSettings\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\ntype DragAndDropSettings {\n  enabled: Boolean!\n  documentTypes: [DocumentTypeItem!]!\n}",
-                    "initialValue": "{\n  \"name\": \"\",\n  \"status\": \"DRAFT\",\n  \"dragAndDrop\": {\n    \"enabled\": true,\n    \"documentTypes\": [{ \"id\": \"all-documents\", \"documentType\": \"*\" }]\n  }\n}",
+                    "schema": "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n  dragAndDrop: DragAndDropSettings\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\ntype DragAndDropSettings {\n  enabled: Boolean!\n}",
+                    "initialValue": "{\n  \"name\": \"\",\n  \"status\": \"DRAFT\",\n  \"documentTypes\": [{ \"id\": \"all-documents\", \"documentType\": \"*\" }],\n  \"dragAndDrop\": {\n    \"enabled\": true\n  }\n}",
                     "examples": []
                 },
                 "local": {
@@ -50,6 +50,28 @@
                             "errors": [],
                             "examples": [],
                             "scope": "global"
+                        },
+                        {
+                            "id": "7376f168-695f-4aef-94d0-6e381666358c",
+                            "name": "ADD_DOCUMENT_TYPE",
+                            "description": "",
+                            "schema": "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
+                        },
+                        {
+                            "id": "310e4e5b-3f14-4e9a-8e09-5583c7698a65",
+                            "name": "REMOVE_DOCUMENT_TYPE",
+                            "description": "",
+                            "schema": "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+                            "template": "",
+                            "reducer": "",
+                            "errors": [],
+                            "examples": [],
+                            "scope": "global"
                         }
                     ]
                 },
@@ -68,34 +90,10 @@
                             "errors": [],
                             "examples": [],
                             "scope": "global"
-                        },
-                        {
-                            "id": "1134db1d-ce83-4426-8c77-7547f3a84143",
-                            "name": "ADD_DOCUMENT_TYPE",
-                            "description": "",
-                            "schema": "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
-                        },
-                        {
-                            "id": "4dd83b36-d6d5-4506-ac1b-0a1afc40ac84",
-                            "name": "REMOVE_DOCUMENT_TYPE",
-                            "description": "",
-                            "schema": "input RemoveDocumentTypeInput {\n  id: OID!\n}",
-                            "template": "",
-                            "reducer": "",
-                            "errors": [],
-                            "examples": [],
-                            "scope": "global"
                         }
                     ]
                 }
             ]
         }
-      }
-    }
-  ]
+    ]
 }

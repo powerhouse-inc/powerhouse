@@ -132,6 +132,60 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
         />
       </div>
 
+      {/* Document Types Field */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700">
+          Document Types
+        </label>
+        <div className="space-y-2">
+          {!isReadOnly &&
+            !documentTypes.some((dt) => dt.documentType === "*") && (
+              <select
+                value={selectedDocumentType}
+                onChange={(e) => handleAddDocumentType(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a document type to add</option>
+                <option value="all-documents">All documents</option>
+                {availableDocumentTypes
+                  .filter(
+                    (docType) =>
+                      !documentTypes.some((dt) => dt.documentType === docType),
+                  )
+                  .map((docType) => (
+                    <option key={docType} value={docType}>
+                      {docType}
+                    </option>
+                  ))}
+              </select>
+            )}
+          <div className="space-y-1">
+            {documentTypes.map((type) => (
+              <div key={type.id} className="flex items-center py-1">
+                <span className="text-sm text-gray-700">
+                  {type.documentType === "*"
+                    ? "All documents (*)"
+                    : type.documentType}
+                </span>
+                {!isReadOnly && (
+                  <button
+                    onClick={() => handleRemoveDocumentType(type.id)}
+                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {documentTypes.some((dt) => dt.documentType === "*") && (
+            <p className="text-sm italic text-gray-500">
+              Wildcard (*) matches all document types
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Drag and Drop Settings */}
       <div>
         <h3 className="text-md mb-4 font-medium text-gray-900">
@@ -155,64 +209,6 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
             </span>
           </label>
         </div>
-
-        {/* Document Types Field */}
-        {dragAndDropEnabled && (
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Document Types
-            </label>
-            <div className="space-y-2">
-              {!isReadOnly &&
-                !documentTypes.some((dt) => dt.documentType === "*") && (
-                  <select
-                    value={selectedDocumentType}
-                    onChange={(e) => handleAddDocumentType(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a document type to add</option>
-                    <option value="all-documents">All documents</option>
-                    {availableDocumentTypes
-                      .filter(
-                        (docType) =>
-                          !documentTypes.some(
-                            (dt) => dt.documentType === docType,
-                          ),
-                      )
-                      .map((docType) => (
-                        <option key={docType} value={docType}>
-                          {docType}
-                        </option>
-                      ))}
-                  </select>
-                )}
-              <div className="space-y-1">
-                {documentTypes.map((type) => (
-                  <div key={type.id} className="flex items-center py-1">
-                    <span className="text-sm text-gray-700">
-                      {type.documentType === "*"
-                        ? "All documents (*)"
-                        : type.documentType}
-                    </span>
-                    {!isReadOnly && (
-                      <button
-                        onClick={() => handleRemoveDocumentType(type.id)}
-                        className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {documentTypes.some((dt) => dt.documentType === "*") && (
-                <p className="text-sm italic text-gray-500">
-                  Wildcard (*) matches all document types
-                </p>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Confirm Button - only show if not in read-only mode */}

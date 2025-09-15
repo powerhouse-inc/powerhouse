@@ -1,15 +1,13 @@
-import type { Subgraph } from "@powerhousedao/reactor-api";
+import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
-import type {
-  SetAppNameInput,
-  SetAppStatusInput,
-} from "../../document-models/app-module/index.js";
 import {
   actions,
   type AddDocumentTypeInput,
   type AppModuleDocument,
   type RemoveDocumentTypeInput,
+  type SetAppNameInput,
+  type SetAppStatusInput,
   type SetDragAndDropEnabledInput,
 } from "../../document-models/app-module/index.js";
 
@@ -144,30 +142,6 @@ export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
         return true;
       },
 
-      AppModule_setDragAndDropEnabled: async (
-        _: unknown,
-        args: { docId: string; input: SetDragAndDropEnabledInput },
-      ) => {
-        const { docId, input } = args;
-        const doc = await reactor.getDocument<AppModuleDocument>(docId);
-        if (!doc) {
-          throw new Error("Document not found");
-        }
-
-        const result = await reactor.addAction(
-          docId,
-          actions.setDragAndDropEnabled(input),
-        );
-
-        if (result.status !== "SUCCESS") {
-          throw new Error(
-            result.error?.message ?? "Failed to setDragAndDropEnabled",
-          );
-        }
-
-        return true;
-      },
-
       AppModule_addDocumentType: async (
         _: unknown,
         args: { docId: string; input: AddDocumentTypeInput },
@@ -208,6 +182,30 @@ export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
         if (result.status !== "SUCCESS") {
           throw new Error(
             result.error?.message ?? "Failed to removeDocumentType",
+          );
+        }
+
+        return true;
+      },
+
+      AppModule_setDragAndDropEnabled: async (
+        _: unknown,
+        args: { docId: string; input: SetDragAndDropEnabledInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.setDragAndDropEnabled(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setDragAndDropEnabled",
           );
         }
 

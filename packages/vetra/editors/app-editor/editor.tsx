@@ -24,26 +24,38 @@ export default function Editor(props: IProps) {
     dispatch(actions.setAppStatus({ status: "CONFIRMED" }));
   }, [dispatch]);
 
-  const onDragAndDropToggle = useCallback((enabled: boolean) => {
-    if (enabled === unsafeCastOfDocument.state.global.dragAndDrop?.enabled) return;
-    dispatch(actions.setDragAndDropEnabled({ enabled }));
-  }, [unsafeCastOfDocument.state.global.dragAndDrop?.enabled, dispatch]);
+  const onDragAndDropToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled === unsafeCastOfDocument.state.global.dragAndDrop?.enabled)
+        return;
+      dispatch(actions.setDragAndDropEnabled({ enabled }));
+    },
+    [unsafeCastOfDocument.state.global.dragAndDrop?.enabled, dispatch],
+  );
 
-  const onAddDocumentType = useCallback((id: string, documentType: string) => {
-    dispatch(actions.addDocumentType({ id, documentType }));
-  }, [dispatch]);
+  const onAddDocumentType = useCallback(
+    (id: string, documentType: string) => {
+      dispatch(actions.addDocumentType({ id, documentType }));
+    },
+    [dispatch],
+  );
 
-  const onRemoveDocumentType = useCallback((id: string) => {
-    dispatch(actions.removeDocumentType({ id }));
-  }, [dispatch]);
+  const onRemoveDocumentType = useCallback(
+    (id: string) => {
+      dispatch(actions.removeDocumentType({ id }));
+    },
+    [dispatch],
+  );
 
   return (
     <div>
       <AppEditorForm
         appName={unsafeCastOfDocument.state.global.name ?? ""}
         status={unsafeCastOfDocument.state.global.status}
-        dragAndDropEnabled={unsafeCastOfDocument.state.global.dragAndDrop?.enabled ?? false}
-        documentTypes={unsafeCastOfDocument.state.global.dragAndDrop?.documentTypes ?? []}
+        dragAndDropEnabled={
+          unsafeCastOfDocument.state.global.dragAndDrop?.enabled ?? false
+        }
+        documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
         onNameChange={onNameChange}
         onDragAndDropToggle={onDragAndDropToggle}
         onAddDocumentType={onAddDocumentType}

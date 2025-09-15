@@ -62,6 +62,7 @@ export type AddDocumentTypeInput = {
 };
 
 export type AppModuleState = {
+  documentTypes: Maybe<Array<DocumentTypeItem>>;
   dragAndDrop: Maybe<DragAndDropSettings>;
   name: Scalars["String"]["output"];
   status: StatusType | `${StatusType}`;
@@ -73,7 +74,6 @@ export type DocumentTypeItem = {
 };
 
 export type DragAndDropSettings = {
-  documentTypes: Array<DocumentTypeItem>;
   enabled: Scalars["Boolean"]["output"];
 };
 
