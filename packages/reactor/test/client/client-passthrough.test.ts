@@ -15,7 +15,6 @@ import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { Reactor } from "../../src/reactor.js";
 import type { ISigner } from "../../src/signer/types.js";
-import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 import type { IReactor } from "../../src/types.js";
 import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
