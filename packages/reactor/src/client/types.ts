@@ -9,7 +9,30 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 
-import type { DocumentChangeEvent } from "./reactor-client.js";
+/**
+ * Describes the types of document changes that can occur.
+ */
+export enum DocumentChangeType {
+  Created = "created",
+  Deleted = "deleted",
+  Updated = "updated",
+  ParentAdded = "parent_added",
+  ParentRemoved = "parent_removed",
+  ChildAdded = "child_added",
+  ChildRemoved = "child_removed",
+}
+
+/**
+ * Represents a change event for documents.
+ */
+export type DocumentChangeEvent = {
+  type: DocumentChangeType;
+  documents: PHDocument[];
+  context?: {
+    parentId?: string;
+    childId?: string;
+  };
+};
 
 /**
  * The ReactorClient interface that wraps lower-level APIs to provide

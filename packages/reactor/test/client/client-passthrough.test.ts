@@ -53,7 +53,12 @@ describe("ReactorClient Passthrough Functions", () => {
     const mockSigner: ISigner = {
       sign: () => Promise.resolve(["mock-signature", "", "", "", ""]),
     };
-    const mockSubscriptionManager: IReactorSubscriptionManager = {};
+    const mockSubscriptionManager: IReactorSubscriptionManager = {
+      onDocumentCreated: () => () => {},
+      onDocumentDeleted: () => () => {},
+      onDocumentStateUpdated: () => () => {},
+      onRelationshipChanged: () => () => {},
+    };
 
     // Create ReactorClient using the builder
     client = new ReactorClientBuilder()

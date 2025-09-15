@@ -12,32 +12,7 @@ import {
 import type { ISigner } from "../signer/types.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IReactor } from "../types.js";
-import type { IReactorClient } from "./types.js";
-
-/**
- * Describes the types of document changes that can occur.
- */
-export enum DocumentChangeType {
-  Created = "created",
-  Deleted = "deleted",
-  Updated = "updated",
-  ParentAdded = "parent_added",
-  ParentRemoved = "parent_removed",
-  ChildAdded = "child_added",
-  ChildRemoved = "child_removed",
-}
-
-/**
- * Represents a change event for documents.
- */
-export type DocumentChangeEvent = {
-  type: DocumentChangeType;
-  documents: PHDocument[];
-  context?: {
-    parentId?: string;
-    childId?: string;
-  };
-};
+import type { DocumentChangeEvent, IReactorClient } from "./types.js";
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -180,7 +155,7 @@ export class ReactorClient implements IReactorClient {
   /**
    * Submits a list of actions to a document
    */
-  async mutateAsync<TDocument extends PHDocument>(
+  async mutateAsync(
     documentIdentifier: string,
     actions: Action[],
     view?: ViewFilter,

@@ -1,9 +1,6 @@
 // Reactor Interface and Implementation
-export {
-  DocumentChangeType,
-  ReactorClient,
-  type DocumentChangeEvent,
-} from "./client/reactor-client.js";
+export { ReactorClient } from "./client/reactor-client.js";
+export { ReactorClientBuilder } from "./builder.js";
 export { type IReactorClient } from "./client/types.js";
 export { Reactor } from "./reactor.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
@@ -20,6 +17,10 @@ export {
   type ViewFilter,
 } from "./shared/types.js";
 export { type IReactor } from "./types.js";
+
+// Subscription Manager
+export { ReactorSubscriptionManager } from "./subs/react-subscription-manager.js";
+export { type IReactorSubscriptionManager } from "./subs/types.js";
 
 // Event Bus
 export { EventBus } from "./events/event-bus.js";
