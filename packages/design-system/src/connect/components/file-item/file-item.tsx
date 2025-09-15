@@ -1,22 +1,17 @@
 import type { NodeOption, TNodeActions } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
-  defaultFileOptions,
-  DELETE,
-  DUPLICATE,
+  defaultNodeOptions,
   getDocumentIconSrc,
   Icon,
   NodeInput,
   nodeOptionsMap,
-  READ,
-  RENAME,
+  SyncStatusIcon,
   useDrag,
-  WRITE,
 } from "@powerhousedao/design-system";
 import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { SyncStatusIcon } from "../status-icon/index.js";
 
 export type FileItemProps = TNodeActions & {
   fileNode: FileNode;
@@ -45,17 +40,17 @@ export function FileItem(props: FileItemProps) {
     onDuplicateNode,
     showDeleteNodeModal,
   } = props;
-  const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
+  const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag({ node: fileNode });
 
-  const isReadMode = mode === READ;
+  const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
   const dropdownMenuHandlers = {
-    [DUPLICATE]: () => onDuplicateNode(fileNode),
-    [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => showDeleteNodeModal(fileNode),
+    DUPLICATE: () => onDuplicateNode(fileNode),
+    RENAME: () => setMode("WRITE"),
+    DELETE: () => showDeleteNodeModal(fileNode),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -64,18 +59,18 @@ export function FileItem(props: FileItemProps) {
       id: id as NodeOption,
     }))
     .filter((option) =>
-      defaultFileOptions.includes(
-        option.id as (typeof defaultFileOptions)[number],
+      defaultNodeOptions.includes(
+        option.id as (typeof defaultNodeOptions)[number],
       ),
     );
 
   function onSubmit(name: string) {
     onRenameNode(name, fileNode);
-    setMode(READ);
+    setMode("READ");
   }
 
   function onCancel() {
-    setMode(READ);
+    setMode("READ");
   }
 
   function onDropdownMenuOptionClick(itemId: NodeOption) {

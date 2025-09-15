@@ -5,18 +5,13 @@ import type {
 } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
-  defaultFolderOptions,
-  DELETE,
-  DUPLICATE,
+  defaultNodeOptions,
   Icon,
   NodeInput,
   nodeOptionsMap,
-  READ,
-  RENAME,
   SyncStatusIcon,
   useDrag,
   useDrop,
-  WRITE,
 } from "@powerhousedao/design-system";
 import type { FolderNode, Node, SharingType } from "document-drive";
 import { useState } from "react";
@@ -50,7 +45,7 @@ export function FolderItem(props: FolderItemProps) {
     onCopyNode,
     onMoveNode,
   } = props;
-  const [mode, setMode] = useState<typeof READ | typeof WRITE>(READ);
+  const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag({ node: folderNode });
   const { isDropTarget, dropProps } = useDrop({
@@ -60,22 +55,22 @@ export function FolderItem(props: FolderItemProps) {
     onMoveNode,
   });
 
-  const isReadMode = mode === READ;
+  const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(folderNode.id, sharingType);
 
   function onCancel() {
-    setMode(READ);
+    setMode("READ");
   }
 
   function onSubmit(name: string) {
     onRenameNode(name, folderNode);
-    setMode(READ);
+    setMode("READ");
   }
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
-    [DUPLICATE]: () => onDuplicateNode(folderNode),
-    [RENAME]: () => setMode(WRITE),
-    [DELETE]: () => showDeleteNodeModal(folderNode),
+    DUPLICATE: () => onDuplicateNode(folderNode),
+    RENAME: () => setMode("WRITE"),
+    DELETE: () => showDeleteNodeModal(folderNode),
   } as const;
 
   const dropdownMenuOptions = Object.entries(nodeOptionsMap)
@@ -84,8 +79,8 @@ export function FolderItem(props: FolderItemProps) {
       id: id as NodeOption,
     }))
     .filter((option) =>
-      defaultFolderOptions.includes(
-        option.id as (typeof defaultFolderOptions)[number],
+      defaultNodeOptions.includes(
+        option.id as (typeof defaultNodeOptions)[number],
       ),
     );
 

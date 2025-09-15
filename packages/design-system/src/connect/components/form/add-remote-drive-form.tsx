@@ -6,8 +6,6 @@ import {
   FormInput,
   LocationInfo,
   PowerhouseButton,
-  PUBLIC,
-  SWITCHBOARD,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
@@ -18,7 +16,7 @@ type RemoteDriveDetails = {
   id: string;
   name: string;
   sharingType: SharingType;
-  location: typeof SWITCHBOARD;
+  location: "SWITCHBOARD";
   availableOffline: boolean;
 };
 
@@ -38,7 +36,7 @@ export type AddPublicDriveFormProps = {
 };
 
 export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
-  const { sharingType = PUBLIC, requestPublicDrive } = props;
+  const { sharingType = "PUBLIC", requestPublicDrive } = props;
   const [remoteDriveDetails, setPublicDriveDetails] =
     useState<RemoteDriveDetails>();
   const [showLocationSettings, setShowLocationSettings] = useState(false);
@@ -71,7 +69,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
           id,
           name,
           sharingType,
-          location: SWITCHBOARD,
+          location: "SWITCHBOARD",
           availableOffline: true,
         });
         setValue("availableOffline", true);
@@ -105,7 +103,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             onOpenChange={() => setShowLocationSettings(!showLocationSettings)}
             title="Location"
           >
-            <LocationInfo location={SWITCHBOARD} />
+            <LocationInfo location="SWITCHBOARD" />
             <AvailableOfflineToggle {...register("availableOffline")} />
           </Disclosure>
           <PowerhouseButton className="mt-4 w-full" color="dark" type="submit">

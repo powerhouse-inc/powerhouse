@@ -1,12 +1,10 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { cn, ConnectDropdownMenu, Icon } from "@powerhousedao/design-system";
 import { capitalCase } from "change-case";
 import {
   getDriveSharingType,
   type DocumentDriveDocument,
 } from "document-drive";
 import { useState } from "react";
-import { CLOUD, PUBLIC } from "../../../constants/drives.js";
-import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
   drives: DocumentDriveDocument[];
@@ -72,10 +70,10 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
 
   function getNodeIcon() {
     const sharingType = getDriveSharingType(drive);
-    if (sharingType === PUBLIC) {
+    if (sharingType === "PUBLIC") {
       return publicDriveIcon;
     }
-    if (sharingType === CLOUD) {
+    if (sharingType === "CLOUD") {
       return cloudDriveIcon;
     }
     return localDriveIcon;

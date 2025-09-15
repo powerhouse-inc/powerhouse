@@ -1,16 +1,8 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
-  CLOUD,
   debugNodeOptions,
   defaultDriveOptions,
-  defaultFileOptions,
-  defaultFolderOptions,
-  DELETE,
-  DRIVE,
-  FILE,
-  FOLDER,
-  LOCAL,
-  PUBLIC,
+  defaultNodeOptions,
 } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { ReactNode } from "react";
@@ -18,7 +10,7 @@ import type { ReactNode } from "react";
 type AllNodeOptions =
   | (typeof debugNodeOptions)[number]
   | (typeof defaultDriveOptions)[number]
-  | (typeof defaultFileOptions)[number];
+  | (typeof defaultNodeOptions)[number];
 
 // Enables debug options for the drive
 const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
@@ -27,9 +19,9 @@ const DriveSections: {
   sharingType: SharingType;
   label: ReactNode;
 }[] = [
-  { sharingType: PUBLIC, label: "Public Drives" },
-  { sharingType: CLOUD, label: "Secure Cloud Drives" },
-  { sharingType: LOCAL, label: "My Local Drives" },
+  { sharingType: "PUBLIC", label: "Public Drives" },
+  { sharingType: "CLOUD", label: "Secure Cloud Drives" },
+  { sharingType: "LOCAL", label: "My Local Drives" },
 ] as const;
 
 const getSectionConfig = (sharingType: SharingType) => {
@@ -40,7 +32,7 @@ export function getDriveNodeOptions(sharingType: SharingType) {
   const options: AllNodeOptions[] = [...defaultDriveOptions];
 
   if (connectConfig.drives.sections[sharingType].allowDelete) {
-    options.push(DELETE);
+    options.push("DELETE");
   }
 
   if (connectDebug) {
@@ -51,7 +43,7 @@ export function getDriveNodeOptions(sharingType: SharingType) {
 }
 
 export function getFileNodeOptions() {
-  const options: AllNodeOptions[] = [...defaultFileOptions];
+  const options: AllNodeOptions[] = [...defaultNodeOptions];
 
   if (connectDebug) {
     options.push(...debugNodeOptions);
@@ -61,7 +53,7 @@ export function getFileNodeOptions() {
 }
 
 export function getFolderNodeOptions() {
-  const options: AllNodeOptions[] = [...defaultFolderOptions];
+  const options: AllNodeOptions[] = [...defaultNodeOptions];
 
   if (connectDebug) {
     options.push(...debugNodeOptions);
@@ -72,20 +64,20 @@ export function getFolderNodeOptions() {
 
 export function getNodeOptions() {
   return {
-    [LOCAL]: {
-      [DRIVE]: getDriveNodeOptions(LOCAL),
-      [FOLDER]: getFolderNodeOptions(),
-      [FILE]: getFileNodeOptions(),
+    LOCAL: {
+      DRIVE: getDriveNodeOptions("LOCAL"),
+      FOLDER: getFolderNodeOptions(),
+      FILE: getFileNodeOptions(),
     },
-    [CLOUD]: {
-      [DRIVE]: getDriveNodeOptions(CLOUD),
-      [FOLDER]: getFolderNodeOptions(),
-      [FILE]: getFileNodeOptions(),
+    CLOUD: {
+      DRIVE: getDriveNodeOptions("CLOUD"),
+      FOLDER: getFolderNodeOptions(),
+      FILE: getFileNodeOptions(),
     },
-    [PUBLIC]: {
-      [DRIVE]: getDriveNodeOptions(PUBLIC),
-      [FOLDER]: getFolderNodeOptions(),
-      [FILE]: getFileNodeOptions(),
+    PUBLIC: {
+      DRIVE: getDriveNodeOptions("PUBLIC"),
+      FOLDER: getFolderNodeOptions(),
+      FILE: getFileNodeOptions(),
     },
   } as const;
 }

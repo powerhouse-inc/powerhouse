@@ -1,14 +1,13 @@
-import { LOCAL } from "@powerhousedao/design-system";
 import {
   addRemoteDrive,
   addTrigger,
+  getDriveIdBySlug,
   registerNewPullResponderTrigger,
   removeTrigger,
   renameDrive,
   setDriveSharingType,
   useDrives,
 } from "@powerhousedao/reactor-browser";
-import { getDriveIdBySlug } from "@powerhousedao/reactor-browser";
 import type { PullResponderTrigger, Trigger } from "document-drive";
 import { logger } from "document-drive";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -106,7 +105,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
           drive.state.global.name + ` (${drive.header.id})`,
         );
 
-        await setDriveSharingType(driveId, LOCAL);
+        await setDriveSharingType(driveId, "LOCAL");
 
         if (trigger.data?.url && drive.header.slug) {
           const newId = await getDriveIdBySlug(

@@ -1,5 +1,5 @@
+import { Editor } from "@powerhousedao/common";
 import type { DriveEditorModule } from "@powerhousedao/reactor-browser";
-import { Editor } from "./editor.js";
 
 export const GenericDriveExplorer: DriveEditorModule = {
   Component: Editor,

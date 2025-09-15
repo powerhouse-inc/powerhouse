@@ -1,4 +1,3 @@
-import { PUBLIC } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { AddRemoteDriveForm } from "./add-remote-drive-form.js";
 
@@ -16,7 +15,7 @@ const Template: Story = {
     onSubmit: (data) => {
       console.log(data);
     },
-    sharingType: PUBLIC,
+    sharingType: "PUBLIC",
     onCancel: () => {},
     requestPublicDrive(url) {
       return Promise.resolve({

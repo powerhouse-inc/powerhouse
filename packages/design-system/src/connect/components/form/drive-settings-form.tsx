@@ -8,9 +8,7 @@ import {
   Label,
   LocationInfo,
   PowerhouseButton,
-  PUBLIC,
   SharingTypeFormInput,
-  SWITCHBOARD,
 } from "@powerhousedao/design-system";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";
@@ -52,7 +50,7 @@ export function DriveSettingsForm(props: DriveSettingsFormProps) {
     },
   });
 
-  const location = sharingType === PUBLIC ? SWITCHBOARD : sharingType;
+  const location = sharingType === "PUBLIC" ? "SWITCHBOARD" : sharingType;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>

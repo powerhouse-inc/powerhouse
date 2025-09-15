@@ -3,7 +3,6 @@ import {
   AvailableOfflineToggle,
   FormInput,
   Label,
-  LOCAL,
   PowerhouseButton,
   SharingTypeFormInput,
 } from "@powerhousedao/design-system";
@@ -36,7 +35,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
   } = useForm<AddLocalDriveInput>({
     defaultValues: {
       name: "",
-      sharingType: LOCAL,
+      sharingType: "LOCAL",
       availableOffline: false,
       appId: props.appOptions[0].id,
     },

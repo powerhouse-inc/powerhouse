@@ -1,8 +1,5 @@
 import type {
   debugNodeOptions,
-  DRIVE,
-  FILE,
-  FOLDER,
   nodeOptions,
   normalNodeOptions,
 } from "@powerhousedao/design-system";
@@ -25,9 +22,9 @@ export type NodeOption = NodeOptions[number];
 export type TNodeOptions = Record<
   SharingType,
   {
-    [DRIVE]: NodeOption[];
-    [FOLDER]: NodeOption[];
-    [FILE]: NodeOption[];
+    DRIVE: NodeOption[];
+    FOLDER: NodeOption[];
+    FILE: NodeOption[];
   }
 >;
 
