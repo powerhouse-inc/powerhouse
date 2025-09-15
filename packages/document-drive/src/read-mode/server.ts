@@ -8,9 +8,8 @@ import type {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import { logger } from "document-drive";
+import { logger, ReadModeService } from "document-drive";
 import type { PHBaseState } from "document-model";
-import { ReadModeService } from "./service.js";
 
 export function ReadModeServer(
   Base: DocumentDriveServerConstructor,

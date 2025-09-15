@@ -28,6 +28,10 @@
     "./storage/prisma/client": {
       "import": "./src/storage/prisma/client/index.js",
       "types": "./src/storage/prisma/client/index.d.ts"
+    },
+    "./run-asap": {
+      "import": "./dist/src/utils/run-asap.js",
+      "types": "./dist/src/utils/run-asap.d.ts"
     }
   },
   "files": [

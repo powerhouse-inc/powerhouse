@@ -89,7 +89,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
-import { runAsap, runAsapAsync } from "../utils/run-asap.js";
+import { runAsap, runAsapAsync } from "document-drive/run-asap";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager

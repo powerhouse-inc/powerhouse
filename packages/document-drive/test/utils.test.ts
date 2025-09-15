@@ -6,9 +6,9 @@ import {
   isAfterRevision,
   isAtRevision,
 } from "document-drive";
+import { runAsapAsync, useSetTimeout } from "document-drive/run-asap";
 import { setModelName } from "document-model";
 import { describe, expect, it } from "vitest";
-import { runAsapAsync, useSetTimeout } from "../src/utils/run-asap.js";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {
