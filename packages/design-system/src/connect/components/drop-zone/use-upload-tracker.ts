@@ -1,7 +1,7 @@
 import type { Node } from "document-drive";
+import type { FileUploadProgress } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useReducer } from "react";
 import {
-  type FileUploadProgress,
   type OnAddFileWithProgress,
   type UploadTracker,
   formatFileSize,
@@ -85,6 +85,10 @@ function uploadsReducer(
           status: mapProgressStageToStatus(action.payload.progress.stage),
           progress: action.payload.progress.progress,
           errorDetails: action.payload.progress.error,
+          // Update documentType if provided
+          ...(action.payload.progress.documentType && {
+            documentType: action.payload.progress.documentType,
+          }),
         },
       };
     }

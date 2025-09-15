@@ -30,8 +30,43 @@ import {
   queueOperations,
   uploadOperations,
 } from "../actions/queue.js";
-import type { FileUploadProgressCallback } from "../types/upload.js";
+import type {
+  DocumentTypeIcon,
+  FileUploadProgressCallback,
+} from "../types/upload.js";
 import { getUserPermissions } from "../utils/user.js";
+
+function getDocumentTypeIcon(
+  document: PHDocument,
+): DocumentTypeIcon | undefined {
+  const documentType = document.header.documentType;
+
+  switch (documentType) {
+    case "powerhouse/document-model":
+      return "document-model";
+    case "powerhouse/app":
+      return "app";
+    case "powerhouse/document-editor":
+      return "editor";
+    case "powerhouse/subgraph":
+      return "subgraph";
+    case "powerhouse/package":
+      return "package";
+    case "powerhouse/processor": {
+      // Check the processor type from global state (safely)
+      const globalState = (document.state as { global?: { type?: string } })
+        .global;
+      const processorType = globalState?.type;
+
+      if (processorType === "analytics") return "analytics-processor";
+      if (processorType === "relational") return "relational-processor";
+      if (processorType === "codegen") return "codegen-processor";
+      return undefined;
+    }
+    default:
+      return undefined;
+  }
+}
 
 export function downloadFile(document: PHDocument, fileName: string) {
   const zip = createZip(document);
@@ -278,7 +313,13 @@ export async function addFileWithProgress(
       throw new Error("No document loaded");
     }
 
-    onProgress?.({ stage: "loading", progress: 10 });
+    // Send documentType info immediately after loading
+    const documentType = getDocumentTypeIcon(document);
+    if (documentType) {
+      onProgress?.({ stage: "loading", progress: 10, documentType });
+    } else {
+      onProgress?.({ stage: "loading", progress: 10 });
+    }
 
     const documentModule = reactor
       .getDocumentModelModules()
@@ -581,7 +622,9 @@ export async function copyNode(
 
       await reactor.addDocument(duplicatedDocument);
     } catch (e) {
-      logger.error(`Error copying document ${fileNodeToCopy.srcId}: ${e}`);
+      logger.error(
+        `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,
+      );
     }
   }
 

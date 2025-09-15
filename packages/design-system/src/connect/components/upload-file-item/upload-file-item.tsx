@@ -1,7 +1,8 @@
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
+import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import { ErrorDetails } from "./components/error-details.js";
-import { Header, type DocumentTypeIcon } from "./components/header.js";
+import { Header } from "./components/header.js";
 import { ProgressBar } from "./components/progress-bar.js";
 import { StatusRow } from "./components/status-row.js";
 
@@ -10,8 +11,6 @@ export type UploadFileItemStatus =
   | "failed"
   | "pending"
   | "uploading";
-
-export type { DocumentTypeIcon } from "./components/header.js";
 
 export type UploadFileItemProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;

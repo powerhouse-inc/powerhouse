@@ -1,15 +1,6 @@
 import { Icon, type IconName } from "#powerhouse";
 import { type ComponentPropsWithoutRef } from "react";
-
-export type DocumentTypeIcon =
-  | "analytics-processor"
-  | "relational-processor"
-  | "codegen-processor"
-  | "app"
-  | "document-model"
-  | "editor"
-  | "package"
-  | "subgraph";
+import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 
 type HeaderProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
