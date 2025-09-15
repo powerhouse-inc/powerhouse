@@ -1,5 +1,6 @@
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
+import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import { ErrorDetails } from "./components/error-details.js";
 import { Header } from "./components/header.js";
 import { ProgressBar } from "./components/progress-bar.js";
@@ -15,6 +16,7 @@ export type UploadFileItemProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
   readonly fileSize: string;
   readonly status: UploadFileItemStatus;
+  readonly documentType?: DocumentTypeIcon;
   readonly progress?: number;
   readonly errorDetails?: string;
   readonly onClose?: () => void;
@@ -28,6 +30,7 @@ export const UploadFileItem = forwardRef<HTMLDivElement, UploadFileItemProps>(
       fileName,
       fileSize,
       status,
+      documentType,
       progress = 0,
       errorDetails,
       onClose,
@@ -46,7 +49,12 @@ export const UploadFileItem = forwardRef<HTMLDivElement, UploadFileItemProps>(
         )}
         {...delegatedProps}
       >
-        <Header fileName={fileName} fileSize={fileSize} onClose={onClose} />
+        <Header
+          fileName={fileName}
+          fileSize={fileSize}
+          documentType={documentType}
+          onClose={onClose}
+        />
 
         <div className="flex flex-col gap-1">
           <StatusRow

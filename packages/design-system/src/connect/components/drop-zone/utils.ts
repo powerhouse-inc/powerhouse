@@ -1,3 +1,7 @@
+import type {
+  DocumentTypeIcon,
+  FileUploadProgress,
+} from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
 import type { UploadFileItemProps } from "../upload-file-item/index.js";
 
@@ -10,12 +14,7 @@ export type UploadTracker = {
   progress: number;
   errorDetails?: string;
   fileNode?: Node;
-};
-
-export type FileUploadProgress = {
-  stage: "loading" | "initializing" | "uploading" | "complete" | "failed";
-  progress: number;
-  error?: string;
+  documentType?: DocumentTypeIcon;
 };
 
 export type OnAddFileWithProgress = (
@@ -70,6 +69,7 @@ export function mapUploadsToFileItems(
       status: upload.status,
       progress: upload.progress,
       errorDetails: upload.errorDetails,
+      documentType: upload.documentType,
       onClose: () => {
         removeUpload(upload.id);
       },

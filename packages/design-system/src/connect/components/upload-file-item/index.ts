@@ -1,6 +1,5 @@
 export {
   UploadFileItem,
   type UploadFileItemProps,
-  type UploadFileItemStatus
+  type UploadFileItemStatus,
 } from "./upload-file-item.js";
-
