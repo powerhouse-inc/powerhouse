@@ -1,6 +1,7 @@
-import { themes as prismThemes } from "prism-react-renderer";
-import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
+import type { Config } from "@docusaurus/types";
+import { themes as prismThemes } from "prism-react-renderer";
+import { typeDocConfig } from "./typedoc.config";
 
 const config: Config = {
   title: "Powerhouse Academy",
@@ -62,7 +63,7 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-
+  plugins: [typeDocConfig],
   themeConfig: {
     // Replace with your project's social card
     image: "img/docusaurus-social-card.jpg",
