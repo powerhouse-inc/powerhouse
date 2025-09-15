@@ -1,5 +1,8 @@
 import type { DocumentTypesMap } from "@powerhousedao/codegen";
-import { TSMorphCodeGenerator } from "@powerhousedao/codegen";
+import {
+  loadDocumentModel,
+  TSMorphCodeGenerator,
+} from "@powerhousedao/codegen";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
@@ -7,7 +10,6 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
 
@@ -76,7 +78,7 @@ export async function generateAll(
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
       documentModelStates.push(documentModel);
-      await generateDocumentModel(documentModel, dir, {
+      await hygenGenerateDocumentModel(documentModel, dir, {
         watch,
         skipFormat,
         verbose,
@@ -101,7 +103,7 @@ export async function generateAll(
   await generator.generateReducers();
 }
 
-export async function generateDocumentModel(
+export async function hygenGenerateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   dir: string,
   {
@@ -161,7 +163,7 @@ export async function generateDocumentModel(
   }
 }
 
-export async function generateEditor(
+export async function hygenGenerateEditor(
   name: string,
   documentTypes: string[],
   documentTypesMap: DocumentTypesMap,
@@ -193,7 +195,7 @@ export async function generateEditor(
   await run(args, { skipFormat, verbose });
 }
 
-export async function generateProcessor(
+export async function hygenGenerateProcessor(
   name: string,
   documentTypes: string[],
   documentTypesMap: DocumentTypesMap,
@@ -225,7 +227,7 @@ export async function generateProcessor(
   );
 }
 
-export async function generateSubgraph(
+export async function hygenGenerateSubgraph(
   name: string,
   documentModel: DocumentModelGlobalState | null,
   dir: string,
@@ -279,7 +281,7 @@ export async function generateSubgraph(
   }
 }
 
-export async function generateImportScript(
+export async function hygenGenerateImportScript(
   name: string,
   dir: string,
   { skipFormat = false, verbose = true } = {},
@@ -300,7 +302,7 @@ export async function generateImportScript(
   );
 }
 
-export async function generateDriveEditor(
+export async function hygenGenerateDriveEditor(
   name: string,
   dir: string,
   { skipFormat = false } = {},

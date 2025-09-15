@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
+import { TSMorphCodeGenerator } from "@powerhousedao/codegen";
 import { loadDocumentModel } from "../utils.js";
 import {
   expectedBaseOperationsContent,

@@ -2,7 +2,7 @@ import type { PowerhouseConfig } from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { generateDriveEditor } from "../index.js";
+import { generateDriveEditor } from "../generate.js";
 import {
   EXPECTED_DRIVE_EXPLORER_EXPORT,
   EXPECTED_EDITOR_CONTENT,

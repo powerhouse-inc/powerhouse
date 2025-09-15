@@ -4,7 +4,10 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateSchemas } from "../graphql.js";
-import { generateDocumentModel, generateProcessor } from "../hygen.js";
+import {
+  hygenGenerateDocumentModel,
+  hygenGenerateProcessor,
+} from "../hygen.js";
 import { loadDocumentModel } from "../utils.js";
 
 describe("document model", () => {
@@ -40,7 +43,7 @@ describe("document model", () => {
       path.join(srcPath, "billing-statement", "billing-statement.json"),
     );
 
-    await generateDocumentModel(
+    await hygenGenerateDocumentModel(
       billingStatementDocumentModel,
       path.join(outPath, "document-model"),
       { skipFormat: true },
@@ -50,7 +53,7 @@ describe("document model", () => {
       path.join(srcPath, "test-doc", "test-doc.json"),
     );
 
-    await generateDocumentModel(
+    await hygenGenerateDocumentModel(
       testDocDocumentModel,
       path.join(outPath, "document-model"),
       { skipFormat: true },
@@ -105,7 +108,7 @@ describe("document model", () => {
     async () => {
       await generate();
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test-analytics-processor",
         ["billing-statement"],
         {
@@ -134,7 +137,7 @@ describe("document model", () => {
     async () => {
       await generate();
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test1",
         ["billing-statement"],
         {
@@ -151,7 +154,7 @@ describe("document model", () => {
         },
       );
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test2",
         ["billing-statement"],
         {
@@ -168,7 +171,7 @@ describe("document model", () => {
         },
       );
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test3",
         ["billing-statement"],
         {
@@ -242,7 +245,7 @@ describe("document model", () => {
         { force: true },
       );
 
-      await generateDocumentModel(
+      await hygenGenerateDocumentModel(
         testDocDocumentModelV2,
         path.join(outPath, "document-model"),
         { skipFormat: true },
@@ -393,7 +396,7 @@ describe("document model", () => {
         ),
       );
 
-      await generateDocumentModel(
+      await hygenGenerateDocumentModel(
         testEmptyCodesDocumentModel,
         path.join(outPath, "document-model"),
         { skipFormat: true },
