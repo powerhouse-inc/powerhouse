@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "noEmit": true,
-    "verbatimModuleSyntax": false,
     "paths": {
       "@powerhousedao/reactor-api": [
         "./src/codegen/__tests__/mocks/reactor-api"
