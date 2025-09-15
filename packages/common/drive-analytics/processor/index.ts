@@ -1,9 +1,10 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
-
-import { DocumentAnalyticsProcessor } from "./document-processor.js";
-import { DriveAnalyticsProcessor } from "./drive-processor.js";
+import {
+  DocumentAnalyticsProcessor,
+  DriveAnalyticsProcessor,
+} from "@powerhousedao/common";
 
 export const processorFactory =
   (module: { analyticsStore: IAnalyticsStore }) =>

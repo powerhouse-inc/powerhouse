@@ -5,7 +5,6 @@ import type {
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 import { childLogger } from "document-drive";
-import type { PHDocument } from "document-model";
 import { DateTime } from "luxon";
 export type NodeTarget = "DRIVE" | "NODE";
 

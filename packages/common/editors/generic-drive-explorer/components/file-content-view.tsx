@@ -134,5 +134,3 @@ export function FileContentView(props: Props) {
     </div>
   );
 }
-
-export default FileContentView;

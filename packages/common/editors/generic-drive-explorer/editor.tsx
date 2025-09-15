@@ -1,4 +1,10 @@
 import {
+  CreateDocument,
+  DriveLayout,
+  FolderView,
+  SearchBar,
+} from "@powerhousedao/common";
+import {
   Breadcrumbs,
   useBreadcrumbs,
   useDrop,
@@ -23,10 +29,6 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import React from "react";
-import { CreateDocument } from "./components/create-document.js";
-import FolderView from "./components/folder-view.js";
-import { DriveLayout } from "./components/layout.js";
-import { SearchBar } from "./components/search-bar.js";
 
 export type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
@@ -124,7 +126,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   );
 }
 
-export default function Editor(props: GenericDriveExplorerEditorProps) {
+export function Editor(props: GenericDriveExplorerEditorProps) {
   return (
     <DriveContextProvider value={props.context}>
       <BaseEditor {...props} />
