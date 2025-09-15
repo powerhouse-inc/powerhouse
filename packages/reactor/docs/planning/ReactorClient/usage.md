@@ -3,11 +3,16 @@
 ### Creation
 
 ```tsx
-const subscriptions: ISubscriptionManager = new SubscriptionManager();
-const reactor: IReactor = getReactor(subscriptions);
+const reactor: IReactor = getReactor();
+const signer: ISigner = getSigner();
+const subscriptionManager: IReactorSubscriptionManager = getSubscriptionManager();
 
-// wraps a reactor and subscriptions
-const client: IReactorClient = new ReactorClient(reactor, subscriptions);
+// Use the builder pattern to create a ReactorClient with all required dependencies
+const client: IReactorClient = new ReactorClientBuilder()
+  .withReactor(reactor)
+  .withSigner(signer)
+  .withSubscriptionManager(subscriptionManager)
+  .build();
 
 // document models
 const { results } = await client.getDocumentModels();

@@ -4,6 +4,7 @@ export { type IReactor } from "./interfaces/reactor.js";
 export { Reactor } from "./reactor.js";
 export {
   ReactorClient,
+  ReactorClientBuilder,
   DocumentChangeType,
   type DocumentChangeEvent,
   type ISigner,

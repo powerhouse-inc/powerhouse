@@ -64,6 +64,67 @@ export type DocumentChangeEvent = {
 };
 
 /**
+ * Builder class for constructing ReactorClient instances with proper configuration
+ */
+export class ReactorClientBuilder {
+  private reactor?: IReactor;
+  private signer?: ISigner;
+  private subscriptionManager?: IReactorSubscriptionManager;
+  private jobAwaiter?: IJobAwaiter;
+
+  public withReactor(reactor: IReactor): this {
+    this.reactor = reactor;
+    return this;
+  }
+
+  public withSigner(signer: ISigner): this {
+    this.signer = signer;
+    return this;
+  }
+
+  public withSubscriptionManager(
+    subscriptionManager: IReactorSubscriptionManager,
+  ): this {
+    this.subscriptionManager = subscriptionManager;
+    return this;
+  }
+
+  public withJobAwaiter(jobAwaiter: IJobAwaiter): this {
+    this.jobAwaiter = jobAwaiter;
+    return this;
+  }
+
+  public build(): ReactorClient {
+    if (!this.reactor) {
+      throw new Error("Reactor is required to build ReactorClient");
+    }
+
+    if (!this.signer) {
+      throw new Error("Signer is required to build ReactorClient");
+    }
+
+    if (!this.subscriptionManager) {
+      throw new Error(
+        "SubscriptionManager is required to build ReactorClient",
+      );
+    }
+
+    if (!this.jobAwaiter) {
+      this.jobAwaiter = new JobAwaiter((jobId, signal) =>
+        this.reactor!.getJobStatus(jobId, signal),
+      );
+    }
+
+    return new ReactorClient(
+      this.reactor,
+      this.signer,
+      this.subscriptionManager,
+      this.jobAwaiter,
+    );
+  }
+}
+
+/**
  * ReactorClient implementation that wraps lower-level APIs to provide
  * a simpler interface for document operations.
  *
@@ -75,25 +136,20 @@ export type DocumentChangeEvent = {
  */
 export class ReactorClient implements IReactorClient {
   private reactor: IReactor;
-  private signer?: ISigner;
-  private subscriptionManager?: IReactorSubscriptionManager;
+  private signer: ISigner;
+  private subscriptionManager: IReactorSubscriptionManager;
   private jobAwaiter: IJobAwaiter;
 
   constructor(
     reactor: IReactor,
-    signer?: ISigner,
-    subscriptionManager?: IReactorSubscriptionManager,
-    jobAwaiter?: IJobAwaiter,
+    signer: ISigner,
+    subscriptionManager: IReactorSubscriptionManager,
+    jobAwaiter: IJobAwaiter,
   ) {
     this.reactor = reactor;
     this.signer = signer;
     this.subscriptionManager = subscriptionManager;
-    // Use provided jobAwaiter or create default one
-    this.jobAwaiter =
-      jobAwaiter ||
-      new JobAwaiter((jobId, signal) =>
-        this.reactor.getJobStatus(jobId, signal),
-      );
+    this.jobAwaiter = jobAwaiter;
   }
 
   /**
@@ -215,33 +271,30 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    // Sign actions if signer is provided
-    let signedActions = actions;
-    if (this.signer) {
-      signedActions = await Promise.all(
-        actions.map(async (action) => {
-          const signature = await this.signer!.sign(action, signal);
-          return {
-            ...action,
-            context: {
-              ...action.context,
-              signer: {
-                user: {
-                  address: signature[0],
-                  networkId: "",
-                  chainId: 0,
-                },
-                app: {
-                  name: "",
-                  key: "",
-                },
-                signatures: [signature],
+    // Sign actions with the required signer
+    const signedActions = await Promise.all(
+      actions.map(async (action) => {
+        const signature = await this.signer.sign(action, signal);
+        return {
+          ...action,
+          context: {
+            ...action.context,
+            signer: {
+              user: {
+                address: signature[0],
+                networkId: "",
+                chainId: 0,
               },
+              app: {
+                name: "",
+                key: "",
+              },
+              signatures: [signature],
             },
-          };
-        }),
-      );
-    }
+          },
+        };
+      }),
+    );
 
     // Note: reactor.mutate doesn't use view or signal currently
     return this.reactor.mutate(documentIdentifier, signedActions);

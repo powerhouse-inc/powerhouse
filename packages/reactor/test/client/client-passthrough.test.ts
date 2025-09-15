@@ -13,7 +13,12 @@ import type { IReactorClient } from "../../src/interfaces/reactor-client.js";
 import type { IReactor } from "../../src/interfaces/reactor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import { ReactorClient } from "../../src/reactor-client.js";
+import {
+  ReactorClient,
+  ReactorClientBuilder,
+  type ISigner,
+  type IReactorSubscriptionManager,
+} from "../../src/reactor-client.js";
 import { Reactor } from "../../src/reactor.js";
 import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
@@ -47,8 +52,18 @@ describe("ReactorClient Passthrough Functions", () => {
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, queue);
 
-    // Create ReactorClient with the reactor
-    client = new ReactorClient(reactor);
+    // Create mock signer and subscription manager for testing
+    const mockSigner: ISigner = {
+      sign: async () => ["mock-signature"],
+    };
+    const mockSubscriptionManager: IReactorSubscriptionManager = {};
+
+    // Create ReactorClient using the builder
+    client = new ReactorClientBuilder()
+      .withReactor(reactor)
+      .withSigner(mockSigner)
+      .withSubscriptionManager(mockSubscriptionManager)
+      .build();
 
     // Add some test documents through the reactor
     const docs = createTestDocuments(5);
