@@ -4,8 +4,8 @@
 
 Install the library:
 
-- NPM: `npm install @acaldas/document-model-libs`
-- Yarn: `yarn add @acaldas/document-model-libs`
+- NPM: `npm install document-model`
+- Yarn: `yarn add document-model`
 
 ## Documentation
 

@@ -1,0 +1,6 @@
+{
+  "extends": ["../../typedoc.base.jsonc"],
+  "entryPoints": ["index.ts", "src/storage/prisma/prisma.ts"],
+  "tsconfig": "tsconfig.lib.json",
+  "projectDocuments": ["docs/logging.md"]
+}

@@ -1,0 +1,11 @@
+{
+  "extends": ["../../typedoc.base.jsonc"],
+  "entryPoints": [
+    "index.ts",
+    "document-models/index.ts",
+    "editors/index.ts",
+    "subgraphs/index.ts",
+    "processors/index.ts"
+  ],
+  "tsconfig": "tsconfig.json"
+}
