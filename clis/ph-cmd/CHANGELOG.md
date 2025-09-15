@@ -1,3 +1,17 @@
+## 4.1.0-dev.53 (2025-09-13)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🩹 Fixes
+
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features

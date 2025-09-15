@@ -30,17 +30,21 @@ export async function renameFolder(
   oldName: string,
   newName: string,
 ) {
+  const folder = page.locator("[draggable=true]", {
+    has: page.locator(`text=${oldName}`),
+  });
+
   // Wait for the folder to be visible
-  await page.waitForSelector(`text=${oldName}`);
+  await folder.waitFor({ state: "visible" });
 
   // Hover over the folder to make options visible
-  await page.hover(`text=${oldName}`);
+  await folder.hover();
 
   // Click the options button (three dots)
-  await page.click('button[aria-haspopup="menu"]');
+  await folder.locator('button[aria-haspopup="menu"]').click();
 
   // Click Rename option
-  await page.click("text=Rename");
+  await page.getByRole("menuitem", { name: "Rename" }).click();
 
   // Fill in the new name and press Enter
   await page.fill('input[type="text"]', newName);
@@ -59,17 +63,21 @@ export async function renameFolder(
  * @param folderName Name of the folder to duplicate
  */
 export async function duplicateFolder(page: Page, folderName: string) {
+  const folder = page.locator("[draggable=true]", {
+    has: page.locator(`text=${folderName}`),
+  });
+
   // Wait for the folder to be visible
-  await page.waitForSelector(`text=${folderName}`);
+  await folder.waitFor({ state: "visible" });
 
   // Hover over the folder to make options visible
-  await page.hover(`text=${folderName}`);
+  await folder.hover();
 
   // Click the options button (three dots)
-  await page.click('button[aria-haspopup="menu"]');
+  await folder.locator('button[aria-haspopup="menu"]').click();
 
   // Click Duplicate option
-  await page.click("text=Duplicate");
+  await page.getByRole("menuitem", { name: "Duplicate" }).click();
 
   // Verify there are exactly 2 elements with the same name after duplication
   await expect(page.getByText(folderName)).toHaveCount(2);
@@ -81,17 +89,21 @@ export async function duplicateFolder(page: Page, folderName: string) {
  * @param folderName Name of the folder to delete
  */
 export async function deleteFolder(page: Page, folderName: string) {
+  const folder = page.locator("[draggable=true]", {
+    has: page.locator(`text=${folderName}`),
+  });
+
   // Wait for the folder to be visible
-  await page.waitForSelector(`text=${folderName}`);
+  await folder.waitFor({ state: "visible" });
 
   // Hover over the folder to make options visible
-  await page.getByText(folderName, { exact: true }).hover();
+  await folder.hover();
 
   // Click the options button (three dots)
-  await page.click('button[aria-haspopup="menu"]');
+  await folder.locator('button[aria-haspopup="menu"]').click();
 
   // Click Delete option
-  await page.click("text=Delete");
+  await page.getByRole("menuitem", { name: "Delete" }).click();
 
   // Press Enter to confirm deletion
   await page.getByText("Delete", { exact: true }).click();

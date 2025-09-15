@@ -1,3 +1,37 @@
+## 4.1.0-dev.53 (2025-09-13)
+
+### 🩹 Fixes
+
+- **connect:** disable search bar by default ([bd05e44aa](https://github.com/powerhouse-inc/powerhouse/commit/bd05e44aa))
+- **connect-e2e:** make folder selection more specific ([7800b4696](https://github.com/powerhouse-inc/powerhouse/commit/7800b4696))
+- **connect-e2e:** fix flaky tests in CI ([d970bd4d3](https://github.com/powerhouse-inc/powerhouse/commit/d970bd4d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🚀 Features
+
+- add a bunch of failing tests for the reactor-client ([8276565a8](https://github.com/powerhouse-inc/powerhouse/commit/8276565a8))
+- implemented the easy, passthrough functions ([ceb692cd1](https://github.com/powerhouse-inc/powerhouse/commit/ceb692cd1))
+- pulled job awaiter out of reactor client ([bd4c206a9](https://github.com/powerhouse-inc/powerhouse/commit/bd4c206a9))
+- more test fixes ([12a0acd1d](https://github.com/powerhouse-inc/powerhouse/commit/12a0acd1d))
+- **vetra:** add basic support to drop documents on vetra drive ([ce10ca3ee](https://github.com/powerhouse-inc/powerhouse/commit/ce10ca3ee))
+
+### 🩹 Fixes
+
+- linting issues ([ba85245b4](https://github.com/powerhouse-inc/powerhouse/commit/ba85245b4))
+- fixes before merge ([b6bfba102](https://github.com/powerhouse-inc/powerhouse/commit/b6bfba102))
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features

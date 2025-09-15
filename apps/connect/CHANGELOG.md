@@ -1,3 +1,24 @@
+## 4.1.0-dev.53 (2025-09-13)
+
+### 🩹 Fixes
+
+- **connect:** disable search bar by default ([bd05e44aa](https://github.com/powerhouse-inc/powerhouse/commit/bd05e44aa))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🩹 Fixes
+
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
