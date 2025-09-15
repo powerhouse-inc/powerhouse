@@ -5,6 +5,7 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
+import type { FileUploadProgressCallback } from "../types/upload.js";
 
 export async function queueActions(
   document: PHDocument | undefined,
@@ -151,13 +152,24 @@ export async function uploadOperations(
     documentId: string,
     operations: Operation[],
   ) => Promise<PHDocument | undefined>,
-  options?: { operationsLimit?: number },
+  options?: {
+    operationsLimit?: number;
+    onProgress?: FileUploadProgressCallback;
+  },
 ) {
   const operationsLimit = options?.operationsLimit || 50;
+  const onProgress = options?.onProgress;
 
   logger.verbose(
     `uploadDocumentOperations(documentId:${documentId}, ops: ${Object.keys(allOperations).join(",")}, limit:${operationsLimit})`,
   );
+
+  // Calculate total operations for progress tracking
+  const totalOperations = Object.values(allOperations).reduce(
+    (total, operations) => total + operations.length,
+    0,
+  );
+  let uploadedOperations = 0;
 
   for (const operations of Object.values(allOperations)) {
     for (let i = 0; i < operations.length; i += operationsLimit) {
@@ -172,6 +184,21 @@ export async function uploadOperations(
       const scope = operation.action.scope;
 
       await pushOperations(documentId, chunk);
+
+      uploadedOperations += chunk.length;
+
+      // Report progress
+      if (onProgress) {
+        const progress = Math.round(
+          (uploadedOperations / totalOperations) * 100,
+        );
+        onProgress({
+          stage: "uploading",
+          progress,
+          totalOperations,
+          uploadedOperations,
+        });
+      }
 
       logger.verbose(
         `uploadDocumentOperations:for:waitForUpdate(${documentId}:${scope} rev ${operation.index}): NEXT`,
