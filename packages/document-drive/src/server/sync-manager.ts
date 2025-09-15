@@ -15,6 +15,7 @@ import type {
   SynchronizationUnitQuery,
 } from "document-drive";
 import {
+  SyncUnitMap,
   SynchronizationUnitNotFoundError,
   childLogger,
   isBefore,
@@ -25,7 +26,6 @@ import {
   garbageCollectDocumentOperations,
   replayDocument,
 } from "document-model";
-import { SyncUnitMap } from "./sync-unit-map.js";
 
 export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();

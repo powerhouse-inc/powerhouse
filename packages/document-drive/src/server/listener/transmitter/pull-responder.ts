@@ -10,10 +10,13 @@ import type {
 } from "document-drive";
 
 import type {
+  CancelPullLoop,
   GraphQLResult,
   ILogger,
+  IPullResponderTransmitter,
   ListenerFilter,
   PullResponderTrigger,
+  PullStrandsGraphQL,
   StrandUpdateSource,
   Trigger,
 } from "document-drive";
@@ -26,11 +29,6 @@ import {
 } from "document-drive";
 import { generateId } from "document-model";
 import { gql } from "graphql-request";
-import type {
-  CancelPullLoop,
-  IPullResponderTransmitter,
-  PullStrandsGraphQL,
-} from "./types.js";
 
 const MAX_REVISIONS_PER_ACK = 100;
 const MAX_PULLS = 50;
