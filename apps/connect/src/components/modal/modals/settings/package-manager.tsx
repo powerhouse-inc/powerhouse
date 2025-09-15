@@ -40,12 +40,6 @@ function manifestToDetails(
   };
 }
 
-export interface SettingsModalProps {
-  open: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
-}
-
 export const PackageManager: React.FC = () => {
   const vetraPackages = useVetraPackages();
   const drives = useDrives();

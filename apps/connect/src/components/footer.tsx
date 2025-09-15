@@ -5,7 +5,7 @@ import {
   Icon,
 } from "@powerhousedao/design-system";
 import { Trans } from "react-i18next";
-import { useModal } from "./modal/index.js";
+import { useModal } from "@powerhousedao/connect";
 
 export const Footer = () => {
   const { showModal } = useModal();

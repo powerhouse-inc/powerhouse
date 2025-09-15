@@ -1,0 +1,31 @@
+import {
+  AddDriveModal,
+  AddLocalDriveModal,
+  AddRemoteDriveModal,
+  ConfirmationModal,
+  CookiesPolicyModal,
+  CreateDocumentModal,
+  DebugSettingsModal,
+  DeleteDriveModal,
+  DeleteItemModal,
+  DisclaimerModal,
+  DriveSettingsModal,
+  SettingsModal,
+  UpgradeDriveModal,
+} from "./modals/index.js";
+
+export const modalsMap = {
+  deleteItem: DeleteItemModal,
+  upgradeDrive: UpgradeDriveModal,
+  createDocument: CreateDocumentModal,
+  addDriveModal: AddDriveModal,
+  addLocalDrive: AddLocalDriveModal,
+  addRemoteDrive: AddRemoteDriveModal,
+  driveSettings: DriveSettingsModal,
+  settingsModal: SettingsModal,
+  confirmationModal: ConfirmationModal,
+  deleteDriveModal: DeleteDriveModal,
+  debugSettingsModal: DebugSettingsModal,
+  disclaimerModal: DisclaimerModal,
+  cookiesPolicy: CookiesPolicyModal,
+};

@@ -1,6 +1,6 @@
+import type { IStorage } from "@powerhousedao/connect";
+import { BaseStorage } from "@powerhousedao/connect";
 import { connectConfig } from "@powerhousedao/connect/config";
-import type { IStorage } from "./index.js";
-import { BaseStorage } from "./index.js";
 
 const store: IStorage = {
   get: function <Key extends string>(key: Key): unknown {

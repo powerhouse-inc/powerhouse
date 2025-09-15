@@ -230,5 +230,3 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
     </AnalyticsProvider>
   );
 }
-
-export default ProcessorManagerProvider;

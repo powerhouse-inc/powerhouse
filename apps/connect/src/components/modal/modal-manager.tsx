@@ -1,33 +1,10 @@
-import React, {
-  Suspense,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
-import type { ModalPropsMapping, ModalType } from "@powerhousedao/connect";
-import { modals } from "@powerhousedao/connect";
-
-type MapModalProps<T> = {
-  [K in keyof T]: Omit<T[K], "open" | "onClose"> & { onClose?: () => void };
-};
-
-type ModalProps = MapModalProps<ModalPropsMapping>;
-
-interface ModalContextValue {
-  showModal: <T extends ModalType>(modalType: T, props: ModalProps[T]) => void;
-  closeModal: () => void;
-}
-
-export const ModalContext = React.createContext<ModalContextValue>({
-  showModal: () => {},
-  closeModal: () => {},
-});
-
-export const useModal = () => {
-  const context = useContext(ModalContext);
-  return context;
-};
+import type {
+  ModalContextValue,
+  ModalProps,
+  ModalType,
+} from "@powerhousedao/connect";
+import { ModalContext, modalsMap } from "@powerhousedao/connect";
+import { Suspense, useCallback, useMemo, useState } from "react";
 
 export const ModalManager: React.FC<{ children?: React.ReactNode }> = (
   props,
@@ -51,7 +28,7 @@ export const ModalManager: React.FC<{ children?: React.ReactNode }> = (
     setOpen(false);
   }, []);
 
-  const ModalComponent = modalType ? modals[modalType] : null;
+  const ModalComponent = modalType ? modalsMap[modalType] : null;
 
   const value = useMemo(
     () => ({ showModal, closeModal }),

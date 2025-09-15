@@ -1,3 +1,4 @@
+import { createRemoveOldRemoteDrivesConfig } from "@powerhousedao/connect";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
@@ -8,13 +9,12 @@ import type {
   IDriveOperationStorage,
 } from "document-drive";
 import {
-  EventQueueManager,
   BrowserStorage,
+  EventQueueManager,
   InMemoryCache,
   ReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||

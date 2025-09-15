@@ -1,5 +1,9 @@
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
-import { useUndoRedoShortcuts } from "@powerhousedao/connect";
+import {
+  EditorLoader,
+  useModal,
+  useUndoRedoShortcuts,
+} from "@powerhousedao/connect";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
   DocumentToolbar,
@@ -19,8 +23,6 @@ import { Suspense, useEffect, useState } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
-import { EditorLoader } from "./editor-loader.js";
-import { useModal } from "./modal/index.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;

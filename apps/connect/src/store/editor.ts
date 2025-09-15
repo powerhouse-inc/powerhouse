@@ -2,6 +2,7 @@ import { documentModelEditorModule } from "@powerhousedao/builder-tools/editor";
 import { GenericDriveExplorer as genericDriveExplorerEditorModule } from "@powerhousedao/common";
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
 import { DEFAULT_DRIVE_EDITOR_ID } from "@powerhousedao/reactor-browser";
+
 export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
   const name = "Generic Drive Explorer";
   const documentTypes = genericDriveExplorerEditorModule.documentTypes;

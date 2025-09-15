@@ -1,14 +1,14 @@
+import {
+  generateSchemas,
+  hygenGenerateDocumentModel,
+  hygenGenerateProcessor,
+  loadDocumentModel,
+} from "@powerhousedao/codegen";
 import { exec } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateSchemas } from "../graphql.js";
-import {
-  hygenGenerateDocumentModel,
-  hygenGenerateProcessor,
-} from "../hygen.js";
-import { loadDocumentModel } from "../utils.js";
 
 describe("document model", () => {
   const srcPath = path.join(

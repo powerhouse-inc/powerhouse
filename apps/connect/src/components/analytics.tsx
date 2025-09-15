@@ -1,6 +1,6 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import { useEffect } from "react";
-import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
+import { useAcceptedCookies } from "@powerhousedao/connect";
 
 declare global {
   interface Window {
@@ -13,7 +13,7 @@ function gtag(...args: (string | Date)[]) {
   window.dataLayer?.push(...args);
 }
 
-const Analytics = () => {
+export const Analytics = () => {
   const gaTrackingId = connectConfig.gaTrackingId;
   const [{ analytics }] = useAcceptedCookies();
   const useAnalytics = gaTrackingId && analytics;
@@ -41,5 +41,3 @@ const Analytics = () => {
 
   return null;
 };
-
-export default Analytics;

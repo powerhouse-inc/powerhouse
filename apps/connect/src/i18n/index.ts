@@ -26,4 +26,4 @@ i18n
     console.error(e);
   });
 
-export default i18n;
+export { i18n };

@@ -1,10 +1,8 @@
+import { AtlasImport, Content, Root } from "@powerhousedao/connect";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import Content from "../pages/content.js";
-import { AtlasImport } from "./demo/atlas-import.js";
-import Root from "./root.js";
 
 const routerBasename = connectConfig.routerBasename.endsWith("/")
   ? connectConfig.routerBasename.slice(0, -1)
