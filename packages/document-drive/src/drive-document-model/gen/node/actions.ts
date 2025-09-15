@@ -7,7 +7,7 @@ import type {
   MoveNodeInput,
   UpdateFileInput,
   UpdateNodeInput,
-} from "../types.js";
+} from "document-drive";
 
 export type AddFileAction = Action & { type: "ADD_FILE"; input: AddFileInput };
 export type AddFolderAction = Action & {
