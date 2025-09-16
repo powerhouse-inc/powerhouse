@@ -18,7 +18,7 @@ export function toDocumentModelResultPage(
   result: PagedResults<DocumentModelState>,
 ): DocumentModelResultPage {
   return {
-    cursor: result.options.cursor,
+    cursor: result.options.cursor || null,
     hasNextPage: false,
     hasPreviousPage: false,
     items: result.results.map(toGqlDocumentModelState),
@@ -59,7 +59,7 @@ export function toPhDocumentResultPage(
   result: PagedResults<PHDocument>,
 ): PhDocumentResultPage {
   return {
-    cursor: result.options.cursor,
+    cursor: result.options.cursor || null,
     hasNextPage: false,
     hasPreviousPage: false,
     items: result.results.map(toGqlPhDocument),
@@ -98,10 +98,10 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
     id: job.id,
     status: job.status,
     createdAt: job.createdAtUtcIso,
-    completedAt: job.completedAtUtcIso,
-    error: job.error,
+    completedAt: job.completedAtUtcIso ?? null,
+    error: job.error ?? null,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    result: job.result,
+    result: job.result ?? null,
   };
 }
 
