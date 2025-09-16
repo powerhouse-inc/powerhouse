@@ -1,4 +1,8 @@
 import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
+import {
+  VETRA_PROCESSOR_CONFIG_KEY,
+  type VetraProcessorConfigType,
+} from "@powerhousedao/config/powerhouse";
 import { getConfig } from "@powerhousedao/config/utils";
 import { blue, green, red } from "colorette";
 import { setLogLevel } from "document-drive/utils/logger";
@@ -8,6 +12,10 @@ import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
+
+const VETRA_DRIVE_ID = "vetra";
+const getDefaultVetraUrl = (port: number) =>
+  `http://localhost:${port}/d/${VETRA_DRIVE_ID}`;
 
 const __dirname =
   import.meta.dirname || dirname(fileURLToPath(import.meta.url));
@@ -27,8 +35,12 @@ export type DevOptions = {
 };
 
 async function startLocalVetraSwitchboard(
-  options?: ReactorOptions & { verbose?: boolean },
+  options?: ReactorOptions & {
+    verbose?: boolean;
+    interactiveCodegen?: boolean;
+  },
   remoteDrive?: string,
+  remoteDriveId?: string,
 ) {
   const baseConfig = getConfig(options?.configFile);
   const { https } = baseConfig.reactor ?? { https: false };
@@ -57,6 +69,15 @@ async function startLocalVetraSwitchboard(
     const Switchboard = await import("./switchboard.js");
     const { startSwitchboard } = Switchboard;
 
+    const vetraProcessorConfig: VetraProcessorConfigType = {
+      interactive: options?.interactiveCodegen,
+      driveUrl: remoteDrive ?? getDefaultVetraUrl(port),
+      driveId: remoteDriveId ?? VETRA_DRIVE_ID,
+    };
+
+    const processorConfig = new Map<string, unknown>();
+    processorConfig.set(VETRA_PROCESSOR_CONFIG_KEY, vetraProcessorConfig);
+
     const switchboard = await startSwitchboard({
       port,
       configFile: configFile || undefined,
@@ -67,6 +88,7 @@ async function startLocalVetraSwitchboard(
       useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
       https,
       mcp: true,
+      processorConfig,
     });
 
     if (verbose) {
@@ -174,16 +196,6 @@ export async function startVetra({
       setLogLevel("info");
     }
 
-    // Set environment variable for interactive code generation
-    if (interactive) {
-      process.env.CODEGEN_INTERACTIVE = "true";
-      if (verbose) {
-        console.log(
-          "Interactive code generation enabled (CODEGEN_INTERACTIVE=true)",
-        );
-      }
-    }
-
     const baseConfig = getConfig(configFile);
 
     // Use config port if no CLI port provided, fallback to default
@@ -192,8 +204,9 @@ export async function startVetra({
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
-    const configVetraUrl = baseConfig.vetraUrl;
+    const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
+    const resolvedVetraId = baseConfig.vetra?.driveId ?? VETRA_DRIVE_ID;
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
@@ -213,8 +226,10 @@ export async function startVetra({
         https,
         configFile,
         verbose,
+        interactiveCodegen: interactive,
       },
       resolvedVetraUrl,
+      resolvedVetraId,
     );
     const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
 
