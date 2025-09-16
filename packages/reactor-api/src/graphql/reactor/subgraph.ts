@@ -1,27 +1,12 @@
 import { Subgraph } from "#graphql/base/index.js";
 import { type SubgraphArgs } from "#graphql/types.js";
-import type {
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  SearchFilter,
-  ViewFilter,
-} from "@powerhousedao/reactor";
 import { childLogger } from "document-drive";
-import type { DocumentModelState, PHDocument } from "document-model";
 import fs from "fs";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import path from "path";
-import {
-  fromInputMaybe,
-  toDocumentModelResultPage,
-  toGqlJobInfo,
-  toGqlPhDocument,
-  toMutableArray,
-  toPhDocumentResultPage,
-} from "./adapters.js";
 import { type Resolvers } from "./gen/graphql.js";
+import * as resolvers from "./resolvers.js";
 
 export class ReactorSubgraph extends Subgraph {
   private logger = childLogger([
@@ -45,241 +30,61 @@ export class ReactorSubgraph extends Subgraph {
     Query: {
       documentModels: async (_parent, args) => {
         this.logger.debug("documentModels", args);
-
-        const namespace = fromInputMaybe(args.namespace);
-
-        let paging: PagingOptions | undefined;
-        if (args.paging?.cursor || args.paging?.limit) {
-          paging = {
-            cursor: fromInputMaybe(args.paging.cursor) || "",
-            limit: fromInputMaybe(args.paging.limit) || 10,
-          };
-        }
-
-        let result: PagedResults<DocumentModelState>;
         try {
-          result = await this.reactorClient.getDocumentModels(
-            namespace,
-            paging,
-          );
+          return await resolvers.documentModels(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error fetching document models:", error);
-
-          throw new GraphQLError(
-            `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return toDocumentModelResultPage(result);
-        } catch (error) {
-          this.logger.error(
-            "Error converting document models to GraphQL:",
-            error,
-          );
-
-          throw new GraphQLError(
-            `Failed to convert document models to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in documentModels:", error);
+          throw error;
         }
       },
 
       document: async (_parent, args) => {
         this.logger.debug("document", args);
-
-        let view: ViewFilter | undefined;
-        if (args.view) {
-          view = {
-            branch: fromInputMaybe(args.view.branch),
-            scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-          };
-        }
-
-        let result: {
-          document: PHDocument;
-          childIds: string[];
-        };
         try {
-          result = await this.reactorClient.get(args.identifier, view);
+          return await resolvers.document(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error fetching document:", error);
-          throw new GraphQLError(
-            `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return {
-            document: toGqlPhDocument(result.document),
-            childIds: result.childIds,
-          };
-        } catch (error) {
-          this.logger.error("Error converting document to GraphQL:", error);
-
-          throw new GraphQLError(
-            `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in document:", error);
+          throw error;
         }
       },
 
       documentChildren: async (_parent, args) => {
         this.logger.debug("documentChildren", args);
-
-        let view: ViewFilter | undefined;
-        if (args.view) {
-          view = {
-            branch: fromInputMaybe(args.view.branch),
-            scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-          };
-        }
-
-        let paging: PagingOptions | undefined;
-        if (args.paging?.cursor || args.paging?.limit) {
-          paging = {
-            cursor: fromInputMaybe(args.paging.cursor) || "",
-            limit: fromInputMaybe(args.paging.limit) || 10,
-          };
-        }
-
-        let result: PagedResults<PHDocument>;
         try {
-          result = await this.reactorClient.getChildren(
-            args.parentIdentifier,
-            view,
-            paging,
-          );
+          return await resolvers.documentChildren(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error fetching document children:", error);
-          throw new GraphQLError(
-            `Failed to fetch document children: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return toPhDocumentResultPage(result);
-        } catch (error) {
-          this.logger.error(
-            "Error converting document children to GraphQL:",
-            error,
-          );
-          throw new GraphQLError(
-            `Failed to convert document children to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in documentChildren:", error);
+          throw error;
         }
       },
 
       documentParents: async (_parent, args) => {
         this.logger.debug("documentParents", args);
-
-        let view: ViewFilter | undefined;
-        if (args.view) {
-          view = {
-            branch: fromInputMaybe(args.view.branch),
-            scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-          };
-        }
-
-        let paging: PagingOptions | undefined;
-        if (args.paging?.cursor || args.paging?.limit) {
-          paging = {
-            cursor: fromInputMaybe(args.paging.cursor) || "",
-            limit: fromInputMaybe(args.paging.limit) || 10,
-          };
-        }
-
-        let result: PagedResults<PHDocument>;
         try {
-          result = await this.reactorClient.getParents(
-            args.childIdentifier,
-            view,
-            paging,
-          );
+          return await resolvers.documentParents(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error fetching document parents:", error);
-          throw new GraphQLError(
-            `Failed to fetch document parents: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return toPhDocumentResultPage(result);
-        } catch (error) {
-          this.logger.error(
-            "Error converting document parents to GraphQL:",
-            error,
-          );
-          throw new GraphQLError(
-            `Failed to convert document parents to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in documentParents:", error);
+          throw error;
         }
       },
 
       findDocuments: async (_parent, args) => {
         this.logger.debug("findDocuments", args);
-
-        let view: ViewFilter | undefined;
-        if (args.view) {
-          view = {
-            branch: fromInputMaybe(args.view.branch),
-            scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-          };
-        }
-
-        let paging: PagingOptions | undefined;
-        if (args.paging?.cursor || args.paging?.limit) {
-          paging = {
-            cursor: fromInputMaybe(args.paging.cursor) || "",
-            limit: fromInputMaybe(args.paging.limit) || 10,
-          };
-        }
-
-        const search: SearchFilter = {
-          type: fromInputMaybe(args.search.type),
-          parentId: fromInputMaybe(args.search.parentId),
-        };
-
-        let result: PagedResults<PHDocument>;
         try {
-          result = await this.reactorClient.find(search, view, paging);
+          return await resolvers.findDocuments(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error finding documents:", error);
-          throw new GraphQLError(
-            `Failed to find documents: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return toPhDocumentResultPage(result);
-        } catch (error) {
-          this.logger.error("Error converting documents to GraphQL:", error);
-
-          throw new GraphQLError(
-            `Failed to convert documents to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in findDocuments:", error);
+          throw error;
         }
       },
 
       jobStatus: async (_parent, args) => {
         this.logger.debug("jobStatus", args);
-
-        let result: JobInfo;
         try {
-          result = await this.reactorClient.getJobStatus(args.jobId);
+          return await resolvers.jobStatus(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error fetching job status:", error);
-          throw new GraphQLError(
-            `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
-        }
-
-        try {
-          return toGqlJobInfo(result);
-        } catch (error) {
-          this.logger.error("Error converting job status to GraphQL:", error);
-
-          throw new GraphQLError(
-            `Failed to convert job status to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
-          );
+          this.logger.error("Error in jobStatus:", error);
+          throw error;
         }
       },
     },
