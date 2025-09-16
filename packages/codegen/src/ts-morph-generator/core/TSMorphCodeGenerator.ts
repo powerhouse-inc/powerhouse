@@ -1,21 +1,18 @@
-import type {
-  CodeGeneratorOptions,
-  CodegenOperation,
-  FileGenerator,
-  GenerationContext,
-  PHProjectDirectories,
-} from "@powerhousedao/codegen";
-import {
-  DirectoryManager,
-  ImportManager,
-  ReducerGenerator,
-} from "@powerhousedao/codegen";
+import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
 } from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
+import type { FileGenerator } from "./FileGenerator.js";
+import type {
+  CodeGeneratorOptions,
+  CodegenOperation,
+  GenerationContext,
+  PHProjectDirectories,
+} from "./GenerationContext.js";
+import { ReducerGenerator } from "./ReducerGenerator.js";
 
 export class TSMorphCodeGenerator {
   private project = new Project();

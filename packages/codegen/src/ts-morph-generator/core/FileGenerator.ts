@@ -1,8 +1,5 @@
-import type {
-  DirectoryManager,
-  GenerationContext,
-  ImportManager,
-} from "@powerhousedao/codegen";
+import type { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import type { GenerationContext } from "./GenerationContext.js";
 
 export abstract class FileGenerator {
   constructor(

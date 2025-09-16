@@ -1,4 +1,4 @@
-export type * from "./amount-input/types.js";
+export * from "./amount-input/types.js";
 export * from "./button/index.js";
 export * from "./character-counter/index.js";
 export * from "./checkbox/index.js";

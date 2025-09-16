@@ -7,7 +7,6 @@ import type {
   SetEditorNameInput,
   SetEditorStatusInput,
 } from "./types.js";
-import { StatusType } from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;

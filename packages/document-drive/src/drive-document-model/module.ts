@@ -1,15 +1,14 @@
-import type { DriveDocumentModelModule } from "document-drive";
+import { driveDocumentFileExtension } from "./constants.js";
+import * as actions from "./gen/creators.js";
+import { driveDocumentModel } from "./gen/document-model.js";
+import { driveDocumentReducer } from "./gen/reducer.js";
 import {
   driveCreateDocument,
   driveCreateState,
-  driveDocumentFileExtension,
-  driveDocumentModel,
-  driveDocumentReducer,
   driveLoadFromInput,
   driveSaveToFileHandle,
-} from "document-drive";
-import * as actions from "./gen/creators.js";
-
+} from "./gen/utils.js";
+import type { DriveDocumentModelModule } from "./types.js";
 export const driveDocumentModelModule: DriveDocumentModelModule = {
   actions,
   reducer: driveDocumentReducer,

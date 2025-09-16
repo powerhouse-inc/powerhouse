@@ -1,9 +1,9 @@
-export type * from "./actions.js";
-export type * from "./header/types.js";
-export type * from "./module/types.js";
-export type * from "./operation-error/types.js";
-export type * from "./operation-example/types.js";
-export type * from "./operation/types.js";
-export type * from "./schema/types.js";
-export type * from "./state/types.js";
-export type * from "./versioning/types.js";
+export * from "./actions.js";
+export * from "./header/types.js";
+export * from "./module/types.js";
+export * from "./operation-error/types.js";
+export * from "./operation-example/types.js";
+export * from "./operation/types.js";
+export * from "./schema/types.js";
+export * from "./state/types.js";
+export * from "./versioning/types.js";

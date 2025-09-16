@@ -28,7 +28,7 @@ import type {
   SignalResult,
 } from "document-model";
 import type { Unsubscribe } from "nanoevents";
-export type * from "./listener/types.js";
+export * from "./listener/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 

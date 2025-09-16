@@ -1,1 +1,1 @@
-export type * from "./transmitter/types.js";
+export * from "./transmitter/types.js";

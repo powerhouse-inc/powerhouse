@@ -11,7 +11,7 @@ import type {
   SetOperationScopeAction,
   SetOperationTemplateAction,
 } from "document-model";
-export type * from "./actions.js";
+export * from "./actions.js";
 
 export type DocumentModelOperationOperations = {
   addOperationOperation: (

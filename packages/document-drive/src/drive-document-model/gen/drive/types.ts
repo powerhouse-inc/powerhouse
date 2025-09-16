@@ -1,1 +1,1 @@
-export type * from "./actions.js";
+export * from "./actions.js";

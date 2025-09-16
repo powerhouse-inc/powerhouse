@@ -7,4 +7,4 @@ import type {
 export type DocumentModelDocument = PHDocument<DocumentModelPHState>;
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelPHState>;
-export type * from "./gen/types.js";
+export * from "./gen/types.js";

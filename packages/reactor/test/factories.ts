@@ -1,12 +1,12 @@
-import type { BaseDocumentDriveServer } from "document-drive";
+import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
-} from "document-drive";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
 } from "document-drive";
 import type {
   Action,
@@ -14,7 +14,10 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
+} from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
@@ -174,7 +177,7 @@ export function createDocModelDocument(
     state?: any;
   } = {},
 ): PHDocument {
-  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
+  const baseDocument = documentModelCreateDocument();
 
   if (overrides.id) {
     baseDocument.header.id = overrides.id;

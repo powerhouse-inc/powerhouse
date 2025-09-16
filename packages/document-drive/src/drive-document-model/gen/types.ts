@@ -8,9 +8,9 @@ import type {
 } from "document-drive";
 import type { Action, PHDocument } from "document-model";
 
-export type * from "./drive/types.js";
-export type * from "./node/types.js";
-export type * from "./schema/types.js";
+export * from "./drive/types.js";
+export * from "./node/types.js";
+export * from "./schema/types.js";
 
 export type DocumentDriveAction =
   | DocumentDriveNodeAction

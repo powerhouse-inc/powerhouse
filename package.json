@@ -9,6 +9,7 @@
     "build:misc": "pnpm --filter !academy -r --no-bail build",
     "build:css": "pnpm -r --no-bail build:css",
     "build:vite": "pnpm -r --no-bail build:vite",
+    "build:all": "pnpm build:misc && pnpm build:css && pnpm build:vite",
     "test:all": "pnpm -r --no-bail test",
     "test:all:ci": "pnpm --filter !document-drive -r --no-bail test",
     "storybook:all": "pnpm -r --no-bail run build-storybook",

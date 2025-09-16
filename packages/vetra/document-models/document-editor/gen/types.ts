@@ -1,9 +1,9 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type { PHBaseState, PHDocument } from "document-model";
 import type { DocumentEditorAction } from "./actions.js";
 import type { DocumentEditorState as DocumentEditorGlobalState } from "./schema/types.js";
 
 export { z } from "./schema/index.js";
-export type * from "./schema/types.js";
+export * from "./schema/types.js";
 type DocumentEditorLocalState = Record<PropertyKey, never>;
 type DocumentEditorPHState = PHBaseState & {
   global: DocumentEditorGlobalState;
@@ -12,9 +12,9 @@ type DocumentEditorPHState = PHBaseState & {
 type DocumentEditorDocument = PHDocument<DocumentEditorPHState>;
 
 export type {
+  DocumentEditorAction,
+  DocumentEditorDocument,
   DocumentEditorGlobalState,
   DocumentEditorLocalState,
   DocumentEditorPHState,
-  DocumentEditorAction,
-  DocumentEditorDocument,
 };

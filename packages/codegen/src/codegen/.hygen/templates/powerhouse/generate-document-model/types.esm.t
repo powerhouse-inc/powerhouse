@@ -12,7 +12,7 @@ import type {
 } from './schema/types.js';
 
 export { z } from './schema/index.js';
-export type * from './schema/types.js';
+export * from './schema/types.js';
 <% if(!hasLocalSchema) { -%>
 <%= 'type ' + h.changeCase.pascal(documentType) %>LocalState = Record<PropertyKey, never>;
 <%} -%>

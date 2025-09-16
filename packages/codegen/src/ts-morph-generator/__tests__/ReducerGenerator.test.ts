@@ -2,13 +2,10 @@ import type {
   CodegenOperation,
   GenerationContext,
 } from "@powerhousedao/codegen";
-import {
-  DirectoryManager,
-  ImportManager,
-  ReducerGenerator,
-} from "@powerhousedao/codegen";
+import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
+import { ReducerGenerator } from "../core/ReducerGenerator.js";
 
 // Custom DirectoryManager for testing that works with in-memory file system
 class TestDirectoryManager extends DirectoryManager {
