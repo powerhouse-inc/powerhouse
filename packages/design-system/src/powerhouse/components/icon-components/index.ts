@@ -3,6 +3,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import CalendarTime from "./CalendarTime.js";
 import CaretLeft from "./CaretLeft.js";
 import CaretRight from "./CaretRight.js";
+import AnalyticsProcessorModule from "./AnalyticsProcessorModule.js";
+import AppModule from "./AppModule.js";
 import ArrowCouterclockwise from "./ArrowCouterclockwise.js";
 import ArrowFilledRight from "./ArrowFilledRight.js";
 import ArrowLeft from "./ArrowLeft.js";
@@ -29,6 +31,7 @@ import ClockFill from "./ClockFill.js";
 import ClockHistory from "./ClockHistory.js";
 import Clock from "./Clock.js";
 import CloudSlash from "./CloudSlash.js";
+import CodegenProcessorModule from "./CodegenProcessorModule.js";
 import Collapse from "./Collapse.js";
 import Compass from "./Compass.js";
 import ConnectSmall from "./ConnectSmall.js";
@@ -40,10 +43,14 @@ import Danger from "./Danger.js";
 import DescendenceModified from "./DescendenceModified.js";
 import Disconnect from "./Disconnect.js";
 import Discord from "./Discord.js";
+import DocumentIcons from "./DocumentIcons.js";
+import DocumentModelModule from "./DocumentModelModule.js";
+import DocumentModel from "./DocumentModel.js";
 import DownloadFile from "./DownloadFile.js";
 import Drive from "./Drive.js";
 import Duplicated from "./Duplicated.js";
 import Edit from "./Edit.js";
+import EditorModule from "./EditorModule.js";
 import Ellipsis from "./Ellipsis.js";
 import Error from "./Error.js";
 import Ethscan from "./Ethscan.js";
@@ -74,6 +81,7 @@ import Modified from "./Modified.js";
 import Moved from "./Moved.js";
 import Npm from "./Npm.js";
 import PackageManager from "./PackageManager.js";
+import PackageModule from "./PackageModule.js";
 import Pencil from "./Pencil.js";
 import PeopleFill from "./PeopleFill.js";
 import People from "./People.js";
@@ -83,10 +91,12 @@ import Pin from "./Pin.js";
 import PlusCircle from "./PlusCircle.js";
 import PlusSquare from "./PlusSquare.js";
 import Plus from "./Plus.js";
+import PowerhouseDocumentModule from "./PowerhouseDocumentModule.js";
 import PowerhouseLogoSmall from "./PowerhouseLogoSmall.js";
 import Project from "./Project.js";
 import QuestionSquare from "./QuestionSquare.js";
 import RedoArrow from "./RedoArrow.js";
+import RelationalProcessorModule from "./RelationalProcessorModule.js";
 import Reload from "./Reload.js";
 import Removed from "./Removed.js";
 import RenownHover from "./RenownHover.js";
@@ -97,6 +107,7 @@ import Save from "./Save.js";
 import Search from "./Search.js";
 import Server from "./Server.js";
 import Settings from "./Settings.js";
+import SubgraphModule from "./SubgraphModule.js";
 import Synced from "./Synced.js";
 import Syncing from "./Syncing.js";
 import Tabler from "./Tabler.js";
@@ -120,6 +131,8 @@ export const iconNames = [
   "CalendarTime",
   "CaretLeft",
   "CaretRight",
+  "AnalyticsProcessorModule",
+  "AppModule",
   "ArrowCouterclockwise",
   "ArrowFilledRight",
   "ArrowLeft",
@@ -146,6 +159,7 @@ export const iconNames = [
   "ClockHistory",
   "Clock",
   "CloudSlash",
+  "CodegenProcessorModule",
   "Collapse",
   "Compass",
   "ConnectSmall",
@@ -157,10 +171,14 @@ export const iconNames = [
   "DescendenceModified",
   "Disconnect",
   "Discord",
+  "DocumentIcons",
+  "DocumentModelModule",
+  "DocumentModel",
   "DownloadFile",
   "Drive",
   "Duplicated",
   "Edit",
+  "EditorModule",
   "Ellipsis",
   "Error",
   "Ethscan",
@@ -191,6 +209,7 @@ export const iconNames = [
   "Moved",
   "Npm",
   "PackageManager",
+  "PackageModule",
   "Pencil",
   "PeopleFill",
   "People",
@@ -200,10 +219,12 @@ export const iconNames = [
   "PlusCircle",
   "PlusSquare",
   "Plus",
+  "PowerhouseDocumentModule",
   "PowerhouseLogoSmall",
   "Project",
   "QuestionSquare",
   "RedoArrow",
+  "RelationalProcessorModule",
   "Reload",
   "Removed",
   "RenownHover",
@@ -214,6 +235,7 @@ export const iconNames = [
   "Search",
   "Server",
   "Settings",
+  "SubgraphModule",
   "Synced",
   "Syncing",
   "Tabler",
@@ -241,6 +263,8 @@ export const iconComponents: Record<
   CalendarTime,
   CaretLeft,
   CaretRight,
+  AnalyticsProcessorModule,
+  AppModule,
   ArrowCouterclockwise,
   ArrowFilledRight,
   ArrowLeft,
@@ -267,6 +291,7 @@ export const iconComponents: Record<
   ClockHistory,
   Clock,
   CloudSlash,
+  CodegenProcessorModule,
   Collapse,
   Compass,
   ConnectSmall,
@@ -278,10 +303,14 @@ export const iconComponents: Record<
   DescendenceModified,
   Disconnect,
   Discord,
+  DocumentIcons,
+  DocumentModelModule,
+  DocumentModel,
   DownloadFile,
   Drive,
   Duplicated,
   Edit,
+  EditorModule,
   Ellipsis,
   Error,
   Ethscan,
@@ -312,6 +341,7 @@ export const iconComponents: Record<
   Moved,
   Npm,
   PackageManager,
+  PackageModule,
   Pencil,
   PeopleFill,
   People,
@@ -321,10 +351,12 @@ export const iconComponents: Record<
   PlusCircle,
   PlusSquare,
   Plus,
+  PowerhouseDocumentModule,
   PowerhouseLogoSmall,
   Project,
   QuestionSquare,
   RedoArrow,
+  RelationalProcessorModule,
   Reload,
   Removed,
   RenownHover,
@@ -335,6 +367,7 @@ export const iconComponents: Record<
   Search,
   Server,
   Settings,
+  SubgraphModule,
   Synced,
   Syncing,
   Tabler,

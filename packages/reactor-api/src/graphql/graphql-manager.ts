@@ -12,6 +12,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type { Context, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
   AnalyticsSubgraph,
@@ -60,6 +61,7 @@ export class GraphQLManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly reactor: IDocumentDriveServer,
+    private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly subgraphs: Map<string, BaseSubgraph[]> = new Map(),
@@ -162,6 +164,7 @@ export class GraphQLManager {
       relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
       reactor: this.reactor,
+      reactorClient: this.reactorClient,
       graphqlManager: this,
       path: this.path,
     });
@@ -236,7 +239,7 @@ export class GraphQLManager {
     });
   }
 
-  async #waitForServer(server: ApolloServer) {
+  async #waitForServer(server: ApolloServer): Promise<boolean> {
     return new Promise((resolve) => {
       try {
         server.assertStarted("waitForServer");

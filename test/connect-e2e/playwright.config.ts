@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-export const CONNECT_URL = "http://127.0.0.1:3000";
+export const CONNECT_URL = "http://localhost:3000";
 export const REACTOR_URL = "http://127.0.0.1:4001";
 
 /**
@@ -16,6 +16,7 @@ export const REACTOR_URL = "http://127.0.0.1:4001";
  */
 export default defineConfig({
   testDir: "./tests",
+  outputDir: "test-results",
   /* Global setup and teardown for codegen */
   globalSetup: "./global-setup.ts",
   globalTeardown: "./global-teardown.ts",
@@ -32,11 +33,14 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://127.0.0.1:3000',
+    baseURL: "http://127.0.0.1:3000",
+
+    acceptDownloads: true,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
-    acceptDownloads: true,
+    video: "retain-on-failure",
+    screenshot: "only-on-failure",
   },
 
   /* Configure projects for major browsers */
@@ -68,21 +72,20 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  // webServer configuration removed - services are started manually in CI
-  // webServer: [
-  //   {
-  //     command: "pnpm connect",
-  //     url: CONNECT_URL,
-  //     stderr: "pipe",
-  //     stdout: "pipe",
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  //   {
-  //     command: "pnpm reactor",
-  //     url: `${REACTOR_URL}/graphql`,
-  //     stderr: "pipe",
-  //     stdout: "pipe",
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  // ],
+  webServer: [
+    {
+      command: "pnpm connect",
+      url: CONNECT_URL,
+      stderr: "pipe",
+      stdout: "pipe",
+      reuseExistingServer: !process.env.CI,
+    },
+    //   {
+    //     command: "pnpm reactor",
+    //     url: `${REACTOR_URL}/graphql`,
+    //     stderr: "pipe",
+    //     stdout: "pipe",
+    //     reuseExistingServer: !process.env.CI,
+    //   },
+  ],
 });

@@ -58,6 +58,10 @@ export type VetraEditorModule = VetraMeta & {
     documentToolbarEnabled?: boolean;
     showSwitchboardLink?: boolean;
     timelineEnabled?: boolean;
+    documentTypes?: string[];
+    dragAndDrop?: {
+      enabled?: boolean;
+    };
   };
 };
 

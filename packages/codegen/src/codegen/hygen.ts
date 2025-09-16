@@ -307,6 +307,10 @@ export async function hygenGenerateDriveEditor(
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
+  editorOptions?: {
+    enabled: boolean;
+    documentTypes: string[];
+  },
 ) {
   // Generate the drive editor files
   const args = [
@@ -320,6 +324,16 @@ export async function hygenGenerateDriveEditor(
 
   if (appId) {
     args.push("--app-id", appId);
+  }
+
+  if (editorOptions?.enabled) {
+    args.push("--drag-and-drop-enabled", "true");
+    if (editorOptions.documentTypes.length > 0) {
+      args.push(
+        "--drag-and-drop-document-types",
+        JSON.stringify(editorOptions.documentTypes),
+      );
+    }
   }
 
   await run(args, { skipFormat });

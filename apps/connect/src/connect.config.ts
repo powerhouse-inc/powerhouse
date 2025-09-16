@@ -89,7 +89,7 @@ export const connectConfig = {
     tracing: PH_CONNECT_SENTRY_TRACING_ENABLED === "true",
   },
   content: {
-    showSearchBar: SEARCH_BAR_ENABLED !== "false",
+    showSearchBar: SEARCH_BAR_ENABLED === "true",
     showDocumentModelSelectionSetting:
       HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS !== "true",
   },

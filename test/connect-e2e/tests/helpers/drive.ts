@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { CONNECT_URL } from "../../playwright.config.js";
 import { handleCookieConsent } from "./cookie-consent.js";
 /**
  * Helper function to navigate into a folder and verify it's visible
@@ -8,13 +7,24 @@ import { handleCookieConsent } from "./cookie-consent.js";
  */
 export async function createLocalDrive(page: Page, driveName: string) {
   // Navigate to URL
-  await page.goto(CONNECT_URL);
+  await page.goto("/");
 
   // Handle cookie consent
   await handleCookieConsent(page);
 
   await page.click(`text=Create New Drive`);
   const input = page.getByPlaceholder("Drive name");
+
+  // the model only opens when packages are loaded
+  for (let retry = 0; retry < 5; retry++) {
+    try {
+      await input.waitFor({ state: "visible", timeout: 500 * retry });
+      break;
+    } catch {
+      await page.click(`text=Create New Drive`);
+    }
+  }
+
   await input.fill(driveName);
 
   const submit = page

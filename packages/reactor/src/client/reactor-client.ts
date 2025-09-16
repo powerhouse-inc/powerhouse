@@ -1,3 +1,4 @@
+<<<<<<< HEAD:packages/reactor/src/reactor-client.ts
 import type {
   Action,
   DocumentModelGlobalState,
@@ -63,6 +64,23 @@ export type DocumentChangeEvent = {
     childId?: string;
   };
 };
+=======
+import type { Action, DocumentModelState, PHDocument } from "document-model";
+
+import type { IReactor } from "../core/types.js";
+import { type IJobAwaiter } from "../shared/awaiter.js";
+import {
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type SearchFilter,
+  type ViewFilter,
+} from "../shared/types.js";
+import type { ISigner } from "../signer/types.js";
+import type { IReactorSubscriptionManager } from "../subs/types.js";
+import type { DocumentChangeEvent, IReactorClient } from "./types.js";
+>>>>>>> main:packages/reactor/src/client/reactor-client.ts
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -76,25 +94,20 @@ export type DocumentChangeEvent = {
  */
 export class ReactorClient implements IReactorClient {
   private reactor: IReactor;
-  private signer?: ISigner;
-  private subscriptionManager?: IReactorSubscriptionManager;
+  private signer: ISigner;
+  private subscriptionManager: IReactorSubscriptionManager;
   private jobAwaiter: IJobAwaiter;
 
   constructor(
     reactor: IReactor,
-    signer?: ISigner,
-    subscriptionManager?: IReactorSubscriptionManager,
-    jobAwaiter?: IJobAwaiter,
+    signer: ISigner,
+    subscriptionManager: IReactorSubscriptionManager,
+    jobAwaiter: IJobAwaiter,
   ) {
     this.reactor = reactor;
     this.signer = signer;
     this.subscriptionManager = subscriptionManager;
-    // Use provided jobAwaiter or create default one
-    this.jobAwaiter =
-      jobAwaiter ||
-      new JobAwaiter((jobId, signal) =>
-        this.reactor.getJobStatus(jobId, signal),
-      );
+    this.jobAwaiter = jobAwaiter;
   }
 
   /**
@@ -210,39 +223,36 @@ export class ReactorClient implements IReactorClient {
   /**
    * Submits a list of actions to a document
    */
-  async mutateAsync<TDocument extends PHDocument>(
+  async mutateAsync(
     documentIdentifier: string,
     actions: Action[],
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    // Sign actions if signer is provided
-    let signedActions = actions;
-    if (this.signer) {
-      signedActions = await Promise.all(
-        actions.map(async (action) => {
-          const signature = await this.signer!.sign(action, signal);
-          return {
-            ...action,
-            context: {
-              ...action.context,
-              signer: {
-                user: {
-                  address: signature[0],
-                  networkId: "",
-                  chainId: 0,
-                },
-                app: {
-                  name: "",
-                  key: "",
-                },
-                signatures: [signature],
+    // Sign actions with the required signer
+    const signedActions = await Promise.all(
+      actions.map(async (action) => {
+        const signature = await this.signer.sign(action, signal);
+        return {
+          ...action,
+          context: {
+            ...action.context,
+            signer: {
+              user: {
+                address: signature[0],
+                networkId: "",
+                chainId: 0,
               },
+              app: {
+                name: "",
+                key: "",
+              },
+              signatures: [signature],
             },
-          };
-        }),
-      );
-    }
+          },
+        };
+      }),
+    );
 
     // Note: reactor.mutate doesn't use view or signal currently
     return this.reactor.mutate(documentIdentifier, signedActions);

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "4.1.0-dev.52",
+  "version": "4.1.0-dev.54",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
@@ -29,6 +29,7 @@
     "@libsql/client": "^0.14.0",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "change-case": "^5.4.4",
     "commander": "^12.1.0",
     "document-drive": "workspace:*",

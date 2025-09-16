@@ -7,14 +7,15 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { IReactorClient } from "../../src/client/types.js";
+import { ReactorClientBuilder } from "../../src/core/builder.js";
+import { Reactor } from "../../src/core/reactor.js";
+import type { IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
-import type { IReactorClient } from "../../src/interfaces/reactor-client.js";
-import type { IReactor } from "../../src/interfaces/reactor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import { ReactorClient } from "../../src/reactor-client.js";
-import { Reactor } from "../../src/reactor.js";
+import type { ISigner } from "../../src/signer/types.js";
 import { createDocModelDocument, createTestDocuments } from "../factories.js";
 
 describe("ReactorClient Passthrough Functions", () => {
@@ -47,8 +48,17 @@ describe("ReactorClient Passthrough Functions", () => {
     // Create reactor facade with all required dependencies
     reactor = new Reactor(driveServer, storage, queue);
 
-    // Create ReactorClient with the reactor
-    client = new ReactorClient(reactor);
+    // Create mock signer for testing
+    const mockSigner: ISigner = {
+      sign: () => Promise.resolve(["mock-signature", "", "", "", ""]),
+    };
+
+    // Create ReactorClient using the builder
+    // The builder will use default subscription manager if not provided
+    client = new ReactorClientBuilder()
+      .withReactor(reactor)
+      .withSigner(mockSigner)
+      .build();
 
     // Add some test documents through the reactor
     const docs = createTestDocuments(5);

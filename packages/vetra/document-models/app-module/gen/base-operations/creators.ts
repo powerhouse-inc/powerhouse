@@ -1,7 +1,17 @@
 import { createAction } from "document-model";
-import type { SetAppNameInput, SetAppStatusInput } from "../types.js";
 import { z } from "../types.js";
-import type { SetAppNameAction, SetAppStatusAction } from "./actions.js";
+import type {
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetAppNameInput,
+  SetAppStatusInput,
+} from "../types.js";
+import type {
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetAppNameAction,
+  SetAppStatusAction,
+} from "./actions.js";
 
 export const setAppName = (input: SetAppNameInput) =>
   createAction<SetAppNameAction>(
@@ -18,5 +28,23 @@ export const setAppStatus = (input: SetAppStatusInput) =>
     { ...input },
     undefined,
     z.SetAppStatusInputSchema,
+    "global",
+  );
+
+export const addDocumentType = (input: AddDocumentTypeInput) =>
+  createAction<AddDocumentTypeAction>(
+    "ADD_DOCUMENT_TYPE",
+    { ...input },
+    undefined,
+    z.AddDocumentTypeInputSchema,
+    "global",
+  );
+
+export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
+  createAction<RemoveDocumentTypeAction>(
+    "REMOVE_DOCUMENT_TYPE",
+    { ...input },
+    undefined,
+    z.RemoveDocumentTypeInputSchema,
     "global",
   );

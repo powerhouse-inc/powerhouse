@@ -48,7 +48,6 @@ const EXPECTED_OPERATIONS = [
   "SET_STATE_SCHEMA",
   "SET_MODEL_NAME",
 ];
-const EXPECTED_OPERATIONS_COUNT = EXPECTED_OPERATIONS.length;
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
   documentType: "powerhouse/todo",
