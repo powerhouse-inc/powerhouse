@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "check": "pnpm tsc && pnpm lint",
-    "build": "pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm build:storybook",
+    "build": "pnpm build:misc && pnpm build:css && pnpm build:vite",
     "test": "pnpm -r --no-bail test",
     "test:ci": "pnpm --filter !document-drive -r --no-bail test",
-    "simulate-ci-workflow": "pnpm clean && pnpm i --frozen-lockfile && pnpm check && pnpm build && pnpm test:ci",
+    "simulate-ci-workflow": "pnpm clean && pnpm i --frozen-lockfile && pnpm check && pnpm build && pnpm test:ci && pnpm build:storybook",
     "tsc": "tsc --build",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "build:misc": "pnpm --filter !academy -r --no-bail build",
