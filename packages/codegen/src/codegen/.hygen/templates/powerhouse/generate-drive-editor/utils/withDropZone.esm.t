@@ -15,7 +15,7 @@ export function withDropZone<T extends DriveEditorProps>(
   WrappedComponent: ComponentType<T>,
 ): ComponentType<T> {
   const WithDropZoneComponent = (props: T) => {
-    const onDropFile = useOnDropFile();
+    const onDropFile = useOnDropFile(props.editorConfig?.documentTypes);
 
     const onAddFile = async (
       file: File,

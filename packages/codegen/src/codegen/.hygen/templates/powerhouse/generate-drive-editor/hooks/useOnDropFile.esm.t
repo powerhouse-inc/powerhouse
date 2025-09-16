@@ -10,7 +10,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 
-export const useOnDropFile = () => {
+export const useOnDropFile = (documentTypes: string[] = []) => {
   const [selectedDrive] = useSelectedDrive();
   const selectedDriveId = selectedDrive?.header.id;
   const selectedFolder = useSelectedFolder();
@@ -32,6 +32,7 @@ export const useOnDropFile = () => {
         fileName,
         targetNodeId,
         onProgress,
+        documentTypes,
       );
     },
     [selectedDriveId, selectedFolder],

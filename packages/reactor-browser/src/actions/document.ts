@@ -1,3 +1,4 @@
+import { isDocumentTypeSupported } from "@powerhousedao/config/powerhouse";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
@@ -290,6 +291,7 @@ export async function addFileWithProgress(
   name?: string,
   parentFolder?: string,
   onProgress?: FileUploadProgressCallback,
+  documentTypes: string[] = [],
 ) {
   logger.verbose(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
@@ -319,6 +321,12 @@ export async function addFileWithProgress(
       onProgress?.({ stage: "loading", progress: 10, documentType });
     } else {
       onProgress?.({ stage: "loading", progress: 10 });
+    }
+
+    if (!isDocumentTypeSupported(document.header.documentType, documentTypes)) {
+      throw new Error(
+        `Document type ${document.header.documentType} is not supported`,
+      );
     }
 
     const documentModule = reactor
