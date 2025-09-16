@@ -15,11 +15,9 @@ import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { Context, SubgraphClass } from "@powerhousedao/reactor-api";
 import {
-  AnalyticsSubgraph,
+  DriveSubgraph,
   buildSubgraphSchemaModule,
   createSchema,
-  DriveSubgraph,
-  SystemSubgraph,
 } from "@powerhousedao/reactor-api";
 import bodyParser from "body-parser";
 import cors from "cors";
@@ -31,12 +29,7 @@ import { Router } from "express";
 import type { GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import type { BaseSubgraph } from "./base-subgraph.js";
-
-export const DefaultCoreSubgraphs = [
-  SystemSubgraph,
-  AnalyticsSubgraph,
-] as const;
+import type { Subgraph } from "./index.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   willSendRequest(options: GraphQLDataSourceProcessOptions) {
@@ -55,6 +48,8 @@ export class GraphQLManager {
   private coreSubgraphsMap = new Map<string, BaseSubgraph[]>();
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
+  private readonly subgraphs = new Map<string, Subgraph[]>();
+
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
   constructor(
@@ -64,11 +59,9 @@ export class GraphQLManager {
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
-    private readonly subgraphs: Map<string, BaseSubgraph[]> = new Map(),
-    private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
   ) {}
 
-  async init() {
+  async init(coreSubgraphs: SubgraphClass[]) {
     this.logger.debug(`Initializing Subgraph Manager...`);
 
     // check if Document Drive model is available
@@ -135,7 +128,7 @@ export class GraphQLManager {
       this.reactorRouter(req, res, next);
     });
 
-    await this.#setupCoreSubgraphs("graphql");
+    await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
 
     this.reactor.on("documentModelModules", () => {
       this.updateRouter().catch((error: unknown) => this.logger.error(error));
@@ -144,8 +137,11 @@ export class GraphQLManager {
     return this.updateRouter();
   }
 
-  async #setupCoreSubgraphs(supergraph: string) {
-    for (const subgraph of this.coreSubgraphs) {
+  async #setupCoreSubgraphs(
+    supergraph: string,
+    coreSubgraphs: SubgraphClass[],
+  ) {
+    for (const subgraph of coreSubgraphs) {
       await this.registerSubgraph(subgraph, supergraph, true);
     }
 
