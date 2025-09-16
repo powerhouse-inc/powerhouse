@@ -312,15 +312,19 @@ export class Reactor implements IReactor {
    * Creates a document
    */
   async create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
+
+    let doc: PHDocument;
     try {
       // BaseDocumentDriveServer uses addDocument, not createDocument
       // addDocument adds an existing document to a drive
-      await this.driveServer.addDocument(document);
+      doc = await this.driveServer.addDocument(document);
     } catch {
       // TODO: Phase 4 - This will return a job that can be retried
       return {
         id: uuidv4(),
         status: JobStatus.FAILED,
+        createdAtUtcIso,
       };
     }
 
@@ -333,6 +337,9 @@ export class Reactor implements IReactor {
     return {
       id: uuidv4(),
       status: JobStatus.COMPLETED,
+      createdAtUtcIso,
+      completedAtUtcIso: new Date().toISOString(),
+      result: doc,
     };
   }
 
@@ -344,6 +351,7 @@ export class Reactor implements IReactor {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
     const jobId = uuidv4();
 
     try {
@@ -356,6 +364,7 @@ export class Reactor implements IReactor {
       return {
         id: jobId,
         status: JobStatus.FAILED,
+        createdAtUtcIso,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
@@ -369,6 +378,8 @@ export class Reactor implements IReactor {
     return {
       id: jobId,
       status: JobStatus.COMPLETED,
+      createdAtUtcIso,
+      completedAtUtcIso: new Date().toISOString(),
     };
   }
 
@@ -376,6 +387,8 @@ export class Reactor implements IReactor {
    * Applies a list of actions to a document
    */
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
+
     // Create jobs for each action/operation
     const jobs: Job[] = actions.map((action, index) => ({
       id: uuidv4(),
@@ -400,10 +413,12 @@ export class Reactor implements IReactor {
     }
 
     // Return job info for the batch (using the first job's ID as the batch ID)
+    // TODO: we need proper support for batch jobs
     const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
     return {
       id: batchJobId,
       status: JobStatus.PENDING,
+      createdAtUtcIso,
     };
   }
 
@@ -416,6 +431,7 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
     const jobId = uuidv4();
 
     // Check abort signal before starting
@@ -433,6 +449,7 @@ export class Reactor implements IReactor {
       return {
         id: jobId,
         status: JobStatus.FAILED,
+        createdAtUtcIso,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
@@ -450,6 +467,7 @@ export class Reactor implements IReactor {
         return {
           id: jobId,
           status: JobStatus.FAILED,
+          createdAtUtcIso,
           error: error instanceof Error ? error.message : "Unknown error",
         };
       }
@@ -466,6 +484,8 @@ export class Reactor implements IReactor {
     return {
       id: jobId,
       status: JobStatus.COMPLETED,
+      createdAtUtcIso,
+      completedAtUtcIso: new Date().toISOString(),
     };
   }
 
@@ -478,6 +498,7 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
     const jobId = uuidv4();
 
     // Check abort signal before starting
@@ -495,6 +516,7 @@ export class Reactor implements IReactor {
       return {
         id: jobId,
         status: JobStatus.FAILED,
+        createdAtUtcIso,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
@@ -510,6 +532,8 @@ export class Reactor implements IReactor {
     return {
       id: jobId,
       status: JobStatus.COMPLETED,
+      createdAtUtcIso,
+      completedAtUtcIso: new Date().toISOString(),
     };
   }
 
@@ -517,6 +541,8 @@ export class Reactor implements IReactor {
    * Retrieves the status of a job
    */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    const createdAtUtcIso = new Date().toISOString();
+
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -526,6 +552,8 @@ export class Reactor implements IReactor {
     return Promise.resolve({
       id: jobId,
       status: JobStatus.FAILED,
+      createdAtUtcIso,
+      completedAtUtcIso: new Date().toISOString(),
       error: "Job tracking not yet implemented",
     });
   }

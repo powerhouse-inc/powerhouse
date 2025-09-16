@@ -39,7 +39,10 @@ enum RelationshipChangeType {
 type JobInfo = {
   id: string;
   status: JobStatus;
+  createdAtUtcIso: string;
+  completedAtUtcIso?: string;
   error?: string;
+  result?: any;
 };
 
 /**

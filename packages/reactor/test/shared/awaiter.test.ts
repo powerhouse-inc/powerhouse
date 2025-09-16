@@ -24,11 +24,16 @@ describe("JobAwaiter", () => {
       const completedJob: JobInfo = {
         id: jobId,
         status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
       };
 
       // First call returns pending, second returns completed
       getJobStatusMock
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.PENDING })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.PENDING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
         .mockResolvedValueOnce(completedJob);
 
       const promise = jobAwaiter.waitForJob(jobId);
@@ -50,6 +55,7 @@ describe("JobAwaiter", () => {
       const failedJob: JobInfo = {
         id: jobId,
         status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
         error: "Job failed",
       };
 
@@ -66,9 +72,21 @@ describe("JobAwaiter", () => {
     });
 
     it("should handle multiple jobs concurrently", async () => {
-      const job1: JobInfo = { id: "job-1", status: JobStatus.COMPLETED };
-      const job2: JobInfo = { id: "job-2", status: JobStatus.COMPLETED };
-      const job3: JobInfo = { id: "job-3", status: JobStatus.COMPLETED };
+      const job1: JobInfo = {
+        id: "job-1",
+        status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
+      };
+      const job2: JobInfo = {
+        id: "job-2",
+        status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
+      };
+      const job3: JobInfo = {
+        id: "job-3",
+        status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
+      };
 
       let job2Calls = 0;
       let job3Calls = 0;
@@ -84,6 +102,7 @@ describe("JobAwaiter", () => {
             return Promise.resolve({
               id: "job-2",
               status: JobStatus.PENDING,
+              createdAtUtcIso: new Date().toISOString(),
             });
           }
           return Promise.resolve(job2);
@@ -94,6 +113,7 @@ describe("JobAwaiter", () => {
             return Promise.resolve({
               id: "job-3",
               status: JobStatus.RUNNING,
+              createdAtUtcIso: new Date().toISOString(),
             });
           }
           return Promise.resolve(job3);
@@ -124,6 +144,7 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue({
         id: jobId,
         status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
       });
 
       const promise = jobAwaiter.waitForJob(jobId, abortController.signal);
@@ -166,8 +187,16 @@ describe("JobAwaiter", () => {
     });
 
     it("should stop interval when all jobs complete", async () => {
-      const job1: JobInfo = { id: "job-1", status: JobStatus.COMPLETED };
-      const job2: JobInfo = { id: "job-2", status: JobStatus.COMPLETED };
+      const job1: JobInfo = {
+        id: "job-1",
+        status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
+      };
+      const job2: JobInfo = {
+        id: "job-2",
+        status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
+      };
 
       getJobStatusMock.mockImplementation((jobId) => {
         if (jobId === "job-1") {
@@ -198,10 +227,26 @@ describe("JobAwaiter", () => {
       const jobId = "job-long-running";
 
       getJobStatusMock
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.PENDING })
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.RUNNING })
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.RUNNING })
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.COMPLETED });
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.PENDING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.RUNNING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.RUNNING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.COMPLETED,
+          createdAtUtcIso: new Date().toISOString(),
+        });
 
       const promise = jobAwaiter.waitForJob(jobId);
 
@@ -227,6 +272,7 @@ describe("JobAwaiter", () => {
       const completedJob: JobInfo = {
         id: jobId,
         status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
       };
 
       getJobStatusMock.mockResolvedValue(completedJob);
@@ -256,6 +302,7 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue({
         id: "any",
         status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
       });
 
       const promise1 = jobAwaiter.waitForJob(jobId1);
@@ -274,6 +321,7 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue({
         id: jobId,
         status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
       });
 
       jobAwaiter.waitForJob(jobId).catch(() => {
@@ -304,6 +352,7 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue({
         id: "job-1",
         status: JobStatus.COMPLETED,
+        createdAtUtcIso: new Date().toISOString(),
       });
 
       const promise = jobAwaiter.waitForJob("job-1");
@@ -321,9 +370,21 @@ describe("JobAwaiter", () => {
 
       const jobId = "job-custom-interval";
       getJobStatusMock
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.PENDING })
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.PENDING })
-        .mockResolvedValueOnce({ id: jobId, status: JobStatus.COMPLETED });
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.PENDING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.PENDING,
+          createdAtUtcIso: new Date().toISOString(),
+        })
+        .mockResolvedValueOnce({
+          id: jobId,
+          status: JobStatus.COMPLETED,
+          createdAtUtcIso: new Date().toISOString(),
+        });
 
       const promise = customAwaiter.waitForJob(jobId);
 
