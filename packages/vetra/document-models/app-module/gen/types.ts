@@ -1,4 +1,4 @@
-import type { PHBaseState, PHDocument } from "document-model";
+import type { PHDocument, PHBaseState } from "document-model";
 import type { AppModuleAction } from "./actions.js";
 import type { AppModuleState as AppModuleGlobalState } from "./schema/types.js";
 
@@ -12,9 +12,9 @@ type AppModulePHState = PHBaseState & {
 type AppModuleDocument = PHDocument<AppModulePHState>;
 
 export type {
-  AppModuleAction,
-  AppModuleDocument,
   AppModuleGlobalState,
   AppModuleLocalState,
   AppModulePHState,
+  AppModuleAction,
+  AppModuleDocument,
 };

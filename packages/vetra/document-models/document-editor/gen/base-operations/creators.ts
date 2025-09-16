@@ -1,16 +1,16 @@
 import { createAction } from "document-model";
-import type {
-  SetEditorNameInput,
-  AddDocumentTypeInput,
-  RemoveDocumentTypeInput,
-  SetEditorStatusInput,
+import {
+  z,
+  type SetEditorNameInput,
+  type AddDocumentTypeInput,
+  type RemoveDocumentTypeInput,
+  type SetEditorStatusInput,
 } from "../types.js";
-import { z } from "../types.js";
-import type {
-  SetEditorNameAction,
-  AddDocumentTypeAction,
-  RemoveDocumentTypeAction,
-  SetEditorStatusAction,
+import {
+  type SetEditorNameAction,
+  type AddDocumentTypeAction,
+  type RemoveDocumentTypeAction,
+  type SetEditorStatusAction,
 } from "./actions.js";
 
 export const setEditorName = (input: SetEditorNameInput) =>

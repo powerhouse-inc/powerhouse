@@ -8,6 +8,7 @@ import type {
   SetAppNameInput,
   SetAppStatusInput,
   SetDragAndDropEnabledInput,
+  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{

@@ -1,4 +1,4 @@
-import type { PHBaseState, PHDocument } from "document-model";
+import type { PHDocument, PHBaseState } from "document-model";
 import type { DocumentEditorAction } from "./actions.js";
 import type { DocumentEditorState as DocumentEditorGlobalState } from "./schema/types.js";
 
@@ -12,9 +12,9 @@ type DocumentEditorPHState = PHBaseState & {
 type DocumentEditorDocument = PHDocument<DocumentEditorPHState>;
 
 export type {
-  DocumentEditorAction,
-  DocumentEditorDocument,
   DocumentEditorGlobalState,
   DocumentEditorLocalState,
   DocumentEditorPHState,
+  DocumentEditorAction,
+  DocumentEditorDocument,
 };

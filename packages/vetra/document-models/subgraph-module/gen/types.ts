@@ -1,4 +1,4 @@
-import type { PHBaseState, PHDocument } from "document-model";
+import type { PHDocument, PHBaseState } from "document-model";
 import type { SubgraphModuleAction } from "./actions.js";
 import type { SubgraphModuleState as SubgraphModuleGlobalState } from "./schema/types.js";
 
@@ -12,9 +12,9 @@ type SubgraphModulePHState = PHBaseState & {
 type SubgraphModuleDocument = PHDocument<SubgraphModulePHState>;
 
 export type {
-  SubgraphModuleAction,
-  SubgraphModuleDocument,
   SubgraphModuleGlobalState,
   SubgraphModuleLocalState,
   SubgraphModulePHState,
+  SubgraphModuleAction,
+  SubgraphModuleDocument,
 };

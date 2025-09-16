@@ -1,9 +1,12 @@
 import { createAction } from "document-model";
-import type { SetSubgraphNameInput, SetSubgraphStatusInput } from "../types.js";
-import { z } from "../types.js";
-import type {
-  SetSubgraphNameAction,
-  SetSubgraphStatusAction,
+import {
+  z,
+  type SetSubgraphNameInput,
+  type SetSubgraphStatusInput,
+} from "../types.js";
+import {
+  type SetSubgraphNameAction,
+  type SetSubgraphStatusAction,
 } from "./actions.js";
 
 export const setSubgraphName = (input: SetSubgraphNameInput) =>

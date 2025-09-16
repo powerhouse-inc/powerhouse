@@ -1,7 +1,11 @@
 // TODO: remove eslint-disable rules once refactor is done
-
-import type { StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model";
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import {
+  type StateReducer,
+  isDocumentAction,
+  createReducer,
+} from "document-model";
 import type { DocumentEditorPHState } from "./types.js";
 import { z } from "./types.js";
 
