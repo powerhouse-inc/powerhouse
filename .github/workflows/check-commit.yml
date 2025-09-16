@@ -49,9 +49,6 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Generate document drive prisma
-        run: pnpm generate-document-drive-prisma
-
       - name: Build typescript project
         run: pnpm tsc
 
