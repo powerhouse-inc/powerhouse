@@ -1,3 +1,18 @@
+## 4.1.0-dev.55 (2025-09-16)
+
+### 🚀 Features
+
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### 🩹 Fixes
+
+- add default, passthrough signer ([d9e2c4f1d](https://github.com/powerhouse-inc/powerhouse/commit/d9e2c4f1d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.54 (2025-09-16)
 
 ### 🚀 Features
