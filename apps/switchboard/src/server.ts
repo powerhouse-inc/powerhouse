@@ -29,6 +29,7 @@ import express from "express";
 import path from "path";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
+import { initFeatureFlags, isReactorv2Enabled } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive } from "./utils.js";
@@ -135,6 +136,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     configFile:
       options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
     mcp: options.mcp ?? true,
+    subgraphs: options.subgraphs,
   });
 
   // add vite middleware after express app is initialized if applicable
@@ -184,6 +186,14 @@ export const startSwitchboard = async (
   options: StartServerOptions = {},
 ): Promise<SwitchboardReactor> => {
   const serverPort = options.port ?? DEFAULT_PORT;
+
+  // Initialize feature flags
+  await initFeatureFlags();
+
+  const enabled = await isReactorv2Enabled();
+  options.subgraphs = {
+    isReactorv2Enabled: enabled,
+  };
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     try {
