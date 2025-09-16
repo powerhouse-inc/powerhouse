@@ -5,6 +5,14 @@ import fs from "fs";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import path from "path";
+import {
+  fromInputMaybe,
+  toDocumentModelResultPage,
+  toGqlJobInfo,
+  toGqlPhDocument,
+  toMutableArray,
+  toPhDocumentResultPage,
+} from "./adapters.js";
 import { type Resolvers } from "./gen/graphql.js";
 
 export class ReactorSubgraph extends Subgraph {
@@ -27,40 +35,147 @@ export class ReactorSubgraph extends Subgraph {
 
   resolvers: Resolvers = {
     Query: {
-      documentModels: (_parent, args) => {
+      documentModels: async (_parent, args) => {
         this.logger.debug("documentModels", args);
-        // TODO: Implement using IReactorClient.getDocumentModels
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.getDocumentModels(
+            fromInputMaybe(args.namespace),
+            args.paging && (args.paging.cursor || args.paging.limit)
+              ? {
+                  cursor: fromInputMaybe(args.paging.cursor) || "",
+                  limit: fromInputMaybe(args.paging.limit) || 10,
+                }
+              : undefined,
+          );
+          return toDocumentModelResultPage(result);
+        } catch (error) {
+          this.logger.error("Error fetching document models:", error);
+          throw new GraphQLError(
+            `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
 
-      document: (_parent, args) => {
+      document: async (_parent, args) => {
         this.logger.debug("document", args);
-        // TODO: Implement using IReactorClient.get
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.get(
+            args.identifier,
+            args.view
+              ? {
+                  branch: fromInputMaybe(args.view.branch),
+                  scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+                }
+              : undefined,
+          );
+          return {
+            document: toGqlPhDocument(result.document),
+            childIds: result.childIds,
+          };
+        } catch (error) {
+          this.logger.error("Error fetching document:", error);
+          throw new GraphQLError(
+            `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
 
-      documentChildren: (_parent, args) => {
+      documentChildren: async (_parent, args) => {
         this.logger.debug("documentChildren", args);
-        // TODO: Implement using IReactorClient.getChildren
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.getChildren(
+            args.parentIdentifier,
+            args.view
+              ? {
+                  branch: fromInputMaybe(args.view.branch),
+                  scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+                }
+              : undefined,
+            args.paging && (args.paging.cursor || args.paging.limit)
+              ? {
+                  cursor: fromInputMaybe(args.paging.cursor) || "",
+                  limit: fromInputMaybe(args.paging.limit) || 10,
+                }
+              : undefined,
+          );
+          return toPhDocumentResultPage(result);
+        } catch (error) {
+          this.logger.error("Error fetching document children:", error);
+          throw new GraphQLError(
+            `Failed to fetch document children: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
 
-      documentParents: (_parent, args) => {
+      documentParents: async (_parent, args) => {
         this.logger.debug("documentParents", args);
-        // TODO: Implement using IReactorClient.getParents
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.getParents(
+            args.childIdentifier,
+            args.view
+              ? {
+                  branch: fromInputMaybe(args.view.branch),
+                  scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+                }
+              : undefined,
+            args.paging && (args.paging.cursor || args.paging.limit)
+              ? {
+                  cursor: fromInputMaybe(args.paging.cursor) || "",
+                  limit: fromInputMaybe(args.paging.limit) || 10,
+                }
+              : undefined,
+          );
+          return toPhDocumentResultPage(result);
+        } catch (error) {
+          this.logger.error("Error fetching document parents:", error);
+          throw new GraphQLError(
+            `Failed to fetch document parents: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
 
-      findDocuments: (_parent, args) => {
+      findDocuments: async (_parent, args) => {
         this.logger.debug("findDocuments", args);
-        // TODO: Implement using IReactorClient.find
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.find(
+            {
+              type: fromInputMaybe(args.search.type),
+              parentId: fromInputMaybe(args.search.parentId),
+              // Note: ids and slugs might not be in the GraphQL schema yet
+            },
+            args.view
+              ? {
+                  branch: fromInputMaybe(args.view.branch),
+                  scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+                }
+              : undefined,
+            args.paging && (args.paging.cursor || args.paging.limit)
+              ? {
+                  cursor: fromInputMaybe(args.paging.cursor) || "",
+                  limit: fromInputMaybe(args.paging.limit) || 10,
+                }
+              : undefined,
+          );
+          return toPhDocumentResultPage(result);
+        } catch (error) {
+          this.logger.error("Error finding documents:", error);
+          throw new GraphQLError(
+            `Failed to find documents: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
 
-      jobStatus: (_parent, args) => {
+      jobStatus: async (_parent, args) => {
         this.logger.debug("jobStatus", args);
-        // TODO: Implement using IReactorClient.getJobStatus
-        throw new GraphQLError("Not implemented yet");
+        try {
+          const result = await this.reactorClient.getJobStatus(args.jobId);
+          return toGqlJobInfo(result);
+        } catch (error) {
+          this.logger.error("Error fetching job status:", error);
+          throw new GraphQLError(
+            `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
       },
     },
 
@@ -149,7 +264,9 @@ export class ReactorSubgraph extends Subgraph {
 
   onSetup(): Promise<void> {
     this.logger.info("Setting up ReactorSubgraph");
-    // TODO: Initialize IReactorClient when available
+    this.logger.info(
+      `ReactorClient is ${this.reactorClient ? "available" : "not available"}`,
+    );
     return Promise.resolve();
   }
 }
