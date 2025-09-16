@@ -7,7 +7,7 @@ import {
   copyConnect,
   makeImportScriptFromPackages,
   prependToHtmlHead,
-  resolveConnect,
+  resolveConnectBundle,
   runTsc,
 } from "../connect-utils/helpers.js";
 import {
@@ -38,7 +38,7 @@ export async function buildConnect(options: ConnectBuildOptions) {
     assetsDirName = DEFAULT_ASSETS_DIR_NAME,
     externalPackagesFileName = DEFAULT_EXTERNAL_PACKAGES_FILE_NAME,
     stylesFileName = DEFAULT_STYLES_FILE_NAME,
-    connectPath = resolveConnect(),
+    connectPath = resolveConnectBundle(),
   } = options;
 
   // In this context, `project*` paths are relative to the project root
