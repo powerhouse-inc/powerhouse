@@ -69,7 +69,7 @@ jobs:
         run: pnpm build:vite
 
       - name: Run storybook build scripts
-        run: pnpm storybook:all
+        run: pnpm build:storybook
 
-      - name: Run tests
-        run: pnpm test:all:ci
+      - name: Run CI tests (excludes document-drive)
+        run: pnpm test:ci

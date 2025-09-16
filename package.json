@@ -3,20 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prepare": "husky",
+    "check": "pnpm tsc && pnpm lint",
+    "build": "pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm build:storybook",
+    "test": "pnpm -r --no-bail test",
+    "test:ci": "pnpm --filter !document-drive -r --no-bail test",
+    "simulate-ci-workflow": "pnpm clean && pnpm i --frozen-lockfile && pnpm check && pnpm build && pnpm test:ci",
     "tsc": "tsc --build",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "build:misc": "pnpm --filter !academy -r --no-bail build",
     "build:css": "pnpm -r --no-bail build:css",
     "build:vite": "pnpm -r --no-bail build:vite",
-    "build:all": "pnpm build:misc && pnpm build:css && pnpm build:vite",
-    "test:all": "pnpm -r --no-bail test",
-    "test:all:ci": "pnpm --filter !document-drive -r --no-bail test",
-    "storybook:all": "pnpm -r --no-bail run build-storybook",
-    "check:all": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm storybook:all && pnpm test:all",
-    "check:all:ci": "pnpm tsc && pnpm lint && pnpm build:misc && pnpm build:css && pnpm build:vite && pnpm test:all:ci && pnpm storybook:all",
+    "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
-    "simulate-check-all-ci": "pnpm clean && pnpm i --frozen-lockfile && pnpm check:all:ci"
+    "prepare": "husky"
+
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^3.2.5",
