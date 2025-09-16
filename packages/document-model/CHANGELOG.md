@@ -1,3 +1,13 @@
+## 4.1.0-dev.54 (2025-09-16)
+
+### 🚀 Features
+
+- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.53 (2025-09-13)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

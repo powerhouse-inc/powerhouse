@@ -1,3 +1,21 @@
+## 4.1.0-dev.54 (2025-09-16)
+
+### 🚀 Features
+
+- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
+- updating docs with error handler ([4e28b0573](https://github.com/powerhouse-inc/powerhouse/commit/4e28b0573))
+- subscriptions now have guaranteed delivery and output errors through a centralized error handler ([d9b0c4326](https://github.com/powerhouse-inc/powerhouse/commit/d9b0c4326))
+- naive implementation of subscriptions ([5ae6dd83c](https://github.com/powerhouse-inc/powerhouse/commit/5ae6dd83c))
+- reactor client builder ([d93875bcd](https://github.com/powerhouse-inc/powerhouse/commit/d93875bcd))
+
+### 🩹 Fixes
+
+- linter feedback ([5219f6322](https://github.com/powerhouse-inc/powerhouse/commit/5219f6322))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.53 (2025-09-13)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
