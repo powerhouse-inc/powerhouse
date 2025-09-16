@@ -35,6 +35,7 @@ import https from "node:https";
 import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
+import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import type { API, Processor } from "./types.js";
@@ -66,6 +67,9 @@ type Options = {
   processors?: Record<string, Processor>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
+  subgraphs?: {
+    isReactorv2Enabled?: boolean;
+  };
 };
 
 const DEFAULT_PORT = 4000;
@@ -405,6 +409,11 @@ export async function startAPI(
   });
 
   // set up subgraph manager
+
+  const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
+  if (options.subgraphs?.isReactorv2Enabled) {
+    coreSubgraphs.push(ReactorSubgraph);
+  }
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
@@ -413,7 +422,7 @@ export async function startAPI(
     analyticsStore,
     {
       extended: subgraphs,
-      core: DefaultCoreSubgraphs.slice(),
+      core: coreSubgraphs,
     },
     {
       enabled: authEnabled,
