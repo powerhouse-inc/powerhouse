@@ -1,4 +1,4 @@
-import { Icon } from "#powerhouse";
+import { Icon } from "@powerhousedao/design-system";
 import { type ComponentPropsWithoutRef, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 

@@ -1,9 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
-import { getConfig } from "@powerhousedao/config/utils";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
 import { getConfig } from "@powerhousedao/config/node";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import {

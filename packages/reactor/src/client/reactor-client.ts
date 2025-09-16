@@ -1,15 +1,11 @@
-<<<<<<< HEAD:packages/reactor/src/reactor-client.ts
 import type {
   Action,
   DocumentModelGlobalState,
   PHDocument,
   Signature,
 } from "document-model";
-
-import type { IReactorClient } from "./interfaces/reactor-client.js";
-import type { IReactor } from "./interfaces/reactor.js";
-import type { IJobAwaiter } from "./shared/awaiter.js";
-import { JobAwaiter } from "./shared/awaiter.js";
+import type { IReactor } from "../core/types.js";
+import type { IJobAwaiter } from "../shared/awaiter.js";
 import type {
   JobInfo,
   PagedResults,
@@ -17,7 +13,8 @@ import type {
   PropagationMode,
   SearchFilter,
   ViewFilter,
-} from "./shared/types.js";
+} from "../shared/types.js";
+import type { IReactorClient } from "./types.js";
 
 /**
  * Interface for signing actions before submission to the reactor.
@@ -64,24 +61,6 @@ export type DocumentChangeEvent = {
     childId?: string;
   };
 };
-=======
-import type { Action, DocumentModelState, PHDocument } from "document-model";
-
-import type { IReactor } from "../core/types.js";
-import { type IJobAwaiter } from "../shared/awaiter.js";
-import {
-  type JobInfo,
-  type PagedResults,
-  type PagingOptions,
-  type PropagationMode,
-  type SearchFilter,
-  type ViewFilter,
-} from "../shared/types.js";
-import type { ISigner } from "../signer/types.js";
-import type { IReactorSubscriptionManager } from "../subs/types.js";
-import type { DocumentChangeEvent, IReactorClient } from "./types.js";
->>>>>>> main:packages/reactor/src/client/reactor-client.ts
-
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
  * a simpler interface for document operations.

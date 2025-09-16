@@ -11,7 +11,9 @@ import {
   type SetDragAndDropEnabledInput,
 } from "../../document-models/app-module/index.js";
 
-export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {

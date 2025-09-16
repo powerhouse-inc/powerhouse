@@ -31,16 +31,11 @@ import {
   generateId,
   replayDocument,
 } from "document-model";
-import {
-  queueActions,
-  queueOperations,
-  uploadOperations,
-} from "../actions/queue.js";
+
 import type {
   DocumentTypeIcon,
   FileUploadProgressCallback,
 } from "../types/upload.js";
-import { getUserPermissions } from "../utils/user.js";
 
 function getDocumentTypeIcon(
   document: PHDocument,

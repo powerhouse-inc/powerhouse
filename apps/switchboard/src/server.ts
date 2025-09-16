@@ -5,7 +5,6 @@ import {
   Reactor,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
-import { startAPI } from "@powerhousedao/reactor-api";
 import {
   VitePackageLoader,
   startAPI,
@@ -22,7 +21,7 @@ import {
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
-import type { IDocumentStorage } from "document-drive/storage/types";
+import type { IDocumentStorage } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";

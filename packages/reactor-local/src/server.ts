@@ -5,17 +5,17 @@ import {
   Reactor,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
-import { startAPI } from "@powerhousedao/reactor-api";
 import {
   VitePackageLoader,
+  startAPI,
   startViteServer,
-} from "@powerhousedao/reactor-api/packages/vite-loader";
+} from "@powerhousedao/reactor-api";
 import type {
   BaseDocumentDriveServer,
   DefaultRemoteDriveInput,
+  IDocumentStorage,
 } from "document-drive";
 import { InMemoryCache, ReactorBuilder, logger } from "document-drive";
-import type { IDocumentStorage } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
 import type {
