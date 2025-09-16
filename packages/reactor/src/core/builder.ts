@@ -1,5 +1,6 @@
 import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
+import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type { ISigner } from "../signer/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -43,7 +44,7 @@ export class ReactorClientBuilder {
     }
 
     if (!this.signer) {
-      throw new Error("Signer is required to build ReactorClient");
+      this.signer = new PassthroughSigner();
     }
 
     // Use default SubscriptionManager with default error handler if not provided
