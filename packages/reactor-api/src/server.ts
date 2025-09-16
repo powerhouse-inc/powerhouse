@@ -63,6 +63,7 @@ type Options = {
   packageLoader?: IPackageLoader;
   processors?: Record<string, Processor>;
   mcp?: boolean;
+  processorConfig?: Map<string, unknown>;
 };
 
 const DEFAULT_PORT = 4000;
@@ -352,6 +353,7 @@ export async function startAPI(
           // eslint-disable-next-line
           analyticsStore: module.analyticsStore,
           relationalDb: module.relationalDb,
+          config: options.processorConfig,
         });
       } catch (e) {
         logger.error(

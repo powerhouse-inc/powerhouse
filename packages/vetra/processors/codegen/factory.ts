@@ -1,3 +1,7 @@
+import {
+  VETRA_PROCESSOR_CONFIG_KEY,
+  type VetraProcessorConfigType,
+} from "@powerhousedao/config/powerhouse";
 import type {
   IProcessorHostModule,
   ProcessorRecord,
@@ -9,11 +13,18 @@ export const codegenProcessorFactory =
   (module: IProcessorHostModule) =>
   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     // Create the processor
-    if (driveHeader.slug !== "vetra") {
+    const processorsConfig = module.config ?? new Map<string, unknown>();
+    const vetraConfig = processorsConfig.get(VETRA_PROCESSOR_CONFIG_KEY) as
+      | VetraProcessorConfigType
+      | undefined;
+
+    const vetraDriveId = vetraConfig?.driveId ?? "vetra";
+
+    if (driveHeader.id !== vetraDriveId) {
       return [];
     }
 
-    const processor = new CodegenProcessor();
+    const processor = new CodegenProcessor(vetraConfig?.interactive);
     return [
       {
         processor,

@@ -68,7 +68,10 @@ export type PowerhouseConfig = {
     openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
-  vetraUrl?: string;
+  vetra?: {
+    driveId: string;
+    driveUrl: string;
+  };
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
@@ -128,3 +131,11 @@ export type PartialPowerhouseManifest = Partial<
 > & {
   publisher?: Partial<Publisher>;
 };
+
+export type VetraProcessorConfigType = {
+  interactive?: boolean;
+  driveUrl: string;
+  driveId: string;
+};
+
+export const VETRA_PROCESSOR_CONFIG_KEY = "VetraConfig";

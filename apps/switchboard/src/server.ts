@@ -111,6 +111,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     https: options.https,
     packageLoader,
     packages: packages,
+    processorConfig: options.processorConfig,
     configFile:
       options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
     mcp: options.mcp ?? true,
