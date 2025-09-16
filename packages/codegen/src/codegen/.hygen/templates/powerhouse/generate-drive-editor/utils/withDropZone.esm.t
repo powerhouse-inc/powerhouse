@@ -30,7 +30,7 @@ export function withDropZone<T extends DriveEditorProps>(
           onAddFile={onAddFile}
           setSelectedNode={setSelectedNode}
           driveId={props.document.header.id}
-          useLocalStorage={false}
+          useLocalStorage={true}
           style={{ height: "100%" }}
         >
           <WrappedComponent {...props} />
