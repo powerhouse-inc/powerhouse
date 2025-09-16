@@ -1,4 +1,3 @@
-import { isDocumentTypeSupported } from "@powerhousedao/config/powerhouse";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
@@ -35,6 +34,7 @@ import type {
   DocumentTypeIcon,
   FileUploadProgressCallback,
 } from "../types/upload.js";
+import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 
 function getDocumentTypeIcon(

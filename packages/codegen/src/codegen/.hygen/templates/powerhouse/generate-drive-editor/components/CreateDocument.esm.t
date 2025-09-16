@@ -2,13 +2,13 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
 unless_exists: true
 ---
-import { isDocumentTypeSupported } from "@powerhousedao/config/powerhouse";
 import { Button } from "@powerhousedao/design-system";
 import {
   addDocument,
   useDocumentModelModules,
   useSelectedDriveId,
   useSelectedFolder,
+  isDocumentTypeSupported,
   type VetraDocumentModelModule,
 } from "@powerhousedao/reactor-browser";
 
