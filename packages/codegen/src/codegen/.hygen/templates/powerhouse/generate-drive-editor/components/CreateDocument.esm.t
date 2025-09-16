@@ -2,6 +2,8 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
 unless_exists: true
 ---
+import { isDocumentTypeSupported } from "@powerhousedao/config/powerhouse";
+import { Button } from "@powerhousedao/design-system";
 import {
   addDocument,
   useDocumentModelModules,
@@ -9,16 +11,25 @@ import {
   useSelectedFolder,
   type VetraDocumentModelModule,
 } from "@powerhousedao/reactor-browser";
-import { Button } from "@powerhousedao/design-system";
+
+interface CreateDocumentProps {
+  documentTypes?: string[];
+}
 
 /**
  * Document creation UI component.
  * Displays available document types as clickable buttons.
  */
-export const CreateDocument = () => {
+export const CreateDocument = (props: CreateDocumentProps) => {
+  const { documentTypes = [] } = props;
+
   const selectedDriveId = useSelectedDriveId();
   const selectedFolder = useSelectedFolder();
   const documentModelModules = useDocumentModelModules();
+
+  const filteredDocumentModelModules = documentModelModules?.filter((module) =>
+    isDocumentTypeSupported(module.documentModel.id, documentTypes),
+  );
 
   async function handleAddDocument(module: VetraDocumentModelModule) {
     if (!selectedDriveId) {
@@ -40,7 +51,7 @@ export const CreateDocument = () => {
       </h3>
       {/* Customize layout by changing flex-wrap, gap, or grid layout */}
       <div className="flex w-full flex-wrap gap-4">
-        {documentModelModules?.map((documentModelModule) => {
+        {filteredDocumentModelModules?.map((documentModelModule) => {
           return (
             <Button
               key={documentModelModule.documentModel.id}
