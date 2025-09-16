@@ -28,10 +28,14 @@ import { withDropZone } from "./utils/withDropZone.js";
  * Customize document opening behavior and drive-level actions here.
  */
 export function BaseEditor(props: DriveEditorProps) {
-  const { context, document } = props;
+  const { context, document, editorConfig } = props;
   return (
     <div className="new-drive-explorer" style={{ height: "100%" }}>
-      <DriveExplorer document={document} context={context} />
+      <DriveExplorer
+        document={document}
+        context={context}
+        editorConfig={editorConfig}
+      />
     </div>
   );
 }
