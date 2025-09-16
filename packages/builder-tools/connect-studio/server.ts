@@ -12,7 +12,7 @@ import {
   backupIndexHtml,
   copyConnect,
   ensureNodeVersion,
-  resolveConnect,
+  resolveConnectBundle,
   runShellScriptPlugin,
 } from "../connect-utils/helpers.js";
 import {
@@ -76,7 +76,7 @@ export async function startServer(
   // exits if node version is not compatible
   ensureNodeVersion();
 
-  const connectPath = options.connectPath ?? resolveConnect();
+  const connectPath = options.connectPath ?? resolveConnectBundle();
   const projectRoot = process.cwd();
   const studioPath = join(projectRoot, ".ph", "connect-studio");
 
