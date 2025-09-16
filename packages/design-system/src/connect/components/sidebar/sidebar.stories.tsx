@@ -1,4 +1,3 @@
-import connectLogo from "@powerhousedao/connect/connect.png";
 import { WagmiContext } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
@@ -31,11 +30,7 @@ const Wrapper = (args: Args) => {
           {...args}
           headerContent={
             <div className="flex h-full items-center">
-              <img
-                alt="Connect logo"
-                className="h-5 object-contain"
-                src={connectLogo}
-              />
+              <img alt="Connect logo" className="h-5 object-contain" src={""} />
             </div>
           }
         >

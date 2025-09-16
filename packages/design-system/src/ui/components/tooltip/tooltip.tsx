@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@powerhousedao/design-system";
 import type {
   TooltipContentProps,
