@@ -39,6 +39,7 @@ export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
+  config?: Map<string, unknown>;
 }
 
 /**

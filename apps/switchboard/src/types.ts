@@ -28,6 +28,7 @@ export type StartServerOptions = {
     admins: string[];
   };
   mcp?: boolean;
+  processorConfig?: Map<string, unknown>;
 };
 
 export type SwitchboardReactor = {
