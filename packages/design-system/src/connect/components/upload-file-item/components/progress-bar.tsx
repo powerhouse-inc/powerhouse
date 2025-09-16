@@ -1,11 +1,11 @@
-import { type UploadFileItemStatus } from "../upload-file-item.js";
+import type { UploadFileItemStatus } from "@powerhousedao/design-system";
 
 type ProgressBarProps = {
   readonly status: UploadFileItemStatus;
   readonly progress?: number;
 };
 
-export function ProgressBar(props: ProgressBarProps) {
+export function UploadFileItemProgressBar(props: ProgressBarProps) {
   const { status, progress = 0 } = props;
 
   if (status !== "uploading") return null;

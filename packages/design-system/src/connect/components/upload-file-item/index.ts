@@ -1,5 +1,2 @@
-export {
-  UploadFileItem,
-  type UploadFileItemProps,
-  type UploadFileItemStatus,
-} from "./upload-file-item.js";
+export * from "./components/index.js";
+export * from "./upload-file-item.js";
