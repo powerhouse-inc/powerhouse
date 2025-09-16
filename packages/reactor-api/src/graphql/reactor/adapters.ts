@@ -59,7 +59,7 @@ export function toPhDocumentResultPage(
   result: PagedResults<PHDocument>,
 ): PhDocumentResultPage {
   return {
-    cursor: result.options.cursor || null,
+    cursor: result.options.cursor,
     hasNextPage: false,
     hasPreviousPage: false,
     items: result.results.map(toGqlPhDocument),
@@ -97,10 +97,11 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
   return {
     id: job.id,
     status: job.status,
-    createdAt: new Date().toISOString(),
-    completedAt: null,
-    error: job.error || null,
-    result: null,
+    createdAt: job.createdAtUtcIso,
+    completedAt: job.completedAtUtcIso,
+    error: job.error,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    result: job.result,
   };
 }
 
