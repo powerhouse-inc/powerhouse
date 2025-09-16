@@ -7,9 +7,8 @@ import type {
   DriveEditorProps,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
-import { setSelectedNode } from "@powerhousedao/reactor-browser";
+import { setSelectedNode, useOnDropFile } from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
-import { useOnDropFile } from "../hooks/useOnDropFile.js";
 
 export function withDropZone<T extends DriveEditorProps>(
   WrappedComponent: ComponentType<T>,

@@ -1,16 +1,18 @@
----
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/hooks/useOnDropFile.ts"
-unless_exists: true
----
-import {
-  addFileWithProgress,
-  useSelectedDrive,
-  useSelectedFolder,
-  type FileUploadProgressCallback,
-} from "@powerhousedao/reactor-browser";
+import type { FileNode } from "document-drive";
 import { useCallback } from "react";
+import { addFileWithProgress } from "../actions/document.js";
+import type { FileUploadProgressCallback } from "../types/upload.js";
+import { useSelectedDrive } from "./drives.js";
+import { useSelectedFolder } from "./nodes.js";
 
-export const useOnDropFile = (documentTypes: string[] = []) => {
+type UseOnDropFile = (
+  documentTypes?: string[],
+) => (
+  file: File,
+  onProgress?: FileUploadProgressCallback,
+) => Promise<FileNode | undefined>;
+
+export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
   const [selectedDrive] = useSelectedDrive();
   const selectedDriveId = selectedDrive?.header.id;
   const selectedFolder = useSelectedFolder();
