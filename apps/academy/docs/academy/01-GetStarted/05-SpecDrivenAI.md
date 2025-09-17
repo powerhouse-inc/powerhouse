@@ -1,4 +1,4 @@
-# Spec-Driven AI
+# Vetra Studio: Specification Driven AI 
 
 This chapter introduces you to one of the most powerfull features of the Powerhouse development framework: Specification Driven AI-control.  In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
 
@@ -20,7 +20,10 @@ It results in composable, maintainable, and scalable functionality.
 
 ## Introducing Vetra Studio
 
-*Vetra Studio* functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different *modules* that together form a package a specification document can be created in *Vetra Studio*. 
+**Vetra Studio** serves as a centralized hub for developers to access and manage specifications. 
+It allows developers to open packages (Git repositories with metadata) from a Vetra package library, providing access to a remote Vetra drive where all specifications are stored. 
+
+This setup ensures that all necessary documentation and project requirements are in one accessible location, streamlining communication and agreement on requirements and operations. Additionally, **Vetra Studio** functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a specification document can be created in **Vetra Studio**. 
 
 As Vetra Studio matures each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. These modules are divided in 3 categories. 
 
