@@ -21,28 +21,17 @@ async function globalTeardown() {
   const indexFile = path.join(connectE2ERoot, "index.ts");
 
   try {
-    // Update index.ts to use empty objects instead of imports
-    if (fs.existsSync(indexFile)) {
-      let indexContent = fs.readFileSync(indexFile, "utf8");
-
-      // Replace imports with empty object constants
-      indexContent = indexContent.replace(
-        /import \* as documentModelsExports from "\.\/document-models\/index\.js";/,
-        "const documentModelsExports = {};",
-      );
-      indexContent = indexContent.replace(
-        /import \* as editorsExports from "\.\/editors\/index\.js";/,
-        "const editorsExports = {};",
-      );
-
-      fs.writeFileSync(indexFile, indexContent, "utf8");
-      console.log("✅ Updated index.ts to use empty objects");
-    }
-
     // Clean up document-models folder
     if (fs.existsSync(documentModelsDir)) {
       fs.rmSync(documentModelsDir, { recursive: true, force: true });
       console.log("✅ Cleaned up document-models folder");
+
+      // rebuild empty document-models
+      fs.mkdirSync(documentModelsDir);
+      fs.writeFileSync(
+        path.join(documentModelsDir, "index.ts"),
+        "export {};\n",
+      );
     }
 
     // Clean up subgraphs folder
@@ -61,6 +50,10 @@ async function globalTeardown() {
     if (fs.existsSync(editorsDir)) {
       fs.rmSync(editorsDir, { recursive: true, force: true });
       console.log("✅ Cleaned up editors folder");
+
+      // rebuild empty editors
+      fs.mkdirSync(editorsDir);
+      fs.writeFileSync(path.join(editorsDir, "index.ts"), "export {};\n");
     }
 
     console.log("🎯 Global teardown completed successfully!");

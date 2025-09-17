@@ -42,12 +42,20 @@ jobs:
         run: pnpm install
         shell: bash
 
-      - name: Build packages and studio
-        run: npx nx run @powerhousedao/ph-cli:build
-        shell: bash
+      - name: Build typescript project
+        run: pnpm tsc
 
       - name: Re-Install packages
         run: pnpm install
+      
+       - name: Run misc build scripts
+        run: pnpm build:misc
+
+      - name: Run css build scripts
+        run: pnpm build:css
+
+      - name: Run vite build scripts
+        run: pnpm build:vite
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
