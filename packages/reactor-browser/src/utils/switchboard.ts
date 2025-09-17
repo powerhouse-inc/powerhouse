@@ -67,12 +67,20 @@ export function buildDocumentSubgraphQuery(
   const driveSlug = getSlugFromDriveUrl(driveUrl);
   const query = getDocumentGraphqlQuery();
   const variables = { documentId, driveId: driveSlug };
-  return lzString.compressToEncodedURIComponent(
-    JSON.stringify({
-      document: query.trim(),
-      variables: JSON.stringify(variables, null, 2),
-    }),
-  );
+  const headers = authToken
+    ? {
+        Authorization: `Bearer ${authToken}`,
+      }
+    : undefined;
+
+  const payload: Record<string, string> = {
+    document: query.trim(),
+    variables: JSON.stringify(variables, null, 2),
+  };
+  if (headers) {
+    payload.headers = JSON.stringify(headers);
+  }
+  return lzString.compressToEncodedURIComponent(JSON.stringify(payload));
 }
 
 export function buildDocumentSubgraphUrl(
