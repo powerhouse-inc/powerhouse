@@ -1,3 +1,13 @@
+## 5.0.0-staging.12 (2025-09-17)
+
+### 🩹 Fixes
+
+- **vetra:** activate codegen processor on either driveId or drive slug ([f4600228a](https://github.com/powerhouse-inc/powerhouse/commit/f4600228a))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.11 (2025-09-17)
 
 ### 🚀 Features
