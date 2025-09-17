@@ -9,6 +9,7 @@ import {
 import type { Context, SubgraphArgs } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
 import { BaseSubgraph } from "./base-subgraph.js";
+
 export class AnalyticsSubgraph extends BaseSubgraph {
   analyticsStore: IAnalyticsStore;
   analyticsModel: AnalyticsModel;

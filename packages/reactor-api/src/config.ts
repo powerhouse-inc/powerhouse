@@ -1,4 +1,4 @@
-import { AnalyticsSubgraph } from "./graphql/analytics/index.js";
+import { AnalyticsSubgraph } from "./graphql/analytics-subgraph.js";
 import { SystemSubgraph } from "./graphql/system/index.js";
 
 export const config = {

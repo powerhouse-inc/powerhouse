@@ -1,18 +1,15 @@
-import { DefaultCoreSubgraphs, config } from "#config.js";
-import { GraphQLManager } from "#graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "#graphql/playground.js";
-import { ImportPackageLoader } from "#packages/import-loader.js";
-import {
-  PackageManager,
-  getUniqueDocumentModels,
-} from "#packages/package-manager.js";
-import type { IPackageLoader } from "#packages/types.js";
 import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import {
+  getUniqueDocumentModels,
+  GraphQLManager,
+  PackageManager,
+  renderGraphqlPlayground,
+  type SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
@@ -24,9 +21,9 @@ import type {
   ProcessorFactory,
 } from "document-drive";
 import {
-  ProcessorManager,
   childLogger,
   createRelationalDb,
+  ProcessorManager,
 } from "document-drive";
 import type { Express } from "express";
 import express from "express";
@@ -35,10 +32,12 @@ import https from "node:https";
 import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
+import { config, DefaultCoreSubgraphs } from "./config.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
+import { ImportPackageLoader } from "./packages/import-loader.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
-import type { API, Processor } from "./types.js";
+import type { API, IPackageLoader, Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
