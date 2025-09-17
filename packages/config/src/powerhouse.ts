@@ -68,10 +68,7 @@ export type PowerhouseConfig = {
     openBrowser?: boolean;
   };
   packages?: PowerhousePackage[];
-  vetra?: {
-    driveId: string;
-    driveUrl: string;
-  };
+  vetraUrl?: string;
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";

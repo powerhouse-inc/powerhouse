@@ -34,6 +34,9 @@ export type DevOptions = {
   interactive?: boolean;
 };
 
+const getDriveId = (driveUrl: string | undefined): string =>
+  driveUrl?.split("/").pop() ?? VETRA_DRIVE_ID;
+
 async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
     verbose?: boolean;
@@ -72,7 +75,7 @@ async function startLocalVetraSwitchboard(
     const vetraProcessorConfig: VetraProcessorConfigType = {
       interactive: options?.interactiveCodegen,
       driveUrl: remoteDrive ?? getDefaultVetraUrl(port),
-      driveId: remoteDriveId ?? VETRA_DRIVE_ID,
+      driveId: getDriveId(remoteDrive),
     };
 
     const processorConfig = new Map<string, unknown>();
@@ -204,9 +207,9 @@ export async function startVetra({
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
-    const configVetraUrl = baseConfig.vetra?.driveUrl;
+    const configVetraUrl = baseConfig.vetraUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
-    const resolvedVetraId = baseConfig.vetra?.driveId ?? VETRA_DRIVE_ID;
+    const resolvedVetraId = getDriveId(configVetraUrl);
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
