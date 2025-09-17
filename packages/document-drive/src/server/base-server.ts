@@ -614,9 +614,9 @@ export class BaseDocumentDriveServer
     // Create document with custom global and local state
     const document = driveCreateDocument({
       global: {
-        ...input.global,
         nodes: [],
         icon: null,
+        ...input.global,
       },
       local: {
         availableOffline: input.local?.availableOffline ?? false,
