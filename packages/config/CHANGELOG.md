@@ -1,3 +1,18 @@
+## 5.0.0-staging.11 (2025-09-17)
+
+### 🚀 Features
+
+- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
+
+### 🩹 Fixes
+
+- **config:** set back config field to vetraUrl to avoid breaking change ([487b996a6](https://github.com/powerhouse-inc/powerhouse/commit/487b996a6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.10 (2025-09-11)
 
 ### 🚀 Features

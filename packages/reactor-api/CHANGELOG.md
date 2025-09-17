@@ -1,3 +1,13 @@
+## 5.0.0-staging.11 (2025-09-17)
+
+### 🚀 Features
+
+- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.10 (2025-09-11)
 
 ### 🚀 Features
