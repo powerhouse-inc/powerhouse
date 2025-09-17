@@ -22,7 +22,7 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
-    "test": "vitest run"
+    "test": "npm run copy-hygen && vitest run"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
