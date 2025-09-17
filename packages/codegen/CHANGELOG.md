@@ -1,3 +1,13 @@
+## 4.1.0-dev.56 (2025-09-17)
+
+### 🚀 Features
+
+- **codegen:** enable localStorage by default in withDropZone hoc ([9b105aae7](https://github.com/powerhouse-inc/powerhouse/commit/9b105aae7))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features

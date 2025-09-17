@@ -1,3 +1,13 @@
+## 4.1.0-dev.56 (2025-09-17)
+
+### 🩹 Fixes
+
+- updating jobinfo type with created, complete, and result ([ebb139d1a](https://github.com/powerhouse-inc/powerhouse/commit/ebb139d1a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features

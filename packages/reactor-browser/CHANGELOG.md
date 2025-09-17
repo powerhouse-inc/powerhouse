@@ -1,3 +1,13 @@
+## 4.1.0-dev.56 (2025-09-17)
+
+### 🩹 Fixes
+
+- auto-lint fixes ([960719d58](https://github.com/powerhouse-inc/powerhouse/commit/960719d58))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features
