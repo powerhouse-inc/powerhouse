@@ -40,7 +40,8 @@ export const getDocumentModelTypeDefs = (
             documentType: String!
             revision: Int!
             created: DateTime!
-            lastModified: DateTime!
+            createdAtUtcIso: DateTime!
+            lastModifiedAtUtcIso: DateTime!
             ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
         }\n`;
   });
@@ -53,8 +54,8 @@ export const getDocumentModelTypeDefs = (
         documentType: String!
         revision: Int!
         created: DateTime!
-        lastModified: DateTime!
-        
+        createdAtUtcIso: DateTime!
+        lastModifiedAtUtcIso: DateTime!
     }
     ${dmSchema}
 

@@ -256,17 +256,15 @@ export class GraphQLManager {
   ) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
-        const subgraphConfig = this.#getLocalSubgraphConfig(
-          subgraph.name,
-          subgraphsMap,
-        );
-        if (!subgraphConfig) continue;
+        this.logger.info(`Setting up subgraph ${subgraph.name}`);
+
         // create subgraph schema
         const schema = createSchema(
           this.reactor,
-          subgraphConfig.resolvers,
-          subgraphConfig.typeDefs,
+          subgraph.resolvers,
+          subgraph.typeDefs,
         );
+
         // create and start apollo server
         const server = this.#createApolloServer(schema);
         await server.start();
@@ -375,16 +373,5 @@ export class GraphQLManager {
         }),
       }),
     );
-  }
-
-  #getLocalSubgraphConfig(
-    subgraphName: string,
-    subgraphsMap: Map<string, BaseSubgraph[]>,
-  ): BaseSubgraph | undefined {
-    for (const [_, subgraphs] of subgraphsMap) {
-      const entry = subgraphs.find((it) => it.name === subgraphName);
-      if (entry) return entry;
-    }
-    return undefined;
   }
 }
