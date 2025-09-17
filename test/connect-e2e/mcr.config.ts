@@ -34,10 +34,6 @@ const coverageOptions: CoverageReportOptions = {
     "packages/document-model/dist/src/document-model/custom/reducers/header.js":
       "packages/document-model/src/document-model/custom/reducers/header.ts",
   },
-  sourceMapResolver(url, defaultResolver) {
-    console.log(url);
-    return defaultResolver(url);
-  },
   // sourcePath: (filePath, info) => {
   //   let srcFilePath = "";
   //   if (filePath.includes("monorepo")) {
