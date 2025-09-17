@@ -1,23 +1,29 @@
-# Spec-Driven AI
+# Vetra Studio: Specification Driven AI 
 
-This chapter introduces you to one of the most powerfull features of the Powerhouse development framework. 
-In this *Get Started'* chapter we've been making use of strict schema definition principles to communicate the intended use case. This shared language is not only a language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent. 
+This chapter introduces you to one of the most powerfull features of the Powerhouse development framework: Specification Driven AI-control.  In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
+
+:::tip
+The **schema definition language**, is a not only a shared language that bridges the gap between developer, designer and analyst but also the gap between **builder and AI-agent**. 
+:::
 
 ## Vision
 
-At Powerhouse we are embracing the progress of AI assisted coding while unlocking the next level of AI control through specification driven AI control.
+At Powerhouse we are embracing the progress of AI assisted coding while unlocking the next level of AI control through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
 - Specifications enable precise, iterative edits, since all our specification documents are machine-readable and executable.
 - Specifications offer the ability to update exact parameters and properties as your specs evolve in lock-step with your agent. 
-- Specs turn fragile sandcastles into solid, editable, and maintainable functionality with predictable results, so you can deliver AI driven projects to production environments with piece of mind. 
+- Specifications turn fragile sandcastles into solid, editable, and maintainable functionality with predictable results.
 
 This approach allows for the creation of editable specifications, enabling business analysts to modify details and instruct the AI to generate code based on updated specifications.
 It results in composable, maintainable, and scalable functionality.
 
 ## Introducing Vetra Studio
 
-Vetra studio functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different *modules* that together form a package a specification document can be created in *Vetra Studio*. 
+**Vetra Studio** serves as a centralized hub for developers to access and manage specifications. 
+It allows developers to open packages (Git repositories with metadata) from a Vetra package library, providing access to a remote Vetra drive where all specifications are stored. 
+
+This setup ensures that all necessary documentation and project requirements are in one accessible location, streamlining communication and agreement on requirements and operations. Additionally, **Vetra Studio** functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a specification document can be created in **Vetra Studio**. 
 
 As Vetra Studio matures each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. These modules are divided in 3 categories. 
 
@@ -28,7 +34,7 @@ As Vetra Studio matures each of these specification documents will offer an inte
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a Drive, providing tailored views and functionalities.
 
-### 3 Data intagrations
+### 3. Data integrations
 - **Subgraph specification**: Details the connections and relationships within a subgraph, facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
@@ -60,18 +66,18 @@ In standard mode:
 
 ### 2. Launch Claude with MCP
 
-Vetra Studio integrates deeply with Claude through MCP (Model Control Protocol):
+Vetra Studio integrates deeply with Claude through MCP (Model Control Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your llm is coding for you. 
 
-1. Start the MCP reactor:
+#### 1. Start the MCP reactor:
 ```bash
 ph mcp
 ```
 
-2. Verify MCP connection:
+#### 2. Verify MCP connection:
 - Check that the reactor MCP is available
 - Confirm Vetra Studio shows "Connected to reactor MCP"
 
-Key MCP Features:
+#### Key MCP Features:
 - Automatic document model creation from natural language descriptions
 - Smart editor generation based on document models
 - Uses reactor recipes for consistent code generation
@@ -79,11 +85,12 @@ Key MCP Features:
 
 The powerhouse config includes a vetra URL for consistent project configuration across different environments.
 
-### Integration with Custom Drives:
+:::tip
 - Vetra supports integration with custom remote drives, allowing users to create and manage documents within these drives.
 - The MCP server enables the agent to work with both existing and newly created document models.
+:::
 
-### 3. Document Creation Workflow
+### 3. Vetra Studio Package Creation Workflow
 
 #### A. Set Package Description (Required)
 1. Provide a name for your package
@@ -105,7 +112,7 @@ You can create document models in two ways:
    - Define document schema with fields and types
    - Create necessary operations
    - Add required modules
-   - Reference the document modeling material for detailed guidance
+   - The document model creation chapter in the Mastery track provides support [here](apps/academy/docs/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
 #### C. Add Document Editor (Required)
 1. **Using MCP (AI-Assisted)**
@@ -129,15 +136,15 @@ Support for:
 
 ### Best Practices
 
-1. **Working with MCP**
-   - Provide clear, specific instructions
-   - Review generated schemas before confirmation
-   - Verify implementation details in generated code
+1. **Working with MCP and claude**
+   - Provide clear, specific instructions and ask for clarifying questions to be answered before code generation.
+   - Review generated schemas before confirmation and work in layers instead of 'one-shotting' your code. 
+   - Verify implementation details in generated code before continuing. 
 
 2. **General Tips**
    - Use interactive mode during development
    - Review changes before confirmation
    - Double-check proposed next actions
-   - Ask clarifying questions when needed
+   - Ask clarifying questions and double check if the task is understood correctly when needed.
 
 
