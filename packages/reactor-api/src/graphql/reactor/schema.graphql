@@ -53,15 +53,20 @@ type DocumentModelResultPage {
   cursor: String
 }
 
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
 type PHDocument {
   id: String!
   slug: String
   name: String!
   documentType: String!
   state: JSONObject!
-  revision: Int!
-  created: DateTime!
-  lastModified: DateTime!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
   parentId: String
 }
 

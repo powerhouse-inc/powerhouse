@@ -1,3 +1,4 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   GraphQLManager,
   ISubgraph,
@@ -21,11 +22,13 @@ export class BaseSubgraph implements ISubgraph {
     }
   `;
   reactor: IDocumentDriveServer;
+  reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
+    this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
     this.path = args.path ?? "";

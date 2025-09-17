@@ -286,7 +286,7 @@ export function DriveExplorer(props: DriveEditorProps) {
 
             {/* === DOCUMENT CREATION SECTION === */}
             {/* Component for creating new documents */}
-            <CreateDocument />
+            <CreateDocument documentTypes={props.editorConfig?.documentTypes} />
           </div>
         )}
       </div>

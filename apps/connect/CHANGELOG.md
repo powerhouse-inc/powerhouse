@@ -1,3 +1,22 @@
+## 4.1.0-dev.56 (2025-09-17)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.55 (2025-09-16)
+
+### 🚀 Features
+
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### 🩹 Fixes
+
+- **connect:** ignore drive node drag when moving it to it's current position ([4aa387814](https://github.com/powerhouse-inc/powerhouse/commit/4aa387814))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.54 (2025-09-16)
 
 ### 🚀 Features

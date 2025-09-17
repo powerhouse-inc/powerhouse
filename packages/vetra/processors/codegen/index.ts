@@ -10,22 +10,18 @@ const CURRENT_WORKING_DIR = process.cwd();
 export class CodegenProcessor implements IProcessor {
   private manager: DocumentCodegenManager;
 
-  constructor() {
-    // Determine interactive mode from environment variable
-    const isInteractive =
-      process.env.CODEGEN_INTERACTIVE?.toLowerCase() === "true";
-
+  constructor(interactiveMode = false) {
     this.manager = DocumentCodegenFactory.createManager(
       {
         PH_CONFIG,
         CURRENT_WORKING_DIR,
       },
-      isInteractive,
+      interactiveMode,
     );
 
-    if (isInteractive) {
+    if (interactiveMode) {
       logger.info(
-        `🔔 CodegenProcessor initialized with interactive mode enabled (CODEGEN_INTERACTIVE=${process.env.CODEGEN_INTERACTIVE})`,
+        `🔔 CodegenProcessor initialized with interactive mode enabled`,
       );
     } else {
       logger.debug(

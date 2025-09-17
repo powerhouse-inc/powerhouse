@@ -166,8 +166,8 @@ export const getDocumentModelTypeDefs = (
       name: String!
       documentType: String!
       revision: Int!
-      created: DateTime!
-      lastModified: DateTime!
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
       operations(first: Int, skip: Int): [Operation!]!
       stateJSON: JSONObject
     }
@@ -178,8 +178,8 @@ export const getDocumentModelTypeDefs = (
       name: String!
       documentType: String!
       revision: Int!
-      created: DateTime!
-      lastModified: DateTime!
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
       operations(first: Int, skip: Int): [Operation!]!
       stateJSON: JSONObject
     }

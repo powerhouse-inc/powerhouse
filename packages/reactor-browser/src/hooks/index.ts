@@ -8,5 +8,6 @@ export * from "./nodes.js";
 export * from "./processor-manager.js";
 export * from "./reactor.js";
 export * from "./renown.js";
+export * from "./use-on-drop-file.js";
 export * from "./user.js";
 export * from "./vetra-packages.js";

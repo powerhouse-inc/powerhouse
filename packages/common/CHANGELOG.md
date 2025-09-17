@@ -1,3 +1,17 @@
+## 4.1.0-dev.56 (2025-09-17)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.55 (2025-09-16)
+
+### 🚀 Features
+
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.54 (2025-09-16)
 
 ### 🚀 Features

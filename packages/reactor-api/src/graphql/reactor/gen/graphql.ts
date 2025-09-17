@@ -197,13 +197,13 @@ export type MutationRenameDocumentArgs = {
 };
 
 export type PhDocument = {
-  readonly created: Scalars["DateTime"]["output"];
+  readonly createdAtUtcIso: Scalars["DateTime"]["output"];
   readonly documentType: Scalars["String"]["output"];
   readonly id: Scalars["String"]["output"];
-  readonly lastModified: Scalars["DateTime"]["output"];
+  readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly parentId?: Maybe<Scalars["String"]["output"]>;
-  readonly revision: Scalars["Int"]["output"];
+  readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
 };
@@ -268,6 +268,11 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
+export type Revision = {
+  readonly revision: Scalars["Int"]["output"];
+  readonly scope: Scalars["String"]["output"];
+};
+
 export type SearchFilterInput = {
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
@@ -316,10 +321,13 @@ export type PhDocumentFieldsFragment = {
   readonly name: string;
   readonly documentType: string;
   readonly state: any;
-  readonly revision: number;
-  readonly created: string | Date;
-  readonly lastModified: string | Date;
+  readonly createdAtUtcIso: string | Date;
+  readonly lastModifiedAtUtcIso: string | Date;
   readonly parentId?: string | null | undefined;
+  readonly revisionsList: ReadonlyArray<{
+    readonly scope: string;
+    readonly revision: number;
+  }>;
 };
 
 export type GetDocumentModelsQueryVariables = Exact<{
@@ -358,10 +366,13 @@ export type GetDocumentQuery = {
           readonly name: string;
           readonly documentType: string;
           readonly state: any;
-          readonly revision: number;
-          readonly created: string | Date;
-          readonly lastModified: string | Date;
+          readonly createdAtUtcIso: string | Date;
+          readonly lastModifiedAtUtcIso: string | Date;
           readonly parentId?: string | null | undefined;
+          readonly revisionsList: ReadonlyArray<{
+            readonly scope: string;
+            readonly revision: number;
+          }>;
         };
       }
     | null
@@ -386,10 +397,13 @@ export type GetDocumentChildrenQuery = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     }>;
   };
 };
@@ -412,10 +426,13 @@ export type GetDocumentParentsQuery = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     }>;
   };
 };
@@ -438,10 +455,13 @@ export type FindDocumentsQuery = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     }>;
   };
 };
@@ -476,10 +496,13 @@ export type CreateDocumentMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -495,10 +518,13 @@ export type CreateEmptyDocumentMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -515,10 +541,13 @@ export type MutateDocumentMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -545,10 +574,13 @@ export type RenameDocumentMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -567,10 +599,13 @@ export type AddChildrenMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -589,10 +624,13 @@ export type RemoveChildrenMutation = {
     readonly name: string;
     readonly documentType: string;
     readonly state: any;
-    readonly revision: number;
-    readonly created: string | Date;
-    readonly lastModified: string | Date;
+    readonly createdAtUtcIso: string | Date;
+    readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
+    readonly revisionsList: ReadonlyArray<{
+      readonly scope: string;
+      readonly revision: number;
+    }>;
   };
 };
 
@@ -613,10 +651,13 @@ export type MoveChildrenMutation = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     };
     readonly target: {
       readonly id: string;
@@ -624,10 +665,13 @@ export type MoveChildrenMutation = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     };
   };
 };
@@ -662,10 +706,13 @@ export type DocumentChangesSubscription = {
       readonly name: string;
       readonly documentType: string;
       readonly state: any;
-      readonly revision: number;
-      readonly created: string | Date;
-      readonly lastModified: string | Date;
+      readonly createdAtUtcIso: string | Date;
+      readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
+      readonly revisionsList: ReadonlyArray<{
+        readonly scope: string;
+        readonly revision: number;
+      }>;
     }>;
     readonly context?:
       | {
@@ -822,6 +869,7 @@ export type ResolversTypes = ResolversObject<{
   PagingInput: PagingInput;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
+  Revision: ResolverTypeWrapper<Revision>;
   SearchFilterInput: SearchFilterInput;
   Signer: ResolverTypeWrapper<Signer>;
   SignerApp: ResolverTypeWrapper<SignerApp>;
@@ -853,6 +901,7 @@ export type ResolversParentTypes = ResolversObject<{
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
   Query: {};
+  Revision: Revision;
   SearchFilterInput: SearchFilterInput;
   Signer: Signer;
   SignerApp: SignerApp;
@@ -1148,13 +1197,25 @@ export type PhDocumentResolvers<
   ParentType extends
     ResolversParentTypes["PHDocument"] = ResolversParentTypes["PHDocument"],
 > = ResolversObject<{
-  created?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
+  createdAtUtcIso?: Resolver<
+    ResolversTypes["DateTime"],
+    ParentType,
+    ContextType
+  >;
   documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  lastModified?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
+  lastModifiedAtUtcIso?: Resolver<
+    ResolversTypes["DateTime"],
+    ParentType,
+    ContextType
+  >;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  revisionsList?: Resolver<
+    ReadonlyArray<ResolversTypes["Revision"]>,
+    ParentType,
+    ContextType
+  >;
   slug?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   state?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
@@ -1222,6 +1283,16 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryJobStatusArgs, "jobId">
   >;
+}>;
+
+export type RevisionResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["Revision"] = ResolversParentTypes["Revision"],
+> = ResolversObject<{
+  revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type SignerResolvers<
@@ -1299,6 +1370,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  Revision?: RevisionResolvers<ContextType>;
   Signer?: SignerResolvers<ContextType>;
   SignerApp?: SignerAppResolvers<ContextType>;
   SignerUser?: SignerUserResolvers<ContextType>;
@@ -1356,9 +1428,12 @@ export const PhDocumentFieldsFragmentDoc = gql`
     name
     documentType
     state
-    revision
-    created
-    lastModified
+    revisionsList {
+      scope
+      revision
+    }
+    createdAtUtcIso
+    lastModifiedAtUtcIso
     parentId
   }
 `;

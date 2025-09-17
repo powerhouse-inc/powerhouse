@@ -6,6 +6,7 @@ import path from "path";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import type { Resolvers } from "./gen/graphql.js";
+import * as resolvers from "./resolvers.js";
 
 export class ReactorSubgraph extends BaseSubgraph {
   private logger = childLogger([
@@ -27,40 +28,64 @@ export class ReactorSubgraph extends BaseSubgraph {
 
   resolvers: Resolvers = {
     Query: {
-      documentModels: (_parent, args) => {
+      documentModels: async (_parent, args) => {
         this.logger.debug("documentModels", args);
-        // TODO: Implement using IReactorClient.getDocumentModels
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.documentModels(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in documentModels:", error);
+          throw error;
+        }
       },
 
-      document: (_parent, args) => {
+      document: async (_parent, args) => {
         this.logger.debug("document", args);
-        // TODO: Implement using IReactorClient.get
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.document(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in document:", error);
+          throw error;
+        }
       },
 
-      documentChildren: (_parent, args) => {
+      documentChildren: async (_parent, args) => {
         this.logger.debug("documentChildren", args);
-        // TODO: Implement using IReactorClient.getChildren
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.documentChildren(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in documentChildren:", error);
+          throw error;
+        }
       },
 
-      documentParents: (_parent, args) => {
+      documentParents: async (_parent, args) => {
         this.logger.debug("documentParents", args);
-        // TODO: Implement using IReactorClient.getParents
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.documentParents(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in documentParents:", error);
+          throw error;
+        }
       },
 
-      findDocuments: (_parent, args) => {
+      findDocuments: async (_parent, args) => {
         this.logger.debug("findDocuments", args);
-        // TODO: Implement using IReactorClient.find
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.findDocuments(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in findDocuments:", error);
+          throw error;
+        }
       },
 
-      jobStatus: (_parent, args) => {
+      jobStatus: async (_parent, args) => {
         this.logger.debug("jobStatus", args);
-        // TODO: Implement using IReactorClient.getJobStatus
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.jobStatus(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in jobStatus:", error);
+          throw error;
+        }
       },
     },
 
@@ -149,7 +174,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
   onSetup(): Promise<void> {
     this.logger.info("Setting up ReactorSubgraph");
-    // TODO: Initialize IReactorClient when available
+
     return Promise.resolve();
   }
 }
