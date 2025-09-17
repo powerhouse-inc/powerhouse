@@ -47,8 +47,8 @@ jobs:
 
       - name: Re-Install packages
         run: pnpm install
-      
-       - name: Run misc build scripts
+
+      - name: Run misc build scripts
         run: pnpm build:misc
 
       - name: Run css build scripts
