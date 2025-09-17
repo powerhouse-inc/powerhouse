@@ -55,7 +55,6 @@ jobs:
         name: Setup pnpm with cache
         with:
           run_install: false
-          cache: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
