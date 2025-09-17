@@ -1,5 +1,7 @@
+// @ts-check
 import { CoverageReport } from "monocart-coverage-reports";
 const inputDir = ["./coverage/raw", "./test/connect-e2e/coverage/raw"];
+
 /**
  * @typedef {import("monocart-coverage-reports").CoverageReportOptions} CoverageReportOptions
  */
@@ -20,7 +22,7 @@ const coverageOptions = {
     "**/node_modules/**": false,
     "**/src/**": true,
   },
-  sourcePath: (filePath, info) => {
+  sourcePath: (filePath) => {
     // Unify the file path for the same files
     // For example, the file index.js has different paths:
     // unit: unit-dist/src/index.js
@@ -41,17 +43,6 @@ const coverageOptions = {
     }
     return filePath;
   },
-
   reports: [["v8"]],
-
-  onEnd: () => {
-    // remove the raw files if it useless
-    // inputDir.forEach((p) => {
-    //     fs.rmSync(p, {
-    //         recursive: true,
-    //         force: true
-    //     });
-    // });
-  },
 };
 await new CoverageReport(coverageOptions).generate();

@@ -10,6 +10,7 @@ import tseslint from "typescript-eslint";
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
   "**/node_modules/",
+  "**/coverage/",
   "**/dist/",
   "**/ts-build/",
   "**/.ph/",
@@ -208,9 +209,10 @@ const typescriptLanguageOptions = {
   parserOptions: {
     projectService: {
       allowDefaultProject: [
-        "vitest.workspace.ts",
         "vitest.config.ts",
         "eslint.config.js",
+        "mcr.config.js",
+        "tools/scripts/merge-coverage.js",
       ],
     },
     tsconfigRootDir: import.meta.dirname,
