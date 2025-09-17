@@ -1,17 +1,14 @@
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  documentModelCreateDocument,
+  documentModelReducer,
   setModelDescription,
   setModelId,
   setModelName,
-} from "../../src/document-model/gen/creators.js";
-import { reducer } from "../../src/document-model/gen/reducer.js";
-import {
-  createDocument,
-  loadFromFile,
-  saveToFile,
-} from "../../src/document-model/gen/utils.js";
-import { undo } from "../../src/document/actions/creators.js";
+  undo,
+} from "document-model";
+import { baseLoadFromFile, baseSaveToFile } from "document-model/node";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("DocumentModel", () => {
   const tempDir = "./test/document/temp/document-model/zip";
@@ -28,12 +25,12 @@ describe("DocumentModel", () => {
   });
 
   it("should save to zip", async () => {
-    let documentModel = createDocument();
-    documentModel = reducer(
+    let documentModel = documentModelCreateDocument();
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
     );
-    await saveToFile(documentModel, tempDir, "test");
+    await baseSaveToFile(documentModel, tempDir, "phdm", "test");
     expect(fs.existsSync(`${tempDir}/test.phdm.zip`)).toBe(true);
 
     // keeps operation timestamp to check when loading
@@ -41,7 +38,10 @@ describe("DocumentModel", () => {
   });
 
   it("should load from zip", async () => {
-    const documentModel = await loadFromFile(`${tempDir}/test.phdm.zip`);
+    const documentModel = await baseLoadFromFile(
+      `${tempDir}/test.phdm.zip`,
+      documentModelReducer,
+    );
     expect(documentModel.state.global.id).toBe("powerhouse/test");
     expect(documentModel.operations.global).toMatchObject([
       {
@@ -58,20 +58,20 @@ describe("DocumentModel", () => {
   });
 
   it("should not include resultingState param in operations when exporting to zip", async () => {
-    let documentModel = createDocument();
-    documentModel = reducer(
+    let documentModel = documentModelCreateDocument();
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
       undefined,
       { reuseOperationResultingState: true },
     );
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelDescription({ description: "desc-test" }),
       undefined,
       { reuseOperationResultingState: true },
     );
-    documentModel = reducer(
+    documentModel = documentModelReducer(
       documentModel,
       setModelName({ name: "name-test" }),
       undefined,
@@ -83,10 +83,16 @@ describe("DocumentModel", () => {
       expect(operation.resultingState).toBeDefined();
     }
 
-    await saveToFile(documentModel, tempDir, "test-document-resulting-state");
+    await baseSaveToFile(
+      documentModel,
+      tempDir,
+      "phdm",
+      "test-document-resulting-state",
+    );
 
-    const loadedDocumentModel = await loadFromFile(
+    const loadedDocumentModel = await baseLoadFromFile(
       `${tempDir}/test-document-resulting-state.phdm.zip`,
+      documentModelReducer,
     );
 
     expect(loadedDocumentModel.operations.global).toHaveLength(3);
@@ -96,17 +102,20 @@ describe("DocumentModel", () => {
   });
 
   it("should keep undo state when loading from zip", async () => {
-    let documentModel = createDocument();
-    documentModel = reducer(
+    let documentModel = documentModelCreateDocument();
+    documentModel = documentModelReducer(
       documentModel,
       setModelId({ id: "powerhouse/test" }),
     );
-    documentModel = reducer(documentModel, undo());
+    documentModel = documentModelReducer(documentModel, undo());
     expect(documentModel.state.global.id).toBe("");
 
-    await saveToFile(documentModel, tempDir, "test2");
+    await baseSaveToFile(documentModel, tempDir, "phdm", "test2");
 
-    const loadedDocumentModel = await loadFromFile(`${tempDir}/test2.phdm.zip`);
+    const loadedDocumentModel = await baseLoadFromFile(
+      `${tempDir}/test2.phdm.zip`,
+      documentModelReducer,
+    );
     expect(loadedDocumentModel.state.global.id).toBe("");
     expect(loadedDocumentModel.operations.global).toMatchObject([
       {

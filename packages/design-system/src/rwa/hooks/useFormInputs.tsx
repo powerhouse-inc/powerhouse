@@ -4,10 +4,12 @@ import type {
   Operation,
   TableItemType,
   TableName,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   allGroupTransactionTypes,
   assetGroupTransactions,
+  CashBalanceChange,
+  EntryTimeLabel,
   feesTransactions,
   FeeTransactionsTable,
   formatDateForDisplay,
@@ -22,7 +24,7 @@ import {
   UnitPrice,
   useEditorContext,
   useModal,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import type {
@@ -31,8 +33,6 @@ import type {
   UseFormRegister,
   UseFormWatch,
 } from "react-hook-form";
-import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
 
 type Input = {
   label: string;

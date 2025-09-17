@@ -1,11 +1,11 @@
 import { OperationForm } from "./operation-form.js";
-import type { Module } from "document-model";
+import type { ModuleSpecification } from "document-model";
 import { useCallback, useId, useState } from "react";
 import { Operation } from "./operation.js";
 
 type Props = {
-  module: Module;
-  allOperations: Module["operations"];
+  module: ModuleSpecification;
+  allOperations: ModuleSpecification["operations"];
   shouldFocusNewOperation: boolean;
   updateOperationName: (id: string, name: string) => void;
   deleteOperation: (id: string) => void;

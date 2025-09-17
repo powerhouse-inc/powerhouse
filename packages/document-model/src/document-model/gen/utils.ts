@@ -1,57 +1,53 @@
-import { defaultBaseState } from "#document/ph-factories.js";
-import {
+import type {
   CreateDocument,
   CreateState,
-  LoadFromFile,
+  DocumentModelGlobalState,
+  DocumentModelPHState,
   LoadFromInput,
-  SaveToFile,
   SaveToFileHandle,
-} from "#document/types.js";
-import { baseCreateDocument } from "#document/utils/base.js";
+} from "document-model";
 import {
-  baseLoadFromFile,
+  baseCreateDocument,
   baseLoadFromInput,
-  baseSaveToFile,
   baseSaveToFileHandle,
-} from "#document/utils/file.js";
-import {
+  defaultBaseState,
+  documentModelReducer,
   documentModelState,
   documentType,
-  fileExtension,
   initialLocalState,
-} from "./constants.js";
-import { DocumentModelPHState } from "./ph-factories.js";
-import { reducer } from "./reducer.js";
+} from "document-model";
 
-export { fileExtension } from "./constants.js";
-
-export const createState: CreateState<DocumentModelPHState> = (state) => {
+export const documentModelCreateState: CreateState<DocumentModelPHState> = (
+  state,
+) => {
   return {
     ...defaultBaseState(),
-    global: { ...documentModelState, ...(state?.global ?? {}) },
+    global: {
+      ...documentModelState,
+      ...((state?.global ?? {}) as DocumentModelGlobalState),
+    },
     local: { ...initialLocalState, ...(state?.local ?? {}) },
   };
 };
 
-export const createDocument: CreateDocument<DocumentModelPHState> = (state) => {
-  const document = baseCreateDocument(createState, state);
+export const documentModelCreateDocument: CreateDocument<
+  DocumentModelPHState
+> = (state) => {
+  const document = baseCreateDocument(documentModelCreateState, state);
   document.header.documentType = documentType;
 
   return document;
 };
 
-export const saveToFile: SaveToFile = (document, path, name) => {
-  return baseSaveToFile(document, path, fileExtension, name);
-};
-
-export const saveToFileHandle: SaveToFileHandle = (document, input) => {
+export const documentModelSaveToFileHandle: SaveToFileHandle = (
+  document,
+  input,
+) => {
   return baseSaveToFileHandle(document, input);
 };
 
-export const loadFromFile: LoadFromFile<DocumentModelPHState> = (path) => {
-  return baseLoadFromFile(path, reducer);
-};
-
-export const loadFromInput: LoadFromInput<DocumentModelPHState> = (input) => {
-  return baseLoadFromInput(input, reducer);
+export const documentModelLoadFromInput: LoadFromInput<DocumentModelPHState> = (
+  input,
+) => {
+  return baseLoadFromInput(input, documentModelReducer);
 };

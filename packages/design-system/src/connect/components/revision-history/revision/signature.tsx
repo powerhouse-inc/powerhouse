@@ -1,6 +1,5 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
-import type { Signature } from "../types.js";
+import type { Signature } from "@powerhousedao/design-system";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 
 export type SignatureProps = {
   readonly signatures: Signature[] | undefined;
@@ -28,12 +27,12 @@ export function Signature(props: SignatureProps) {
   );
 
   return (
-    <Tooltip content={tooltipContent}>
+    <ConnectTooltip content={tooltipContent}>
       <span className="flex w-fit cursor-pointer items-center gap-1 rounded-lg border border-gray-200 px-2 py-1">
         <VerificationStatus signatures={signatures} />{" "}
         <Icon className="text-gray-300" name="InfoSquare" size={16} />
       </span>
-    </Tooltip>
+    </ConnectTooltip>
   );
 }
 

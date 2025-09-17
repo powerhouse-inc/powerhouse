@@ -1,4 +1,3 @@
-export * from "./cn.js";
 export * from "./decorators.js";
 export * from "./deep-equal.js";
 export * from "./is-empty.js";

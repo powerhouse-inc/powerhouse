@@ -1,4 +1,3 @@
-import { actionSigner } from "#document/ph-factories.js";
 import type {
   Action,
   ActionSigner,
@@ -6,30 +5,26 @@ import type {
   Reducer,
   ReducerOptions,
   SignalDispatch,
-} from "#document/types.js";
-import { generateUUID } from "#utils/env";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+  SigningParameters,
+} from "document-model";
 import {
-  baseCreateDocument,
-  hashDocumentStateForScope,
-} from "../../src/document/utils/base.js";
-import {
+  PublicKeySigner,
   ab2hex,
+  actionSigner,
+  baseCreateDocument,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
   buildSignedAction,
+  generateUUIDBrowser,
+  hashDocumentStateForScope,
   hex2ab,
-  verifyOperationSignature,
-} from "../../src/document/utils/crypto.js";
-import type { SigningParameters } from "../../src/document/utils/header.js";
-import {
-  PublicKeySigner,
   sign,
   verify,
-} from "../../src/document/utils/header.js";
-import type { CountPHState } from "../helpers.js";
+  verifyOperationSignature,
+} from "document-model";
+import type { CountPHState } from "document-model/test";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  CountDocument,
   countReducer,
   createCountDocumentState,
   createCountState,
@@ -281,7 +276,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.action!.context!.signer!;
+    const signer = operation.action.context!.signer!;
     const verified = await verifyOperationSignature(
       signer.signatures.at(0)!,
       signer,
@@ -296,8 +291,8 @@ describe("Crypto utils", () => {
         return crypto.subtle.verify(
           algorithm,
           importedKey,
-          signature as BufferSource,
-          data as BufferSource,
+          new Uint8Array(signature),
+          new Uint8Array(data),
         );
       },
     );
@@ -345,7 +340,7 @@ describe("Crypto utils", () => {
           ),
         ),
     );
-    const signer = operation.action!.context!.signer!;
+    const signer = operation.action.context!.signer!;
     const signature = signer.signatures.at(0)!;
 
     signature[4] = "FAKE SIGNATURE";
@@ -363,8 +358,8 @@ describe("Crypto utils", () => {
         return crypto.subtle.verify(
           algorithm,
           importedKey,
-          signature as BufferSource,
-          data as BufferSource,
+          new Uint8Array(signature),
+          new Uint8Array(data),
         );
       },
     );
@@ -375,7 +370,7 @@ describe("Crypto utils", () => {
     const parameters: SigningParameters = {
       documentType: "powerhouse/counter",
       createdAtUtcIso: new Date().toISOString(),
-      nonce: generateUUID(),
+      nonce: generateUUIDBrowser(),
     };
 
     const keyPair = await crypto.subtle.generateKey("Ed25519", true, [

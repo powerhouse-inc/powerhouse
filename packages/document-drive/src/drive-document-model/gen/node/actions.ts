@@ -1,13 +1,14 @@
-import { type Action } from "document-model";
 import type {
   AddFileInput,
   AddFolderInput,
   CopyNodeInput,
   DeleteNodeInput,
+  DocumentDriveGlobalState,
   MoveNodeInput,
   UpdateFileInput,
   UpdateNodeInput,
-} from "../types.js";
+} from "document-drive";
+import type { Action, SignalDispatch } from "document-model";
 
 export type AddFileAction = Action & { type: "ADD_FILE"; input: AddFileInput };
 export type AddFolderAction = Action & {
@@ -43,3 +44,41 @@ export type DocumentDriveNodeAction =
   | UpdateNodeAction
   | CopyNodeAction
   | MoveNodeAction;
+
+export interface DocumentDriveNodeOperations {
+  addFileOperation: (
+    state: DocumentDriveGlobalState,
+    action: AddFileAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addFolderOperation: (
+    state: DocumentDriveGlobalState,
+    action: AddFolderAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  deleteNodeOperation: (
+    state: DocumentDriveGlobalState,
+    action: DeleteNodeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  updateFileOperation: (
+    state: DocumentDriveGlobalState,
+    action: UpdateFileAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  updateNodeOperation: (
+    state: DocumentDriveGlobalState,
+    action: UpdateNodeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  copyNodeOperation: (
+    state: DocumentDriveGlobalState,
+    action: CopyNodeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  moveNodeOperation: (
+    state: DocumentDriveGlobalState,
+    action: MoveNodeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+}

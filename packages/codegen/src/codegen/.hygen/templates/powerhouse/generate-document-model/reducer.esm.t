@@ -6,7 +6,7 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { type StateReducer, isDocumentAction, createReducer } from "document-model";
-import { <%= h.changeCase.pascal(documentType) %>PHState } from './ph-factories.js';
+import type { <%= h.changeCase.pascal(documentType) %>PHState } from './types.js';
 import { z } from './types.js';
 
 <% modules.forEach(m => { _%>

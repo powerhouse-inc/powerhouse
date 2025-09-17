@@ -1,25 +1,33 @@
-import { createAction } from "document-model";
-import {
-  z,
-  type AddFileInput,
-  type AddFolderInput,
-  type DeleteNodeInput,
-  type UpdateFileInput,
-  type UpdateNodeInput,
-  type CopyNodeInput,
-  type MoveNodeInput,
-  LegacyAddFileInput,
+import type {
+  AddFileAction,
+  AddFolderAction,
+  CopyNodeAction,
+  DeleteNodeAction,
+  MoveNodeAction,
+  UpdateFileAction,
+  UpdateNodeAction,
+} from "document-drive";
+import type {
+  AddFileInput,
+  AddFolderInput,
+  CopyNodeInput,
+  DeleteNodeInput,
   LegacyAddFileAction,
-} from "../types.js";
+  LegacyAddFileInput,
+  MoveNodeInput,
+  UpdateFileInput,
+  UpdateNodeInput,
+} from "document-drive";
 import {
-  type AddFileAction,
-  type AddFolderAction,
-  type DeleteNodeAction,
-  type UpdateFileAction,
-  type UpdateNodeAction,
-  type CopyNodeAction,
-  type MoveNodeAction,
-} from "./actions.js";
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  CopyNodeInputSchema,
+  DeleteNodeInputSchema,
+  MoveNodeInputSchema,
+  UpdateFileInputSchema,
+  UpdateNodeInputSchema,
+} from "document-drive";
+import { createAction } from "document-model";
 
 /**
  * @deprecated Use addFile with {@link AddFileInput} instead. This overload will be removed in the future.
@@ -46,7 +54,7 @@ export function addFile(
     "ADD_FILE",
     { ...input },
     undefined,
-    z.AddFileInputSchema,
+    AddFileInputSchema,
     "global",
   );
 }
@@ -56,7 +64,7 @@ export const addFolder = (input: AddFolderInput) =>
     "ADD_FOLDER",
     { ...input },
     undefined,
-    z.AddFolderInputSchema,
+    AddFolderInputSchema,
     "global",
   );
 
@@ -65,7 +73,7 @@ export const deleteNode = (input: DeleteNodeInput) =>
     "DELETE_NODE",
     { ...input },
     undefined,
-    z.DeleteNodeInputSchema,
+    DeleteNodeInputSchema,
     "global",
   );
 
@@ -74,7 +82,7 @@ export const updateFile = (input: UpdateFileInput) =>
     "UPDATE_FILE",
     { ...input },
     undefined,
-    z.UpdateFileInputSchema,
+    UpdateFileInputSchema,
     "global",
   );
 
@@ -83,7 +91,7 @@ export const updateNode = (input: UpdateNodeInput) =>
     "UPDATE_NODE",
     { ...input },
     undefined,
-    z.UpdateNodeInputSchema,
+    UpdateNodeInputSchema,
     "global",
   );
 
@@ -92,7 +100,7 @@ export const copyNode = (input: CopyNodeInput) =>
     "COPY_NODE",
     { ...input },
     undefined,
-    z.CopyNodeInputSchema,
+    CopyNodeInputSchema,
     "global",
   );
 
@@ -101,6 +109,6 @@ export const moveNode = (input: MoveNodeInput) =>
     "MOVE_NODE",
     { ...input },
     undefined,
-    z.MoveNodeInputSchema,
+    MoveNodeInputSchema,
     "global",
   );

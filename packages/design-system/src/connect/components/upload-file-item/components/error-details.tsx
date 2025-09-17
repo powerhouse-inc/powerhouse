@@ -1,11 +1,11 @@
-import { type UploadFileItemStatus } from "../upload-file-item.js";
+import type { UploadFileItemStatus } from "@powerhousedao/design-system";
 
 type ErrorDetailsProps = {
   readonly status: UploadFileItemStatus;
   readonly errorDetails?: string;
 };
 
-export function ErrorDetails(props: ErrorDetailsProps) {
+export function UploadFileItemErrorDetails(props: ErrorDetailsProps) {
   const { status, errorDetails } = props;
 
   if (!(status === "failed" && errorDetails)) return null;

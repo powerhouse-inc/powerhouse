@@ -1,15 +1,15 @@
+import {
+  loadDocumentModelEditor,
+  loadGenericDriveExplorerEditorModule,
+} from "@powerhousedao/connect";
 import type {
   VetraDocumentModelModule,
   VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
-import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "./editor.js";
-
+import { driveDocumentModelModule } from "document-drive";
+import { documentModelDocumentModelModule } from "document-model";
 async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
-  const { documentModelDocumentModelModule } = await import("document-model");
   const documentModel = documentModelDocumentModelModule.documentModel;
   const name = documentModel.name;
   const documentType = documentModel.id;
@@ -34,7 +34,6 @@ async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentMode
 }
 
 async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule> {
-  const { driveDocumentModelModule } = await import("document-drive");
   const documentModel = driveDocumentModelModule.documentModel;
   const name = documentModel.name;
   const documentType = documentModel.id;

@@ -1,27 +1,17 @@
 /**
  * Factory methods for creating AppModuleDocument instances
  */
-
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 import type {
   AppModuleDocument,
   AppModuleLocalState,
-  AppModuleState,
+  AppModuleGlobalState,
+  AppModulePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type AppModulePHState = PHBaseState & {
-  global: AppModuleState;
-  local: AppModuleLocalState;
-};
-
-export function defaultGlobalState(): AppModuleState {
+export function defaultGlobalState(): AppModuleGlobalState {
   return {
     name: "",
     status: "DRAFT",
@@ -45,12 +35,12 @@ export function defaultPHState(): AppModulePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<AppModuleState>,
-): AppModuleState {
+  state?: Partial<AppModuleGlobalState>,
+): AppModuleGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as AppModuleState;
+  } as AppModuleGlobalState;
 }
 
 export function createLocalState(
@@ -64,7 +54,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<AppModuleState>,
+  globalState?: Partial<AppModuleGlobalState>,
   localState?: Partial<AppModuleLocalState>,
 ): AppModulePHState {
   return {
@@ -83,7 +73,7 @@ export function createAppModuleDocument(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<AppModuleState>;
+    global?: Partial<AppModuleGlobalState>;
     local?: Partial<AppModuleLocalState>;
   }>,
 ): AppModuleDocument {

@@ -1,12 +1,11 @@
-import { useCookieBanner } from "#hooks";
-import { openUrl } from "#utils";
+import { openUrl, useCookieBanner } from "@powerhousedao/connect";
 import {
   Footer as DesignSystemFooter,
   FooterLink,
   Icon,
 } from "@powerhousedao/design-system";
 import { Trans } from "react-i18next";
-import { useModal } from "./modal/index.js";
+import { useModal } from "@powerhousedao/connect";
 
 export const Footer = () => {
   const { showModal } = useModal();

@@ -1,22 +1,20 @@
 /**
- * Factory methods for creating DocumentModelDocument instances
+ * Factory methods for creating DocumentModelGlobalState instances
  */
 
+import type { PHBaseState, PHDocument } from "document-model";
 import {
   createBaseState,
   defaultBaseState,
-  type PHAuthState,
-  type PHBaseState,
-  type PHDocumentState,
+  documentModelCreateDocument,
 } from "document-model";
 import type {
-  DocumentModelDocument,
+  DocumentModelGlobalState,
   DocumentModelLocalState,
-  DocumentModelState,
+  DocumentModelPHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
 
-export function defaultGlobalState(): DocumentModelState {
+export function defaultGlobalState(): DocumentModelGlobalState {
   return {
     ...defaultBaseState(),
     author: {
@@ -44,12 +42,12 @@ export function defaultPHState(): DocumentModelPHState {
 }
 
 export function createGlobalState(
-  state?: Partial<DocumentModelState>,
-): DocumentModelState {
+  state?: Partial<DocumentModelGlobalState>,
+): DocumentModelGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as DocumentModelState;
+  } as DocumentModelGlobalState;
 }
 
 export function createLocalState(
@@ -63,7 +61,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<DocumentModelState>,
+  globalState?: Partial<DocumentModelGlobalState>,
   localState?: Partial<DocumentModelLocalState>,
 ): DocumentModelPHState {
   return {
@@ -73,25 +71,15 @@ export function createState(
   };
 }
 
-export type DocumentModelPHState = PHBaseState & {
-  global: DocumentModelState;
-  local: DocumentModelLocalState;
-};
-
 /**
  * Creates a BillingStatementDocument with custom global and local state
  * This properly handles the PHBaseState requirements while allowing
  * document-specific state to be set.
  */
 export function createDocumentModelDocument(
-  state?: Partial<{
-    auth?: Partial<PHAuthState>;
-    document?: Partial<PHDocumentState>;
-    global?: Partial<DocumentModelState>;
-    local?: Partial<DocumentModelLocalState>;
-  }>,
-): DocumentModelDocument {
-  const document = createDocument(
+  state?: Partial<DocumentModelPHState>,
+): PHDocument<DocumentModelPHState> {
+  const document = documentModelCreateDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

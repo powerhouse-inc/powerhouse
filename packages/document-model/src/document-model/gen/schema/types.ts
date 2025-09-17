@@ -1,32 +1,4 @@
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = T | null | undefined;
-export type Exact<T extends { [key: string]: unknown }> = {
-  [K in keyof T]: T[K];
-};
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]?: Maybe<T[SubKey]>;
-};
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]: Maybe<T[SubKey]>;
-};
-export type MakeEmpty<
-  T extends { [key: string]: unknown },
-  K extends keyof T,
-> = { [_ in K]?: never };
-export type Incremental<T> =
-  | T
-  | {
-      [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never;
-    };
-/** All built-in and custom scalars, mapped to their actual values */
-export type Scalars = {
-  ID: { input: string; output: string };
-  String: { input: string; output: string };
-  Boolean: { input: boolean; output: boolean };
-  Int: { input: number; output: number };
-  Float: { input: number; output: number };
-  DateTime: { input: string; output: string };
-};
+import type { InputMaybe, Maybe, PHBaseState, Scalars } from "document-model";
 
 export type AddChangeLogItemInput = {
   __typename?: "AddChangeLogItemInput";
@@ -155,8 +127,7 @@ export type DocumentModelInput =
   | UpdateOperationExampleInput
   | UpdateStateExampleInput;
 
-export type DocumentModelState = {
-  __typename?: "DocumentModelState";
+export type DocumentModelGlobalState = {
   author: Author;
   description: Scalars["String"]["output"];
   extension: Scalars["String"]["output"];
@@ -165,27 +136,31 @@ export type DocumentModelState = {
   specifications: Array<DocumentSpecification>;
 };
 
+export type DocumentModelLocalState = {};
+export type DocumentModelPHState = PHBaseState & {
+  global: DocumentModelGlobalState;
+  local: DocumentModelLocalState;
+};
+
 export type ScopeState = {
   global: State;
   local: State;
 };
 
-export type DocumentModelLocalState = {};
-
 export type DocumentSpecification = {
   __typename?: "DocumentSpecification";
   changeLog: Array<Scalars["String"]["output"]>;
-  modules: Array<Module>;
+  modules: Array<ModuleSpecification>;
   state: ScopeState;
   version: Scalars["Int"]["output"];
 };
 
-export type Module = {
-  __typename?: "Module";
+export type ModuleSpecification = {
+  __typename?: "ModuleSpecification";
   description: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];
   name: Scalars["String"]["output"];
-  operations: Array<Operation>;
+  operations: Array<OperationSpecification>;
 };
 
 export type MoveOperationInput = {
@@ -195,48 +170,48 @@ export type MoveOperationInput = {
 
 export type Mutation = {
   __typename?: "Mutation";
-  addChangeLogItemInput: DocumentModelState;
-  addModule: DocumentModelState;
-  addOperation: DocumentModelState;
-  addOperationError: DocumentModelState;
-  addOperationExample: DocumentModelState;
-  addStateExample: DocumentModelState;
-  deleteChangeLogItemInput: DocumentModelState;
-  deleteModule: DocumentModelState;
-  deleteOperation: DocumentModelState;
-  deleteOperationError: DocumentModelState;
-  deleteOperationExample: DocumentModelState;
-  deleteStateExample: DocumentModelState;
-  moveOperation: DocumentModelState;
-  releaseNewVersion: DocumentModelState;
-  reorderChangeLogItemsInput: DocumentModelState;
-  reorderModuleOperations: DocumentModelState;
-  reorderModules: DocumentModelState;
-  reorderOperationErrors: DocumentModelState;
-  reorderOperationExamples: DocumentModelState;
-  reorderStateExamples: DocumentModelState;
-  setAuthorName: DocumentModelState;
-  setAuthorWebsite: DocumentModelState;
-  setInitialState: DocumentModelState;
-  setModelDescription: DocumentModelState;
-  setModelExtension: DocumentModelState;
-  setModelId: DocumentModelState;
-  setModelName: DocumentModelState;
-  setModuleDescription: DocumentModelState;
-  setModuleName: DocumentModelState;
-  setOperationDescription: DocumentModelState;
-  setOperationErrorCode: DocumentModelState;
-  setOperationErrorDescription: DocumentModelState;
-  setOperationErrorName: DocumentModelState;
-  setOperationErrorTemplate: DocumentModelState;
-  setOperationName: DocumentModelState;
-  setOperationReducer: DocumentModelState;
-  setOperationSchema: DocumentModelState;
-  setOperationTemplate: DocumentModelState;
-  setStateSchema: DocumentModelState;
-  updateChangeLogItemInput: DocumentModelState;
-  updateOperationExample: DocumentModelState;
-  updateStateExample: DocumentModelState;
+  addChangeLogItemInput: DocumentModelGlobalState;
+  addModule: DocumentModelGlobalState;
+  addOperation: DocumentModelGlobalState;
+  addOperationError: DocumentModelGlobalState;
+  addOperationExample: DocumentModelGlobalState;
+  addStateExample: DocumentModelGlobalState;
+  deleteChangeLogItemInput: DocumentModelGlobalState;
+  deleteModule: DocumentModelGlobalState;
+  deleteOperation: DocumentModelGlobalState;
+  deleteOperationError: DocumentModelGlobalState;
+  deleteOperationExample: DocumentModelGlobalState;
+  deleteStateExample: DocumentModelGlobalState;
+  moveOperation: DocumentModelGlobalState;
+  releaseNewVersion: DocumentModelGlobalState;
+  reorderChangeLogItemsInput: DocumentModelGlobalState;
+  reorderModuleOperations: DocumentModelGlobalState;
+  reorderModules: DocumentModelGlobalState;
+  reorderOperationErrors: DocumentModelGlobalState;
+  reorderOperationExamples: DocumentModelGlobalState;
+  reorderStateExamples: DocumentModelGlobalState;
+  setAuthorName: DocumentModelGlobalState;
+  setAuthorWebsite: DocumentModelGlobalState;
+  setInitialState: DocumentModelGlobalState;
+  setModelDescription: DocumentModelGlobalState;
+  setModelExtension: DocumentModelGlobalState;
+  setModelId: DocumentModelGlobalState;
+  setModelName: DocumentModelGlobalState;
+  setModuleDescription: DocumentModelGlobalState;
+  setModuleName: DocumentModelGlobalState;
+  setOperationDescription: DocumentModelGlobalState;
+  setOperationErrorCode: DocumentModelGlobalState;
+  setOperationErrorDescription: DocumentModelGlobalState;
+  setOperationErrorName: DocumentModelGlobalState;
+  setOperationErrorTemplate: DocumentModelGlobalState;
+  setOperationName: DocumentModelGlobalState;
+  setOperationReducer: DocumentModelGlobalState;
+  setOperationSchema: DocumentModelGlobalState;
+  setOperationTemplate: DocumentModelGlobalState;
+  setStateSchema: DocumentModelGlobalState;
+  updateChangeLogItemInput: DocumentModelGlobalState;
+  updateOperationExample: DocumentModelGlobalState;
+  updateStateExample: DocumentModelGlobalState;
 };
 
 export type MutationAddChangeLogItemInputArgs = {
@@ -403,10 +378,10 @@ export type MutationUpdateStateExampleArgs = {
   input: UpdateStateExampleInput;
 };
 
-export type Operation = {
-  __typename?: "Operation";
+export type OperationSpecification = {
+  __typename?: "OperationSpecification";
   description: Maybe<Scalars["String"]["output"]>;
-  errors: Array<OperationError>;
+  errors: Array<OperationErrorSpecification>;
   examples: Array<CodeExample>;
   id: Scalars["ID"]["output"];
   name: Maybe<Scalars["String"]["output"]>;
@@ -416,8 +391,8 @@ export type Operation = {
   scope: string;
 };
 
-export type OperationError = {
-  __typename?: "OperationError";
+export type OperationErrorSpecification = {
+  __typename?: "OperationErrorSpecification";
   code: Maybe<Scalars["String"]["output"]>;
   description: Maybe<Scalars["String"]["output"]>;
   id: Scalars["ID"]["output"];

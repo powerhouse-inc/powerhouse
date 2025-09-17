@@ -1,5 +1,9 @@
-import type { TableItemType, TableName } from "#rwa";
-import { makeTableData, useEditorContext, useSortTableItems } from "#rwa";
+import type { TableItemType, TableName } from "@powerhousedao/design-system";
+import {
+  makeTableData,
+  useEditorContext,
+  useSortTableItems,
+} from "@powerhousedao/design-system";
 import { useMemo } from "react";
 
 export function useTableData<TTableName extends TableName>(

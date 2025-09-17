@@ -1,21 +1,16 @@
+import type { DocumentModelUtils } from "document-model";
 import {
-  type CreateDocument,
-  type CreateState,
-  type LoadFromFile,
-  type LoadFromInput,
   baseCreateDocument,
-  baseSaveToFile,
   baseSaveToFileHandle,
-  baseLoadFromFile,
   baseLoadFromInput,
   defaultBaseState,
   generateId,
 } from "document-model";
-import { type AppModuleState, type AppModuleLocalState } from "./types.js";
-import { AppModulePHState } from "./ph-factories.js";
+import type { AppModuleGlobalState, AppModuleLocalState } from "./types.js";
+import type { AppModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
 
-export const initialGlobalState: AppModuleState = {
+export const initialGlobalState: AppModuleGlobalState = {
   name: "",
   status: "DRAFT",
   documentTypes: [{ id: "all-documents", documentType: "*" }],
@@ -25,46 +20,36 @@ export const initialGlobalState: AppModuleState = {
 };
 export const initialLocalState: AppModuleLocalState = {};
 
-export const createState: CreateState<AppModulePHState> = (state) => {
-  return {
-    ...defaultBaseState(),
-    global: { ...initialGlobalState, ...(state?.global ?? {}) },
-    local: { ...initialLocalState, ...(state?.local ?? {}) },
-  };
-};
-
-export const createDocument: CreateDocument<AppModulePHState> = (state) => {
-  const document = baseCreateDocument(createState, state);
-  document.header.documentType = "powerhouse/app";
-  // for backwards compatibility, but this is NOT a valid signed document id
-  document.header.id = generateId();
-  return document;
-};
-
-export const saveToFile = (document: any, path: string, name?: string) => {
-  return baseSaveToFile(document, path, ".phdm", name);
-};
-
-export const saveToFileHandle = (document: any, input: any) => {
-  return baseSaveToFileHandle(document, input);
-};
-
-export const loadFromFile: LoadFromFile<AppModulePHState> = (path) => {
-  return baseLoadFromFile(path, reducer);
-};
-
-export const loadFromInput: LoadFromInput<AppModulePHState> = (input) => {
-  return baseLoadFromInput(input, reducer);
-};
-
-const utils = {
+const utils: DocumentModelUtils<AppModulePHState> = {
   fileExtension: ".phdm",
-  createState,
-  createDocument,
-  saveToFile,
-  saveToFileHandle,
-  loadFromFile,
-  loadFromInput,
+  createState(state) {
+    return {
+      ...defaultBaseState(),
+      global: { ...initialGlobalState, ...state?.global },
+      local: { ...initialLocalState, ...state?.local },
+    };
+  },
+  createDocument(state) {
+    const document = baseCreateDocument(utils.createState, state);
+
+    document.header.documentType = "powerhouse/app";
+
+    // for backwards compatibility, but this is NOT a valid signed document id
+    document.header.id = generateId();
+
+    return document;
+  },
+  saveToFileHandle(document, input) {
+    return baseSaveToFileHandle(document, input);
+  },
+  loadFromInput(input) {
+    return baseLoadFromInput(input, reducer);
+  },
 };
+
+export const createDocument = utils.createDocument;
+export const createState = utils.createState;
+export const saveToFileHandle = utils.saveToFileHandle;
+export const loadFromInput = utils.loadFromInput;
 
 export default utils;

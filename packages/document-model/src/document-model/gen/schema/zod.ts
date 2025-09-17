@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import {
+import type {
   AddChangeLogItemInput,
   AddModuleInput,
   AddOperationErrorInput,
@@ -15,12 +15,12 @@ import {
   DeleteOperationExampleInput,
   DeleteOperationInput,
   DeleteStateExampleInput,
-  DocumentModelState,
+  DocumentModelGlobalState,
   DocumentSpecification,
-  Module,
+  ModuleSpecification,
   MoveOperationInput,
-  Operation,
-  OperationError,
+  OperationErrorSpecification,
+  OperationSpecification,
   ReorderChangeLogItemsInput,
   ReorderModuleOperationsInput,
   ReorderModulesInput,
@@ -52,20 +52,12 @@ import {
   UpdateChangeLogItemInput,
   UpdateOperationExampleInput,
   UpdateStateExampleInput,
-} from "./types.js";
+} from "document-model";
+import { OperationScopeSchema } from "document-model";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
 }>;
-
-type definedNonNullAny = {};
-
-export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
-  v !== undefined && v !== null;
-
-export const definedNonNullAnySchema = z
-  .any()
-  .refine((v) => isDefinedNonNullAny(v));
 
 export function AddChangeLogItemInputSchema(): z.ZodObject<
   Properties<AddChangeLogItemInput>
@@ -203,10 +195,6 @@ export function DeleteStateExampleInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationScopeSchema(): z.ZodString {
-  return z.string();
-}
-
 export function DocumentModelInputSchema() {
   return z.union([
     AddChangeLogItemInputSchema(),
@@ -253,11 +241,11 @@ export function DocumentModelInputSchema() {
   ]);
 }
 
-export function DocumentModelStateSchema(): z.ZodObject<
-  Properties<DocumentModelState>
+export function DocumentModelGlobalStateSchema(): z.ZodObject<
+  Properties<DocumentModelGlobalState>
 > {
   return z.object({
-    __typename: z.literal("DocumentModelState").optional(),
+    __typename: z.literal("DocumentModelGlobalState").optional(),
     author: AuthorSchema(),
     description: z.string(),
     extension: z.string(),
@@ -279,13 +267,13 @@ export function DocumentSpecificationSchema(): z.ZodObject<
   });
 }
 
-export function ModuleSchema(): z.ZodObject<Properties<Module>> {
+export function ModuleSchema(): z.ZodObject<Properties<ModuleSpecification>> {
   return z.object({
-    __typename: z.literal("Module").optional(),
+    __typename: z.literal("ModuleSpecification").optional(),
     description: z.string().nullable(),
     id: z.string(),
     name: z.string(),
-    operations: z.array(OperationSchema()),
+    operations: z.array(OperationSpecificationSchema()),
   });
 }
 
@@ -298,9 +286,11 @@ export function MoveOperationInputSchema(): z.ZodObject<
   });
 }
 
-export function OperationSchema(): z.ZodObject<Properties<Operation>> {
+export function OperationSpecificationSchema(): z.ZodObject<
+  Properties<OperationSpecification>
+> {
   return z.object({
-    __typename: z.literal("Operation").optional(),
+    __typename: z.literal("OperationSpecification").optional(),
     description: z.string().nullable(),
     errors: z.array(OperationErrorSchema()),
     examples: z.array(CodeExampleSchema()),
@@ -314,10 +304,10 @@ export function OperationSchema(): z.ZodObject<Properties<Operation>> {
 }
 
 export function OperationErrorSchema(): z.ZodObject<
-  Properties<OperationError>
+  Properties<OperationErrorSpecification>
 > {
   return z.object({
-    __typename: z.literal("OperationError").optional(),
+    __typename: z.literal("OperationErrorSpecification").optional(),
     code: z.string().nullable(),
     description: z.string().nullable(),
     id: z.string(),

@@ -13,26 +13,16 @@
   "files": [
     "dist"
   ],
-  "types": "./dist/src/index.d.ts",
-  "main": "./dist/src/index.js",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./analytics": "./dist/src/analytics/analytics.js",
-    "./pglite": "./dist/src/pglite/index.js",
-    "./relational": "./dist/src/relational/index.js",
-    "./*": "./dist/src/*.js"
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
   },
   "scripts": {
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix",
-    "build": "tsc --build",
-    "build:watch": "tsc --build --watch",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
+    "lint": "eslint",
     "test:browser": "vitest run",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
     "install:playwright": "playwright install"
   },
   "devDependencies": {
@@ -42,14 +32,14 @@
     "@types/react-dom": "^18.3.1",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
-    "@vitejs/plugin-react": "^4.4.1",
-    "@vitest/browser": "^3.1.2",
+    "@vitejs/plugin-react": "^5.0.1",
+    "@vitest/browser": "^3.2.4",
     "playwright": "^1.51.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vite-plugin-node-polyfills": "^0.23.0",
-    "vitest": "^3.1.2",
-    "vitest-browser-react": "^0.2.0"
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vitest": "^3.2.4",
+    "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
     "react": "^18.3.1",
@@ -60,7 +50,6 @@
     "@electric-sql/pglite-react": "^0.2.17",
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
-    "@powerhousedao/analytics-engine-knex": "^0.6.0",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "^5.4.4",

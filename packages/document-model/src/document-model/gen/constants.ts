@@ -1,6 +1,9 @@
-import { DocumentModelLocalState, DocumentModelState } from "./types.js";
+import type {
+  DocumentModelGlobalState,
+  DocumentModelLocalState,
+} from "document-model";
 
-export const documentModelState: DocumentModelState = {
+export const documentModelState: DocumentModelGlobalState = {
   id: "",
   name: "",
   extension: "",
@@ -32,7 +35,7 @@ export const documentModelState: DocumentModelState = {
 
 export const initialLocalState: DocumentModelLocalState = {};
 
-export const fileExtension = "phdm" as const;
+export const documentModelFileExtension = "phdm" as const;
 
 export const documentType = "powerhouse/document-model" as const;
 

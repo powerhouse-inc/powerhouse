@@ -1,14 +1,13 @@
-import type {
-  DocumentDriveLocalState,
-  FileNode,
-  FolderNode,
-} from "#drive-document-model/gen/types";
-import type { IBaseDocumentDriveServer } from "#server/types";
 import { pascalCase } from "change-case";
 import type {
+  DocumentGraphQLResult,
+  DriveInfo,
+  GraphQLResult,
+  IBaseDocumentDriveServer,
+} from "document-drive";
+import type {
+  DocumentModelGlobalState,
   DocumentModelModule,
-  DocumentModelState,
-  Operation,
   PHBaseState,
   PHDocument,
 } from "document-model";
@@ -35,10 +34,6 @@ type ReqGraphQLError = {
   message: string;
 };
 
-export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
-  errors?: GraphQLError[];
-};
-
 // replaces fetch so it can be used in Node and Browser envs
 export async function requestGraphql<T>(
   url: string,
@@ -62,16 +57,6 @@ export async function requestGraphql<T>(
   }
   return result;
 }
-
-export type DriveInfo = {
-  id: string;
-  name: string;
-  slug: string;
-  icon?: string;
-  meta?: {
-    preferredEditor?: string;
-  };
-};
 
 function getFields(type: GraphQLOutputType, prefix: string): string {
   if (type instanceof GraphQLObjectType) {
@@ -122,7 +107,7 @@ function getFields(type: GraphQLOutputType, prefix: string): string {
 }
 
 export function generateDocumentStateQueryFields(
-  documentModelState: DocumentModelState,
+  documentModelState: DocumentModelGlobalState,
   prefix: string,
   options?: BuildSchemaOptions & ParseOptions,
 ): string {
@@ -195,21 +180,6 @@ export async function requestPublicDrive(
   return drive;
 }
 
-export type DriveState = DriveInfo &
-  Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {
-    nodes: Array<FolderNode | Omit<FileNode, "synchronizationUnits">>;
-  };
-
-export type DocumentGraphQLResult<TState extends PHBaseState = PHBaseState> =
-  PHDocument<TState> & {
-    revision: number;
-    state: TState;
-    initialState: TState;
-    operations: (Operation & {
-      inputText: string;
-    })[];
-  };
-
 export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
   url: string,
   documentId: string,
@@ -281,7 +251,7 @@ export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
     clipboard: result.document.clipboard,
     header: result.document.header,
     initialState: result.document.initialState,
-    /** @ts-expect-error */
+    /** @ts-expect-error TODO: fix this */
     operations: {
       global: result.document.operations.map(({ inputText, ...o }) => ({
         ...o,

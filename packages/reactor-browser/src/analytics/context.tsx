@@ -1,6 +1,8 @@
 import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
 import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
+import { getGlobal, setGlobal } from "@powerhousedao/reactor-browser";
 import {
   QueryClient,
   QueryClientProvider,
@@ -12,8 +14,6 @@ import {
 import { childLogger } from "document-drive";
 import type { PropsWithChildren } from "react";
 import { useEffect, useMemo } from "react";
-import { getGlobal, setGlobal } from "../global/core.js";
-import type { IAnalyticsStore } from "./types.js";
 
 const logger = childLogger(["reactor-browser", "analytics", "provider"]);
 
@@ -184,7 +184,6 @@ export function AnalyticsProvider({
 }: AnalyticsProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* eslint-disable-next-line react/jsx-props-no-spreading */}
       <CreateAnalyticsStore {...props} />
       {children}
     </QueryClientProvider>

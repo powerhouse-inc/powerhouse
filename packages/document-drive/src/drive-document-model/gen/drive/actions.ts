@@ -1,14 +1,16 @@
-import { type Action } from "document-model";
 import type {
   AddListenerInput,
   AddTriggerInput,
+  DocumentDriveGlobalState,
+  DocumentDriveLocalState,
   RemoveListenerInput,
   RemoveTriggerInput,
   SetAvailableOfflineInput,
   SetDriveIconInput,
   SetDriveNameInput,
   SetSharingTypeInput,
-} from "../types.js";
+} from "document-drive";
+import type { Action, SignalDispatch } from "document-model";
 
 export type SetDriveNameAction = Action & {
   type: "SET_DRIVE_NAME";
@@ -52,3 +54,46 @@ export type DocumentDriveDriveAction =
   | RemoveListenerAction
   | AddTriggerAction
   | RemoveTriggerAction;
+
+export interface DocumentDriveDriveOperations {
+  setDriveNameOperation: (
+    state: DocumentDriveGlobalState,
+    action: SetDriveNameAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setDriveIconOperation: (
+    state: DocumentDriveGlobalState,
+    action: SetDriveIconAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setSharingTypeOperation: (
+    state: DocumentDriveLocalState,
+    action: SetSharingTypeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setAvailableOfflineOperation: (
+    state: DocumentDriveLocalState,
+    action: SetAvailableOfflineAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addListenerOperation: (
+    state: DocumentDriveLocalState,
+    action: AddListenerAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  removeListenerOperation: (
+    state: DocumentDriveLocalState,
+    action: RemoveListenerAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addTriggerOperation: (
+    state: DocumentDriveLocalState,
+    action: AddTriggerAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  removeTriggerOperation: (
+    state: DocumentDriveLocalState,
+    action: RemoveTriggerAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+}

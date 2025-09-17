@@ -1,11 +1,11 @@
-import {
-  type PartialPowerhouseManifest,
-  type PowerhouseManifest,
-} from "@powerhousedao/config/powerhouse";
+import type {
+  PartialPowerhouseManifest,
+  PowerhouseManifest,
+} from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { generateManifest } from "../index.js";
+import { generateManifest } from "../generate.js";
 
 // Set this to false to keep the generated files for inspection
 const CLEANUP_AFTER_TESTS = true;

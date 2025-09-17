@@ -1,4 +1,8 @@
-import type { Action, DocumentModelState, PHDocument } from "document-model";
+import type {
+  Action,
+  DocumentModelGlobalState,
+  PHDocument,
+} from "document-model";
 
 import type {
   JobInfo,
@@ -57,7 +61,7 @@ export interface IReactorClient {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>>;
+  ): Promise<PagedResults<DocumentModelGlobalState>>;
 
   /**
    * Retrieves a specific PHDocument

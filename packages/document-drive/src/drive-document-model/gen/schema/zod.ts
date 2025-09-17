@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type {
   AddFileInput,
   AddFolderInput,
@@ -6,8 +5,8 @@ import type {
   AddTriggerInput,
   CopyNodeInput,
   DeleteNodeInput,
+  DocumentDriveGlobalState,
   DocumentDriveLocalState,
-  DocumentDriveState,
   FileNode,
   FolderNode,
   Listener,
@@ -21,12 +20,11 @@ import type {
   SetDriveIconInput,
   SetDriveNameInput,
   SetSharingTypeInput,
-  TransmitterType,
   Trigger,
-  TriggerType,
   UpdateFileInput,
   UpdateNodeInput,
-} from "./types.js";
+} from "document-drive";
+import { z } from "zod";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -117,7 +115,7 @@ export function DocumentDriveLocalStateSchema(): z.ZodObject<
 }
 
 export function DocumentDriveStateSchema(): z.ZodObject<
-  Properties<DocumentDriveState>
+  Properties<DocumentDriveGlobalState>
 > {
   return z.object({
     __typename: z.literal("DocumentDriveState").optional(),

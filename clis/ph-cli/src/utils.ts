@@ -1,4 +1,4 @@
-import type { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import type { Command } from "commander";
 import fs from "node:fs";
 import { homedir } from "node:os";
@@ -343,5 +343,3 @@ export function removeStylesImports(
     fs.writeFileSync(stylesPath, updatedStyles);
   }
 }
-
-export { getConfig } from "@powerhousedao/config/utils";

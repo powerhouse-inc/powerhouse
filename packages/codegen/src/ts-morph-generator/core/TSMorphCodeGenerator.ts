@@ -1,17 +1,18 @@
-import type { DocumentModelState } from "document-model";
+import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import type {
+  DocumentModelGlobalState,
+  ModuleSpecification,
+} from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
-import { ReducerGenerator } from "../file-generators/ReducerGenerator.js";
-import { DirectoryManager } from "../utilities/DirectoryManager.js";
-import { ImportManager } from "../utilities/ImportManager.js";
 import type { FileGenerator } from "./FileGenerator.js";
 import type {
   CodeGeneratorOptions,
+  CodegenOperation,
   GenerationContext,
-  ModuleSpec,
-  Operation,
   PHProjectDirectories,
 } from "./GenerationContext.js";
+import { ReducerGenerator } from "./ReducerGenerator.js";
 
 export class TSMorphCodeGenerator {
   private project = new Project();
@@ -26,7 +27,7 @@ export class TSMorphCodeGenerator {
 
   constructor(
     private rootDir: string,
-    private docModels: DocumentModelState[],
+    private docModels: DocumentModelGlobalState[],
     options: CodeGeneratorOptions = { directories: {}, forceUpdate: false },
   ) {
     this.directories = {
@@ -120,11 +121,11 @@ export class TSMorphCodeGenerator {
   }
 
   private createGenerationContext(
-    docModel: DocumentModelState,
-    module: ModuleSpec,
+    docModel: DocumentModelGlobalState,
+    module: ModuleSpecification,
     forceUpdate = false,
   ): GenerationContext {
-    const operations: Operation[] = module.operations.map((op) => ({
+    const operations: CodegenOperation[] = module.operations.map((op) => ({
       ...op,
       hasInput: op.schema !== null,
       hasAttachment: op.schema?.includes(": Attachment"),

@@ -1,15 +1,15 @@
+import { getConfig } from "@powerhousedao/config/node";
+import { mkdir, rm, writeFile } from "fs/promises";
+import { join } from "path";
+import { PH_DIR_NAME } from "../connect-utils/constants.js";
 import {
   appendToHtmlHead,
   copyConnect,
   makeImportScriptFromPackages,
-  PH_DIR_NAME,
   prependToHtmlHead,
-  resolveConnect,
+  resolveConnectBundle,
   runTsc,
-} from "#connect-utils";
-import { getConfig } from "@powerhousedao/config/utils";
-import { mkdir, rm, writeFile } from "fs/promises";
-import { join } from "path";
+} from "../connect-utils/helpers.js";
 import {
   CONNECT_BUILD_ASSETS_DIR_NAME,
   CONNECT_BUILD_DIR_NAME,
@@ -38,7 +38,7 @@ export async function buildConnect(options: ConnectBuildOptions) {
     assetsDirName = DEFAULT_ASSETS_DIR_NAME,
     externalPackagesFileName = DEFAULT_EXTERNAL_PACKAGES_FILE_NAME,
     stylesFileName = DEFAULT_STYLES_FILE_NAME,
-    connectPath = resolveConnect(),
+    connectPath = resolveConnectBundle(),
   } = options;
 
   // In this context, `project*` paths are relative to the project root

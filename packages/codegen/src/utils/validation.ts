@@ -1,23 +1,23 @@
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 
 /**
- * Validation result for DocumentModelState code generation requirements
+ * Validation result for DocumentModelGlobalState code generation requirements
  */
 export interface DocumentModelStateValidationResult {
-  /** Whether the DocumentModelState is valid for code generation */
+  /** Whether the DocumentModelGlobalState is valid for code generation */
   isValid: boolean;
   /** Array of validation error messages if validation fails */
   errors: string[];
 }
 
 /**
- * Validates that a DocumentModelState has all required properties for successful code generation.
+ * Validates that a DocumentModelGlobalState has all required properties for successful code generation.
  *
- * @param documentModelState - The DocumentModelState to validate
+ * @param documentModelState - The DocumentModelGlobalState to validate
  * @returns Validation result with isValid flag and error messages
  */
 export function validateDocumentModelState(
-  documentModelState: DocumentModelState,
+  documentModelState: DocumentModelGlobalState,
 ): DocumentModelStateValidationResult {
   const errors: string[] = [];
 

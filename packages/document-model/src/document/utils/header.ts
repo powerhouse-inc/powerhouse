@@ -1,5 +1,5 @@
-import type { PHDocumentHeader } from "#document/ph-types.js";
-import { generateUUID } from "#utils/env";
+import type { PHDocumentHeader } from "document-model";
+import { generateUUIDBrowser } from "document-model";
 
 /**
  * Parameters used in a document signature.
@@ -61,19 +61,7 @@ export class PublicKeySigner implements ISigner {
 
   #initCrypto() {
     return new Promise<SubtleCrypto>((resolve, reject) => {
-      if (typeof window === "undefined") {
-        import("node:crypto")
-          .then((module) => {
-            resolve(module.webcrypto.subtle as SubtleCrypto);
-          })
-          .catch(reject);
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!window.crypto?.subtle) {
-          reject(new Error("Crypto module not available"));
-        }
-        resolve(window.crypto.subtle);
-      }
+      resolve(crypto.subtle);
     });
   }
 
@@ -105,8 +93,8 @@ export class PublicKeySigner implements ISigner {
       isValid = await subtleCrypto.verify(
         "Ed25519",
         this.publicCryptoKey,
-        signature as BufferSource,
-        data as BufferSource,
+        new Uint8Array(signature),
+        new Uint8Array(data),
       );
     } catch (error) {
       throw new Error("invalid signature");
@@ -213,8 +201,8 @@ export const validateHeader = async (
  *
  * @returns An unsigned header for a document.
  */
-export const createUnsignedHeader = (
-  id: string = generateUUID(),
+export const createPresignedHeader = (
+  id: string = generateUUIDBrowser(),
   documentType = "",
 ): PHDocumentHeader => {
   return {
@@ -254,7 +242,7 @@ export const createSignedHeader = async (
   const parameters: SigningParameters = {
     documentType,
     createdAtUtcIso: unsignedHeader.createdAtUtcIso,
-    nonce: generateUUID(),
+    nonce: generateUUIDBrowser(),
   };
 
   const signature = await sign(parameters, signer);
@@ -296,7 +284,7 @@ export const createSignedHeaderForSigner = async (
   documentType: string,
   signer: ISigner,
 ): Promise<PHDocumentHeader> => {
-  const unsignedHeader = createUnsignedHeader();
+  const unsignedHeader = createPresignedHeader();
   const signedHeader = await createSignedHeader(
     unsignedHeader,
     documentType,

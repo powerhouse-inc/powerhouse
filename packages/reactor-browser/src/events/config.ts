@@ -1,4 +1,4 @@
-import type { AppConfig } from "../types/global.js";
+import type { AppConfig } from "@powerhousedao/reactor-browser";
 import type { SetAppConfigEvent } from "./types.js";
 
 export function dispatchSetAppConfigEvent(appConfig: AppConfig | undefined) {

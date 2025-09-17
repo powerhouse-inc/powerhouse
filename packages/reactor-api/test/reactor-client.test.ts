@@ -2,10 +2,8 @@ import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReactorClient } from "../src/graphql/reactor/factory.js";
 import { GetDocumentDocument } from "../src/graphql/reactor/gen/graphql.js";
-import {
-  createFetchRequester,
-  type FetchLike,
-} from "../src/graphql/reactor/requester.js";
+import type { FetchLike } from "../src/graphql/reactor/requester.js";
+import { createFetchRequester } from "../src/graphql/reactor/requester.js";
 import { createValidatingRequester } from "../src/graphql/reactor/requester.with-zod.js";
 
 describe("ReactorSDK", () => {

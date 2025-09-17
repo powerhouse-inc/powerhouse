@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+// @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
 const meta: Meta<typeof About> = {

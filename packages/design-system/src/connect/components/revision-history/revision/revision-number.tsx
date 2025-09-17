@@ -1,5 +1,4 @@
-import { Tooltip } from "#connect";
-import { Icon } from "#powerhouse";
+import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
 
 export type RevisionNumberProps = {
@@ -31,7 +30,7 @@ export function RevisionNumber(props: RevisionNumberProps) {
   }
 
   return (
-    <Tooltip content={tooltipContent}>
+    <ConnectTooltip content={tooltipContent}>
       <span className="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
         Revision {revisionNumber}.
         <a>
@@ -42,6 +41,6 @@ export function RevisionNumber(props: RevisionNumberProps) {
           />
         </a>
       </span>
-    </Tooltip>
+    </ConnectTooltip>
   );
 }

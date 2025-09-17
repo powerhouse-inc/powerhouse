@@ -1,6 +1,7 @@
-import { Icon, type IconName } from "#powerhouse";
-import { type ComponentPropsWithoutRef } from "react";
+import type { IconName } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
+import type { ComponentPropsWithoutRef } from "react";
 
 type HeaderProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
@@ -32,7 +33,7 @@ function getDocumentIcon(documentType?: DocumentTypeIcon): IconName {
   }
 }
 
-export function Header(props: HeaderProps) {
+export function UploadFileItemHeader(props: HeaderProps) {
   const { fileName, fileSize, documentType, onClose, ...delegatedProps } =
     props;
 

@@ -1,39 +1,28 @@
-import connectConfig from "#connect-config";
+import type { PGlite } from "@electric-sql/pglite";
+import type { PGliteWithLive } from "@electric-sql/pglite/live";
+import { PGliteWorker } from "@electric-sql/pglite/worker";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { processorFactory } from "@powerhousedao/common";
+import { connectConfig } from "@powerhousedao/connect/config";
 import type { Processors } from "@powerhousedao/reactor-browser";
-import {
-  useProcessorManager,
-  useProcessors,
-  useRelationalDb,
-} from "@powerhousedao/reactor-browser";
-import type { IAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
 import {
   AnalyticsProvider,
   useAnalyticsStoreAsync,
-} from "@powerhousedao/reactor-browser/analytics/context";
-import type {
-  PGlite,
-  PGliteWithLive,
-} from "@powerhousedao/reactor-browser/pglite";
-import { live, useSetPGliteDB } from "@powerhousedao/reactor-browser/pglite";
+  useProcessorManager,
+  useProcessors,
+  useRelationalDb,
+  useSetPGliteDB,
+} from "@powerhousedao/reactor-browser";
+import type { IRelationalDb, ProcessorManager } from "document-drive";
 import { childLogger } from "document-drive";
-import type { ProcessorManager } from "document-drive/processors/processor-manager";
-import type { IRelationalDb } from "document-drive/processors/types";
-import type { PHDocumentHeader } from "document-model";
-import { generateId } from "document-model";
+import { generateUUIDBrowser } from "document-model";
 import type { PropsWithChildren } from "react";
 import { useEffect, useRef } from "react";
-
+import PGWorker from "../workers/pglite-worker?worker";
 const logger = childLogger(["reactor-analytics"]);
 
 function createPgLiteFactoryWorker(databaseName: string) {
   return async () => {
-    const PGWorker = (await import("../workers/pglite-worker.js?worker"))
-      .default;
-
-    const { PGliteWorker } = await import(
-      "@powerhousedao/reactor-browser/pglite"
-    );
-
     const worker = new PGWorker({
       name: "pglite-worker",
     });
@@ -51,9 +40,6 @@ function createPgLiteFactoryWorker(databaseName: string) {
       meta: {
         databaseName,
       },
-      extensions: {
-        live,
-      },
     });
 
     await pgLiteWorker.waitReady;
@@ -69,39 +55,37 @@ async function registerExternalProcessors(
   processorName: string,
   processorFactory: Processors,
 ) {
-  return await manager.registerFactory(
+  return manager.registerFactory(
     processorName,
     processorFactory({ analyticsStore, relationalDb }),
   );
 }
 
-async function registerDiffAnalyzer(
-  manager: ProcessorManager,
-  analyticsStore: IAnalyticsStore,
-) {
-  const { processorFactory } = await import(
-    "@powerhousedao/diff-analyzer/processors"
-  );
+// async function registerDiffAnalyzer(
+//   manager: ProcessorManager,
+//   analyticsStore: IAnalyticsStore,
+// ) {
+//   const { processorFactory } = await import(
+//     "@powerhousedao/diff-analyzer/processors"
+//   );
 
-  const wrappedFactory = (driveHeader: PHDocumentHeader) => {
-    return processorFactory({ analyticsStore })(driveHeader.id);
-  };
+//   const unsafeWrappedFactory = (driveHeader: PHDocumentHeader) => {
+//     return processorFactory({ analyticsStore })(
+//       driveHeader.id,
+//     ) as ProcessorRecord[];
+//   };
 
-  return await manager.registerFactory(
-    "@powerhousedao/diff-analyzer",
-    wrappedFactory,
-  );
-}
+//   return manager.registerFactory(
+//     "@powerhousedao/diff-analyzer",
+//     unsafeWrappedFactory,
+//   );
+// }
 
 async function registerDriveAnalytics(
   manager: ProcessorManager,
   analyticsStore: IAnalyticsStore,
 ) {
-  const { processorFactory } = await import(
-    "@powerhousedao/common/drive-analytics"
-  );
-
-  return await manager.registerFactory(
+  return manager.registerFactory(
     "@powerhousedao/common/drive-analytics",
     processorFactory({ analyticsStore }),
   );
@@ -118,7 +102,7 @@ export function DiffAnalyzerProcessor() {
     }
 
     hasRegistered.current = true;
-    registerDiffAnalyzer(manager, store.data).catch(logger.error);
+    // registerDiffAnalyzer(manager, store.data).catch(logger.error);
   }, [store.data, manager]);
 
   return null;
@@ -157,7 +141,7 @@ export function ExternalProcessors() {
       !store.data ||
       !manager ||
       hasRegistered.current ||
-      processors.length === 0 ||
+      processors?.length === 0 ||
       !relationalDb.db
     ) {
       return;
@@ -165,16 +149,19 @@ export function ExternalProcessors() {
 
     hasRegistered.current = true;
 
+    if (!processors) {
+      return;
+    }
     for (const processor of processors) {
       registerExternalProcessors(
         manager,
         store.data,
         relationalDb.db,
-        generateId(),
+        generateUUIDBrowser(),
         processor,
       ).catch(logger.error);
     }
-  }, [store.data, manager, relationalDb, processors]);
+  }, [store.data, manager, relationalDb]);
 
   return null;
 }
@@ -217,6 +204,21 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
       });
   }, []);
 
+  const content = (
+    <>
+      {connectConfig.analytics.diffProcessorEnabled && (
+        <DiffAnalyzerProcessor />
+      )}
+      {connectConfig.analytics.driveAnalyticsEnabled && (
+        <DriveAnalyticsProcessor />
+      )}
+      {connectConfig.analytics.externalProcessorsEnabled && (
+        <ExternalProcessors />
+      )}
+      {children}
+    </>
+  );
+
   return (
     <AnalyticsProvider
       options={{
@@ -224,20 +226,7 @@ export function ProcessorManagerProvider({ children }: PropsWithChildren) {
         pgLiteFactory,
       }}
     >
-      <>
-        {connectConfig.analytics.diffProcessorEnabled && (
-          <DiffAnalyzerProcessor />
-        )}
-        {connectConfig.analytics.driveAnalyticsEnabled && (
-          <DriveAnalyticsProcessor />
-        )}
-        {connectConfig.analytics.externalProcessorsEnabled && (
-          <ExternalProcessors />
-        )}
-        {children}
-      </>
+      {content}
     </AnalyticsProvider>
   );
 }
-
-export default ProcessorManagerProvider;

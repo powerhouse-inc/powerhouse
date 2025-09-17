@@ -6,7 +6,7 @@ import {
   isDocumentAction,
   createReducer,
 } from "document-model";
-import { VetraPackagePHState } from "./ph-factories.js";
+import type { VetraPackagePHState } from "./types.js";
 import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";

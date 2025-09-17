@@ -5,10 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "generate": "ph-cli generate",
-    "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

@@ -1,36 +1,36 @@
-import { DocumentModelState } from "../types.js";
-import {
+import type {
+  DocumentModelGlobalState,
   SetAuthorNameAction,
   SetAuthorWebsiteAction,
   SetModelDescriptionAction,
   SetModelExtensionAction,
   SetModelIdAction,
   SetModelNameAction,
-} from "./actions.js";
+} from "document-model";
 
 export interface DocumentModelHeaderOperations {
   setModelNameOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModelNameAction,
   ) => void;
   setModelIdOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModelIdAction,
   ) => void;
   setModelExtensionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModelExtensionAction,
   ) => void;
   setModelDescriptionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetModelDescriptionAction,
   ) => void;
   setAuthorNameOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetAuthorNameAction,
   ) => void;
   setAuthorWebsiteOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetAuthorWebsiteAction,
   ) => void;
 }

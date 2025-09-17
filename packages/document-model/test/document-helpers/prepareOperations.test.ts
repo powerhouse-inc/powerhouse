@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prepareOperations } from "../../src/document/utils/document-helpers.js";
+import { prepareOperations } from "document-model";
 import { buildOperations } from "./utils.js";
 
 describe("prepareOperations", () => {

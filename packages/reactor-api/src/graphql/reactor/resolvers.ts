@@ -6,7 +6,7 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelState, PHDocument } from "document-model";
+import type { DocumentModelGlobalState, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
@@ -46,7 +46,7 @@ export async function documentModels(
     }
   }
 
-  let result: PagedResults<DocumentModelState>;
+  let result: PagedResults<DocumentModelGlobalState>;
   try {
     result = await reactorClient.getDocumentModels(namespace, paging);
   } catch (error) {

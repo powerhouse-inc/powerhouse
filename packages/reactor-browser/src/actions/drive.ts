@@ -1,9 +1,10 @@
+import { getUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   DriveInput,
-  Listener,
   PullResponderTrigger,
   RemoteDriveOptions,
+  ServerListener,
   SharingType,
   SyncStatus,
   Trigger,
@@ -13,17 +14,12 @@ import {
   SynchronizationUnitNotFoundError,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
+  driveCreateState,
   setAvailableOffline,
   setDriveName,
   setSharingType,
 } from "document-drive";
-import {
-  createGlobalState,
-  createState,
-} from "document-drive/drive-document-model/gen/ph-factories";
-import { defaultBaseState, generateId } from "document-model";
-import { defaultLocalState } from "document-model/document-model/gen/ph-factories";
-import { getUserPermissions } from "../utils/user.js";
+import { generateId } from "document-model";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
@@ -36,18 +32,11 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
   }
-
   const id = input.id || generateId();
-  const state = createState(
-    defaultBaseState(),
-    createGlobalState(input.global),
-    defaultLocalState(),
-  );
-
   const newDrive = await reactor.addDrive(
     {
-      global: state.global,
-      local: state.local,
+      global: input.global,
+      local: input.local,
       id,
     },
     preferredEditor,
@@ -206,7 +195,7 @@ export async function registerNewPullResponderTrigger(
   }
 
   const uuid = generateId();
-  const listener: Listener = {
+  const listener: ServerListener = {
     driveId,
     listenerId: uuid,
     block: false,

@@ -1,83 +1,44 @@
-import { castDraft, create, unsafe } from "mutative";
-import {
-  loadStateOperation,
-  pruneOperation,
-  redoOperation,
-  setNameOperation,
-  undoOperation,
-} from "./actions/operations.js";
-import { LOAD_STATE, PRUNE, REDO, SET_NAME, UNDO } from "./actions/types.js";
-import {
-  actionFromAction,
-  operationFromAction,
-  operationFromOperation,
-} from "./ph-factories.js";
-import type { PHBaseState, PHDocumentHeader } from "./ph-types.js";
-import { DocumentActionSchema } from "./schema/zod.js";
-import type { SignalDispatch } from "./signal.js";
 import type {
   Action,
   Operation,
+  PHBaseState,
   PHDocument,
+  Reducer,
   ReducerOptions,
+  SignalDispatch,
   StateReducer,
-} from "./types.js";
+} from "document-model";
 import {
-  getDocumentLastModified,
+  actionFromAction,
+  diffOperations,
+  DocumentActionSchema,
+  garbageCollect,
+  garbageCollectDocumentOperations,
   hashDocumentStateForScope,
   isDocumentAction,
   isUndo,
   isUndoRedo,
+  loadStateOperation,
+  operationFromAction,
+  operationFromOperation,
   parseResultingState,
+  pruneOperation,
+  redoOperation,
   replayOperations,
-} from "./utils/base.js";
-import {
-  diffOperations,
-  garbageCollect,
-  garbageCollectDocumentOperations,
+  setNameOperation,
   skipHeaderOperations,
   sortOperations,
-} from "./utils/document-helpers.js";
-
-/**
- * Gets the next revision number based on the provided scope.
- *
- * @param state The current state of the document.
- * @param scope The scope of the operation.
- * @returns The next revision number.
- */
-function getNextRevision(document: PHDocument, scope: string) {
-  const latestOperationIndex = document.operations[scope].at(-1)?.index ?? -1;
-
-  return (latestOperationIndex ?? -1) + 1;
-}
-
-/**
- * Updates the document header with the latest revision number and
- * date of last modification.
- *
- * @param state The current state of the document.
- * @param operation The action being applied to the document.
- * @returns The updated document state.
- */
-export function updateHeaderRevision(
-  document: PHDocument,
-  scope: string,
-): PHDocument {
-  const header: PHDocumentHeader = {
-    ...document.header,
-    revision: {
-      ...document.header.revision,
-      [scope]: getNextRevision(document, scope),
-    },
-    lastModifiedAtUtcIso: getDocumentLastModified(document),
-  };
-
-  return {
-    ...document,
-    header,
-  };
-}
+  undoOperation,
+  updateHeaderRevision,
+} from "document-model";
+import { castDraft, create, unsafe } from "mutative";
+import {
+  LOAD_STATE,
+  PRUNE,
+  REDO,
+  SET_NAME,
+  UNDO,
+} from "./actions/constants.js";
 
 /**
  * Updates the operations history of the document based on the provided action.
@@ -97,7 +58,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
-  if ([UNDO, REDO, PRUNE].includes(action.type)) {
+  if (["UNDO", "REDO", "PRUNE"].includes(action.type)) {
     return document;
   }
 
@@ -291,7 +252,7 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
         operationResultingStateParser: resultingStateParser,
       },
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
     scopeState = (state as any)[scope];
   }
 
@@ -531,7 +492,6 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
     if (reuseOperationResultingState) {
       lastOperation.resultingState = JSON.stringify(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (newDocument.state as any)[scope],
       );
     }
@@ -551,4 +511,37 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   }
 
   return newDocument;
+}
+
+/**
+ * Helper function to create a document model reducer.
+ *
+ * @remarks
+ * This function creates a new reducer that wraps the provided `reducer` with
+ * `documentReducer`, adding support for document actions:
+ *   - `SET_NAME`
+ *   - `UNDO`
+ *   - `REDO`
+ *   - `PRUNE`
+ *
+ * It also updates the document-related attributes on every operation.
+ *
+ * @param reducer - The custom reducer to wrap.
+ * @param documentReducer - The document reducer to use.
+ *
+ * @returns The new reducer.
+ */
+export function createReducer<TState extends PHBaseState = PHBaseState>(
+  stateReducer: StateReducer<TState>,
+  documentReducer = baseReducer,
+): Reducer<TState> {
+  const reducer: Reducer<TState> = (
+    document: PHDocument<TState>,
+    action: Action,
+    dispatch?: SignalDispatch,
+    options?: ReducerOptions,
+  ) => {
+    return documentReducer(document, action, stateReducer, dispatch, options);
+  };
+  return reducer;
 }

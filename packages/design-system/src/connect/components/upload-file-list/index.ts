@@ -1,5 +1,2 @@
-export {
-  UploadFileList,
-  type UploadFileListProps,
-} from "./upload-file-list.js";
-export { getUploadListTitle } from "./utils.js";
+export * from "./upload-file-list.js";
+export * from "./utils.js";

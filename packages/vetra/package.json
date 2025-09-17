@@ -11,49 +11,49 @@
     "access": "public"
   },
   "files": [
-    "/dist"
+    "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./document-models": {
-      "types": "./dist/document-models/index.d.ts",
-      "default": "./dist/document-models/index.js"
+      "import": "./dist/document-models/index.js",
+      "types": "./dist/document-models/index.d.ts"
+    },
+    "./document-models/*.js": {
+      "import": "./dist/document-models/*.js",
+      "types": "./dist/document-models/*.d.ts"
     },
     "./editors": {
-      "types": "./dist/editors/index.d.ts",
-      "default": "./dist/editors/index.js"
+      "import": "./dist/editors/index.js",
+      "types": "./dist/editors/index.d.ts"
     },
     "./subgraphs": {
-      "types": "./dist/subgraphs/index.d.ts",
-      "default": "./dist/subgraphs/index.js"
+      "import": "./dist/subgraphs/index.js",
+      "types": "./dist/subgraphs/index.d.ts"
     },
     "./processors": {
-      "types": "./dist/processors/index.d.ts",
-      "default": "./dist/processors/index.js"
+      "import": "./dist/processors/index.js",
+      "types": "./dist/processors/index.d.ts"
     },
     "./manifest": {
-      "types": "./dist/manifest.d.ts",
-      "default": "./dist/manifest.js"
+      "import": "./dist/manifest.js",
+      "types": "./dist/manifest.d.ts"
     },
     "./vetra-drive-app": {
-      "types": "./dist/editors/vetra-drive-app/index.d.ts",
-      "default": "./dist/editors/vetra-drive-app/index.js"
+      "import": "./dist/editors/vetra-drive-app/index.js",
+      "types": "./dist/editors/vetra-drive-app/index.d.ts"
     },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "lint": "eslint .",
-    "build:tsc": "tsc",
-    "build:tsc:watch": "tsc --watch",
+    "tsc": "tsc",
+    "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "build:css:watch": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css --watch",
-    "build": "npm run build:tsc && npm run build:css",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
@@ -62,35 +62,34 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
+    "document-model": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "change-case": "^5.4.4",
     "colorette": "^2.0.20",
-    "document-model": "workspace:*",
     "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.2.12",
-    "@eslint/js": "^9.22.0",
-    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "document-drive": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.27.0",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/document-engineering": "^1.27.0",
+    "@electric-sql/pglite": "^0.2.12",
     "@tailwindcss/cli": "^4.0.15",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.13.11",
     "@types/react": "^18.3.19",
     "@vitejs/plugin-react": "^4.3.4",
-    "document-drive": "workspace:*",
     "eslint": "^9.22.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -100,8 +99,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.0.15",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0",
     "vite": "^6.2.3",
     "vitest": "^3.0.9"
   },

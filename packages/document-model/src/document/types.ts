@@ -1,30 +1,20 @@
-import type { DocumentModelState } from "#document-model/gen/types.js";
-import type { Draft, Immutable } from "mutative";
-import type { FC } from "react";
-import type { DocumentAction } from "./actions/types.js";
 import type {
+  DocumentModelGlobalState,
   PHBaseState,
   PHDocumentHeader,
   PHDocumentHistory,
-} from "./ph-types.js";
-import type {
-  CreateChildDocumentInput,
-  Signal,
   SignalDispatch,
-  SignalResult,
-} from "./signal.js";
-import type { FileInput } from "./utils/file.js";
-export type { PHBaseState } from "./ph-types.js";
-export type { NOOPAction } from "./schema/types.js";
-export type {
-  CreateChildDocumentInput,
-  DocumentAction,
-  FileInput,
-  Immutable,
-  Signal,
-  SignalDispatch,
-  SignalResult,
-};
+} from "document-model";
+import type { Draft } from "mutative";
+import type { FC } from "react";
+
+export * from "./actions/types.js";
+export * from "./ph-types.js";
+export * from "./schema/types.js";
+export * from "./signal.js";
+
+export type FileInput = string | number[] | Uint8Array | ArrayBuffer | Blob;
+
 //  [
 //     signerAddress,
 //     hash (docID, scope, operationID, operationName, operationInput),
@@ -318,9 +308,7 @@ export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
   fileExtension: string;
   createState: CreateState<TState>;
   createDocument: CreateDocument<TState>;
-  loadFromFile: LoadFromFile<TState>;
   loadFromInput: LoadFromInput<TState>;
-  saveToFile: SaveToFile;
   saveToFileHandle: SaveToFileHandle;
 };
 
@@ -448,8 +436,5 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
   actions: Record<string, (input: any) => Action>;
   utils: DocumentModelUtils<TState>;
-  documentModel: DocumentModelState;
+  documentModel: DocumentModelGlobalState;
 };
-
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = T | null | undefined;

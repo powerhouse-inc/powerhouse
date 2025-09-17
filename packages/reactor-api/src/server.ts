@@ -1,32 +1,28 @@
-import { config } from "#config.js";
-import { GraphQLManager } from "#graphql/graphql-manager.js";
-import { renderGraphqlPlayground } from "#graphql/playground.js";
-import { ImportPackageLoader } from "#packages/import-loader.js";
-import {
-  getUniqueDocumentModels,
-  PackageManager,
-} from "#packages/package-manager.js";
-import type { IPackageLoader } from "#packages/types.js";
 import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
-import { getConfig } from "@powerhousedao/config/utils";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
+import { getConfig } from "@powerhousedao/config/node";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import {
+  GraphQLManager,
+  renderGraphqlPlayground,
+} from "@powerhousedao/reactor-api";
+import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
-} from "document-drive";
-import { childLogger } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
-import type {
   IProcessorHostModule,
   IProcessorManager,
   IRelationalDb,
   ProcessorFactory,
-} from "document-drive/processors/types";
-import { createRelationalDb } from "document-drive/processors/utils";
+} from "document-drive";
+import {
+  childLogger,
+  createRelationalDb,
+  ProcessorManager,
+} from "document-drive";
 import type { Express } from "express";
 import express from "express";
 import fs from "node:fs";
@@ -34,9 +30,15 @@ import https from "node:https";
 import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
+import { config } from "./config.js";
+import { ImportPackageLoader } from "./packages/import-loader.js";
+import {
+  getUniqueDocumentModels,
+  PackageManager,
+} from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
-import type { API, Processor, SubgraphClass } from "./types.js";
+import type { API, IPackageLoader, Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);
@@ -171,11 +173,7 @@ function setupEventListeners(
   },
 ): void {
   pkgManager.onDocumentModelsChange(async (documentModels) => {
-    const uniqueModels = getUniqueDocumentModels([
-      ...reactor.getDocumentModelModules(),
-      ...Object.values(documentModels).flat(),
-    ]);
-    reactor.setDocumentModelModules(uniqueModels);
+    reactor.setDocumentModelModules(Object.values(documentModels).flat());
     await graphqlManager.updateRouter();
   });
 
@@ -355,7 +353,8 @@ export async function startAPI(
     const factories = fns.map((fn) => {
       try {
         return fn({
-          // eslint-disable-next-line
+          // TODO: figure out why this type comes out as any
+
           analyticsStore: module.analyticsStore,
           relationalDb: module.relationalDb,
           config: options.processorConfig,

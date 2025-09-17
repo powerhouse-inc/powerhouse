@@ -1,7 +1,7 @@
-import { CLOUD, LOCAL, PUBLIC } from "@powerhousedao/design-system";
-import { isLogLevel, logger, setLogLevel } from "document-drive/utils/logger";
-import pkg from "../package.json" with { type: "json" };
-import { getBasePath } from "./utils/browser";
+import { isLogLevel } from "@powerhousedao/config";
+import { getBasePath } from "@powerhousedao/connect";
+import { logger, setLogLevel } from "document-drive";
+import pkg from "../package.copy.json" with { type: "json" };
 
 const version = pkg.version;
 const APP_VERSION = import.meta.env.APP_VERSION || version;
@@ -70,7 +70,7 @@ const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
 setLogLevel(LOG_LEVEL);
 logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
-export default {
+export const connectConfig = {
   appVersion: APP_VERSION,
   studioMode: PH_CONNECT_STUDIO_MODE.toString() === "true",
   warnOutdatedApp: WARN_OUTDATED_APP === "true",
@@ -96,17 +96,17 @@ export default {
   drives: {
     addDriveEnabled: DISABLE_ADD_DRIVE === "true" ? false : true,
     sections: {
-      [LOCAL]: {
+      LOCAL: {
         enabled: LOCAL_DRIVES_ENABLED !== "false",
         allowAdd: DISABLE_ADD_LOCAL_DRIVES !== "true",
         allowDelete: DISABLE_DELETE_LOCAL_DRIVES !== "true",
       },
-      [CLOUD]: {
+      CLOUD: {
         enabled: CLOUD_DRIVES_ENABLED !== "false",
         allowAdd: DISABLE_ADD_CLOUD_DRIVES !== "true",
         allowDelete: DISABLE_DELETE_CLOUD_DRIVES !== "true",
       },
-      [PUBLIC]: {
+      PUBLIC: {
         enabled: PUBLIC_DRIVES_ENABLED !== "false",
         allowAdd: DISABLE_ADD_PUBLIC_DRIVES !== "true",
         allowDelete: DISABLE_DELETE_PUBLIC_DRIVES !== "true",
@@ -115,4 +115,4 @@ export default {
   },
   gaTrackingId: GA_TRACKING_ID,
   phCliVersion: PH_CONNECT_CLI_VERSION,
-};
+} as const;

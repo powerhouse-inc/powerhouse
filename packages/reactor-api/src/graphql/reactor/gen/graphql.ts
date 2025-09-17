@@ -1,12 +1,12 @@
-import {
+import type {
+  DocumentNode,
   GraphQLResolveInfo,
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
-import { Context } from "../../types.js";
-import { z } from "zod";
-import { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import { z } from "zod";
+import type { Context } from "../../types.js";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -346,7 +346,7 @@ export type GetDocumentModelsQuery = {
       readonly name: string;
       readonly namespace?: string | null | undefined;
       readonly version?: string | null | undefined;
-      readonly specification?: any | null | undefined;
+      readonly specification?: any;
     }>;
   };
 };
@@ -475,7 +475,7 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result?: any | null | undefined;
+        readonly result?: any;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
@@ -530,9 +530,7 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -555,9 +553,7 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -736,7 +732,7 @@ export type JobChangesSubscription = {
   readonly jobChanges: {
     readonly jobId: string;
     readonly status: string;
-    readonly result?: any | null | undefined;
+    readonly result?: any;
     readonly error?: string | null | undefined;
   };
 };

@@ -1,14 +1,20 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument, PHBaseState } from "document-model";
 import type { ProcessorModuleAction } from "./actions.js";
-import type { ProcessorModulePHState } from "./ph-factories.js";
-import type { ProcessorModuleState } from "./schema/types.js";
+import type { ProcessorModuleState as ProcessorModuleGlobalState } from "./schema/types.js";
 
 export { z } from "./schema/index.js";
-export type * from "./schema/types.js";
+export * from "./schema/types.js";
 type ProcessorModuleLocalState = Record<PropertyKey, never>;
-export type ProcessorModuleDocument = PHDocument<ProcessorModulePHState>;
+type ProcessorModulePHState = PHBaseState & {
+  global: ProcessorModuleGlobalState;
+  local: ProcessorModuleLocalState;
+};
+type ProcessorModuleDocument = PHDocument<ProcessorModulePHState>;
+
 export type {
-  ProcessorModuleState,
+  ProcessorModuleGlobalState,
   ProcessorModuleLocalState,
+  ProcessorModulePHState,
   ProcessorModuleAction,
+  ProcessorModuleDocument,
 };

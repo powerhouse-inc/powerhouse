@@ -1,6 +1,6 @@
 import { generateFromFile } from "@powerhousedao/codegen";
-import type { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import { getConfig } from "@powerhousedao/config/utils";
+import type { PowerhouseConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import type {
   LocalReactor,
   RemoteDriveInputSimple,
@@ -10,10 +10,12 @@ import {
   DefaultStartServerOptions,
   startServer,
 } from "@powerhousedao/reactor-local";
-import type { IProcessor } from "document-drive/processors/types";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import { InternalTransmitter } from "document-drive/server/listener/transmitter/internal";
-import type { Listener } from "document-drive/server/types";
+import type {
+  InternalTransmitterUpdate,
+  IProcessor,
+  ServerListener,
+} from "document-drive";
+import { InternalTransmitter } from "document-drive";
 import { readFileSync } from "node:fs";
 
 export type ReactorOptions = StartServerOptions & {
@@ -114,7 +116,7 @@ async function addGenerateTransmitter(
   const listenerManager = reactor.server.listeners;
 
   // todo: simplify
-  const listener: Listener = {
+  const listener: ServerListener = {
     driveId: "powerhouse",
     listenerId: "reactor-local-document-model-generator",
     label: "reactor-local-document-model-generator",

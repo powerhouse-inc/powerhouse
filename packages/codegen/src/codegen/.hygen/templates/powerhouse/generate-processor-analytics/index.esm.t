@@ -2,8 +2,9 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 unless_exists: true
 ---
-import { AnalyticsPath, AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/reactor-api";
-import { type InternalTransmitterUpdate, type IProcessor } from "document-drive";
+import type { AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/reactor-api";
+import { AnalyticsPath } from "@powerhousedao/reactor-api";
+import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 
 export class <%= pascalName %>Processor implements IProcessor {
   private readonly NAMESPACE = "<%= pascalName %>";

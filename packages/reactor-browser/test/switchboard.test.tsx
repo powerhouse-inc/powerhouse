@@ -1,11 +1,11 @@
 // test suite for the switchboard hooks
 
-import { describe, it } from "vitest";
 import {
   buildDocumentSubgraphUrl,
   getDocumentGraphqlQuery,
   getSwitchboardGatewayUrlFromDriveUrl,
-} from "../src/utils/switchboard.js";
+} from "@powerhousedao/reactor-browser";
+import { describe, it } from "vitest";
 
 describe("Switchboard hooks", () => {
   it("should return the proper switchboard url", () => {

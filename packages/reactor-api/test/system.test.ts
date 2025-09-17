@@ -1,4 +1,4 @@
-import { SystemSubgraph } from "#graphql/system/index.js";
+import { SystemSubgraph } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
 import { documentModelDocumentModelModule, generateId } from "document-model";
 import { GraphQLError } from "graphql";

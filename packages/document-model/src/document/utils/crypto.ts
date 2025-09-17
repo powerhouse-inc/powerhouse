@@ -1,7 +1,3 @@
-import { actionSigner, operationWithContext } from "#document/ph-factories.js";
-import type { PHBaseState } from "#document/ph-types.js";
-import { generateUUID, hash } from "#utils/env";
-import stringifyJson from "safe-stable-stringify";
 import type {
   Action,
   ActionContext,
@@ -10,22 +6,26 @@ import type {
   ActionSigningHandler,
   ActionVerificationHandler,
   PHDocument,
+  PHBaseState,
   Reducer,
   Signature,
-} from "../types.js";
+} from "document-model";
+import {
+  actionSigner,
+  generateUUIDBrowser,
+  hashBrowser,
+  operationWithContext,
+} from "document-model";
+import stringifyJson from "safe-stable-stringify";
 
 export function generateId(method?: "UUIDv4"): string {
-  // TODO: this does not make sense. This type says that the input can only be either "UUIDv4" or undefined.
-  // But the purpose of the function is to determine if this is something else.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
   if (method && method.toString() !== "UUIDv4") {
     throw new Error(
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
       `Id generation method not supported: "${method.toString()}"`,
     );
   }
 
-  return generateUUID();
+  return generateUUIDBrowser();
 }
 
 export function getUnixTimestamp(date: Date | string): string {
@@ -42,7 +42,7 @@ export function buildOperationSignatureParams({
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
-    hash(
+    hashBrowser(
       [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
     ),
     previousStateHash,

@@ -1,7 +1,7 @@
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
-} from "document-drive/storage/types";
+} from "document-drive";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";

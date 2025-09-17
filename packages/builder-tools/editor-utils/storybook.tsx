@@ -1,4 +1,3 @@
-import { useDocumentReducer } from "#editor-utils/reducer";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
@@ -14,6 +13,7 @@ import type {
 import { baseCreateDocument } from "document-model";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
+import { useDocumentReducer } from "./reducer.js";
 
 export type EditorStoryArgs = Partial<{
   user: {
@@ -145,12 +145,12 @@ export function createDocumentStory(
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document as PHDocument));
+            dispatch(createAction(document));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} document={document as PHDocument} />;
+      return <Editor {...args} document={document} />;
     },
     argTypes: {
       document: {

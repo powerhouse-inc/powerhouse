@@ -1,5 +1,11 @@
-import { openUrl } from "#utils";
 import {
+  DocumentEditor,
+  openUrl,
+  useModal,
+  validateDocument,
+} from "@powerhousedao/connect";
+import {
+  buildDocumentSubgraphUrl,
   exportFile,
   setSelectedNode,
   useConnectCrypto,
@@ -10,13 +16,9 @@ import {
   useSelectedDrive,
   useUser,
 } from "@powerhousedao/reactor-browser";
-import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser/utils/switchboard";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useModal } from "../components/modal/index.js";
-import { validateDocument } from "../utils/validate-document.js";
-import { DocumentEditor } from "./editors.js";
 
 export function DocumentEditorContainer() {
   const { t } = useTranslation();

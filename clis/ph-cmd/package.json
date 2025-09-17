@@ -17,20 +17,17 @@
   "files": [
     "dist"
   ],
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "prebuild": "npm run clean && npm run generate-commands-md && npm run generate-version",
-    "build": "tsc --build",
+    "build": "npm run generate-commands-md && npm run generate-version",
     "dev": "tsx src/cli.ts",
-    "prepublishOnly": "npm run build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix",
     "test": "vitest run",
-    "test:watch": "vitest watch",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",

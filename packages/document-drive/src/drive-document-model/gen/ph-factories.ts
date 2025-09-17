@@ -2,21 +2,15 @@
  * Factory methods for creating DocumentDriveDocument instances
  */
 
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHBaseState,
-  type PHDocumentState,
-} from "document-model";
 import type {
-  DocumentDriveDocument,
+  DocumentDriveGlobalState,
   DocumentDriveLocalState,
-  DocumentDriveState,
-} from "./types.js";
-import { createDocument } from "./utils.js";
+  DocumentDrivePHState,
+} from "document-drive";
+import type { PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 
-export function defaultGlobalState(): DocumentDriveState {
+export function defaultGlobalState(): DocumentDriveGlobalState {
   return {
     icon: null,
     name: "",
@@ -42,12 +36,12 @@ export function defaultPHState(): DocumentDrivePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<DocumentDriveState>,
-): DocumentDriveState {
+  state?: Partial<DocumentDriveGlobalState>,
+): DocumentDriveGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as DocumentDriveState;
+  } as DocumentDriveGlobalState;
 }
 
 export function createLocalState(
@@ -61,7 +55,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<DocumentDriveState>,
+  globalState?: Partial<DocumentDriveGlobalState>,
   localState?: Partial<DocumentDriveLocalState>,
 ): DocumentDrivePHState {
   return {
@@ -69,35 +63,4 @@ export function createState(
     global: createGlobalState(globalState),
     local: createLocalState(localState),
   };
-}
-
-export type DocumentDrivePHState = PHBaseState & {
-  global: DocumentDriveState;
-  local: DocumentDriveLocalState;
-};
-
-/**
- * Creates a DocumentDriveDocument with custom global and local state
- * This properly handles the PHBaseState requirements while allowing
- * document-specific state to be set.
- */
-export function createDocumentDriveDocument(
-  state?: Partial<{
-    auth?: Partial<PHAuthState>;
-    document?: Partial<PHDocumentState>;
-    global?: Partial<DocumentDriveState>;
-    local?: Partial<DocumentDriveLocalState>;
-  }>,
-): DocumentDriveDocument {
-  const document = createDocument(
-    state
-      ? createState(
-          createBaseState(state.auth, state.document),
-          state.global,
-          state.local,
-        )
-      : undefined,
-  );
-
-  return document;
 }

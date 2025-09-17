@@ -1,23 +1,24 @@
-import { setName } from "../../src/document/actions/creators.js";
 import {
   baseCreateDocument,
+  garbageCollectDocumentOperations,
   mapSkippedOperations,
   replayOperations,
-} from "../../src/document/utils/base.js";
-import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
-import type { CountPHState, TestPHState } from "../helpers.js";
+  setName,
+} from "document-model";
+import type { CountPHState, TestPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,
-  createTestState,
   createCountDocumentState,
   defaultPHDocumentCreateState,
   error,
   fakeOperation,
   increment,
   mapOperations,
+  testCreateBaseState,
   wrappedEmptyReducer,
-} from "../helpers.js";
+} from "document-model/test";
+import { describe } from "vitest";
 
 describe("skip operations", () => {
   describe("skip operation param", () => {
@@ -302,7 +303,7 @@ describe("skip operations", () => {
 
   describe("replayOperations", () => {
     it("should ignore operation 2, when operation 3 -> (skip=1)", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,
@@ -348,7 +349,7 @@ describe("skip operations", () => {
     });
 
     it("should ignore operation 2, 3 and 4, when operation 5 -> (skip=3)", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,
@@ -395,7 +396,7 @@ describe("skip operations", () => {
     });
 
     it("should ignore operation 2 and 5, when operation 3 -> (skip=1) and operation 6 -> (skip=1)", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,
@@ -460,7 +461,7 @@ describe("skip operations", () => {
     });
 
     it("should ignore all the previous operations, when operation 5 -> (skip=4)", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,
@@ -503,7 +504,7 @@ describe("skip operations", () => {
     });
 
     it("should skip operations when dispatch a new action with an skip value", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,
@@ -543,7 +544,7 @@ describe("skip operations", () => {
     });
 
     it("should not process and skip operation that throws an error", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       let document = baseCreateDocument<CountPHState>(
         createCountDocumentState,

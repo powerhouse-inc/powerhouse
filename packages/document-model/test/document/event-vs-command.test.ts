@@ -1,13 +1,13 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { baseCreateDocument } from "../../src/document/utils/base.js";
-import type { TestPHState } from "../helpers.js";
+import { baseCreateDocument } from "document-model";
+import type { TestPHState } from "document-model/test";
 import {
   defaultPHDocumentCreateState,
   fakeAction,
   wrappedEmptyReducer,
-} from "../helpers.js";
+} from "document-model/test";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Event", () => {
   beforeAll(() => {

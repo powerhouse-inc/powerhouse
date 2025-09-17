@@ -1,36 +1,36 @@
-import {
-  SetStateSchemaAction,
-  SetInitialStateAction,
+import type {
   AddStateExampleAction,
-  UpdateStateExampleAction,
   DeleteStateExampleAction,
+  DocumentModelGlobalState,
   ReorderStateExamplesAction,
-} from "./actions.js";
-import { DocumentModelState } from "../types.js";
+  SetInitialStateAction,
+  SetStateSchemaAction,
+  UpdateStateExampleAction,
+} from "document-model";
 
 export interface DocumentModelStateOperations {
   setStateSchemaOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetStateSchemaAction,
   ) => void;
   setInitialStateOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetInitialStateAction,
   ) => void;
   addStateExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddStateExampleAction,
   ) => void;
   updateStateExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: UpdateStateExampleAction,
   ) => void;
   deleteStateExampleOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteStateExampleAction,
   ) => void;
   reorderStateExamplesOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderStateExamplesAction,
   ) => void;
 }

@@ -1,10 +1,14 @@
+import type {
+  AppConfig,
+  DID,
+  IConnectCrypto,
+  LoginStatus,
+  Reactor,
+  VetraPackage,
+} from "@powerhousedao/reactor-browser";
 import type { IRenown, User } from "@renown/sdk";
 import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
-import type { DID, IConnectCrypto } from "../crypto/index.js";
-import type { AppConfig, LoginStatus } from "../types/global.js";
-import type { Reactor } from "../types/reactor.js";
-import type { VetraPackage } from "../types/vetra.js";
 
 export type SetReactorEvent = CustomEvent<{
   reactor: Reactor | undefined;

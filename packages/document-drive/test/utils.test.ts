@@ -1,34 +1,30 @@
-import { setModelName } from "document-model";
-import { describe, expect, it } from "vitest";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import { createDocument } from "../src/drive-document-model/gen/utils.js";
 import {
   buildDocumentRevisionsFilter,
+  driveCreateDocument,
+  driveDocumentReducer,
   filterOperationsByRevision,
   isAfterRevision,
   isAtRevision,
-} from "../src/server/utils.js";
-import { runAsapAsync } from "../src/utils/misc.js";
-import { RunAsap } from "../src/utils/run-asap.js";
+} from "document-drive";
+import { runAsapAsync, useSetTimeout } from "document-drive/run-asap";
+import { setModelName } from "document-model";
+import { describe, expect, it } from "vitest";
 
 describe("utils", () => {
   it("should run setTimeout", async () => {
-    const result = await runAsapAsync(
-      () => Promise.resolve(1),
-      RunAsap.useSetTimeout,
-    );
+    const result = await runAsapAsync(() => Promise.resolve(1), useSetTimeout);
     expect(result).toBe(1);
   });
 
   it("should build document revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(buildDocumentRevisionsFilter(document)).toStrictEqual({
       global: -1,
       local: -1,
     });
 
-    document = reducer(document, setModelName({ name: "0" }));
+    document = driveDocumentReducer(document, setModelName({ name: "0" }));
 
     expect(buildDocumentRevisionsFilter(document)).toStrictEqual({
       global: 0,
@@ -37,7 +33,7 @@ describe("utils", () => {
   });
 
   it("should check revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(isAtRevision(document)).toBe(true);
     expect(isAtRevision(document, { global: -1, local: -1 })).toBe(true);
@@ -46,7 +42,7 @@ describe("utils", () => {
     expect(isAtRevision(document, { global: 0, local: 0 })).toBe(false);
     expect(isAtRevision(document, { global: 0, local: -1 })).toBe(false);
 
-    document = reducer(document, setModelName({ name: "0" }));
+    document = driveDocumentReducer(document, setModelName({ name: "0" }));
     expect(isAtRevision(document, { global: 0, local: -1 })).toBe(true);
     expect(isAtRevision(document, { global: -1, local: -1 })).toBe(false);
     expect(isAtRevision(document, { global: 0 })).toBe(true);
@@ -57,7 +53,7 @@ describe("utils", () => {
   });
 
   it("should check document is at least at revisions filter", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(isAfterRevision(document)).toBe(true);
     expect(isAfterRevision(document, { global: -1, local: -1 })).toBe(false);
@@ -66,7 +62,7 @@ describe("utils", () => {
     expect(isAfterRevision(document, { global: 0, local: 0 })).toBe(false);
     expect(isAfterRevision(document, { global: 0, local: -1 })).toBe(false);
 
-    document = reducer(document, setModelName({ name: "0" }));
+    document = driveDocumentReducer(document, setModelName({ name: "0" }));
     expect(isAfterRevision(document, { global: 0, local: -1 })).toBe(false);
     expect(isAfterRevision(document, { global: -1 })).toBe(true);
     expect(isAfterRevision(document, { global: 0 })).toBe(false);
@@ -77,18 +73,18 @@ describe("utils", () => {
   });
 
   it("should filter operations by revision", async () => {
-    let document = createDocument();
+    let document = driveCreateDocument();
 
     expect(filterOperationsByRevision(document.operations)).toStrictEqual({
       global: [],
       local: [],
     });
 
-    document = reducer(document, setModelName({ name: "0" }));
-    document = reducer(document, setModelName({ name: "1" }));
-    document = reducer(document, setModelName({ name: "2" }));
-    document = reducer(document, setModelName({ name: "3" }));
-    document = reducer(document, setModelName({ name: "4" }));
+    document = driveDocumentReducer(document, setModelName({ name: "0" }));
+    document = driveDocumentReducer(document, setModelName({ name: "1" }));
+    document = driveDocumentReducer(document, setModelName({ name: "2" }));
+    document = driveDocumentReducer(document, setModelName({ name: "3" }));
+    document = driveDocumentReducer(document, setModelName({ name: "4" }));
 
     expect(filterOperationsByRevision(document.operations)).toStrictEqual(
       document.operations,

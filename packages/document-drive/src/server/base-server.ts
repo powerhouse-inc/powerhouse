@@ -1,34 +1,66 @@
-/* eslint-disable @typescript-eslint/no-deprecated */
-// TODO remove this when drive methods are deleted
-import type { AddFileAction } from "#drive-document-model/gen/actions";
-import {
-  removeListener,
-  removeTrigger,
-  setSharingType,
-} from "#drive-document-model/gen/creators";
-import { createDocumentDriveDocument } from "#drive-document-model/gen/ph-factories";
-import type { LegacyAddFileAction } from "#drive-document-model/module";
 import type {
   ActionJob,
-  DocumentJob,
-  IQueueManager,
-  Job,
-  OperationJob,
-} from "#queue/types";
-import { isActionJob, isDocumentJob, isOperationJob } from "#queue/types";
-import { ReadModeServer } from "#read-mode/server";
-import type { IDocumentStorage, IDriveOperationStorage } from "#storage/types";
-import type { IDefaultDrivesManager } from "#utils/default-drives-manager";
-import { DefaultDrivesManager } from "#utils/default-drives-manager";
-import { requestPublicDriveWithTokenFromReactor } from "#utils/graphql";
-import { isDocumentDrive, runAsapAsync } from "#utils/misc";
-import { RunAsap } from "#utils/run-asap";
-import type {
+  AddFileAction,
+  AddOperationOptions,
+  CancelPullLoop,
+  CreateDocumentInput,
   DocumentDriveAction,
   DocumentDriveDocument,
+  DocumentDriveServerOptions,
+  DocumentJob,
+  DriveEvents,
+  DriveInput,
+  DriveOperationResult,
+  GetDocumentOptions,
+  IBaseDocumentDriveServer,
+  ICache,
+  IDefaultDrivesManager,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IEventEmitter,
+  IListenerManager,
+  IOperationResult,
+  IQueueManager,
+  ISynchronizationManager,
+  Job,
+  LegacyAddFileAction,
+  ListenerState,
+  OperationJob,
+  OperationUpdate,
+  RemoteDriveAccessLevel,
+  RemoteDriveOptions,
+  ServerListener,
+  StrandUpdate,
+  StrandUpdateSource,
+  SyncStatus,
+  SyncUnitStatusObject,
+  SynchronizationUnit,
+  SynchronizationUnitNotFoundError,
   Trigger,
 } from "document-drive";
-import { DocumentAlreadyExistsError, childLogger } from "document-drive";
+import {
+  ConflictOperationError,
+  DefaultDrivesManager,
+  DefaultListenerManagerOptions,
+  DocumentAlreadyExistsError,
+  OperationError,
+  PullResponderTransmitter,
+  ReadModeServer,
+  SwitchboardPushTransmitter,
+  childLogger,
+  driveCreateDocument,
+  filterOperationsByRevision,
+  isActionJob,
+  isAtRevision,
+  isDocumentDrive,
+  isDocumentJob,
+  isOperationJob,
+  removeListener,
+  removeTrigger,
+  requestPublicDriveWithTokenFromReactor,
+  resolveCreateDocumentInput,
+  setSharingType,
+} from "document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -42,6 +74,7 @@ import type {
 import {
   attachBranch,
   createPresignedHeader,
+  documentModelCreateDocument,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -56,44 +89,7 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
-import type { ICache } from "../cache/types.js";
-import type { SynchronizationUnitNotFoundError } from "./error.js";
-import { ConflictOperationError, OperationError } from "./error.js";
-import type { CancelPullLoop } from "./listener/transmitter/pull-responder.js";
-import { PullResponderTransmitter } from "./listener/transmitter/pull-responder.js";
-import { SwitchboardPushTransmitter } from "./listener/transmitter/switchboard-push.js";
-import type { StrandUpdateSource } from "./listener/transmitter/types.js";
-import type {
-  AddOperationOptions,
-  Constructor,
-  CreateDocumentInput,
-  DocumentDriveServerOptions,
-  DriveEvents,
-  DriveInput,
-  DriveOperationResult,
-  GetDocumentOptions,
-  IBaseDocumentDriveServer,
-  IEventEmitter,
-  IListenerManager,
-  IOperationResult,
-  ISynchronizationManager,
-  Listener,
-  ListenerState,
-  Mixin,
-  OperationUpdate,
-  RemoteDriveAccessLevel,
-  RemoteDriveOptions,
-  StrandUpdate,
-  SyncStatus,
-  SyncUnitStatusObject,
-  SynchronizationUnit,
-} from "./types.js";
-import { DefaultListenerManagerOptions } from "./types.js";
-import {
-  filterOperationsByRevision,
-  isAtRevision,
-  resolveCreateDocumentInput,
-} from "./utils.js";
+import { runAsap, runAsapAsync } from "document-drive/run-asap";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
@@ -148,8 +144,7 @@ export class BaseDocumentDriveServer
       options,
     }: DocumentJob): Promise<IOperationResult> => {
       const documentModelModule = this.getDocumentModelModule(documentType);
-      const document = documentModelModule.utils.createDocument(initialState);
-
+      const document = documentModelCreateDocument(initialState);
       // TODO: header must be included
       const header = createPresignedHeader(documentId, documentType);
       document.header.id = documentId;
@@ -244,7 +239,7 @@ export class BaseDocumentDriveServer
           : options.jwtHandler,
       taskQueueMethod:
         options?.taskQueueMethod === undefined
-          ? RunAsap.runAsap
+          ? runAsap
           : options.taskQueueMethod,
     };
 
@@ -273,7 +268,7 @@ export class BaseDocumentDriveServer
 
     await this.queueManager.init(this.queueDelegate, (error) => {
       this.logger.error(`Error initializing queue manager`, error);
-      errors.push(error);
+      // errors.push(error);
     });
 
     try {
@@ -549,7 +544,7 @@ export class BaseDocumentDriveServer
           `[SYNC DEBUG] Setting up PullResponder listener ${zodListener.listenerId} for drive ${driveId}`,
         );
 
-        const pullResponderListener: Listener = {
+        const pullResponderListener: ServerListener = {
           driveId,
           listenerId: zodListener.listenerId,
           block: false,
@@ -582,6 +577,7 @@ export class BaseDocumentDriveServer
     const documentModelModule = this.documentModelModules.find(
       (module) => module.documentModel.id === documentType,
     );
+
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);
     }
@@ -597,7 +593,6 @@ export class BaseDocumentDriveServer
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   addDocument<TDocument extends PHDocument>(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     type: string,
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
@@ -617,9 +612,18 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
-    const document = createDocumentDriveDocument({
-      global: input.global,
-      local: input.local,
+    const document = driveCreateDocument({
+      global: {
+        ...input.global,
+        nodes: [],
+        icon: null,
+      },
+      local: {
+        availableOffline: input.local?.availableOffline ?? false,
+        sharingType: input.local?.sharingType ?? "public",
+        listeners: [],
+        triggers: [],
+      },
     });
 
     if (input.id && input.id.length > 0) {
@@ -818,7 +822,7 @@ export class BaseDocumentDriveServer
     driveId: string,
     documentId?: string | GetDocumentOptions,
     options?: GetDocumentOptions,
-  ): Promise<TDocument> | Promise<TDocument> {
+  ): Promise<TDocument> {
     const id = typeof documentId === "string" ? documentId : driveId;
     const resolvedOptions =
       typeof documentId === "object" ? documentId : options;
@@ -2461,7 +2465,7 @@ export class BaseDocumentDriveServer
    */
   async addDriveAction(
     driveId: string,
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
+
     action: DocumentDriveAction | Action,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
@@ -2689,13 +2693,5 @@ export class BaseDocumentDriveServer
     this.listenerManager.removeJwtHandler();
   }
 }
-
-export type DocumentDriveServerConstructor =
-  Constructor<BaseDocumentDriveServer>;
-
-export type DocumentDriveServerMixin<I> = Mixin<
-  typeof BaseDocumentDriveServer,
-  I
->;
 
 export const DocumentDriveServer = ReadModeServer(BaseDocumentDriveServer);

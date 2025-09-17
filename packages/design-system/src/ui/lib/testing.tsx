@@ -1,6 +1,6 @@
+import { Form } from "@powerhousedao/design-system";
 import type { RenderResult } from "@testing-library/react";
 import { render } from "@testing-library/react";
-import { Form } from "../components/index.js";
 
 export const renderWithForm = (
   children: React.ReactNode,

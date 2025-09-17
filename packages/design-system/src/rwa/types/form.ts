@@ -3,7 +3,7 @@ import type {
   Operation,
   TableItemType,
   TableName,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 
 export type AssetFormInputs = {
   id?: string;

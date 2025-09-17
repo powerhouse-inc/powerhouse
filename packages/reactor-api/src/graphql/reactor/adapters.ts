@@ -2,7 +2,7 @@ import type {
   JobInfo as ClientJobInfo,
   PagedResults,
 } from "@powerhousedao/reactor";
-import type { DocumentModelState, PHDocument } from "document-model";
+import type { DocumentModelGlobalState, PHDocument } from "document-model";
 import type {
   DocumentModelResultPage,
   DocumentModelState as GqlDocumentModelState,
@@ -15,7 +15,7 @@ import type {
  * Converts a PagedResults from ReactorClient to the GraphQL DocumentModelResultPage format
  */
 export function toDocumentModelResultPage(
-  result: PagedResults<DocumentModelState>,
+  result: PagedResults<DocumentModelGlobalState>,
 ): DocumentModelResultPage {
   return {
     cursor: result.options.cursor || null,
@@ -27,17 +27,17 @@ export function toDocumentModelResultPage(
 }
 
 /**
- * Gets the namespace from a DocumentModelState
+ * Gets the namespace from a DocumentModelGlobalState
  */
-function getNamespace(model: DocumentModelState): string {
+function getNamespace(model: DocumentModelGlobalState): string {
   return model.name.split("/")[0];
 }
 
 /**
- * Converts a DocumentModelState from ReactorClient to GraphQL format
+ * Converts a DocumentModelGlobalState from ReactorClient to GraphQL format
  */
 function toGqlDocumentModelState(
-  model: DocumentModelState,
+  model: DocumentModelGlobalState,
 ): GqlDocumentModelState {
   const specification =
     model.specifications.length > 0 ? model.specifications[0] : null;

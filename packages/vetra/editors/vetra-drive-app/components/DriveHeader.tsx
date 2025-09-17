@@ -1,4 +1,4 @@
-import type React from "react";
+import React from "react";
 import { InfoIcon } from "../icons/InfoIcon.js";
 import { ShareIcon } from "../icons/ShareIcon.js";
 import { VetraIcon } from "../icons/VetraIcon.js";

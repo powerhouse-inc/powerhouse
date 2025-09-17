@@ -1,41 +1,41 @@
-import {
+import type { DocumentModelGlobalState } from "document-model";
+import type {
   AddOperationErrorAction,
-  SetOperationErrorCodeAction,
-  SetOperationErrorNameAction,
-  SetOperationErrorDescriptionAction,
-  SetOperationErrorTemplateAction,
   DeleteOperationErrorAction,
   ReorderOperationErrorsAction,
-} from "./actions.js";
-import { DocumentModelState } from "../types.js";
+  SetOperationErrorCodeAction,
+  SetOperationErrorDescriptionAction,
+  SetOperationErrorNameAction,
+  SetOperationErrorTemplateAction,
+} from "document-model";
 
 export interface DocumentModelOperationErrorOperations {
   addOperationErrorOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: AddOperationErrorAction,
   ) => void;
   setOperationErrorCodeOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationErrorCodeAction,
   ) => void;
   setOperationErrorNameOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationErrorNameAction,
   ) => void;
   setOperationErrorDescriptionOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationErrorDescriptionAction,
   ) => void;
   setOperationErrorTemplateOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: SetOperationErrorTemplateAction,
   ) => void;
   deleteOperationErrorOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: DeleteOperationErrorAction,
   ) => void;
   reorderOperationErrorsOperation: (
-    state: DocumentModelState,
+    state: DocumentModelGlobalState,
     action: ReorderOperationErrorsAction,
   ) => void;
 }

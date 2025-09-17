@@ -1,10 +1,12 @@
+import {
+  i18n,
+  useAcceptedCookies,
+  useCookieBanner,
+  useModal,
+} from "@powerhousedao/connect";
 import type { CookieInput } from "@powerhousedao/design-system";
 import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system";
 import { Trans, useTranslation } from "react-i18next";
-import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
-import { useCookieBanner } from "../hooks/useCookiebanner.js";
-import i18n from "../i18n";
-import { useModal } from "./modal/index.js";
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
   return cookies.some((cookie) => cookie.id === id && cookie.value);

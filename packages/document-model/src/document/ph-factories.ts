@@ -1,14 +1,16 @@
-import type { PHAuthState, PHBaseState, PHDocumentState } from "./ph-types.js";
 import type {
   Action,
   ActionContext,
   ActionSigner,
-  AppActionSigner,
   Operation,
+  PHAuthState,
+  PHBaseState,
+  PHDocumentState,
   Signature,
+  AppActionSigner,
   UserActionSigner,
-} from "./types.js";
-import { generateId } from "./utils/crypto.js";
+} from "document-model";
+import { generateId } from "document-model";
 
 /**
  * This function should be used instead of { ...action } to ensure

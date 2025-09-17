@@ -4,8 +4,8 @@ import type {
   CashAsset,
   FixedIncome,
   GroupTransactionType,
-} from "#rwa";
-import { assetGroupTransactions } from "#rwa";
+} from "@powerhousedao/design-system";
+import { assetGroupTransactions } from "@powerhousedao/design-system";
 
 export function isAssetGroupTransactionType(
   type: GroupTransactionType,

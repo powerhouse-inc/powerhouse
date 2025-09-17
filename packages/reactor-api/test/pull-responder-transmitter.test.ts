@@ -1,22 +1,23 @@
 import {
-  addFile,
-  addFolder,
+  createDriveHandlers,
+  expectUUID,
+  getDocumentScopeIndexes,
+  testSetupReactor,
+} from "@powerhousedao/reactor-api";
+import type {
   DocumentDriveDocument,
-  driveDocumentModelModule,
   IDocumentDriveServer,
-  PullResponderTransmitter,
-  ReactorBuilder,
 } from "document-drive";
 import {
-  DocumentModelDocument,
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-  generateId,
-} from "document-model";
+  addFile,
+  addFolder,
+  driveCreateDocument,
+  PullResponderTransmitter,
+} from "document-drive";
+import type { DocumentModelDocument } from "document-model";
+import { generateId, setAuthorName } from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDriveHandlers } from "./drive-handlers.js";
-import { expectUUID, getDocumentScopeIndexes } from "./utils.js";
 
 const remoteUrl = "http://test.com/d/test";
 
@@ -42,18 +43,8 @@ describe("Pull Responder Transmitter", () => {
     pullInterval: 50,
   };
 
-  async function setupReactor() {
-    const builder = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as unknown as DocumentModelModule[]);
-    const reactor = await builder.build();
-    await reactor.initialize();
-    return { reactor, listenerManager: builder.listenerManager! };
-  }
-
   async function setupTrigger() {
-    const { reactor, listenerManager } = await setupReactor();
+    const { listenerManager } = await testSetupReactor();
     return PullResponderTransmitter.createPullResponderTrigger(
       driveId,
       remoteUrl,
@@ -63,7 +54,7 @@ describe("Pull Responder Transmitter", () => {
   }
 
   beforeEach(async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
 
@@ -105,7 +96,7 @@ describe("Pull Responder Transmitter", () => {
   });
 
   it("should pull drive operation from remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -136,7 +127,7 @@ describe("Pull Responder Transmitter", () => {
   });
 
   it("should push new document to remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -146,7 +137,7 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = driveCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
 
@@ -187,7 +178,7 @@ describe("Pull Responder Transmitter", () => {
   });
 
   it("should push new document with operations to remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -197,12 +188,12 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = driveCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
     const result = await remoteReactor.queueAction(
       documentId,
-      documentModelDocumentModelModule.actions.setAuthorName({
+      setAuthorName({
         authorName: "test",
       }),
     );

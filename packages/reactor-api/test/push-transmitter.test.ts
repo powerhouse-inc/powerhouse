@@ -1,24 +1,29 @@
 import {
+  createDriveHandlers,
+  expectUTCTimestamp,
+  getDocumentScopeIndexes,
+  testSetupReactor,
+} from "@powerhousedao/reactor-api";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  IListenerManager,
+  ServerListener,
+} from "document-drive";
+import {
   addFile,
   addFolder,
-  DocumentDriveDocument,
-  driveDocumentModelModule,
-  IDocumentDriveServer,
-  ReactorBuilder,
   requestPublicDrive,
+  SwitchboardPushTransmitter,
 } from "document-drive";
-import { SwitchboardPushTransmitter } from "document-drive/server/listener/transmitter/switchboard-push";
-import { IListenerManager, Listener } from "document-drive/server/types";
+import type { DocumentModelDocument } from "document-model";
 import {
-  DocumentModelDocument,
-  documentModelDocumentModelModule,
-  DocumentModelModule,
+  documentModelCreateDocument,
   generateId,
+  setAuthorName,
 } from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDriveHandlers } from "./drive-handlers.js";
-import { expectUTCTimestamp, getDocumentScopeIndexes } from "./utils.js";
 
 const remoteUrl = "http://test.com/d/test";
 
@@ -33,19 +38,9 @@ describe("Push Transmitter", () => {
     },
   };
 
-  async function setupReactor() {
-    const builder = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as unknown as DocumentModelModule[]);
-    const reactor = builder.build();
-    await reactor.initialize();
-    return { reactor, listenerManager: builder.listenerManager! };
-  }
-
   async function setupListener(listenerManager: IListenerManager) {
     const uuid = generateId();
-    const listener: Listener = {
+    const listener: ServerListener = {
       driveId: remoteDrive.id,
       listenerId: uuid,
       block: false,
@@ -66,16 +61,15 @@ describe("Push Transmitter", () => {
 
     // TODO: circular reference
     listener.transmitter = new SwitchboardPushTransmitter(remoteUrl);
-    await listenerManager?.setListener(remoteDrive.id, listener);
+    await listenerManager.setListener(remoteDrive.id, listener);
 
     return listener;
   }
 
   beforeEach(async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
-
     server = setupServer(...createDriveHandlers(reactor, drive.header.id));
     server.listen({ onUnhandledRequest: "error" });
   });
@@ -96,7 +90,7 @@ describe("Push Transmitter", () => {
   });
 
   it("should push drive operation to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
@@ -120,7 +114,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId: driveId,
@@ -142,12 +136,12 @@ describe("Push Transmitter", () => {
   });
 
   it("should push new document to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
     const listener = await setupListener(listenerManager);
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await reactor.addDocument(newDocument);
 
@@ -187,7 +181,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId,
@@ -209,17 +203,17 @@ describe("Push Transmitter", () => {
   });
 
   it("should push new document with operations to remote reactor", async () => {
-    const { reactor, listenerManager } = await setupReactor();
+    const { reactor, listenerManager } = await testSetupReactor();
     const { id: driveId, name } = await requestPublicDrive(remoteUrl);
     await reactor.addDrive({ id: driveId, global: { name } });
 
     const listener = await setupListener(listenerManager);
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await reactor.addDocument(newDocument);
     const result = await reactor.queueAction(
       documentId,
-      documentModelDocumentModelModule.actions.setAuthorName({
+      setAuthorName({
         authorName: "test",
       }),
     );
@@ -250,7 +244,7 @@ describe("Push Transmitter", () => {
     const syncUnits = listenerManager?.getListenerState(
       driveId,
       listener.listenerId,
-    ).syncUnits!;
+    ).syncUnits;
     expect(
       syncUnits.get({
         documentId,

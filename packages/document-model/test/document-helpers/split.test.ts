@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { split } from "../../src/document/utils/document-helpers.js";
+import { split } from "document-model";
 import { buildOperation, buildOperations } from "./utils.js";
 
 describe("split", () => {
