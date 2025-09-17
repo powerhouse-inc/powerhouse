@@ -20,7 +20,7 @@ export const codegenProcessorFactory =
 
     const vetraDriveId = vetraConfig?.driveId ?? "vetra";
 
-    if (driveHeader.id !== vetraDriveId) {
+    if (driveHeader.slug !== vetraDriveId && driveHeader.id !== vetraDriveId) {
       return [];
     }
 
