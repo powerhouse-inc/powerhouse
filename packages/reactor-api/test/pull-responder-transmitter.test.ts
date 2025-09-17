@@ -9,14 +9,13 @@ import type {
   IDocumentDriveServer,
   Listener,
 } from "document-drive";
-import {
-  PullResponderTransmitter,
-  addFile,
-  addFolder,
-  driveCreateDocument,
-} from "document-drive";
+import { PullResponderTransmitter, addFile, addFolder } from "document-drive";
 import type { DocumentModelDocument } from "document-model";
-import { generateId, setAuthorName } from "document-model";
+import {
+  documentModelCreateDocument,
+  generateId,
+  setAuthorName,
+} from "document-model";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -143,7 +142,7 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = driveCreateDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
 
@@ -194,7 +193,7 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = driveCreateDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
     const result = await remoteReactor.queueAction(
