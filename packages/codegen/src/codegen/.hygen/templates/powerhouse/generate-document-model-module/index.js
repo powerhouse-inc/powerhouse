@@ -1,5 +1,5 @@
 // @ts-check
-const { paramCase } = require("change-case");
+const { paramCase, pascalCase } = require("change-case");
 
 module.exports = {
   params: ({ args }) => {
