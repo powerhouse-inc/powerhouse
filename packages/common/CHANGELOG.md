@@ -48,40 +48,38 @@ This was a version bump only for @powerhousedao/common to align it with other pr
 
 ### 🩹 Fixes
 
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
 - annoyingly, you have to add ignores to the root eslint ([bb6d993bd](https://github.com/powerhouse-inc/powerhouse/commit/bb6d993bd))
 - **docs:** improve document hooks documentation ([d05fcb835](https://github.com/powerhouse-inc/powerhouse/commit/d05fcb835))
 
 ### ❤️ Thank You
 
+- acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
 - Callme-T
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.47 (2025-09-06)
+## 5.0.0-staging.6 (2025-09-08)
 
-### 🩹 Fixes
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 
-- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+## 5.0.0-staging.5 (2025-09-08)
 
-### ❤️ Thank You
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 
-- acaldas @acaldas
-- Callme-T
-
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.4 (2025-09-08)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
 

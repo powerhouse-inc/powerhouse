@@ -67,7 +67,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - Guillermo Puente @gpuente
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 ### 🩹 Fixes
 
@@ -77,17 +77,11 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - Frank
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
-### 🩹 Fixes
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
 
-- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
-
-### ❤️ Thank You
-
-- Frank
-
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 ### 🩹 Fixes
 
@@ -97,19 +91,25 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - acaldas @acaldas
 
-## 4.1.0-dev.47 (2025-09-06)
+## 5.0.0-staging.6 (2025-09-08)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 5.0.0-staging.5 (2025-09-08)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 5.0.0-staging.4 (2025-09-08)
 
 ### 🩹 Fixes
 
-- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
-- Callme-T
 
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.3 (2025-09-08)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
 
@@ -1255,7 +1255,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 - **switchboard-gui:** init ([#405](https://github.com/powerhouse-inc/powerhouse/pull/405))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - frankp.eth @froid1911
 - Guillermo Puente Sandoval @gpuente
@@ -1271,7 +1271,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **codegen:** export create-lib methods ([#403](https://github.com/powerhouse-inc/powerhouse/pull/403))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Guillermo Puente Sandoval @gpuente
@@ -1287,7 +1287,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 
@@ -1300,7 +1300,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **design-system:** create icon components in prepare install of postinstall ([f302d65f](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f))
 - **design-system:** improve bundle size and tree shaking support ([ffb68cfc](https://github.com/powerhouse-inc/powerhouse/commit/ffb68cfc))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Guillermo Puente Sandoval @gpuente
@@ -1330,12 +1330,13 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **monorepo:** try frozen lockfile ([ea788885](https://github.com/powerhouse-inc/powerhouse/commit/ea788885))
 - **monorepo:** add missing dep ([28d487d7](https://github.com/powerhouse-inc/powerhouse/commit/28d487d7))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - Guillermo Puente @gpuente
 - ryanwolhuter @ryanwolhuter
 
 ## 0.2.0 (2024-10-08)
+
 
 ### 🚀 Features
 
@@ -1343,17 +1344,19 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **codegen:** fixed editor folder name ([ae0e6e2c](https://github.com/powerhouse-inc/powerhouse/commit/ae0e6e2c))
 
-### ❤️ Thank You
+
+### ❤️  Thank You
 
 - acaldas @acaldas
--
-
+- 
 ## 0.1.0 (2024-09-26)
+
 
 ### 🚀 Features
 
 - **codegen:** initial codegen package setup ([0f67da6](https://github.com/powerhouse-inc/powerhouse/commit/0f67da6))
 
-### ❤️ Thank You
+
+### ❤️  Thank You
 
 - Guillermo Puente @gpuente

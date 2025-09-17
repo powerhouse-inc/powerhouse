@@ -32,6 +32,9 @@ export type DevOptions = {
   interactive?: boolean;
 };
 
+const getDriveId = (driveUrl: string | undefined): string =>
+  driveUrl?.split("/").pop() ?? VETRA_DRIVE_ID;
+
 async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
     verbose?: boolean;

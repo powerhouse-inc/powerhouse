@@ -49,6 +49,7 @@ This was a version bump only for @powerhousedao/vetra to align it with other pro
 
 ### 🚀 Features
 
+- **vetra:** add basic support to drop documents on vetra drive ([ce10ca3ee](https://github.com/powerhouse-inc/powerhouse/commit/ce10ca3ee))
 - **reactor-api:** generate sdk ([ec107015c](https://github.com/powerhouse-inc/powerhouse/commit/ec107015c))
 - **reactor-api:** initial gql codegen ([3db9e9778](https://github.com/powerhouse-inc/powerhouse/commit/3db9e9778))
 - **monorepo:** make format consistent across ignores ([98469560f](https://github.com/powerhouse-inc/powerhouse/commit/98469560f))
@@ -57,40 +58,38 @@ This was a version bump only for @powerhousedao/vetra to align it with other pro
 
 ### 🩹 Fixes
 
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
 - annoyingly, you have to add ignores to the root eslint ([bb6d993bd](https://github.com/powerhouse-inc/powerhouse/commit/bb6d993bd))
 - **docs:** improve document hooks documentation ([d05fcb835](https://github.com/powerhouse-inc/powerhouse/commit/d05fcb835))
 
 ### ❤️ Thank You
 
+- acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
 - Callme-T
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.47 (2025-09-06)
+## 5.0.0-staging.6 (2025-09-08)
 
-### 🩹 Fixes
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 
-- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+## 5.0.0-staging.5 (2025-09-08)
 
-### ❤️ Thank You
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 
-- acaldas @acaldas
-- Callme-T
-
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.4 (2025-09-08)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
 

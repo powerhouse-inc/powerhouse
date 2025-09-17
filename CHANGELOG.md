@@ -105,12 +105,14 @@
 - **reactor-api:** generate sdk ([ec107015c](https://github.com/powerhouse-inc/powerhouse/commit/ec107015c))
 - **reactor-api:** creating an sdk factory ([34151d5d2](https://github.com/powerhouse-inc/powerhouse/commit/34151d5d2))
 - **reactor-api:** tests for each level of the reactor gql sdk ([1e52b761e](https://github.com/powerhouse-inc/powerhouse/commit/1e52b761e))
+- **vetra:** add basic support to drop documents on vetra drive ([ce10ca3ee](https://github.com/powerhouse-inc/powerhouse/commit/ce10ca3ee))
 
 ### 🩹 Fixes
 
 - annoyingly, you have to add ignores to the root eslint ([bb6d993bd](https://github.com/powerhouse-inc/powerhouse/commit/bb6d993bd))
 - linting fixes ([27fe7d397](https://github.com/powerhouse-inc/powerhouse/commit/27fe7d397))
 - whoops, adding generated code ([ffb6ca373](https://github.com/powerhouse-inc/powerhouse/commit/ffb6ca373))
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
 - **connect,reactor-browser:** remove documentModel argument on getSwitchboardUrl ([0eb514eda](https://github.com/powerhouse-inc/powerhouse/commit/0eb514eda))
 - **docs:** improve document hooks documentation ([d05fcb835](https://github.com/powerhouse-inc/powerhouse/commit/d05fcb835))
 - **reactor-api:** pass generated code through prettier and eslint ([1624548c0](https://github.com/powerhouse-inc/powerhouse/commit/1624548c0))
@@ -127,7 +129,7 @@
 - Guillermo Puente @gpuente
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 ### 🩹 Fixes
 
@@ -139,21 +141,11 @@
 - Frank
 - Guillermo Puente @gpuente
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
-### 🩹 Fixes
+This was a version bump only, there were no code changes.
 
-- **codegen:** set proper created and last modified fields ([5fcd69385](https://github.com/powerhouse-inc/powerhouse/commit/5fcd69385))
-- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
-- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
-- **reactor-browser:** set driveId to type of phid ([4d7cb2fbf](https://github.com/powerhouse-inc/powerhouse/commit/4d7cb2fbf))
-- **reactor-browser:** switchboard link ([3f474121b](https://github.com/powerhouse-inc/powerhouse/commit/3f474121b))
-
-### ❤️ Thank You
-
-- Frank
-
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 ### 🚀 Features
 
@@ -170,6 +162,37 @@
 - automated linting fixes ([d9c123692](https://github.com/powerhouse-inc/powerhouse/commit/d9c123692))
 - tons of linting fixes ([38c7981e3](https://github.com/powerhouse-inc/powerhouse/commit/38c7981e3))
 - more linting issues ([5dd874517](https://github.com/powerhouse-inc/powerhouse/commit/5dd874517))
+- **reactor-api:** delete drive mutation not working ([84cdf6c5a](https://github.com/powerhouse-inc/powerhouse/commit/84cdf6c5a))
+- **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.0.0-staging.6 (2025-09-08)
+
+### 🩹 Fixes
+
+- **reactor-browser:** use fallback when window.showSaveFilePicker is not available ([78164031c](https://github.com/powerhouse-inc/powerhouse/commit/78164031c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.0.0-staging.5 (2025-09-08)
+
+This was a version bump only, there were no code changes.
+
+## 5.0.0-staging.4 (2025-09-08)
+
+### 🩹 Fixes
+
+- fix eventbus benchmarks, remove old benchmark ([5a85f498e](https://github.com/powerhouse-inc/powerhouse/commit/5a85f498e))
+- automated linting fixes ([d9c123692](https://github.com/powerhouse-inc/powerhouse/commit/d9c123692))
+- tons of linting fixes ([38c7981e3](https://github.com/powerhouse-inc/powerhouse/commit/38c7981e3))
+- more linting issues ([5dd874517](https://github.com/powerhouse-inc/powerhouse/commit/5dd874517))
 - **reactor-api,reactor/browser:** update open in switchboard url ([f42897b29](https://github.com/powerhouse-inc/powerhouse/commit/f42897b29))
 - **reactor-browser:** use fallback when window.showSaveFilePicker is not available ([78164031c](https://github.com/powerhouse-inc/powerhouse/commit/78164031c))
 
@@ -178,31 +201,17 @@
 - acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
 
-## 4.1.0-dev.47 (2025-09-06)
-
-### 🚀 Features
-
-- **reactor-browser:** accept documentId on dispatchActions ([a579dd53c](https://github.com/powerhouse-inc/powerhouse/commit/a579dd53c))
+## 5.0.0-staging.3 (2025-09-08)
 
 ### 🩹 Fixes
 
-- **codegen:** remove .jsx imports ([880a98fe0](https://github.com/powerhouse-inc/powerhouse/commit/880a98fe0))
-- **connect,reactor-browser:** add duplicated documents to reactor when nodes on a drive are duplicated ([ddb882f75](https://github.com/powerhouse-inc/powerhouse/commit/ddb882f75))
-- **connect,reactor-browser:** fixed clearStorage on connect ([70588c663](https://github.com/powerhouse-inc/powerhouse/commit/70588c663))
-- **connect,reactor-browser:** fixed node actions and zip upload ([3664d1238](https://github.com/powerhouse-inc/powerhouse/commit/3664d1238))
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
-- **reactor-api:** error logging on package load ([b56cf77c6](https://github.com/powerhouse-inc/powerhouse/commit/b56cf77c6))
-- **reactor-browser:** do not show all nodes on drive root ([da55217c8](https://github.com/powerhouse-inc/powerhouse/commit/da55217c8))
-- **reactor-browser,document-drive,design-system,common,connect:** fixed get drive sharing type logic ([134d15ded](https://github.com/powerhouse-inc/powerhouse/commit/134d15ded))
-- **vetra:** do not include tsconfig and eslint on dist ([ace03e88a](https://github.com/powerhouse-inc/powerhouse/commit/ace03e88a))
+- **reactor-browser:** switchboard url link ([b49ffa958](https://github.com/powerhouse-inc/powerhouse/commit/b49ffa958))
 
 ### ❤️ Thank You
 
-- acaldas @acaldas
-- Callme-T
 - Frank
 
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.2 (2025-09-05)
 
 ### 🚀 Features
 

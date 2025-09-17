@@ -58,29 +58,27 @@ This was a version bump only for @powerhousedao/ph-cli to align it with other pr
 - Callme-T
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.47 (2025-09-06)
+## 5.0.0-staging.6 (2025-09-08)
 
-### 🩹 Fixes
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+## 5.0.0-staging.5 (2025-09-08)
 
-### ❤️ Thank You
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
-- Callme-T
-
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.4 (2025-09-08)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
 
@@ -2221,7 +2219,7 @@ This was a version bump only for @powerhousedao/ph-cli to align it with other pr
 - **ph-cli:** added scope to package name ([ef18ead6](https://github.com/powerhouse-inc/powerhouse/commit/ef18ead6))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - Guillermo Puente @gpuente
 - Guillermo Puente Sandoval @gpuente
