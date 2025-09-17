@@ -1,4 +1,5 @@
 import {
+  generateImportMapPlugin,
   viteConnectDevStudioPlugin,
   viteLoadExternalPackages,
 } from "@powerhousedao/builder-tools";
@@ -108,6 +109,25 @@ export default defineConfig(({ mode }) => {
       }) as PluginOption,
     );
   }
+
+  if (isProd) {
+    plugins.push(
+      generateImportMapPlugin(outDir, [
+        {
+          name: "react",
+          version: pkg.devDependencies.react.replace("^", ""),
+          provider: "esm.sh",
+        },
+        {
+          name: "react-dom",
+          version: pkg.devDependencies["react-dom"].replace("^", ""),
+          provider: "esm.sh",
+          dependencies: ["scheduler@0.23.2"],
+        },
+      ]),
+    );
+  }
+
   const config: UserConfig = {
     base: "./",
     optimizeDeps: {

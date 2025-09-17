@@ -23,6 +23,9 @@
       "path": "../codegen"
     },
     {
+      "path": "../../clis/ph-cli"
+    },
+    {
       "path": "../config"
     },
     {
@@ -36,6 +39,9 @@
     },
     {
       "path": "../document-drive"
+    },
+    {
+      "path": "../../apps/switchboard"
     }
   ]
 }
