@@ -61,6 +61,7 @@ import {
   resolveCreateDocumentInput,
   setSharingType,
 } from "document-drive";
+import { runAsap, runAsapAsync } from "document-drive/run-asap";
 import type {
   Action,
   DocumentModelModule,
@@ -89,7 +90,6 @@ import {
 } from "document-model";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
-import { runAsap, runAsapAsync } from "document-drive/run-asap";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
@@ -621,8 +621,8 @@ export class BaseDocumentDriveServer
       local: {
         availableOffline: input.local?.availableOffline ?? false,
         sharingType: input.local?.sharingType ?? "public",
-        listeners: [],
-        triggers: [],
+        listeners: input.local?.listeners ?? [],
+        triggers: input.local?.triggers ?? [],
       },
     });
 
@@ -759,6 +759,7 @@ export class BaseDocumentDriveServer
     } catch (e) {
       this.logger.error("Error getting drive from cache", e);
     }
+
     const driveStorage = document ?? (await this.documentStorage.get(driveId));
     const result = this._buildDocument(driveStorage, options);
     if (!isDocumentDrive(result)) {
