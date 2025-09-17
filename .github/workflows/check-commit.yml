@@ -30,8 +30,7 @@ jobs:
         with:
           node-version: 22
 
-      # Simple built-in pnpm store caching
-      - name: Setup pnpm (latest) with cache
+      - name: Setup pnpm with cache
         uses: pnpm/action-setup@v4
         with:
           run_install: false
@@ -47,7 +46,7 @@ jobs:
             eslint-${{ runner.os }}-
 
       - name: Install deps (frozen lockfile)
-        run: pnpm install --frozen-lockfile
+        run: pnpm install:ci
 
       - name: Build typescript project
         run: pnpm tsc
