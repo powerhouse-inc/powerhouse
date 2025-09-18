@@ -49,11 +49,11 @@ export class ConsoleLogger implements ILogger {
           ? globalThis.process.env.LOG_LEVEL
           : undefined;
       if (!envLevel) {
-        return LogLevels.debug;
+        return LogLevels.info;
       }
 
       if (!(envLevel in LogLevels)) {
-        return LogLevels.debug;
+        return LogLevels.info;
       }
 
       return LogLevels[envLevel as LogLevel];
