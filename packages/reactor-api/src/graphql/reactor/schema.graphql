@@ -37,7 +37,7 @@ enum DocumentChangeType {
 }
 
 # Object types
-type DocumentModelState {
+type DocumentModelGlobalState {
   id: String!
   name: String!
   namespace: String
@@ -46,7 +46,7 @@ type DocumentModelState {
 }
 
 type DocumentModelResultPage {
-  items: [DocumentModelState!]!
+  items: [DocumentModelGlobalState!]!
   totalCount: Int!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!

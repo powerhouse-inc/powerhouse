@@ -84,20 +84,20 @@ export enum DocumentChangeType {
   Updated = "UPDATED",
 }
 
-export type DocumentModelResultPage = {
-  readonly cursor?: Maybe<Scalars["String"]["output"]>;
-  readonly hasNextPage: Scalars["Boolean"]["output"];
-  readonly hasPreviousPage: Scalars["Boolean"]["output"];
-  readonly items: ReadonlyArray<DocumentModelState>;
-  readonly totalCount: Scalars["Int"]["output"];
-};
-
-export type DocumentModelState = {
+export type DocumentModelGlobalState = {
   readonly id: Scalars["String"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly namespace?: Maybe<Scalars["String"]["output"]>;
   readonly specification: Scalars["JSONObject"]["output"];
   readonly version?: Maybe<Scalars["String"]["output"]>;
+};
+
+export type DocumentModelResultPage = {
+  readonly cursor?: Maybe<Scalars["String"]["output"]>;
+  readonly hasNextPage: Scalars["Boolean"]["output"];
+  readonly hasPreviousPage: Scalars["Boolean"]["output"];
+  readonly items: ReadonlyArray<DocumentModelGlobalState>;
+  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type DocumentWithChildren = {
@@ -847,8 +847,8 @@ export type ResolversTypes = ResolversObject<{
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
   DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
   DocumentChangeType: DocumentChangeType;
+  DocumentModelGlobalState: ResolverTypeWrapper<DocumentModelGlobalState>;
   DocumentModelResultPage: ResolverTypeWrapper<DocumentModelResultPage>;
-  DocumentModelState: ResolverTypeWrapper<DocumentModelState>;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
@@ -880,8 +880,8 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars["DateTime"]["output"];
   DocumentChangeContext: DocumentChangeContext;
   DocumentChangeEvent: DocumentChangeEvent;
+  DocumentModelGlobalState: DocumentModelGlobalState;
   DocumentModelResultPage: DocumentModelResultPage;
-  DocumentModelState: DocumentModelState;
   DocumentWithChildren: DocumentWithChildren;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
@@ -990,31 +990,10 @@ export type DocumentChangeEventResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export type DocumentModelResultPageResolvers<
+export type DocumentModelGlobalStateResolvers<
   ContextType = Context,
   ParentType extends
-    ResolversParentTypes["DocumentModelResultPage"] = ResolversParentTypes["DocumentModelResultPage"],
-> = ResolversObject<{
-  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
-  hasPreviousPage?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType
-  >;
-  items?: Resolver<
-    ReadonlyArray<ResolversTypes["DocumentModelState"]>,
-    ParentType,
-    ContextType
-  >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type DocumentModelStateResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelState"] = ResolversParentTypes["DocumentModelState"],
+    ResolversParentTypes["DocumentModelGlobalState"] = ResolversParentTypes["DocumentModelGlobalState"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1029,6 +1008,27 @@ export type DocumentModelStateResolvers<
     ContextType
   >;
   version?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DocumentModelResultPageResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["DocumentModelResultPage"] = ResolversParentTypes["DocumentModelResultPage"],
+> = ResolversObject<{
+  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  hasPreviousPage?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType
+  >;
+  items?: Resolver<
+    ReadonlyArray<ResolversTypes["DocumentModelGlobalState"]>,
+    ParentType,
+    ContextType
+  >;
+  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1339,8 +1339,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   DateTime?: GraphQLScalarType;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
   DocumentChangeEvent?: DocumentChangeEventResolvers<ContextType>;
+  DocumentModelGlobalState?: DocumentModelGlobalStateResolvers<ContextType>;
   DocumentModelResultPage?: DocumentModelResultPageResolvers<ContextType>;
-  DocumentModelState?: DocumentModelStateResolvers<ContextType>;
   DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
   JSONObject?: GraphQLScalarType;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;
