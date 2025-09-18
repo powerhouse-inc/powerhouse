@@ -152,7 +152,7 @@ type Query {
 
 type Mutation {
   # Create a new document
-  createDocument(document: JSON!, parentIdentifier: String): PHDocument!
+  createDocument(document: JSONObject!, parentIdentifier: String): PHDocument!
 
   # Create an empty document of specified type
   createEmptyDocument(
@@ -421,7 +421,7 @@ query GetChildDocuments(
 ```graphql
 mutation SubmitDocumentMutation(
   $docId: String!
-  $operations: [JSON!]!
+  $actions: [JSONObject!]!
   $view: ViewFilterInput
 ) {
   mutateDocumentAsync(
@@ -450,30 +450,6 @@ mutation SubmitDocumentMutation(
   "view": {
     "branch": "main",
     "scopes": ["global"]
-  }
-}
-```
-
-**Synchronous Alternative:**
-
-```graphql
-mutation MutateDocumentSync(
-  $docId: String!
-  $operations: [JSON!]!
-  $view: ViewFilterInput
-) {
-  mutateDocument(
-    documentIdentifier: $docId
-    operations: $operations
-    view: $view
-  ) {
-    id
-    slug
-    name
-    documentType
-    state
-    revision
-    lastModified
   }
 }
 ```

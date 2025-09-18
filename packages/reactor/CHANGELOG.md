@@ -1,46 +1,3 @@
-## 4.1.0-dev.58 (2025-09-18)
-
-### 🚀 Features
-
-- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
-
-### 🩹 Fixes
-
-- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
-
-### ❤️ Thank You
-
-- Benjamin Jordan (@thegoldenmule)
-
-## 4.1.0-dev.57 (2025-09-17)
-
-### 🚀 Features
-
-- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
-- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
-- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
-
-### 🩹 Fixes
-
-- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
-- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
-- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
-
-### ❤️ Thank You
-
-- Ryan Wolhuter @ryanwolhuter
-- ryanwolhuter @ryanwolhuter
-
-## 4.1.0-dev.56 (2025-09-17)
-
-### 🩹 Fixes
-
-- updating jobinfo type with created, complete, and result ([ebb139d1a](https://github.com/powerhouse-inc/powerhouse/commit/ebb139d1a))
-
-### ❤️ Thank You
-
-- Benjamin Jordan (@thegoldenmule)
-
 ## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features
@@ -117,15 +74,15 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 - Callme-T
 - ryanwolhuter @ryanwolhuter
 
-## 5.0.0-staging.9 (2025-09-09)
+## 4.1.0-dev.50 (2025-09-09)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
 
-## 5.0.0-staging.8 (2025-09-09)
+## 4.1.0-dev.49 (2025-09-09)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
 
-## 5.0.0-staging.7 (2025-09-09)
+## 4.1.0-dev.48 (2025-09-09)
 
 ### 🚀 Features
 
@@ -146,36 +103,17 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 
 - Benjamin Jordan (@thegoldenmule)
 
-## 5.0.0-staging.6 (2025-09-08)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.5 (2025-09-08)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.4 (2025-09-08)
-
-### 🚀 Features
-
-- update queue to use job handles ([acbe50ee1](https://github.com/powerhouse-inc/powerhouse/commit/acbe50ee1))
-- tests for job execution handle ([5af69c190](https://github.com/powerhouse-inc/powerhouse/commit/5af69c190))
-- moving to job execution handles ([f91c3a759](https://github.com/powerhouse-inc/powerhouse/commit/f91c3a759))
-- drain, block, unblock on queue ([77ad8f9bc](https://github.com/powerhouse-inc/powerhouse/commit/77ad8f9bc))
-- added job execution handle ([4fadd6638](https://github.com/powerhouse-inc/powerhouse/commit/4fadd6638))
+## 4.1.0-dev.47 (2025-09-06)
 
 ### 🩹 Fixes
 
-- more linting issues ([5dd874517](https://github.com/powerhouse-inc/powerhouse/commit/5dd874517))
-- tons of linting fixes ([38c7981e3](https://github.com/powerhouse-inc/powerhouse/commit/38c7981e3))
-- automated linting fixes ([d9c123692](https://github.com/powerhouse-inc/powerhouse/commit/d9c123692))
-- fix eventbus benchmarks, remove old benchmark ([5a85f498e](https://github.com/powerhouse-inc/powerhouse/commit/5a85f498e))
+- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
 
 ### ❤️ Thank You
 
-- Benjamin Jordan (@thegoldenmule)
+- Callme-T
 
-## 5.0.0-staging.2 (2025-09-05)
+## 4.1.0-dev.46 (2025-09-05)
 
 ### 🚀 Features
 
