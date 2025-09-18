@@ -13,16 +13,16 @@ import { pascalCase } from "change-case";
 import type {
   DocumentDriveDocument,
   DriveInfo,
-  Node,
   FileNode,
   ListenerFilter,
   ListenerRevision,
+  Node,
   ServerListener,
   StrandUpdateGraphQL,
 } from "document-drive";
 import {
-  childLogger,
   PullResponderTransmitter,
+  childLogger,
   responseForDocument,
   responseForDrive,
 } from "document-drive";
@@ -309,7 +309,7 @@ export class DriveSubgraph extends BaseSubgraph {
         const dms = this.reactor.getDocumentModelModules();
         const dm = dms.find(
           ({ documentModel }) =>
-            documentModel.id === document.header.documentType,
+            documentModel.global.id === document.header.documentType,
         );
 
         let node: Node | undefined;
@@ -326,7 +326,7 @@ export class DriveSubgraph extends BaseSubgraph {
           throw new Error("Document was found with no global state");
 
         const typeName = pascalCase(
-          (dm?.documentModel.name || "").replaceAll("/", " "),
+          (dm?.documentModel.global.name || "").replaceAll("/", " "),
         );
 
         return responseForDocument(document, typeName, node?.name);

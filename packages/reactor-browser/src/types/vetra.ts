@@ -3,7 +3,7 @@ import type { IRelationalDb, ProcessorRecord } from "document-drive";
 import type {
   Action,
   Author,
-  DocumentModelGlobalState,
+  DocumentModelPHState,
   DocumentSpecification,
   ImportScriptModule,
   PHDocumentHeader,
@@ -38,8 +38,6 @@ type BaseVetraPackage<TModules extends { [K in keyof TModules]: VetraMeta[] }> =
     };
   };
 
-type DocumentModel = DocumentModelGlobalState;
-
 export type VetraDocumentModelModule = VetraMeta & {
   documentType: string;
   extension: string;
@@ -47,7 +45,7 @@ export type VetraDocumentModelModule = VetraMeta & {
   reducer: Reducer<any>;
   actions: Record<string, (input: any) => Action>;
   utils: any;
-  documentModel: DocumentModel;
+  documentModel: DocumentModelPHState;
 };
 export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];

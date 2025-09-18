@@ -70,7 +70,7 @@ export class GraphQLManager {
     // check if Document Drive model is available
     const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
-      (it) => it.documentModel.name === "DocumentDrive",
+      (it) => it.documentModel.global.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");

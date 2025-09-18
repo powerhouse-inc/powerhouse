@@ -68,21 +68,16 @@ export function validateDocumentModelAction(
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  const documentModelState = documentModelModule.documentModel;
+  const globalState = documentModelModule.documentModel.global;
 
   // Get the latest specification
-  if (
-    !documentModelState.specifications ||
-    documentModelState.specifications.length === 0
-  ) {
+  if (!globalState.specifications || globalState.specifications.length === 0) {
     errors.push("Document model has no specifications");
     return { isValid: false, errors };
   }
 
   const latestSpec =
-    documentModelState.specifications[
-      documentModelState.specifications.length - 1
-    ];
+    globalState.specifications[globalState.specifications.length - 1];
 
   // Search through modules to find the operation that matches the action type (in SCREAMING_SNAKE_CASE)
   let operation: (Operation & { scope: string }) | null = null;
