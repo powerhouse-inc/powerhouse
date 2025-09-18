@@ -86,7 +86,8 @@ export class Reactor implements IReactor {
     // Get document model modules from the drive server + filter
     const modules = this.driveServer.getDocumentModelModules();
     const filteredModels = modules.filter(
-      (module) => !namespace || module.documentModel.name.startsWith(namespace),
+      (module) =>
+        !namespace || module.documentModel.global.name.startsWith(namespace),
     );
 
     // Apply paging

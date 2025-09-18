@@ -43,7 +43,7 @@ describe("DocumentModelRegistry", () => {
         DuplicateModuleError,
       );
       expect(() => registry.registerModules(documentModelModule)).toThrow(
-        `Document model module already registered for type: ${documentModelModule.documentModel.id}`,
+        `Document model module already registered for type: ${documentModelModule.documentModel.global.id}`,
       );
     });
 
@@ -57,7 +57,9 @@ describe("DocumentModelRegistry", () => {
   describe("getModule", () => {
     it("should return registered module", () => {
       registry.registerModules(documentModelModule);
-      const module = registry.getModule(documentModelModule.documentModel.id);
+      const module = registry.getModule(
+        documentModelModule.documentModel.global.id,
+      );
       expect(module).toBe(documentModelModule);
     });
 
@@ -65,11 +67,11 @@ describe("DocumentModelRegistry", () => {
       registry.registerModules(documentModelModule, driveModule);
 
       const docModule = registry.getModule(
-        documentModelModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
       );
       expect(docModule).toBe(documentModelModule);
 
-      const drvModule = registry.getModule(driveModule.documentModel.id);
+      const drvModule = registry.getModule(driveModule.documentModel.global.id);
       expect(drvModule).toBe(driveModule);
     });
 
@@ -84,10 +86,10 @@ describe("DocumentModelRegistry", () => {
 
     it("should throw ModuleNotFoundError after module is unregistered", () => {
       registry.registerModules(documentModelModule);
-      registry.unregisterModules(documentModelModule.documentModel.id);
+      registry.unregisterModules(documentModelModule.documentModel.global.id);
 
       expect(() =>
-        registry.getModule(documentModelModule.documentModel.id),
+        registry.getModule(documentModelModule.documentModel.global.id),
       ).toThrow(ModuleNotFoundError);
     });
   });
@@ -96,7 +98,7 @@ describe("DocumentModelRegistry", () => {
     it("should unregister a single module successfully", () => {
       registry.registerModules(documentModelModule);
       const result = registry.unregisterModules(
-        documentModelModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
       );
       expect(result).toBe(true);
       expect(registry.getAllModules()).toHaveLength(0);
@@ -105,8 +107,8 @@ describe("DocumentModelRegistry", () => {
     it("should unregister multiple modules successfully", () => {
       registry.registerModules(documentModelModule, driveModule);
       const result = registry.unregisterModules(
-        documentModelModule.documentModel.id,
-        driveModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
+        driveModule.documentModel.global.id,
       );
       expect(result).toBe(true);
       expect(registry.getAllModules()).toHaveLength(0);
@@ -120,7 +122,7 @@ describe("DocumentModelRegistry", () => {
     it("should return false when some modules not found", () => {
       registry.registerModules(documentModelModule);
       const result = registry.unregisterModules(
-        documentModelModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
         "unknown.module.id",
       );
       expect(result).toBe(false);
@@ -131,7 +133,7 @@ describe("DocumentModelRegistry", () => {
     it("should only unregister specified modules", () => {
       registry.registerModules(documentModelModule, driveModule);
       const result = registry.unregisterModules(
-        documentModelModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
       );
       expect(result).toBe(true);
       expect(registry.getAllModules()).toHaveLength(1);
@@ -179,7 +181,7 @@ describe("DocumentModelRegistry", () => {
 
     it("should make getModule throw after clear", () => {
       registry.registerModules(documentModelModule);
-      const moduleId = documentModelModule.documentModel.id;
+      const moduleId = documentModelModule.documentModel.global.id;
 
       // Module is accessible before clear
       expect(() => registry.getModule(moduleId)).not.toThrow();
@@ -199,18 +201,18 @@ describe("DocumentModelRegistry", () => {
 
       // Get modules
       const docModule = registry.getModule(
-        documentModelModule.documentModel.id,
+        documentModelModule.documentModel.global.id,
       );
       expect(docModule).toBe(documentModelModule);
 
       // Unregister one
-      registry.unregisterModules(driveModule.documentModel.id);
+      registry.unregisterModules(driveModule.documentModel.global.id);
       expect(registry.getAllModules()).toHaveLength(1);
 
       // Try to get unregistered module
-      expect(() => registry.getModule(driveModule.documentModel.id)).toThrow(
-        ModuleNotFoundError,
-      );
+      expect(() =>
+        registry.getModule(driveModule.documentModel.global.id),
+      ).toThrow(ModuleNotFoundError);
 
       // Clear all
       registry.clear();
@@ -225,13 +227,13 @@ describe("DocumentModelRegistry", () => {
       // First cycle
       registry.registerModules(documentModelModule);
       expect(registry.getAllModules()).toHaveLength(1);
-      registry.unregisterModules(documentModelModule.documentModel.id);
+      registry.unregisterModules(documentModelModule.documentModel.global.id);
       expect(registry.getAllModules()).toHaveLength(0);
 
       // Second cycle
       registry.registerModules(documentModelModule, driveModule);
       expect(registry.getAllModules()).toHaveLength(2);
-      registry.unregisterModules(documentModelModule.documentModel.id);
+      registry.unregisterModules(documentModelModule.documentModel.global.id);
       expect(registry.getAllModules()).toHaveLength(1);
 
       // Third cycle
@@ -252,7 +254,7 @@ describe("DocumentModelRegistry", () => {
       registry.registerModules(documentModelModule);
       registry.clear();
       expect(() =>
-        registry.getModule(documentModelModule.documentModel.id),
+        registry.getModule(documentModelModule.documentModel.global.id),
       ).toThrow(ModuleNotFoundError);
     });
   });
