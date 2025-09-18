@@ -8,7 +8,7 @@ export async function signAction(action: Action, document: PHDocument) {
 
   const documentModelModules = reactor.getDocumentModelModules();
   const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.id === document.header.documentType,
+    (module) => module.documentModel.global.id === document.header.documentType,
   );
   if (!documentModelModule) {
     logger.error(`Document model '${document.header.documentType}' not found`);

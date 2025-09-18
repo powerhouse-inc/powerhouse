@@ -22,7 +22,7 @@ export function handleSetVetraPackagesEvent(event: SetVetraPackagesEvent) {
     ?.flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
   window.reactor?.setDocumentModelModules(
-    documentModelModules as DocumentModelModule[],
+    documentModelModules as unknown as DocumentModelModule[],
   );
 }
 

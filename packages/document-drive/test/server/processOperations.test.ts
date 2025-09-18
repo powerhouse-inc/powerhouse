@@ -18,13 +18,13 @@ import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
 import {
-  addFile,
   BasicClient,
+  ReactorBuilder,
+  addFile,
   buildOperation,
   buildOperations,
   driveDocumentModelModule,
   driveDocumentReducer,
-  ReactorBuilder,
 } from "document-drive";
 import { createPresignedHeader } from "document-model";
 
@@ -57,7 +57,7 @@ describe("processOperations", () => {
       ...documentModelDocumentModelModule.utils.createDocument(),
       header: createPresignedHeader(
         documentId,
-        documentModelDocumentModelModule.documentModel.id,
+        documentModelDocumentModelModule.documentModel.global.id,
       ),
     };
   }

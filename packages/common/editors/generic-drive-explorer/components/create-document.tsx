@@ -1,17 +1,16 @@
 import { PowerhouseButton } from "@powerhousedao/design-system";
-import type { DocumentModelModule } from "document-model";
+import type {
+  DocumentModelGlobalState,
+  DocumentModelModule,
+} from "document-model";
 
 interface CreateDocumentProps {
   documentModels?: DocumentModelModule[];
   createDocument: (doc: DocumentModelModule) => void;
 }
 
-function getDocumentSpec(doc: DocumentModelModule) {
-  if ("documentModelState" in doc) {
-    return doc.documentModelState as DocumentModelModule["documentModel"];
-  }
-
-  return doc.documentModel;
+function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
+  return doc.documentModel.global;
 }
 
 export const CreateDocument: React.FC<CreateDocumentProps> = ({

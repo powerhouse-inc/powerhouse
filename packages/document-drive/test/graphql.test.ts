@@ -7,7 +7,7 @@ import { describe, it } from "vitest";
 describe("Graphql methods", () => {
   it("should generate document drive query", ({ expect }) => {
     const schema = generateDocumentStateQueryFields(
-      driveDocumentModelModule.documentModel,
+      driveDocumentModelModule.documentModel.global,
       "",
     );
     expect(schema).toEqual(
