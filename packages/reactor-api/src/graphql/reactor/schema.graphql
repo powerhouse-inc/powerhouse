@@ -42,7 +42,7 @@ type DocumentModelState {
   name: String!
   namespace: String
   version: String
-  specification: JSONObject
+  specification: JSONObject!
 }
 
 type DocumentModelResultPage {
@@ -91,7 +91,7 @@ type MoveChildrenResult {
 type JobInfo {
   id: String!
   status: String!
-  result: JSONObject
+  result: JSONObject!
   error: String
   createdAt: DateTime!
   completedAt: DateTime
@@ -111,7 +111,7 @@ type DocumentChangeContext {
 type JobChangeEvent {
   jobId: String!
   status: String!
-  result: JSONObject
+  result: JSONObject!
   error: String
 }
 
@@ -140,7 +140,7 @@ type Action {
   id: String!
   type: String!
   timestampUtcMs: String!
-  input: JSONObject
+  input: JSONObject!
   scope: String!
   attachments: [AttachmentInput!]
   context: ActionContext
