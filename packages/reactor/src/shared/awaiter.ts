@@ -1,5 +1,4 @@
-import type { JobInfo } from "./types.js";
-import { JobStatus } from "./types.js";
+import { JobStatus, type JobInfo } from "./types.js";
 
 export interface IJobAwaiter {
   /**

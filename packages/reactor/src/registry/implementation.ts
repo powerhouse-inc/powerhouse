@@ -46,7 +46,6 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
    * @throws InvalidModuleError if a module is malformed
    */
   registerModules(...modules: DocumentModelModule<any>[]): void {
-    console.log("registerModules", modules);
     for (const module of modules) {
       const documentType = module.documentModel.id;
 

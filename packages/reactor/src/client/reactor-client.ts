@@ -1,66 +1,19 @@
-import type {
-  Action,
-  DocumentModelGlobalState,
-  PHDocument,
-  Signature,
-} from "document-model";
+import type { Action, DocumentModelModule, PHDocument } from "document-model";
+
 import type { IReactor } from "../core/types.js";
-import type { IJobAwaiter } from "../shared/awaiter.js";
-import type {
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  PropagationMode,
-  SearchFilter,
-  ViewFilter,
+import { type IJobAwaiter } from "../shared/awaiter.js";
+import {
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type SearchFilter,
+  type ViewFilter,
 } from "../shared/types.js";
-import type { IReactorClient } from "./types.js";
+import type { ISigner } from "../signer/types.js";
+import type { IReactorSubscriptionManager } from "../subs/types.js";
+import type { DocumentChangeEvent, IReactorClient } from "./types.js";
 
-/**
- * Interface for signing actions before submission to the reactor.
- */
-export interface ISigner {
-  /**
-   * Signs an action
-   *
-   * @param action - The action to sign
-   * @param abortSignal - Optional abort signal to cancel the signing
-   * @returns The signature
-   */
-  sign(action: Action, abortSignal?: AbortSignal): Promise<Signature>;
-}
-
-/**
- * Interface for managing subscriptions to document changes.
- */
-export interface IReactorSubscriptionManager {
-  // To be defined based on the subscription planning docs
-}
-
-/**
- * Describes the types of document changes that can occur.
- */
-export enum DocumentChangeType {
-  Created = "created",
-  Deleted = "deleted",
-  Updated = "updated",
-  ParentAdded = "parent_added",
-  ParentRemoved = "parent_removed",
-  ChildAdded = "child_added",
-  ChildRemoved = "child_removed",
-}
-
-/**
- * Represents a change event for documents.
- */
-export type DocumentChangeEvent = {
-  type: DocumentChangeType;
-  documents: PHDocument[];
-  context?: {
-    parentId?: string;
-    childId?: string;
-  };
-};
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
  * a simpler interface for document operations.
@@ -90,13 +43,13 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Retrieves a list of document model specifications
+   * Retrieves a list of document model modules.
    */
   async getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelGlobalState>> {
+  ): Promise<PagedResults<DocumentModelModule>> {
     return this.reactor.getDocumentModels(namespace, paging, signal);
   }
 
