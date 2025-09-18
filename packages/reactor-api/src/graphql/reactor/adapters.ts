@@ -9,7 +9,7 @@ import type {
 } from "document-model";
 import type {
   DocumentModelResultPage,
-  DocumentModelState as GqlDocumentModelState,
+  DocumentModelGlobalState as GqlDocumentModelGlobalState,
   JobInfo as GqlJobInfo,
   PhDocument,
   PhDocumentResultPage,
@@ -43,7 +43,7 @@ function getNamespace(model: DocumentModelPHState): string {
  */
 function toGqlDocumentModelState(
   model: DocumentModelPHState,
-): GqlDocumentModelState {
+): GqlDocumentModelGlobalState {
   const global = model.global;
   const specification =
     global.specifications.length > 0 ? global.specifications[0] : null;

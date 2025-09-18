@@ -47,7 +47,7 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
    */
   registerModules(...modules: DocumentModelModule<any>[]): void {
     for (const module of modules) {
-      const documentType = module.documentModel.id;
+      const documentType = module.documentModel.global.id;
 
       if (this.modules.has(documentType)) {
         throw new DuplicateModuleError(documentType);
