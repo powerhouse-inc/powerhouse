@@ -38,7 +38,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const reactor = useReactor();
   const docModels = reactor?.getDocumentModelModules() ?? [];
   const availableDocumentTypes = docModels.map(
-    (model) => model.documentModel.id,
+    (model) => model.documentModel.global.id,
   );
 
   // Use the debounce hook for name and type changes

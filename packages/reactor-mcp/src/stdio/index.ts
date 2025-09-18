@@ -43,7 +43,7 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
       documentModels.push(...loadedModels);
       logger.log(
         "Loaded document models:",
-        loadedModels.map((m) => m.documentModel.name).join(", "),
+        loadedModels.map((m) => m.documentModel.global.name).join(", "),
       );
     } catch (e) {
       logger.error(e);

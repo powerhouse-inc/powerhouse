@@ -11,8 +11,8 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, FileNode } from "document-drive";
 import { useCallback } from "react";
-import { DriveExplorer } from "./DriveExplorer.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
+import { DriveExplorer } from "./DriveExplorer.js";
 
 export type IProps = DriveEditorProps;
 
@@ -48,7 +48,7 @@ export function BaseEditor(props: IProps) {
   const onCreateDocument = useCallback(
     (documentType: string) => {
       const documentModel = documentModels?.find(
-        (model) => model.documentModel.id === documentType,
+        (model) => model.documentModel.global.id === documentType,
       );
 
       if (documentModel) {

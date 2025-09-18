@@ -47,7 +47,7 @@ function createDriveStory<T extends (props: any) => React.JSX.Element>(
             showDeleteNodeModal: () => {},
             showCreateDocumentModal(documentModel: DocumentModelModule) {
               return Promise.resolve({
-                name: `New ${documentModel.documentModel.name}`,
+                name: `New ${documentModel.documentModel.global.name}`,
               });
             },
           }}

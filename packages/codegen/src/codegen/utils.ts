@@ -92,7 +92,7 @@ export async function getDocumentTypesMap(
       const documentModel = documentModels[
         name as keyof typeof documentModels
       ] as DocumentModelModule;
-      documentTypesMap[documentModel.documentModel.id] = {
+      documentTypesMap[documentModel.documentModel.global.id] = {
         name,
         importPath: `document-model-libs/${paramCase(name)}`,
       };

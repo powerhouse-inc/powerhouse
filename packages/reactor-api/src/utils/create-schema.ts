@@ -43,9 +43,11 @@ export const getDocumentModelTypeDefs = (
   const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+    const dmSchemaName = pascalCase(
+      documentModel.global.name.replaceAll("/", " "),
+    );
     let tmpDmSchema = `
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.global.schema
                 .replaceAll("scalar DateTime", "")
@@ -53,7 +55,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
   
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.local.schema
                 .replaceAll("scalar DateTime", "")

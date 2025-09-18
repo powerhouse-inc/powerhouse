@@ -29,7 +29,8 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
 import type { IDocumentAdminStorage } from "document-drive";
-import { logger, ProcessorManager } from "document-drive";
+import { ProcessorManager, logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -82,7 +83,7 @@ export async function createReactor() {
 
   // create the reactor
   const reactor = createBrowserDocumentDriveServer(
-    documentModelModules,
+    documentModelModules as unknown as DocumentModelModule[],
     storage,
   );
   // initialize the reactor

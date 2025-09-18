@@ -115,7 +115,8 @@ function BaseEditor(props: GenericDriveExplorerEditorProps) {
             documentModels={
               documentModels?.filter(
                 (module) =>
-                  module.documentModel.id !== "powerhouse/document-drive",
+                  module.documentModel.global.id !==
+                  "powerhouse/document-drive",
               ) as unknown as DocumentModelModule[]
             }
             createDocument={onCreateDocument}
