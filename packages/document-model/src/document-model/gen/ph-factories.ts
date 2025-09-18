@@ -2,17 +2,19 @@
  * Factory methods for creating DocumentModelGlobalState instances
  */
 
-import type { PHBaseState, PHDocument } from "document-model";
+// this was hand-edited to add relative imports
 import {
   createBaseState,
   defaultBaseState,
-  documentModelCreateDocument,
-} from "document-model";
+} from "../../document/ph-factories.js";
+// this was hand-edited to add relative imports
+import type { PHBaseState, PHDocument } from "../../document/types.js";
 import type {
   DocumentModelGlobalState,
   DocumentModelLocalState,
   DocumentModelPHState,
 } from "./types.js";
+import { documentModelCreateDocument } from "./utils.js";
 
 export function defaultGlobalState(): DocumentModelGlobalState {
   return {
