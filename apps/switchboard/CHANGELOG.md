@@ -1,3 +1,18 @@
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+- fixing the utc times ([15b06d2e2](https://github.com/powerhouse-inc/powerhouse/commit/15b06d2e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.57 (2025-09-17)
 
 ### 🚀 Features

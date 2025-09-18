@@ -1,3 +1,23 @@
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- fixing the utc times ([15b06d2e2](https://github.com/powerhouse-inc/powerhouse/commit/15b06d2e2))
+- build fixes ([fe2cd6699](https://github.com/powerhouse-inc/powerhouse/commit/fe2cd6699))
+- fixing issue where icon was breaking ([cd7d0e6ec](https://github.com/powerhouse-inc/powerhouse/commit/cd7d0e6ec))
+- fixing issue with local state not being persisted ([fc6735e6c](https://github.com/powerhouse-inc/powerhouse/commit/fc6735e6c))
+- document type was wrong ([ae3ffb9ee](https://github.com/powerhouse-inc/powerhouse/commit/ae3ffb9ee))
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+- codegen package needs to copy before testing ([9115c7968](https://github.com/powerhouse-inc/powerhouse/commit/9115c7968))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.57 (2025-09-17)
 
 ### 🚀 Features

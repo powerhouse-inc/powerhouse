@@ -1,3 +1,18 @@
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- codegen package needs to copy before testing ([9115c7968](https://github.com/powerhouse-inc/powerhouse/commit/9115c7968))
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.57 (2025-09-17)
 
 ### 🚀 Features

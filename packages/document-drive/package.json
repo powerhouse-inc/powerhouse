@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.57",
+  "version": "4.1.0-dev.58",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
