@@ -67,23 +67,16 @@ describe("ReactorSubgraph Query Resolvers", () => {
         hasPreviousPage: false,
         items: [
           {
-            id: "model-1",
-            name: "powerhouse/document-model",
-            namespace: "powerhouse",
+            id: "powerhouse/document-model",
+            name: "DocumentModel",
+            namespace: "DocumentModel",
             specification:
               mockDocumentModels.results[0].documentModel.global
                 .specifications[0],
             version: null,
           },
-          {
-            id: "model-2",
-            name: "example/test-model",
-            namespace: "example",
-            specification: null,
-            version: null,
-          },
         ],
-        totalCount: 2,
+        totalCount: 1,
       });
     });
 
