@@ -1,3 +1,4 @@
+import { createState, defaultBaseState } from "document-model";
 import { driveDocumentFileExtension } from "./constants.js";
 import * as actions from "./gen/creators.js";
 import { driveDocumentModel } from "./gen/document-model.js";
@@ -12,7 +13,7 @@ import type { DriveDocumentModelModule } from "./types.js";
 export const driveDocumentModelModule: DriveDocumentModelModule = {
   actions,
   reducer: driveDocumentReducer,
-  documentModel: driveDocumentModel,
+  documentModel: createState(defaultBaseState(), driveDocumentModel),
   utils: {
     fileExtension: driveDocumentFileExtension,
     createState: driveCreateState,

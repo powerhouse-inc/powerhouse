@@ -46,12 +46,12 @@ export function convertLegacyLibToVetraPackage(
 export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
   legacyDocumentModelModule: DocumentModelModule,
 ) {
-  const documentModel = legacyDocumentModelModule.documentModel;
-  const name = documentModel.name;
-  const documentType = documentModel.id;
+  const global = legacyDocumentModelModule.documentModel.global;
+  const name = global.name;
+  const documentType = global.id;
   const unsafeIdFromDocumentType = documentType;
-  const extension = documentModel.extension;
-  const specifications = documentModel.specifications;
+  const extension = global.extension;
+  const specifications = global.specifications;
   const reducer = legacyDocumentModelModule.reducer;
   const actions = legacyDocumentModelModule.actions;
   const utils = legacyDocumentModelModule.utils;
@@ -60,7 +60,7 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
     name,
     documentType,
     extension,
-    documentModel,
+    documentModel: global,
     specifications,
     reducer,
     actions,

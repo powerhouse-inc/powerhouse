@@ -2,7 +2,11 @@ import type {
   JobInfo as ClientJobInfo,
   PagedResults,
 } from "@powerhousedao/reactor";
-import type { DocumentModelGlobalState, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  DocumentModelPHState,
+  PHDocument,
+} from "document-model";
 import type {
   DocumentModelResultPage,
   DocumentModelState as GqlDocumentModelState,
@@ -15,13 +19,14 @@ import type {
  * Converts a PagedResults from ReactorClient to the GraphQL DocumentModelResultPage format
  */
 export function toDocumentModelResultPage(
-  result: PagedResults<DocumentModelGlobalState>,
+  result: PagedResults<DocumentModelModule>,
 ): DocumentModelResultPage {
+  const models = result.results.map((module) => module.documentModel);
   return {
     cursor: result.options.cursor || null,
     hasNextPage: false,
     hasPreviousPage: false,
-    items: result.results.map(toGqlDocumentModelState),
+    items: models.map(toGqlDocumentModelState),
     totalCount: result.results.length,
   };
 }
@@ -29,23 +34,24 @@ export function toDocumentModelResultPage(
 /**
  * Gets the namespace from a DocumentModelGlobalState
  */
-function getNamespace(model: DocumentModelGlobalState): string {
-  return model.name.split("/")[0];
+function getNamespace(model: DocumentModelPHState): string {
+  return model.global.name.split("/")[0];
 }
 
 /**
  * Converts a DocumentModelGlobalState from ReactorClient to GraphQL format
  */
 function toGqlDocumentModelState(
-  model: DocumentModelGlobalState,
+  model: DocumentModelPHState,
 ): GqlDocumentModelState {
+  const global = model.global;
   const specification =
-    model.specifications.length > 0 ? model.specifications[0] : null;
+    global.specifications.length > 0 ? global.specifications[0] : null;
   const namespace = getNamespace(model);
 
   return {
-    id: model.id,
-    name: model.name,
+    id: global.id,
+    name: global.name,
     namespace,
     specification,
     version: null,

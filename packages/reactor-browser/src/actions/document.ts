@@ -95,9 +95,9 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   }
   const documentModelModules = reactor.getDocumentModelModules();
   const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.id === document.header.documentType,
+    (module) => module.documentModel.global.id === document.header.documentType,
   );
-  const extension = documentModelModule?.documentModel.extension;
+  const extension = documentModelModule?.documentModel.global.extension;
   const name = `${suggestedName || document.header.name || "Untitled"}.${
     extension ? `${extension}.` : ""
   }zip`;
@@ -133,7 +133,8 @@ export async function loadFile(path: string | File) {
     { checkHashes: true },
   );
   const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.id === baseDocument.header.documentType,
+    (module) =>
+      module.documentModel.global.id === baseDocument.header.documentType,
   );
   if (!documentModelModule) {
     throw new Error(
@@ -167,7 +168,7 @@ export async function addDocument(
   const documentId = id ?? generateId();
   const reactorDocumentModelModules = reactor.getDocumentModelModules();
   const documentModelModuleFromReactor = reactorDocumentModelModules.find(
-    (module) => module.documentModel.id === documentType,
+    (module) => module.documentModel.global.id === documentType,
   );
   if (!documentModelModuleFromReactor) {
     throw new Error(`Document model module for type ${documentType} not found`);
@@ -229,7 +230,10 @@ export async function addFile(
 
   const documentModule = reactor
     .getDocumentModelModules()
-    .find((module) => module.documentModel.id === document.header.documentType);
+    .find(
+      (module) =>
+        module.documentModel.global.id === document.header.documentType,
+    );
   if (!documentModule) {
     throw new Error(
       `Document model module for type ${document.header.documentType} not found`,
@@ -333,7 +337,8 @@ export async function addFileWithProgress(
     const documentModule = reactor
       .getDocumentModelModules()
       .find(
-        (module) => module.documentModel.id === document.header.documentType,
+        (module) =>
+          module.documentModel.global.id === document.header.documentType,
       );
     if (!documentModule) {
       throw new Error(
@@ -569,7 +574,10 @@ function _duplicateDocument(
 ) {
   const documentModule = reactor
     .getDocumentModelModules()
-    .find((module) => module.documentModel.id === document.header.documentType);
+    .find(
+      (module) =>
+        module.documentModel.global.id === document.header.documentType,
+    );
   if (!documentModule) {
     throw new Error(
       `Document model module for type ${document.header.documentType} not found`,

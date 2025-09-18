@@ -575,7 +575,7 @@ export class BaseDocumentDriveServer
 
   protected getDocumentModelModule(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
-      (module) => module.documentModel.id === documentType,
+      (module) => module.documentModel.global.id === documentType,
     );
 
     if (!documentModelModule) {

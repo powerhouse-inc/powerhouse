@@ -1,5 +1,5 @@
 import type {
-  DocumentModelGlobalState,
+  DocumentModelPHState,
   PHBaseState,
   PHDocumentHeader,
   PHDocumentHistory,
@@ -436,5 +436,5 @@ export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
   actions: Record<string, (input: any) => Action>;
   utils: DocumentModelUtils<TState>;
-  documentModel: DocumentModelGlobalState;
+  documentModel: DocumentModelPHState;
 };
