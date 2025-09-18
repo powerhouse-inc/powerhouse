@@ -38,7 +38,7 @@ export class DocumentCodegenManager {
     }
 
     this.generators.set(documentType, new generatorClass(this.config));
-    logger.info(`✅ Registered generator for document type: ${documentType}`);
+    logger.debug(`✅ Registered generator for document type: ${documentType}`);
   }
 
   /**
@@ -102,7 +102,7 @@ export class DocumentCodegenManager {
 
     if (!generator) {
       logger.warn(`⚠️ No generator found for document type: ${documentType}`);
-      logger.info(
+      logger.warn(
         `ℹ️ Supported document types: ${this.getRegisteredDocumentTypes().join(", ")}`,
       );
       throw new Error(`Unsupported document type: ${documentType}`);
@@ -164,7 +164,7 @@ export class DocumentCodegenManager {
       // Set up new debounced generation (no interactive confirmation)
       const debounceTimer = setTimeout(async () => {
         try {
-          logger.info(
+          logger.debug(
             `🔄 Routing document type "${documentType}" to generator (debounced)`,
           );
 
@@ -196,7 +196,7 @@ export class DocumentCodegenManager {
   private async processQueuedStrands(
     queuedStrands: QueuedStrand[],
   ): Promise<void> {
-    logger.info(`🔄 Processing ${queuedStrands.length} queued strand(s)`);
+    logger.debug(`🔄 Processing ${queuedStrands.length} queued strand(s)`);
 
     // Sort by priority (document-model first to ensure dependencies exist)
     const documentModelStrands = queuedStrands.filter(
@@ -218,7 +218,7 @@ export class DocumentCodegenManager {
       await this.processStrand(queuedStrand.strand);
     }
 
-    logger.info(
+    logger.debug(
       `✅ Successfully processed all ${queuedStrands.length} queued strand(s)`,
     );
   }
@@ -238,7 +238,7 @@ export class DocumentCodegenManager {
     }
 
     try {
-      logger.info(`🔄 Generating code for document type: ${documentType}`);
+      logger.debug(`🔄 Generating code for document type: ${documentType}`);
       await generator.generate(strand);
       logger.info(
         `✅ Successfully generated code for document type: ${documentType}`,
@@ -257,7 +257,7 @@ export class DocumentCodegenManager {
    */
   clearGenerators(): void {
     this.generators.clear();
-    logger.info("🧹 Cleared all registered generators");
+    logger.debug("🧹 Cleared all registered generators");
   }
 
   /**
