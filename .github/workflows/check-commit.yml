@@ -47,7 +47,7 @@ jobs:
         run: pnpm install:ci
 
       - name: Build typescript project
-        run: pnpm tsc
+        run: pnpm tsc:build
 
       - name: Run eslint
         run: pnpm lint

@@ -93,7 +93,7 @@ jobs:
         working-directory: packages/document-drive
 
       - name: Build
-        run: pnpm tsc
+        run: pnpm tsc:build
 
       - name: Lint
         run: pnpm lint

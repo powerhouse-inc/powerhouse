@@ -43,7 +43,7 @@ jobs:
         shell: bash
 
       - name: Build typescript project
-        run: pnpm tsc
+        run: pnpm tsc:build
 
       - name: Re-Install packages
         run: pnpm install
