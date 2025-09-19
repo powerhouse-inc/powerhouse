@@ -8,14 +8,13 @@ import { coverageConfigDefaults } from "vitest/config";
 
 const console = globalThis.console;
 
-const filter = {
+export const filter = {
   ...coverageConfigDefaults.exclude.reduce((acc, exclude) => {
     return {
       ...acc,
       [exclude]: false,
     };
   }, {}),
-  "**/dist/**": false,
   "**/__tests__/**": false,
   "**/test/**": false,
   "**/tests/**": false,
@@ -28,7 +27,7 @@ const filter = {
   "**/storybook-static/**": false,
   "tools/**": false,
   "apps/academy/**": false,
-  "packages/document-drive/src/storage/prisma/client/**": false,
+  "**/packages/document-drive/src/storage/prisma/client/**": false,
   "setupTests.ts": false,
   "*.d.ts": false,
   "**/*.stories.tsx": false,
@@ -55,11 +54,12 @@ const coverageOptions = {
     console.log(`Coverage report generated: ${results?.reportPath}`);
   },
   all: {
-    dir: ["./packages"],
+    dir: ["./clis", "./apps", "./packages"],
     filter: {
       ...filter,
+      "**/dist/**": false,
       "**/clis/**/*.{ts,tsx}": true,
-      "**/apps/**/*.{ts,tsx}": true,
+      "**/apps/*/src/**/*.{ts,tsx}": true,
       "**/packages/**/*.{ts,tsx}": true,
     },
   },
@@ -99,6 +99,7 @@ const coverageOptions = {
   },
   sourceFilter: {
     ...filter,
+    "**/dist/**": false,
     "**/**": true,
   },
 };
