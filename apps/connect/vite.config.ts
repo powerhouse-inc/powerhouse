@@ -1,150 +1,158 @@
-import {
-  generateImportMapPlugin,
-  viteConnectDevStudioPlugin,
-  viteLoadExternalPackages,
-} from "@powerhousedao/builder-tools";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { HtmlTagDescriptor, PluginOption, UserConfig } from "vite";
 import { defineConfig, loadEnv } from "vite";
-import { viteEnvs } from "vite-envs";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
 import clientConfig from "./client.config.js";
-import pkg from "./package.copy.json" with { type: "json" };
-export default defineConfig(({ mode }) => {
-  const outDir = path.resolve(__dirname, "./dist");
-  const isProd = mode === "production";
-  const env = loadEnv(mode, process.cwd());
 
-  const APP_VERSION = (
-    process.env.APP_VERSION ??
-    env.APP_VERSION ??
-    pkg.version
-  ).toString();
+/**
+ * Takes a list of Powerhouse project packages, by name or path and
+ * returns a js module that exports those packages for use in Connect.
+ */
+function makeImportScriptFromPackages(packages: string[]) {
+  const imports: string[] = [];
+  const moduleNames: string[] = [];
+  let counter = 0;
 
-  const authToken = process.env.SENTRY_AUTH_TOKEN ?? env.SENTRY_AUTH_TOKEN;
-  const org = process.env.SENTRY_ORG ?? env.SENTRY_ORG;
-  const project = process.env.SENTRY_PROJECT ?? env.SENTRY_PROJECT;
-  const release =
-    (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
-  const uploadSentrySourcemaps = authToken && org && project;
+  for (const packageName of packages) {
+    const moduleName = `module${counter}`;
+    moduleNames.push(moduleName);
+    imports.push(`import * as ${moduleName} from '${packageName}';`);
+    imports.push(`import '${packageName}/style.css';`);
+    counter++;
+  }
 
-  const phPackagesStr = process.env.PH_PACKAGES ?? env.PH_PACKAGES;
-  const phPackages =
-    phPackagesStr?.split(",").filter((p) => p.trim().length) || [];
+  const exports = moduleNames.map(
+    (name, index) => `{
+      id: "${packages[index]}",
+      ...${name},
+    }`,
+  );
 
-  const wrapViteEnvs = (): PluginOption => {
-    const viteEnvsPlugin = viteEnvs({
-      computedEnv() {
-        return {
-          APP_VERSION,
-          SENTRY_RELEASE: release,
-        };
+  const exportsString = exports.length
+    ? `
+        ${exports.join(",\n")}
+    `
+    : "";
+
+  const exportStatement = `export default [${exportsString}];`;
+
+  const fileContent = `${imports.join("\n")}\n\n${exportStatement}`;
+
+  return fileContent;
+}
+
+export const connectViteConfig = () =>
+  defineConfig(({ mode }) => {
+    const env = loadEnv(mode, process.cwd());
+
+    const pkg = JSON.parse(
+      readFileSync(path.resolve(__dirname, "./package.json"), "utf-8"),
+    );
+
+    const APP_VERSION = (
+      process.env.APP_VERSION ||
+      env.APP_VERSION ||
+      pkg.version
+    ).toString();
+
+    const authToken = process.env.SENTRY_AUTH_TOKEN ?? env.SENTRY_AUTH_TOKEN;
+    const org = process.env.SENTRY_ORG ?? env.SENTRY_ORG;
+    const project = process.env.SENTRY_PROJECT ?? env.SENTRY_PROJECT;
+    const release =
+      (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
+    const uploadSentrySourcemaps = authToken && org && project;
+
+    const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
+    const phPackages = phPackagesStr.split(",").filter((p) => p.trim().length);
+
+    const plugins: PluginOption[] = [
+      nodePolyfills({
+        include: ["events"],
+        globals: {
+          Buffer: false,
+          global: false,
+          process: true,
+        },
+      }),
+      tailwind(),
+      svgr(),
+      react(),
+      {
+        name: "ph-external-packages",
+        enforce: "pre",
+        resolveId(id) {
+          if (id === "ph:external-packages") {
+            return "ph:external-packages";
+          }
+        },
+        load(id) {
+          if (id === "ph:external-packages") {
+            return makeImportScriptFromPackages(phPackages);
+          }
+        },
       },
-    });
-    return {
-      ...viteEnvsPlugin,
-      closeBundle() {
-        try {
-          return viteEnvsPlugin.closeBundle();
-        } catch (error) {
-          console.error(error);
-        }
+      // viteConnectDevStudioPlugin(false, outDir, env),
+      createHtmlPlugin({
+        minify: false,
+        inject: {
+          tags: [
+            ...(clientConfig.meta.map((meta) => ({
+              ...meta,
+              injectTo: "head",
+            })) as HtmlTagDescriptor[]),
+          ],
+        },
+      }),
+    ] as const;
+
+    if (uploadSentrySourcemaps) {
+      plugins.push(
+        sentryVitePlugin({
+          release: {
+            name: release,
+            inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
+          },
+          authToken,
+          org,
+          project,
+          bundleSizeOptimizations: {
+            excludeDebugStatements: true,
+          },
+          reactComponentAnnotation: {
+            enabled: true,
+          },
+        }) as PluginOption,
+      );
+    }
+
+    const config: UserConfig = {
+      base: "./",
+      envPrefix: ["PH_CONNECT_"],
+      optimizeDeps: {
+        exclude: ["@electric-sql/pglite"],
+      },
+      plugins,
+      build: {
+        minify: false,
+        sourcemap: true,
+      },
+      worker: {
+        format: "es",
+      },
+      define: {
+        // TODO: replace with env variables?
+        __APP_VERSION__: JSON.stringify(APP_VERSION),
+        __SENTRY_RELEASE__: JSON.stringify(release),
+        __REQUIRES_HARD_REFRESH__: false,
       },
     };
-  };
+    return config;
+  });
 
-  const plugins: PluginOption[] = [
-    nodePolyfills({
-      include: ["events"],
-      globals: {
-        Buffer: false,
-        global: false,
-        process: true,
-      },
-    }),
-    tailwind(),
-    svgr(),
-    react(),
-    viteConnectDevStudioPlugin(false, outDir, env),
-    viteLoadExternalPackages(
-      false,
-      phPackages,
-      path.resolve(__dirname, "./public"),
-    ),
-    createHtmlPlugin({
-      minify: false,
-      inject: {
-        tags: [
-          ...(clientConfig.meta.map((meta) => ({
-            ...meta,
-            injectTo: "head",
-          })) as HtmlTagDescriptor[]),
-        ],
-      },
-    }),
-    wrapViteEnvs(),
-  ] as const;
-
-  if (uploadSentrySourcemaps) {
-    plugins.push(
-      sentryVitePlugin({
-        release: {
-          name: release,
-          inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
-        },
-        authToken,
-        org,
-        project,
-        bundleSizeOptimizations: {
-          excludeDebugStatements: true,
-        },
-        reactComponentAnnotation: {
-          enabled: true,
-        },
-      }) as PluginOption,
-    );
-  }
-
-  if (isProd) {
-    plugins.push(
-      generateImportMapPlugin(outDir, [
-        {
-          name: "react",
-          version: pkg.devDependencies.react.replace("^", ""),
-          provider: "esm.sh",
-        },
-        {
-          name: "react-dom",
-          version: pkg.devDependencies["react-dom"].replace("^", ""),
-          provider: "esm.sh",
-          dependencies: ["scheduler@0.23.2"],
-        },
-      ]),
-    );
-  }
-
-  const config: UserConfig = {
-    base: "./",
-    optimizeDeps: {
-      exclude: ["@electric-sql/pglite"],
-    },
-    plugins,
-    build: {
-      minify: false,
-      sourcemap: true,
-    },
-    worker: {
-      format: "es",
-    },
-    define: {
-      __APP_VERSION__: JSON.stringify(APP_VERSION),
-      __REQUIRES_HARD_REFRESH__: false,
-    },
-  };
-  return config;
-});
+export default connectViteConfig();

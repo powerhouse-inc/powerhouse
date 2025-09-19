@@ -2,7 +2,6 @@ export * from "./modals.js";
 export * from "./useAcceptedCookies.js";
 export * from "./useClientErrorHandler.js";
 export * from "./useCookiebanner.js";
-export * from "./useEnsInfo.js";
 export * from "./useFeatureFlags/index.js";
 export * from "./useInitSentry.js";
 export * from "./useLoadData.js";

@@ -13,8 +13,9 @@ import {
   removeTrigger,
   useDrives,
 } from "@powerhousedao/reactor-browser";
+import { generateUUIDBrowser } from "document-model";
 import { useEffect, useState } from "react";
-import { v4 as uuid } from "uuid";
+
 export interface DebugSettingsModalProps {
   open: boolean;
   onClose: () => void;
@@ -86,12 +87,14 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
       return;
     }
 
+    const triggerId = generateUUIDBrowser();
+
     await addTrigger(selectedDrive, {
-      id: `invalid-trigger-${uuid()}`,
+      id: `invalid-trigger-${triggerId}`,
       type: "PullResponder",
       data: {
         interval: "3000",
-        listenerId: `ivalid-listener-${uuid()}`,
+        listenerId: `invalid-listener-${triggerId}`,
         url: driveUrl,
       },
     });
