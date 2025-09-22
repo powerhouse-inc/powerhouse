@@ -30,7 +30,44 @@ import {
   queueOperations,
   uploadOperations,
 } from "../actions/queue.js";
+import type {
+  DocumentTypeIcon,
+  FileUploadProgressCallback,
+} from "../types/upload.js";
+import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
+
+function getDocumentTypeIcon(
+  document: PHDocument,
+): DocumentTypeIcon | undefined {
+  const documentType = document.header.documentType;
+
+  switch (documentType) {
+    case "powerhouse/document-model":
+      return "document-model";
+    case "powerhouse/app":
+      return "app";
+    case "powerhouse/document-editor":
+      return "editor";
+    case "powerhouse/subgraph":
+      return "subgraph";
+    case "powerhouse/package":
+      return "package";
+    case "powerhouse/processor": {
+      // Check the processor type from global state (safely)
+      const globalState = (document.state as { global?: { type?: string } })
+        .global;
+      const processorType = globalState?.type;
+
+      if (processorType === "analytics") return "analytics-processor";
+      if (processorType === "relational") return "relational-processor";
+      if (processorType === "codegen") return "codegen-processor";
+      return undefined;
+    }
+    default:
+      return undefined;
+  }
+}
 
 export function downloadFile(document: PHDocument, fileName: string) {
   const zip = createZip(document);
@@ -248,6 +285,146 @@ export async function addFile(
   );
 }
 
+export async function addFileWithProgress(
+  file: string | File,
+  driveId: string,
+  name?: string,
+  parentFolder?: string,
+  onProgress?: FileUploadProgressCallback,
+  documentTypes: string[] = [],
+) {
+  logger.verbose(
+    `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
+  );
+  const reactor = window.reactor;
+  if (!reactor) {
+    return;
+  }
+
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to create files");
+  }
+
+  // Loading stage (0-10%)
+  try {
+    onProgress?.({ stage: "loading", progress: 0 });
+
+    const document = await loadFile(file);
+    if (!document) {
+      throw new Error("No document loaded");
+    }
+
+    // Send documentType info immediately after loading
+    const documentType = getDocumentTypeIcon(document);
+    if (documentType) {
+      onProgress?.({ stage: "loading", progress: 10, documentType });
+    } else {
+      onProgress?.({ stage: "loading", progress: 10 });
+    }
+
+    if (!isDocumentTypeSupported(document.header.documentType, documentTypes)) {
+      throw new Error(
+        `Document type ${document.header.documentType} is not supported`,
+      );
+    }
+
+    const documentModule = reactor
+      .getDocumentModelModules()
+      .find(
+        (module) => module.documentModel.id === document.header.documentType,
+      );
+    if (!documentModule) {
+      throw new Error(
+        `Document model module for type ${document.header.documentType} not found`,
+      );
+    }
+
+    // Initializing stage (10-20%)
+    onProgress?.({ stage: "initializing", progress: 10 });
+
+    let duplicateId = false;
+    try {
+      await reactor.getDocument(document.header.id);
+      duplicateId = true;
+    } catch {
+      // document id not found
+    }
+
+    const documentId = duplicateId ? generateId() : document.header.id;
+    const header = createPresignedHeader(
+      documentId,
+      document.header.documentType,
+    );
+    header.lastModifiedAtUtcIso = document.header.createdAtUtcIso;
+    header.meta = document.header.meta;
+    header.name = name || document.header.name;
+
+    // copy the document at it's initial state
+    const initialDocument = {
+      ...document,
+      header,
+      state: document.initialState,
+      operations: Object.keys(document.operations).reduce((acc, key) => {
+        acc[key] = [];
+        return acc;
+      }, {} as DocumentOperations),
+    };
+
+    const fileNode = await addDocument(
+      driveId,
+      name || document.header.name,
+      document.header.documentType,
+      parentFolder,
+      initialDocument,
+      documentId,
+      document.header.meta?.preferredEditor,
+    );
+
+    if (!fileNode) {
+      throw new Error("There was an error adding file");
+    }
+
+    onProgress?.({ stage: "initializing", progress: 20 });
+
+    // Uploading stage (20-100%)
+    await uploadOperations(documentId, document.operations, queueOperations, {
+      onProgress: (uploadProgress) => {
+        if (
+          uploadProgress.totalOperations &&
+          uploadProgress.uploadedOperations !== undefined
+        ) {
+          const uploadPercent =
+            uploadProgress.totalOperations > 0
+              ? uploadProgress.uploadedOperations /
+                uploadProgress.totalOperations
+              : 0;
+          const overallProgress = 20 + Math.round(uploadPercent * 80);
+          onProgress?.({
+            stage: "uploading",
+            progress: overallProgress,
+            totalOperations: uploadProgress.totalOperations,
+            uploadedOperations: uploadProgress.uploadedOperations,
+          });
+        }
+      },
+    });
+
+    onProgress?.({ stage: "complete", progress: 100 });
+
+    return fileNode;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    onProgress?.({
+      stage: "failed",
+      progress: 100,
+      error: errorMessage,
+    });
+    throw error;
+  }
+}
+
 export async function updateFile(
   driveId: string,
   nodeId: string,
@@ -453,7 +630,9 @@ export async function copyNode(
 
       await reactor.addDocument(duplicatedDocument);
     } catch (e) {
-      logger.error(`Error copying document ${fileNodeToCopy.srcId}: ${e}`);
+      logger.error(
+        `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,
+      );
     }
   }
 

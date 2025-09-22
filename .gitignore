@@ -16,3 +16,4 @@ storybook-static
 .ph
 CLAUDE.md
 .claude
+coverage/

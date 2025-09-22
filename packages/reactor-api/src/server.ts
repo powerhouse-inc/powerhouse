@@ -11,6 +11,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/utils";
+import type { IReactorClient } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp/express";
 import devcert from "devcert";
 import type {
@@ -112,6 +113,7 @@ async function initializeDatabaseAndAnalytics(
 async function setupGraphQLManager(
   app: Express,
   reactor: IDocumentDriveServer,
+  client: IReactorClient,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   subgraphs: Map<string, SubgraphClass[]>,
@@ -126,6 +128,7 @@ async function setupGraphQLManager(
     config.basePath,
     app,
     reactor,
+    client,
     relationalDb,
     analyticsStore,
   );
@@ -249,6 +252,7 @@ async function startServer(
  * Starts the API server.
  *
  * @param reactor - The document drive server.
+ * @param client - The reactor client. For now, this sits side-by-side with the reactor. In the future, we will want to replace one with the other.
  * @param options - Additional options for server configuration. These options intended to be serializable.
  * @param overrides - System overrides. These overrides are intended to be object references.
  *
@@ -256,6 +260,7 @@ async function startServer(
  */
 export async function startAPI(
   reactor: IDocumentDriveServer,
+  client: IReactorClient,
   options: Options,
 ): Promise<API> {
   const port = options.port ?? DEFAULT_PORT;
@@ -402,6 +407,7 @@ export async function startAPI(
   const graphqlManager = await setupGraphQLManager(
     app,
     reactor,
+    client,
     relationalDb,
     analyticsStore,
     subgraphs,

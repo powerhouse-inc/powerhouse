@@ -17,6 +17,7 @@ import type {
 import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
+import { Reactor } from "../src/core/reactor.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
@@ -25,7 +26,6 @@ import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
-import { Reactor } from "../src/reactor.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 

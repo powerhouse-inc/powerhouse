@@ -1,13 +1,17 @@
-import type { Subgraph } from "@powerhousedao/reactor-api";
+import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
-import type {
-  SetAppNameInput,
-  SetAppStatusInput,
+import {
+  actions,
+  type AddDocumentTypeInput,
+  type AppModuleDocument,
+  type RemoveDocumentTypeInput,
+  type SetAppNameInput,
+  type SetAppStatusInput,
+  type SetDragAndDropEnabledInput,
 } from "../../document-models/app-module/index.js";
-import { actions } from "../../document-models/app-module/index.js";
 
-export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
+export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {
@@ -30,17 +34,15 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
               }
             }
 
-            const doc = await reactor.getDocument(docId);
+            const doc = await reactor.getDocument<AppModuleDocument>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              // these will be ripped out in the future, but for now all doc models have global state
-              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              state: (doc.state as any).global ?? {},
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              stateJSON: (doc.state as any).global ?? "{}",
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
+              state: doc.state.global,
+              stateJSON: doc.state.global,
               revision: doc.header?.revision?.global ?? 0,
             };
           },
@@ -49,17 +51,15 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(docId);
+                const doc = await reactor.getDocument<AppModuleDocument>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  // these will be ripped out in the future, but for now all doc models have global state
-                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  state: (doc.state as any).global ?? {},
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  stateJSON: (doc.state as any).global ?? "{}",
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
+                  state: doc.state.global,
+                  stateJSON: doc.state.global,
                   revision: doc.header?.revision?.global ?? 0,
                 };
               }),
@@ -103,7 +103,7 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
         args: { docId: string; input: SetAppNameInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -125,7 +125,7 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
         args: { docId: string; input: SetAppStatusInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -137,6 +137,76 @@ export const getResolvers = (subgraph: Subgraph): Record<string, any> => {
 
         if (result.status !== "SUCCESS") {
           throw new Error(result.error?.message ?? "Failed to setAppStatus");
+        }
+
+        return true;
+      },
+
+      AppModule_addDocumentType: async (
+        _: unknown,
+        args: { docId: string; input: AddDocumentTypeInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.addDocumentType(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(result.error?.message ?? "Failed to addDocumentType");
+        }
+
+        return true;
+      },
+
+      AppModule_removeDocumentType: async (
+        _: unknown,
+        args: { docId: string; input: RemoveDocumentTypeInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.removeDocumentType(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to removeDocumentType",
+          );
+        }
+
+        return true;
+      },
+
+      AppModule_setDragAndDropEnabled: async (
+        _: unknown,
+        args: { docId: string; input: SetDragAndDropEnabledInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.setDragAndDropEnabled(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setDragAndDropEnabled",
+          );
         }
 
         return true;

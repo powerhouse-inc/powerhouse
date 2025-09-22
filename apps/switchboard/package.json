@@ -36,6 +36,7 @@
     "@powerhousedao/analytics-engine-knex": "^0.6.0",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",
     "body-parser": "^1.20.3",

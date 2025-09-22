@@ -21,6 +21,9 @@
     },
     {
       "path": "../renown"
+    },
+    {
+      "path": "../config"
     }
   ],
   "include": ["**/*"],

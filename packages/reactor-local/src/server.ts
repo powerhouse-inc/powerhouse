@@ -1,11 +1,21 @@
 import { isLogLevel } from "@powerhousedao/config";
+import {
+  EventBus,
+  InMemoryQueue,
+  Reactor,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import { startAPI } from "@powerhousedao/reactor-api";
 import {
-  startViteServer,
   VitePackageLoader,
+  startViteServer,
 } from "@powerhousedao/reactor-api/packages/vite-loader";
-import type { DefaultRemoteDriveInput } from "document-drive";
-import { InMemoryCache, logger, ReactorBuilder } from "document-drive";
+import type {
+  BaseDocumentDriveServer,
+  DefaultRemoteDriveInput,
+} from "document-drive";
+import { InMemoryCache, ReactorBuilder, logger } from "document-drive";
+import type { IDocumentStorage } from "document-drive/storage/types";
 import dotenv from "dotenv";
 import path from "node:path";
 import type {
@@ -99,11 +109,20 @@ const startServer = async (
 
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
+  const storageImpl = createStorage(storage, cache);
   const reactorBuilder = new ReactorBuilder([])
     .withCache(cache)
-    .withStorage(createStorage(storage, cache));
+    .withStorage(storageImpl);
 
   const driveServer = reactorBuilder.build();
+
+  const queue = new InMemoryQueue(new EventBus());
+  const reactor = new Reactor(
+    driveServer as unknown as BaseDocumentDriveServer,
+    storageImpl as unknown as IDocumentStorage,
+    queue,
+  );
+  const client = new ReactorClientBuilder().withReactor(reactor).build();
 
   // init drive server + conditionally add a default drive
   await driveServer.initialize();
@@ -115,7 +134,7 @@ const startServer = async (
   const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(driveServer, {
+  const api = await startAPI(driveServer, client, {
     port: serverPort,
     dbPath,
     https: options?.https,

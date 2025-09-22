@@ -1,11 +1,16 @@
 import fs from "fs";
+import MCR from "monocart-coverage-reports";
 import path from "path";
 import { fileURLToPath } from "url";
+import coverageOptions from "./mcr.config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function globalTeardown() {
+async function globalTeardown() {
+  const mcr = MCR(coverageOptions);
+  await mcr.generate();
+
   console.log("🧹 Running global teardown - cleaning up generated files...");
 
   const connectE2ERoot = __dirname;

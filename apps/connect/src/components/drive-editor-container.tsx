@@ -45,6 +45,12 @@ export function DriveEditorContainer() {
     defaultDriveEditor?.Component ??
     GenericDriveExplorer.Component;
 
+  const editorConfig = driveEditor?.Component
+    ? driveEditor.config
+    : defaultDriveEditor?.Component
+      ? defaultDriveEditor.config
+      : GenericDriveExplorer.config;
+
   if (!selectedDrive) return null;
 
   return (
@@ -59,6 +65,7 @@ export function DriveEditorContainer() {
           showDeleteNodeModal,
         }}
         document={selectedDrive}
+        editorConfig={editorConfig}
       />
     </ErrorBoundary>
   );
