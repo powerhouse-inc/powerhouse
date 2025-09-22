@@ -1,3 +1,4 @@
+import type { PowerhousePackage } from "@powerhousedao/config";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -47,12 +48,42 @@ function makeImportScriptFromPackages(packages: string[]) {
   return fileContent;
 }
 
-export const connectViteConfig = () =>
+export interface IConnectOptions {
+  packages?: (PowerhousePackage | string)[];
+  localPackage?: string; // path to local package to be loaded.
+}
+
+export const connectViteConfig = (options: IConnectOptions = {}) =>
   defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd());
 
+    // load packages from env variable
+    const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
+    const envPhPackages = phPackagesStr.split(",");
+
+    // loadPackages from config
+    const configPhPackages =
+      options.packages?.map((p) =>
+        typeof p === "string" ? p : p.packageName,
+      ) || [];
+
+    // merges env and config packages
+    const allPackages = [...envPhPackages, ...configPhPackages];
+
+    // if local package is provided, add it to the packages to be loaded
+    const localPackage = options.localPackage || process.env.PH_LOCAL_PACKAGE;
+    if (localPackage) {
+      allPackages.push(localPackage);
+    }
+
+    // remove duplicates and empty strings
+    const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
+
     const pkg = JSON.parse(
-      readFileSync(path.resolve(__dirname, "./package.json"), "utf-8"),
+      readFileSync(
+        path.resolve(import.meta.dirname, "../package.json"),
+        "utf-8",
+      ),
     );
 
     const APP_VERSION = (
@@ -67,9 +98,6 @@ export const connectViteConfig = () =>
     const release =
       (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
     const uploadSentrySourcemaps = authToken && org && project;
-
-    const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
-    const phPackages = phPackagesStr.split(",").filter((p) => p.trim().length);
 
     const plugins: PluginOption[] = [
       nodePolyfills({
