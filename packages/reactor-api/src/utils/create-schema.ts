@@ -6,10 +6,12 @@ import type {
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
-import type { IDocumentDriveServer } from "document-drive";
+import { childLogger, type IDocumentDriveServer } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
+
+const logger = childLogger(["reactor-api", "create-schema"]);
 
 export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,
@@ -42,8 +44,17 @@ export const getDocumentModelTypeDefs = (
 ) => {
   const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
+
+  const addedDocumentModels = new Set<string>();
   documentModels.forEach(({ documentModel }) => {
     const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+    if (addedDocumentModels.has(dmSchemaName)) {
+      logger.error(
+        `Skipping document model with duplicate name: ${dmSchemaName}`,
+      );
+      return;
+    }
+    addedDocumentModels.add(dmSchemaName);
     let tmpDmSchema = `
           ${documentModel.specifications
             .map((specification) =>
