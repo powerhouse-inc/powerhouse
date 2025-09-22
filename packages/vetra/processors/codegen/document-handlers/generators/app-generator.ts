@@ -52,8 +52,25 @@ export class AppGenerator extends BaseDocumentGen {
         // Generate app ID using kebabCase
         const appId: string = kebabCase(state.name);
 
+        // Extract editor settings if available
+        let editorOptions:
+          | { enabled: boolean; documentTypes: string[] }
+          | undefined;
+        if (state.dragAndDrop?.enabled) {
+          editorOptions = {
+            enabled: state.dragAndDrop.enabled,
+            documentTypes:
+              state.documentTypes?.map((item) => item.documentType) || [],
+          };
+        }
+
         // Generate the drive editor using the codegen function
-        await generateDriveEditor(state.name, this.config.PH_CONFIG, appId);
+        await generateDriveEditor(
+          state.name,
+          this.config.PH_CONFIG,
+          appId,
+          editorOptions,
+        );
 
         logger.info(
           `✅ Drive editor generation completed successfully for app: ${state.name}`,

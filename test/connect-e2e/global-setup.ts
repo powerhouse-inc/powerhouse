@@ -1,7 +1,9 @@
 import { execSync } from "child_process";
 import fs from "fs";
+import MCR from "monocart-coverage-reports";
 import path from "path";
 import { fileURLToPath } from "url";
+import coverageOptions from "./mcr.config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +58,9 @@ function globalSetup() {
       fs.writeFileSync(indexFile, indexContent, "utf8");
       console.log("✅ Updated index.ts to import from generated folders");
     }
+
+    const mcr = MCR(coverageOptions);
+    mcr.cleanCache();
 
     console.log("🎯 Global setup completed successfully!");
   } catch (error) {

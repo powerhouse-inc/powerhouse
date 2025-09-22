@@ -5,9 +5,12 @@ fragment PHDocumentFields on PHDocument {
   name
   documentType
   state
-  revision
-  created
-  lastModified
+  revisionsList {
+    scope
+    revision
+  }
+  createdAtUtcIso
+  lastModifiedAtUtcIso
   parentId
 }
 

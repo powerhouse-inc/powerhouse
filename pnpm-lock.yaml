@@ -407,6 +407,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../../packages/reactor-api
@@ -1462,6 +1465,9 @@ importers:
       '@powerhousedao/document-engineering':
         specifier: ^1.27.0
         version: 1.30.0(@types/express@5.0.3)(@types/react-dom@19.1.7(@types/react@19.1.10))(@types/react@19.1.10)(bufferutil@4.0.9)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../reactor-mcp
@@ -1634,6 +1640,9 @@ importers:
       '@powerhousedao/analytics-engine-knex':
         specifier: ^0.6.0
         version: 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(sqlite3@5.1.7)
+      '@powerhousedao/config':
+        specifier: workspace:*
+        version: link:../config
       '@renown/sdk':
         specifier: workspace:*
         version: link:../renown
@@ -1740,6 +1749,9 @@ importers:
       '@powerhousedao/common':
         specifier: workspace:*
         version: link:../common
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../reactor-api
@@ -2066,6 +2078,9 @@ importers:
       '@types/node':
         specifier: ^22.15.17
         version: 22.17.2
+      change-case:
+        specifier: ^5.4.4
+        version: 5.4.4
       document-drive:
         specifier: workspace:*
         version: link:../../packages/document-drive
@@ -2084,6 +2099,9 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
+      monocart-coverage-reports:
+        specifier: ^2.12.8
+        version: 2.12.8
       react:
         specifier: '18'
         version: 18.3.1
@@ -9243,6 +9261,10 @@ packages:
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
 
+  acorn-loose@8.5.2:
+    resolution: {integrity: sha512-PPvV6g8UGMGgjrMu+n/f9E/tCSkNQ2Y97eFvuVdJfG11+xdIeDcLyNdC8SHcrHbRqkfwLASdplyR6B6sKM1U4A==}
+    engines: {node: '>=0.4.0'}
+
   acorn-walk@8.3.4:
     resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
     engines: {node: '>=0.4.0'}
@@ -10318,6 +10340,10 @@ packages:
     resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
     engines: {node: '>=18'}
 
+  commander@14.0.0:
+    resolution: {integrity: sha512-2uM9rYjPvyq39NwLRqaiLtWHyDC1FvryJDa2ATTVims5YAS4PupsEQsDvP14FqhFr0P49CYDugi59xaxJlTXRA==}
+    engines: {node: '>=20'}
+
   commander@2.15.1:
     resolution: {integrity: sha512-VlfT9F3V0v+jr4yxPc5gg9s62/fIVWsd2Bk2iD435um1NlGMYdVCq+MjcXnhYq2icNOizHr1kK+5TI6H0Hy0ag==}
 
@@ -10414,6 +10440,9 @@ packages:
 
   console-control-strings@1.1.0:
     resolution: {integrity: sha512-ty/fTekppD2fIwRvnZAVdeOiGd1c7YXEixbgJTNzqcxJWKQnjJ/V1bNEEE6hygpM3WjwHFUVK6HTjWSzV4a8sQ==}
+
+  console-grid@2.2.3:
+    resolution: {integrity: sha512-+mecFacaFxGl+1G31IsCx41taUXuW2FxX+4xIE0TIPhgML+Jb9JFcBWGhhWerd1/vhScubdmHqTwOhB0KCUUAg==}
 
   constant-case@2.0.0:
     resolution: {integrity: sha512-eS0N9WwmjTqrOmR3o83F5vW8Z+9R1HnVz3xmzT2PMFug9ly+Au/fxRWlEBSb6LcZwspSsEn9Xs1uw9YgzAg1EQ==}
@@ -11383,6 +11412,9 @@ packages:
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
+
+  eight-colors@1.3.1:
+    resolution: {integrity: sha512-7nXPYDeKh6DgJDR/mpt2G7N/hCNSGwwoPVmoI3+4TEwOb07VFN1WMPG0DFf6nMEjrkgdj8Og7l7IaEEk3VE6Zg==}
 
   ejs@3.1.10:
     resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
@@ -14468,6 +14500,9 @@ packages:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
 
+  lz-utils@2.1.0:
+    resolution: {integrity: sha512-CMkfimAypidTtWjNDxY8a1bc1mJdyEh04V2FfEQ5Zh8Nx4v7k850EYa+dOWGn9hKG5xOyHP5MkuduAZCTHRvJw==}
+
   magic-string@0.27.0:
     resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
     engines: {node: '>=12'}
@@ -15035,6 +15070,13 @@ packages:
 
   monaco-editor@0.52.2:
     resolution: {integrity: sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==}
+
+  monocart-coverage-reports@2.12.8:
+    resolution: {integrity: sha512-NYOjiuuGPth91E9o5fnUsLs7kEqEXeyYAsNdv8yF0/J/dyNvYQiP+LhSCbQKuVVP/9/HBuq0aoBzDPo5SL6nuA==}
+    hasBin: true
+
+  monocart-locator@1.0.2:
+    resolution: {integrity: sha512-v8W5hJLcWMIxLCcSi/MHh+VeefI+ycFmGz23Froer9QzWjrbg4J3gFJBuI/T1VLNoYxF47bVPPxq8ZlNX4gVCw==}
 
   mortice@3.3.1:
     resolution: {integrity: sha512-t3oESfijIPGsmsdLEKjF+grHfrbnKSXflJtgb1wY14cjxZpS6GnhHRXTxxzCAoCCnq1YYfpEPwY3gjiCPhOufQ==}
@@ -32091,6 +32133,10 @@ snapshots:
     dependencies:
       acorn: 8.15.0
 
+  acorn-loose@8.5.2:
+    dependencies:
+      acorn: 8.15.0
+
   acorn-walk@8.3.4:
     dependencies:
       acorn: 8.15.0
@@ -33444,6 +33490,8 @@ snapshots:
 
   commander@13.1.0: {}
 
+  commander@14.0.0: {}
+
   commander@2.15.1: {}
 
   commander@2.20.3: {}
@@ -33543,6 +33591,8 @@ snapshots:
 
   console-control-strings@1.1.0:
     optional: true
+
+  console-grid@2.2.3: {}
 
   constant-case@2.0.0:
     dependencies:
@@ -34587,6 +34637,8 @@ snapshots:
       - supports-color
 
   ee-first@1.1.1: {}
+
+  eight-colors@1.3.1: {}
 
   ejs@3.1.10:
     dependencies:
@@ -38695,6 +38747,8 @@ snapshots:
 
   lz-string@1.5.0: {}
 
+  lz-utils@2.1.0: {}
+
   magic-string@0.27.0:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -39674,6 +39728,23 @@ snapshots:
     optional: true
 
   monaco-editor@0.52.2: {}
+
+  monocart-coverage-reports@2.12.8:
+    dependencies:
+      acorn: 8.15.0
+      acorn-loose: 8.5.2
+      acorn-walk: 8.3.4
+      commander: 14.0.0
+      console-grid: 2.2.3
+      eight-colors: 1.3.1
+      foreground-child: 3.3.1
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      lz-utils: 2.1.0
+      monocart-locator: 1.0.2
+
+  monocart-locator@1.0.2: {}
 
   mortice@3.3.1:
     dependencies:

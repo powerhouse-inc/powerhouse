@@ -9,6 +9,7 @@
     "global-setup.ts",
     "global-teardown.ts",
     "playwright.config.ts",
+    "mcr.config.ts",
     "powerhouse.manifest.json",
     "document-models/**/*",
     "editors/**/*",

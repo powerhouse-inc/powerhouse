@@ -16,9 +16,9 @@ export const documentModel: DocumentModelState = {
       state: {
         global: {
           schema:
-            "type AppModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+            "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n  dragAndDrop: DragAndDropSettings\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\ntype DragAndDropSettings {\n  enabled: Boolean!\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\"\\n}"',
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }],\\n  \\"dragAndDrop\\": {\\n    \\"enabled\\": true\\n  }\\n}"',
           examples: [],
         },
         local: {
@@ -29,12 +29,12 @@ export const documentModel: DocumentModelState = {
       },
       modules: [
         {
-          id: "ff260195-e3b3-4263-b9ef-41053f156921",
+          id: "d274599a-ceb5-4f2b-8651-b25787306734",
           name: "base_operations",
           description: "",
           operations: [
             {
-              id: "3780b02e-f859-4497-a360-110f56f6fba9",
+              id: "f2ba2ddc-8527-4162-93bd-e045e9932013",
               name: "SET_APP_NAME",
               description: "",
               schema: "input SetAppNameInput {\n  name: String!\n}",
@@ -45,10 +45,52 @@ export const documentModel: DocumentModelState = {
               scope: "global",
             },
             {
-              id: "cd1cbfe6-238c-48ae-8eba-50ebb838d231",
+              id: "c842efa4-154c-4fd9-9d12-42bec51af4e9",
               name: "SET_APP_STATUS",
               description: "",
               schema: "input SetAppStatusInput {\n  status: StatusType!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "7376f168-695f-4aef-94d0-6e381666358c",
+              name: "ADD_DOCUMENT_TYPE",
+              description: "",
+              schema:
+                "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "310e4e5b-3f14-4e9a-8e09-5583c7698a65",
+              name: "REMOVE_DOCUMENT_TYPE",
+              description: "",
+              schema: "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+          ],
+        },
+        {
+          id: "270faa10-92e9-40d0-b128-2de32704bcb5",
+          name: "dnd_operations",
+          description: "",
+          operations: [
+            {
+              id: "077b1ab8-cb32-4b4e-a1fa-76178188c6a1",
+              name: "SET_DRAG_AND_DROP_ENABLED",
+              description: "",
+              schema:
+                "input SetDragAndDropEnabledInput {\n  enabled: Boolean!\n}",
               template: "",
               reducer: "",
               errors: [],

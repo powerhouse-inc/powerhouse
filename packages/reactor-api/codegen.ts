@@ -1,28 +1,26 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
-  schema: "./src/graphql/reactor/schema.graphql",
-  documents: [
-    "./src/graphql/reactor/**/*.graphql",
-    "!./src/graphql/reactor/schema.graphql",
-  ],
+  schema: "./src/graphql/reactor/*.graphql",
+  documents: ["./src/graphql/reactor/operations.graphql"],
   generates: {
-    "./src/graphql/reactor/generated/graphql.ts": {
+    "./src/graphql/reactor/gen/graphql.ts": {
       plugins: [
-        {
-          add: {
-            content: "/* eslint-disable */",
-          },
-        },
         "typescript",
         "typescript-operations",
         "typescript-resolvers",
+        "typescript-validation-schema",
+        "typescript-generic-sdk",
       ],
       config: {
         contextType: "../../types.js#Context",
         scalars: {
           JSONObject: "any",
           DateTime: "string | Date",
+        },
+        scalarSchemas: {
+          JSONObject: "z.unknown()",
+          DateTime: "z.union([z.string(), z.date()])",
         },
         useIndexSignature: true,
         strictScalars: true,
@@ -31,65 +29,8 @@ const config: CodegenConfig = {
         constEnums: false,
         immutableTypes: true,
         maybeValue: "T | null | undefined",
-      },
-    },
-    "./src/graphql/reactor/generated/sdk.ts": {
-      plugins: [
-        {
-          add: {
-            content:
-              "/* eslint-disable */\nimport * as Types from './graphql.js';",
-          },
-        },
-        "typescript",
-        "typescript-operations",
-        "typescript-generic-sdk",
-      ],
-      config: {
-        documentMode: "documentNode",
-      },
-    },
-    "./src/graphql/reactor/generated/typed-document-nodes.ts": {
-      plugins: [
-        {
-          add: {
-            content: "/* eslint-disable */",
-          },
-        },
-        "typescript",
-        "typescript-operations",
-        "typed-document-node",
-      ],
-      config: {
-        scalars: {
-          JSONObject: "any",
-          DateTime: "string | Date",
-        },
-        strictScalars: true,
-        skipTypename: true,
-      },
-    },
-    "./src/graphql/reactor/generated/zod-schemas.ts": {
-      plugins: [
-        {
-          add: {
-            content: "/* eslint-disable */",
-          },
-        },
-        "typescript-validation-schema",
-      ],
-      config: {
         schema: "zod",
-        scalarSchemas: {
-          JSONObject: "z.unknown()",
-          DateTime: "z.union([z.string(), z.date()])",
-        },
-        scalars: {
-          JSONObject: "any",
-          DateTime: "string | Date",
-        },
-        strictScalars: true,
-        importFrom: "./graphql.js",
+        gqlImport: "graphql-tag#gql",
       },
     },
   },

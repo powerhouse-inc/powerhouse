@@ -145,6 +145,14 @@ export function useNodeActions(): TNodeActions {
         return;
       }
       const resolvedTarget = resolveNode(selectedDriveId, target);
+
+      // if node is already on target then ignore move
+      if (
+        (!resolvedTarget?.id && !src.parentFolder) ||
+        resolvedTarget?.id === src.parentFolder
+      ) {
+        return;
+      }
       await moveNode(selectedDriveId, resolvedSrc, resolvedTarget);
     },
     [moveNode, selectedDriveId],

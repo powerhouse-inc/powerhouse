@@ -207,7 +207,7 @@ export async function startVetra({
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
-    const configVetraUrl = baseConfig.vetraUrl;
+    const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
     const resolvedVetraId = getDriveId(configVetraUrl);
 

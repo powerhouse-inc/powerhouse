@@ -2,7 +2,14 @@
 
 ```tsx
 const reactor: IReactor = getReactor();
-const client: IReactorClient = new ReactorClient(reactor);
+const signer: ISigner = getSigner();
+const subscriptionManager: IReactorSubscriptionManager = getSubscriptionManager();
+
+const client: IReactorClient = new ReactorClientBuilder()
+  .withReactor(reactor)
+  .withSigner(signer)
+  .withSubscriptionManager(subscriptionManager)
+  .build();
 
 const { results } = await client.getDocumentModels();
 

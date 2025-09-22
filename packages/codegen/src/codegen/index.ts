@@ -307,6 +307,10 @@ export async function generateDriveEditor(
   name: string,
   config: PowerhouseConfig,
   appId?: string,
+  editorOptions?: {
+    enabled: boolean;
+    documentTypes: string[];
+  },
 ) {
   return _generateDriveEditor(
     name,
@@ -315,6 +319,7 @@ export async function generateDriveEditor(
       skipFormat: config.skipFormat,
     },
     appId,
+    editorOptions,
   );
 }
 

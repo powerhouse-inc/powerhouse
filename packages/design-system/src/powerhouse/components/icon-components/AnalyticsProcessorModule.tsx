@@ -1,0 +1,107 @@
+import type { Props } from "./index.js";
+export default function AnalyticsProcessorModule(props: Props) {
+  return (
+    <svg
+      {...props}
+      width="32"
+      height="40"
+      viewBox="0 0 32 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g clipPath="url(#clip0_2488_6474)">
+        <g filter="url(#filter0_di_2488_6474)">
+          <path
+            d="M0 6C0 2.68629 2.68629 0 6 0L24 0L32 8V34C32 37.3137 29.3137 40 26 40H6C2.68629 40 0 37.3137 0 34V6Z"
+            fill="#F3F5F7"
+          />
+          <path
+            d="M6 0.75H23.6895L31.25 8.31055V34C31.25 36.8995 28.8995 39.25 26 39.25H6C3.10051 39.25 0.75 36.8995 0.75 34V6C0.75 3.10051 3.10051 0.75 6 0.75Z"
+            stroke="#3292ED"
+            strokeWidth="1.5"
+          />
+        </g>
+        <path d="M23 0L32 9H27C24.7909 9 23 7.20914 23 5V0Z" fill="#3292ED" />
+        <path
+          d="M9.25 24.667V14C9.25 13.5858 9.58579 13.25 10 13.25C10.4142 13.25 10.75 13.5858 10.75 14V24.667L10.7617 24.7812C10.7842 24.8933 10.8389 24.9971 10.9209 25.0791C11.0302 25.1884 11.1784 25.2499 11.333 25.25H22C22.4142 25.25 22.75 25.5858 22.75 26C22.75 26.4142 22.4142 26.75 22 26.75H11.333C10.7806 26.7499 10.251 26.5303 9.86035 26.1396C9.51859 25.7979 9.3072 25.3498 9.25977 24.873L9.25 24.667Z"
+          fill="#3292ED"
+        />
+        <path
+          d="M19.25 23.333V18C19.25 17.5858 19.5858 17.25 20 17.25C20.4142 17.25 20.75 17.5858 20.75 18V23.333L20.7461 23.4102C20.7076 23.7883 20.3883 24.083 20 24.083C19.6117 24.083 19.2924 23.7883 19.2539 23.4102L19.25 23.333Z"
+          fill="#3292ED"
+        />
+        <path
+          d="M15.9167 23.334V15.334C15.9167 14.9198 16.2525 14.584 16.6667 14.584C17.0809 14.584 17.4167 14.9198 17.4167 15.334V23.334C17.4167 23.7482 17.0809 24.084 16.6667 24.084C16.2525 24.084 15.9167 23.7482 15.9167 23.334Z"
+          fill="#3292ED"
+        />
+        <path
+          d="M12.5833 23.334V21.334C12.5833 20.9198 12.9191 20.584 13.3333 20.584C13.7475 20.584 14.0833 20.9198 14.0833 21.334V23.334C14.0833 23.7482 13.7475 24.084 13.3333 24.084C12.9191 24.084 12.5833 23.7482 12.5833 23.334Z"
+          fill="#3292ED"
+        />
+      </g>
+      <defs>
+        <filter
+          id="filter0_di_2488_6474"
+          x="-4"
+          y="-1"
+          width="40"
+          height="49"
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feMorphology
+            radius="4"
+            operator="erode"
+            in="SourceAlpha"
+            result="effect1_dropShadow_2488_6474"
+          />
+          <feOffset dy="4" />
+          <feGaussianBlur stdDeviation="4" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.02 0"
+          />
+          <feBlend
+            mode="multiply"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_2488_6474"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_2488_6474"
+            result="shape"
+          />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy="-1" />
+          <feGaussianBlur stdDeviation="0.5" />
+          <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0"
+          />
+          <feBlend
+            mode="multiply"
+            in2="shape"
+            result="effect2_innerShadow_2488_6474"
+          />
+        </filter>
+        <clipPath id="clip0_2488_6474">
+          <rect width="32" height="40" fill="white" />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+}
