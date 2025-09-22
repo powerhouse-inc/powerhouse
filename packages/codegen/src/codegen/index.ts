@@ -59,7 +59,12 @@ async function getDocumentTypesMap(
   dir: string,
   pathOrigin = "../../",
 ): Promise<DocumentTypesMap> {
-  const documentTypesMap: DocumentTypesMap = {};
+  const documentTypesMap: DocumentTypesMap = {
+    "powerhouse/document-model": {
+      name: "DocumentModel",
+      importPath: `document-model`,
+    },
+  };
 
   // add document types from provided dir
   if (fs.existsSync(dir)) {
@@ -87,7 +92,7 @@ async function getDocumentTypesMap(
       });
   }
 
-  // add documents from document-model-libs if lib is installed
+  // add documents from powerhouse package if installed
   try {
     /* eslint-disable */
     // @ts-ignore-error TS2307 this import is expected to fail if document-model-libs is not available
