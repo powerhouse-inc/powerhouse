@@ -321,10 +321,9 @@ export async function startAPI(
   const module: IProcessorHostModule = { relationalDb, analyticsStore };
 
   // Initialize package manager
-  const loaders: IPackageLoader[] = [new ImportPackageLoader()];
-  if (options.packageLoader) {
-    loaders.push(options.packageLoader);
-  }
+  const loaders: IPackageLoader[] = [
+    options.packageLoader ?? new ImportPackageLoader(),
+  ];
 
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,

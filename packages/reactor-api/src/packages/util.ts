@@ -86,8 +86,7 @@ async function loadDependency<T = unknown>(
       logger.warn(
         `Unable to load dependency ${fullPath} - tried standard import, suggested paths, resolved paths, and workspace patterns`,
       );
-
-      logger.error(e);
+      logger.debug(e);
     } else if (
       e instanceof Error &&
       "code" in e &&
