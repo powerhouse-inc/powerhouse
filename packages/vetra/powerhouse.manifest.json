@@ -60,11 +60,6 @@
       "id": "vetra-drive-app",
       "name": "Vetra Drive App",
       "driveEditor": "vetra-drive-app"
-    },
-    {
-      "id": "test-editor",
-      "name": "Test Editor",
-      "driveEditor": "test-editor"
     }
   ],
   "subgraphs": [],
