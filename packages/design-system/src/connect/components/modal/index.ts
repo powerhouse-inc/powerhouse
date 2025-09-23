@@ -7,6 +7,7 @@ export * from "./delete-drive-modal.js";
 export * from "./delete-item-modal.js";
 export * from "./drive-settings-modal.js";
 export * from "./read-required-modal.js";
+export * from "./replace-duplicate-modal.js";
 export * from "./settings-modal/index.js";
 export * from "./settings-modal-v2/index.js";
 export * from "./upgrade-drive-modal.js";
