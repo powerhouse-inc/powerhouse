@@ -1,3 +1,15 @@
+## 5.0.0-staging.14 (2025-09-23)
+
+### 🩹 Fixes
+
+- **reactor-api:** rename timestamp fields to follow ISO format ([86813d154](https://github.com/powerhouse-inc/powerhouse/commit/86813d154))
+- **reactor-api:** catch subgraph setup errors to avoid breaking the server ([2237ff6b4](https://github.com/powerhouse-inc/powerhouse/commit/2237ff6b4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.0.0-staging.13 (2025-09-23)
 
 ### 🚀 Features
