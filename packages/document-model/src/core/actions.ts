@@ -40,21 +40,6 @@ import type {
 } from "./types.js";
 
 /**
- * Changes the name of the document.
- *
- * @param name - The name to be set in the document.
- * @category Actions
- */
-export const setName = (name: string) =>
-  createAction<SetNameAction>(
-    "SET_NAME",
-    name,
-    undefined,
-    SetNameActionInputSchema,
-    "global",
-  );
-
-/**
  * Cancels the last `count` operations.
  *
  * @param count - Number of operations to cancel
@@ -128,14 +113,6 @@ export const loadState = <TState extends PHBaseState = PHBaseState>(
 export const noop = (scope = "global") =>
   createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
 
-export const actions = {
-  setName,
-  undo,
-  redo,
-  prune,
-  loadState,
-  noop,
-} as unknown as Record<string, (input: any) => Action>;
 // TODO improve base actions type
 
 /**

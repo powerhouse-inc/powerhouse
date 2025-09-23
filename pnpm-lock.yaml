@@ -410,13 +410,6 @@ importers:
       '@rollup/rollup-linux-x64-musl':
         specifier: 4.14.3
         version: 4.14.3
-    optionalDependencies:
-      '@esbuild/linux-x64':
-        specifier: ^0.21.4
-        version: 0.21.5
-      '@rollup/rollup-linux-x64-musl':
-        specifier: 4.14.3
-        version: 4.14.3
 
   apps/switchboard:
     dependencies:
@@ -759,8 +752,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.3
-        version: 0.12.3(encoding@0.1.13)(graphql@16.11.0)
-        version: 0.12.3(encoding@0.1.13)(graphql@16.11.0)
+        version: 0.12.3(graphql@16.11.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -14397,12 +14389,11 @@ packages:
   libp2p@2.10.0:
     resolution: {integrity: sha512-tgDz7YuGg1XX7UfxebCUii+IGsly/8V0ZRZdFJSDySY2i3UuqpCTsEbRApH3cBKFhcAf00nx9xj8GL9zfo+XWw==}
 
-  libphonenumber-js@1.12.18:
-    resolution: {integrity: sha512-k0pdkX8DXHqVrby7yJ23WBcHMCX1lhwvX/Uazh0vf3wfGQa0qDIyRB2Z2C01JREGGt8Assfwl1yZduq59OjXXQ==}
+  libphonenumber-js@1.12.21:
+    resolution: {integrity: sha512-z/o0jBYS3d8js1QBksrHxZUARjmM0S6uvpINkyJ9IcPkXIoUh5l4S3rTbGAlq9ThbCExdSV0wWp8gw7729A/ww==}
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
@@ -19901,8 +19892,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(encoding@0.1.13)(graphql@16.11.0)':
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(encoding@0.1.13)(graphql@16.11.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(graphql@16.11.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.11.0)
@@ -25403,7 +25393,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3(supports-color@5.5.0)
       pony-cause: 2.1.11
       semver: 7.7.2
       uuid: 9.0.1
@@ -25417,7 +25407,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3(supports-color@5.5.0)
       pony-cause: 2.1.11
       semver: 7.7.2
       uuid: 9.0.1
@@ -26807,7 +26797,7 @@ snapshots:
       focus-trap-react: 11.0.4(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       graphql: 16.11.0
       graphql-upload: 17.0.0(@types/express@5.0.3)(graphql@16.11.0)
-      libphonenumber-js: 1.12.18
+      libphonenumber-js: 1.12.21
       mime: 4.1.0
       nanoid: 5.1.6
       natural-compare-lite: 1.4.0
@@ -33445,7 +33435,7 @@ snapshots:
   engine.io-client@6.6.3(bufferutil@4.0.9)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.4
+      debug: 4.3.7
       engine.io-parser: 5.2.3
       ws: 8.17.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       xmlhttprequest-ssl: 2.1.2
@@ -37292,7 +37282,7 @@ snapshots:
       race-signal: 1.1.3
       uint8arrays: 5.1.0
 
-  libphonenumber-js@1.12.18: {}
+  libphonenumber-js@1.12.21: {}
 
   libsql@0.4.7:
     dependencies:
@@ -41648,7 +41638,7 @@ snapshots:
   socket.io-client@4.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.4
+      debug: 4.3.7
       engine.io-client: 6.6.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       socket.io-parser: 4.2.4
     transitivePeerDependencies:
@@ -41659,7 +41649,7 @@ snapshots:
   socket.io-parser@4.2.4:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.4
+      debug: 4.3.7
     transitivePeerDependencies:
       - supports-color
 

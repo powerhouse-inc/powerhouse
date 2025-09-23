@@ -1,9 +1,9 @@
+import { setName } from "document-model";
 import {
   baseCreateDocument,
   loadState,
   prune,
   redo,
-  setName,
   undo,
 } from "document-model/core";
 import type { CountPHState } from "document-model/test";

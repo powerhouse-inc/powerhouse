@@ -1,4 +1,60 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import type {
+  AddChangeLogItemAction,
+  AddModuleAction,
+  AddOperationAction,
+  AddOperationErrorAction,
+  AddOperationExampleAction,
+  AddStateExampleAction,
+  DeleteChangeLogItemAction,
+  DeleteModuleAction,
+  DeleteOperationAction,
+  DeleteOperationErrorAction,
+  DeleteOperationExampleAction,
+  DeleteStateExampleAction,
+  DocumentModelHeaderOperations,
+  DocumentModelModuleOperations,
+  DocumentModelOperationErrorOperations,
+  DocumentModelOperationExampleOperations,
+  DocumentModelOperationOperations,
+  DocumentModelPHState,
+  DocumentModelStateOperations,
+  DocumentModelVersioningOperations,
+  MoveOperationAction,
+  OperationSpecification,
+  ReleaseNewVersionAction,
+  ReorderChangeLogItemsAction,
+  ReorderModuleOperationsAction,
+  ReorderModulesAction,
+  ReorderOperationErrorsAction,
+  ReorderOperationExamplesAction,
+  ReorderStateExamplesAction,
+  ScopeState,
+  SetAuthorNameAction,
+  SetAuthorWebsiteAction,
+  SetInitialStateAction,
+  SetModelDescriptionAction,
+  SetModelExtensionAction,
+  SetModelIdAction,
+  SetModelNameAction,
+  SetModuleDescriptionAction,
+  SetModuleNameAction,
+  SetOperationDescriptionAction,
+  SetOperationErrorCodeAction,
+  SetOperationErrorDescriptionAction,
+  SetOperationErrorNameAction,
+  SetOperationErrorTemplateAction,
+  SetOperationNameAction,
+  SetOperationReducerAction,
+  SetOperationSchemaAction,
+  SetOperationScopeAction,
+  SetOperationTemplateAction,
+  SetStateSchemaAction,
+  StateReducer,
+  UpdateChangeLogItemAction,
+  UpdateOperationExampleAction,
+  UpdateStateExampleAction,
+} from "document-model";
+import { createReducer, isDocumentAction } from "document-model/core";
 import {
   AddChangeLogItemInputSchema,
   AddModuleInputSchema,
@@ -311,44 +367,13 @@ export const documentModelOperationExampleReducer: DocumentModelOperationExample
             latestSpec.modules[i].operations[j].id == action.input.operationId
           ) {
             latestSpec.modules[i].operations[j].examples.sort(
-              exampleSorter(action.input.order),
+              sorter(action.input.order),
             );
           }
         }
       }
     },
   };
-
-import type {
-  AddChangeLogItemAction,
-  CodeExample,
-  DeleteChangeLogItemAction,
-  DocumentModelHeaderOperations,
-  DocumentModelModuleOperations,
-  DocumentModelOperationErrorOperations,
-  DocumentModelOperationExampleOperations,
-  DocumentModelOperationOperations,
-  DocumentModelPHState,
-  DocumentModelVersioningOperations,
-  OperationSpecification,
-  ReorderChangeLogItemsAction,
-  SetAuthorNameAction,
-  SetAuthorWebsiteAction,
-  SetModelDescriptionAction,
-  SetModelExtensionAction,
-  SetModelIdAction,
-  SetModelNameAction,
-  StateReducer,
-  UpdateChangeLogItemAction,
-} from "document-model";
-
-const operationSorter = (order: string[]) => {
-  const mapping: Record<string, number> = {};
-  order.forEach((key, index) => (mapping[key] = index));
-  return (a: OperationSpecification, b: OperationSpecification) =>
-    (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
-};
-
 export const documentModelOperationReducer: DocumentModelOperationOperations = {
   addOperationOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
@@ -479,25 +504,11 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
     const latestSpec = state.specifications[state.specifications.length - 1];
     for (let i = 0; i < latestSpec.modules.length; i++) {
       if (latestSpec.modules[i].id == action.input.moduleId) {
-        latestSpec.modules[i].operations.sort(
-          operationSorter(action.input.order),
-        );
+        latestSpec.modules[i].operations.sort(sorter(action.input.order));
       }
     }
   },
 };
-
-import type { DocumentModelStateOperations, ScopeState } from "document-model";
-import { isDocumentAction } from "../core/documents.js";
-import { createReducer } from "../core/reducer.js";
-
-const exampleSorter = (order: string[]) => {
-  const mapping: Record<string, number> = {};
-  order.forEach((key, index) => (mapping[key] = index));
-  return (a: CodeExample, b: CodeExample) =>
-    (mapping[b.id] || 999999) - (mapping[a.id] || 999999);
-};
-
 export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
   setStateSchemaOperation(state, action) {
     const latestSpec = state.specifications[state.specifications.length - 1];
@@ -562,7 +573,7 @@ export const documentModelStateSchemaReducer: DocumentModelStateOperations = {
     const latestSpec = state.specifications[state.specifications.length - 1];
     if (Object.keys(latestSpec.state).includes(action.input.scope)) {
       latestSpec.state[action.input.scope as keyof ScopeState].examples.sort(
-        exampleSorter(action.input.order),
+        sorter(action.input.order),
       );
     } else {
       throw new Error(`Invalid scope: ${action.input.scope}`);
@@ -697,7 +708,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
         throw new Error("Expected empty input for action RELEASE_NEW_VERSION");
       documentModelVersioningReducer.releaseNewVersionOperation(
         state.global,
-        action as any,
+        action as ReleaseNewVersionAction,
       );
       break;
 
@@ -705,7 +716,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       AddModuleInputSchema().parse(action.input);
       documentModelModuleReducer.addModuleOperation(
         state.global,
-        action as any,
+        action as AddModuleAction,
       );
       break;
 
@@ -713,7 +724,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetModuleNameInputSchema().parse(action.input);
       documentModelModuleReducer.setModuleNameOperation(
         state.global,
-        action as any,
+        action as SetModuleNameAction,
       );
       break;
 
@@ -721,7 +732,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetModuleDescriptionInputSchema().parse(action.input);
       documentModelModuleReducer.setModuleDescriptionOperation(
         state.global,
-        action as any,
+        action as SetModuleDescriptionAction,
       );
       break;
 
@@ -729,7 +740,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       DeleteModuleInputSchema().parse(action.input);
       documentModelModuleReducer.deleteModuleOperation(
         state.global,
-        action as any,
+        action as DeleteModuleAction,
       );
       break;
 
@@ -737,7 +748,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       ReorderModulesInputSchema().parse(action.input);
       documentModelModuleReducer.reorderModulesOperation(
         state.global,
-        action as any,
+        action as ReorderModulesAction,
       );
       break;
 
@@ -745,7 +756,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       AddOperationErrorInputSchema().parse(action.input);
       documentModelOperationErrorReducer.addOperationErrorOperation(
         state.global,
-        action as any,
+        action as AddOperationErrorAction,
       );
       break;
 
@@ -753,7 +764,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationErrorCodeInputSchema().parse(action.input);
       documentModelOperationErrorReducer.setOperationErrorCodeOperation(
         state.global,
-        action as any,
+        action as SetOperationErrorCodeAction,
       );
       break;
 
@@ -761,7 +772,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationErrorNameInputSchema().parse(action.input);
       documentModelOperationErrorReducer.setOperationErrorNameOperation(
         state.global,
-        action as any,
+        action as SetOperationErrorNameAction,
       );
       break;
 
@@ -769,7 +780,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationErrorDescriptionInputSchema().parse(action.input);
       documentModelOperationErrorReducer.setOperationErrorDescriptionOperation(
         state.global,
-        action as any,
+        action as SetOperationErrorDescriptionAction,
       );
       break;
 
@@ -777,7 +788,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationErrorTemplateInputSchema().parse(action.input);
       documentModelOperationErrorReducer.setOperationErrorTemplateOperation(
         state.global,
-        action as any,
+        action as SetOperationErrorTemplateAction,
       );
       break;
 
@@ -785,7 +796,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       DeleteOperationErrorInputSchema().parse(action.input);
       documentModelOperationErrorReducer.deleteOperationErrorOperation(
         state.global,
-        action as any,
+        action as DeleteOperationErrorAction,
       );
       break;
 
@@ -793,7 +804,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       ReorderOperationErrorsInputSchema().parse(action.input);
       documentModelOperationErrorReducer.reorderOperationErrorsOperation(
         state.global,
-        action as any,
+        action as ReorderOperationErrorsAction,
       );
       break;
 
@@ -801,7 +812,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       AddOperationExampleInputSchema().parse(action.input);
       documentModelOperationExampleReducer.addOperationExampleOperation(
         state.global,
-        action as any,
+        action as AddOperationExampleAction,
       );
       break;
 
@@ -809,7 +820,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       UpdateOperationExampleInputSchema().parse(action.input);
       documentModelOperationExampleReducer.updateOperationExampleOperation(
         state.global,
-        action as any,
+        action as UpdateOperationExampleAction,
       );
       break;
 
@@ -817,7 +828,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       DeleteOperationExampleInputSchema().parse(action.input);
       documentModelOperationExampleReducer.deleteOperationExampleOperation(
         state.global,
-        action as any,
+        action as DeleteOperationExampleAction,
       );
       break;
 
@@ -825,7 +836,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       ReorderOperationExamplesInputSchema().parse(action.input);
       documentModelOperationExampleReducer.reorderOperationExamplesOperation(
         state.global,
-        action as any,
+        action as ReorderOperationExamplesAction,
       );
       break;
 
@@ -833,7 +844,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       AddOperationInputSchema().parse(action.input);
       documentModelOperationReducer.addOperationOperation(
         state.global,
-        action as any,
+        action as AddOperationAction,
       );
       break;
 
@@ -841,7 +852,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationNameInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationNameOperation(
         state.global,
-        action as any,
+        action as SetOperationNameAction,
       );
       break;
 
@@ -849,7 +860,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationScopeInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationScopeOperation(
         state.global,
-        action as any,
+        action as SetOperationScopeAction,
       );
       break;
 
@@ -857,7 +868,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationSchemaInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationSchemaOperation(
         state.global,
-        action as any,
+        action as SetOperationSchemaAction,
       );
       break;
 
@@ -865,7 +876,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationDescriptionInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationDescriptionOperation(
         state.global,
-        action as any,
+        action as SetOperationDescriptionAction,
       );
       break;
 
@@ -873,7 +884,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationTemplateInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationTemplateOperation(
         state.global,
-        action as any,
+        action as SetOperationTemplateAction,
       );
       break;
 
@@ -881,7 +892,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetOperationReducerInputSchema().parse(action.input);
       documentModelOperationReducer.setOperationReducerOperation(
         state.global,
-        action as any,
+        action as SetOperationReducerAction,
       );
       break;
 
@@ -889,7 +900,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       MoveOperationInputSchema().parse(action.input);
       documentModelOperationReducer.moveOperationOperation(
         state.global,
-        action as any,
+        action as MoveOperationAction,
       );
       break;
 
@@ -897,7 +908,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       DeleteOperationInputSchema().parse(action.input);
       documentModelOperationReducer.deleteOperationOperation(
         state.global,
-        action as any,
+        action as DeleteOperationAction,
       );
       break;
 
@@ -905,7 +916,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       ReorderModuleOperationsInputSchema().parse(action.input);
       documentModelOperationReducer.reorderModuleOperationsOperation(
         state.global,
-        action as any,
+        action as ReorderModuleOperationsAction,
       );
       break;
 
@@ -913,7 +924,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetStateSchemaInputSchema().parse(action.input);
       documentModelStateSchemaReducer.setStateSchemaOperation(
         state.global,
-        action as any,
+        action as SetStateSchemaAction,
       );
       break;
 
@@ -921,7 +932,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       SetInitialStateInputSchema().parse(action.input);
       documentModelStateSchemaReducer.setInitialStateOperation(
         state.global,
-        action as any,
+        action as SetInitialStateAction,
       );
       break;
 
@@ -929,7 +940,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       AddStateExampleInputSchema().parse(action.input);
       documentModelStateSchemaReducer.addStateExampleOperation(
         state.global,
-        action as any,
+        action as AddStateExampleAction,
       );
       break;
 
@@ -937,7 +948,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       UpdateStateExampleInputSchema().parse(action.input);
       documentModelStateSchemaReducer.updateStateExampleOperation(
         state.global,
-        action as any,
+        action as UpdateStateExampleAction,
       );
       break;
 
@@ -945,7 +956,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       DeleteStateExampleInputSchema().parse(action.input);
       documentModelStateSchemaReducer.deleteStateExampleOperation(
         state.global,
-        action as any,
+        action as DeleteStateExampleAction,
       );
       break;
 
@@ -953,7 +964,7 @@ export const documentModelStateReducer: StateReducer<DocumentModelPHState> = (
       ReorderStateExamplesInputSchema().parse(action.input);
       documentModelStateSchemaReducer.reorderStateExamplesOperation(
         state.global,
-        action as any,
+        action as ReorderStateExamplesAction,
       );
       break;
 
