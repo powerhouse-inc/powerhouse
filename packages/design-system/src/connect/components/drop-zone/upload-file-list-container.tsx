@@ -13,6 +13,7 @@ export type UploadFileListContainerProps = ComponentPropsWithoutRef<"div"> & {
     nodeOrNodeSlug: Node | string | undefined,
   ) => void;
   readonly onClose?: () => void;
+  readonly onConflictResolution?: (uploadId: string) => void;
 };
 
 export function UploadFileListContainer(props: UploadFileListContainerProps) {
@@ -23,6 +24,7 @@ export function UploadFileListContainer(props: UploadFileListContainerProps) {
     clearAllUploads,
     setSelectedNode,
     onClose,
+    onConflictResolution,
     className,
     ...delegatedProps
   } = props;
@@ -34,6 +36,7 @@ export function UploadFileListContainer(props: UploadFileListContainerProps) {
     uploadsArray,
     removeUpload,
     setSelectedNode,
+    onConflictResolution,
   );
 
   const handleClose = onClose ?? clearAllUploads;

@@ -1,7 +1,10 @@
 import type { FileNode } from "document-drive";
 import { useCallback } from "react";
 import { addFileWithProgress } from "../actions/document.js";
-import type { FileUploadProgressCallback } from "../types/upload.js";
+import type {
+  ConflictResolution,
+  FileUploadProgressCallback,
+} from "../types/upload.js";
 import { useSelectedDrive } from "./drives.js";
 import { useSelectedFolder } from "./nodes.js";
 
@@ -10,6 +13,7 @@ type UseOnDropFile = (
 ) => (
   file: File,
   onProgress?: FileUploadProgressCallback,
+  resolveConflict?: ConflictResolution,
 ) => Promise<FileNode | undefined>;
 
 export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
@@ -18,7 +22,11 @@ export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
   const selectedFolder = useSelectedFolder();
 
   const onDropFile = useCallback(
-    async (file: File, onProgress?: FileUploadProgressCallback) => {
+    async (
+      file: File,
+      onProgress?: FileUploadProgressCallback,
+      resolveConflict?: ConflictResolution,
+    ) => {
       if (!selectedDriveId) {
         console.warn("No selected drive - upload skipped");
         return;
@@ -35,6 +43,7 @@ export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
         targetNodeId,
         onProgress,
         documentTypes,
+        resolveConflict,
       );
     },
     [selectedDriveId, selectedFolder],

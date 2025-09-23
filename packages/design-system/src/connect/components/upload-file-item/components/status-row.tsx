@@ -17,6 +17,8 @@ function getStatusText(status: UploadFileItemStatus): string {
       return "Upload failed";
     case "pending":
       return "Pending resolution";
+    case "conflict":
+      return "Pending Resolution";
     case "uploading":
       return "Uploading...";
     default:
@@ -30,6 +32,7 @@ function getStatusColor(status: UploadFileItemStatus): string {
       return "text-green-700";
     case "failed":
     case "pending":
+    case "conflict":
       return "text-red-900";
     case "uploading":
       return "text-gray-900";
@@ -45,13 +48,15 @@ function shouldShowCTA(
 ): boolean {
   return (
     (status === "success" && Boolean(onOpenDocument)) ||
-    (status === "pending" && Boolean(onFindResolution))
+    (status === "pending" && Boolean(onFindResolution)) ||
+    (status === "conflict" && Boolean(onFindResolution))
   );
 }
 
 function getCTAText(status: UploadFileItemStatus): string {
   if (status === "success") return "Open Document";
   if (status === "pending") return "Find resolution";
+  if (status === "conflict") return "Find resolution";
   return "";
 }
 
@@ -60,7 +65,11 @@ export function StatusRow(props: StatusRowProps) {
 
   const handleCTAClick = () => {
     if (status === "success" && onOpenDocument) onOpenDocument();
-    else if (status === "pending" && onFindResolution) onFindResolution();
+    else if (
+      (status === "pending" || status === "conflict") &&
+      onFindResolution
+    )
+      onFindResolution();
   };
 
   return (

@@ -1,5 +1,6 @@
 import { DropZone } from "@powerhousedao/design-system";
 import type {
+  ConflictResolution,
   DriveEditorProps,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
@@ -16,8 +17,9 @@ export function withDropZone<T extends DriveEditorProps>(
       file: File,
       parent: any,
       onProgress?: FileUploadProgressCallback,
+      resolveConflict?: ConflictResolution,
     ) => {
-      return await onDropFile(file, onProgress);
+      return await onDropFile(file, onProgress, resolveConflict);
     };
 
     if (props.editorConfig?.dragAndDrop?.enabled) {

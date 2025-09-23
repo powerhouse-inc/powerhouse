@@ -1,6 +1,6 @@
+import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
-import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import { ErrorDetails } from "./components/error-details.js";
 import { Header } from "./components/header.js";
 import { ProgressBar } from "./components/progress-bar.js";
@@ -10,7 +10,8 @@ export type UploadFileItemStatus =
   | "success"
   | "failed"
   | "pending"
-  | "uploading";
+  | "uploading"
+  | "conflict";
 
 export type UploadFileItemProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
