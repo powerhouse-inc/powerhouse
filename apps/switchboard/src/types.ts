@@ -29,6 +29,7 @@ export type StartServerOptions = {
   };
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
+  disableLocalPackages?: boolean;
 };
 
 export type SwitchboardReactor = {

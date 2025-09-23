@@ -23,7 +23,7 @@ import type { StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings
 const logger = createLogger();
-// eslint-disable-next-line @typescript-eslint/unbound-method
+
 const loggerWarn = logger.warn;
 /**
  * @param {string} msg
@@ -105,6 +105,13 @@ export async function startServer(
   const vitePluginNodePolyfillsPath =
     findVitePluginNodePolyfills(currentFilePath);
 
+  const disableDynamicLoading = options.disableDynamicLoading ?? false;
+  const ignoredPaths = ["**/subgraphs/**", "**/powerhouse.manifest.json"];
+
+  if (disableDynamicLoading) {
+    ignoredPaths.push("**/document-models/**", "**/editors/**");
+  }
+
   const config: InlineConfig = {
     customLogger: logger,
     configFile: false,
@@ -118,7 +125,7 @@ export async function startServer(
         allow: generateAllowedPaths(projectRoot),
       },
       watch: {
-        ignored: ["**/subgraphs/**", "**/powerhouse.manifest.json"],
+        ignored: ignoredPaths,
       },
     },
     optimizeDeps: {
@@ -167,7 +174,11 @@ export async function startServer(
         exclude: ["node_modules", join(studioPath, "assets/*.js")],
       }),
       viteConnectDevStudioPlugin(true, studioPath),
-      viteLoadExternalPackages(true, options.packages, studioPath),
+      viteLoadExternalPackages(
+        !disableDynamicLoading,
+        options.packages,
+        studioPath,
+      ),
       // Only enable documents HMR when explicitly requested (e.g., from ph-cli vetra)
       options.enableDocumentsHMR && viteDocumentModelsHMR(studioPath),
       options.enableDocumentsHMR && viteEditorsHMR(studioPath),

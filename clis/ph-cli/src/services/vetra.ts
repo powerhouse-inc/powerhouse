@@ -32,6 +32,7 @@ export type DevOptions = {
   remoteDrive?: string;
   disableConnect?: boolean;
   interactive?: boolean;
+  watchPackages?: boolean;
 };
 
 const getDriveId = (driveUrl: string | undefined): string =>
@@ -41,6 +42,7 @@ async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
     verbose?: boolean;
     interactiveCodegen?: boolean;
+    watchPackages?: boolean;
   },
   remoteDrive?: string,
   remoteDriveId?: string,
@@ -92,6 +94,7 @@ async function startLocalVetraSwitchboard(
       https,
       mcp: true,
       processorConfig,
+      disableLocalPackages: !options?.watchPackages,
     });
 
     if (verbose) {
@@ -192,6 +195,7 @@ export async function startVetra({
   remoteDrive,
   disableConnect = false,
   interactive = false,
+  watchPackages = false,
 }: DevOptions) {
   try {
     // Set default log level to info if not already specified
@@ -230,6 +234,7 @@ export async function startVetra({
         configFile,
         verbose,
         interactiveCodegen: interactive,
+        watchPackages,
       },
       resolvedVetraUrl,
       resolvedVetraId,
@@ -247,7 +252,13 @@ export async function startVetra({
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
       await spawnConnect(
-        { configFile, verbose, connectPort, enableDocumentsHMR: true },
+        {
+          configFile,
+          verbose,
+          connectPort,
+          enableDocumentsHMR: true,
+          disableDynamicLoading: !watchPackages,
+        },
         driveUrl,
       );
     }
