@@ -32,6 +32,7 @@ export type DevOptions = {
   remoteDrive?: string;
   disableConnect?: boolean;
   interactive?: boolean;
+  watchPackages?: boolean;
 };
 
 const getDriveId = (driveUrl: string | undefined): string =>
@@ -192,6 +193,7 @@ export async function startVetra({
   remoteDrive,
   disableConnect = false,
   interactive = false,
+  watchPackages = false,
 }: DevOptions) {
   try {
     // Set default log level to info if not already specified
@@ -247,7 +249,13 @@ export async function startVetra({
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
       await spawnConnect(
-        { configFile, verbose, connectPort, enableDocumentsHMR: true },
+        {
+          configFile,
+          verbose,
+          connectPort,
+          enableDocumentsHMR: true,
+          disableDynamicLoading: !watchPackages,
+        },
         driveUrl,
       );
     }

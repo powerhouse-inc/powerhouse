@@ -18,6 +18,7 @@ export const vetra: CommandActionType<
     verbose: options.logs,
     disableConnect: options.disableConnect,
     interactive: options.interactive,
+    watchPackages: options.watchPackages,
   });
 };
 
@@ -54,6 +55,10 @@ export function vetraCommand(program: Command) {
     .option(
       "--interactive",
       "Enable interactive mode for code generation (requires user confirmation before generating code)",
+    )
+    .option(
+      "--watch-packages",
+      "Enable dynamic loading for document-models and editors in connect-studio and switchboard",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting
