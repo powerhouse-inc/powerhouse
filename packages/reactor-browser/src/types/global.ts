@@ -55,6 +55,7 @@ export type AppConfig = {
 
 declare global {
   interface Window {
+    loading?: boolean | undefined;
     reactor?: IDocumentDriveServer | undefined;
     connectCrypto?: IConnectCrypto | undefined;
     did?: DID | undefined;

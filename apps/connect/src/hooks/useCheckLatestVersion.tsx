@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { toast } from "../services/toast.js";
 import { isLatestVersion } from "./utils.js";
 
-export const useLoadInitialData = () => {
+export const useCheckLatestVersion = () => {
   async function checkLatestVersion() {
     const result = await isLatestVersion();
     if (result === null) return;
