@@ -42,6 +42,7 @@ async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
     verbose?: boolean;
     interactiveCodegen?: boolean;
+    watchPackages?: boolean;
   },
   remoteDrive?: string,
   remoteDriveId?: string,
@@ -93,6 +94,7 @@ async function startLocalVetraSwitchboard(
       https,
       mcp: true,
       processorConfig,
+      disableLocalPackages: !options?.watchPackages,
     });
 
     if (verbose) {
@@ -232,6 +234,7 @@ export async function startVetra({
         configFile,
         verbose,
         interactiveCodegen: interactive,
+        watchPackages,
       },
       resolvedVetraUrl,
       resolvedVetraId,

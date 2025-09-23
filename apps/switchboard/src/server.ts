@@ -114,7 +114,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const vite = dev ? await startViteServer() : undefined;
 
   // get paths to local document models
-  if (dev) {
+  if (dev && !options.disableLocalPackages) {
     // TODO get path from powerhouse config
     const basePath = process.cwd();
     packages.push(basePath);
