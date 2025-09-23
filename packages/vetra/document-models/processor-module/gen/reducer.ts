@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model/core";
+import { isDocumentAction, createReducer } from "document-model/core";
 import type { ProcessorModulePHState } from "./types.js";
 import { z } from "./types.js";
 

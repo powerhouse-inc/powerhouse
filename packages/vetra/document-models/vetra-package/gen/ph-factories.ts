@@ -1,12 +1,12 @@
 /**
  * Factory methods for creating VetraPackageDocument instances
  */
-import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
 import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   VetraPackageDocument,
-  VetraPackageGlobalState,
   VetraPackageLocalState,
+  VetraPackageGlobalState,
   VetraPackagePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";

@@ -1,8 +1,8 @@
 // TODO: remove eslint-disable rules once refactor is done
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { createReducer, isDocumentAction } from "document-model/core";
 import type { StateReducer } from "document-model";
+import { isDocumentAction, createReducer } from "document-model/core";
 import type { SubgraphModulePHState } from "./types.js";
 import { z } from "./types.js";
 

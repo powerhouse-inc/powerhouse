@@ -1,12 +1,12 @@
 /**
  * Factory methods for creating AppModuleDocument instances
  */
-import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
 import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   AppModuleDocument,
-  AppModuleGlobalState,
   AppModuleLocalState,
+  AppModuleGlobalState,
   AppModulePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";

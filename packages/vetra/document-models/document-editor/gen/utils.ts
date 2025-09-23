@@ -1,17 +1,17 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseLoadFromInput,
   baseSaveToFileHandle,
+  baseLoadFromInput,
   defaultBaseState,
   generateId,
 } from "document-model/core";
-import { reducer } from "./reducer.js";
 import type {
   DocumentEditorGlobalState,
   DocumentEditorLocalState,
-  DocumentEditorPHState,
 } from "./types.js";
+import type { DocumentEditorPHState } from "./types.js";
+import { reducer } from "./reducer.js";
 
 export const initialGlobalState: DocumentEditorGlobalState = {
   name: "",
