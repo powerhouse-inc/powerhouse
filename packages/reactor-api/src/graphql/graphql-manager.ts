@@ -267,19 +267,27 @@ export class GraphQLManager {
           subgraphsMap,
         );
         if (!subgraphConfig) continue;
-        // create subgraph schema
-        const schema = createSchema(
-          this.reactor,
-          subgraphConfig.resolvers,
-          subgraphConfig.typeDefs,
-        );
-        // create and start apollo server
-        const server = this.#createApolloServer(schema);
-        await server.start();
-        await this.#waitForServer(server);
 
-        const path = this.#getSubgraphPath(subgraph, supergraph);
-        this.#setupApolloExpressMiddleware(server, router, path);
+        try {
+          // create subgraph schema
+          const schema = createSchema(
+            this.reactor,
+            subgraphConfig.resolvers,
+            subgraphConfig.typeDefs,
+          );
+          // create and start apollo server
+          const server = this.#createApolloServer(schema);
+          await server.start();
+          await this.#waitForServer(server);
+
+          const path = this.#getSubgraphPath(subgraph, supergraph);
+          this.#setupApolloExpressMiddleware(server, router, path);
+        } catch (error) {
+          this.logger.error(
+            `Error setting up subgraph ${subgraph.name}:`,
+            error,
+          );
+        }
       }
     }
   }
