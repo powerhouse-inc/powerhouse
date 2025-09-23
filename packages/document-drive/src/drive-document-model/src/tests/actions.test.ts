@@ -5,7 +5,7 @@ import {
   driveDocumentReducer,
   moveNode,
 } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("DocumentDrive Actions", () => {

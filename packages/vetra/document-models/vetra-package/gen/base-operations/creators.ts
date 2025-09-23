@@ -1,27 +1,27 @@
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 import {
   z,
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
+  type AddPackageKeywordInput,
+  type RemovePackageKeywordInput,
   type SetPackageAuthorInput,
   type SetPackageAuthorNameInput,
   type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
+  type SetPackageCategoryInput,
+  type SetPackageDescriptionInput,
   type SetPackageGithubUrlInput,
+  type SetPackageNameInput,
   type SetPackageNpmUrlInput,
 } from "../types.js";
 import {
-  type SetPackageNameAction,
-  type SetPackageDescriptionAction,
-  type SetPackageCategoryAction,
+  type AddPackageKeywordAction,
+  type RemovePackageKeywordAction,
   type SetPackageAuthorAction,
   type SetPackageAuthorNameAction,
   type SetPackageAuthorWebsiteAction,
-  type AddPackageKeywordAction,
-  type RemovePackageKeywordAction,
+  type SetPackageCategoryAction,
+  type SetPackageDescriptionAction,
   type SetPackageGithubUrlAction,
+  type SetPackageNameAction,
   type SetPackageNpmUrlAction,
 } from "./actions.js";
 

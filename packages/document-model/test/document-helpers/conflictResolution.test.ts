@@ -6,7 +6,7 @@ import {
   merge,
   precedes,
   reshuffleByTimestamp,
-} from "document-model";
+} from "document-model/core";
 import { buildOperations } from "./utils.js";
 
 describe("Conflict resolution", () => {

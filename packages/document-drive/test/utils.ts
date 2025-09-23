@@ -11,7 +11,8 @@ import type {
   PHDocument,
   Reducer,
 } from "document-model";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 import type { ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [

@@ -5,7 +5,7 @@ import {
   createReducer,
   generateId,
   setName,
-} from "document-model";
+} from "document-model/core";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
   countReducer,

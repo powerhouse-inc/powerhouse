@@ -28,7 +28,7 @@ import {
   SetDriveNameInputSchema,
   SetSharingTypeInputSchema,
 } from "document-drive";
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 
 export const setDriveName = (input: SetDriveNameInput) =>
   createAction<SetDriveNameAction>(

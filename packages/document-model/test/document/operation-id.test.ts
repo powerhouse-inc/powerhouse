@@ -2,7 +2,7 @@ import {
   baseCreateDocument,
   garbageCollectDocumentOperations,
   replayOperations,
-} from "document-model";
+} from "document-model/core";
 import type { CountDocument, CountPHState } from "document-model/test";
 import {
   baseCountReducer,

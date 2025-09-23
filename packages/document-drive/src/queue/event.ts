@@ -15,7 +15,7 @@ import {
   logger,
   MemoryQueue,
 } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import type { Unsubscribe } from "nanoevents";
 import { createNanoEvents } from "nanoevents";
 

@@ -1,6 +1,6 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { actions } from "../../document-models/vetra-package/index.js";
 
 const DEFAULT_DRIVE_ID = "powerhouse";

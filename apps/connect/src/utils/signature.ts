@@ -8,7 +8,7 @@ import type {
   Reducer,
   User,
 } from "document-model";
-import { buildSignedAction } from "document-model";
+import { buildSignedAction } from "document-model/core";
 
 export async function signOperation<TState extends PHBaseState = PHBaseState>(
   operation: Operation,

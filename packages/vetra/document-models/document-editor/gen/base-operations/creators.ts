@@ -1,15 +1,15 @@
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 import {
   z,
-  type SetEditorNameInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetEditorNameInput,
   type SetEditorStatusInput,
 } from "../types.js";
 import {
-  type SetEditorNameAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetEditorNameAction,
   type SetEditorStatusAction,
 } from "./actions.js";
 

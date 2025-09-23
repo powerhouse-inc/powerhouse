@@ -13,8 +13,8 @@ import type { DocumentModelModule } from "document-model";
 import {
   documentModelDocumentModelModule as DocumentModel,
   documentModelCreateDocument,
-  generateId,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 

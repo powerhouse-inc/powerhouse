@@ -1,4 +1,4 @@
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 import { z, type SetDragAndDropEnabledInput } from "../types.js";
 import { type SetDragAndDropEnabledAction } from "./actions.js";
 

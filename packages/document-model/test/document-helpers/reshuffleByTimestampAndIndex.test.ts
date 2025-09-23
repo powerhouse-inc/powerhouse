@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reshuffleByTimestampAndIndex } from "document-model";
+import { reshuffleByTimestampAndIndex } from "document-model/core";
 import { buildOperations } from "./utils.js";
 
 describe("reshuffleByTimestamp", () => {

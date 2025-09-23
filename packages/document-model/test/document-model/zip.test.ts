@@ -4,8 +4,8 @@ import {
   setModelDescription,
   setModelId,
   setModelName,
-  undo,
 } from "document-model";
+import { undo } from "document-model/core";
 import { baseLoadFromFile, baseSaveToFile } from "document-model/node";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

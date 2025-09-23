@@ -19,7 +19,7 @@ import {
   UpdateNodeInputSchema,
 } from "document-drive";
 import type { Reducer, StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model";
+import { createReducer, isDocumentAction } from "document-model/core";
 
 const driveStateReducer: StateReducer<DocumentDrivePHState> = (
   state,

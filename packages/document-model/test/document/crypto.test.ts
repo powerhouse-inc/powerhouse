@@ -21,7 +21,7 @@ import {
   sign,
   verify,
   verifyOperationSignature,
-} from "document-model";
+} from "document-model/core";
 import type { CountPHState } from "document-model/test";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sortOperations } from "document-model";
+import { sortOperations } from "document-model/core";
 import { buildOperations } from "./utils.js";
 
 describe("sortOperations", () => {

@@ -3,12 +3,9 @@
  * Delete the file and run the code generator again to have it reset
  */
 
-import {
-  actions as BaseActions,
-  createState,
-  defaultBaseState,
-  type DocumentModelModule,
-} from "document-model";
+import type { DocumentModelModule } from "document-model";
+import { createState } from "document-model";
+import { actions as BaseActions, defaultBaseState } from "document-model/core";
 import { documentModel } from "./gen/document-model.js";
 import { actions as VetraPackageActions } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";

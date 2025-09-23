@@ -1,4 +1,7 @@
-import { attachBranch, checkCleanedOperationsIntegrity } from "document-model";
+import {
+  attachBranch,
+  checkCleanedOperationsIntegrity,
+} from "document-model/core";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

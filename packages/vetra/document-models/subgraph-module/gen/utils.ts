@@ -1,17 +1,17 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseSaveToFileHandle,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model";
+} from "document-model/core";
+import { reducer } from "./reducer.js";
 import type {
   SubgraphModuleGlobalState,
   SubgraphModuleLocalState,
+  SubgraphModulePHState,
 } from "./types.js";
-import type { SubgraphModulePHState } from "./types.js";
-import { reducer } from "./reducer.js";
 
 export const initialGlobalState: SubgraphModuleGlobalState = {
   name: "",

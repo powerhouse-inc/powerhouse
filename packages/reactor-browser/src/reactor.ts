@@ -11,7 +11,7 @@ import {
   ReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import type { IConnectCrypto } from "./crypto/index.js";
 import { BrowserKeyStorage, ConnectCrypto } from "./crypto/index.js";
 import { dispatchSetDocumentsEvent } from "./events/documents.js";

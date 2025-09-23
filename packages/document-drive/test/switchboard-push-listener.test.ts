@@ -14,9 +14,9 @@ import type { DocumentModelModule } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  generateId,
   setModelName,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock(import("graphql-request"), async (importOriginal) => {

@@ -28,12 +28,11 @@ import type {
   PHDocument,
 } from "document-model";
 import {
-  createPresignedHeader,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  generateId,
   setModelName,
 } from "document-model";
+import { createPresignedHeader, generateId } from "document-model/core";
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";

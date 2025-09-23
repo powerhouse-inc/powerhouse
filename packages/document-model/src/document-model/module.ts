@@ -1,15 +1,19 @@
-import { defaultBaseState } from "../document/ph-factories.js";
-import { documentModelFileExtension } from "./gen/constants.js";
-import * as actions from "./gen/creators.js";
-import { documentModelState } from "./gen/document-model.js";
-import { createState } from "./gen/ph-factories.js";
-import { documentModelReducer } from "./gen/reducer.js";
+import { defaultBaseState } from "document-model/core";
+import { documentModelActions } from "./actions.js";
 import {
-  documentModelCreateDocument,
-  documentModelCreateState,
+  documentModelFileExtension,
+  documentModelGlobalState,
+} from "./constants.js";
+import {
   documentModelLoadFromInput,
   documentModelSaveToFileHandle,
-} from "./gen/utils.js";
+} from "./files.js";
+import { documentModelReducer } from "./reducers.js";
+import {
+  createState,
+  documentModelCreateDocument,
+  documentModelCreateState,
+} from "./state.js";
 import type { DocumentModelDocumentModelModule } from "./types.js";
 
 const utils = {
@@ -19,10 +23,11 @@ const utils = {
   loadFromInput: documentModelLoadFromInput,
   saveToFileHandle: documentModelSaveToFileHandle,
 };
+
 export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
   {
     reducer: documentModelReducer,
-    documentModel: createState(defaultBaseState(), documentModelState),
-    actions,
+    documentModel: createState(defaultBaseState(), documentModelGlobalState),
+    actions: documentModelActions,
     utils,
   };

@@ -1,16 +1,16 @@
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 import {
   z,
-  type SetAppNameInput,
-  type SetAppStatusInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetAppNameInput,
+  type SetAppStatusInput,
 } from "../types.js";
 import {
-  type SetAppNameAction,
-  type SetAppStatusAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetAppNameAction,
+  type SetAppStatusAction,
 } from "./actions.js";
 
 export const setAppName = (input: SetAppNameInput) =>

@@ -1,6 +1,6 @@
 import { type BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { setName } from "document-model";
+import { setName } from "document-model/core";
 import {
   actions,
   type AddDocumentTypeInput,

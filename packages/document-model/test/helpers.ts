@@ -7,13 +7,12 @@ import type {
   PHDocument,
   StateReducer,
 } from "document-model";
-import { createAction, createReducer, defaultBaseState } from "document-model";
-
-// Test state type that extends PHBaseState with global and local fields
-export type TestPHState = PHBaseState & {
-  global: any;
-  local: any;
-};
+import {
+  createAction,
+  createReducer,
+  defaultBaseState,
+} from "document-model/core";
+import type { TestPHState } from "./types.js";
 
 /**
  * Default createState function for test documents

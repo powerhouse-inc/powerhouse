@@ -3,9 +3,9 @@ import { DriveSubgraph, testSetupReactor } from "@powerhousedao/reactor-api";
 import { driveCreateDocument } from "document-drive";
 import {
   documentModelDocumentModelModule,
-  generateId,
   type DocumentModelModule,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { describe, expect, it, vi } from "vitest";
 
 describe("DriveSubgraph", () => {
