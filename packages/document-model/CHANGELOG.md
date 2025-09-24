@@ -1,3 +1,21 @@
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+
+### 🩹 Fixes
+
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- hand-edit document-model generated stuff so as not to have a circular reference ([e9ec89590](https://github.com/powerhouse-inc/powerhouse/commit/e9ec89590))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.58 (2025-09-18)
 
 ### 🚀 Features

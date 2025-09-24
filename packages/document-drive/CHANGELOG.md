@@ -1,3 +1,22 @@
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+
+### 🩹 Fixes
+
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- generating prisma client ([0a101b476](https://github.com/powerhouse-inc/powerhouse/commit/0a101b476))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+- **document-drive:** changed default log level from 'debug' to 'info' ([dffeb1d81](https://github.com/powerhouse-inc/powerhouse/commit/dffeb1d81))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.58 (2025-09-18)
 
 ### 🚀 Features
