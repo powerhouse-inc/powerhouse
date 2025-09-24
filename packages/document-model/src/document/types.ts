@@ -354,6 +354,7 @@ export type EditorContext = {
   getDocumentRevision?: (
     options?: GetDocumentOptions,
   ) => Promise<PHDocument> | undefined;
+  vetra?: { driveId?: string; driveUrl?: string };
 };
 
 export type ActionErrorCallback = (error: unknown) => void;

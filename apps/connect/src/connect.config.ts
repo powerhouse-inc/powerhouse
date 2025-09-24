@@ -64,6 +64,11 @@ const PH_CONNECT_DRIVE_ANALYTICS_ENABLED =
 const PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED =
   import.meta.env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED || "true";
 
+const PH_CONNECT_VETRA_DRIVE_ID =
+  import.meta.env.PH_CONNECT_VETRA_DRIVE_ID || undefined;
+const PH_CONNECT_VETRA_DRIVE_URL =
+  import.meta.env.PH_CONNECT_VETRA_DRIVE_URL || undefined;
+
 const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
   ? import.meta.env.LOG_LEVEL
   : "info";
@@ -115,4 +120,8 @@ export default {
   },
   gaTrackingId: GA_TRACKING_ID,
   phCliVersion: PH_CONNECT_CLI_VERSION,
+  vetra: {
+    driveId: PH_CONNECT_VETRA_DRIVE_ID,
+    driveUrl: PH_CONNECT_VETRA_DRIVE_URL,
+  },
 };

@@ -57,6 +57,10 @@ export type IDriveContext = {
    * @param node - The node to be deleted
    */
   showDeleteNodeModal: (node: Node) => void;
+  /**
+   * VETRA configuration
+   */
+  vetra?: { driveId?: string; driveUrl?: string };
 };
 
 export type DriveEditorConfig = {

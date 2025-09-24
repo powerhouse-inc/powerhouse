@@ -1,4 +1,5 @@
 import { useUndoRedoShortcuts } from "#hooks";
+import connectConfig from "#connect-config";
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
@@ -254,6 +255,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                     selectedTimelineItem?.endDate,
                     globalOperations,
                   ),
+                  vetra: connectConfig.vetra,
                 }}
                 document={document}
                 documentNodeName={documentName ?? ""}

@@ -57,6 +57,7 @@ export default function Editor(props: IProps) {
         processorName={unsafeCastOfDocument.state.global.name ?? ""}
         processorType={unsafeCastOfDocument.state.global.type ?? ""}
         documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
+        vetraDriveId={props.context.vetra?.driveId}
         onConfirm={onConfirm}
       />
     </div>
