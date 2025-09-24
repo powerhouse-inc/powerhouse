@@ -56,6 +56,7 @@ export default function Editor(props: IProps) {
           unsafeCastOfDocument.state.global.dragAndDrop?.enabled ?? false
         }
         documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
+        vetraDriveId={props.context.vetra?.driveId}
         onNameChange={onNameChange}
         onDragAndDropToggle={onDragAndDropToggle}
         onAddDocumentType={onAddDocumentType}

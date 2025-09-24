@@ -124,6 +124,7 @@ async function startLocalVetraSwitchboard(
 async function spawnConnect(
   options?: ConnectStudioOptions & { verbose?: boolean; connectPort?: number },
   localReactorUrl?: string,
+  driveId?: string,
 ) {
   const { verbose = false, connectPort, ...connectOptions } = options || {};
 
@@ -140,6 +141,8 @@ async function spawnConnect(
         ...process.env,
         PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
         PH_CONNECT_DRIVES_PRESERVE_STRATEGY: "preserve-all",
+        PH_CONNECT_VETRA_DRIVE_URL: localReactorUrl,
+        PH_CONNECT_VETRA_DRIVE_ID: driveId,
       },
     },
   ) as ChildProcessWithoutNullStreams;
@@ -213,7 +216,7 @@ export async function startVetra({
     // Use vetraUrl from config if no explicit remoteDrive is provided
     const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
-    const resolvedVetraId = getDriveId(configVetraUrl);
+    const resolvedVetraId = getDriveId(resolvedVetraUrl);
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
@@ -240,6 +243,7 @@ export async function startVetra({
       resolvedVetraId,
     );
     const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
+    const driveId = getDriveId(driveUrl);
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");
@@ -260,6 +264,7 @@ export async function startVetra({
           disableDynamicLoading: !watchPackages,
         },
         driveUrl,
+        driveId,
       );
     }
   } catch (error) {
