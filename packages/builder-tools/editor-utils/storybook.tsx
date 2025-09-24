@@ -39,38 +39,37 @@ export type EditorStoryArgs = Partial<{
   };
 }>;
 
-export type EditorStoryProps = EditorProps & EditorStoryArgs;
+export type EditorStoryProps<TState extends PHBaseState = PHBaseState> =
+  EditorProps<PHDocument<TState>> & EditorStoryArgs;
 
 export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
 
-export type EditorStoryComponent = (
-  props: EditorStoryProps,
+export type EditorStoryComponent<TState extends PHBaseState = PHBaseState> = (
+  props: EditorStoryProps<TState>,
 ) => React.JSX.Element;
 
 export type DriveEditorStoryComponent = (
   props: DriveEditorStoryProps,
 ) => React.JSX.Element;
 
-export type DocumentStory = StoryObj<EditorStoryComponent>;
+export type DocumentStory<TState extends PHBaseState = PHBaseState> = StoryObj<
+  EditorStoryComponent<TState>
+>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
-// Default createState function for PHDocument
-const defaultPHDocumentCreateState: CreateState = (state) => {
-  return state as PHBaseState;
-};
-
-export function createDocumentStory(
-  Editor: EditorStoryComponent,
-  reducer: Reducer<any>,
-  initialState: unknown,
+export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
+  Editor: EditorStoryComponent<TState>,
+  reducer: Reducer<TState>,
+  initialState: TState,
   additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps>[],
+  decorators?: Decorator<EditorStoryProps<TState>>[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory;
+  CreateDocumentStory: DocumentStory<TState>;
 } {
   const meta = {
+    includeStories: ["All"],
     component: Editor,
     decorators: [
       (Story, { args }) => {
@@ -90,7 +89,7 @@ export function createDocumentStory(
       (Story, { args }) => {
         const [, setArgs] = useArgs<typeof args>();
         const emit = useChannel({
-          DOCUMENT: (document: PHDocument) => {
+          DOCUMENT: (document: PHDocument<TState>) => {
             setArgs({ document });
           },
         });
@@ -103,7 +102,7 @@ export function createDocumentStory(
       const [error, setError] = useState<unknown>();
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentReducer(
+      const [document, _dispatch] = useDocumentReducer<TState>(
         reducer,
         args.document,
         (error) => {
@@ -145,12 +144,12 @@ export function createDocumentStory(
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document as PHDocument));
+            dispatch(createAction(document));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} document={document as PHDocument} />;
+      return <Editor {...args} document={document} />;
     },
     argTypes: {
       document: {
@@ -170,12 +169,17 @@ export function createDocumentStory(
     },
   } satisfies Meta<typeof Editor>;
 
-  const CreateDocumentStory: DocumentStory = {
+  // Default createState function for PHDocument
+  const defaultPHDocumentCreateState: CreateState<TState> = (state) => {
+    return state as TState;
+  };
+
+  const CreateDocumentStory: DocumentStory<TState> = {
     name: "New document",
     args: {
-      document: baseCreateDocument(
+      document: baseCreateDocument<TState>(
         defaultPHDocumentCreateState,
-        initialState as Partial<PHBaseState>,
+        initialState,
       ),
       user: {
         address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",

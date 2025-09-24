@@ -358,13 +358,11 @@ export type EditorContext = {
 
 export type ActionErrorCallback = (error: unknown) => void;
 
-export type EditorDispatch = (
-  action: Action,
-  onErrorCallback?: ActionErrorCallback,
-) => void;
+export type EditorDispatch = (actionOrActions: Action[] | Action) => void;
 
-export type EditorProps = {
-  document: PHDocument;
+export type EditorProps<Document extends PHDocument = PHDocument> = {
+  document: Document;
+  dispatch: EditorDispatch;
   context: EditorContext;
 };
 
@@ -382,8 +380,8 @@ export type ImportScriptModule = {
   endpoint: string;
 };
 
-export type EditorModule = {
-  Component: FC<EditorProps>;
+export type EditorModule<Document extends PHDocument = PHDocument> = {
+  Component: FC<EditorProps<Document>>;
   documentTypes: string[];
   config: {
     id: string;
@@ -437,7 +435,7 @@ export type Manifest = {
 export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   manifest: Manifest;
   documentModels: DocumentModelModule<TState>[];
-  editors: EditorModule[];
+  editors: EditorModule<PHDocument<TState>>[];
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
 };

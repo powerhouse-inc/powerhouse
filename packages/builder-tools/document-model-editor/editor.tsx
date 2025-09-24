@@ -1,3 +1,4 @@
+import { pascalCase } from "change-case";
 import type { DocumentModelDocument, EditorProps } from "document-model";
 import {
   addModule,
@@ -33,13 +34,9 @@ import {
   initializeModelSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
-import { pascalCase } from "change-case";
-import { useDocumentById } from "@powerhousedao/reactor-browser";
 
-export function DocumentModelEditor(props: EditorProps) {
-  const { document: initialDocument } = props;
-  const [unsafeDocument, dispatch] = useDocumentById(initialDocument.header.id);
-  const document = unsafeDocument as DocumentModelDocument;
+export function DocumentModelEditor(props: EditorProps<DocumentModelDocument>) {
+  const { document, dispatch } = props;
 
   const documentNodeName = document.header.name;
   const {

@@ -11,7 +11,6 @@ import {
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
-  useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model";
@@ -70,11 +69,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
-
-  const userPermissions = useUserPermissions();
-
   const timelineItems = useTimelineItems(documentId, createdAt);
 
+  const isLoadingDocument = !document;
   const isLoadingEditor =
     editorModule === undefined ||
     (editorModule &&
@@ -128,6 +125,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
 
   if (isLoadingEditor) {
     return <EditorLoader message="Loading editor" />;
+  }
+
+  if (isLoadingDocument) {
+    return <EditorLoader message="Loading document" />;
   }
 
   if (!documentModelModule) {
@@ -261,19 +262,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                   ),
                 }}
                 document={document}
-                documentNodeName={documentName ?? ""}
-                onClose={onClose}
-                onExport={onExport}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onSwitchboardLinkClick={handleSwitchboardLinkClick}
-                onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
-                isAllowedToCreateDocuments={
-                  userPermissions?.isAllowedToCreateDocuments ?? false
-                }
-                isAllowedToEditDocuments={
-                  userPermissions?.isAllowedToEditDocuments ?? false
-                }
+                dispatch={dispatch}
               />
             )}
           </ErrorBoundary>
