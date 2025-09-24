@@ -8,14 +8,23 @@ export type DocumentTypeIcon =
   | "package"
   | "subgraph";
 
+export type ConflictResolution = "replace" | "duplicate";
+
 export interface FileUploadProgress {
-  stage: "loading" | "initializing" | "uploading" | "complete" | "failed";
+  stage:
+    | "loading"
+    | "initializing"
+    | "uploading"
+    | "complete"
+    | "failed"
+    | "conflict";
   progress: number; // 0-100
   totalOperations?: number;
   uploadedOperations?: number;
   message?: string;
   error?: string;
   documentType?: DocumentTypeIcon;
+  duplicateType?: "id" | "name";
 }
 
 export type FileUploadProgressCallback = (progress: FileUploadProgress) => void;

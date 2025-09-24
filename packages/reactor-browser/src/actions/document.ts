@@ -31,11 +31,67 @@ import {
   uploadOperations,
 } from "../actions/queue.js";
 import type {
+  ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgressCallback,
 } from "../types/upload.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
+
+async function isDocumentInLocation(
+  document: PHDocument,
+  driveId: string,
+  parentFolder?: string,
+): Promise<{
+  isDuplicate: boolean;
+  duplicateType?: "id" | "name";
+  nodeId?: string;
+}> {
+  const reactor = window.reactor;
+  if (!reactor) {
+    return { isDuplicate: false };
+  }
+
+  try {
+    // Get the drive and check its nodes
+    const drive = await reactor.getDrive(driveId);
+
+    // Case 1: Check for duplicate by ID
+    const nodeById = drive.state.global.nodes.find(
+      (node) => node.id === document.header.id,
+    );
+
+    if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
+      return {
+        isDuplicate: true,
+        duplicateType: "id",
+        nodeId: nodeById.id,
+      };
+    }
+
+    // Case 2: Check for duplicate by name + type in same parent folder
+    const nodeByNameAndType = drive.state.global.nodes.find(
+      (node) =>
+        isFileNode(node) &&
+        node.name === document.header.name &&
+        node.documentType === document.header.documentType &&
+        node.parentFolder === (parentFolder ?? null),
+    );
+
+    if (nodeByNameAndType) {
+      return {
+        isDuplicate: true,
+        duplicateType: "name",
+        nodeId: nodeByNameAndType.id,
+      };
+    }
+
+    return { isDuplicate: false };
+  } catch {
+    // Drive doesn't exist or other error
+    return { isDuplicate: false };
+  }
+}
 
 function getDocumentTypeIcon(
   document: PHDocument,
@@ -292,6 +348,7 @@ export async function addFileWithProgress(
   parentFolder?: string,
   onProgress?: FileUploadProgressCallback,
   documentTypes: string[] = [],
+  resolveConflict?: ConflictResolution,
 ) {
   logger.verbose(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
@@ -314,6 +371,34 @@ export async function addFileWithProgress(
     if (!document) {
       throw new Error("No document loaded");
     }
+
+    // Check for duplicate in same location
+    const duplicateCheck = await isDocumentInLocation(
+      document,
+      driveId,
+      parentFolder,
+    );
+
+    if (duplicateCheck.isDuplicate && !resolveConflict) {
+      // Report conflict and return early
+      onProgress?.({
+        stage: "conflict",
+        progress: 0,
+        duplicateType: duplicateCheck.duplicateType,
+      });
+      return undefined;
+    }
+
+    // Handle replace resolution by deleting the existing document
+    if (
+      duplicateCheck.isDuplicate &&
+      resolveConflict === "replace" &&
+      duplicateCheck.nodeId
+    ) {
+      await deleteNode(driveId, duplicateCheck.nodeId);
+    }
+    // For "duplicate" resolution, we continue normally which creates a new document
+    // with a different ID (the default behavior)
 
     // Send documentType info immediately after loading
     const documentType = getDocumentTypeIcon(document);
