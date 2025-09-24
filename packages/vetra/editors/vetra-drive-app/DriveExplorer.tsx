@@ -1,9 +1,9 @@
-import type { IDriveContext } from "@powerhousedao/reactor-browser";
 import {
   useDocumentModelModuleById,
   useFallbackEditorModule,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "document-drive";
+import type { EditorContext } from "document-model";
 import type React from "react";
 import { DriveHeader } from "./components/DriveHeader.js";
 import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";
@@ -11,7 +11,7 @@ import { PackageInformationSection } from "./components/PackageInformationSectio
 import { DOCUMENT_TYPES } from "./document-types.js";
 
 interface DriveExplorerProps {
-  context: IDriveContext;
+  context: EditorContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];

@@ -17,7 +17,6 @@ import {
   useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
 import { getDriveSharingType } from "document-drive/server/utils";
 import type { DocumentModelModule } from "document-model";
 import type React from "react";
@@ -31,7 +30,6 @@ export type GenericDriveExplorerEditorProps = DriveEditorProps &
 
 export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { document, className, children } = props;
-  const unsafeCastOfDocument = document as DocumentDriveDocument;
 
   const {
     showCreateDocumentModal,
@@ -64,7 +62,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     selectedNodePath,
     setSelectedNode,
   });
-  const sharingType = getDriveSharingType(unsafeCastOfDocument);
+  const sharingType = getDriveSharingType(document);
 
   if (!selectedDrive) {
     return <div>Drive not found</div>;

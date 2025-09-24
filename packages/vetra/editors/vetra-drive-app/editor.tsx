@@ -9,7 +9,7 @@ import {
   useDriveContext,
 } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
-import type { DocumentDriveDocument, FileNode } from "document-drive";
+import type { FileNode } from "document-drive";
 import { useCallback } from "react";
 import { DriveExplorer } from "./DriveExplorer.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
@@ -18,11 +18,11 @@ export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
   const { context, document } = props;
-  const unsafeCastOfDocument = document as DocumentDriveDocument;
+
   const { showCreateDocumentModal, onAddFile } = useDriveContext();
-  const driveId = unsafeCastOfDocument.header.id;
+  const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
-  const fileNodes = unsafeCastOfDocument.state.global.nodes.filter(
+  const fileNodes = document.state.global.nodes.filter(
     (node) => node.kind === "file",
   ) as Array<FileNode>;
   const packageDocumentId = fileNodes.find(

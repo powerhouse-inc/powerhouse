@@ -1,5 +1,7 @@
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
 import { DEFAULT_DRIVE_EDITOR_ID } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
+import type { FC } from "react";
 
 export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
   const { GenericDriveExplorer: genericDriveExplorerEditorModule } =
@@ -12,7 +14,7 @@ export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEdito
     id: DEFAULT_DRIVE_EDITOR_ID,
     name,
     documentTypes,
-    Component,
+    Component: Component as FC<EditorProps>,
     config,
   };
   return vetraEditorModule;

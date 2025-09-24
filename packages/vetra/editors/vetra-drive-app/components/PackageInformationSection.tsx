@@ -1,8 +1,8 @@
 import type {
-  IDriveContext,
   VetraDocumentModelModule,
   VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
+import type { EditorContext } from "document-model";
 import type React from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";
 import { EditorContainer } from "./EditorContainer.js";
@@ -10,7 +10,7 @@ import { SectionAccordion } from "./SectionAccordion.js";
 
 interface PackageInformationSectionProps {
   className?: string;
-  context: IDriveContext;
+  context: EditorContext;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
   documentModelModule?: VetraDocumentModelModule;

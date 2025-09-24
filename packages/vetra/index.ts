@@ -12,5 +12,5 @@ export const manifest: Manifest = manifestJson;
 export const documentModels: DocumentModelModule<any>[] = Object.values(
   documentModelsExports,
 );
-export const editors: (EditorModule | DriveEditorModule)[] =
+export const editors: (EditorModule<any> | DriveEditorModule)[] =
   Object.values(editorsExports);
