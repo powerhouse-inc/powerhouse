@@ -1,3 +1,13 @@
+## 5.0.0-staging.15 (2025-09-24)
+
+### 🚀 Features
+
+- added watch-packages option to vetra command and disabled dynamic package loading by default ([#1875](https://github.com/powerhouse-inc/powerhouse/pull/1875))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.14 (2025-09-23)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
