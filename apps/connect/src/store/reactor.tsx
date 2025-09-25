@@ -95,6 +95,33 @@ export async function createReactor() {
   // get the drives from the reactor
   const drives = await getDrives(reactor);
 
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+  const remoteUrl = getRemoteUrl();
+  if (
+    remoteUrl &&
+    !drives.some(
+      (drive) =>
+        remoteUrl.includes(drive.header.slug) ||
+        remoteUrl.includes(drive.header.id),
+    )
+  ) {
+    try {
+      await reactor.addRemoteDrive(remoteUrl, {
+        listeners: [],
+        availableOffline: false,
+        sharingType: "PRIVATE",
+        triggers: [],
+      });
+      window.location.href = "/d/" + remoteUrl.split("/").pop();
+    } catch (error) {
+      logger.error("Error adding remote drive", error);
+    }
+  } else if (remoteUrl) {
+    window.location.href = "/d/" + remoteUrl.split("/").pop();
+  }
+
   // get the documents from the reactor
   const documents = await getDocuments(reactor);
 
@@ -195,4 +222,11 @@ function getDidFromUrl() {
   const didComponent = searchParams.get("user");
   const did = didComponent ? decodeURIComponent(didComponent) : undefined;
   return did;
+}
+
+function getRemoteUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const remoteUrl = searchParams.get("remoteUrl");
+  const url = remoteUrl ? decodeURIComponent(remoteUrl) : undefined;
+  return url;
 }
