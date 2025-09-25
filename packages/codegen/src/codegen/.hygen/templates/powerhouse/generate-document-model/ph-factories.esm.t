@@ -13,7 +13,7 @@ import type {
 import {
   createBaseState,
   defaultBaseState,
-} from "document-model";
+} from "document-model/core";
 import type {
   <%= h.changeCase.pascal(documentType) %>Document,
   <%= h.changeCase.pascal(documentType) %>LocalState,

@@ -17,11 +17,8 @@ import {
   SwitchboardPushTransmitter,
 } from "document-drive";
 import type { DocumentModelDocument } from "document-model";
-import {
-  documentModelCreateDocument,
-  generateId,
-  setAuthorName,
-} from "document-model";
+import { documentModelCreateDocument, setAuthorName } from "document-model";
+import { generateId } from "document-model/core";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

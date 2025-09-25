@@ -11,7 +11,7 @@ import {
     baseLoadFromInput,
     defaultBaseState,
     generateId,
- } from 'document-model';
+ } from 'document-model/core';
 import type { 
   <%= h.changeCase.pascal(documentType) %>GlobalState,
   <%= h.changeCase.pascal(documentType) %>LocalState

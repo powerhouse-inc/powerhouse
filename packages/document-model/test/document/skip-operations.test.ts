@@ -3,8 +3,7 @@ import {
   garbageCollectDocumentOperations,
   mapSkippedOperations,
   replayOperations,
-  setName,
-} from "document-model";
+} from "document-model/core";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
   baseCountReducer,
@@ -19,6 +18,7 @@ import {
   wrappedEmptyReducer,
 } from "document-model/test";
 import { describe } from "vitest";
+import { setName } from "document-model";
 
 describe("skip operations", () => {
   describe("skip operation param", () => {

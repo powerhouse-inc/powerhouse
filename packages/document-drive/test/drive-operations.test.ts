@@ -11,7 +11,8 @@ import {
   setAvailableOffline,
 } from "document-drive";
 import type { DocumentModelModule, Operation } from "document-model";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
 function buildOperation(

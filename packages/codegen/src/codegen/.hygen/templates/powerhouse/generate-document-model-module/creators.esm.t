@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/<%= module %>/creators.ts"
 force: true
 ---
-import { createAction<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model';
+import { createAction<% if (actions.find(a => a.hasAttachment)) {%>, AttachmentInput<%}%> } from 'document-model/core';
 import { z,
 <% actions.filter(a => a.hasInput).forEach(action => { _%>
     <%= 'type ' + h.changeCase.pascal(action.name) %>Input,

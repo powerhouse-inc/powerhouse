@@ -1,0 +1,625 @@
+import type {
+  DocumentModelGlobalState,
+  DocumentModelLocalState,
+} from "./types.js";
+
+export const documentModelFileExtension = "phdm" as const;
+export const documentModelDocumentType = "powerhouse/document-model" as const;
+
+export const documentModelInitialLocalState: DocumentModelLocalState = {};
+export const documentModelInitialGlobalState: DocumentModelGlobalState = {
+  id: "",
+  name: "",
+  extension: "",
+  description: "",
+  author: {
+    name: "",
+    website: "",
+  },
+  specifications: [
+    {
+      version: 1,
+      changeLog: [],
+      state: {
+        global: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+        local: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+      },
+      modules: [],
+    },
+  ],
+};
+export const documentModelGlobalState: DocumentModelGlobalState = {
+  id: "powerhouse/document-model",
+  name: "DocumentModel",
+  extension: "phdm",
+  description:
+    "The Powerhouse Document Model describes the state and operations of a document type.",
+  author: {
+    name: "Powerhouse",
+    website: "https://www.powerhouse.inc/",
+  },
+  specifications: [
+    {
+      version: 1,
+      changeLog: [],
+      state: {
+        global: {
+          schema:
+            "type CodeExample {\n    id: ID!\n    value: String!\n}\n\ntype OperationError {\n    id: ID!\n    code: String\n    name: String\n    description: String\n    template: String\n}\n\ntype Operation {\n    id: ID!\n    name: String\n    schema: String\n    description: String\n    template: String\n    errors: [OperationError!]!\n    examples: [CodeExample!]!\n    reducer: String\n    scope: String\n}\n\ntype Module {\n    id: ID!\n    name: String!\n    description: String\n    operations: [Operation!]!\n}\n\ntype State {\n    schema: String!\n    initialValue: String!\n    examples: [CodeExample!]!\n}\n\ntype ScopeState {\n    global: State!\n    local: State!\n}\n\ntype Author {\n    name: String!\n    website: String\n}\n\ntype DocumentSpecification {\n    version: Int!\n    state: ScopeState!\n    modules: [Module!]!\n    changeLog: [String!]!\n}\n\ntype DocumentModelGlobalState {\n    name: String!\n    id: String!\n    extension: String!\n    description: String!\n    author: Author!\n    specifications: [DocumentSpecification!]!\n}",
+          initialValue:
+            '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
+          examples: [],
+        },
+        local: {
+          schema: "",
+          initialValue: "",
+          examples: [],
+        },
+      },
+      modules: [
+        {
+          name: "header",
+          operations: [
+            {
+              name: "SET_MODEL_NAME",
+              id: "",
+              description: "Sets the name of the document model",
+              schema: "input SetModelNameInput {\n    name: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_MODEL_ID",
+              id: "",
+              description: "Sets the unique identifier for the document model",
+              schema: "input SetModelIdInput {\n    id: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_MODEL_EXTENSION",
+              id: "",
+              description:
+                "Sets the file extension associated with this document model",
+              schema:
+                "input SetModelExtensionInput {\n    extension: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_MODEL_DESCRIPTION",
+              id: "",
+              description: "Sets the description text for the document model",
+              schema:
+                "input SetModelDescriptionInput {\n    description: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_AUTHOR_NAME",
+              id: "",
+              description: "Sets the name of the document model author",
+              schema: "input SetAuthorNameInput {\n    authorName: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_AUTHOR_WEBSITE",
+              id: "",
+              description: "Sets the website URL of the document model author",
+              schema:
+                "input SetAuthorWebsiteInput {\n    authorWebsite: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "versioning",
+          operations: [
+            {
+              name: "ADD_CHANGE_LOG_ITEM",
+              id: "",
+              description: "Adds a new item to the document model changelog",
+              schema:
+                "input AddChangeLogItemInput {\n    id: ID!\n    insertBefore: ID\n    content: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "UPDATE_CHANGE_LOG_ITEM",
+              id: "",
+              description: "Updates an existing changelog item",
+              schema:
+                "input UpdateChangeLogItemInput {\n    id: ID!\n    newContent: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_CHANGE_LOG_ITEM",
+              id: "",
+              description: "Removes an item from the document model changelog",
+              schema: "input DeleteChangeLogItemInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_CHANGE_LOG_ITEMS",
+              id: "",
+              description: "Changes the order of changelog items",
+              schema:
+                "input ReorderChangeLogItemsInput {\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "RELEASE_NEW_VERSION",
+              schema: null,
+              id: "",
+              description:
+                "Creates a new version of the document model specification",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "module",
+          operations: [
+            {
+              name: "ADD_MODULE",
+              id: "",
+              description:
+                "Adds a new module to the document model specification",
+              schema:
+                "input AddModuleInput {\n    id: ID!\n    name: String!\n    description: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_MODULE_NAME",
+              id: "",
+              description: "Sets the name of an existing module",
+              schema:
+                "input SetModuleNameInput {\n    id: ID!\n    name: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_MODULE_DESCRIPTION",
+              id: "",
+              description: "Sets the description of an existing module",
+              schema:
+                "input SetModuleDescriptionInput {\n    id: ID!\n    description: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_MODULE",
+              id: "",
+              description:
+                "Removes a module from the document model specification",
+              schema: "input DeleteModuleInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_MODULES",
+              id: "",
+              description:
+                "Changes the order of modules in the document model specification",
+              schema: "input ReorderModulesInput {\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "operation-error",
+          operations: [
+            {
+              name: "ADD_OPERATION_ERROR",
+              id: "",
+              description: "Adds a new error definition to an operation",
+              schema:
+                "input AddOperationErrorInput {\n    operationId: ID!\n    id: ID!\n    errorCode: String\n    errorName: String\n    errorDescription: String\n    errorTemplate: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_ERROR_CODE",
+              id: "",
+              description: "Sets the error code for an operation error",
+              schema:
+                "input SetOperationErrorCodeInput {\n    id: ID!\n    errorCode: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_ERROR_NAME",
+              id: "",
+              description: "Sets the name of an operation error",
+              schema:
+                "input SetOperationErrorNameInput {\n    id: ID!\n    errorName: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_ERROR_DESCRIPTION",
+              id: "",
+              description: "Sets the description of an operation error",
+              schema:
+                "input SetOperationErrorDescriptionInput {\n    id: ID!\n    errorDescription: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_ERROR_TEMPLATE",
+              id: "",
+              description: "Sets the template for an operation error",
+              schema:
+                "input SetOperationErrorTemplateInput {\n    id: ID!\n    errorTemplate: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_OPERATION_ERROR",
+              id: "",
+              description: "Removes an error definition from an operation",
+              schema: "input DeleteOperationErrorInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_OPERATION_ERRORS",
+              id: "",
+              description:
+                "Changes the order of error definitions for an operation",
+              schema:
+                "input ReorderOperationErrorsInput {\n    operationId: ID!\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "operation-example",
+          operations: [
+            {
+              name: "ADD_OPERATION_EXAMPLE",
+              id: "",
+              description: "Adds a new code example to an operation",
+              schema:
+                "input AddOperationExampleInput {\n    operationId: ID!\n    id: ID!\n    example: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "UPDATE_OPERATION_EXAMPLE",
+              id: "",
+              description: "Updates an existing code example for an operation",
+              schema:
+                "input UpdateOperationExampleInput {\n    id: ID!\n    example: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_OPERATION_EXAMPLE",
+              id: "",
+              description: "Removes a code example from an operation",
+              schema: "input DeleteOperationExampleInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_OPERATION_EXAMPLES",
+              id: "",
+              description:
+                "Changes the order of code examples for an operation",
+              schema:
+                "input ReorderOperationExamplesInput {\n    operationId: ID!\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "operation",
+          operations: [
+            {
+              name: "ADD_OPERATION",
+              id: "",
+              description: "Adds a new operation to a module",
+              schema:
+                "input AddOperationInput {\n    moduleId: ID!\n    id: ID!\n    name: String!\n    schema: String\n    description: String\n    template: String\n    reducer: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_NAME",
+              id: "",
+              description: "Sets the name of an operation",
+              schema:
+                "input SetOperationNameInput {\n    id: ID!\n    name: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_SCHEMA",
+              id: "",
+              description:
+                "Sets the GraphQL schema definition for an operation's input",
+              schema:
+                "input SetOperationSchemaInput {\n    id: ID!\n    schema: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_DESCRIPTION",
+              id: "",
+              description: "Sets the description of an operation",
+              schema:
+                "input SetOperationDescriptionInput {\n    id: ID!\n    description: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_TEMPLATE",
+              id: "",
+              description: "Sets the template code for an operation",
+              schema:
+                "input SetOperationTemplateInput {\n    id: ID!\n    template: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_REDUCER",
+              id: "",
+              description: "Sets the reducer function code for an operation",
+              schema:
+                "input SetOperationReducerInput {\n    id: ID!\n    reducer: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "MOVE_OPERATION",
+              id: "",
+              description: "Moves an operation from one module to another",
+              schema:
+                "input MoveOperationInput {\n    operationId: ID!\n    newModuleId: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_OPERATION",
+              id: "",
+              description: "Removes an operation from a module",
+              schema: "input DeleteOperationInput {\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_MODULE_OPERATIONS",
+              id: "",
+              description: "Changes the order of operations within a module",
+              schema:
+                "input ReorderModuleOperationsInput {\n    moduleId: ID!\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+        {
+          name: "state",
+          operations: [
+            {
+              name: "SET_STATE_SCHEMA",
+              id: "",
+              description:
+                "Sets the GraphQL schema definition for document state",
+              schema:
+                "input SetStateSchemaInput {\n    scope: String!\n    schema: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_INITIAL_STATE",
+              id: "",
+              description: "Sets the initial state value for a document scope",
+              schema:
+                "input SetInitialStateInput {\n    scope: String!\n    initialValue: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "ADD_STATE_EXAMPLE",
+              id: "",
+              description: "Adds a new state example to a document scope",
+              schema:
+                "input AddStateExampleInput {\n    scope: String!\n    id: ID!\n    insertBefore: ID\n    example: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "UPDATE_STATE_EXAMPLE",
+              id: "",
+              description:
+                "Updates an existing state example for a document scope",
+              schema:
+                "input UpdateStateExampleInput {\n    scope: String!\n    id: ID!\n    newExample: String!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "DELETE_STATE_EXAMPLE",
+              id: "",
+              description: "Removes a state example from a document scope",
+              schema:
+                "input DeleteStateExampleInput {\n    scope: String!\n    id: ID!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "REORDER_STATE_EXAMPLES",
+              id: "",
+              description:
+                "Changes the order of state examples for a document scope",
+              schema:
+                "input ReorderStateExamplesInput {\n    scope: String!\n    order: [ID!]!\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+          ],
+          id: "",
+          description: "",
+        },
+      ],
+    },
+  ],
+};

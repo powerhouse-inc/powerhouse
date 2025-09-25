@@ -16,7 +16,7 @@ import {
   baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model";
+} from "document-model/core";
 
 export const initialGlobalState: DocumentDriveGlobalState = {
   name: "",

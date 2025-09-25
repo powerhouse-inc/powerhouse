@@ -1,11 +1,11 @@
 import type { Action, CreateChildDocumentInput } from "document-model";
+import { setName } from "document-model";
 import {
   baseCreateDocument,
   createAction,
   createReducer,
   generateId,
-  setName,
-} from "document-model";
+} from "document-model/core";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
   countReducer,

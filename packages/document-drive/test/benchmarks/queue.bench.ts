@@ -9,11 +9,8 @@ import {
   ReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import {
-  createPresignedHeader,
-  documentModelDocumentModelModule,
-  generateId,
-} from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { createPresignedHeader, generateId } from "document-model/core";
 import type { BenchOptions } from "vitest";
 import { bench, describe } from "vitest";
 

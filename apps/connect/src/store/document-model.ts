@@ -8,14 +8,16 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
 import { driveDocumentModelModule } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import { createState, documentModelDocumentModelModule } from "document-model";
+import { defaultBaseState } from "document-model/core";
+
 async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
-  const documentModel = documentModelDocumentModelModule.documentModel;
-  const name = documentModel.name;
-  const documentType = documentModel.id;
+  const global = documentModelDocumentModelModule.documentModel.global;
+  const name = global.name;
+  const documentType = global.id;
   const unsafeIdFromDocumentType = documentType;
-  const extension = documentModel.extension;
-  const specifications = documentModel.specifications;
+  const extension = global.extension;
+  const specifications = global.specifications;
   const reducer = documentModelDocumentModelModule.reducer;
   const actions = documentModelDocumentModelModule.actions;
   const utils = documentModelDocumentModelModule.utils;
@@ -28,18 +30,18 @@ async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentMode
     reducer,
     actions,
     utils,
-    documentModel,
+    documentModel: createState(defaultBaseState(), global),
   };
   return vetraDocumentModelModule;
 }
 
 async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule> {
-  const documentModel = driveDocumentModelModule.documentModel;
-  const name = documentModel.name;
-  const documentType = documentModel.id;
+  const global = driveDocumentModelModule.documentModel.global;
+  const name = global.name;
+  const documentType = global.id;
   const unsafeIdFromDocumentType = documentType;
-  const extension = documentModel.extension;
-  const specifications = documentModel.specifications;
+  const extension = global.extension;
+  const specifications = global.specifications;
   const reducer = driveDocumentModelModule.reducer;
   const actions = driveDocumentModelModule.actions;
   const utils = driveDocumentModelModule.utils;
@@ -52,7 +54,7 @@ async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule>
     reducer,
     actions,
     utils,
-    documentModel,
+    documentModel: createState(defaultBaseState(), global),
   };
   return vetraDocumentModelModule;
 }

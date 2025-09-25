@@ -5,15 +5,15 @@ import type {
   ReadDriveContext,
 } from "document-drive";
 import {
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+  ReadModeService,
   addFile,
   createBaseState,
   driveCreateDocument,
   driveDocumentModelModule,
   driveDocumentReducer,
-  ReadDocumentNotFoundError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-  ReadModeService,
   responseForDocument,
   responseForDrive,
   updateNode,
@@ -28,8 +28,8 @@ import {
   documentModelCreateDocument,
   documentModelCreateState,
   documentModelDocumentModelModule,
-  generateId,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import {
   afterAll,
@@ -51,7 +51,9 @@ const documentModels = [
 ] as DocumentModelModule<any>[];
 
 function getDocumentModelModule(id: string): DocumentModelModule<any> {
-  const documentModel = documentModels.find((d) => d.documentModel.id === id);
+  const documentModel = documentModels.find(
+    (d) => d.documentModel.global.id === id,
+  );
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }
@@ -361,7 +363,7 @@ describe.skip("Read mode methods", () => {
     let document = driveCreateDocument();
     const addNodeAction = addFile({
       name: "Document 1",
-      documentType: documentModelDocumentModelModule.documentModel.id,
+      documentType: documentModelDocumentModelModule.documentModel.global.id,
       id: documentId,
     });
 
@@ -412,7 +414,7 @@ describe.skip("Read mode methods", () => {
     const readDocument = await readModeService.fetchDocument(
       readDriveId,
       documentId,
-      driveDocumentModelModule.documentModel.id,
+      driveDocumentModelModule.documentModel.global.id,
     );
 
     expect(readDocument).toMatchObject(document);

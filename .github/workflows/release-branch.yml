@@ -51,17 +51,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        name: Setup pnpm with cache
-        with:
-          run_install: false
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-          registry-url: https://registry.npmjs.org/
+
+      - uses: pnpm/action-setup@v4
+        name: Setup pnpm with cache
+        with:
+          version: latest
+          run_install: false
 
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci

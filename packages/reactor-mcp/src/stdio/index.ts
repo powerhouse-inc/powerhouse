@@ -1,7 +1,8 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 import { logger } from "../logger.js";
 import { createServer } from "../server.js";
 import { VitePackageLoader } from "./loader.js";
@@ -43,7 +44,7 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
       documentModels.push(...loadedModels);
       logger.log(
         "Loaded document models:",
-        loadedModels.map((m) => m.documentModel.name).join(", "),
+        loadedModels.map((m) => m.documentModel.global.name).join(", "),
       );
     } catch (e) {
       logger.error(e);

@@ -1,5 +1,5 @@
 import type { PHDocument } from "document-model";
-import { createReducer, noop, replayDocument } from "document-model";
+import { createReducer, noop, replayDocument } from "document-model/core";
 import type { CountPHState } from "document-model/test";
 import {
   baseCountReducer,

@@ -7,26 +7,24 @@ import type {
 import {
   documentModelDocumentModelModule,
   documentModelReducer,
-  garbageCollect,
-  generateId,
   setModelExtension,
   setModelId,
   setModelName,
-  undo,
 } from "document-model";
+import { garbageCollect, generateId, undo } from "document-model/core";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
 import {
-  addFile,
   BasicClient,
+  ReactorBuilder,
+  addFile,
   buildOperation,
   buildOperations,
   driveDocumentModelModule,
   driveDocumentReducer,
-  ReactorBuilder,
 } from "document-drive";
-import { createPresignedHeader } from "document-model";
+import { createPresignedHeader } from "document-model/core";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -57,7 +55,7 @@ describe("processOperations", () => {
       ...documentModelDocumentModelModule.utils.createDocument(),
       header: createPresignedHeader(
         documentId,
-        documentModelDocumentModelModule.documentModel.id,
+        documentModelDocumentModelModule.documentModel.global.id,
       ),
     };
   }

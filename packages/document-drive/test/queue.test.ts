@@ -5,6 +5,10 @@ import type {
   IQueueManager,
 } from "document-drive";
 import {
+  EventQueueManager,
+  InMemoryCache,
+  MemoryStorage,
+  ReactorBuilder,
   addFile,
   addFolder,
   addListener,
@@ -13,19 +17,14 @@ import {
   deleteNode,
   driveDocumentModelModule,
   driveDocumentReducer,
-  EventQueueManager,
-  InMemoryCache,
-  MemoryStorage,
-  ReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
-  createPresignedHeader,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  generateId,
   setModelName,
 } from "document-model";
+import { createPresignedHeader, generateId } from "document-model/core";
 import { setTimeout } from "node:timers/promises";
 import { describe, it } from "vitest";
 
@@ -94,7 +93,8 @@ describe.each(queueLayers)(
           addFile({
             id,
             name: id,
-            documentType: documentModelDocumentModelModule.documentModel.id,
+            documentType:
+              documentModelDocumentModelModule.documentModel.global.id,
           }),
         );
         promisses.push(
@@ -120,7 +120,8 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
 
       const driveId = drive.header.id;
-      const documentType = documentModelDocumentModelModule.documentModel.id;
+      const documentType =
+        documentModelDocumentModelModule.documentModel.global.id;
       const driveOperations = buildOperations(driveDocumentReducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
@@ -172,7 +173,8 @@ describe.each(queueLayers)(
           name: "file 1",
           kind: "file",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType:
+            documentModelDocumentModelModule.documentModel.global.id,
         }),
       ]);
 
@@ -195,7 +197,8 @@ describe.each(queueLayers)(
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
-      const documentType = documentModelDocumentModelModule.documentModel.id;
+      const documentType =
+        documentModelDocumentModelModule.documentModel.global.id;
       const driveOperations = buildOperations(driveDocumentReducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
@@ -257,7 +260,8 @@ describe.each(queueLayers)(
             name: "file 1",
             kind: "file",
             parentFolder: folderId,
-            documentType: documentModelDocumentModelModule.documentModel.id,
+            documentType:
+              documentModelDocumentModelModule.documentModel.global.id,
           }),
           expect.objectContaining({
             id: folderId2,
@@ -328,7 +332,8 @@ describe.each(queueLayers)(
           id: nodeId,
           name: "file 1",
           parentFolder: "folder 1",
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType:
+            documentModelDocumentModelModule.documentModel.global.id,
         }),
       ]);
 

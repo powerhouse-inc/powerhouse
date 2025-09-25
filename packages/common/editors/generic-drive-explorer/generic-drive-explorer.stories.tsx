@@ -13,7 +13,7 @@ import type {
 } from "document-drive";
 import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { defaultBaseState } from "document-model";
+import { defaultBaseState } from "document-model/core";
 
 function createDriveStory<T extends (props: any) => React.JSX.Element>(
   Editor: T,
@@ -47,7 +47,7 @@ function createDriveStory<T extends (props: any) => React.JSX.Element>(
             showDeleteNodeModal: () => {},
             showCreateDocumentModal(documentModel: DocumentModelModule) {
               return Promise.resolve({
-                name: `New ${documentModel.documentModel.name}`,
+                name: `New ${documentModel.documentModel.global.name}`,
               });
             },
           }}

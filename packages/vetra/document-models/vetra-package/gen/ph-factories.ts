@@ -2,7 +2,7 @@
  * Factory methods for creating VetraPackageDocument instances
  */
 import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   VetraPackageDocument,
   VetraPackageLocalState,

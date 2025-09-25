@@ -3,8 +3,6 @@ import {
   documentModelCreateDocument,
   documentModelReducer,
   documentModelStateReducer,
-  garbageCollectDocumentOperations,
-  replayOperations,
   setAuthorName,
   setAuthorWebsite,
   setModelDescription,
@@ -12,6 +10,10 @@ import {
   setModelId,
   setModelName,
 } from "document-model";
+import {
+  garbageCollectDocumentOperations,
+  replayOperations,
+} from "document-model/core";
 import { expect } from "vitest";
 
 describe("Document Operations", () => {

@@ -2,7 +2,7 @@
  * Factory methods for creating SubgraphModuleDocument instances
  */
 import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   SubgraphModuleDocument,
   SubgraphModuleLocalState,

@@ -10,7 +10,7 @@ import type {
   PHDocument,
   Reducer,
 } from "document-model";
-import { baseCreateDocument } from "document-model";
+import { baseCreateDocument } from "document-model/core";
 import React, { useState } from "react";
 import { useInterval } from "usehooks-ts";
 import { useDocumentReducer } from "./reducer.js";

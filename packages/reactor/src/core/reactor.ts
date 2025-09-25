@@ -2,7 +2,7 @@ import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
-  DocumentModelGlobalState,
+  DocumentModelModule,
   Operation,
   PHBaseState,
   PHDocument,
@@ -82,30 +82,13 @@ export class Reactor implements IReactor {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelGlobalState>> {
-    // Get document model modules from the drive server
-    // Note: BaseDocumentDriveServer provides modules, not model states
-    // This is an adaptation layer that converts modules to states
+  ): Promise<PagedResults<DocumentModelModule>> {
+    // Get document model modules from the drive server + filter
     const modules = this.driveServer.getDocumentModelModules();
-
-    // Convert modules to DocumentModelGlobalState format
-    // TODO: Proper conversion when DocumentModelGlobalState structure is finalized
-    const filteredModels = modules
-      .filter(
-        (module) =>
-          !namespace || module.documentModel.name.startsWith(namespace),
-      )
-      .map(
-        (module) =>
-          ({
-            id: module.documentModel.id,
-            name: module.documentModel.name,
-            extension: module.documentModel.extension,
-            author: module.documentModel.author,
-            description: module.documentModel.description || "",
-            specifications: module.documentModel.specifications,
-          }) as DocumentModelGlobalState,
-      );
+    const filteredModels = modules.filter(
+      (module) =>
+        !namespace || module.documentModel.global.name.startsWith(namespace),
+    );
 
     // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;

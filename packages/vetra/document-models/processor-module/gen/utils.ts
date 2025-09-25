@@ -5,7 +5,7 @@ import {
   baseLoadFromInput,
   defaultBaseState,
   generateId,
-} from "document-model";
+} from "document-model/core";
 import type {
   ProcessorModuleGlobalState,
   ProcessorModuleLocalState,

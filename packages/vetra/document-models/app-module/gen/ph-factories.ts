@@ -2,7 +2,7 @@
  * Factory methods for creating AppModuleDocument instances
  */
 import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   AppModuleDocument,
   AppModuleLocalState,

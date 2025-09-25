@@ -3,7 +3,7 @@
 ## Let's get started
 
 To give you a quick idea of how the Powerhouse ecosystem operates on document models and packages, why don't you try installing a package?
-We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package with a document models, an editor and a drive-app.
+We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package containing a document model, an editor, and a drive app.
 
 ## Step 1: Install the Powerhouse CLI
 
@@ -90,7 +90,7 @@ Click the returned localhost URL and you should see Connect Studio appear in you
   <figcaption>The Powerhouse Connect Studio interface.</figcaption>
 </figure>
 
-When you move to the settingswheel in the bottom right corner you'll get access to the **Package Manager**.
+When you click the settings wheel in the bottom right corner, you'll get access to the **Package Manager**.
 Here, you'll see that you've installed the `@powerhousedao/todo-demo-package`, which contains not only a **Document Model** and its accompanying editor but also a **Drive App** specific to the to-do document model.
 
 <figure className="image-container">
@@ -130,15 +130,19 @@ Now move into the drive you've just created:
 - You'll see a statistics widget that counts the open to-dos
 - After closing the document, look at the To-do Drive App interface—you'll see that it tracks your tasks and displays a progress bar
 
+This is an example of the **usefulness and impact of Drive Apps**.   
+They offer a customized interface that works well with the different documents inside your drive.    
+Read more about drive apps in the Mastery Track: [Drive Apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
+
 <figure className="image-container">
   <img
     src={require("./images/TodoDriveApp.png").default}
     alt="Todo Drive App"
   />
-  <figcaption>A list of todo's in the custom todo drive app. </figcaption>
+  <figcaption>A list of todos in the custom todo drive app.</figcaption>
 </figure>
 
-A key feature you get with Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when.
+A key feature of Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when.
 
 <figure className="image-container">
   <img
@@ -146,9 +150,7 @@ A key feature you get with Connect is the **Operations History**. Every change t
     alt="Operations History Button"
   />
   <figcaption>
-    {" "}
-    You can find the button to visit the operations history in the document
-    model toolbar{" "}
+You can find the button to visit the operations history in the document model toolbar
   </figcaption>
 </figure>
 
@@ -165,8 +167,6 @@ A key feature you get with Connect is the **Operations History**. Every change t
 
 Learn more about the [Operations History](../MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory) and other document tools you get for free.
 
-This is the power of Drive Apps. They offer a customized interface that works well with the different documents inside your drive. Read more about drive apps in the Mastery Track: [Drive Apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
-
 ## Step 5: Enable operation signing and verification through Renown
 
 Renown is Powerhouse's **decentralized identity and reputation system** designed to address the challenge of trust within open organizations, where contributors often operate under pseudonyms. In traditional organizations, personal identity and reputation are key to establishing trust and accountability. Renown replicates this dynamic in the digital space, allowing contributors to earn experience and build reputation without revealing their real-world identities.
@@ -175,7 +175,7 @@ Renown is Powerhouse's **decentralized identity and reputation system** designed
 When signing in with Renown, use an Ethereum or blockchain address that can function as your 'identity', as this address will accrue more experience and history over time.
 :::
 
-### 5.1 Click the renown icon and connect your eth identity
+### 5.1 Click the renown icon and connect your Ethereum identity
 
 "**Log in with Renown**" is a decentralized authentication flow that enables you to log into applications by signing a credential with your Ethereum wallet. Upon signing in, a Decentralized Identifier (DID) is created based on your Ethereum key.
 

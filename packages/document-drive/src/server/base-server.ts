@@ -62,20 +62,20 @@ import {
   setSharingType,
 } from "document-drive";
 import { runAsap, runAsapAsync } from "document-drive/run-asap";
-import type {
-  Action,
-  DocumentModelModule,
-  Operation,
-  PHDocument,
-  PHDocumentHeader,
-  PHDocumentMeta,
-  Signal,
-  SignalResult,
+import {
+  documentModelCreateDocument,
+  type Action,
+  type DocumentModelModule,
+  type Operation,
+  type PHDocument,
+  type PHDocumentHeader,
+  type PHDocumentMeta,
+  type Signal,
+  type SignalResult,
 } from "document-model";
 import {
   attachBranch,
   createPresignedHeader,
-  documentModelCreateDocument,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -87,7 +87,7 @@ import {
   skipHeaderOperations,
   sortOperations,
   validateHeader,
-} from "document-model";
+} from "document-model/core";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
 
@@ -575,7 +575,7 @@ export class BaseDocumentDriveServer
 
   protected getDocumentModelModule(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
-      (module) => module.documentModel.id === documentType,
+      (module) => module.documentModel.global.id === documentType,
     );
 
     if (!documentModelModule) {

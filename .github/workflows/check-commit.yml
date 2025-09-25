@@ -33,6 +33,7 @@ jobs:
       - name: Setup pnpm with cache
         uses: pnpm/action-setup@v4
         with:
+          version: latest
           run_install: false
 
       - name: Cache ESLint
@@ -54,6 +55,9 @@ jobs:
 
       - name: Run misc build scripts
         run: pnpm build:misc
+
+      - name: Run install again after generating binaries
+        run: pnpm install
 
       - name: Run css build scripts
         run: pnpm build:css

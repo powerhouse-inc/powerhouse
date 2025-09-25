@@ -11,7 +11,7 @@ import {
   InternalTransmitter,
   isRelationalDbProcessor,
 } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([

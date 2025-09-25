@@ -14,10 +14,7 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import {
-  documentModelCreateDocument,
-  documentModelDocumentModelModule,
-} from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import { Reactor } from "../src/core/reactor.js";
@@ -177,7 +174,7 @@ export function createDocModelDocument(
     state?: any;
   } = {},
 ): PHDocument {
-  const baseDocument = documentModelCreateDocument();
+  const baseDocument = documentModelDocumentModelModule.utils.createDocument();
 
   if (overrides.id) {
     baseDocument.header.id = overrides.id;

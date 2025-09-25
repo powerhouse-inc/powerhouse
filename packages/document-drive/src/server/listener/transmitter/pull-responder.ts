@@ -27,7 +27,7 @@ import {
   PULL_DRIVE_INTERVAL,
   requestGraphql,
 } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { gql } from "graphql-request";
 
 const MAX_REVISIONS_PER_ACK = 100;

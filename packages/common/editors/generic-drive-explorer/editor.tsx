@@ -112,10 +112,13 @@ function BaseEditor(props: GenericDriveExplorerEditorProps) {
       <DriveLayout.Footer>
         {isAllowedToCreateDocuments && (
           <CreateDocument
-            documentModels={documentModels?.filter(
-              (module) =>
-                module.documentModel.id !== "powerhouse/document-drive",
-            )}
+            documentModels={
+              documentModels?.filter(
+                (module) =>
+                  module.documentModel.global.id !==
+                  "powerhouse/document-drive",
+              ) as unknown as DocumentModelModule[]
+            }
             createDocument={onCreateDocument}
           />
         )}

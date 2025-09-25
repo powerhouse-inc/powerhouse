@@ -14,12 +14,12 @@ import {
   SynchronizationUnitNotFoundError,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
-  driveCreateState,
   setAvailableOffline,
   setDriveName,
   setSharingType,
 } from "document-drive";
-import { generateId } from "document-model";
+import type { PHDocument } from "document-model";
+import { generateId } from "document-model/core";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
@@ -67,7 +67,10 @@ export async function deleteDrive(driveId: string) {
   await reactor.deleteDrive(driveId);
 }
 
-export async function renameDrive(driveId: string, name: string) {
+export async function renameDrive(
+  driveId: string,
+  name: string,
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -85,7 +88,7 @@ export async function renameDrive(driveId: string, name: string) {
 export async function setDriveAvailableOffline(
   driveId: string,
   availableOffline: boolean,
-) {
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -106,7 +109,7 @@ export async function setDriveAvailableOffline(
 export async function setDriveSharingType(
   driveId: string,
   sharingType: SharingType,
-) {
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;

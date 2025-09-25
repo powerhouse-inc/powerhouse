@@ -9,23 +9,29 @@ export const getDocumentModelTypeDefs = (
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
     dmSchema += `
-        ${documentModel.specifications
+        ${documentModel.global.specifications
           .map((specification) =>
             specification.state.global.schema
-              .replaceAll(" Account ", ` ${documentModel.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+              .replaceAll(" Account ", ` ${documentModel.global.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModel.global.name}Account`)
+              .replaceAll(
+                `[Account!]!`,
+                `[${documentModel.global.name}Account!]!`,
+              )
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
           )
           .join("\n")};
 
-        ${documentModel.specifications
+        ${documentModel.global.specifications
           .map((specification) =>
             specification.state.local.schema
-              .replaceAll(" Account ", ` ${documentModel.name}Account `)
-              .replaceAll(`: Account`, `: ${documentModel.name}Account`)
-              .replaceAll(`[Account!]!`, `[${documentModel.name}Account!]!`)
+              .replaceAll(" Account ", ` ${documentModel.global.name}Account `)
+              .replaceAll(`: Account`, `: ${documentModel.global.name}Account`)
+              .replaceAll(
+                `[Account!]!`,
+                `[${documentModel.global.name}Account!]!`,
+              )
               .replaceAll("scalar DateTime", "")
               .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
               .replaceAll("type AccountSnapshotLocalState", "")
@@ -34,7 +40,7 @@ export const getDocumentModelTypeDefs = (
           )
           .join("\n")};
 
-        type ${documentModel.name} implements IDocument {
+        type ${documentModel.global.name} implements IDocument {
             id: ID!
             name: String!
             documentType: String!
@@ -42,7 +48,7 @@ export const getDocumentModelTypeDefs = (
             created: DateTime!
             createdAtUtcIso: DateTime!
             lastModifiedAtUtcIso: DateTime!
-            ${documentModel.name !== "DocumentModel" ? `state: ${documentModel.name}State!` : ""}
+            ${documentModel.global.name !== "DocumentModel" ? `state: ${documentModel.global.name}State!` : ""}
         }\n`;
   });
 

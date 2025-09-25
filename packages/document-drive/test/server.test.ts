@@ -4,20 +4,20 @@ import type {
   IDriveOperationStorage,
 } from "document-drive";
 import {
+  BrowserStorage,
+  InMemoryCache,
+  MemoryStorage,
+  ReactorBuilder,
+  SynchronizationManager,
   addFile,
   addFolder,
   baseDocumentModels,
-  BrowserStorage,
   copyNode,
   deleteNode,
   driveDocumentModelModule,
   driveDocumentReducer,
   expectUUID,
-  InMemoryCache,
-  MemoryStorage,
-  ReactorBuilder,
   setDriveName,
-  SynchronizationManager,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorage } from "document-drive/storage/prisma";
@@ -28,12 +28,11 @@ import type {
   PHDocument,
 } from "document-model";
 import {
-  createPresignedHeader,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  generateId,
   setModelName,
 } from "document-model";
+import { createPresignedHeader, generateId } from "document-model/core";
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -112,7 +111,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       ...documentModelCreateDocument(),
       header: createPresignedHeader(
         id,
-        documentModelDocumentModelModule.documentModel.id,
+        documentModelDocumentModelModule.documentModel.global.id,
       ),
     };
   }

@@ -4,7 +4,7 @@ import {
   usePagination,
 } from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
-import { garbageCollect, sortOperations } from "document-model";
+import { garbageCollect, sortOperations } from "document-model/core";
 import { useMemo, useState } from "react";
 import { Header } from "./header/index.js";
 import { Timeline } from "./timeline/index.js";

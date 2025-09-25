@@ -25,7 +25,7 @@ import type { DocumentModelModule, PHDocument } from "document-model";
 import {
   garbageCollectDocumentOperations,
   replayDocument,
-} from "document-model";
+} from "document-model/core";
 
 export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();
@@ -253,7 +253,7 @@ export class SynchronizationManager implements ISynchronizationManager {
 
   private getDocumentModelModule<TDocument>(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
-      (m) => m.documentModel.id === documentType,
+      (m) => m.documentModel.global.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);

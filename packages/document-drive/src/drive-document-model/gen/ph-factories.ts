@@ -8,7 +8,7 @@ import type {
   DocumentDrivePHState,
 } from "document-drive";
 import type { PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 
 export function defaultGlobalState(): DocumentDriveGlobalState {
   return {

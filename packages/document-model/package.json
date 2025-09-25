@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "4.1.0-dev.58",
+  "version": "4.1.0-dev.59",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -13,19 +13,23 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/src/core/index.js",
+      "types": "./dist/src/core/index.d.ts"
     },
     "./test": {
       "import": "./dist/test/index.js",
       "types": "./dist/test/index.d.ts"
     },
     "./node": {
-      "import": "./dist/src/document/utils/node.js",
-      "types": "./dist/src/document/utils/node.d.ts"
+      "import": "./dist/src/core/node.js",
+      "types": "./dist/src/core/node.d.ts"
     }
   },
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

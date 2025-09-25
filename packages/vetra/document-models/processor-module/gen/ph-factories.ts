@@ -2,7 +2,7 @@
  * Factory methods for creating ProcessorModuleDocument instances
  */
 import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   ProcessorModuleDocument,
   ProcessorModuleLocalState,

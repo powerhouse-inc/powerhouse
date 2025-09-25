@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
-import type { JobInfo } from "../../src/shared/types.js";
-import { JobStatus } from "../../src/shared/types.js";
+import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 
 describe("JobAwaiter", () => {
   let jobAwaiter: JobAwaiter;

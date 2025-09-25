@@ -1,7 +1,11 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 import { DriveSubgraph, testSetupReactor } from "@powerhousedao/reactor-api";
 import { driveCreateDocument } from "document-drive";
-import { generateId } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
+import { generateId } from "document-model/core";
 import { describe, expect, it, vi } from "vitest";
 
 describe("DriveSubgraph", () => {
@@ -140,11 +144,11 @@ describe("DriveSubgraph", () => {
       getDrive: vi.fn(),
       getDocuments: vi.fn().mockResolvedValue([mockDocumentData.header.id]),
       getDocument: vi.fn().mockResolvedValue(mockDocumentData),
-      getDocumentModelModules: vi.fn().mockReturnValue([
-        {
-          documentModel: { id: "test-document-type", name: "Test Document" },
-        },
-      ]),
+      getDocumentModelModules: vi
+        .fn()
+        .mockReturnValue([
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ]),
       listeners: {
         setListener: vi.fn(),
       },

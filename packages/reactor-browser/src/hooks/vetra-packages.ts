@@ -55,7 +55,9 @@ export function useDocumentModelModuleById(
   id: string | null | undefined,
 ): VetraDocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find((module) => module.documentModel.id === id);
+  return documentModelModules?.find(
+    (module) => module.documentModel.global.id === id,
+  );
 }
 
 export function useEditorModuleById(
@@ -107,8 +109,8 @@ export function useEditorModulesForDocumentType(
 export function useProcessorModules(): VetraProcessorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.processorModules)
-    .filter((module) => module !== undefined);
+    .flatMap((pkg) => pkg.modules.processorModules)
+    .filter((module) => module !== undefined) as VetraProcessorModule[];
 }
 
 export function useProcessors(): Processors[] | undefined {

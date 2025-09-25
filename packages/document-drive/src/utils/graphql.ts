@@ -190,8 +190,11 @@ export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
   }>
 > {
   const { documentModel } = documentModelModule;
-  const name = pascalCase(documentModel.name);
-  const stateFields = generateDocumentStateQueryFields(documentModel, name);
+  const name = pascalCase(documentModel.global.name);
+  const stateFields = generateDocumentStateQueryFields(
+    documentModel.global,
+    name,
+  );
   const result = await requestGraphql<{
     document: DocumentGraphQLResult<TState>;
   }>(
