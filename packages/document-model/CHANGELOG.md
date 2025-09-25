@@ -1,3 +1,13 @@
+## 5.0.0-staging.16 (2025-09-25)
+
+### 🚀 Features
+
+- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.15 (2025-09-24)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

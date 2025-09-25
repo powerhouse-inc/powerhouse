@@ -1,3 +1,15 @@
+## 5.0.0-staging.16 (2025-09-25)
+
+### 🚀 Features
+
+- **connect:** open remote drive ([e0a1c43a6](https://github.com/powerhouse-inc/powerhouse/commit/e0a1c43a6))
+- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.15 (2025-09-24)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

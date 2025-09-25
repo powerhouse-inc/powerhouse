@@ -1,3 +1,18 @@
+## 5.0.0-staging.16 (2025-09-25)
+
+### 🚀 Features
+
+- handle replace and duplicate documents in drag and drop ([#1876](https://github.com/powerhouse-inc/powerhouse/pull/1876))
+- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
+- refactor drag and drop to use withDropZone HOC ([1737fd4fd](https://github.com/powerhouse-inc/powerhouse/commit/1737fd4fd))
+- **connect:** open remote drive ([e0a1c43a6](https://github.com/powerhouse-inc/powerhouse/commit/e0a1c43a6))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.15 (2025-09-24)
 
 ### 🚀 Features
