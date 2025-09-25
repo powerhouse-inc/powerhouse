@@ -1,21 +1,19 @@
 import type {
   AddFileAction,
-  AddFolderAction,
-  CopyNodeAction,
-  DeleteNodeAction,
-  MoveNodeAction,
-  UpdateFileAction,
-  UpdateNodeAction,
-} from "document-drive";
-import type {
   AddFileInput,
+  AddFolderAction,
   AddFolderInput,
+  CopyNodeAction,
   CopyNodeInput,
+  DeleteNodeAction,
   DeleteNodeInput,
   LegacyAddFileAction,
   LegacyAddFileInput,
+  MoveNodeAction,
   MoveNodeInput,
+  UpdateFileAction,
   UpdateFileInput,
+  UpdateNodeAction,
   UpdateNodeInput,
 } from "document-drive";
 import {
@@ -27,7 +25,7 @@ import {
   UpdateFileInputSchema,
   UpdateNodeInputSchema,
 } from "document-drive";
-import { createAction } from "document-model";
+import { createAction } from "document-model/core";
 
 /**
  * @deprecated Use addFile with {@link AddFileInput} instead. This overload will be removed in the future.

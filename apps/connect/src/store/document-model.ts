@@ -8,11 +8,8 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
 import { driveDocumentModelModule } from "document-drive";
-import {
-  createState,
-  defaultBaseState,
-  documentModelDocumentModelModule,
-} from "document-model";
+import { createState, documentModelDocumentModelModule } from "document-model";
+import { defaultBaseState } from "document-model/core";
 
 async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
   const global = documentModelDocumentModelModule.documentModel.global;

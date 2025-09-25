@@ -4,20 +4,20 @@
  */
 
 import {
-  actions as BaseActions,
   createState,
-  defaultBaseState,
   type DocumentModelModule,
+  baseActions,
 } from "document-model";
-import { documentModel } from "./gen/document-model.js";
+import { defaultBaseState } from "document-model/core";
 import { actions as DocumentEditorActions } from "./gen/index.js";
 import { reducer } from "./gen/reducer.js";
-import type { DocumentEditorPHState } from "./gen/types.js";
+import { documentModel } from "./gen/document-model.js";
 import genUtils from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
+import type { DocumentEditorPHState } from "./gen/types.js";
 
 const utils = { ...genUtils, ...customUtils };
-const actions = { ...BaseActions, ...DocumentEditorActions };
+const actions = { ...baseActions, ...DocumentEditorActions };
 
 export const module: DocumentModelModule<DocumentEditorPHState> = {
   reducer,
@@ -26,7 +26,7 @@ export const module: DocumentModelModule<DocumentEditorPHState> = {
   documentModel: createState(defaultBaseState(), documentModel),
 };
 
-export { actions, documentModel, reducer, utils };
+export { reducer, actions, utils, documentModel };
 
 export * from "./gen/types.js";
 export * from "./src/utils.js";

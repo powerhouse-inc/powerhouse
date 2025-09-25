@@ -16,8 +16,8 @@ import {
 import {
   documentModelDocumentModelModule,
   type DocumentModelModule,
-  generateId,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { bench, type BenchOptions, describe, vi } from "vitest";
 import GetDrive from "./getDrive.json" with { type: "json" };
 import Strands from "./strands.small.json" with { type: "json" };

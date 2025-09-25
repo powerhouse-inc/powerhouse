@@ -2,7 +2,7 @@
  * Factory methods for creating DocumentEditorDocument instances
  */
 import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   DocumentEditorDocument,
   DocumentEditorLocalState,

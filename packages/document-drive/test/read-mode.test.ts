@@ -28,8 +28,8 @@ import {
   documentModelCreateDocument,
   documentModelCreateState,
   documentModelDocumentModelModule,
-  generateId,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import {
   afterAll,

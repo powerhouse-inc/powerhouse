@@ -78,7 +78,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install:ci
 
       - name: Generate Prisma client
         run: pnpm prisma generate

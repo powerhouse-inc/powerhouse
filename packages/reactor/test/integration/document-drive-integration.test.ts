@@ -22,7 +22,7 @@ import {
   updateNode,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";

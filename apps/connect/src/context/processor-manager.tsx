@@ -15,7 +15,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { IRelationalDb, ProcessorManager } from "document-drive";
 import { childLogger } from "document-drive";
-import { generateUUIDBrowser } from "document-model";
+import { generateUUIDBrowser } from "document-model/core";
 import type { PropsWithChildren } from "react";
 import { useEffect, useRef } from "react";
 import PGWorker from "../workers/pglite-worker?worker";

@@ -25,7 +25,7 @@ import type { DocumentModelModule, PHDocument } from "document-model";
 import {
   garbageCollectDocumentOperations,
   replayDocument,
-} from "document-model";
+} from "document-model/core";
 
 export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();

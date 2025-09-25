@@ -6,7 +6,8 @@ import {
   LRUCacheStorage,
 } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
-import { documentModelCreateDocument, generateId } from "document-model";
+import { documentModelCreateDocument } from "document-model";
+import { generateId } from "document-model/core";
 import sizeof from "object-sizeof";
 import { createClient } from "redis";
 import { beforeEach, describe, it } from "vitest";

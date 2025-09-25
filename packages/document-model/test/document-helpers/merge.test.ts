@@ -1,11 +1,10 @@
-import { describe, expect, it } from "vitest";
-
 import {
   checkCleanedOperationsIntegrity,
   merge,
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
-} from "document-model";
+} from "document-model/core";
+import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 
 describe("merge", () => {

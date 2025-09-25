@@ -30,7 +30,7 @@ import {
   createZip,
   generateId,
   replayDocument,
-} from "document-model";
+} from "document-model/core";
 
 import type {
   DocumentTypeIcon,

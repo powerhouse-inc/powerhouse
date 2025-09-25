@@ -27,7 +27,7 @@ import {
   responseForDrive,
 } from "document-drive";
 import type { DocumentModelInput, Operation, PHDocument } from "document-model";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { BaseSubgraph } from "./base-subgraph.js";

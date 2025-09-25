@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Operation } from "document-model";
-import { removeExistingOperations } from "document-model";
+import { removeExistingOperations } from "document-model/core";
 import { buildOperations, fakeAction } from "document-model/test";
 
 describe("removeExistingOperations", () => {

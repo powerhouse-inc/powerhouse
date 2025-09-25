@@ -30,7 +30,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext } from "document-model";
+import { actionContext } from "document-model/core";
 import { type IBackOffOptions, backOff } from "exponential-backoff";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import { Prisma, PrismaClient } from "./client/index.js";

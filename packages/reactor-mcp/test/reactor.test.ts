@@ -10,8 +10,8 @@ import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
   documentModelReducer,
-  generateId,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock reactor
