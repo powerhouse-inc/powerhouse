@@ -3,9 +3,10 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import type { EditorModule } from 'document-model';
+import type { EditorDocument } from "./editor.js";
 import Editor from './editor.js';
 
-export const module: EditorModule = {
+export const module: EditorModule<EditorDocument> = {
     Component: Editor,
     documentTypes: [<% if(!documentTypes.length){ %>'*'<% } else { %><% documentTypes.forEach(type => { _%>"<%= type %>", %><% }); _%> <% } %>],
     config: {

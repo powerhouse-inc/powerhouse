@@ -5,7 +5,7 @@ import type {
 } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
-import type { DocumentModelModule, DocumentModelState } from "document-model";
+import type { DocumentModelState } from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";
@@ -55,10 +55,10 @@ function generateGraphqlSchema(documentModel: DocumentModelState) {
 }
 
 // returns map of document model id to document model name in pascal case and import path
-async function getDocumentTypesMap(
+function getDocumentTypesMap(
   dir: string,
   pathOrigin = "../../",
-): Promise<DocumentTypesMap> {
+): DocumentTypesMap {
   const documentTypesMap: DocumentTypesMap = {
     "powerhouse/document-model": {
       name: "DocumentModel",
@@ -83,32 +83,13 @@ async function getDocumentTypesMap(
           if (spec.id) {
             documentTypesMap[spec.id] = {
               name: pascalCase(name),
-              importPath: join(pathOrigin, dir, name),
+              importPath: join(pathOrigin, dir, name, "index.js"),
             };
           }
         } catch {
           console.error(`Failed to parse ${specPath}`);
         }
       });
-  }
-
-  // add documents from powerhouse package if installed
-  try {
-    /* eslint-disable */
-    // @ts-ignore-error TS2307 this import is expected to fail if document-model-libs is not available
-    const documentModels = await import("document-model-libs/document-models");
-    Object.keys(documentModels).forEach((name) => {
-      const documentModel = documentModels[
-        name as keyof typeof documentModels
-      ] as DocumentModelModule;
-      documentTypesMap[documentModel.documentModel.id] = {
-        name,
-        importPath: `document-model-libs/${paramCase(name)}`,
-      };
-    });
-    /* eslint-enable */
-  } catch {
-    /* document-model-libs is not available */
   }
 
   return documentTypesMap;
@@ -224,10 +205,7 @@ export async function generateEditor(
   const pathOrigin = "../../";
 
   const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = await getDocumentTypesMap(
-    documentModelsDir,
-    pathOrigin,
-  );
+  const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),
@@ -281,7 +259,7 @@ export async function generateProcessor(
   config: PowerhouseConfig,
 ) {
   const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = await getDocumentTypesMap(documentModelsDir);
+  const documentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),
