@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import { Branch } from "./branch.js";
 import { DocId } from "./doc-id.js";
+import { DocumentState } from "./document-state.js";
 import { Scope } from "./scope.js";
 
 interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
@@ -11,6 +12,8 @@ interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly scope: string;
   readonly onChangeScope: (scope: string) => void;
   readonly onClose: () => void;
+  readonly documentState?: object;
+  readonly onCopyState?: () => void;
 }
 
 export function Header(props: Props) {
@@ -21,6 +24,8 @@ export function Header(props: Props) {
     onChangeScope,
     onClose,
     className,
+    documentState,
+    onCopyState,
     ...divProps
   } = props;
   return (
@@ -33,7 +38,7 @@ export function Header(props: Props) {
     >
       <div className="flex items-center gap-3">
         <button
-          className="shadow-button rounded-lg bg-gray-50 p-1 text-slate-100"
+          className="shadow-button rounded-lg bg-gray-50 p-1 text-stone-300"
           onClick={onClose}
         >
           <Icon name="VariantArrowLeft" />
@@ -42,6 +47,12 @@ export function Header(props: Props) {
       </div>
       <div className="flex items-center gap-2">
         <DocId docId={docId} />
+        {documentState && (
+          <DocumentState
+            documentState={documentState}
+            onCopyState={onCopyState}
+          />
+        )}
         <Branch />
         <Scope onChange={onChangeScope} value={scope} />
       </div>
