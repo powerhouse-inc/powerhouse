@@ -8,7 +8,6 @@ export interface ProcessorEditorFormProps {
   processorType?: string;
   documentTypes?: DocumentTypeItem[];
   status?: string;
-  vetraDriveId?: string;
   onNameChange?: (name: string) => void;
   onTypeChange?: (type: string) => void;
   onAddDocumentType?: (id: string, documentType: string) => void;
@@ -21,7 +20,6 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   processorType: initialProcessorType = "",
   documentTypes: initialDocumentTypes = [],
   status = "DRAFT",
-  vetraDriveId,
   onNameChange,
   onTypeChange,
   onAddDocumentType,
@@ -36,7 +34,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Get available document types from the hook (combines reactor and vetra drive)
-  const availableDocumentTypes = useAvailableDocumentTypes(vetraDriveId);
+  const availableDocumentTypes = useAvailableDocumentTypes();
 
   // Use the debounce hook for name and type changes
   useDebounce(processorName, onNameChange, 300);

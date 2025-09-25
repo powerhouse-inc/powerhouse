@@ -1,5 +1,4 @@
 import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
-import connectConfig from "#connect-config";
 import { GenericDriveExplorer } from "@powerhousedao/common";
 import {
   useDefaultDriveEditorModule,
@@ -64,7 +63,6 @@ export function DriveEditorContainer() {
           ...nodeActions,
           showCreateDocumentModal,
           showDeleteNodeModal,
-          vetra: connectConfig.vetra,
         }}
         document={selectedDrive}
         editorConfig={editorConfig}

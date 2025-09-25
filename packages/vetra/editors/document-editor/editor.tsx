@@ -50,7 +50,6 @@ export default function Editor(props: IProps) {
         status={unsafeCastOfDocument.state.global.status}
         editorName={unsafeCastOfDocument.state.global.name ?? ""}
         documentTypes={unsafeCastOfDocument.state.global.documentTypes}
-        vetraDriveId={props.context.vetra?.driveId}
         onEditorNameChange={onEditorNameChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}

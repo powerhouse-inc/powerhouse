@@ -11,7 +11,6 @@ export interface DocumentEditorFormProps {
   editorName?: string;
   documentTypes?: DocumentTypeItem[];
   status?: string;
-  vetraDriveId?: string;
   onEditorNameChange?: (name: string) => void;
   onAddDocumentType?: (input: AddDocumentTypeInput) => void;
   onRemoveDocumentType?: (input: RemoveDocumentTypeInput) => void;
@@ -22,7 +21,6 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   editorName: initialEditorName = "",
   documentTypes: initialDocumentTypes = [],
   status = "DRAFT",
-  vetraDriveId,
   onEditorNameChange,
   onAddDocumentType,
   onRemoveDocumentType,
@@ -35,7 +33,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Get available document types from the hook (vetra drive only for document editor)
-  const availableDocumentTypes = useAvailableDocumentTypes(vetraDriveId, true);
+  const availableDocumentTypes = useAvailableDocumentTypes(true);
 
   // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);

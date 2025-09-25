@@ -1,17 +1,17 @@
-import { useReactor } from "@powerhousedao/reactor-browser";
+import { useReactor, useSelectedDriveId } from "@powerhousedao/reactor-browser";
 import type { DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 
 const DEFAULT_DRIVE_ID = "vetra";
 
 export function useAvailableDocumentTypes(
-  vetraDriveId?: string,
   onlyVetraDocuments = false,
 ): string[] {
   const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
     string[]
   >([]);
   const reactor = useReactor();
+  const selectedDriveId = useSelectedDriveId();
 
   useEffect(() => {
     async function loadDocumentTypes() {
@@ -26,7 +26,7 @@ export function useAvailableDocumentTypes(
       // Get from vetra drive
       const driveDocIds: string[] = [];
       const driveDocs = await reactor?.getDocuments(
-        vetraDriveId ?? DEFAULT_DRIVE_ID,
+        selectedDriveId ?? DEFAULT_DRIVE_ID,
       );
 
       if (driveDocs) {
@@ -47,7 +47,7 @@ export function useAvailableDocumentTypes(
     }
 
     void loadDocumentTypes();
-  }, [reactor, vetraDriveId, onlyVetraDocuments]);
+  }, [reactor, selectedDriveId, onlyVetraDocuments]);
 
   return availableDocumentTypes;
 }

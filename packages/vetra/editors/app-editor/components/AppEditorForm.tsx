@@ -8,7 +8,6 @@ export interface AppEditorFormProps {
   status?: string;
   dragAndDropEnabled?: boolean;
   documentTypes?: DocumentTypeItem[];
-  vetraDriveId?: string;
   onNameChange?: (name: string) => void;
   onDragAndDropToggle?: (enabled: boolean) => void;
   onAddDocumentType?: (id: string, documentType: string) => void;
@@ -21,7 +20,6 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
   status = "DRAFT",
   dragAndDropEnabled = false,
   documentTypes: initialDocumentTypes = [],
-  vetraDriveId,
   onNameChange,
   onDragAndDropToggle,
   onAddDocumentType,
@@ -35,7 +33,7 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Get available document types from the hook (combines reactor and vetra drive)
-  const availableDocumentTypes = useAvailableDocumentTypes(vetraDriveId);
+  const availableDocumentTypes = useAvailableDocumentTypes();
 
   // Use the debounce hook for name changes
   useDebounce(appName, onNameChange, 300);
