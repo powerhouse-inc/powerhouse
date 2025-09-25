@@ -1,7 +1,0 @@
-{
-  "extends": "../../tsconfig.options.json",
-  "compilerOptions": {
-    "outDir": "dist"
-  },
-  "include": ["vite.config.ts", "client.config.ts"]
-}

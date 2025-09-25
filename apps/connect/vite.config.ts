@@ -81,7 +81,7 @@ export const connectViteConfig = (options: IConnectOptions = {}) =>
 
     const pkg = JSON.parse(
       readFileSync(
-        path.resolve(import.meta.dirname, "../package.json"),
+        path.resolve(import.meta.dirname, "./package.json"),
         "utf-8",
       ),
     );

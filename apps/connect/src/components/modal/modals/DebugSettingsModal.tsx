@@ -13,7 +13,7 @@ import {
   removeTrigger,
   useDrives,
 } from "@powerhousedao/reactor-browser";
-import { generateUUIDBrowser } from "document-model";
+import { generateUUIDBrowser } from "document-model/core";
 import { useEffect, useState } from "react";
 
 export interface DebugSettingsModalProps {
