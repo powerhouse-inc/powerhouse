@@ -1,4 +1,4 @@
-.html-defaults-container h1 {
+.html-defaults-container-vetra h1 {
   font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 600;
@@ -7,7 +7,7 @@
   color: #343839;
 }
 
-.html-defaults-container h2 {
+.html-defaults-container-vetra h2 {
   font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 600;
@@ -16,7 +16,7 @@
   color: #343839;
 }
 
-.html-defaults-container h3 {
+.html-defaults-container-vetra h3 {
   font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 600;
@@ -25,7 +25,7 @@
   color: #343839;
 }
 
-.html-defaults-container p {
+.html-defaults-container-vetra p {
   font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 400;
@@ -34,7 +34,7 @@
   color: #343839;
 }
 
-.html-defaults-container small {
+.html-defaults-container-vetra small {
   font-family: "Inter", sans-serif;
   font-style: normal;
   font-weight: 400;
@@ -44,14 +44,14 @@
 }
 
 /* Default styles for text input fields and textareas based on Storybook */
-.html-defaults-container input[type="text"],
-.html-defaults-container input[type="email"],
-.html-defaults-container input[type="password"],
-.html-defaults-container input[type="search"],
-.html-defaults-container input[type="tel"],
-.html-defaults-container input[type="url"],
-.html-defaults-container input[type="number"],
-.html-defaults-container textarea {
+.html-defaults-container-vetra input[type="text"],
+.html-defaults-container-vetra input[type="email"],
+.html-defaults-container-vetra input[type="password"],
+.html-defaults-container-vetra input[type="search"],
+.html-defaults-container-vetra input[type="tel"],
+.html-defaults-container-vetra input[type="url"],
+.html-defaults-container-vetra input[type="number"],
+.html-defaults-container-vetra textarea {
   font-family:
     "Inter", sans-serif; /* Consistent with other defaults, Tailwind uses font-sans */
   font-size: 0.875rem; /* text-sm */
@@ -67,13 +67,13 @@
   margin-bottom: 10px; /* For some default spacing */
 }
 
-.html-defaults-container textarea {
+.html-defaults-container-vetra textarea {
   min-height: 2.25rem; /* min-h-9 from textarea styles */
   resize: vertical; /* resize-y from textarea styles */
 }
 
 /* Default styles for buttons based on Storybook/Button component */
-.html-defaults-container button {
+.html-defaults-container-vetra button {
   font-family: "Inter", sans-serif; /* Consistent with other defaults */
   font-size: 0.875rem; /* Assuming text-sm as a common button size, adjust if needed */
   font-weight: 500; /* A common weight for buttons, adjust if needed */
@@ -93,12 +93,12 @@
   margin-bottom: 10px; /* For some default spacing */
 }
 
-.html-defaults-container button:hover {
+.html-defaults-container-vetra button:hover {
   background-color: #f1f5f9; /* hover:bg-slate-100 */
   box-shadow: none; /* hover:shadow-none */
 }
 
-.html-defaults-container button:focus {
+.html-defaults-container-vetra button:focus {
   /* Adding a generic focus style, adjust to match your design system's focus indicators */
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -108,17 +108,17 @@
 }
 
 /* Default styles for anchor/links */
-.html-defaults-container a {
+.html-defaults-container-vetra a {
   color: #007bff; /* Example link color - match your design system */
   text-decoration: none;
 }
 
-.html-defaults-container a:hover {
+.html-defaults-container-vetra a:hover {
   text-decoration: underline;
   color: #0056b3; /* Darker shade for hover */
 }
 
-.html-defaults-container a:focus {
+.html-defaults-container-vetra a:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow:
@@ -127,19 +127,19 @@
 }
 
 /* Default styles for lists */
-.html-defaults-container ul,
-.html-defaults-container ol {
+.html-defaults-container-vetra ul,
+.html-defaults-container-vetra ol {
   padding-left: 20px; /* Standard indentation */
   margin-top: 0;
   margin-bottom: 1rem;
 }
 
-.html-defaults-container li {
+.html-defaults-container-vetra li {
   margin-bottom: 0.5rem;
 }
 
 /* Default styles for labels */
-.html-defaults-container label {
+.html-defaults-container-vetra label {
   display: block;
   font-family: "Inter", sans-serif;
   font-size: 0.875rem; /* text-sm */
@@ -149,7 +149,7 @@
 }
 
 /* Default styles for horizontal rules */
-.html-defaults-container hr {
+.html-defaults-container-vetra hr {
   border: 0;
   height: 1px;
   background-color: #ced4da; /* A common light grey border color */
