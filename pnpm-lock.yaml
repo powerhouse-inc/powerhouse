@@ -653,9 +653,6 @@ importers:
       viem:
         specifier: ^2.28.0
         version: 2.37.8(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.76)
-      vite:
-        specifier: ^7.1.3
-        version: 7.1.7(@types/node@24.5.2)(jiti@2.6.0)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.5)(yaml@2.8.1)
       vite-envs:
         specifier: ^4.6.0
         version: 4.6.2
@@ -681,6 +678,15 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      vite:
+        specifier: ^7.1.7
+        version: 7.1.7(@types/node@24.5.2)(jiti@2.6.0)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.5)(yaml@2.8.1)
+      vite-plugin-html:
+        specifier: ^3.2.2
+        version: 3.2.2(vite@7.1.7(@types/node@24.5.2)(jiti@2.6.0)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.5)(yaml@2.8.1))
+      vite-plugin-svgr:
+        specifier: ^4.5.0
+        version: 4.5.0(rollup@4.52.2)(typescript@5.9.2)(vite@7.1.7(@types/node@24.5.2)(jiti@2.6.0)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.5)(yaml@2.8.1))
 
   packages/codegen:
     dependencies:
@@ -5535,8 +5541,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@mswjs/interceptors@0.39.6':
-    resolution: {integrity: sha512-bndDP83naYYkfayr/qhBHMhk0YGwS1iv6vaEGcr0SQbO0IZtbOPqjKjds/WcG+bJA+1T5vCx6kprKOzn5Bg+Vw==}
+  '@mswjs/interceptors@0.39.7':
+    resolution: {integrity: sha512-sURvQbbKsq5f8INV54YJgJEdk8oxBanqkTiXXd33rKmofFCwZLhLRszPduMZ9TA9b8/1CHc/IJmOlBHJk2Q5AQ==}
     engines: {node: '>=18'}
 
   '@mui/core-downloads-tracker@5.18.0':
@@ -25455,7 +25461,7 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@mswjs/interceptors@0.39.6':
+  '@mswjs/interceptors@0.39.7':
     dependencies:
       '@open-draft/deferred-promise': 2.2.0
       '@open-draft/logger': 0.3.0
@@ -38576,7 +38582,7 @@ snapshots:
       '@bundled-es-modules/cookie': 2.0.1
       '@bundled-es-modules/statuses': 1.0.1
       '@inquirer/confirm': 5.1.18(@types/node@22.18.6)
-      '@mswjs/interceptors': 0.39.6
+      '@mswjs/interceptors': 0.39.7
       '@open-draft/deferred-promise': 2.2.0
       '@types/cookie': 0.6.0
       '@types/statuses': 2.0.6
@@ -38603,7 +38609,7 @@ snapshots:
       '@bundled-es-modules/cookie': 2.0.1
       '@bundled-es-modules/statuses': 1.0.1
       '@inquirer/confirm': 5.1.18(@types/node@24.5.2)
-      '@mswjs/interceptors': 0.39.6
+      '@mswjs/interceptors': 0.39.7
       '@open-draft/deferred-promise': 2.2.0
       '@types/cookie': 0.6.0
       '@types/statuses': 2.0.6

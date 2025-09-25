@@ -9,22 +9,21 @@
     "node": ">=22.0.0"
   },
   "files": [
-    "src",
+    "dist",
+    "lib",
     "nginx.conf",
     "nginx.sh",
     "scripts",
     "assets",
     "public",
-    ".env"
+    ".env",
+    "./src/index.css"
   ],
   "exports": {
-    "./vite": "./dist/vite.config.js",
-    ".": "./src/index.ts",
-    "./custom.d.ts": "./custom.d.ts",
-    "./main.tsx": "./src/main.tsx",
-    "./index.html": "./index.html",
+    ".": "./lib/src/index.js",
+    "./config": "./lib/src/connect.config.js",
+    "./custom.d.ts": "./lib/custom.d.ts",
     "./styles.css": "./src/index.css",
-    "./config": "./src/connect.config.ts",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
