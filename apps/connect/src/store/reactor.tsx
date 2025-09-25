@@ -31,6 +31,7 @@ import { initRenown } from "@renown/sdk";
 import type { IDocumentAdminStorage } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -98,7 +99,7 @@ export async function createReactor() {
   // if remoteUrl is set and drive not already existing add remote drive and open it
 
   // if remoteUrl is set and drive not already existing add remote drive and open it
-  const remoteUrl = getRemoteUrl();
+  const remoteUrl = getDriveUrl();
   if (
     remoteUrl &&
     !drives.some(
@@ -109,9 +110,27 @@ export async function createReactor() {
   ) {
     try {
       await reactor.addRemoteDrive(remoteUrl, {
-        listeners: [],
-        availableOffline: false,
-        sharingType: "PRIVATE",
+        sharingType: "PUBLIC",
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: remoteUrl,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: generateId(),
+            system: true,
+          },
+        ],
         triggers: [],
       });
       window.location.href = "/d/" + remoteUrl.split("/").pop();
@@ -224,9 +243,9 @@ function getDidFromUrl() {
   return did;
 }
 
-function getRemoteUrl() {
+function getDriveUrl() {
   const searchParams = new URLSearchParams(window.location.search);
-  const remoteUrl = searchParams.get("remoteUrl");
-  const url = remoteUrl ? decodeURIComponent(remoteUrl) : undefined;
+  const driveUrl = searchParams.get("driveUrl");
+  const url = driveUrl ? decodeURIComponent(driveUrl) : undefined;
   return url;
 }
