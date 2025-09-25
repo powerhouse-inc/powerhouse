@@ -1,3 +1,13 @@
+## 5.0.0-staging.17 (2025-09-25)
+
+### 🩹 Fixes
+
+- **connect:** added switchboard push listener ([39e8660f5](https://github.com/powerhouse-inc/powerhouse/commit/39e8660f5))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.16 (2025-09-25)
 
 ### 🚀 Features
