@@ -1,4 +1,4 @@
-import type { DocumentDriveDocument, FolderNode, Node } from "document-drive";
+import type { FolderNode, Node } from "document-drive";
 import type { DocumentModelModule, EditorProps } from "document-model";
 import type { FC } from "react";
 
@@ -71,7 +71,7 @@ export type DriveEditorConfig = {
   };
 };
 
-export type DriveEditorProps = EditorProps<DocumentDriveDocument> & {
+export type DriveEditorProps = EditorProps & {
   context: IDriveContext;
   editorConfig?: DriveEditorConfig;
 };

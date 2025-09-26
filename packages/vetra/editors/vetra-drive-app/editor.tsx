@@ -7,6 +7,7 @@ import {
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useDriveContext,
+  useDriveDocument,
 } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import type { FileNode } from "document-drive";
@@ -17,7 +18,9 @@ import { DOCUMENT_TYPES } from "./document-types.js";
 export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
-  const { context, document } = props;
+  const { context, documentId } = props;
+
+  const [document] = useDriveDocument(documentId);
 
   const { showCreateDocumentModal, onAddFile } = useDriveContext();
   const driveId = document.header.id;

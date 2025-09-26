@@ -1,4 +1,5 @@
-import type { PHDocument } from "document-model";
+import type { Action } from "document-model";
+import { type DocumentModelModule, type PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import { useDispatch } from "./dispatch.js";
 import { useFileNodes, useSelectedNodeId } from "./nodes.js";
@@ -56,4 +57,63 @@ export function useDocumentById(id: string | null | undefined) {
   const documents = useSelectedDriveDocuments();
   const document = documents?.find((d) => d.header.id === id);
   return useDispatch(document);
+}
+
+export type BaseCreators = {
+  setName: (name: string) => Action & { type: "SET_NAME"; input: string };
+};
+
+type ExtractModulePHState<TModule> =
+  TModule extends DocumentModelModule<infer U> ? U : never;
+
+export type UseDocumentReturn<
+  TModule,
+  TCreators extends Record<string, (...args: any[]) => any> = Record<
+    string,
+    (...args: any[]) => any
+  >,
+> = [
+  PHDocument<ExtractModulePHState<TModule>>,
+  (
+    actionOrActions:
+      | ReturnType<TCreators[keyof TCreators]>[]
+      | ReturnType<TCreators[keyof TCreators]>
+      | undefined,
+  ) => void,
+  TCreators,
+];
+
+export function useDocumentOfModule<
+  TModule extends DocumentModelModule<any>,
+  TCreators extends Record<string, (...args: any[]) => any> = Record<
+    string,
+    (...args: any[]) => any
+  >,
+>(
+  documentId: string,
+  documentModule: TModule,
+  actionCreators: TCreators,
+): UseDocumentReturn<TModule, TCreators & BaseCreators> {
+  const [document, dispatch] = useDocumentById(documentId);
+
+  if (!document) {
+    throw new Error(`Document with id ${documentId} not found`);
+  }
+
+  const documentType = documentModule.documentModel.id;
+
+  if (document.header.documentType !== documentType) {
+    throw new Error(
+      `Document with id ${documentId} is not of type ${documentType}. Actual type: ${document.header.documentType}`,
+    );
+  }
+
+  // TODO: validate document instead of type cast
+  // documentModelModule.utils.validateDocument(document);
+
+  return [
+    document as PHDocument<ExtractModulePHState<TModule>>,
+    dispatch,
+    actionCreators as TCreators & BaseCreators,
+  ] as const;
 }

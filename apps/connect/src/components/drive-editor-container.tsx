@@ -24,7 +24,7 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-  const [selectedDrive, dispatch] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDrive();
   const nodeActions = useNodeActions();
   const { showModal } = useModal();
   const showCreateDocumentModal = useCallback(
@@ -65,8 +65,7 @@ export function DriveEditorContainer() {
           showCreateDocumentModal,
           showDeleteNodeModal,
         }}
-        document={selectedDrive}
-        dispatch={dispatch}
+        documentId={selectedDrive.header.id}
         editorConfig={editorConfig}
       />
     </ErrorBoundary>

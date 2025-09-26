@@ -256,8 +256,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                     globalOperations,
                   ),
                 }}
-                document={document}
-                dispatch={dispatch}
+                documentId={document.header.id}
               />
             )}
           </ErrorBoundary>

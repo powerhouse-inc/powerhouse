@@ -11,6 +11,7 @@ import {
   setSelectedNode,
   useDocumentModelModules,
   useDriveContext,
+  useDriveDocument,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
@@ -29,8 +30,8 @@ export type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
 export function BaseEditor(props: GenericDriveExplorerEditorProps) {
-  const { document, className, children } = props;
-
+  const { documentId, className, children } = props;
+  const [document] = useDriveDocument(documentId);
   const {
     showCreateDocumentModal,
     onRenameNode,

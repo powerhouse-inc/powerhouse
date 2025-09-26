@@ -18,7 +18,7 @@ export interface EditorContainerProps {
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const { context, editorModule, documentId } = props;
-  const [document, dispatch] = useDocumentById(documentId);
+  const [document] = useDocumentById(documentId);
 
   const loadingContent = (
     <div className="flex h-full flex-1 items-center justify-center">
@@ -32,11 +32,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   return (
     <Suspense fallback={loadingContent}>
-      <EditorComponent
-        context={context}
-        document={document}
-        dispatch={dispatch}
-      />
+      <EditorComponent context={context} documentId={documentId} />
     </Suspense>
   );
 };
