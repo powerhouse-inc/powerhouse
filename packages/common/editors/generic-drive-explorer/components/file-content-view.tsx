@@ -98,7 +98,6 @@ export function FileContentView(props: Props) {
     <div
       ref={parentRef}
       style={{
-        height: `400px`,
         width: `100%`,
         overflow: "auto",
       }}

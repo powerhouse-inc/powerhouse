@@ -6,6 +6,7 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -27,6 +28,7 @@ const normalIgnoredFiles = [
   // test artifacts
   "**/.out/",
   "**/flaky/",
+  "apps/connect/lib/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
@@ -271,7 +273,7 @@ const typescriptEsLintRecommendedConfig = [
 ];
 
 /** Main config */
-export default tseslint.config(
+export default defineConfig(
   ignored,
   eslintRecommendedConfig,
   typescriptEsLintRecommendedConfig,

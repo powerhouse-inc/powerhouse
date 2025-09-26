@@ -21,7 +21,7 @@ async function getSentry() {
 }
 
 async function initSentry() {
-  const release = import.meta.env.SENTRY_RELEASE;
+  const release = __SENTRY_RELEASE__;
 
   const Sentry = await getSentry();
   const integrations: BrowserOptions["integrations"] = [

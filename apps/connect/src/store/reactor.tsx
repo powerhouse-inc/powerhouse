@@ -211,29 +211,13 @@ export async function createReactor() {
 }
 
 function getAppConfig() {
-  const allowList = getAllowList();
   const analyticsDatabaseName = connectConfig.analytics.databaseName;
   const showSearchBar = connectConfig.content.showSearchBar;
   return {
-    allowList,
+    allowList: undefined,
     analyticsDatabaseName,
     showSearchBar,
   };
-}
-
-function getAllowList() {
-  const arbitrumAllowList = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
-  const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
-  if (!arbitrumAllowList.length && !rwaAllowList.length) {
-    return undefined;
-  }
-  if (arbitrumAllowList.length) {
-    return arbitrumAllowList.split(",").filter(Boolean);
-  }
-  if (rwaAllowList.length) {
-    return rwaAllowList.split(",").filter(Boolean);
-  }
-  return undefined;
 }
 
 function getDidFromUrl() {

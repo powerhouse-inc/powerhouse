@@ -1,4 +1,4 @@
-const currentVersion = import.meta.env.APP_VERSION;
+const currentVersion = __APP_VERSION__;
 
 export const isMac = window.navigator.appVersion.includes("Mac");
 

@@ -98,12 +98,7 @@ export function FolderView(props: IFolderViewProps) {
           defaultValue: "Documents and files",
         })}
       >
-        <div
-          className={twMerge(
-            "w-full",
-            fileNodes.length > 0 ? "min-h-[400px]" : "min-h-14",
-          )}
-        >
+        <div className="w-full">
           <FileContentView
             fileNodes={fileNodes}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}

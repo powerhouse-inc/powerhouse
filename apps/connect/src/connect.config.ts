@@ -1,10 +1,7 @@
 import { isLogLevel } from "@powerhousedao/config";
 import { getBasePath } from "@powerhousedao/connect";
 import { logger, setLogLevel } from "document-drive";
-import pkg from "../package.copy.json" with { type: "json" };
 
-const version = pkg.version;
-const APP_VERSION = import.meta.env.APP_VERSION || version;
 const WARN_OUTDATED_APP =
   import.meta.env.PH_CONNECT_WARN_OUTDATED_APP || "false";
 const PH_CONNECT_STUDIO_MODE =
@@ -71,7 +68,7 @@ setLogLevel(LOG_LEVEL);
 logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
 
 export const connectConfig = {
-  appVersion: APP_VERSION,
+  appVersion: __APP_VERSION__,
   studioMode: PH_CONNECT_STUDIO_MODE.toString() === "true",
   warnOutdatedApp: WARN_OUTDATED_APP === "true",
   routerBasename: PH_CONNECT_ROUTER_BASENAME,

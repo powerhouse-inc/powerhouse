@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
+
 export function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);

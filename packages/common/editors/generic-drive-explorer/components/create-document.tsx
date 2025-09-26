@@ -18,10 +18,8 @@ export const CreateDocument: React.FC<CreateDocumentProps> = ({
   createDocument,
 }) => {
   return (
-    <div className="px-6">
-      <h3 className="mb-3 mt-4 text-xl font-bold text-gray-600">
-        New document
-      </h3>
+    <div className="px-6 py-4">
+      <h3 className="mb-3 text-xl font-bold text-gray-600">New document</h3>
       <div className="flex w-full flex-wrap gap-4">
         {documentModels?.map((doc) => {
           const spec = getDocumentSpec(doc);
