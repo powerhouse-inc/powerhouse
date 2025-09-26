@@ -1,17 +1,24 @@
 import { phExternalPackagesPlugin } from "@powerhousedao/builder-tools";
-import type { PowerhousePackage } from "@powerhousedao/config";
+import type { PowerhouseConfig } from "@powerhousedao/config";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { readFileSync } from "node:fs";
-import type { HtmlTagDescriptor, PluginOption, UserConfig } from "vite";
+import path from "node:path";
+import type {
+  HtmlTagDescriptor,
+  loadEnv,
+  PluginOption,
+  UserConfig,
+} from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
 
 export type IConnectOptions = {
-  env: Record<string, string>;
-  packageJsonPath: string;
-  packages?: PowerhousePackage[];
+  dirname: string;
+  env: ReturnType<typeof loadEnv>;
+  powerhouseConfig?: PowerhouseConfig;
   localPackage?: string; // path to local package to be loaded.
 };
 
@@ -89,15 +96,16 @@ export const connectClientConfig = {
 
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const env = options.env;
-
+  const packageJsonPath = path.resolve(options.dirname, "./package.json");
   // load packages from env variable
   const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
   const envPhPackages = phPackagesStr.split(",");
 
   // loadPackages from config
   const configPhPackages =
-    options.packages?.map((p) => (typeof p === "string" ? p : p.packageName)) ||
-    [];
+    options.powerhouseConfig?.packages?.map((p) =>
+      typeof p === "string" ? p : p.packageName,
+    ) || [];
 
   // merges env and config packages
   const allPackages = [...envPhPackages, ...configPhPackages];
@@ -111,7 +119,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
 
-  const pkg = JSON.parse(readFileSync(options.packageJsonPath, "utf-8")) as {
+  const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
     version: string;
   };
 
@@ -121,8 +129,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     pkg.version
   ).toString();
 
+  const authToken = process.env.SENTRY_AUTH_TOKEN ?? env.SENTRY_AUTH_TOKEN;
+  const org = process.env.SENTRY_ORG ?? env.SENTRY_ORG;
+  const project = process.env.SENTRY_PROJECT ?? env.SENTRY_PROJECT;
   const release =
     (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
+  const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
     nodePolyfills({
@@ -150,6 +162,26 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     }),
   ] as const;
 
+  if (uploadSentrySourcemaps) {
+    plugins.push(
+      sentryVitePlugin({
+        release: {
+          name: release,
+          inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
+        },
+        authToken,
+        org,
+        project,
+        bundleSizeOptimizations: {
+          excludeDebugStatements: true,
+        },
+        reactComponentAnnotation: {
+          enabled: true,
+        },
+      }) as PluginOption,
+    );
+  }
+
   const config: UserConfig = {
     base: "./",
     envPrefix: ["PH_CONNECT_"],
@@ -160,6 +192,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     build: {
       minify: false,
       sourcemap: true,
+    },
+    server: {
+      fs: {
+        strict: false,
+      },
     },
     worker: {
       format: "es",

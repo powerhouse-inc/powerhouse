@@ -32,6 +32,7 @@
     "storybook": "storybook dev -p 6006"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^2.23.1",
     "@storybook/types": "^8.5.2",
     "@tailwindcss/vite": "^4.1.13",
     "@types/react": "^18.3.18",
