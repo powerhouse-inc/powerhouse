@@ -11,7 +11,13 @@ export type UploadTracker = {
   id: string;
   fileName: string;
   fileSize: string;
-  status: "pending" | "uploading" | "success" | "failed" | "conflict";
+  status:
+    | "pending"
+    | "uploading"
+    | "success"
+    | "failed"
+    | "conflict"
+    | "unsupported-document-type";
   progress: number;
   errorDetails?: string;
   fileNode?: Node;
@@ -57,6 +63,8 @@ export function mapProgressStageToStatus(
       return "failed";
     case "conflict":
       return "conflict";
+    case "unsupported-document-type":
+      return "unsupported-document-type";
     default:
       return "pending";
   }

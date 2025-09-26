@@ -8,7 +8,13 @@ type ErrorDetailsProps = {
 export function ErrorDetails(props: ErrorDetailsProps) {
   const { status, errorDetails } = props;
 
-  if (!(status === "failed" && errorDetails)) return null;
+  if (
+    !(
+      (status === "failed" || status === "unsupported-document-type") &&
+      errorDetails
+    )
+  )
+    return null;
 
   return (
     <div className="break-words text-xs leading-[18px] text-gray-500">

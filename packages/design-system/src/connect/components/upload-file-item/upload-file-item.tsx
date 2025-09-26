@@ -11,7 +11,8 @@ export type UploadFileItemStatus =
   | "failed"
   | "pending"
   | "uploading"
-  | "conflict";
+  | "conflict"
+  | "unsupported-document-type";
 
 export type UploadFileItemProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;

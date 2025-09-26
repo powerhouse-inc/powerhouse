@@ -17,7 +17,8 @@ export interface FileUploadProgress {
     | "uploading"
     | "complete"
     | "failed"
-    | "conflict";
+    | "conflict"
+    | "unsupported-document-type";
   progress: number; // 0-100
   totalOperations?: number;
   uploadedOperations?: number;
