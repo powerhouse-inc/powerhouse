@@ -262,3 +262,121 @@ input[type="number"] {
     @apply cursor-pointer;
   }
 }
+
+.ph-default-styles h1 {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 120%;
+  color: #343839;
+}
+
+.ph-default-styles h2 {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 120%;
+  color: #343839;
+}
+
+.ph-default-styles h3 {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 120%;
+  color: #343839;
+}
+
+.ph-default-styles p {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 120%;
+  color: #343839;
+}
+
+.ph-default-styles small {
+  font-family: "Inter", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 100%;
+  color: #474d4e;
+}
+
+/* Default styles for text input fields and textareas based on Storybook */
+.ph-default-styles input[type="text"],
+.ph-default-styles input[type="email"],
+.ph-default-styles input[type="password"],
+.ph-default-styles input[type="search"],
+.ph-default-styles input[type="tel"],
+.ph-default-styles input[type="url"],
+.ph-default-styles input[type="number"],
+.ph-default-styles textarea {
+  font-family:
+    "Inter", sans-serif; /* Consistent with other defaults, Tailwind uses font-sans */
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 400; /* font-normal */
+  line-height: 1.25rem; /* leading-5 */
+  color: #343839; /* text-gray-900 is #1a202c, using established default */
+  background-color: #ffffff; /* bg-white */
+  border: 1px solid #ced4da; /* border border-gray-300 (#d1d5db), using established default */
+  border-radius: 0.375rem; /* rounded-md */
+  padding: 7px 0.75rem; /* py-[7px] (textarea) / py-2 (input), px-3 */
+  width: 100%; /* w-full */
+  box-sizing: border-box;
+  margin-bottom: 10px; /* For some default spacing */
+}
+
+.ph-default-styles textarea {
+  min-height: 2.25rem; /* min-h-9 from textarea styles */
+  resize: vertical; /* resize-y from textarea styles */
+}
+
+/* Default styles for anchor/links */
+.ph-default-styles a {
+  color: #007bff; /* Example link color - match your design system */
+  text-decoration: none;
+}
+
+.ph-default-styles a:hover {
+  text-decoration: underline;
+  color: #0056b3; /* Darker shade for hover */
+}
+
+.ph-default-styles a:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px rgba(0, 123, 255, 0.5); /* Example focus ring */
+}
+
+/* Default styles for lists */
+.ph-default-styles ul,
+.ph-default-styles ol {
+  padding-left: 0px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Default styles for labels */
+.ph-default-styles label {
+  display: block;
+  font-family: "Inter", sans-serif;
+  font-weight: 500; /* font-medium or similar */
+  color: #343839; /* Match other text colors */
+}
+
+/* Default styles for horizontal rules */
+.ph-default-styles hr {
+  border: 0;
+  height: 1px;
+  background-color: #ced4da; /* A common light grey border color */
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
