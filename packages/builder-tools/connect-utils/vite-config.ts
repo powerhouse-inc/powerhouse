@@ -19,7 +19,7 @@ export type IConnectOptions = {
   dirname: string;
   env: ReturnType<typeof loadEnv>;
   powerhouseConfig?: PowerhouseConfig;
-  localPackage?: string; // path to local package to be loaded.
+  localPackage?: string | false; // path to local package to be loaded.
 };
 
 export const connectClientConfig = {
@@ -111,7 +111,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const allPackages = [...envPhPackages, ...configPhPackages];
 
   // if local package is provided, add it to the packages to be loaded
-  const localPackage = options.localPackage || process.env.PH_LOCAL_PACKAGE;
+  const localPackage =
+    options.localPackage ?? process.env.PH_LOCAL_PACKAGE ?? options.dirname;
   if (localPackage) {
     allPackages.push(localPackage);
   }

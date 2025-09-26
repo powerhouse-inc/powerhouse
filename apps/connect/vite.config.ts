@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const config = getConnectBaseViteConfig({
     env,
     dirname,
+    localPackage: false,
   });
 
   return config;
