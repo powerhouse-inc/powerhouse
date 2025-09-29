@@ -1,7 +1,8 @@
-import { OpenFeature } from "@openfeature/server-sdk";
 import { EnvVarProvider } from "@openfeature/env-var-provider";
+import { OpenFeature } from "@openfeature/server-sdk";
 
 export async function initFeatureFlags() {
+  // for now, we're only using env vars for feature flags
   const provider = new EnvVarProvider();
 
   await OpenFeature.setProviderAndWait(provider);
@@ -11,7 +12,5 @@ export async function initFeatureFlags() {
 
 export async function isReactorv2Enabled(): Promise<boolean> {
   const client = OpenFeature.getClient();
-  // EnvVarProvider will read from FEATURE_REACTORV2_ENABLED env variable
-  const flag = await client.getBooleanValue("FEATURE_REACTORV2_ENABLED", false);
-  return flag;
+  return await client.getBooleanValue("FEATURE_REACTORV2_ENABLED", false);
 }
