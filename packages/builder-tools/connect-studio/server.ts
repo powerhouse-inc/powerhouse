@@ -33,6 +33,13 @@ logger.warn = (msg, options) => {
   if (msg.includes("The above dynamic import cannot be analyzed by Vite.")) {
     return;
   }
+  if (
+    msg.includes(
+      "@import must precede all other statements (besides @charset or empty @layer)",
+    )
+  ) {
+    return;
+  }
   loggerWarn(msg, options);
 };
 

@@ -65,8 +65,7 @@ export function DriveEditorContainer() {
           showCreateDocumentModal,
           showDeleteNodeModal,
         }}
-        document={selectedDrive}
-        dispatch={dispatch}
+        documentId={selectedDrive.header.id}
         editorConfig={editorConfig}
       />
     </ErrorBoundary>

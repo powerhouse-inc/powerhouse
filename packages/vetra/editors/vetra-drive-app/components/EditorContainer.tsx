@@ -32,11 +32,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   return (
     <Suspense fallback={loadingContent}>
-      <EditorComponent
-        context={context}
-        document={document}
-        dispatch={dispatch}
-      />
+      <EditorComponent context={context} documentId={documentId} />
     </Suspense>
   );
 };

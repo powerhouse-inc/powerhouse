@@ -35,7 +35,10 @@ export type {
   DocumentDriveState,
   Node,
 } from "#drive-document-model/gen/types";
-export { module as driveDocumentModelModule } from "#drive-document-model/module";
+export {
+  actions as driveDocumentModelActions,
+  module as driveDocumentModelModule,
+} from "#drive-document-model/module";
 export {
   generateNodesCopy,
   isFileNode,

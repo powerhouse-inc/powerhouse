@@ -1,9 +1,11 @@
 import type {
   DocumentDriveDocument,
   DocumentDrivePHState,
+  driveDocumentModelModule,
   SharingType,
   Trigger,
 } from "document-drive";
+import { driveDocumentModelActions } from "document-drive";
 import { getDriveSharingType } from "document-drive/server/utils";
 import type { PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
@@ -14,6 +16,7 @@ import {
 } from "../events/index.js";
 import { getDriveAvailableOffline } from "../utils/drives.js";
 import { useDispatch } from "./dispatch.js";
+import type { UseDocumentReturn } from "./documents.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives(): PHDocument<DocumentDrivePHState>[] | undefined {
@@ -27,6 +30,19 @@ export function useDriveById(driveId: string | undefined | null) {
   const [document, dispatch] = useDispatch(drive);
   const unsafeDrive = document as DocumentDriveDocument | undefined;
   return [unsafeDrive, dispatch] as const;
+}
+
+export function useDriveDocument(
+  driveId: string,
+): UseDocumentReturn<
+  typeof driveDocumentModelModule,
+  typeof driveDocumentModelActions
+> {
+  const [drive, dispatch] = useDriveById(driveId);
+  if (!drive) {
+    throw new Error(`Drive with id ${driveId} not found`);
+  }
+  return [drive, dispatch, driveDocumentModelActions] as const;
 }
 
 export function useSelectedDriveId() {

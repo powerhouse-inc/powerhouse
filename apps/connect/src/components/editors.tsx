@@ -238,7 +238,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           globalOperations={globalOperations}
           localOperations={localOperations}
           onClose={() => setRevisionHistoryVisible(false)}
-          documentState={document?.state}
+          documentState={document.state}
           onCopyState={() => {
             toast("Copied document state to clipboard", { type: "success" });
           }}
@@ -261,8 +261,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                     globalOperations,
                   ),
                 }}
-                document={document}
-                dispatch={dispatch}
+                documentId={document.header.id}
               />
             )}
           </ErrorBoundary>

@@ -7,6 +7,7 @@ import {
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useDriveContext,
+  useDriveDocument,
 } from "@powerhousedao/reactor-browser";
 import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
 import type { FileNode } from "document-drive";
@@ -18,9 +19,11 @@ import { withDropZone } from "./utils/withDropZone.js";
 export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
-  const { context, document } = props;
+  const { context, documentId } = props;
 
-  const { showCreateDocumentModal, onAddFile } = useDriveContext();
+  const [document] = useDriveDocument(documentId);
+
+  const { showCreateDocumentModal } = useDriveContext();
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
   const fileNodes = document.state.global.nodes.filter(

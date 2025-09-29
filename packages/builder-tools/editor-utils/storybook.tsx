@@ -1,5 +1,7 @@
-import { useDocumentReducer } from "#editor-utils/reducer";
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
+import {
+  useDocumentById,
+  type DriveEditorProps,
+} from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
@@ -12,7 +14,7 @@ import type {
   Reducer,
 } from "document-model";
 import { baseCreateDocument } from "document-model";
-import React, { useState } from "react";
+import type React from "react";
 import { useInterval } from "usehooks-ts";
 
 export type EditorStoryArgs = Partial<{
@@ -39,34 +41,31 @@ export type EditorStoryArgs = Partial<{
   };
 }>;
 
-export type EditorStoryProps<TState extends PHBaseState = PHBaseState> =
-  EditorProps<PHDocument<TState>> & EditorStoryArgs;
+export type EditorStoryProps = EditorProps & EditorStoryArgs;
 
 export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
 
-export type EditorStoryComponent<TState extends PHBaseState = PHBaseState> = (
-  props: EditorStoryProps<TState>,
+export type EditorStoryComponent = (
+  props: EditorStoryProps,
 ) => React.JSX.Element;
 
 export type DriveEditorStoryComponent = (
   props: DriveEditorStoryProps,
 ) => React.JSX.Element;
 
-export type DocumentStory<TState extends PHBaseState = PHBaseState> = StoryObj<
-  EditorStoryComponent<TState>
->;
+export type DocumentStory = StoryObj<EditorStoryComponent>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
 export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
-  Editor: EditorStoryComponent<TState>,
+  Editor: EditorStoryComponent,
   reducer: Reducer<TState>,
   initialState: TState,
   additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps<TState>>[],
+  decorators?: Decorator[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory<TState>;
+  CreateDocumentStory: DocumentStory;
 } {
   const meta = {
     includeStories: ["All"],
@@ -89,8 +88,8 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
       (Story, { args }) => {
         const [, setArgs] = useArgs<typeof args>();
         const emit = useChannel({
-          DOCUMENT: (document: PHDocument<TState>) => {
-            setArgs({ document });
+          DOCUMENT: (documentId: string) => {
+            setArgs({ documentId });
           },
         });
 
@@ -99,17 +98,9 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
       ...(decorators ?? []),
     ],
     render: function Render(args) {
-      const [error, setError] = useState<unknown>();
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentReducer<TState>(
-        reducer,
-        args.document,
-        (error) => {
-          console.error(error);
-          setError(error);
-        },
-      );
+      const [document, _dispatch] = useDocumentById(args.documentId);
       function dispatch(action: Action) {
         const context: ActionContext = {};
         if (args.user) {
@@ -132,29 +123,26 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
         });
       }
 
-      //  resets the budget state in the reducer when the prop changes
-      React.useEffect(() => {
-        if (document) {
-          emit("DOCUMENT", document);
-        }
-        setError(undefined);
-      }, [document, emit]);
+      // TODO: allow changing document on storybook
+      // React.useEffect(() => {
+      //   if (document) {
+      //     emit("DOCUMENT", document);
+      //   }
+      // }, [document, emit]);
 
       useInterval(() => {
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document));
+            dispatch(createAction(document!));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} document={document} />;
+      return <Editor {...args} documentId={args.documentId} />;
     },
     argTypes: {
-      document: {
-        control: "object",
-      },
+      // documentId: "string", TODO allow setting document
       context: {
         theme: {
           name: "Theme",
@@ -170,17 +158,17 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
   } satisfies Meta<typeof Editor>;
 
   // Default createState function for PHDocument
-  const defaultPHDocumentCreateState: CreateState<TState> = (state) => {
+  const defaultPHDocumentCreateState: CreateState = (state) => {
     return state as TState;
   };
 
-  const CreateDocumentStory: DocumentStory<TState> = {
+  const CreateDocumentStory: DocumentStory = {
     name: "New document",
     args: {
-      document: baseCreateDocument<TState>(
+      documentId: baseCreateDocument(
         defaultPHDocumentCreateState,
-        initialState,
-      ),
+        initialState as Partial<PHBaseState>,
+      ).header.id,
       user: {
         address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
         networkId: "eip155",

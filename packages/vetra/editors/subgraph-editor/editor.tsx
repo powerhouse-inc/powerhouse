@@ -1,13 +1,20 @@
+import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import type { SubgraphModuleDocument } from "../../document-models/subgraph-module/index.js";
-import { actions } from "../../document-models/subgraph-module/index.js";
+import {
+  actions,
+  module,
+} from "../../document-models/subgraph-module/index.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 
-export type IProps = EditorProps<SubgraphModuleDocument>;
+export type IProps = EditorProps;
+
+export function useSubgraphModuleDocument(documentId: string) {
+  return useDocumentOfModule(documentId, module, actions);
+}
 
 export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
+  const [document, dispatch] = useSubgraphModuleDocument(props.documentId);
 
   const onNameChange = useCallback(
     (name: string) => {

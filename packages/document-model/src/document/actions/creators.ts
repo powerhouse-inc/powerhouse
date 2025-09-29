@@ -115,7 +115,5 @@ export const actions = {
   undo,
   redo,
   prune,
-  loadState,
   noop,
-} as unknown as Record<string, (input: any) => Action>;
-// TODO improve base actions type
+} as Record<string, (input: any) => Action>;
