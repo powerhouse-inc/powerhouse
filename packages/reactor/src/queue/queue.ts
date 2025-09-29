@@ -172,11 +172,11 @@ export class InMemoryQueue implements IQueue {
       onStart: () => {
         // Job is now running
       },
-      onComplete: async () => {
-        await this.completeJob(job.id);
+      onComplete: () => {
+        void this.completeJob(job.id);
       },
-      onFail: async (reason: string) => {
-        await this.failJob(job.id, reason);
+      onFail: (reason: string) => {
+        void this.failJob(job.id, reason);
       },
     });
 
@@ -220,11 +220,11 @@ export class InMemoryQueue implements IQueue {
             onStart: () => {
               // Job is now running
             },
-            onComplete: async () => {
-              await this.completeJob(job.id);
+            onComplete: () => {
+              void this.completeJob(job.id);
             },
-            onFail: async (reason: string) => {
-              await this.failJob(job.id, reason);
+            onFail: (reason: string) => {
+              void this.failJob(job.id, reason);
             },
           });
 
