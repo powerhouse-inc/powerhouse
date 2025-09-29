@@ -265,7 +265,6 @@ export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
       local: [],
     },
     state: result.document.state,
-    attachments: result.document.attachments,
   };
 
   return {

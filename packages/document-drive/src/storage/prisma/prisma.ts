@@ -30,7 +30,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext } from "document-model/core";
+import { actionContext, defaultBaseState } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import { Prisma, PrismaClient } from "./client/index.js";
@@ -490,11 +490,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       initialState: JSON.parse(dbDoc.initialState) as TDocument["initialState"],
       operations: operationsByScope,
       clipboard: [],
-      attachments: {},
-      state: undefined,
-    };
+      state: defaultBaseState(),
+    } as PHDocument;
 
-    return doc as unknown as TDocument;
+    return doc as TDocument;
   }
 
   async getBySlug<TDocument extends PHDocument>(

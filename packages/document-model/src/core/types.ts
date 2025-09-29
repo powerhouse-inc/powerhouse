@@ -661,13 +661,6 @@ export type BaseDocument<TState extends PHBaseState = PHBaseState> = {
    * This will be removed in a future release.
    */
   clipboard: Operation[];
-
-  /**
-   * The index of document attachments.
-   *
-   * This will be removed in a future release.
-   */
-  attachments?: FileRegistry;
 };
 
 export type PHDocument<TState extends PHBaseState = PHBaseState> =

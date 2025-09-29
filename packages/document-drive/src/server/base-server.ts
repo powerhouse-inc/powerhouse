@@ -987,7 +987,6 @@ export class BaseDocumentDriveServer
       operations: { global: [], local: [] },
       initialState: document.initialState,
       clipboard: [],
-      attachments: document.attachments,
       state: state ?? document.state,
     };
 

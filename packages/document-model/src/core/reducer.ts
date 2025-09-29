@@ -523,19 +523,6 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
         (newDocument.state as Record<string, unknown>)[scope],
       );
     }
-
-    // if the action has attachments then adds them to the document
-    if (!isDocumentAction(_action) && _action.attachments) {
-      _action.attachments.forEach((attachment) => {
-        const { hash, ...file } = attachment;
-        if (!newDocument.attachments) {
-          newDocument.attachments = {};
-        }
-        newDocument.attachments[hash] = {
-          ...file,
-        };
-      });
-    }
   }
 
   return newDocument;

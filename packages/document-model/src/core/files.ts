@@ -55,20 +55,6 @@ export function createZip(document: PHDocument) {
     ),
   );
 
-  if (document.attachments) {
-    const attachments = Object.keys(document.attachments);
-    attachments.forEach((key) => {
-      const { data, ...attributes } = document.attachments?.[key] ?? {};
-      if (data) {
-        zip.file(key, data, {
-          base64: true,
-          createFolders: true,
-          comment: JSON.stringify(attributes),
-        });
-      }
-    });
-  }
-
   return zip;
 }
 

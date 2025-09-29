@@ -26,7 +26,6 @@ describe("DocumentModel Class", () => {
       meta: {},
     },
     state: createCountState(),
-    attachments: {},
     initialState,
     operations: { global: [], local: [] },
     clipboard: [],
