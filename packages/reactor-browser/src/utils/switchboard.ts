@@ -51,7 +51,9 @@ export function getDocumentGraphqlQuery() {
   return `query getDocument($documentId: String!) {
   document(id: $documentId) {
       id
-      lastModified
+      documentType
+      createdAtUtcIso
+      lastModifiedAtUtcIso
       name
       revision
       stateJSON
