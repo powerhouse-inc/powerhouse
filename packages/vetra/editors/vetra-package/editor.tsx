@@ -1,14 +1,10 @@
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import { actions, module } from "../../document-models/vetra-package/index.js";
+import { actions } from "../../document-models/vetra-package/index.js";
+import { useVetraPackageDocument } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 
 export type IProps = EditorProps;
-
-export function useVetraPackageDocument(documentId: string) {
-  return useDocumentOfModule(documentId, module, actions);
-}
 
 export default function Editor(props: IProps) {
   const [document, dispatch] = useVetraPackageDocument(props.documentId);

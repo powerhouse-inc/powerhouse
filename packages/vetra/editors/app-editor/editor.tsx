@@ -1,17 +1,13 @@
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import { actions, module } from "../../document-models/app-module/index.js";
+import { actions } from "../../document-models/app-module/index.js";
+import { useAppModuleDocument } from "../hooks/useVetraDocument.js";
 import { AppEditorForm } from "./components/AppEditorForm.js";
 
 export type IProps = EditorProps;
 
-export function useAppModuleDocument(documentId: string) {
-  return useDocumentOfModule(documentId, module, actions);
-}
-
 export default function Editor(props: IProps) {
-  const [document, dispatch, actions] = useAppModuleDocument(props.documentId);
+  const [document, dispatch] = useAppModuleDocument(props.documentId);
 
   const onNameChange = useCallback(
     (name: string) => {

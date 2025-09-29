@@ -1,21 +1,14 @@
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import type {
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
 } from "../../document-models/document-editor/index.js";
-import {
-  actions,
-  module,
-} from "../../document-models/document-editor/index.js";
+import { actions } from "../../document-models/document-editor/index.js";
+import { useDocumentEditorDocument } from "../hooks/useVetraDocument.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 
 export type IProps = EditorProps;
-
-export function useDocumentEditorDocument(documentId: string) {
-  return useDocumentOfModule(documentId, module, actions);
-}
 
 export default function Editor(props: IProps) {
   const [document, dispatch] = useDocumentEditorDocument(props.documentId);

@@ -1,12 +1,18 @@
 import type { DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
 import type { FC } from "react";
-import type { DocumentAction } from "./actions/types.js";
 import type {
   PHBaseState,
   PHDocumentHeader,
   PHDocumentHistory,
 } from "./ph-types.js";
+import type {
+  NOOPAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
+} from "./schema/types.js";
 import type {
   CreateChildDocumentInput,
   Signal,
@@ -15,10 +21,15 @@ import type {
 } from "./signal.js";
 import type { FileInput } from "./utils/file.js";
 export type { PHBaseState } from "./ph-types.js";
-export type { NOOPAction } from "./schema/types.js";
+export type {
+  NOOPAction,
+  PruneAction,
+  RedoAction,
+  SetNameAction,
+  UndoAction,
+} from "./schema/types.js";
 export type {
   CreateChildDocumentInput,
-  DocumentAction,
   FileInput,
   Immutable,
   Signal,
@@ -441,9 +452,16 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
 
 export type ValidationError = { message: string; details: object };
 
+export type BaseAction =
+  | SetNameAction
+  | UndoAction
+  | RedoAction
+  | PruneAction
+  | NOOPAction;
+
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
-  actions: Record<string, (input: any) => Action>;
+  actions: Record<string, (...args: any[]) => Action>;
   utils: DocumentModelUtils<TState>;
   documentModel: DocumentModelState;
 };

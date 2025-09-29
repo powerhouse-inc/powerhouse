@@ -27,7 +27,7 @@ export function withDropZone<T extends DriveEditorProps>(
         <DropZone
           onAddFile={onAddFile}
           setSelectedNode={setSelectedNode}
-          driveId={props.document.header.id}
+          driveId={props.documentId}
           useLocalStorage={true}
           style={{ height: "100%" }}
         >

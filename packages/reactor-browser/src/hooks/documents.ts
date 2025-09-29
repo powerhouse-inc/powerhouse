@@ -1,8 +1,8 @@
-import type { Action } from "document-model";
-import { type DocumentModelModule, type PHDocument } from "document-model";
+import type { Action, BaseAction, PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import { useDispatch } from "./dispatch.js";
 import { useFileNodes, useSelectedNodeId } from "./nodes.js";
+import { useDocumentModelModuleById } from "./vetra-packages.js";
 
 function getDocumentsSnapshot() {
   const documents = window.phDocuments;
@@ -59,61 +59,57 @@ export function useDocumentById(id: string | null | undefined) {
   return useDispatch(document);
 }
 
-export type BaseCreators = {
-  setName: (name: string) => Action & { type: "SET_NAME"; input: string };
-};
+export class DocumentNotFoundError extends Error {
+  constructor(documentId: string) {
+    super(`Document with id ${documentId} not found`);
+  }
+}
 
-type ExtractModulePHState<TModule> =
-  TModule extends DocumentModelModule<infer U> ? U : never;
+export class DocumentModelNotFoundError extends Error {
+  constructor(documentType: string) {
+    super(`Document model module for type ${documentType} not found`);
+  }
+}
 
-export type UseDocumentReturn<
-  TModule,
-  TCreators extends Record<string, (...args: any[]) => any> = Record<
-    string,
-    (...args: any[]) => any
-  >,
-> = [
-  PHDocument<ExtractModulePHState<TModule>>,
-  (
-    actionOrActions:
-      | ReturnType<TCreators[keyof TCreators]>[]
-      | ReturnType<TCreators[keyof TCreators]>
-      | undefined,
-  ) => void,
-  TCreators,
-];
+export class DocumentTypeMismatchError extends Error {
+  constructor(documentId: string, expectedType: string, actualType: string) {
+    super(
+      `Document ${documentId} is not of type ${expectedType}. Actual type: ${actualType}`,
+    );
+  }
+}
 
-export function useDocumentOfModule<
-  TModule extends DocumentModelModule<any>,
-  TCreators extends Record<string, (...args: any[]) => any> = Record<
-    string,
-    (...args: any[]) => any
-  >,
+export type DocumentDispatch<TAction extends Action> = (
+  actionOrActions: TAction | TAction[] | BaseAction | BaseAction[] | undefined,
+) => void;
+
+/** Returns a document of a specific type, throws an error if the found document has a different type */
+export function useDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
 >(
-  documentId: string,
-  documentModule: TModule,
-  actionCreators: TCreators,
-): UseDocumentReturn<TModule, TCreators & BaseCreators> {
+  documentId: string | null | undefined,
+  documentType: string | null | undefined,
+) {
   const [document, dispatch] = useDocumentById(documentId);
+  const documentModelModule = useDocumentModelModuleById(documentType);
+
+  if (!documentId || !documentType) return [];
 
   if (!document) {
-    throw new Error(`Document with id ${documentId} not found`);
+    throw new DocumentNotFoundError(documentId);
+  }
+  if (!documentModelModule) {
+    throw new DocumentModelNotFoundError(documentType);
   }
 
-  const documentType = documentModule.documentModel.id;
-
   if (document.header.documentType !== documentType) {
-    throw new Error(
-      `Document with id ${documentId} is not of type ${documentType}. Actual type: ${document.header.documentType}`,
+    throw new DocumentTypeMismatchError(
+      documentId,
+      documentType,
+      document.header.documentType,
     );
   }
 
-  // TODO: validate document instead of type cast
-  // documentModelModule.utils.validateDocument(document);
-
-  return [
-    document as PHDocument<ExtractModulePHState<TModule>>,
-    dispatch,
-    actionCreators as TCreators & BaseCreators,
-  ] as const;
+  return [document, dispatch] as [TDocument, DocumentDispatch<TAction>];
 }

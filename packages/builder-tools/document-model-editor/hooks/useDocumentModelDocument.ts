@@ -1,22 +1,12 @@
+import { useDocumentOfType } from "@powerhousedao/reactor-browser";
 import type {
-  BaseCreators,
-  UseDocumentReturn,
-} from "@powerhousedao/reactor-browser";
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
-import {
-  documentModelActions,
-  documentModelDocumentModelModule,
+  DocumentModelAction,
+  DocumentModelDocument,
 } from "document-model";
 
-export function useDocumentModelDocument(
-  documentId: string,
-): UseDocumentReturn<
-  typeof documentModelDocumentModelModule,
-  typeof documentModelActions & BaseCreators
-> {
-  return useDocumentOfModule(
+export function useDocumentModelDocument(documentId: string) {
+  return useDocumentOfType<DocumentModelDocument, DocumentModelAction>(
     documentId,
-    documentModelDocumentModelModule,
-    documentModelActions,
+    "powerhouse/document-model",
   );
 }

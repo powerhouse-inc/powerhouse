@@ -1,7 +1,6 @@
 import type {
   DocumentStory,
   EditorStoryArgs,
-  EditorStoryProps,
 } from "@powerhousedao/builder-tools/editor-utils";
 import { createDocumentStory } from "@powerhousedao/builder-tools/editor-utils";
 import { DriveContextProvider } from "@powerhousedao/reactor-browser";
@@ -15,7 +14,7 @@ export function createDriveStory<T extends (props: any) => React.JSX.Element>(
   Editor: T,
   initialState?: any,
   additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps>[],
+  decorators?: Decorator[],
 ): {
   meta: Meta<T>;
   CreateDocumentStory: DocumentStory;

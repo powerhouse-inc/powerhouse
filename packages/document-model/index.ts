@@ -53,11 +53,11 @@ export type {
   ActionWithAttachment,
   App,
   AttachmentInput,
+  BaseAction,
   BaseDocument,
   CreateChildDocumentInput,
   CreateDocument,
   CreateState,
-  DocumentAction,
   DocumentModelLib,
   DocumentModelModule,
   DocumentModelUtils,
@@ -159,3 +159,4 @@ export {
   skipHeaderOperations,
   sortOperations,
 } from "#document/utils/document-helpers.js";
+

@@ -1,17 +1,10 @@
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  actions,
-  module,
-} from "../../document-models/processor-module/index.js";
+import { actions } from "../../document-models/processor-module/index.js";
+import { useProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 
 export type IProps = EditorProps;
-
-export function useProcessorModuleDocument(documentId: string) {
-  return useDocumentOfModule(documentId, module, actions);
-}
 
 export default function Editor(props: IProps) {
   const [document, dispatch] = useProcessorModuleDocument(props.documentId);

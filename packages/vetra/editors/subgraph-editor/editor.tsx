@@ -1,17 +1,10 @@
-import { useDocumentOfModule } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import {
-  actions,
-  module,
-} from "../../document-models/subgraph-module/index.js";
+import { actions } from "../../document-models/subgraph-module/index.js";
+import { useSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 
 export type IProps = EditorProps;
-
-export function useSubgraphModuleDocument(documentId: string) {
-  return useDocumentOfModule(documentId, module, actions);
-}
 
 export default function Editor(props: IProps) {
   const [document, dispatch] = useSubgraphModuleDocument(props.documentId);

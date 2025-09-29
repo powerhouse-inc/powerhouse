@@ -15,8 +15,8 @@ import type { UndoAction, UndoRedoAction } from "../schema/types.js";
 import type { SignalDispatch } from "../signal.js";
 import type {
   Action,
+  BaseAction,
   CreateState,
-  DocumentAction,
   DocumentOperations,
   DocumentOperationsIgnoreMap,
   MappedOperation,
@@ -57,7 +57,7 @@ export function isUndo(action: Action): action is UndoAction {
   return action.type === UNDO;
 }
 
-export function isDocumentAction(action: Action): action is DocumentAction {
+export function isDocumentAction(action: Action): action is BaseAction {
   return [SET_NAME, UNDO, REDO, PRUNE, LOAD_STATE].includes(action.type);
 }
 
