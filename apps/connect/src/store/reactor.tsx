@@ -26,6 +26,7 @@ import { initRenown } from "@renown/sdk";
 import { logger } from "document-drive";
 import { ProcessorManager } from "document-drive/processors/processor-manager";
 import type { IDocumentAdminStorage } from "document-drive/storage/types";
+import { generateId } from "document-model";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
 
@@ -93,6 +94,51 @@ export async function createReactor() {
 
   // get the drives from the reactor
   const drives = await getDrives(reactor);
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+  const remoteUrl = getDriveUrl();
+  if (
+    remoteUrl &&
+    !drives.some(
+      (drive) =>
+        remoteUrl.includes(drive.header.slug) ||
+        remoteUrl.includes(drive.header.id),
+    )
+  ) {
+    try {
+      await reactor.addRemoteDrive(remoteUrl, {
+        sharingType: "PUBLIC",
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: remoteUrl,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: generateId(),
+            system: true,
+          },
+        ],
+        triggers: [],
+      });
+      window.location.href = "/d/" + remoteUrl.split("/").pop();
+    } catch (error) {
+      logger.error("Error adding remote drive", error);
+    }
+  } else if (remoteUrl) {
+    window.location.href = "/d/" + remoteUrl.split("/").pop();
+  }
 
   // get the documents from the reactor
   const documents = await getDocuments(reactor);
@@ -196,4 +242,11 @@ function getDidFromUrl() {
   const didComponent = searchParams.get("user");
   const did = didComponent ? decodeURIComponent(didComponent) : undefined;
   return did;
+}
+
+function getDriveUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const driveUrl = searchParams.get("driveUrl");
+  const url = driveUrl ? decodeURIComponent(driveUrl) : undefined;
+  return url;
 }

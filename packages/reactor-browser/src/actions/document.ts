@@ -36,6 +36,7 @@ import type {
   FileUploadProgressCallback,
 } from "../types/upload.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
+import { UnsupportedDocumentTypeError } from "../utils/unsupported-document-type-error.js";
 import { getUserPermissions } from "../utils/user.js";
 
 async function isDocumentInLocation(
@@ -409,9 +410,12 @@ export async function addFileWithProgress(
     }
 
     if (!isDocumentTypeSupported(document.header.documentType, documentTypes)) {
-      throw new Error(
-        `Document type ${document.header.documentType} is not supported`,
-      );
+      onProgress?.({
+        stage: "unsupported-document-type",
+        progress: 100,
+        error: `Document type ${document.header.documentType} is not supported`,
+      });
+      throw new UnsupportedDocumentTypeError(document.header.documentType);
     }
 
     const documentModule = reactor
@@ -499,13 +503,16 @@ export async function addFileWithProgress(
 
     return fileNode;
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    onProgress?.({
-      stage: "failed",
-      progress: 100,
-      error: errorMessage,
-    });
+    // Don't override unsupported-document-type status
+    if (!(error instanceof UnsupportedDocumentTypeError)) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      onProgress?.({
+        stage: "failed",
+        progress: 100,
+        error: errorMessage,
+      });
+    }
     throw error;
   }
 }

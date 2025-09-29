@@ -18,6 +18,7 @@ import { Suspense, useEffect, useState } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
+import { toast } from "../services/toast.js";
 import { EditorLoader } from "./editor-loader.js";
 import { useModal } from "./modal/index.js";
 
@@ -237,6 +238,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           globalOperations={globalOperations}
           localOperations={localOperations}
           onClose={() => setRevisionHistoryVisible(false)}
+          documentState={document.state}
+          onCopyState={() => {
+            toast("Copied document state to clipboard", { type: "success" });
+          }}
         />
       ) : (
         <Suspense fallback={<EditorLoader />} name="EditorLoader">

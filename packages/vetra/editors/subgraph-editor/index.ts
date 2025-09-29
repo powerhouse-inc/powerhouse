@@ -1,7 +1,8 @@
 import type { EditorModule } from "document-model";
+import type { SubgraphModuleDocument } from "../../document-models/subgraph-module/index.js";
 import Editor from "./editor.js";
 
-export const module: EditorModule = {
+export const module: EditorModule<SubgraphModuleDocument> = {
   Component: Editor,
   documentTypes: ["powerhouse/subgraph"],
   config: {

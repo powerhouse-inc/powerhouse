@@ -39,6 +39,7 @@ import Connect from "./Connect.js";
 import Copy from "./Copy.js";
 import Created from "./Created.js";
 import CrossCircle from "./CrossCircle.js";
+import CurlyBrackets from "./CurlyBrackets.js";
 import Danger from "./Danger.js";
 import DescendenceModified from "./DescendenceModified.js";
 import Disconnect from "./Disconnect.js";
@@ -167,6 +168,7 @@ export const iconNames = [
   "Copy",
   "Created",
   "CrossCircle",
+  "CurlyBrackets",
   "Danger",
   "DescendenceModified",
   "Disconnect",
@@ -299,6 +301,7 @@ export const iconComponents: Record<
   Copy,
   Created,
   CrossCircle,
+  CurlyBrackets,
   Danger,
   DescendenceModified,
   Disconnect,

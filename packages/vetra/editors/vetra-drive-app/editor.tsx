@@ -1,4 +1,4 @@
-import { useDrop, WagmiContext } from "@powerhousedao/design-system";
+import { WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
@@ -14,6 +14,7 @@ import type { FileNode } from "document-drive";
 import { useCallback } from "react";
 import { DriveExplorer } from "./DriveExplorer.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
+import { withDropZone } from "./utils/withDropZone.js";
 
 export type IProps = DriveEditorProps;
 
@@ -22,7 +23,7 @@ export function BaseEditor(props: IProps) {
 
   const [document] = useDriveDocument(documentId);
 
-  const { showCreateDocumentModal, onAddFile } = useDriveContext();
+  const { showCreateDocumentModal } = useDriveContext();
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
   const fileNodes = document.state.global.nodes.filter(
@@ -67,18 +68,10 @@ export function BaseEditor(props: IProps) {
     );
   }, [driveId]);
 
-  const { isDropTarget, dropProps } = useDrop({
-    node: undefined,
-    onAddFile,
-    onCopyNode: () => console.warn("Copy node not allowed"),
-    onMoveNode: () => console.warn("Move node not allowed"),
-  });
-
   return (
     <div
-      {...dropProps}
       style={{ height: "100%" }}
-      className={`bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-[''] ${isDropTarget ? "hover:after:opacity-30" : ""}`}
+      className="bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
     >
       <DriveExplorer
         documentModels={docModelsNodes}
@@ -107,13 +100,15 @@ export function BaseEditor(props: IProps) {
   );
 }
 
+const BaseEditorWithDropZone = withDropZone(BaseEditor);
+
 export default function Editor(props: IProps) {
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <DriveContextProvider value={props.context}>
       <WagmiContext>
         <AnalyticsProvider databaseName={analyticsDatabaseName}>
-          <BaseEditor {...props} />
+          <BaseEditorWithDropZone {...props} />
         </AnalyticsProvider>
       </WagmiContext>
     </DriveContextProvider>

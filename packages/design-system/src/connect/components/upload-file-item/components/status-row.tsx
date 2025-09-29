@@ -15,6 +15,8 @@ function getStatusText(status: UploadFileItemStatus): string {
       return "Upload successful";
     case "failed":
       return "Upload failed";
+    case "unsupported-document-type":
+      return "Document not supported by this drive";
     case "pending":
       return "Pending resolution";
     case "conflict":
@@ -31,6 +33,7 @@ function getStatusColor(status: UploadFileItemStatus): string {
     case "success":
       return "text-green-700";
     case "failed":
+    case "unsupported-document-type":
     case "pending":
     case "conflict":
       return "text-red-900";

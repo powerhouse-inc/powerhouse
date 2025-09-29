@@ -18,7 +18,7 @@ export interface EditorContainerProps {
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
   const { context, editorModule, documentId } = props;
-  const [document] = useDocumentById(documentId);
+  const [document, dispatch] = useDocumentById(documentId);
 
   const loadingContent = (
     <div className="flex h-full flex-1 items-center justify-center">

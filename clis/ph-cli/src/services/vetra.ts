@@ -45,7 +45,6 @@ async function startLocalVetraSwitchboard(
     watchPackages?: boolean;
   },
   remoteDrive?: string,
-  remoteDriveId?: string,
 ) {
   const baseConfig = getConfig(options?.configFile);
   const { https } = baseConfig.reactor ?? { https: false };
@@ -213,7 +212,6 @@ export async function startVetra({
     // Use vetraUrl from config if no explicit remoteDrive is provided
     const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
-    const resolvedVetraId = getDriveId(configVetraUrl);
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
@@ -237,7 +235,6 @@ export async function startVetra({
         watchPackages,
       },
       resolvedVetraUrl,
-      resolvedVetraId,
     );
     const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
 

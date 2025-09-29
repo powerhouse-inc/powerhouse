@@ -57,22 +57,18 @@ export type DocumentStory = StoryObj<EditorStoryComponent>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
-// Default createState function for PHDocument
-const defaultPHDocumentCreateState: CreateState = (state) => {
-  return state as PHBaseState;
-};
-
-export function createDocumentStory(
+export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
   Editor: EditorStoryComponent,
-  reducer: Reducer<any>,
-  initialState: unknown,
+  reducer: Reducer<TState>,
+  initialState: TState,
   additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps>[],
+  decorators?: Decorator[],
 ): {
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory;
 } {
   const meta = {
+    includeStories: ["All"],
     component: Editor,
     decorators: [
       (Story, { args }) => {
@@ -160,6 +156,11 @@ export function createDocumentStory(
       },
     },
   } satisfies Meta<typeof Editor>;
+
+  // Default createState function for PHDocument
+  const defaultPHDocumentCreateState: CreateState = (state) => {
+    return state as TState;
+  };
 
   const CreateDocumentStory: DocumentStory = {
     name: "New document",

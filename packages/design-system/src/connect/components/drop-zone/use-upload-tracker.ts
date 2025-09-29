@@ -132,7 +132,7 @@ function uploadsReducer(
         ...state,
         [action.payload.id]: {
           ...failedUpload,
-          status: "failed",
+          status: failedUpload.status || "failed",
           errorDetails: action.payload.error,
         },
       };

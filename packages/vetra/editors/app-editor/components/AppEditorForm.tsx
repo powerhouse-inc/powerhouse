@@ -1,8 +1,7 @@
-import { useReactor } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import type { DocumentTypeItem } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
-import { useDebounce } from "../../hooks/index.js";
+import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
 
 export interface AppEditorFormProps {
   appName?: string;
@@ -33,12 +32,8 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  // Get available document types from reactor
-  const reactor = useReactor();
-  const docModels = reactor?.getDocumentModelModules() ?? [];
-  const availableDocumentTypes = docModels.map(
-    (model) => model.documentModel.id,
-  );
+  // Get available document types from the hook (combines reactor and vetra drive)
+  const availableDocumentTypes = useAvailableDocumentTypes();
 
   // Use the debounce hook for name changes
   useDebounce(appName, onNameChange, 300);

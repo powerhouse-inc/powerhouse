@@ -1,3 +1,33 @@
+## 5.0.0-staging.18 (2025-09-29)
+
+### 🚀 Features
+
+- enhance upload tracking with unsupported document type handling ([bcf784dfc](https://github.com/powerhouse-inc/powerhouse/commit/bcf784dfc))
+
+### 🩹 Fixes
+
+- **reactor-browser:** document switchboard query ([e0929df25](https://github.com/powerhouse-inc/powerhouse/commit/e0929df25))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 5.0.0-staging.17 (2025-09-25)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 5.0.0-staging.16 (2025-09-25)
+
+### 🚀 Features
+
+- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
+- handle replace and duplicate documents in drag and drop ([#1876](https://github.com/powerhouse-inc/powerhouse/pull/1876))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.15 (2025-09-24)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

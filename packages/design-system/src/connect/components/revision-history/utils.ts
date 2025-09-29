@@ -6,6 +6,7 @@ export function makeRows(operations: Operation[]) {
   const seenDays = new Set<string>();
 
   for (const operation of operations) {
+    if (!operation.timestampUtcMs) continue;
     const day = operation.timestampUtcMs.split("T")[0];
 
     if (!seenDays.has(day)) {
@@ -56,6 +57,7 @@ export function getUniqueDatesInOrder(operations: Operation[]) {
   const dates = new Set<string>();
 
   for (const operation of operations) {
+    if (!operation.timestampUtcMs) continue;
     const date = operation.timestampUtcMs.split("T")[0];
     dates.add(date);
   }
