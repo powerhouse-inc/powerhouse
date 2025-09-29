@@ -11,7 +11,7 @@ import { PackageInformationSection } from "./components/PackageInformationSectio
 import { DOCUMENT_TYPES } from "./document-types.js";
 
 interface DriveExplorerProps {
-  context: EditorContext;
+  context?: EditorContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];
@@ -45,7 +45,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onAddSubgraph,
   onAddProcessor,
   onAddCodegenProcessor,
-  context,
+  context = {},
   packageDocumentId,
   onAddPackageDocument,
   driveId,

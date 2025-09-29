@@ -11,6 +11,7 @@ import type {
   ConnectCryptoUpdatedEvent,
   DidUpdatedEvent,
   DocumentsUpdatedEvent,
+  DriveContextUpdatedEvent,
   DrivesUpdatedEvent,
   LoginStatusUpdatedEvent,
   ProcessorManagerUpdatedEvent,
@@ -22,6 +23,7 @@ import type {
   SetConnectCryptoEvent,
   SetDidEvent,
   SetDocumentsEvent,
+  SetDriveContextEvent,
   SetDrivesEvent,
   SetLoginStatusEvent,
   SetProcessorManagerEvent,
@@ -35,6 +37,7 @@ import type {
   VetraPackagesUpdatedEvent,
 } from "../events/types.js";
 import type { VetraPackage } from "./vetra.js";
+import type { IDriveContext } from "./drive-editor.js";
 
 export type UserPermissions = {
   isAllowedToCreateDocuments: boolean;
@@ -69,6 +72,7 @@ declare global {
     phSelectedDriveId?: string | undefined;
     phSelectedNodeId?: string | undefined;
     phAppConfig?: AppConfig | undefined;
+    phDriveContext?: IDriveContext | undefined;
   }
 
   interface WindowEventMap {
@@ -98,5 +102,7 @@ declare global {
     "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
     "ph:setAppConfig": SetAppConfigEvent;
     "ph:appConfigUpdated": AppConfigUpdatedEvent;
+    "ph:setDriveContext": SetDriveContextEvent;
+    "ph:driveContextUpdated": DriveContextUpdatedEvent;
   }
 }

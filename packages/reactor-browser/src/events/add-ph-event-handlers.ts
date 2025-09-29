@@ -1,6 +1,7 @@
 import { addAppConfigEventHandler } from "./config.js";
 import { addConnectCryptoEventHandler, addDidEventHandler } from "./crypto.js";
 import { addDocumentsEventHandler } from "./documents.js";
+import { addDriveContextEventHandler } from "./drive-context.js";
 import {
   addDrivesEventHandler,
   addSelectedDriveIdEventHandler,
@@ -23,6 +24,7 @@ export function addPHEventHandlers() {
   addProcessorManagerEventHandler();
   addDrivesEventHandler();
   addDocumentsEventHandler();
+  addDriveContextEventHandler();
   addSelectedDriveIdEventHandler();
   addSelectedNodeIdEventHandler();
   addVetraPackagesEventHandler();

@@ -2,6 +2,7 @@ export * from "./add-ph-event-handlers.js";
 export * from "./config.js";
 export * from "./crypto.js";
 export * from "./documents.js";
+export * from "./drive-context.js";
 export * from "./drives.js";
 export * from "./nodes.js";
 export * from "./processors.js";

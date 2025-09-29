@@ -5,7 +5,6 @@ import {
 } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
-  DriveContextProvider,
   getSyncStatusSync,
   makeFolderNodeFromDrive,
   setSelectedNode,
@@ -29,7 +28,7 @@ import { SearchBar } from "./components/search-bar.js";
 export type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
-export function BaseEditor(props: GenericDriveExplorerEditorProps) {
+export default function Editor(props: GenericDriveExplorerEditorProps) {
   const { documentId, className, children } = props;
   const [document] = useDriveDocument(documentId);
   const {
@@ -127,13 +126,5 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
         </DriveLayout.Footer>
       )}
     </DriveLayout>
-  );
-}
-
-export default function Editor(props: GenericDriveExplorerEditorProps) {
-  return (
-    <DriveContextProvider value={props.context}>
-      <BaseEditor {...props} />
-    </DriveContextProvider>
   );
 }

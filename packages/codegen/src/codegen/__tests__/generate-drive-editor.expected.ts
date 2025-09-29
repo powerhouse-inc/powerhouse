@@ -16,7 +16,6 @@ export default module;`;
 export const EXPECTED_EDITOR_CONTENT = `import { WagmiContext } from "@powerhousedao/design-system";
 import {
   AnalyticsProvider,
-  DriveContextProvider,
   useAppConfig,
   type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
@@ -50,13 +49,11 @@ export default function Editor(props: DriveEditorProps) {
   const analyticsDatabaseName = appConfig?.analyticsDatabaseName;
   return (
     // Required context providers for drive functionality
-    <DriveContextProvider value={props.context}>
-      <WagmiContext>
-        <AnalyticsProvider databaseName={analyticsDatabaseName}>
-          <BaseEditorWithDropZone {...props} />
-        </AnalyticsProvider>
-      </WagmiContext>
-    </DriveContextProvider>
+    <WagmiContext>
+      <AnalyticsProvider databaseName={analyticsDatabaseName}>
+        <BaseEditorWithDropZone {...props} />
+      </AnalyticsProvider>
+    </WagmiContext>
   );
 }
 `;

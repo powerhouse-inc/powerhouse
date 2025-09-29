@@ -2,6 +2,7 @@ import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
 import { GenericDriveExplorer } from "@powerhousedao/common";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
+  dispatchSetDriveContextEvent,
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
   useSelectedDocument,
@@ -9,7 +10,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
 import type { FC } from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { DocumentEditorContainer } from "./document-editor-container.js";
@@ -39,6 +40,16 @@ export function DriveEditorContainer() {
     [showModal],
   );
   const showDeleteNodeModal = useShowDeleteNodeModal();
+
+  // Synchronize drive context with Window object
+  useEffect(() => {
+    const context = {
+      ...nodeActions,
+      showCreateDocumentModal,
+      showDeleteNodeModal,
+    };
+    dispatchSetDriveContextEvent(context);
+  }, [nodeActions, showCreateDocumentModal, showDeleteNodeModal]);
 
   const driveEditor = useDriveEditorModuleById(
     selectedDrive?.header.meta?.preferredEditor,

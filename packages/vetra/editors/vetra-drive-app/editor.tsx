@@ -2,7 +2,6 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
-  DriveContextProvider,
   setSelectedNode,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
@@ -19,7 +18,7 @@ import { withDropZone } from "./utils/withDropZone.js";
 export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
-  const { children, context, documentId } = props;
+  const { children, documentId } = props;
 
   const [document] = useDriveDocument(documentId);
 
@@ -94,7 +93,6 @@ export function BaseEditor(props: IProps) {
           onCreateDocument(DOCUMENT_TYPES.documentProcessor)
         }
         onAddCodegenProcessor={() => console.log("add codegen processor")}
-        context={context}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
         driveId={document.header.id}
@@ -109,12 +107,10 @@ const BaseEditorWithDropZone = withDropZone(BaseEditor);
 export default function Editor(props: IProps) {
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
-    <DriveContextProvider value={props.context}>
-      <WagmiContext>
-        <AnalyticsProvider databaseName={analyticsDatabaseName}>
-          <BaseEditorWithDropZone {...props} />
-        </AnalyticsProvider>
-      </WagmiContext>
-    </DriveContextProvider>
+    <WagmiContext>
+      <AnalyticsProvider databaseName={analyticsDatabaseName}>
+        <BaseEditorWithDropZone {...props} />
+      </AnalyticsProvider>
+    </WagmiContext>
   );
 }
