@@ -74,49 +74,58 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     setSelectedNode(selectedFolder);
   }
 
+  const showDocumentEditor = !!children;
+
   return (
     <DriveLayout className={className}>
-      {children}
-      <DriveLayout.Header>
-        <Breadcrumbs
-          breadcrumbs={breadcrumbs}
-          createEnabled={isAllowedToCreateDocuments}
-          onCreate={onAddAndSelectNewFolder}
-          onBreadcrumbSelected={onBreadcrumbSelected}
-        />
-        {showSearchBar && <SearchBar />}
-      </DriveLayout.Header>
-      <DriveLayout.Content
-        {...dropProps}
-        className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
-      >
-        <FolderView
-          node={selectedFolder ?? selectedDriveAsFolderNode}
-          sharingType={sharingType}
-          getSyncStatusSync={getSyncStatusSync}
-          setSelectedNode={setSelectedNode}
-          onRenameNode={onRenameNode}
-          onDuplicateNode={onDuplicateNode}
-          onAddFolder={onAddFolder}
-          onAddFile={onAddFile}
-          onCopyNode={onCopyNode}
-          onMoveNode={onMoveNode}
-          onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-          showDeleteNodeModal={showDeleteNodeModal}
-          isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-        />
-      </DriveLayout.Content>
-      <DriveLayout.Footer>
-        {isAllowedToCreateDocuments && (
-          <CreateDocument
-            documentModels={documentModels?.filter(
-              (module) =>
-                module.documentModel.id !== "powerhouse/document-drive",
-            )}
-            createDocument={onCreateDocument}
+      {!showDocumentEditor && (
+        <DriveLayout.Header>
+          <Breadcrumbs
+            breadcrumbs={breadcrumbs}
+            createEnabled={isAllowedToCreateDocuments}
+            onCreate={onAddAndSelectNewFolder}
+            onBreadcrumbSelected={onBreadcrumbSelected}
           />
-        )}
-      </DriveLayout.Footer>
+          {showSearchBar && <SearchBar />}
+        </DriveLayout.Header>
+      )}
+      {showDocumentEditor ? (
+        children
+      ) : (
+        <DriveLayout.Content
+          {...dropProps}
+          className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+        >
+          <FolderView
+            node={selectedFolder ?? selectedDriveAsFolderNode}
+            sharingType={sharingType}
+            getSyncStatusSync={getSyncStatusSync}
+            setSelectedNode={setSelectedNode}
+            onRenameNode={onRenameNode}
+            onDuplicateNode={onDuplicateNode}
+            onAddFolder={onAddFolder}
+            onAddFile={onAddFile}
+            onCopyNode={onCopyNode}
+            onMoveNode={onMoveNode}
+            onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+            showDeleteNodeModal={showDeleteNodeModal}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+          />
+        </DriveLayout.Content>
+      )}
+      {!showDocumentEditor && (
+        <DriveLayout.Footer>
+          {isAllowedToCreateDocuments && (
+            <CreateDocument
+              documentModels={documentModels?.filter(
+                (module) =>
+                  module.documentModel.id !== "powerhouse/document-drive",
+              )}
+              createDocument={onCreateDocument}
+            />
+          )}
+        </DriveLayout.Footer>
+      )}
     </DriveLayout>
   );
 }

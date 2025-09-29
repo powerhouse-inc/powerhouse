@@ -19,7 +19,7 @@ import { withDropZone } from "./utils/withDropZone.js";
 export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
-  const { context, documentId } = props;
+  const { children, context, documentId } = props;
 
   const [document] = useDriveDocument(documentId);
 
@@ -68,7 +68,11 @@ export function BaseEditor(props: IProps) {
     );
   }, [driveId]);
 
-  return (
+  const showDocumentEditor = !!children;
+
+  return showDocumentEditor ? (
+    children
+  ) : (
     <div
       style={{ height: "100%" }}
       className="bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
