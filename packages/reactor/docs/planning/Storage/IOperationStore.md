@@ -55,14 +55,14 @@ interface IOperationStore {
     documentId: string,
     scope: string,
     branch: string,
-    index: number,
+    revision: number,
     signal?: AbortSignal): Promise<Operation>;
 
   getSince(
     documentId: string,
     scope: string,
     branch: string,
-    index: number,
+    revision: number,
     signal?: AbortSignal): Promise<Operation[]>;
 
   getSinceTimestamp(

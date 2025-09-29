@@ -226,6 +226,69 @@ export class KyselyOperationStore implements IOperationStore {
     return header;
   }
 
+  async getSince(
+    documentId: string,
+    scope: string,
+    branch: string,
+    index: number,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const rows = await this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where("index", ">", index)
+      .orderBy("index", "asc")
+      .execute();
+
+    return rows.map((row) => this.rowToOperation(row));
+  }
+
+  async getSinceTimestamp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    timestampUtcMs: number,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const rows = await this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where("writeTimestampUtcMs", ">", new Date(timestampUtcMs))
+      .orderBy("index", "asc")
+      .execute();
+
+    return rows.map((row) => this.rowToOperation(row));
+  }
+
+  async getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const rows = await this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("id", ">", id)
+      .orderBy("id", "asc")
+      .execute();
+
+    return rows.map((row) => this.rowToOperation(row));
+  }
+
   private rowToOperation(row: OperationRow): Operation {
     return {
       index: row.index,

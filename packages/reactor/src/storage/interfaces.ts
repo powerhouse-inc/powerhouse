@@ -53,7 +53,25 @@ export interface IOperationStore {
     documentId: string,
     scope: string,
     branch: string,
-    index: number,
+    revision: number,
     signal?: AbortSignal,
   ): Promise<Operation>;
+
+  getSince(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
+
+  getSinceTimestamp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    timestampUtcMs: number,
+    signal?: AbortSignal,
+  ): Promise<Operation[]>;
+
+  getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]>;
 }

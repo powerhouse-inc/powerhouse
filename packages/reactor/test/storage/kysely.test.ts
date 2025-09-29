@@ -328,6 +328,170 @@ describe("KyselyOperationStore", () => {
     });
   });
 
+  describe("getSince", () => {
+    it("should get operations since a given revision", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+
+      // Add multiple operations
+      const operations = [];
+      for (let i = 0; i < 3; i++) {
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${i}`,
+          parentFolder: null,
+        });
+
+        const op = {
+          index: i,
+          timestampUtcMs: new Date(Date.now() + i * 1000).toISOString(),
+          hash: `hash-${i}`,
+          skip: 0,
+          id: generateId(),
+          action,
+        };
+        operations.push(op);
+
+        await store.apply(documentId, scope, branch, i, (txn) => {
+          txn.addOperations(op);
+        });
+      }
+
+      // Get operations since revision 0 (should return operations at revision 1 and 2)
+      const result = await store.getSince(documentId, scope, branch, 0);
+      expect(result).toHaveLength(2);
+      expect(result[0].index).toBe(1);
+      expect(result[1].index).toBe(2);
+      expect(result[0].action.type).toBe("ADD_FOLDER");
+    });
+
+    it("should return empty array when no operations since revision", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+
+      // Add one operation at revision 0
+      const action = addFile({
+        id: generateId(),
+        name: "test.txt",
+        documentType: "text/plain",
+        parentFolder: null,
+      });
+
+      await store.apply(documentId, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action,
+        });
+      });
+
+      // Get operations since revision 0 (should return empty array)
+      const result = await store.getSince(documentId, scope, branch, 0);
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("getSinceTimestamp", () => {
+    it("should get operations since a given timestamp", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+
+      // Add some operations
+      for (let i = 0; i < 2; i++) {
+        const action = setDriveName({
+          name: `Drive ${i}`,
+        });
+
+        await store.apply(documentId, scope, branch, i, (txn) => {
+          txn.addOperations({
+            index: i,
+            timestampUtcMs: new Date().toISOString(),
+            hash: `hash-${i}`,
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        });
+      }
+
+      // Test with a timestamp from long ago - should get all operations
+      const longAgo = new Date("2020-01-01").getTime();
+      const result = await store.getSinceTimestamp(
+        documentId,
+        scope,
+        branch,
+        longAgo,
+      );
+
+      // Should get both operations since they were created after 2020
+      expect(result.length).toBe(2);
+      expect(result[0].action.type).toBe("SET_DRIVE_NAME");
+      expect(result[1].action.type).toBe("SET_DRIVE_NAME");
+    });
+
+    it("should return empty array when no operations since timestamp", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+
+      // Test with a future timestamp - should get no operations
+      const futureTime = Date.now() + 1000000; // 1000 seconds in future
+      const result = await store.getSinceTimestamp(
+        documentId,
+        scope,
+        branch,
+        futureTime,
+      );
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("getSinceId", () => {
+    it("should get operations since a given database ID", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+
+      // Add multiple operations to get database IDs
+      for (let i = 0; i < 3; i++) {
+        const action = deleteNode({
+          id: generateId(),
+        });
+
+        await store.apply(documentId, scope, branch, i, (txn) => {
+          txn.addOperations({
+            index: i,
+            timestampUtcMs: new Date().toISOString(),
+            hash: `hash-${i}`,
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        });
+      }
+
+      // Get all operations first to find the first ID
+      const allOps = await store.getSince(documentId, scope, branch, -1);
+      expect(allOps.length).toBeGreaterThanOrEqual(3);
+
+      // Get operations since the first database ID
+      // Note: This uses the internal database ID, not the operation ID
+      const result = await store.getSinceId(1); // Assuming first DB ID is 1
+
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      result.forEach((op) => {
+        expect(op.action.type).toBe("DELETE_NODE");
+      });
+    });
+  });
+
   describe("abort signal handling", () => {
     it("should abort apply operation", async () => {
       const controller = new AbortController();
@@ -364,6 +528,41 @@ describe("KyselyOperationStore", () => {
       await expect(
         store.getHeader(documentId, "main", 0, controller.signal),
       ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should abort getSince operation", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      const documentId = generateId();
+
+      await expect(
+        store.getSince(documentId, "global", "main", 0, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should abort getSinceTimestamp operation", async () => {
+      const controller = new AbortController();
+      controller.abort();
+      const documentId = generateId();
+
+      await expect(
+        store.getSinceTimestamp(
+          documentId,
+          "global",
+          "main",
+          Date.now(),
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should abort getSinceId operation", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(store.getSinceId(1, controller.signal)).rejects.toThrow(
+        "Operation aborted",
+      );
     });
   });
 });
