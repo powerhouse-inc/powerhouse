@@ -1,3 +1,13 @@
+## 5.0.0-staging.19 (2025-09-29)
+
+### 🚀 Features
+
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.18 (2025-09-29)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

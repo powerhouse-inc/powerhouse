@@ -1,3 +1,14 @@
+## 5.0.0-staging.19 (2025-09-29)
+
+### 🚀 Features
+
+- **design-system:** moved default ph styles to the design system stylesheet ([5860f6cc3](https://github.com/powerhouse-inc/powerhouse/commit/5860f6cc3))
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.18 (2025-09-29)
 
 ### 🚀 Features
