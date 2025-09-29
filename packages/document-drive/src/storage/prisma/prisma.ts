@@ -27,10 +27,11 @@ import type {
   DocumentOperations,
   FileRegistry,
   Operation,
+  PHBaseState,
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext, defaultBaseState } from "document-model/core";
+import { actionContext } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import { Prisma, PrismaClient } from "./client/index.js";
@@ -490,7 +491,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       initialState: JSON.parse(dbDoc.initialState) as TDocument["initialState"],
       operations: operationsByScope,
       clipboard: [],
-      state: defaultBaseState(),
+      state: undefined as unknown as PHBaseState,
     } as PHDocument;
 
     return doc as TDocument;
