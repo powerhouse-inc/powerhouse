@@ -1,4 +1,5 @@
-import type { Operation, PHDocumentHeader } from "document-model";
+import { type Operation, type PHDocumentHeader } from "document-model";
+import { createPresignedHeader } from "document-model/core";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -188,19 +189,10 @@ export class KyselyOperationStore implements IOperationStore {
     await trx.insertInto("Operation").values(headerOp).execute();
   }
 
+  // TODO: This is a hack for testing purposes -- these actions do not exist
   private reconstructHeader(headerOps: OperationRow[]): PHDocumentHeader {
     // Start with a base header
-    let header: PHDocumentHeader = {
-      id: "",
-      sig: { publicKey: {} as JsonWebKey, nonce: "" },
-      documentType: "",
-      createdAtUtcIso: "",
-      slug: "",
-      name: "",
-      branch: "main",
-      revision: {},
-      lastModifiedAtUtcIso: "",
-    };
+    let header = createPresignedHeader();
 
     // Apply each header operation in order
     for (const op of headerOps) {

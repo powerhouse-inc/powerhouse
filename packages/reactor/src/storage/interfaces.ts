@@ -75,3 +75,45 @@ export interface IOperationStore {
 
   getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]>;
 }
+
+export interface ViewFilter {
+  branch?: string;
+  scopes?: string[];
+}
+
+export interface SearchFilter {
+  documentType?: string;
+  parentId?: string;
+  identifiers?: Record<string, any>;
+}
+
+export interface PagingOptions {
+  cursor?: string;
+  limit?: number;
+}
+
+export interface PagedResults<T> {
+  items: T[];
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+export interface IDocumentView {
+  /**
+   * Initializes the view.
+   */
+  init(): Promise<void>;
+
+  /**
+   * Indexes a list of operations.
+   */
+  indexOperations(operations: Operation[]): Promise<void>;
+
+  /**
+   * Returns true if and only if the documents exist.
+   *
+   * @param documentIds - The list of document ids to check.
+   * @param signal - Optional abort signal to cancel the request
+   */
+  exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
+}
