@@ -77,7 +77,7 @@ describe("KyselyOperationStore", () => {
 
   afterEach(async () => {
     // Clean up database connection
-    await db?.destroy();
+    await db.destroy();
   });
 
   describe("apply", () => {
@@ -182,6 +182,7 @@ describe("KyselyOperationStore", () => {
       // Create initial header using document-drive document
       const driveDoc = driveDocumentModelModule.utils.createDocument();
 
+      // This is not how headers will work, but for now, test that we can store them per scope
       await store.apply(documentId, "header", branch, 0, (txn) => {
         const headerOp: Operation = {
           index: 0,
@@ -248,6 +249,7 @@ describe("KyselyOperationStore", () => {
         meta: { preferredEditor: "test-editor" },
       };
 
+      // This is not how headers will work, but for now, test that we can store them per scope
       await store.apply(documentId, "header", branch, 0, (txn) => {
         txn.addOperations({
           index: 0,

@@ -1,4 +1,8 @@
-import type { Operation, PHDocumentHeader, PHDocumentMeta } from "document-model";
+import type {
+  Operation,
+  PHDocumentHeader,
+  PHDocumentMeta,
+} from "document-model";
 
 export class DuplicateOperationError extends Error {
   constructor(opId: string) {

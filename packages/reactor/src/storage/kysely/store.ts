@@ -1,8 +1,4 @@
-import type {
-  Operation,
-  PHDocumentHeader,
-  PHDocumentMeta,
-} from "document-model";
+import type { Operation, PHDocumentHeader } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -11,59 +7,8 @@ import {
   type AtomicTxn,
   type IOperationStore,
 } from "../interfaces.js";
+import { AtomicTransaction } from "../txn.js";
 import type { Database, InsertableOperation, OperationRow } from "./types.js";
-
-class AtomicTransaction implements AtomicTxn {
-  private operations: InsertableOperation[] = [];
-  private headerUpdates: Partial<PHDocumentHeader> = {};
-
-  constructor(
-    private documentId: string,
-    private scope: string,
-    private branch: string,
-    private baseRevision: number,
-  ) {}
-
-  addOperations(...operations: Operation[]): void {
-    for (const op of operations) {
-      this.operations.push({
-        jobId: uuidv4(),
-        opId: op.id || uuidv4(),
-        prevOpId: "", // Will be set during apply
-        documentId: this.documentId,
-        scope: this.scope,
-        branch: this.branch,
-        timestampUtcMs: new Date(op.timestampUtcMs),
-        index: op.index,
-        action: JSON.stringify(op.action),
-        skip: op.skip,
-        resultingState: op.resultingState || null,
-        error: op.error || null,
-        hash: op.hash,
-      });
-    }
-  }
-
-  setSlug(slug: string): void {
-    this.headerUpdates.slug = slug;
-  }
-
-  setName(name: string): void {
-    this.headerUpdates.name = name;
-  }
-
-  setMeta(meta: PHDocumentMeta): void {
-    this.headerUpdates.meta = meta;
-  }
-
-  getOperations(): InsertableOperation[] {
-    return this.operations;
-  }
-
-  getHeaderUpdates(): Partial<PHDocumentHeader> {
-    return this.headerUpdates;
-  }
-}
 
 export class KyselyOperationStore implements IOperationStore {
   constructor(private db: Kysely<Database>) {}
@@ -124,11 +69,16 @@ export class KyselyOperationStore implements IOperationStore {
         try {
           await trx.insertInto("Operation").values(operations).execute();
         } catch (error: any) {
-          if (error.message?.includes("unique constraint")) {
-            // Extract the opId from the error if possible
-            const opId = operations[0]?.opId || "unknown";
-            throw new DuplicateOperationError(opId);
+          if (error instanceof Error) {
+            if (error.message.includes("unique constraint")) {
+              // Extract the opId from the error if possible
+              const opId = operations[0]?.opId || "unknown";
+              throw new DuplicateOperationError(opId);
+            }
+
+            throw error;
           }
+
           throw error;
         }
       }
@@ -254,7 +204,10 @@ export class KyselyOperationStore implements IOperationStore {
 
     // Apply each header operation in order
     for (const op of headerOps) {
-      const action = JSON.parse(op.action);
+      const action = JSON.parse(op.action) as {
+        type: string;
+        input: Partial<PHDocumentHeader>;
+      };
 
       if (action.type === "CREATE_HEADER") {
         // Initial header creation
@@ -282,7 +235,7 @@ export class KyselyOperationStore implements IOperationStore {
       error: row.error || undefined,
       resultingState: row.resultingState || undefined,
       id: row.opId,
-      action: JSON.parse(row.action),
+      action: JSON.parse(row.action) as Operation["action"],
     };
   }
 }
