@@ -13,13 +13,13 @@ import {
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  type ICache,
-  type SynchronizationUnitQuery,
   childLogger,
   isValidDocumentId,
   isValidSlug,
   logger,
   resolveStorageUnitsFilter,
+  type ICache,
+  type SynchronizationUnitQuery,
 } from "document-drive";
 import type {
   Action,
@@ -31,7 +31,7 @@ import type {
   PHDocumentHeader,
 } from "document-model";
 import { actionContext } from "document-model/core";
-import { type IBackOffOptions, backOff } from "exponential-backoff";
+import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
 import { Prisma, PrismaClient } from "./client/index.js";
 
@@ -491,7 +491,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       operations: operationsByScope,
       clipboard: [],
       attachments: {},
-      history: [],
       state: undefined,
     };
 

@@ -25,7 +25,6 @@ describe("DocumentModel Class", () => {
       lastModifiedAtUtcIso: "",
       meta: {},
     },
-    history: {},
     state: createCountState(),
     attachments: {},
     initialState,

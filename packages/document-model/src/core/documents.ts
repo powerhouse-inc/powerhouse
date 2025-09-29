@@ -69,7 +69,6 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
     operations: { global: [], local: [] },
     clipboard: [],
     attachments: {},
-    history: [],
   };
 
   return phDocument;

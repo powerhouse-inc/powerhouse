@@ -984,7 +984,6 @@ export class BaseDocumentDriveServer
     // stores document information
     const documentStorage: PHDocument = {
       header,
-      history: document.history,
       operations: { global: [], local: [] },
       initialState: document.initialState,
       clipboard: [],

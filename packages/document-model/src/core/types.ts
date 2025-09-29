@@ -638,22 +638,35 @@ export type BaseDocument<TState extends PHBaseState = PHBaseState> = {
   /** The header of the document. */
   header: PHDocumentHeader;
 
-  /** The history of the document. */
-  history: PHDocumentHistory;
-
   /** The document model specific state. */
   state: TState;
 
-  /** The initial state of the document, enabling replaying operations. */
+  /**
+   * The initial state of the document, enabling replaying operations.
+   *
+   * This will be removed in a future release.
+   */
   initialState: TState;
 
-  /** The operations history of the document. */
+  /**
+   * The operations history of the document.
+   *
+   * This will be removed in a future release.
+   */
   operations: DocumentOperations;
 
-  /** A list of undone operations */
+  /**
+   * A list of undone operations
+   *
+   * This will be removed in a future release.
+   */
   clipboard: Operation[];
 
-  /** The index of document attachments. */
+  /**
+   * The index of document attachments.
+   *
+   * This will be removed in a future release.
+   */
   attachments?: FileRegistry;
 };
 
