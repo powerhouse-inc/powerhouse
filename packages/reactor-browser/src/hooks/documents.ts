@@ -1,9 +1,10 @@
 import {
   useDispatch,
+  useDocumentModelModuleById,
   useFileNodes,
   useSelectedNodeId,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocument } from "document-model";
+import type { Action, BaseAction, PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 
 function subscribeToDocuments(onStoreChange: () => void) {
@@ -54,4 +55,35 @@ export function useDocumentById(id: string | null | undefined) {
   const documents = useSelectedDriveDocuments();
   const document = documents?.find((d) => d.header.id === id);
   return useDispatch(document);
+}
+
+/** Returns a document of a specific type, throws an error if the found document has a different type */
+export function useDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(id: string | null | undefined, type: string | null | undefined) {
+  type DocumentDispatch = (
+    actionOrActions:
+      | TAction
+      | TAction[]
+      | BaseAction
+      | BaseAction[]
+      | undefined,
+  ) => void;
+  const [document, dispatch] = useDocumentById(id);
+  const documentModelModule = useDocumentModelModuleById(type);
+
+  if (!id || !type) return [];
+
+  if (!document) {
+    throw new Error(`Document with id ${id} is not found`);
+  }
+  if (!documentModelModule) {
+    throw new Error(`Document model module for type ${type} not found`);
+  }
+  if (document.header.documentType !== type) {
+    throw new Error(`Document ${id} is not of type ${type}`);
+  }
+
+  return [document, dispatch] as [TDocument, DocumentDispatch];
 }

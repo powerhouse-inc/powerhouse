@@ -1,5 +1,4 @@
 import type {
-  Action,
   AddChangeLogItemAction,
   AddChangeLogItemInput,
   AddModuleAction,
@@ -561,7 +560,8 @@ export const baseActions = {
   prune,
   loadState,
   noop,
-} as unknown as Record<string, (input: any) => Action>;
+} as const;
+
 export const documentModelActions = {
   setModelName,
   setModelId,

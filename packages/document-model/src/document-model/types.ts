@@ -6,19 +6,33 @@ import type {
   ImportScriptModule,
   InputMaybe,
   LoadFromInput,
+  LoadStateAction,
   Manifest,
   Maybe,
+  NOOPAction,
   PHBaseState,
   PHDocument,
+  PruneAction,
+  RedoAction,
   Reducer,
   SaveToFileHandle,
   Scalars,
+  SetNameAction,
   SubgraphModule,
+  UndoAction,
 } from "document-model";
+
+export type BaseAction =
+  | SetNameAction
+  | UndoAction
+  | RedoAction
+  | PruneAction
+  | LoadStateAction
+  | NOOPAction;
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
-  actions: Record<string, (input: any) => Action>;
+  actions: Record<string, (...args: any[]) => Action>;
   utils: DocumentModelUtils<TState>;
   documentModel: DocumentModelPHState;
 };
