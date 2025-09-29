@@ -2,7 +2,7 @@
 
 ### Summary
 
-- Listens for Operations updates from the event bus.
+- The Reactor listens for Operations updates from the event bus and passes them here to index relationships between documents.
 - Indexes relationships between documents.
 - Forms a graph of documents and relationships.
 - Generally just needs to listen to the System Stream.
@@ -19,27 +19,22 @@ The indexer stores the last operation id it has processed synchronously in memor
 
 #### Case 1: At Runtime
 
-If the document indexer receives an event for an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+If the document indexer receives an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
 
 ```tsx
-const lastOperationId = await this.operationStore.getLastOperationId();
 const operations = await this.operationStore.getSinceId(lastOperationId + 1);
 
-for (const operation of operations) {
-  this.indexOperation(operation);
-}
+this.indexOperations(operations);
 ```
 
 #### Case 2: At Startup
 
-Before any operation events have fired, the document indexer must ensure that it has the latest operation information. This can be done by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
+Before any operations have been processed, the document indexer must ensure that it has the latest operation information. This can be done by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
 
 ```tsx
 const operations = await this.operationStore.getSinceId(lastOperationId + 1);
 
-for (const operation of operations) {
-  this.indexOperation(operation);
-}
+this.indexOperations(operations);
 ```
 
 ### Dependencies
@@ -99,6 +94,16 @@ interface IDocumentGraph {
 }
 
 interface IDocumentIndexer {
+  /**
+   * Initializes the indexer.
+   */
+  init(): Promise<void>;
+
+  /**
+   * Indexes a list of operations.
+   */
+  indexOperations(operations: Operation[]): Promise<void>;
+
   /**
    * Retrieves all relationships between two documents.
    *
@@ -208,6 +213,11 @@ interface IDocumentIndexer {
 ### Schema
 
 ```prisma
+
+model IndexerState {
+  lastOperationId Int @id
+  lastOperationTimestamp DateTime @default(now())
+}
 
 model Document {
   id           String @id
