@@ -14,7 +14,6 @@ import {
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
-import { DocumentEditorContainer } from "../components/document-editor-container.js";
 import { DriveEditorContainer } from "../components/drive-editor-container.js";
 import { DriveIcon } from "../components/drive-icon.js";
 
@@ -22,13 +21,10 @@ export default function Content() {
   const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const [selectedDocument] = useSelectedDocument();
+  const showHomeScreen = !selectedDocument && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
-      {selectedDocument && <DocumentEditorContainer />}
-      {(!!selectedDrive || !!selectedFolder) && !selectedDocument && (
-        <DriveEditorContainer />
-      )}
-      {!selectedDocument && !selectedDrive && <HomeScreenContainer />}
+      {showHomeScreen ? <HomeScreenContainer /> : <DriveEditorContainer />}
     </ContentContainer>
   );
 }

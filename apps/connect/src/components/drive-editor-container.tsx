@@ -4,6 +4,7 @@ import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
+  useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
@@ -11,6 +12,7 @@ import type { FC } from "react";
 import { useCallback } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
+import { DocumentEditorContainer } from "./document-editor-container.js";
 import { useModal } from "./modal/index.js";
 
 function DriveEditorError({ error }: FallbackProps) {
@@ -24,7 +26,8 @@ function DriveEditorError({ error }: FallbackProps) {
 }
 
 export function DriveEditorContainer() {
-  const [selectedDrive, dispatch] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDrive();
+  const [selectedDocument] = useSelectedDocument();
   const nodeActions = useNodeActions();
   const { showModal } = useModal();
   const showCreateDocumentModal = useCallback(
@@ -67,7 +70,9 @@ export function DriveEditorContainer() {
         }}
         documentId={selectedDrive.header.id}
         editorConfig={editorConfig}
-      />
+      >
+        {selectedDocument ? <DocumentEditorContainer /> : null}
+      </DriveEditorComponent>
     </ErrorBoundary>
   );
 }

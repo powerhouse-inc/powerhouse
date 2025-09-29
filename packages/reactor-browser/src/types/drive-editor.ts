@@ -72,6 +72,7 @@ export type DriveEditorConfig = {
 };
 
 export type DriveEditorProps = EditorProps & {
+  children?: React.ReactNode;
   context: IDriveContext;
   editorConfig?: DriveEditorConfig;
 };
