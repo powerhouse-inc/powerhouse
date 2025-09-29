@@ -73,3 +73,14 @@ export {
   ModuleNotFoundError,
   type IDocumentModelRegistry,
 } from "./registry/index.js";
+
+// Storage
+export {
+  DuplicateOperationError,
+  OptimisticLockError,
+  RevisionMismatchError,
+  type AtomicTxn,
+  type IOperationStore,
+} from "./storage/interfaces.js";
+export { KyselyOperationStore } from "./storage/kysely/store.js";
+export type { Database, OperationTable } from "./storage/kysely/types.js";

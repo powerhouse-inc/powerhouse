@@ -14,7 +14,7 @@
 
 We will maintain multiple implementations of the `IOperationStore` interface.
 
-- `KyselyOperationStore`: A Kysely implementation. This will be the default implementation, using a PostgreSQL database on the server, and PGLite for the browser.
+- `KyselyOperationStore`: A Kysely implementation. This will be the default implementation, using a PostgreSQL database on the server, PGLite for the browser, and memory for testing and other local development needs.
 
 - `FilesystemOperationStore`: A filesystem implementation. This will be used for local development.
 
@@ -85,6 +85,7 @@ interface AtomicTxn {
 	// header operations
 	setSlug(slug: string);
 	setName(name: string);
+	setMeta(meta: PHDocumentMeta);
 }
 ```
 
@@ -102,6 +103,7 @@ await operations.apply(documentId, scope, branch, revision, async (txn) => {
   // header operations
   txn.setSlug("updated-slug");
   txn.setName("updated-name");
+  txn.setMeta({ preferredEditor: "updated-editor" });
 });
 ```
 
@@ -138,7 +140,6 @@ model Operation {
 
   // defines reshuffling logic (the reactor does this)
   skip            Int
-
 
   // compound unique constraint: the index is unique
   @@unique([documentId, scope, branch, index], name: "unique_revision")
