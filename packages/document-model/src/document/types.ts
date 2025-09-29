@@ -1,6 +1,6 @@
 import type { DocumentModelState } from "#document-model/gen/types.js";
 import type { Draft, Immutable } from "mutative";
-import type { FC } from "react";
+import type { ComponentType as ReactComponentType } from "react";
 import type {
   PHBaseState,
   PHDocumentHeader,
@@ -372,8 +372,10 @@ export type ActionErrorCallback = (error: unknown) => void;
 export type EditorDispatch = (actionOrActions: Action[] | Action) => void;
 
 export type EditorProps = {
-  documentId: string;
-  context: EditorContext;
+  /**
+   * @deprecated Use useDriveContext instead
+   */
+  context?: EditorContext;
 };
 
 export type SubgraphModule = {
@@ -391,7 +393,7 @@ export type ImportScriptModule = {
 };
 
 export type EditorModule = {
-  Component: FC<EditorProps>;
+  Component: ReactComponentType<any>;
   documentTypes: string[];
   config: {
     id: string;

@@ -11,7 +11,7 @@ import { PackageInformationSection } from "./components/PackageInformationSectio
 import { DOCUMENT_TYPES } from "./document-types.js";
 
 interface DriveExplorerProps {
-  context: EditorContext;
+  context?: EditorContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];
@@ -65,7 +65,6 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
       <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection
           className="mb-6"
-          context={context}
           packageDocumentId={packageDocumentId}
           onAddPackageDocument={onAddPackageDocument}
           documentModelModule={vetraPackageModule}

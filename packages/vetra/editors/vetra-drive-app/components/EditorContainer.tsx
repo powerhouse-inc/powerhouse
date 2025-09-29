@@ -4,20 +4,18 @@ import type {
   VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
 import { useDocumentById } from "@powerhousedao/reactor-browser";
-import type { EditorContext } from "document-model";
 import { Suspense } from "react";
 
 export interface EditorContainerProps {
   driveId: string;
   documentId: string;
   documentType: string;
-  context: EditorContext;
   documentModelModule: VetraDocumentModelModule;
   editorModule: VetraEditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-  const { context, editorModule, documentId } = props;
+  const { editorModule, documentId } = props;
   const [document, dispatch] = useDocumentById(documentId);
 
   const loadingContent = (
@@ -32,7 +30,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   return (
     <Suspense fallback={loadingContent}>
-      <EditorComponent context={context} documentId={documentId} />
+      <EditorComponent documentId={documentId} />
     </Suspense>
   );
 };

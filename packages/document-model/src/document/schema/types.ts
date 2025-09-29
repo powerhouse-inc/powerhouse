@@ -162,7 +162,7 @@ export type SetNameAction = {
   timestampUtcMs: Scalars["DateTime"]["output"];
   input: Scalars["String"]["input"];
   type: Set_Name;
-  scope: "global";
+  scope: string;
 };
 
 export type SetNameOperation = IOperation & {

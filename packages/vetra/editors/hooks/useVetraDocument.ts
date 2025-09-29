@@ -1,4 +1,7 @@
-import { useDocumentOfType } from "@powerhousedao/reactor-browser";
+import {
+  useDocumentOfType,
+  useSelectedDocumentId,
+} from "@powerhousedao/reactor-browser";
 import type {
   AppModuleAction,
   AppModuleDocument,
@@ -20,37 +23,68 @@ import type {
   VetraPackageDocument,
 } from "../../document-models/vetra-package/index.js";
 
-export function useAppModuleDocument(documentId: string) {
+export function useAppModuleDocument(documentId: string | undefined | null) {
   return useDocumentOfType<AppModuleDocument, AppModuleAction>(
     documentId,
     "powerhouse/app",
   );
 }
 
-export function useDocumentEditorDocument(documentId: string) {
+export function useSelectedAppModuleDocument() {
+  const documentId = useSelectedDocumentId();
+  return useAppModuleDocument(documentId);
+}
+
+export function useDocumentEditorDocument(
+  documentId: string | undefined | null,
+) {
   return useDocumentOfType<DocumentEditorDocument, DocumentEditorAction>(
     documentId,
     "powerhouse/document-editor",
   );
 }
 
-export function useProcessorModuleDocument(documentId: string) {
+export function useSelectedDocumentEditorDocument() {
+  const documentId = useSelectedDocumentId();
+  return useDocumentEditorDocument(documentId);
+}
+
+export function useProcessorModuleDocument(
+  documentId: string | undefined | null,
+) {
   return useDocumentOfType<ProcessorModuleDocument, ProcessorModuleAction>(
     documentId,
     "powerhouse/processor",
   );
 }
 
-export function useSubgraphModuleDocument(documentId: string) {
+export function useSelectedProcessorModuleDocument() {
+  const documentId = useSelectedDocumentId();
+  return useProcessorModuleDocument(documentId);
+}
+
+export function useSubgraphModuleDocument(
+  documentId: string | undefined | null,
+) {
   return useDocumentOfType<SubgraphModuleDocument, SubgraphModuleAction>(
     documentId,
     "powerhouse/subgraph",
   );
 }
 
-export function useVetraPackageDocument(documentId: string) {
+export function useSelectedSubgraphModuleDocument() {
+  const documentId = useSelectedDocumentId();
+  return useSubgraphModuleDocument(documentId);
+}
+
+export function useVetraPackageDocument(documentId: string | undefined | null) {
   return useDocumentOfType<VetraPackageDocument, VetraPackageAction>(
     documentId,
     "powerhouse/package",
   );
+}
+
+export function useSelectedVetraPackageDocument() {
+  const documentId = useSelectedDocumentId();
+  return useVetraPackageDocument(documentId);
 }

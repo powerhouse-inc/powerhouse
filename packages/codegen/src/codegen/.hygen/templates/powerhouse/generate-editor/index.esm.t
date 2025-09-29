@@ -3,10 +3,9 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import type { EditorModule } from 'document-model';
-import type { EditorDocument } from "./editor.js";
-import Editor from './editor.js';
+import { Editor } from './editor.js';
 
-export const module: EditorModule<EditorDocument> = {
+export const module: EditorModule = {
     Component: Editor,
     documentTypes: [<% if(!documentTypes.length){ %>'*'<% } else { %><% documentTypes.forEach(type => { _%>"<%= type %>", %><% }); _%> <% } %>],
     config: {
@@ -16,5 +15,3 @@ export const module: EditorModule<EditorDocument> = {
         showSwitchboardLink: true,
     },
 };
-
-export default module;

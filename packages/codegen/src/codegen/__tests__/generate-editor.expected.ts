@@ -1,8 +1,7 @@
 export const EXPECTED_INDEX_CONTENT = `import type { EditorModule } from 'document-model';
-import type { EditorDocument } from "./editor.js";
-import Editor from './editor.js';
+import { Editor } from './editor.js';
 
-export const module: EditorModule<EditorDocument> = {
+export const module: EditorModule = {
     Component: Editor,
     documentTypes: ["powerhouse/document-model", ],
     config: {
@@ -11,16 +10,11 @@ export const module: EditorModule<EditorDocument> = {
         documentToolbarEnabled: true,
         showSwitchboardLink: true,
     },
-};
+};`;
 
-export default module;`;
-
-const EXPECTED_EDITOR_METHOD = `export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
-
-  function handleSetName(values: { name: string }) {
+const EXPECTED_EDITOR_METHOD = `function handleSetName(values: { name: string }) {
     if (values.name) {
-      dispatch(baseActions.setName(values.name));
+      dispatch(setName(values.name));
     }
   }
 
@@ -34,7 +28,7 @@ const EXPECTED_EDITOR_METHOD = `export default function Editor(props: IProps) {
           <div className="flex flex-col space-y-2">
             <Form
               onSubmit={handleSetName}
-              resetOnSuccessfulSubmit
+              defaultValues={{ name: document.header.name }}
               className="flex flex-col gap-3 pt-2"
             >
               <div className="flex items-end gap-3">
@@ -91,20 +85,20 @@ const EXPECTED_EDITOR_METHOD = `export default function Editor(props: IProps) {
   );
 }`;
 
-export const EXPECTED_EDITOR_CONTENT = `import type { EditorProps } from 'document-model';
-import { actions as baseActions } from "document-model";
-import { type DocumentModelDocument, actions } from "document-model";
-import {
+export const EXPECTED_EDITOR_CONTENT = `import {
   Button,
   Form,
   FormLabel,
   StringField,
 } from "@powerhousedao/document-engineering";
+import { useSelectedDocumentModelDocument } from "../hooks/useDocumentModelDocument.js";
+import { setName } from "document-model";
+import { actions } from "document-model";
 
-export type EditorDocument = DocumentModelDocument;
-export type IProps = EditorProps<EditorDocument>;
+export function Editor() {
+  const [document, dispatch] = useSelectedDocumentModelDocument();
 
-${EXPECTED_EDITOR_METHOD}`;
+  ${EXPECTED_EDITOR_METHOD}`;
 
 export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 * This is a scaffold file meant for customization.
@@ -113,11 +107,22 @@ export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 
 export { module as DocumentModelEditor } from './document-model-editor/index.js';`;
 
-export const EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES = `import type { EditorModule } from 'document-model';
-import type { EditorDocument } from "./editor.js";
-import Editor from './editor.js';
+export const EXPECTED_HOOK_CONTENT = `import { useDocumentOfType, useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+import type { DocumentModelAction, DocumentModelDocument } from "document-model";
 
-export const module: EditorModule<EditorDocument> = {
+export function useDocumentModelDocument(documentId: string | null | undefined) {
+  return useDocumentOfType<DocumentModelDocument, DocumentModelAction>(documentId, "powerhouse/document-model");
+}
+
+export function useSelectedDocumentModelDocument() {
+  const selectedDocumentId = useSelectedDocumentId();
+  return useDocumentModelDocument(selectedDocumentId);
+}`;
+
+export const EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES = `import type { EditorModule } from 'document-model';
+import { Editor } from './editor.js';
+
+export const module: EditorModule = {
     Component: Editor,
     documentTypes: ['*'],
     config: {
@@ -126,23 +131,25 @@ export const module: EditorModule<EditorDocument> = {
         documentToolbarEnabled: true,
         showSwitchboardLink: true,
     },
-};
+};`;
 
-export default module;`;
-
-export const EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES = `import type { EditorProps, PHDocument } from 'document-model';
-import { actions as baseActions } from "document-model";
-import {
+export const EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES = `import {
   Button,
   Form,
   FormLabel,
   StringField,
 } from "@powerhousedao/document-engineering";
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
+import { setName } from "document-model";
 
-export type EditorDocument = PHDocument;
-export type IProps = EditorProps<EditorDocument>;
+export function Editor() {
+  const [document, dispatch] = useSelectedDocument();
 
-${EXPECTED_EDITOR_METHOD}`;
+  if (!document) {
+    return null;
+  }
+
+  ${EXPECTED_EDITOR_METHOD}`;
 
 export const EXPECTED_MAIN_INDEX_CONTENT_NO_DOCUMENT_TYPES = `/**
 * This is a scaffold file meant for customization.

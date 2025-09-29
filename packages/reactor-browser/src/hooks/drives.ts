@@ -31,16 +31,17 @@ export function useDriveById(driveId: string | undefined | null) {
   return [unsafeDrive, dispatch] as const;
 }
 
-export function useDriveDocument(driveId: string) {
-  // ): UseDocumentReturn<
-  //   typeof driveDocumentModelModule,
-  //   typeof driveDocumentModelActions
-  // > {
+export function useDriveDocument(driveId: string | undefined | null) {
   const [drive, dispatch] = useDriveById(driveId);
   if (!drive) {
     throw new Error(`Drive with id ${driveId} not found`);
   }
   return [drive, dispatch as DocumentDispatch<DocumentDriveAction>] as const;
+}
+
+export function useSelectedDriveDocument() {
+  const selectedDriveId = useSelectedDriveId();
+  return useDriveDocument(selectedDriveId);
 }
 
 export function useSelectedDriveId() {

@@ -1,13 +1,10 @@
-import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import { actions } from "../../document-models/vetra-package/index.js";
-import { useVetraPackageDocument } from "../hooks/useVetraDocument.js";
+import { useSelectedVetraPackageDocument } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 
-export type IProps = EditorProps;
-
-export default function Editor(props: IProps) {
-  const [document, dispatch] = useVetraPackageDocument(props.documentId);
+export function Editor() {
+  const [document, dispatch] = useSelectedVetraPackageDocument();
 
   const onNameChange = useCallback(
     (name: string) => {

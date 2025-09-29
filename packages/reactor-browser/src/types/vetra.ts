@@ -8,7 +8,6 @@ import type {
   Author,
   DocumentModelState,
   DocumentSpecification,
-  EditorProps,
   ImportScriptModule,
   PHDocumentHeader,
   Reducer,
@@ -55,7 +54,7 @@ export type VetraDocumentModelModule = VetraMeta & {
 };
 export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];
-  Component: (props: EditorProps) => any;
+  Component: React.ComponentType<any>;
   config: {
     id: string;
     disableExternalControls?: boolean;
