@@ -1,3 +1,13 @@
+## 5.0.0-staging.18 (2025-09-29)
+
+### 🚀 Features
+
+- add document state copy button with toast notification ([#1880](https://github.com/powerhouse-inc/powerhouse/pull/1880))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.17 (2025-09-25)
 
 ### 🩹 Fixes

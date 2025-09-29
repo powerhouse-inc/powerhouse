@@ -1,3 +1,7 @@
+## 5.0.0-staging.18 (2025-09-29)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 5.0.0-staging.17 (2025-09-25)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

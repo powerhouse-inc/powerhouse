@@ -1,3 +1,15 @@
+## 5.0.0-staging.18 (2025-09-29)
+
+### 🚀 Features
+
+- enhance upload tracking with unsupported document type handling ([bcf784dfc](https://github.com/powerhouse-inc/powerhouse/commit/bcf784dfc))
+- add document state copy button with toast notification ([#1880](https://github.com/powerhouse-inc/powerhouse/pull/1880))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.17 (2025-09-25)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
