@@ -19,9 +19,13 @@ export function responseForDrive(drive: DocumentDriveDocument) {
 export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
   id: string;
   revision: number;
-  // @deprecated
+  /**
+   * @deprecated Use createdAtUtcIso instead
+   */
   createdAt: string;
-  // @deprecated
+  /**
+   * @deprecated Use lastModifiedAtUtcIso instead
+   */
   lastModified: string;
   __typename: string;
   state: unknown;

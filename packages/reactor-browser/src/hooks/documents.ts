@@ -1,7 +1,7 @@
 import type { Action, BaseAction, PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
 import { useDispatch } from "./dispatch.js";
-import { useFileNodes, useSelectedNodeId } from "./nodes.js";
+import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
 import { useDocumentModelModuleById } from "./vetra-packages.js";
 
 function getDocumentsSnapshot() {
@@ -30,14 +30,20 @@ export function useSelectedDriveDocuments() {
   return documents?.filter((d) => fileNodeIds?.includes(d.header.id));
 }
 
+/** Returns the selected document id */
+export function useSelectedDocumentId() {
+  const selectedNodeId = useSelectedNodeId();
+  const kind = useNodeKind(selectedNodeId);
+  if (kind === "FILE") {
+    return selectedNodeId;
+  }
+  return undefined;
+}
+
 /** Returns the selected document. */
 export function useSelectedDocument() {
-  const selectedNodeId = useSelectedNodeId();
-  const documents = useSelectedDriveDocuments();
-  const selectedDocument = documents?.find(
-    (d) => d.header.id === selectedNodeId,
-  );
-  return useDispatch(selectedDocument);
+  const selectedNodeId = useSelectedDocumentId();
+  return useDocumentById(selectedNodeId);
 }
 
 /** Returns the document type of a document by id. */
@@ -112,4 +118,12 @@ export function useDocumentOfType<
   }
 
   return [document, dispatch] as [TDocument, DocumentDispatch<TAction>];
+}
+
+export function useSelectedDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(documentType: string | null | undefined) {
+  const documentId = useSelectedDocumentId();
+  return useDocumentOfType<TDocument, TAction>(documentId, documentType);
 }

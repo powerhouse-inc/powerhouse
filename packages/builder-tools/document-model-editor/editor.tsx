@@ -1,5 +1,4 @@
 import { pascalCase } from "change-case";
-import type { EditorProps } from "document-model";
 import {
   addModule,
   addOperation,
@@ -28,7 +27,7 @@ import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
 import { StateSchemas } from "./components/state-schemas.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
-import { useDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
+import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
 import type { Scope } from "./types/documents.js";
 import {
   compareStringsWithoutWhitespace,
@@ -36,10 +35,8 @@ import {
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
-export function DocumentModelEditor(props: EditorProps) {
-  const { documentId } = props;
-
-  const [document, dispatch] = useDocumentModelDocument(documentId);
+export function DocumentModelEditor() {
+  const [document, dispatch] = useSelectedDocumentModelDocument();
 
   const documentNodeName = document.header.name;
   const {

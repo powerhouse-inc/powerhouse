@@ -1,13 +1,10 @@
-import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import { actions } from "../../document-models/subgraph-module/index.js";
-import { useSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
+import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 
-export type IProps = EditorProps;
-
-export default function Editor(props: IProps) {
-  const [document, dispatch] = useSubgraphModuleDocument(props.documentId);
+export function Editor() {
+  const [document, dispatch] = useSelectedSubgraphModuleDocument();
 
   const onNameChange = useCallback(
     (name: string) => {

@@ -11,8 +11,7 @@ import {
   setSelectedNode,
   useDocumentModelModules,
   useDriveContext,
-  useDriveDocument,
-  useSelectedDrive,
+  useSelectedDriveDocument,
   useSelectedFolder,
   useSelectedNodePath,
   useShowSearchBar,
@@ -30,8 +29,8 @@ export type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
 export function BaseEditor(props: GenericDriveExplorerEditorProps) {
-  const { documentId, className, children } = props;
-  const [document] = useDriveDocument(documentId);
+  const { className, children } = props;
+  const [selectedDrive] = useSelectedDriveDocument();
   const {
     showCreateDocumentModal,
     onRenameNode,
@@ -42,7 +41,6 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     onMoveNode,
     showDeleteNodeModal,
   } = useDriveContext();
-  const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();
@@ -63,11 +61,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
     selectedNodePath,
     setSelectedNode,
   });
-  const sharingType = getDriveSharingType(document);
-
-  if (!selectedDrive) {
-    return <div>Drive not found</div>;
-  }
+  const sharingType = getDriveSharingType(selectedDrive);
 
   async function onAddAndSelectNewFolder(name: string) {
     await onAddFolder(name, selectedFolder);
@@ -132,7 +126,9 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
 
 export default function Editor(props: GenericDriveExplorerEditorProps) {
   return (
-    <DriveContextProvider value={props.context}>
+    // TODO: Replace with useDriveContext
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    <DriveContextProvider value={props.context!}>
       <BaseEditor {...props} />
     </DriveContextProvider>
   );

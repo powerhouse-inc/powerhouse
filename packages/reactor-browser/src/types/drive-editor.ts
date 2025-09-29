@@ -1,6 +1,6 @@
 import type { FolderNode, Node } from "document-drive";
-import type { DocumentModelModule, EditorProps } from "document-model";
-import type { FC } from "react";
+import type { DocumentModelModule } from "document-model";
+import type { ComponentType } from "react";
 
 /**
  * Interface representing the context values provided by the host application
@@ -71,14 +71,17 @@ export type DriveEditorConfig = {
   };
 };
 
-export type DriveEditorProps = EditorProps & {
+export type DriveEditorProps = {
   children?: React.ReactNode;
-  context: IDriveContext;
+  /**
+   * @deprecated call useDriveContext instead
+   */
+  context?: IDriveContext;
   editorConfig?: DriveEditorConfig;
 };
 
 export type DriveEditorModule = {
-  Component: FC<DriveEditorProps>;
+  Component: ComponentType<DriveEditorProps>;
   documentTypes: string[];
   config: DriveEditorConfig;
 };

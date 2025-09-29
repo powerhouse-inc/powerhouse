@@ -7,6 +7,7 @@ import { generateEditor } from "../index.js";
 import {
   EXPECTED_EDITOR_CONTENT,
   EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES,
+  EXPECTED_HOOK_CONTENT,
   EXPECTED_INDEX_CONTENT,
   EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES,
   EXPECTED_MAIN_INDEX_CONTENT,
@@ -14,7 +15,7 @@ import {
 } from "./generate-editor.expected.js";
 
 // Set this to false to keep the generated files for inspection
-const CLEANUP_AFTER_TESTS = false;
+const CLEANUP_AFTER_TESTS = true;
 
 describe("generateEditor", () => {
   let testDir: string;
@@ -81,9 +82,11 @@ describe("generateEditor", () => {
 
     const indexPath = path.join(editorDir, "index.ts");
     const editorPath = path.join(editorDir, "editor.tsx");
+    const hooksPath = path.join(editorDir, "hooks");
 
     expect(fs.existsSync(editorPath)).toBe(true);
     expect(fs.existsSync(indexPath)).toBe(true);
+    expect(fs.existsSync(hooksPath)).toBe(false);
 
     const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
     expect(indexContent).toBe(EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES.trim());
@@ -118,15 +121,23 @@ describe("generateEditor", () => {
 
     const indexPath = path.join(editorDir, "index.ts");
     const editorPath = path.join(editorDir, "editor.tsx");
+    const hookPath = path.join(
+      editorDir,
+      "../hooks/useDocumentModelDocument.ts",
+    );
 
     expect(fs.existsSync(editorPath)).toBe(true);
     expect(fs.existsSync(indexPath)).toBe(true);
+    expect(fs.existsSync(hookPath)).toBe(true);
 
     const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
     expect(indexContent).toBe(EXPECTED_INDEX_CONTENT.trim());
 
     const editorContent = fs.readFileSync(editorPath, "utf-8").trim();
     expect(editorContent).toBe(EXPECTED_EDITOR_CONTENT.trim());
+
+    const hookContent = fs.readFileSync(hookPath, "utf-8").trim();
+    expect(hookContent).toBe(EXPECTED_HOOK_CONTENT.trim());
 
     const mainIndexPath = path.join(testDir, "index.ts");
     const mainIndexContent = fs

@@ -1,23 +1,22 @@
 import {
-  useDocumentById,
+  useSelectedDocument,
   type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
-import { useArgs, useChannel } from "@storybook/preview-api";
+import { useArgs, useChannel, useEffect } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
   Action,
   ActionContext,
   CreateState,
-  EditorProps,
   PHBaseState,
   PHDocument,
-  Reducer,
 } from "document-model";
 import { baseCreateDocument } from "document-model";
 import type React from "react";
 import { useInterval } from "usehooks-ts";
 
 export type EditorStoryArgs = Partial<{
+  document: PHDocument;
   user: {
     address: string;
     networkId: string;
@@ -41,7 +40,7 @@ export type EditorStoryArgs = Partial<{
   };
 }>;
 
-export type EditorStoryProps = EditorProps & EditorStoryArgs;
+export type EditorStoryProps = EditorStoryArgs;
 
 export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
 
@@ -59,7 +58,6 @@ export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
 export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
   Editor: EditorStoryComponent,
-  reducer: Reducer<TState>,
   initialState: TState,
   additionalStoryArgs?: EditorStoryArgs,
   decorators?: Decorator[],
@@ -88,8 +86,8 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
       (Story, { args }) => {
         const [, setArgs] = useArgs<typeof args>();
         const emit = useChannel({
-          DOCUMENT: (documentId: string) => {
-            setArgs({ documentId });
+          DOCUMENT: (document: PHDocument) => {
+            setArgs({ document });
           },
         });
 
@@ -100,7 +98,8 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
     render: function Render(args) {
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentById(args.documentId);
+      // TODO: make args.document the selected document
+      const [document, _dispatch] = useSelectedDocument();
       function dispatch(action: Action) {
         const context: ActionContext = {};
         if (args.user) {
@@ -124,11 +123,11 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
       }
 
       // TODO: allow changing document on storybook
-      // React.useEffect(() => {
-      //   if (document) {
-      //     emit("DOCUMENT", document);
-      //   }
-      // }, [document, emit]);
+      useEffect(() => {
+        if (document) {
+          emit("DOCUMENT", document);
+        }
+      }, [document, emit]);
 
       useInterval(() => {
         if (args.simulateBackgroundUpdates) {
@@ -139,20 +138,15 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} documentId={args.documentId} />;
+      return <Editor {...args} />;
     },
     argTypes: {
+      document: {
+        control: "object",
+      },
       // documentId: "string", TODO allow setting document
-      context: {
-        theme: {
-          name: "Theme",
-          options: ["light", "dark"],
-          defaultValue: "light",
-          control: "inline-radio",
-        },
-        user: {
-          control: "object",
-        },
+      user: {
+        control: "object",
       },
     },
   } satisfies Meta<typeof Editor>;
@@ -165,10 +159,10 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
   const CreateDocumentStory: DocumentStory = {
     name: "New document",
     args: {
-      documentId: baseCreateDocument(
+      document: baseCreateDocument(
         defaultPHDocumentCreateState,
         initialState as Partial<PHBaseState>,
-      ).header.id,
+      ),
       user: {
         address: "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
         networkId: "eip155",

@@ -8,7 +8,7 @@ import {
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
-import type { FC } from "react";
+import type { ComponentType } from "react";
 import { useCallback } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
@@ -47,7 +47,7 @@ export function DriveEditorContainer() {
 
   const DriveEditorComponent = (driveEditor?.Component ??
     defaultDriveEditor?.Component ??
-    GenericDriveExplorer.Component) as FC<DriveEditorProps>;
+    GenericDriveExplorer.Component) as ComponentType<DriveEditorProps>;
 
   const editorConfig = driveEditor?.Component
     ? driveEditor.config
@@ -68,7 +68,6 @@ export function DriveEditorContainer() {
           showCreateDocumentModal,
           showDeleteNodeModal,
         }}
-        documentId={selectedDrive.header.id}
         editorConfig={editorConfig}
       >
         {selectedDocument ? <DocumentEditorContainer /> : null}

@@ -2,27 +2,26 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
 unless_exists: true
 ---
-<% if(!documentTypes.length){ %>import type { EditorProps, PHDocument } from 'document-model';<% } else { %>import type { EditorProps } from 'document-model';<% } %>
-import { actions as baseActions } from "document-model";
-<% documentTypes.forEach(type => { _%>
-import { type <%= documentTypesMap[type].name %>Document, actions } from "<%= documentTypesMap[type].importPath %>";
-%><% }); _%>
 import {
   Button,
   Form,
   FormLabel,
   StringField,
 } from "@powerhousedao/document-engineering";
+<% if(!documentType){ %>import { useSelectedDocument } from "@powerhousedao/reactor-browser";<% } else { %>import { useSelected<%= documentType.name %>Document %>} from "../hooks/use<%= documentType.name %>Document%>.js";<% } %>
+import { setName } from "document-model";<% if(documentType) { %>
+import { actions } from "<%= documentType.importPath %>";<% } %>
 
-export type EditorDocument = <% if(documentTypes.length) { %><% documentTypes.map(type => { _%><%= documentTypesMap[type].name %>Document<% }).join(" | ") %><% } else { %>PHDocument<% } %>;
-export type IProps = EditorProps<EditorDocument>;
-
-export default function Editor(props: IProps) {
-  const { document, dispatch } = props;
-
+export function Editor() {
+  const [document, dispatch] = <% if(documentType) { %>useSelected<%= documentType.name %>Document()<% } else { %>useSelectedDocument()<% } %>;
+<% if(!documentType){ %>
+  if (!document) {
+    return null;
+  }
+<% } %>
   function handleSetName(values: { name: string }) {
     if (values.name) {
-      dispatch(baseActions.setName(values.name));
+      dispatch(setName(values.name));
     }
   }
 
@@ -36,7 +35,7 @@ export default function Editor(props: IProps) {
           <div className="flex flex-col space-y-2">
             <Form
               onSubmit={handleSetName}
-              resetOnSuccessfulSubmit
+              defaultValues={{ name: document.header.name }}
               className="flex flex-col gap-3 pt-2"
             >
               <div className="flex items-end gap-3">
