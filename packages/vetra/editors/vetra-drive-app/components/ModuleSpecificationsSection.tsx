@@ -1,5 +1,5 @@
 import type { FileNode } from "document-drive";
-import type React from "react";
+import React from "react";
 import { DataIntegrationsColumn } from "./DataIntegrationsColumn.js";
 import { DocumentModelsColumn } from "./DocumentModelsColumn.js";
 import { SectionAccordion } from "./SectionAccordion.js";

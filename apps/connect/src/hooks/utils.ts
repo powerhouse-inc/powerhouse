@@ -1,6 +1,5 @@
-const currentVersion = import.meta.env.APP_VERSION;
+const currentVersion = __APP_VERSION__;
 
-// eslint-disable-next-line @typescript-eslint/no-deprecated
 export const isMac = window.navigator.appVersion.includes("Mac");
 
 const urlBranchMap: Record<string, string> = {

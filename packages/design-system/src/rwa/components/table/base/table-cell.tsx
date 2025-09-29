@@ -1,6 +1,5 @@
-import { Icon } from "#powerhouse";
-import type { TableItemType, TableName } from "#rwa";
-import { useEditorContext } from "#rwa";
+import type { TableItemType, TableName } from "@powerhousedao/design-system";
+import { Icon, useEditorContext } from "@powerhousedao/design-system";
 
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback } from "react";

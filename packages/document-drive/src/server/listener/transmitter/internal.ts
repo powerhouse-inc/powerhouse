@@ -1,49 +1,34 @@
-import type { IProcessor } from "#processors/types";
 import type {
   GetDocumentOptions,
   IBaseDocumentDriveServer,
   IDocumentDriveServer,
+  InternalOperationUpdate,
+  IProcessor,
+  ITransmitter,
   ListenerRevision,
+  RunAsap,
   StrandUpdate,
-} from "#server/types";
-import { logger } from "#utils/logger";
-import { operationsToRevision } from "#utils/misc";
-import { RunAsap } from "#utils/run-asap";
-import type { Action, Operation, PHBaseState } from "document-model";
-import type { ITransmitter, StrandUpdateSource } from "./types.js";
-
-export type InternalOperationUpdate = Omit<Operation, "scope"> & {
-  /** The state, for a specific scope, of the document */
-  state?: PHBaseState;
-  /** The previous state, for a specific scope, of the document */
-  previousState?: PHBaseState;
-};
-
-export type InternalTransmitterUpdate = {
-  driveId: string;
-  documentId: string;
-  documentType: string;
-  scope: string;
-  branch: string;
-  operations: InternalOperationUpdate[];
-  state: any; // The current state (global or local) for the scope
-};
+  StrandUpdateSource,
+} from "document-drive";
+import { logger, operationsToRevision } from "document-drive";
+import { runAsap, runAsapAsync } from "document-drive/run-asap";
+import type { Action, PHBaseState } from "document-model";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
   protected processor: IProcessor;
-  protected taskQueueMethod: RunAsap.RunAsap<unknown> | null;
+  protected taskQueueMethod: RunAsap<unknown> | null;
   protected transmitQueue: Promise<ListenerRevision[]> | undefined;
 
   constructor(
     drive: IDocumentDriveServer,
     processor: IProcessor,
-    taskQueueMethod?: RunAsap.RunAsap<unknown> | null,
+    taskQueueMethod?: RunAsap<unknown> | null,
   ) {
     this.drive = drive;
     this.processor = processor;
     this.taskQueueMethod =
-      taskQueueMethod === undefined ? RunAsap.runAsap : taskQueueMethod;
+      taskQueueMethod === undefined ? runAsap : taskQueueMethod;
   }
 
   async #buildInternalOperationUpdate(
@@ -69,13 +54,8 @@ export class InternalTransmitter implements ITransmitter {
         : this.drive.getDocument(strand.documentId, getDocumentOptions));
 
       if (index < 0) {
-        stateByIndex.set(
-          index,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-          (document.initialState as any)[strand.scope],
-        );
+        stateByIndex.set(index, (document.initialState as any)[strand.scope]);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         stateByIndex.set(index, (document.state as any)[strand.scope]);
       }
       return stateByIndex.get(index);
@@ -83,12 +63,12 @@ export class InternalTransmitter implements ITransmitter {
     for (const operation of strand.operations) {
       const stateTask = () => getStateByIndex(operation.index);
       const state = await (this.taskQueueMethod
-        ? RunAsap.runAsapAsync(stateTask, this.taskQueueMethod)
+        ? runAsapAsync(stateTask, this.taskQueueMethod)
         : stateTask());
 
       const previousStateTask = () => getStateByIndex(operation.index - 1);
       const previousState = await (this.taskQueueMethod
-        ? RunAsap.runAsapAsync(previousStateTask, this.taskQueueMethod)
+        ? runAsapAsync(previousStateTask, this.taskQueueMethod)
         : previousStateTask());
 
       const action: Action = {
@@ -102,8 +82,8 @@ export class InternalTransmitter implements ITransmitter {
 
       operations.push({
         ...operation,
-        state,
-        previousState,
+        state: state as PHBaseState,
+        previousState: previousState as PHBaseState,
         action,
       });
     }
@@ -113,7 +93,6 @@ export class InternalTransmitter implements ITransmitter {
 
   async transmit(
     strands: StrandUpdate[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _source: StrandUpdateSource,
   ): Promise<ListenerRevision[]> {
     const task = async (): Promise<ListenerRevision[]> => {

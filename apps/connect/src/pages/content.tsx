@@ -1,5 +1,10 @@
-import connectConfig from "#connect-config";
-import { useShowAddDriveModal } from "#hooks";
+import {
+  DocumentEditorContainer,
+  DriveEditorContainer,
+  DriveIcon,
+  useShowAddDriveModal,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   HomeScreen,
   HomeScreenAddDriveItem,
@@ -14,11 +19,8 @@ import {
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
-import { DocumentEditorContainer } from "../components/document-editor-container.js";
-import { DriveEditorContainer } from "../components/drive-editor-container.js";
-import { DriveIcon } from "../components/drive-icon.js";
 
-export default function Content() {
+export function Content() {
   const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const [selectedDocument] = useSelectedDocument();

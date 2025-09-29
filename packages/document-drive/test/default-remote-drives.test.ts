@@ -1,18 +1,18 @@
-import {
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-  generateId,
-} from "document-model";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import {
+import type {
   DefaultRemoteDriveInput,
+  DocumentDriveDocument,
   DocumentDriveServerOptions,
-} from "../src/server/types.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { DriveInfo } from "../src/utils/graphql.js";
+  DriveInfo,
+} from "document-drive";
+import {
+  driveDocumentModelModule,
+  MemoryStorage,
+  ReactorBuilder,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 type DriveInput = {
   url: string;
@@ -200,10 +200,10 @@ describe("default remote drives", () => {
     await server.initialize();
 
     expect(mockCallback).toHaveBeenCalledTimes(2);
-    expect(mockCallback.mock.calls[0]![0]).toBe("ADDING");
-    expect(mockCallback.mock.calls[0]![3]).toBe(undefined);
-    expect(mockCallback.mock.calls[1]![0]).toBe("SUCCESS");
-    expect(mockCallback.mock.calls[1]![3]).toBe(drive1.id);
+    expect(mockCallback.mock.calls[0][0]).toBe("ADDING");
+    expect(mockCallback.mock.calls[0][3]).toBe(undefined);
+    expect(mockCallback.mock.calls[1][0]).toBe("SUCCESS");
+    expect(mockCallback.mock.calls[1][3]).toBe(drive1.id);
   });
 
   it("should not add an existing remote drive", async () => {
@@ -226,8 +226,8 @@ describe("default remote drives", () => {
     await server2.initialize();
 
     expect(mockCallback).toHaveBeenCalledTimes(1);
-    expect(mockCallback.mock.calls[0]![0]).toBe("ALREADY_ADDED");
-    expect(mockCallback.mock.calls[0]![3]).toBe(drive1.id);
+    expect(mockCallback.mock.calls[0][0]).toBe("ALREADY_ADDED");
+    expect(mockCallback.mock.calls[0][3]).toBe(drive1.id);
   });
 });
 

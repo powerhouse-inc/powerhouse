@@ -1,5 +1,9 @@
-import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
 import { GenericDriveExplorer } from "@powerhousedao/common";
+import {
+  useModal,
+  useNodeActions,
+  useShowDeleteNodeModal,
+} from "@powerhousedao/connect";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
@@ -9,7 +13,6 @@ import type { DocumentModelModule } from "document-model";
 import { useCallback } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
-import { useModal } from "./modal/index.js";
 
 function DriveEditorError({ error }: FallbackProps) {
   return (

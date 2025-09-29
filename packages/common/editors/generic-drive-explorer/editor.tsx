@@ -1,4 +1,10 @@
 import {
+  CreateDocument,
+  DriveLayout,
+  FolderView,
+  SearchBar,
+} from "@powerhousedao/common";
+import {
   Breadcrumbs,
   useBreadcrumbs,
   useDrop,
@@ -18,18 +24,14 @@ import {
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
-import { getDriveSharingType } from "document-drive/server/utils";
+import { getDriveSharingType } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import type React from "react";
-import { CreateDocument } from "./components/create-document.js";
-import FolderView from "./components/folder-view.js";
-import { DriveLayout } from "./components/layout.js";
-import { SearchBar } from "./components/search-bar.js";
+import React from "react";
 
-export type GenericDriveExplorerEditorProps = DriveEditorProps &
+type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
-export function BaseEditor(props: GenericDriveExplorerEditorProps) {
+function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { document, className, children } = props;
   const unsafeCastOfDocument = document as DocumentDriveDocument;
 
@@ -110,10 +112,13 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
       <DriveLayout.Footer>
         {isAllowedToCreateDocuments && (
           <CreateDocument
-            documentModels={documentModels?.filter(
-              (module) =>
-                module.documentModel.id !== "powerhouse/document-drive",
-            )}
+            documentModels={
+              documentModels?.filter(
+                (module) =>
+                  module.documentModel.global.id !==
+                  "powerhouse/document-drive",
+              ) as unknown as DocumentModelModule[]
+            }
             createDocument={onCreateDocument}
           />
         )}
@@ -122,7 +127,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   );
 }
 
-export default function Editor(props: GenericDriveExplorerEditorProps) {
+export function Editor(props: GenericDriveExplorerEditorProps) {
   return (
     <DriveContextProvider value={props.context}>
       <BaseEditor {...props} />

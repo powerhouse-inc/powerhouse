@@ -1,5 +1,9 @@
-import connectConfig from "#connect-config";
-import { useShowAddDriveModal } from "#hooks";
+import {
+  DriveIcon,
+  useModal,
+  useShowAddDriveModal,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
   Icon,
@@ -17,10 +21,8 @@ import {
 import { logger } from "document-drive";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
-import { DriveIcon } from "./drive-icon.js";
-import { useModal } from "./modal/index.js";
 
-export default function Sidebar() {
+export function Sidebar() {
   const { showModal } = useModal();
   const navigate = useNavigate();
   const user = useUser();

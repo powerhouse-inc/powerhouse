@@ -1,7 +1,7 @@
 import type { IDocumentDriveServer } from "document-drive";
-import type { DocumentModelState } from "document-model";
-import { generateId } from "document-model";
-import { DocumentModelStateSchema } from "document-model/document-model/gen/schema/zod";
+import type { DocumentModelGlobalState } from "document-model";
+import { DocumentModelGlobalStateSchema } from "document-model";
+import { generateId } from "document-model/core";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -272,9 +272,9 @@ export const getDocumentModelSchemaTool = {
     type: z.string().describe("Type of the document model"),
   },
   outputSchema: {
-    schema: DocumentModelStateSchema().describe(
+    schema: DocumentModelGlobalStateSchema().describe(
       "Schema of the document model",
-    ) as z.ZodObject<Properties<DocumentModelState>>,
+    ) as z.ZodObject<Properties<DocumentModelGlobalState>>,
   },
 } as const satisfies ToolSchema;
 
@@ -305,7 +305,6 @@ type ToolRecord<T extends readonly ToolSchema[]> = {
 };
 
 // All tools array for type inference
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allTools = [
   getDocumentTool,
   createDocumentTool,
@@ -331,7 +330,7 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
   function getDocumentModelModule(documentType: string) {
     const documentModels = reactor.getDocumentModelModules();
     const documentModel = documentModels.find(
-      (model) => model.documentModel.id === documentType,
+      (model) => model.documentModel.global.id === documentType,
     );
     return documentModel;
   }
@@ -500,14 +499,14 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       const documentModels = reactor.getDocumentModelModules();
       return {
         documentModels: documentModels.map((model) => {
-          const schema = model.documentModel;
+          const schemaGlobal = model.documentModel.global;
           return {
-            name: schema.name,
-            type: schema.id,
-            description: schema.description,
-            extension: schema.extension,
-            authorName: schema.author.name,
-            authorWebsite: schema.author.website ?? "",
+            name: schemaGlobal.name,
+            type: schemaGlobal.id,
+            description: schemaGlobal.description,
+            extension: schemaGlobal.extension,
+            authorName: schemaGlobal.author.name,
+            authorWebsite: schemaGlobal.author.website ?? "",
           };
         }),
       };
@@ -517,7 +516,7 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
       getDocumentModelSchemaTool,
       (params) => {
         const documentModel = getDocumentModelModule(params.type);
-        const schema = documentModel?.documentModel;
+        const schema = documentModel?.documentModel.global;
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
         }

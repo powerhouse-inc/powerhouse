@@ -1,5 +1,6 @@
 export * from "./config.js";
 export * from "./crypto.js";
+export * from "./dispatch.js";
 export * from "./documents.js";
 export * from "./drive-context.js";
 export * from "./drives.js";
@@ -10,4 +11,3 @@ export * from "./renown.js";
 export * from "./use-on-drop-file.js";
 export * from "./user.js";
 export * from "./vetra-packages.js";
-

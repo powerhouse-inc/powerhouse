@@ -1,13 +1,14 @@
 import { ReadRequiredModal } from "@powerhousedao/design-system";
-import type React from "react";
 import { Trans, useTranslation } from "react-i18next";
 
-export interface DisclaimerModalProps {
+export interface CookiesPolicyModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-export const CookiesPolicyModal: React.FC<DisclaimerModalProps> = (props) => {
+export const CookiesPolicyModal: React.FC<CookiesPolicyModalProps> = (
+  props,
+) => {
   const { open, onClose } = props;
 
   const { t } = useTranslation();

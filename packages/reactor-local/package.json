@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
@@ -11,12 +11,9 @@
     "access": "public"
   },
   "scripts": {
-    "start": "vite-node src/index.ts",
-    "build:tsc": "tsc --build",
-    "build": "tsc --build",
-    "prebuild": "npm run clean",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "tsc": "tsc",
+    "lint": "eslint",
+    "start": "vite-node src/index.ts"
   },
   "exports": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -53,6 +50,6 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/ms": "^0.7.34",
-    "@types/node": "^22.15.17"
+    "@types/node": "^24.3.0"
   }
 }

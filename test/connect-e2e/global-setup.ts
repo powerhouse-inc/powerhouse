@@ -1,5 +1,4 @@
 import { execSync } from "child_process";
-import fs from "fs";
 import MCR from "monocart-coverage-reports";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -40,24 +39,6 @@ function globalSetup() {
     });
 
     console.log("✅ ToDoList editor generated successfully!");
-
-    // Update index.ts to import from generated folders
-    if (fs.existsSync(indexFile)) {
-      let indexContent = fs.readFileSync(indexFile, "utf8");
-
-      // Replace empty object constants with imports
-      indexContent = indexContent.replace(
-        /const documentModelsExports = \{\};/,
-        'import * as documentModelsExports from "./document-models/index.js";',
-      );
-      indexContent = indexContent.replace(
-        /const editorsExports = \{\};/,
-        'import * as editorsExports from "./editors/index.js";',
-      );
-
-      fs.writeFileSync(indexFile, indexContent, "utf8");
-      console.log("✅ Updated index.ts to import from generated folders");
-    }
 
     const mcr = MCR(coverageOptions);
     mcr.cleanCache();

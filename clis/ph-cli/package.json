@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -17,36 +17,31 @@
   "files": [
     "dist"
   ],
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "prebuild": "npm run clean && npm run generate-commands-md && npm run generate-version",
-    "postbuild": "npm run copy-scripts",
+    "build": "npm run generate-commands-md && npm run generate-version && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
-    "build": "tsc --build",
-    "dev": "concurrently -P 'pnpm -w run build:tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
-    "prepublishOnly": "npm run build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "lint:fix": "eslint --fix",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules",
+    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "test": "vitest --run"
   },
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@types/node": "^22.15.17",
+    "@types/node": "^24.3.0",
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
     "nodemon": "^3.1.9",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "colorette": "^2.0.20",

@@ -74,13 +74,18 @@ jobs:
       - name: Install PNPM
         uses: pnpm/action-setup@v4
         with:
+          version: latest
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter document-drive...
+        run: pnpm install:ci
 
       - name: Generate Prisma client
         run: pnpm prisma generate
+        working-directory: packages/document-drive
+
+      - name: Copy Prisma files
+        run: pnpm copy-prisma
         working-directory: packages/document-drive
 
       - name: Push database schema
@@ -88,7 +93,12 @@ jobs:
         working-directory: packages/document-drive
 
       - name: Build
-        run: pnpm nx run document-drive:build
+        run: pnpm tsc:build
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: packages/document-drive
 
       - name: Run tests
-        run: pnpm nx run document-drive:test
+        run: pnpm test
+        working-directory: packages/document-drive

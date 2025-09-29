@@ -1,27 +1,30 @@
-import {
+import type {
   Action,
   DocumentModelDocument,
-  documentModelDocumentModelModule,
   DocumentModelModule,
-  documentModelReducer,
-  garbageCollect,
-  generateId,
   Operation,
+} from "document-model";
+import {
+  documentModelDocumentModelModule,
+  documentModelReducer,
   setModelExtension,
   setModelId,
   setModelName,
 } from "document-model";
+import { garbageCollect, generateId, undo } from "document-model/core";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
-import { addFile } from "#drive-document-model/gen/creators";
-import { BaseDocumentDriveServer } from "#server/base-server";
-import { createPresignedHeader } from "document-model";
-import { undo } from "../../../document-model/src/document/actions/creators.js";
-import { reducer as documentDriveReducer } from "../../src/drive-document-model/gen/reducer.js";
-import { driveDocumentModelModule } from "../../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { IOperationResult } from "../../src/server/types.js";
-import { BasicClient, buildOperation, buildOperations } from "../utils.js";
+import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
+import {
+  BasicClient,
+  ReactorBuilder,
+  addFile,
+  buildOperation,
+  buildOperations,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+} from "document-drive";
+import { createPresignedHeader } from "document-model/core";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {
@@ -52,7 +55,7 @@ describe("processOperations", () => {
       ...documentModelDocumentModelModule.utils.createDocument(),
       header: createPresignedHeader(
         documentId,
-        documentModelDocumentModelModule.documentModel.id,
+        documentModelDocumentModelModule.documentModel.global.id,
       ),
     };
   }
@@ -75,7 +78,7 @@ describe("processOperations", () => {
     await server.addDriveOperation(
       driveId,
       buildOperation(
-        documentDriveReducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: documentId,

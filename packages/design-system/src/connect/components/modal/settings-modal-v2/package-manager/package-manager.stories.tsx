@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { PH_PACKAGES } from "@powerhousedao/config/packages";
+import { PH_PACKAGES } from "@powerhousedao/config";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
 import { mockPackages, mockReactorOptions } from "../mocks.js";
@@ -53,7 +53,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
-    // @ts-expect-error
+    // @ts-expect-error - storybook doesn't support the type
     render: PackageManagerWrapper,
     args: defaultArgs,
   };

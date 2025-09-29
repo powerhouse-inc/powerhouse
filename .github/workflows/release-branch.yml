@@ -40,6 +40,7 @@ jobs:
           else
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
           fi
+
           if [[ "${{ github.ref_name }}" == release* ]]; then
             echo "VERSION=" >> $GITHUB_ENV
             echo "BRANCH_RELEASE=${{ github.ref_name }}" >> $GITHUB_ENV
@@ -50,45 +51,47 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Install Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-          registry-url: https://registry.npmjs.org/
 
-      - name: Install dependencies
+      - uses: pnpm/action-setup@v4
+        name: Setup pnpm with cache
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install:ci
+
+      - name: Build typescript project
+        run: pnpm tsc:build
+
+      - name: Run misc build scripts
+        run: pnpm build:misc
+
+      - name: Run install again after generating binaries
         run: pnpm install
-        shell: bash
 
-      - name: Build packages and studio
-        run: pnpm nx run-many --target='build' --all --no-cloud
-        shell: bash
+      - name: Run css build scripts
+        run: pnpm build:css
 
-      - name: Print Environment Info
-        run: pnpm nx report
-        shell: bash
+      - name: Run vite build scripts
+        run: pnpm build:vite
 
       - name: git config
-        shell: bash
         run: |
           git config user.name "Github Actions Bot"
           git config user.email "-"
 
       - name: Clean up non-dev tags (main branch only)
         if: github.ref_name == 'main'
-        shell: bash
         run: |
           git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+-dev\.[0-9]\+$' | xargs -r git tag -d
 
       - name: Update pkg version and publish to npm
         run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
-        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}

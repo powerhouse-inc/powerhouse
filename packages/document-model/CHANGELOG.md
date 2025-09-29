@@ -1,3 +1,58 @@
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+
+### 🩹 Fixes
+
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- hand-edit document-model generated stuff so as not to have a circular reference ([e9ec89590](https://github.com/powerhouse-inc/powerhouse/commit/e9ec89590))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.57 (2025-09-17)
+
+### 🚀 Features
+
+- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
+- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
+- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
+
+### 🩹 Fixes
+
+- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
+- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
+- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.56 (2025-09-17)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features
@@ -44,38 +99,38 @@ This was a version bump only for document-model to align it with other projects,
 
 ### 🩹 Fixes
 
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
 - annoyingly, you have to add ignores to the root eslint ([bb6d993bd](https://github.com/powerhouse-inc/powerhouse/commit/bb6d993bd))
 - **docs:** improve document hooks documentation ([d05fcb835](https://github.com/powerhouse-inc/powerhouse/commit/d05fcb835))
 
 ### ❤️ Thank You
 
+- acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
 - Callme-T
 - ryanwolhuter @ryanwolhuter
 
-## 4.1.0-dev.50 (2025-09-09)
+## 5.0.0-staging.9 (2025-09-09)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.49 (2025-09-09)
+## 5.0.0-staging.8 (2025-09-09)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.48 (2025-09-09)
+## 5.0.0-staging.7 (2025-09-09)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
 
-## 4.1.0-dev.47 (2025-09-06)
+## 5.0.0-staging.6 (2025-09-08)
 
-### 🩹 Fixes
+This was a version bump only for document-model to align it with other projects, there were no code changes.
 
-- **docs:** added zip redundancy to release notes ([3acfe1027](https://github.com/powerhouse-inc/powerhouse/commit/3acfe1027))
+## 5.0.0-staging.5 (2025-09-08)
 
-### ❤️ Thank You
+This was a version bump only for document-model to align it with other projects, there were no code changes.
 
-- Callme-T
-
-## 4.1.0-dev.46 (2025-09-05)
+## 5.0.0-staging.4 (2025-09-08)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
 
@@ -1363,13 +1418,13 @@ This was a version bump only for document-model to align it with other projects,
 - **monorepo:** regenerate lockfile ([0e277cec1](https://github.com/powerhouse-inc/powerhouse/commit/0e277cec1))
 - **monorepo:** apply lint fixes ([9803ac778](https://github.com/powerhouse-inc/powerhouse/commit/9803ac778))
 - **monorepo:** migrate to unified configs ([693ce1a30](https://github.com/powerhouse-inc/powerhouse/commit/693ce1a30))
-- ⚠️ **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
+- ⚠️  **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
 
 ### 🩹 Fixes
 
 - all builds should first clean their dist directories -- this does not affect the build cache ([7acffd6b0](https://github.com/powerhouse-inc/powerhouse/commit/7acffd6b0))
 - use relative path for generateId to fix test ([973a92662](https://github.com/powerhouse-inc/powerhouse/commit/973a92662))
-- **reactor:** fix issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
+- **reactor:** fix  issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
 - remove all usages of hashKey and replace with appropriate generateId/generateUUID functions ([1a365939d](https://github.com/powerhouse-inc/powerhouse/commit/1a365939d))
 - **codegen,document-model:** fix ph index type issues ([8ec628941](https://github.com/powerhouse-inc/powerhouse/commit/8ec628941))
 - **document-model:** trigger release ([1f2a88fdf](https://github.com/powerhouse-inc/powerhouse/commit/1f2a88fdf))
@@ -1386,9 +1441,9 @@ This was a version bump only for document-model to align it with other projects,
 - **monorepo:** remove workspaces and package manager fields ([e0b53fef2](https://github.com/powerhouse-inc/powerhouse/commit/e0b53fef2))
 - **document-model:** update .gitignore ([d0c932981](https://github.com/powerhouse-inc/powerhouse/commit/d0c932981))
 
-### ⚠️ Breaking Changes
+### ⚠️  Breaking Changes
 
-- ⚠️ **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
+- ⚠️  **document-model:** initial document-model package setup ([8a145eecb](https://github.com/powerhouse-inc/powerhouse/commit/8a145eecb))
 
 ### ❤️ Thank You
 
@@ -1442,7 +1497,7 @@ This was a version bump only for document-model to align it with other projects,
 ### 🩹 Fixes
 
 - use relative path for generateId to fix test ([973a92662](https://github.com/powerhouse-inc/powerhouse/commit/973a92662))
-- **reactor:** fix issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
+- **reactor:** fix  issue where get drive by revision was incorrect ([e6be7d3f1](https://github.com/powerhouse-inc/powerhouse/commit/e6be7d3f1))
 
 ### ❤️ Thank You
 
@@ -2168,7 +2223,7 @@ This was a version bump only for document-model to align it with other projects,
 
 - **document-model:** do not generate a new timestamp for operations ([#544](https://github.com/powerhouse-inc/powerhouse/pull/544))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - Guillermo Puente Sandoval @gpuente
 
@@ -2196,7 +2251,7 @@ This was a version bump only for document-model to align it with other projects,
 
 - **design-system:** fix scalars import ([#506](https://github.com/powerhouse-inc/powerhouse/pull/506))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas
 - Guillermo Puente Sandoval
@@ -2209,7 +2264,7 @@ This was a version bump only for document-model to align it with other projects,
 - **document-model-libs:** regenerate lockfile ([0effee2e](https://github.com/powerhouse-inc/powerhouse/commit/0effee2e))
 - qa updates 4 ([50ac4eb5](https://github.com/powerhouse-inc/powerhouse/commit/50ac4eb5))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - ryanwolhuter @ryanwolhuter
 
@@ -2222,7 +2277,7 @@ This was a version bump only for document-model to align it with other projects,
 - **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
 - **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - Guillermo Puente Sandoval @gpuente
 - ryanwolhuter @ryanwolhuter
@@ -2240,7 +2295,7 @@ This was a version bump only for document-model to align it with other projects,
 - bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
 - **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan
@@ -2259,7 +2314,7 @@ This was a version bump only for document-model to align it with other projects,
 - **document-model-libs:** add json editors with sync ([76acd807](https://github.com/powerhouse-inc/powerhouse/commit/76acd807))
 - **document-model-libs:** include typedefs in initial hidden schema state ([88e184fd](https://github.com/powerhouse-inc/powerhouse/commit/88e184fd))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Guillermo Puente @gpuente
@@ -2285,7 +2340,7 @@ This was a version bump only for document-model to align it with other projects,
 - **document-model:** fix import zip files ([#412](https://github.com/powerhouse-inc/powerhouse/pull/412))
 - **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - frankp.eth @froid1911
@@ -2301,7 +2356,7 @@ This was a version bump only for document-model to align it with other projects,
 - **design-system:** create icon components in prepare install of postinstall ([f302d65f](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f))
 - **design-system:** improve bundle size and tree shaking support ([ffb68cfc](https://github.com/powerhouse-inc/powerhouse/commit/ffb68cfc))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Guillermo Puente Sandoval @gpuente
@@ -2517,7 +2572,7 @@ This was a version bump only for document-model to align it with other projects,
 - Storybook body styles ([dbe53e8a](https://github.com/powerhouse-inc/powerhouse/commit/dbe53e8a))
 - sotorybook dep with yarn ([fc7970e8](https://github.com/powerhouse-inc/powerhouse/commit/fc7970e8))
 
-### ❤️ Thank You
+### ❤️  Thank You
 
 - acaldas @acaldas
 - Frank
@@ -2529,6 +2584,7 @@ This was a version bump only for document-model to align it with other projects,
 - semantic-release-bot
 
 ## 2.1.0 (2024-09-26)
+
 
 ### 🚀 Features
 
@@ -2552,11 +2608,13 @@ This was a version bump only for document-model to align it with other projects,
 
 - **codegen:** initial codegen package setup ([0f67da6](https://github.com/powerhouse-inc/powerhouse/commit/0f67da6))
 
+
 ### 🩹 Fixes
 
 - undo bump change case ([b479715](https://github.com/powerhouse-inc/powerhouse/commit/b479715))
 
-### ❤️ Thank You
+
+### ❤️  Thank You
 
 - acaldas
 - Guillermo Puente @gpuente
@@ -2564,24 +2622,28 @@ This was a version bump only for document-model to align it with other projects,
 
 ## 2.0.1 (2024-09-25)
 
+
 ### 🩹 Fixes
 
 - **document-model:** update .gitignore ([d0c9329](https://github.com/powerhouse-inc/ph-monorepo/commit/d0c9329))
 
-### ❤️ Thank You
+
+### ❤️  Thank You
 
 - Guillermo Puente @gpuente
 
 # 2.0.0 (2024-09-24)
 
+
 ### 🚀 Features
 
-- ⚠️ **document-model:** initial document-model package setup ([8a145ee](https://github.com/powerhouse-inc/ph-monorepo/commit/8a145ee))
+- ⚠️  **document-model:** initial document-model package setup ([8a145ee](https://github.com/powerhouse-inc/ph-monorepo/commit/8a145ee))
 
-#### ⚠️ Breaking Changes
 
-- ⚠️ **document-model:** initial document-model package setup ([8a145ee](https://github.com/powerhouse-inc/ph-monorepo/commit/8a145ee))
+#### ⚠️  Breaking Changes
 
-### ❤️ Thank You
+- ⚠️  **document-model:** initial document-model package setup ([8a145ee](https://github.com/powerhouse-inc/ph-monorepo/commit/8a145ee))
+
+### ❤️  Thank You
 
 - Guillermo Puente @gpuente

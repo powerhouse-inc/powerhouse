@@ -1,7 +1,10 @@
-import { TooltipProvider } from "#connect";
-import { Pagination, usePagination } from "#powerhouse";
+import {
+  ConnectTooltipProvider,
+  Pagination,
+  usePagination,
+} from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
-import { garbageCollect, sortOperations } from "document-model";
+import { garbageCollect, sortOperations } from "document-model/core";
 import { useMemo, useState } from "react";
 import { Header } from "./header/index.js";
 import { Timeline } from "./timeline/index.js";
@@ -79,7 +82,7 @@ export function RevisionHistory(props: Props) {
   );
 
   return (
-    <TooltipProvider>
+    <ConnectTooltipProvider>
       <Header
         docId={documentId}
         onChangeScope={onChangeScope}
@@ -104,6 +107,6 @@ export function RevisionHistory(props: Props) {
         )}
       </div>
       {PaginationComponent}
-    </TooltipProvider>
+    </ConnectTooltipProvider>
   );
 }

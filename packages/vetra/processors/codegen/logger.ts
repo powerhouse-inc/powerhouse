@@ -1,5 +1,5 @@
 import { cyan } from "colorette";
-import { childLogger } from "document-drive/utils/logger";
+import { childLogger } from "document-drive";
 
 // Create empty childLogger and manually prepend colored tag
 const baseLogger = childLogger([]); // No automatic tags

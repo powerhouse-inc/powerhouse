@@ -2,6 +2,8 @@ import type {
   BaseDocumentDriveServer,
   DocumentDriveDocument,
   FileNode,
+  IDocumentOperationStorage,
+  IDocumentStorage,
 } from "document-drive";
 import {
   MemoryStorage,
@@ -19,12 +21,8 @@ import {
   updateFile,
   updateNode,
 } from "document-drive";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive/storage/types";
 import type { DocumentModelModule } from "document-model";
-import { generateId } from "document-model";
+import { generateId } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";

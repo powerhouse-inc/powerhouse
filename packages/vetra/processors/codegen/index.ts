@@ -1,6 +1,5 @@
-import { getConfig } from "@powerhousedao/config/utils";
-import type { IProcessor } from "document-drive/processors/types";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import { getConfig } from "@powerhousedao/config/node";
+import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { logger } from "./logger.js";

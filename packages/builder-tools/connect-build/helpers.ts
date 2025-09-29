@@ -14,7 +14,7 @@ export async function bundleExternalPackages(
     outdir: connectBuildDistDirPath,
     bundle: true,
     treeShaking: true,
-    minify: true,
+    minify: false,
     sourcemap: true,
     metafile: true,
     format: "esm",

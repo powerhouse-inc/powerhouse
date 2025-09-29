@@ -1,13 +1,15 @@
+import type { DocumentTypesMap } from "@powerhousedao/codegen";
+import {
+  loadDocumentModel,
+  TSMorphCodeGenerator,
+} from "@powerhousedao/codegen";
 import { pascalCase } from "change-case";
-import type { DocumentModelState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
-import type { DocumentTypesMap } from "./index.js";
-import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
 
@@ -28,12 +30,10 @@ export async function run(
     cwd: process.cwd(),
     logger,
     createPrompter: () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return require("enquirer");
     },
     exec: (action, body) => {
       const opts = body && body.length > 0 ? { input: body } : {};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       return require("execa").shell(action, opts);
     },
     debug: !!process.env.DEBUG,
@@ -63,7 +63,7 @@ export async function generateAll(
   { watch = false, skipFormat = false, verbose = true, force = true } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
-  const documentModelStates: DocumentModelState[] = [];
+  const documentModelStates: DocumentModelGlobalState[] = [];
 
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
@@ -78,7 +78,7 @@ export async function generateAll(
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
       documentModelStates.push(documentModel);
-      await generateDocumentModel(documentModel, dir, {
+      await hygenGenerateDocumentModel(documentModel, dir, {
         watch,
         skipFormat,
         verbose,
@@ -103,8 +103,8 @@ export async function generateAll(
   await generator.generateReducers();
 }
 
-export async function generateDocumentModel(
-  documentModelState: DocumentModelState,
+export async function hygenGenerateDocumentModel(
+  documentModelState: DocumentModelGlobalState,
   dir: string,
   {
     watch = false,
@@ -163,7 +163,7 @@ export async function generateDocumentModel(
   }
 }
 
-export async function generateEditor(
+export async function hygenGenerateEditor(
   name: string,
   documentTypes: string[],
   documentTypesMap: DocumentTypesMap,
@@ -195,7 +195,7 @@ export async function generateEditor(
   await run(args, { skipFormat, verbose });
 }
 
-export async function generateProcessor(
+export async function hygenGenerateProcessor(
   name: string,
   documentTypes: string[],
   documentTypesMap: DocumentTypesMap,
@@ -227,9 +227,9 @@ export async function generateProcessor(
   );
 }
 
-export async function generateSubgraph(
+export async function hygenGenerateSubgraph(
   name: string,
-  documentModel: DocumentModelState | null,
+  documentModel: DocumentModelGlobalState | null,
   dir: string,
   { skipFormat = false, verbose = true } = {},
 ) {
@@ -281,7 +281,7 @@ export async function generateSubgraph(
   }
 }
 
-export async function generateImportScript(
+export async function hygenGenerateImportScript(
   name: string,
   dir: string,
   { skipFormat = false, verbose = true } = {},
@@ -302,7 +302,7 @@ export async function generateImportScript(
   );
 }
 
-export async function generateDriveEditor(
+export async function hygenGenerateDriveEditor(
   name: string,
   dir: string,
   { skipFormat = false } = {},

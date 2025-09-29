@@ -1,38 +1,26 @@
-import type { DocumentDriveDocument } from "document-drive";
-import type {
-  Operation,
-  PHBaseState,
-  PHDocument,
-  PHDocumentHeader,
-} from "document-model";
+import type { DocumentDriveDocument, PHDocumentGQL } from "document-drive";
+import type { Operation, PHDocument } from "document-model";
 
+type ResponseForDrive = {
+  id: string;
+  slug: string;
+  meta: Record<string, unknown> | undefined;
+  name: string;
+  icon: string | undefined;
+};
 export function responseForDrive(drive: DocumentDriveDocument) {
-  return {
+  const response: ResponseForDrive = {
     id: drive.header.id,
     slug: drive.header.slug,
     meta: drive.header.meta,
     name: drive.state.global.name,
     icon: drive.state.global.icon ?? undefined,
   };
+  return response;
 }
 
-export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
-  id: string;
-  revision: number;
-  // @deprecated
-  createdAt: string;
-  // @deprecated
-  lastModified: string;
-  __typename: string;
-  state: unknown;
-  initialState: unknown;
-  stateJSON: unknown;
-  operations: Operation[];
-  nodeName?: string;
-};
-
-export function responseForDocument<TState extends PHBaseState = PHBaseState>(
-  document: PHDocument<TState>,
+export function responseForDocument(
+  document: PHDocument,
   typeName: string,
   nodeName?: string,
 ): PHDocumentGQL {
@@ -44,7 +32,6 @@ export function responseForDocument<TState extends PHBaseState = PHBaseState>(
     lastModified: document.header.lastModifiedAtUtcIso,
     documentType: document.header.documentType,
     name: document.header.name,
-    nodeName,
     revision: document.header.revision.global || 0,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,

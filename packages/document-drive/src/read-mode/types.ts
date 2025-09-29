@@ -1,23 +1,19 @@
 import type {
   DocumentDriveDocument,
-  ListenerFilter,
-} from "#drive-document-model/gen/types";
-import type { DocumentModelNotFoundError } from "#server/error";
-import type {
   DocumentDriveServerMixin,
+  DocumentModelNotFoundError,
+  DriveInfo,
+  ListenerFilter,
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
-} from "#server/types";
-import type { DriveInfo } from "#utils/graphql";
+} from "document-drive";
 import type {
   DocumentModelModule,
   PHBaseState,
   PHDocument,
 } from "document-model";
-import type {
-  ReadDocumentNotFoundError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-} from "./errors.js";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;

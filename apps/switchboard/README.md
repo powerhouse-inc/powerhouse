@@ -56,15 +56,16 @@ pnpm add -g @powerhousedao/switchboard
 
 ### Environment Variables
 
-| Variable                   | Description                   | Default               |
-| -------------------------- | ----------------------------- | --------------------- |
-| `PORT`                     | Server port                   | `4001`                |
-| `DATABASE_URL`             | Database connection string    | `./.ph/drive-storage` |
-| `REDIS_URL`                | Redis connection URL          | -                     |
-| `REDIS_TLS_URL`            | Redis TLS connection URL      | -                     |
-| `SENTRY_DSN`               | Sentry DSN for error tracking | -                     |
-| `SENTRY_ENV`               | Sentry environment            | -                     |
-| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address      | -                     |
+| Variable                     | Description                        | Default               |
+| ---------------------------- | ---------------------------------- | --------------------- |
+| `PORT`                       | Server port                        | `4001`                |
+| `DATABASE_URL`               | Database connection string         | `./.ph/drive-storage` |
+| `REDIS_URL`                  | Redis connection URL               | -                     |
+| `REDIS_TLS_URL`              | Redis TLS connection URL           | -                     |
+| `SENTRY_DSN`                 | Sentry DSN for error tracking      | -                     |
+| `SENTRY_ENV`                 | Sentry environment                 | -                     |
+| `PYROSCOPE_SERVER_ADDRESS`   | Pyroscope server address           | -                     |
+| `FEATURE_REACTORV2_ENABLED`  | Enable Reactor v2 subgraph feature | `false`               |
 
 ### Authentication Configuration
 

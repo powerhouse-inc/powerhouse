@@ -1,26 +1,23 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { generateId } from "../../index.js";
-import { setName } from "../../src/document/actions/creators.js";
-import { SET_NAME } from "../../src/document/actions/types.js";
-import type { CreateChildDocumentInput } from "../../src/document/signal.js";
-import type { Action } from "../../src/document/types.js";
+import type { Action, CreateChildDocumentInput } from "document-model";
+import { setName } from "document-model";
 import {
   baseCreateDocument,
   createAction,
   createReducer,
-} from "../../src/document/utils/base.js";
-import type { CountPHState, TestPHState } from "../helpers.js";
+  generateId,
+} from "document-model/core";
+import type { CountPHState, TestPHState } from "document-model/test";
 import {
-  CountDocument,
   countReducer,
-  createTestState,
   createCountDocumentState,
   defaultPHDocumentCreateState,
   error,
   fakeAction,
   increment,
+  testCreateBaseState,
   wrappedEmptyReducer,
-} from "../helpers.js";
+} from "document-model/test";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Base reducer", () => {
   beforeAll(() => {
@@ -108,7 +105,7 @@ describe("Base reducer", () => {
     expect(setNameAction).toStrictEqual({
       id: setNameAction.id,
       timestampUtcMs: setNameAction.timestampUtcMs,
-      type: SET_NAME,
+      type: "SET_NAME",
       input: "Document",
       scope: "global",
     });
@@ -172,7 +169,6 @@ describe("Base reducer", () => {
     reducer(document, triggerAction, (action) => {
       expect(action.type).toBe("CREATE_CHILD_DOCUMENT");
       const input = action.input as CreateChildDocumentInput;
-
       expect(input.id).toBe(id);
       expect(input.documentType).toBe("test");
     });
@@ -324,7 +320,7 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer", () => {
-    const initialState = createTestState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
@@ -340,7 +336,7 @@ describe("Base reducer", () => {
   });
 
   it("should not throw errors from reducer when there is an error after an operation with skip value", () => {
-    const initialState = createTestState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
@@ -356,7 +352,7 @@ describe("Base reducer", () => {
   });
 
   it("should include error message into error operation prop", () => {
-    const initialState = createTestState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
@@ -393,7 +389,7 @@ describe("Base reducer", () => {
   });
 
   it("should not include error message in successful operations", () => {
-    const initialState = createTestState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     let document = baseCreateDocument<CountPHState>(
       createCountDocumentState,

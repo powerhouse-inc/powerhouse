@@ -1,6 +1,5 @@
+import type { UploadFileItemStatus } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
-
-import { type UploadFileItemStatus } from "../upload-file-item.js";
 
 type StatusRowProps = {
   readonly status: UploadFileItemStatus;
@@ -55,7 +54,7 @@ function getCTAText(status: UploadFileItemStatus): string {
   return "";
 }
 
-export function StatusRow(props: StatusRowProps) {
+export function UploadFileItemStatusRow(props: StatusRowProps) {
   const { status, progress = 0, onOpenDocument, onFindResolution } = props;
 
   const handleCTAClick = () => {

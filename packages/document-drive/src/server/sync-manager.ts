@@ -1,22 +1,11 @@
-import type { ICache } from "#cache/types";
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
 import type {
+  DocumentDriveDocument,
+  GetStrandsOptions,
+  ICache,
   IDocumentStorage,
   IDriveOperationStorage,
-  IStorageUnit,
-} from "#storage/types";
-import { childLogger } from "#utils/logger";
-import { isBefore, operationsToRevision } from "#utils/misc";
-import type { DocumentModelModule, PHDocument } from "document-model";
-import {
-  garbageCollectDocumentOperations,
-  replayDocument,
-} from "document-model";
-import { SynchronizationUnitNotFoundError } from "./error.js";
-import { SyncUnitMap } from "./sync-unit-map.js";
-import type {
-  GetStrandsOptions,
   IEventEmitter,
+  IStorageUnit,
   ISynchronizationManager,
   OperationUpdate,
   SyncStatus,
@@ -24,9 +13,21 @@ import type {
   SynchronizationUnit,
   SynchronizationUnitId,
   SynchronizationUnitQuery,
-} from "./types.js";
+} from "document-drive";
+import {
+  SyncUnitMap,
+  SynchronizationUnitNotFoundError,
+  childLogger,
+  isBefore,
+  operationsToRevision,
+} from "document-drive";
+import type { DocumentModelModule, PHDocument } from "document-model";
+import {
+  garbageCollectDocumentOperations,
+  replayDocument,
+} from "document-model/core";
 
-export default class SynchronizationManager implements ISynchronizationManager {
+export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();
 
   private logger = childLogger(["SynchronizationManager"]);
@@ -252,7 +253,7 @@ export default class SynchronizationManager implements ISynchronizationManager {
 
   private getDocumentModelModule<TDocument>(documentType: string) {
     const documentModelModule = this.documentModelModules.find(
-      (m) => m.documentModel.id === documentType,
+      (m) => m.documentModel.global.id === documentType,
     );
     if (!documentModelModule) {
       throw new Error(`Document type ${documentType} not supported`);

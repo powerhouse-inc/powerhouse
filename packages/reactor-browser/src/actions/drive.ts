@@ -1,9 +1,10 @@
+import { getUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   DriveInput,
-  Listener,
   PullResponderTrigger,
   RemoteDriveOptions,
+  ServerListener,
   SharingType,
   SyncStatus,
   Trigger,
@@ -17,13 +18,8 @@ import {
   setDriveName,
   setSharingType,
 } from "document-drive";
-import {
-  createGlobalState,
-  createState,
-} from "document-drive/drive-document-model/gen/ph-factories";
-import { defaultBaseState, generateId } from "document-model";
-import { defaultLocalState } from "document-model/document-model/gen/ph-factories";
-import { getUserPermissions } from "../utils/user.js";
+import type { PHDocument } from "document-model";
+import { generateId } from "document-model/core";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
@@ -36,18 +32,11 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to create drives");
   }
-
   const id = input.id || generateId();
-  const state = createState(
-    defaultBaseState(),
-    createGlobalState(input.global),
-    defaultLocalState(),
-  );
-
   const newDrive = await reactor.addDrive(
     {
-      global: state.global,
-      local: state.local,
+      global: input.global,
+      local: input.local,
       id,
     },
     preferredEditor,
@@ -78,7 +67,10 @@ export async function deleteDrive(driveId: string) {
   await reactor.deleteDrive(driveId);
 }
 
-export async function renameDrive(driveId: string, name: string) {
+export async function renameDrive(
+  driveId: string,
+  name: string,
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -96,7 +88,7 @@ export async function renameDrive(driveId: string, name: string) {
 export async function setDriveAvailableOffline(
   driveId: string,
   availableOffline: boolean,
-) {
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -117,7 +109,7 @@ export async function setDriveAvailableOffline(
 export async function setDriveSharingType(
   driveId: string,
   sharingType: SharingType,
-) {
+): Promise<PHDocument | undefined> {
   const reactor = window.reactor;
   if (!reactor) {
     return;
@@ -206,7 +198,7 @@ export async function registerNewPullResponderTrigger(
   }
 
   const uuid = generateId();
-  const listener: Listener = {
+  const listener: ServerListener = {
     driveId,
     listenerId: uuid,
     block: false,

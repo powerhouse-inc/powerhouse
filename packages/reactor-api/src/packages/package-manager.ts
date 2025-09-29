@@ -1,10 +1,7 @@
-import { getConfig } from "@powerhousedao/config/utils";
+import { getConfig } from "@powerhousedao/config/node";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger, driveDocumentModelModule } from "document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-} from "document-drive/processors/types";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
@@ -24,7 +21,7 @@ export function getUniqueDocumentModels(
 
   for (const models of documentModels) {
     for (const model of models) {
-      uniqueModels.set(model.documentModel.id, model);
+      uniqueModels.set(model.documentModel.global.id, model);
     }
   }
 

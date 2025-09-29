@@ -1,4 +1,4 @@
-import type { Action, DocumentModelState, PHDocument } from "document-model";
+import type { Action, DocumentModelModule, PHDocument } from "document-model";
 
 import type {
   JobInfo,
@@ -46,18 +46,18 @@ export type DocumentChangeEvent = {
  */
 export interface IReactorClient {
   /**
-   * Retrieves a list of document model specifications
+   * Retrieves a list of document model modules.
    *
    * @param namespace - Optional namespace like "powerhouse" or "sky", defaults to ""
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
-   * @returns List of document models
+   * @returns List of document model modules
    */
   getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>>;
+  ): Promise<PagedResults<DocumentModelModule>>;
 
   /**
    * Retrieves a specific PHDocument

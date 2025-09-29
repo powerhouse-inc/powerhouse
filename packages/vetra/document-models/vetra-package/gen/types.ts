@@ -1,10 +1,20 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument, PHBaseState } from "document-model";
 import type { VetraPackageAction } from "./actions.js";
-import type { VetraPackagePHState } from "./ph-factories.js";
-import type { VetraPackageState } from "./schema/types.js";
+import type { VetraPackageState as VetraPackageGlobalState } from "./schema/types.js";
 
 export { z } from "./schema/index.js";
-export type * from "./schema/types.js";
+export * from "./schema/types.js";
 type VetraPackageLocalState = Record<PropertyKey, never>;
-export type VetraPackageDocument = PHDocument<VetraPackagePHState>;
-export type { VetraPackageState, VetraPackageLocalState, VetraPackageAction };
+type VetraPackagePHState = PHBaseState & {
+  global: VetraPackageGlobalState;
+  local: VetraPackageLocalState;
+};
+type VetraPackageDocument = PHDocument<VetraPackagePHState>;
+
+export type {
+  VetraPackageGlobalState,
+  VetraPackageLocalState,
+  VetraPackagePHState,
+  VetraPackageAction,
+  VetraPackageDocument,
+};

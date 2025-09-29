@@ -1,12 +1,10 @@
 {
   "name": "@renown/sdk",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
-  "main": "./dist/src/index.js",
-  "types": "./dist/src/index.browser.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
@@ -14,35 +12,21 @@
   "publishConfig": {
     "access": "public"
   },
-  "imports": {
-    "#*": "./dist/src/*",
-    "#init/env": {
-      "node": "./dist/src/init.node.js",
-      "default": "./dist/src/init.browser.js"
-    }
-  },
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist"
   ],
-  "nx-release-publish": {
-    "options": {
-      "packageRoot": "dist/{projectRoot}"
-    }
-  },
   "scripts": {
-    "build:tsc": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.browser.json --noEmit",
-    "build:tsc:node": "tsc -p tsconfig.node.json --noEmit",
-    "build:tsc:browser": "tsc -p tsconfig.browser.json --noEmit",
-    "build": "tsc --build",
-    "prebuild": "npm run clean",
-    "clean": "rimraf dist/",
-    "clean:node_modules": "rimraf node_modules"
+    "tsc": "tsc",
+    "lint": "eslint"
   },
   "peerDependencies": {
     "document-model": "workspace:*"
   },
   "devDependencies": {
-    "document-model": "workspace:*"
+    "document-model": "workspace:*",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@didtools/key-did": "^1.0.0",

@@ -32,7 +32,7 @@ export function AddDriveModal(props: Props) {
     onClose();
   }
 
-  const ready = driveEditorModules.length > 0;
+  const ready = !!driveEditorModules?.length;
 
   return (
     <ConnectAddLocalDriveModal

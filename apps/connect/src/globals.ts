@@ -1,4 +1,4 @@
-import type { DocumentEditorDebugTools } from "./utils/document-editor-debug-tools.js";
+import type { DocumentEditorDebugTools } from "@powerhousedao/connect";
 
 declare global {
   interface Window {

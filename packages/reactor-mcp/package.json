@@ -1,37 +1,28 @@
 {
   "name": "@powerhousedao/reactor-mcp",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
   "type": "module",
-  "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
-  "exports": {
-    "./*": "./dist/src/*.js"
-  },
-  "imports": {
-    "#*": "./dist/src/*"
-  },
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "bin": {
     "reactor-mcp": "./dist/src/cli.js"
   },
   "files": [
-    "./dist"
+    "dist"
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc --build",
-    "build:tsc": "tsc --build",
-    "prebuild": "npm run clean",
+    "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "bench": "vitest bench"
   },
   "publishConfig": {
     "access": "public"
@@ -54,7 +45,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.15.17",
-    "vitest": "^3.1.2"
+    "@types/node": "^24.3.0",
+    "vitest": "^3.2.4"
   }
 }

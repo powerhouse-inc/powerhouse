@@ -1,28 +1,23 @@
+import {
+  loadDocumentModel,
+  TSMorphCodeGenerator,
+} from "@powerhousedao/codegen";
 import fs from "fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
-import { loadDocumentModel } from "../utils.js";
+import { expectedProOperationsV3Content } from "./fixtures/expected-reducer-content-v3.js";
 import {
   expectedBaseOperationsContent,
   expectedProOperationsContent,
 } from "./fixtures/expected-reducer-content.js";
-import { expectedProOperationsV3Content } from "./fixtures/expected-reducer-content-v3.js";
+
+const testDir = path.join(import.meta.dirname);
 
 describe("ts-morph generator", () => {
-  const srcPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    ".test-project",
-  );
+  const srcPath = path.join(testDir, ".test-project");
 
   const srcTestDocumentPathV3 = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
+    testDir,
     "data",
     "test-doc-versions",
     "test-doc-v3",
@@ -30,10 +25,7 @@ describe("ts-morph generator", () => {
   );
 
   const srcTestDocumentPathV4 = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
+    testDir,
     "data",
     "test-doc-versions",
     "test-doc-v4",

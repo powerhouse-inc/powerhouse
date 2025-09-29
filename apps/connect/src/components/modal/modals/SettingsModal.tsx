@@ -1,14 +1,15 @@
 import {
+  About,
+  DangerZone,
+  DefaultEditor,
+  PackageManager,
+} from "@powerhousedao/connect";
+import {
   Icon,
   SettingsModal as SettingsModalV2,
 } from "@powerhousedao/design-system";
 import { t } from "i18next";
-import type React from "react";
-import { useCallback, useMemo } from "react";
-import { About } from "./settings/about.js";
-import { DangerZone } from "./settings/danger-zone.js";
-import { DefaultEditor } from "./settings/default-editor.js";
-import { PackageManager } from "./settings/package-manager.js";
+import React, { useCallback, useMemo } from "react";
 
 export interface SettingsModalProps {
   open: boolean;

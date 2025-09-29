@@ -1,11 +1,11 @@
-import {
+import type {
   GraphQLResolveInfo,
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
-import { Context } from "../../types.js";
+import type { Context } from "../../types.js";
 import { z } from "zod";
-import { DocumentNode } from "graphql";
+import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
@@ -45,7 +45,7 @@ export type Action = {
   readonly attachments?: Maybe<ReadonlyArray<AttachmentInput>>;
   readonly context?: Maybe<ActionContext>;
   readonly id: Scalars["String"]["output"];
-  readonly input?: Maybe<Scalars["JSONObject"]["output"]>;
+  readonly input: Scalars["JSONObject"]["output"];
   readonly scope: Scalars["String"]["output"];
   readonly timestampUtcMs: Scalars["String"]["output"];
   readonly type: Scalars["String"]["output"];
@@ -84,20 +84,20 @@ export enum DocumentChangeType {
   Updated = "UPDATED",
 }
 
+export type DocumentModelGlobalState = {
+  readonly id: Scalars["String"]["output"];
+  readonly name: Scalars["String"]["output"];
+  readonly namespace?: Maybe<Scalars["String"]["output"]>;
+  readonly specification: Scalars["JSONObject"]["output"];
+  readonly version?: Maybe<Scalars["String"]["output"]>;
+};
+
 export type DocumentModelResultPage = {
   readonly cursor?: Maybe<Scalars["String"]["output"]>;
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
-  readonly items: ReadonlyArray<DocumentModelState>;
+  readonly items: ReadonlyArray<DocumentModelGlobalState>;
   readonly totalCount: Scalars["Int"]["output"];
-};
-
-export type DocumentModelState = {
-  readonly id: Scalars["String"]["output"];
-  readonly name: Scalars["String"]["output"];
-  readonly namespace?: Maybe<Scalars["String"]["output"]>;
-  readonly specification?: Maybe<Scalars["JSONObject"]["output"]>;
-  readonly version?: Maybe<Scalars["String"]["output"]>;
 };
 
 export type DocumentWithChildren = {
@@ -108,7 +108,7 @@ export type DocumentWithChildren = {
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
-  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
+  readonly result: Scalars["JSONObject"]["output"];
   readonly status: Scalars["String"]["output"];
 };
 
@@ -117,7 +117,7 @@ export type JobInfo = {
   readonly createdAt: Scalars["DateTime"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
-  readonly result?: Maybe<Scalars["JSONObject"]["output"]>;
+  readonly result: Scalars["JSONObject"]["output"];
   readonly status: Scalars["String"]["output"];
 };
 
@@ -346,7 +346,7 @@ export type GetDocumentModelsQuery = {
       readonly name: string;
       readonly namespace?: string | null | undefined;
       readonly version?: string | null | undefined;
-      readonly specification?: any | null | undefined;
+      readonly specification: any;
     }>;
   };
 };
@@ -475,7 +475,7 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result?: any | null | undefined;
+        readonly result: any;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
@@ -530,9 +530,7 @@ export type CreateEmptyDocumentMutation = {
 
 export type MutateDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -555,9 +553,7 @@ export type MutateDocumentMutation = {
 
 export type MutateDocumentAsyncMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
-  actions:
-    | ReadonlyArray<Scalars["JSONObject"]["input"]>
-    | Scalars["JSONObject"]["input"];
+  actions: ReadonlyArray<Scalars["JSONObject"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -590,9 +586,7 @@ export type RenameDocumentMutation = {
 
 export type AddChildrenMutationVariables = Exact<{
   parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
+  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -615,9 +609,7 @@ export type AddChildrenMutation = {
 
 export type RemoveChildrenMutationVariables = Exact<{
   parentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
+  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -641,9 +633,7 @@ export type RemoveChildrenMutation = {
 export type MoveChildrenMutationVariables = Exact<{
   sourceParentIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
-  documentIdentifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
+  documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -688,9 +678,7 @@ export type DeleteDocumentMutationVariables = Exact<{
 export type DeleteDocumentMutation = { readonly deleteDocument: boolean };
 
 export type DeleteDocumentsMutationVariables = Exact<{
-  identifiers:
-    | ReadonlyArray<Scalars["String"]["input"]>
-    | Scalars["String"]["input"];
+  identifiers: ReadonlyArray<Scalars["String"]["input"]>;
   propagate?: InputMaybe<PropagationMode>;
 }>;
 
@@ -736,7 +724,7 @@ export type JobChangesSubscription = {
   readonly jobChanges: {
     readonly jobId: string;
     readonly status: string;
-    readonly result?: any | null | undefined;
+    readonly result: any;
     readonly error?: string | null | undefined;
   };
 };
@@ -859,8 +847,8 @@ export type ResolversTypes = ResolversObject<{
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
   DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
   DocumentChangeType: DocumentChangeType;
+  DocumentModelGlobalState: ResolverTypeWrapper<DocumentModelGlobalState>;
   DocumentModelResultPage: ResolverTypeWrapper<DocumentModelResultPage>;
-  DocumentModelState: ResolverTypeWrapper<DocumentModelState>;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
@@ -892,8 +880,8 @@ export type ResolversParentTypes = ResolversObject<{
   DateTime: Scalars["DateTime"]["output"];
   DocumentChangeContext: DocumentChangeContext;
   DocumentChangeEvent: DocumentChangeEvent;
+  DocumentModelGlobalState: DocumentModelGlobalState;
   DocumentModelResultPage: DocumentModelResultPage;
-  DocumentModelState: DocumentModelState;
   DocumentWithChildren: DocumentWithChildren;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
@@ -931,11 +919,7 @@ export type ActionResolvers<
     ContextType
   >;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  input?: Resolver<
-    Maybe<ResolversTypes["JSONObject"]>,
-    ParentType,
-    ContextType
-  >;
+  input?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   type?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1006,6 +990,27 @@ export type DocumentChangeEventResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type DocumentModelGlobalStateResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["DocumentModelGlobalState"] = ResolversParentTypes["DocumentModelGlobalState"],
+> = ResolversObject<{
+  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  namespace?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  specification?: Resolver<
+    ResolversTypes["JSONObject"],
+    ParentType,
+    ContextType
+  >;
+  version?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type DocumentModelResultPageResolvers<
   ContextType = Context,
   ParentType extends
@@ -1019,32 +1024,11 @@ export type DocumentModelResultPageResolvers<
     ContextType
   >;
   items?: Resolver<
-    ReadonlyArray<ResolversTypes["DocumentModelState"]>,
+    ReadonlyArray<ResolversTypes["DocumentModelGlobalState"]>,
     ParentType,
     ContextType
   >;
   totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type DocumentModelStateResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelState"] = ResolversParentTypes["DocumentModelState"],
-> = ResolversObject<{
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  namespace?: Resolver<
-    Maybe<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  specification?: Resolver<
-    Maybe<ResolversTypes["JSONObject"]>,
-    ParentType,
-    ContextType
-  >;
-  version?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1074,11 +1058,7 @@ export type JobChangeEventResolvers<
 > = ResolversObject<{
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<
-    Maybe<ResolversTypes["JSONObject"]>,
-    ParentType,
-    ContextType
-  >;
+  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
@@ -1096,11 +1076,7 @@ export type JobInfoResolvers<
   createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<
-    Maybe<ResolversTypes["JSONObject"]>,
-    ParentType,
-    ContextType
-  >;
+  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
@@ -1363,8 +1339,8 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   DateTime?: GraphQLScalarType;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
   DocumentChangeEvent?: DocumentChangeEventResolvers<ContextType>;
+  DocumentModelGlobalState?: DocumentModelGlobalStateResolvers<ContextType>;
   DocumentModelResultPage?: DocumentModelResultPageResolvers<ContextType>;
-  DocumentModelState?: DocumentModelStateResolvers<ContextType>;
   DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
   JSONObject?: GraphQLScalarType;
   JobChangeEvent?: JobChangeEventResolvers<ContextType>;

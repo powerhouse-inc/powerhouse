@@ -1,14 +1,22 @@
+import {
+  addFile,
+  addFolder,
+  driveDocumentModelModule as DocumentDrive,
+  driveDocumentReducer,
+  fakeAction,
+  InMemoryCache,
+  MemoryStorage,
+  SynchronizationManager,
+  SynchronizationUnitNotFoundError,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import {
+  documentModelDocumentModelModule as DocumentModel,
+  documentModelCreateDocument,
+} from "document-model";
+import { generateId } from "document-model/core";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
-import { DocumentModelModule, generateId } from "../../document-model/index.js";
-import { documentModelDocumentModelModule as DocumentModel } from "../../document-model/src/document-model/module.js";
-import InMemoryCache from "../src/cache/memory.js";
-import * as DriveActions from "../src/drive-document-model/gen/creators.js";
-import { driveDocumentModelModule as DocumentDrive } from "../src/drive-document-model/module.js";
-import { SynchronizationUnitNotFoundError } from "../src/server/error.js";
-import SynchronizationManager from "../src/server/sync-manager.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { fakeAction } from "./utils.js";
 
 const documentModels = [
   DocumentModel,
@@ -78,9 +86,9 @@ describe("Synchronization Manager with memory adapters", () => {
     const drive = DocumentDrive.utils.createDocument();
     await storage.create(drive);
 
-    const newDrive = DocumentDrive.reducer(
+    const newDrive = driveDocumentReducer(
       drive,
-      DriveActions.addFolder({ id: generateId(), name: "Test" }),
+      addFolder({ id: generateId(), name: "Test" }),
     );
     await storage.addDocumentOperations(
       newDrive.header.id,
@@ -112,9 +120,9 @@ describe("Synchronization Manager with memory adapters", () => {
     let drive = DocumentDrive.utils.createDocument();
     await storage.create(drive);
 
-    drive = DocumentDrive.reducer(
+    drive = driveDocumentReducer(
       drive,
-      DriveActions.addFile({
+      addFile({
         id: document.header.id,
         name: "Document",
         documentType: document.header.documentType,
@@ -289,7 +297,7 @@ describe("Synchronization Manager with memory adapters", () => {
       });
     }).rejects.toThrowError("Document with id non-existent not found");
 
-    const document = DocumentModel.utils.createDocument();
+    const document = documentModelCreateDocument();
     await storage.create(document);
 
     // Getting sync unit for non-existent document scope should return undefined

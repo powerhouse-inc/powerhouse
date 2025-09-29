@@ -1,29 +1,21 @@
+import {
+  generateSchemas,
+  hygenGenerateDocumentModel,
+  hygenGenerateProcessor,
+  loadDocumentModel,
+} from "@powerhousedao/codegen";
 import { exec } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateSchemas } from "../graphql.js";
-import { generateDocumentModel, generateProcessor } from "../hygen.js";
-import { loadDocumentModel } from "../utils.js";
+
+const testDir = import.meta.dirname;
 
 describe("document model", () => {
-  const srcPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    "data",
-    "document-models",
-  );
+  const srcPath = path.join(testDir, "data", "document-models");
 
-  const outPath = path.join(
-    process.cwd(),
-    "src",
-    "codegen",
-    "__tests__",
-    ".out",
-  );
+  const outPath = path.join(testDir, ".out");
 
   beforeEach(async () => {
     // make sure to remove the outPath directory
@@ -40,7 +32,7 @@ describe("document model", () => {
       path.join(srcPath, "billing-statement", "billing-statement.json"),
     );
 
-    await generateDocumentModel(
+    await hygenGenerateDocumentModel(
       billingStatementDocumentModel,
       path.join(outPath, "document-model"),
       { skipFormat: true },
@@ -50,7 +42,7 @@ describe("document model", () => {
       path.join(srcPath, "test-doc", "test-doc.json"),
     );
 
-    await generateDocumentModel(
+    await hygenGenerateDocumentModel(
       testDocDocumentModel,
       path.join(outPath, "document-model"),
       { skipFormat: true },
@@ -63,9 +55,10 @@ describe("document model", () => {
         stdout: [],
         stderr: [],
       };
+      const rootDir = path.join(testDir, "../../..");
       const child = exec(
         "npx tsc --project tsconfig.document-model.test.json",
-        { cwd: process.cwd() },
+        { cwd: rootDir },
       );
       child.stdout?.on("data", (data) => {
         output.stdout.push(data);
@@ -105,7 +98,7 @@ describe("document model", () => {
     async () => {
       await generate();
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test-analytics-processor",
         ["billing-statement"],
         {
@@ -134,7 +127,7 @@ describe("document model", () => {
     async () => {
       await generate();
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test1",
         ["billing-statement"],
         {
@@ -151,7 +144,7 @@ describe("document model", () => {
         },
       );
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test2",
         ["billing-statement"],
         {
@@ -168,7 +161,7 @@ describe("document model", () => {
         },
       );
 
-      await generateProcessor(
+      await hygenGenerateProcessor(
         "test3",
         ["billing-statement"],
         {
@@ -242,7 +235,7 @@ describe("document model", () => {
         { force: true },
       );
 
-      await generateDocumentModel(
+      await hygenGenerateDocumentModel(
         testDocDocumentModelV2,
         path.join(outPath, "document-model"),
         { skipFormat: true },
@@ -386,10 +379,14 @@ describe("document model", () => {
       });
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
-        path.join(srcPath, "test-empty-error-codes", "test-empty-error-codes.json"),
+        path.join(
+          srcPath,
+          "test-empty-error-codes",
+          "test-empty-error-codes.json",
+        ),
       );
 
-      await generateDocumentModel(
+      await hygenGenerateDocumentModel(
         testEmptyCodesDocumentModel,
         path.join(outPath, "document-model"),
         { skipFormat: true },
@@ -404,13 +401,16 @@ describe("document model", () => {
         "test-operations",
         "error.ts",
       );
-      const testOperationsErrorContent = readFileSync(testOperationsErrorPath, "utf-8");
+      const testOperationsErrorContent = readFileSync(
+        testOperationsErrorPath,
+        "utf-8",
+      );
 
       // Check that error codes are generated from names in PascalCase when empty
       expect(testOperationsErrorContent).toContain("export type ErrorCode =");
       expect(testOperationsErrorContent).toContain("'InvalidValue'");
       expect(testOperationsErrorContent).toContain("'EmptyValue'");
-      
+
       // Check that error classes are generated
       expect(testOperationsErrorContent).toContain(
         "export class InvalidValue extends Error implements ReducerError",
@@ -418,7 +418,7 @@ describe("document model", () => {
       expect(testOperationsErrorContent).toContain(
         "export class EmptyValue extends Error implements ReducerError",
       );
-      
+
       // Verify error code constants are set properly in PascalCase
       expect(testOperationsErrorContent).toContain(
         "errorCode = 'InvalidValue' as ErrorCode",

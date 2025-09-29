@@ -1,39 +1,28 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
   "files": [
-    "dist/*"
+    "dist"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": "./dist/index.js",
-  "imports": {
-    "#utils/*": "./dist/src/utils/*.js",
-    "#codegen/*": "./dist/src/codegen/*.js",
-    "#create-lib/*": "./dist/src/create-lib/*.js"
-  },
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
-    "clean": "rimraf dist/",
-    "copy-templates": "copyfiles src/codegen/.hygen/templates/**/*.esm.t dist/",
-    "copy-hygen-pkg": "copyfiles src/codegen/.hygen/package.json dist/",
-    "prebuild": "npm run clean",
-    "build": "tsc --build",
-    "postbuild": "npm run copy-templates && npm run copy-hygen-pkg",
-    "prepublishOnly": "npm run build",
+    "tsc": "tsc",
+    "lint": "eslint",
+    "copy-hygen": "cp -r src/codegen/.hygen dist/src/codegen/",
+    "build": "npm run copy-hygen",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "clean:node_modules": "rimraf node_modules",
     "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
-    "test": "vitest run"
+    "test": "npm run copy-hygen && vitest run"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
@@ -46,7 +35,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/common": "workspace:*",
-    "@types/node": "^22.15.17",
+    "@types/node": "^24.3.0",
     "arg": "^5.0.2",
     "change-case": "^4.1.2",
     "document-model": "workspace:*",
@@ -69,7 +58,7 @@
     "husky": "^8.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vitest": "^3.1.2",
+    "vitest": "^3.2.4",
     "zod": "^3.24.3"
   }
 }

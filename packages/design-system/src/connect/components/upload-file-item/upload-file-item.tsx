@@ -1,10 +1,12 @@
+import {
+  ErrorDetails,
+  Header,
+  ProgressBar,
+  StatusRow,
+} from "@powerhousedao/design-system";
+import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
-import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
-import { ErrorDetails } from "./components/error-details.js";
-import { Header } from "./components/header.js";
-import { ProgressBar } from "./components/progress-bar.js";
-import { StatusRow } from "./components/status-row.js";
 
 export type UploadFileItemStatus =
   | "success"

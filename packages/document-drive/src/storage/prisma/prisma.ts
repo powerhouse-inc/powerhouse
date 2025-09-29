@@ -1,10 +1,26 @@
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import type {
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+} from "document-drive";
 import {
+  AbortError,
+  ConflictOperationError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
+  type ICache,
+  type SynchronizationUnitQuery,
+  childLogger,
   isValidDocumentId,
   isValidSlug,
+  logger,
   resolveStorageUnitsFilter,
-} from "#storage/utils";
-import { AbortError } from "#utils/errors";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+} from "document-drive";
 import type {
   Action,
   AttachmentInput,
@@ -14,28 +30,10 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext } from "document-model";
-import type { IBackOffOptions } from "exponential-backoff";
-import { backOff } from "exponential-backoff";
-import type { ICache } from "../../cache/types.js";
-import type { DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
-import {
-  ConflictOperationError,
-  DocumentAlreadyExistsError,
-  DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
-  DocumentNotFoundError,
-  DocumentSlugValidationError,
-} from "../../server/error.js";
-import type { SynchronizationUnitQuery } from "../../server/types.js";
-import { childLogger, logger } from "../../utils/logger.js";
-import type {
-  IDocumentStorage,
-  IDriveOperationStorage,
-  IStorageUnit,
-  IStorageUnitFilter,
-} from "../types.js";
-import type { Prisma, PrismaClient } from "./client/index.js";
+import { actionContext } from "document-model/core";
+import { type IBackOffOptions, backOff } from "exponential-backoff";
+import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
+import { Prisma, PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
 
@@ -98,7 +96,6 @@ function getRetryTransactionsClient<T extends PrismaClient>(
   return prisma.$extends({
     client: {
       $transaction: (...args: Parameters<T["$transaction"]>) => {
-        // eslint-disable-next-line prefer-spread
         return backOff(() => prisma.$transaction.apply(prisma, args), {
           retry: (e) => {
             const code = (e as { code: string }).code;
@@ -847,7 +844,6 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       { isolationLevel: "Serializable", maxWait: 10000, timeout: 20000 },
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!result) {
       throw new Error("No operations were provided");
     }

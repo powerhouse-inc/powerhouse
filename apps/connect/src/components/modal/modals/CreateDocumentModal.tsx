@@ -28,8 +28,8 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = (
 
     const node = await addDocument(
       selectedDrive.header.id,
-      documentName || `New ${documentModel.documentModel.name}`,
-      documentModel.documentModel.id,
+      documentName || `New ${documentModel.documentModel.global.name}`,
+      documentModel.documentModel.global.id,
       selectedFolder?.id ?? parentFolder?.id,
     );
     setSelectedNode(node);

@@ -1,9 +1,12 @@
-import { DocumentModelModule } from "document-model";
+import { ReactorBuilder } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { describe, test } from "vitest";
-import { ReactorBuilder } from "../src/server/builder.js";
 
-import { documentModelDocumentModelModule } from "document-model";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
+import { driveDocumentModelModule } from "document-drive";
+import {
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
+} from "document-model";
 
 describe("Internal Listener", () => {
   const documentModels = [
@@ -21,8 +24,7 @@ describe("Internal Listener", () => {
   test("should add document", async ({ expect }) => {
     const reactor = await buildReactor();
 
-    const documentToCreate =
-      documentModelDocumentModelModule.utils.createDocument();
+    const documentToCreate = documentModelCreateDocument();
     const createdDocument = await reactor.addDocument(documentToCreate);
     expect(createdDocument).toMatchObject(documentToCreate);
 

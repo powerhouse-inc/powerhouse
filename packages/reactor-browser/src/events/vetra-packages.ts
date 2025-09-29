@@ -1,5 +1,5 @@
+import type { VetraPackage } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
-import type { VetraPackage } from "../types/vetra.js";
 import type { SetVetraPackagesEvent } from "./types.js";
 
 export function dispatchSetVetraPackagesEvent(
@@ -22,7 +22,7 @@ export function handleSetVetraPackagesEvent(event: SetVetraPackagesEvent) {
     ?.flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
   window.reactor?.setDocumentModelModules(
-    documentModelModules as DocumentModelModule[],
+    documentModelModules as unknown as DocumentModelModule[],
   );
 }
 

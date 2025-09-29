@@ -1,5 +1,10 @@
-import connectConfig from "#connect-config";
-import { createBrowserDocumentDriveServer, createBrowserStorage } from "#utils";
+import {
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+  loadCommonPackage,
+  loadExternalPackages,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
   dispatchSetAppConfigEvent,
@@ -23,11 +28,10 @@ import {
   refreshReactorData,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
-import { logger } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
-import type { IDocumentAdminStorage } from "document-drive/storage/types";
-import { loadCommonPackage } from "./document-model.js";
-import { loadExternalPackages } from "./external-packages.js";
+import type { IDocumentAdminStorage } from "document-drive";
+import { ProcessorManager, logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -80,7 +84,7 @@ export async function createReactor() {
 
   // create the reactor
   const reactor = createBrowserDocumentDriveServer(
-    documentModelModules,
+    documentModelModules as unknown as DocumentModelModule[],
     storage,
   );
   // initialize the reactor
@@ -91,6 +95,51 @@ export async function createReactor() {
 
   // get the drives from the reactor
   const drives = await getDrives(reactor);
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+  const remoteUrl = getDriveUrl();
+  if (
+    remoteUrl &&
+    !drives.some(
+      (drive) =>
+        remoteUrl.includes(drive.header.slug) ||
+        remoteUrl.includes(drive.header.id),
+    )
+  ) {
+    try {
+      await reactor.addRemoteDrive(remoteUrl, {
+        sharingType: "PUBLIC",
+        availableOffline: true,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: remoteUrl,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: generateId(),
+            system: true,
+          },
+        ],
+        triggers: [],
+      });
+      window.location.href = "/d/" + remoteUrl.split("/").pop();
+    } catch (error) {
+      logger.error("Error adding remote drive", error);
+    }
+  } else if (remoteUrl) {
+    window.location.href = "/d/" + remoteUrl.split("/").pop();
+  }
 
   // get the documents from the reactor
   const documents = await getDocuments(reactor);
@@ -162,29 +211,13 @@ export async function createReactor() {
 }
 
 function getAppConfig() {
-  const allowList = getAllowList();
   const analyticsDatabaseName = connectConfig.analytics.databaseName;
   const showSearchBar = connectConfig.content.showSearchBar;
   return {
-    allowList,
+    allowList: undefined,
     analyticsDatabaseName,
     showSearchBar,
   };
-}
-
-function getAllowList() {
-  const arbitrumAllowList = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
-  const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
-  if (!arbitrumAllowList.length && !rwaAllowList.length) {
-    return undefined;
-  }
-  if (arbitrumAllowList.length) {
-    return arbitrumAllowList.split(",").filter(Boolean);
-  }
-  if (rwaAllowList.length) {
-    return rwaAllowList.split(",").filter(Boolean);
-  }
-  return undefined;
 }
 
 function getDidFromUrl() {
@@ -192,4 +225,11 @@ function getDidFromUrl() {
   const didComponent = searchParams.get("user");
   const did = didComponent ? decodeURIComponent(didComponent) : undefined;
   return did;
+}
+
+function getDriveUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const driveUrl = searchParams.get("driveUrl");
+  const url = driveUrl ? decodeURIComponent(driveUrl) : undefined;
+  return url;
 }

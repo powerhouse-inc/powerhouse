@@ -1,36 +1,32 @@
-import { setTimeout } from "node:timers/promises";
-import { describe, it } from "vitest";
-import {
-  DocumentModelDocument,
-  DocumentModelModule,
-  generateId,
-} from "../../document-model/index.js";
-import { setModelName } from "../../document-model/src/document-model/gen/creators.js";
-import { createDocument as createDocumentModelDocument } from "../../document-model/src/document-model/gen/utils.js";
-import { documentModelDocumentModelModule } from "../../document-model/src/document-model/module.js";
-import { createUnsignedHeader } from "../../document-model/src/document/utils/header.js";
-import InMemoryCache from "../src/cache/memory.js";
-import { addListener } from "../src/drive-document-model/gen/creators.js";
-import {
-  addFile,
-  addFolder,
-  deleteNode,
-} from "../src/drive-document-model/gen/node/creators.js";
-import {
-  reducer as documentDriveReducer,
-  reducer,
-} from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { EventQueueManager } from "../src/queue/event.js";
-import { IQueueManager } from "../src/queue/types.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import {
+import type {
+  DocumentDriveDocument,
   IBaseDocumentDriveServer,
   IOperationResult,
-} from "../src/server/types.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { buildOperation, buildOperations } from "./utils.js";
+  IQueueManager,
+} from "document-drive";
+import {
+  EventQueueManager,
+  InMemoryCache,
+  MemoryStorage,
+  ReactorBuilder,
+  addFile,
+  addFolder,
+  addListener,
+  buildOperation,
+  buildOperations,
+  deleteNode,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+} from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import {
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
+  setModelName,
+} from "document-model";
+import { createPresignedHeader, generateId } from "document-model/core";
+import { setTimeout } from "node:timers/promises";
+import { describe, it } from "vitest";
 
 const REDIS_TLS_URL = process.env.REDIS_TLS_URL || "redis://localhost:6379";
 
@@ -92,12 +88,13 @@ describe.each(queueLayers)(
       const promisses: Promise<IOperationResult>[] = [];
       for (let i = 0; i < ADD_OPERATIONS_TO_DRIVE; i++) {
         const id = generateId();
-        drive = reducer(
+        drive = driveDocumentReducer(
           drive,
           addFile({
             id,
             name: id,
-            documentType: documentModelDocumentModelModule.documentModel.id,
+            documentType:
+              documentModelDocumentModelModule.documentModel.global.id,
           }),
         );
         promisses.push(
@@ -123,8 +120,9 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
 
       const driveId = drive.header.id;
-      const documentType = documentModelDocumentModelModule.documentModel.id;
-      const driveOperations = buildOperations(reducer, drive, [
+      const documentType =
+        documentModelDocumentModelModule.documentModel.global.id;
+      const driveOperations = buildOperations(driveDocumentReducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: documentId,
@@ -134,8 +132,8 @@ describe.each(queueLayers)(
         }),
       ]);
 
-      const document = createDocumentModelDocument();
-      const header = createUnsignedHeader(documentId, documentType);
+      const document = documentModelCreateDocument();
+      const header = createPresignedHeader(documentId, documentType);
       document.header = header;
       await server.addDocument(document);
       const mutation = buildOperation(
@@ -175,14 +173,13 @@ describe.each(queueLayers)(
           name: "file 1",
           kind: "file",
           parentFolder: folderId,
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType:
+            documentModelDocumentModelModule.documentModel.global.id,
         }),
       ]);
 
-      const docModelDocument = (await server.getDocument(
-        documentId,
-      )) as DocumentModelDocument;
-      expect(docModelDocument.state.global.name).toBe("foo");
+      const docModelDocument = await server.getDocument(documentId);
+      expect((docModelDocument.state as any).global.name).toBe("foo");
     });
 
     it("orders strands correctly", async ({ expect }) => {
@@ -200,8 +197,9 @@ describe.each(queueLayers)(
       const folderId = generateId();
       const folderId2 = generateId();
       const fileId = generateId();
-      const documentType = documentModelDocumentModelModule.documentModel.id;
-      const driveOperations = buildOperations(reducer, drive, [
+      const documentType =
+        documentModelDocumentModelModule.documentModel.global.id;
+      const driveOperations = buildOperations(driveDocumentReducer, drive, [
         addFolder({ id: folderId, name: "folder 1" }),
         addFile({
           id: fileId,
@@ -211,8 +209,8 @@ describe.each(queueLayers)(
         }),
       ]);
 
-      const document = createDocumentModelDocument();
-      const header = createUnsignedHeader(fileId, documentType);
+      const document = documentModelCreateDocument();
+      const header = createPresignedHeader(fileId, documentType);
       await server.addDocument({ ...document, header });
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
@@ -230,7 +228,7 @@ describe.each(queueLayers)(
       results.push(
         server.queueOperations(driveId, [
           buildOperation(
-            reducer,
+            driveDocumentReducer,
             drive,
             addFolder({
               id: folderId2,
@@ -262,7 +260,8 @@ describe.each(queueLayers)(
             name: "file 1",
             kind: "file",
             parentFolder: folderId,
-            documentType: documentModelDocumentModelModule.documentModel.id,
+            documentType:
+              documentModelDocumentModelModule.documentModel.global.id,
           }),
           expect.objectContaining({
             id: folderId2,
@@ -287,10 +286,8 @@ describe.each(queueLayers)(
         drive.state.global.nodes.findIndex((n: any) => n.id === folderId),
       );
 
-      const docModelDocument = (await server.getDocument(
-        fileId,
-      )) as DocumentModelDocument;
-      expect(docModelDocument.state.global.name).toBe("foo");
+      const docModelDocument = await server.getDocument(fileId);
+      expect((docModelDocument.state as any).global.name).toBe("foo");
     });
 
     it("does not block a document queue when the drive queue processes a delete node operation", async ({
@@ -306,7 +303,7 @@ describe.each(queueLayers)(
       let drive = await createDrive(server);
       const driveId = drive.header.id;
 
-      const document = createDocumentModelDocument();
+      const document = documentModelCreateDocument();
 
       await server.addDocument(document);
 
@@ -330,12 +327,13 @@ describe.each(queueLayers)(
 
       // add file op
       const nodeId = document.header.id;
-      const driveOperations = buildOperations(reducer, drive, [
+      const driveOperations = buildOperations(driveDocumentReducer, drive, [
         addFile({
           id: nodeId,
           name: "file 1",
           parentFolder: "folder 1",
-          documentType: documentModelDocumentModelModule.documentModel.id,
+          documentType:
+            documentModelDocumentModelModule.documentModel.global.id,
         }),
       ]);
 
@@ -351,7 +349,7 @@ describe.each(queueLayers)(
       expect(errors.length).toBe(0);
       // delete node op
       drive = await server.getDrive(driveId);
-      const deleteNodeOps = buildOperations(documentDriveReducer, drive, [
+      const deleteNodeOps = buildOperations(driveDocumentReducer, drive, [
         deleteNode({ id: nodeId }),
       ]);
 

@@ -7,7 +7,7 @@ import type {
   RealWorldAssetsState,
   TableItemType,
   TableName,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   getActionOperationType,
   getCashAsset,
@@ -15,7 +15,7 @@ import {
   getStateKeyForTableName,
   getTableNameFor,
   makeTableData,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import {
   createContext,

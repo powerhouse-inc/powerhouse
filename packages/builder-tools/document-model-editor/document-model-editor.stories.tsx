@@ -1,12 +1,8 @@
-import { createDocumentStory } from "#editor-utils/storybook";
+import { createDocumentStory } from "@powerhousedao/builder-tools";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { DocumentSpecification } from "document-model";
-import {
-  defaultBaseState,
-  createState as documentModelCreateState,
-  documentModelReducer,
-  generateId,
-} from "document-model";
+import { documentModelCreateState, documentModelReducer } from "document-model";
+import { defaultBaseState, generateId } from "document-model/core";
 import { v7 as uuidv7 } from "uuid";
 import { DocumentModelEditor } from "./editor.js";
 

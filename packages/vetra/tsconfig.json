@@ -3,18 +3,9 @@
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "outDir": "./dist",
-    "jsx": "react-jsx",
-    "lib": ["ESNext", "dom", "dom.iterable"],
-    "resolveJsonModule": true
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "tsconfig.json",
-    "eslint.config.js",
-    ".gitignore"
-  ],
   "references": [
     {
       "path": "../document-model"
@@ -32,6 +23,9 @@
       "path": "../codegen"
     },
     {
+      "path": "../../clis/ph-cli"
+    },
+    {
       "path": "../config"
     },
     {
@@ -45,6 +39,9 @@
     },
     {
       "path": "../document-drive"
+    },
+    {
+      "path": "../../apps/switchboard"
     }
   ]
 }

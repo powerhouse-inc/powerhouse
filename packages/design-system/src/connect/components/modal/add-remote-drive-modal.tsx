@@ -1,7 +1,14 @@
-import type { AddPublicDriveFormProps, AddRemoteDriveInput } from "#connect";
-import { AddRemoteDriveForm, Divider } from "#connect";
-import type { DivProps } from "#powerhouse";
-import { Icon, Modal } from "#powerhouse";
+import type {
+  AddPublicDriveFormProps,
+  AddRemoteDriveInput,
+  DivProps,
+} from "@powerhousedao/design-system";
+import {
+  AddRemoteDriveForm,
+  Divider,
+  Icon,
+  Modal,
+} from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

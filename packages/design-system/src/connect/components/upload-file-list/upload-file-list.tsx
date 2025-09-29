@@ -1,12 +1,12 @@
-import { Icon } from "#powerhouse";
-import { type ComponentPropsWithoutRef, useMemo, useState } from "react";
-import { twMerge } from "tailwind-merge";
-
 import {
+  getUploadListTitle,
+  Icon,
   UploadFileItem,
   type UploadFileItemProps,
-} from "../upload-file-item/index.js";
-import { getUploadListTitle } from "./utils.js";
+} from "@powerhousedao/design-system";
+import type { ComponentPropsWithoutRef } from "react";
+import { useMemo, useState } from "react";
+import { twMerge } from "tailwind-merge";
 
 export type UploadFileListProps = ComponentPropsWithoutRef<"div"> & {
   readonly items: ReadonlyArray<UploadFileItemProps>;

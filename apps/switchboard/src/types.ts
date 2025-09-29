@@ -29,6 +29,9 @@ export type StartServerOptions = {
   };
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
+  subgraphs?: {
+    isReactorv2Enabled?: boolean;
+  };
 };
 
 export type SwitchboardReactor = {

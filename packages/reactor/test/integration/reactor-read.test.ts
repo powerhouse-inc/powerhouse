@@ -52,7 +52,7 @@ describe("Reactor Read Interface", () => {
       // The real drive server will have the document models we initialized it with
       expect(result.results).toHaveLength(2);
       // Check that we have the expected document models
-      const modelIds = result.results.map((m) => m.id);
+      const modelIds = result.results.map((m) => m.documentModel.global.id);
       expect(modelIds.length).toBe(2);
       // The actual model IDs in the test setup
       expect(modelIds).toContain("powerhouse/document-model");

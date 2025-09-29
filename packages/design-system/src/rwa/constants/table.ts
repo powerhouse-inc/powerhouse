@@ -4,7 +4,7 @@ import type {
   RealWorldAssetsState,
   TableName,
   TableNameFor,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 
 export const defaultColumnCountByTableWidth = {
   1520: 10,

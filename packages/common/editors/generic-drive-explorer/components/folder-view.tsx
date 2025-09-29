@@ -1,4 +1,5 @@
-import type { BaseProps } from "#editors/utils/index";
+import type { BaseProps } from "@powerhousedao/common";
+import { DriveLayout, FileContentView } from "@powerhousedao/common";
 import type { TNodeActions } from "@powerhousedao/design-system";
 import { FolderItem, useDrop } from "@powerhousedao/design-system";
 import {
@@ -8,8 +9,6 @@ import {
 import type { FolderNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
-import FileContentView from "./file-content-view.js";
-import { DriveLayout } from "./layout.js";
 
 type IFolderViewProps = BaseProps &
   TNodeActions & {
@@ -99,12 +98,7 @@ export function FolderView(props: IFolderViewProps) {
           defaultValue: "Documents and files",
         })}
       >
-        <div
-          className={twMerge(
-            "w-full",
-            fileNodes.length > 0 ? "min-h-[400px]" : "min-h-14",
-          )}
-        >
+        <div className="w-full">
           <FileContentView
             fileNodes={fileNodes}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}

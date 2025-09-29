@@ -1,13 +1,17 @@
-import { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import { ActionContext, Operation, generateId } from "document-model";
+import type { DocumentDriveDocument } from "document-drive";
+import {
+  addFile,
+  BrowserStorage,
+  buildOperation,
+  createBaseState,
+  driveCreateDocument,
+  driveDocumentReducer,
+  migrateLegacyOperationSignature,
+} from "document-drive";
+import { PrismaClient } from "document-drive/storage/prisma/client";
+import type { ActionContext, Operation } from "document-model";
+import { generateId } from "document-model/core";
 import { beforeEach, describe, it } from "vitest";
-import { addFile } from "../src/drive-document-model/gen/creators.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import { createDocument } from "../src/drive-document-model/gen/utils.js";
-import { BrowserStorage } from "../src/storage/browser.js";
-import { PrismaClient } from "../src/storage/prisma/client/index.js";
-import { migrateLegacyOperationSignature } from "../src/utils/migrations.js";
-import { buildOperation, createBaseState } from "./utils.js";
 
 const prismaClient = new PrismaClient();
 
@@ -113,7 +117,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation without context", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,
@@ -134,7 +138,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",
@@ -164,7 +168,7 @@ describe.each(storageLayers)(
       expect,
     }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,
@@ -185,7 +189,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",
@@ -193,7 +197,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.action!.context = {
+      driveOperation.action.context = {
         signer: {
           app: {
             name: "name",
@@ -241,7 +245,7 @@ describe.each(storageLayers)(
 
     it("should migrate operation with a signature", async ({ expect }) => {
       const storage = await buildStorage();
-      const drive = createDocument(
+      const drive = driveCreateDocument(
         createBaseState(
           {
             icon: null,
@@ -262,7 +266,7 @@ describe.each(storageLayers)(
       await storage.create(drive);
 
       const driveOperation = buildOperation(
-        reducer,
+        driveDocumentReducer,
         drive,
         addFile({
           id: "1.1",
@@ -270,7 +274,7 @@ describe.each(storageLayers)(
           documentType: "powerhouse/budget-statement",
         }),
       );
-      driveOperation.action!.context = {
+      driveOperation.action.context = {
         signer: {
           app: {
             name: "name",

@@ -1,16 +1,21 @@
 import type {
+  BaseDocumentDriveServer,
   DocumentDriveAction,
   DocumentDriveDocument,
   DocumentDriveLocalState,
+  DriveInfo,
+  IDefaultDrivesManager,
+  IReadModeDriveServer,
+  ITransmitter,
   LegacyAddFileAction,
   ListenerCallInfo,
   ListenerFilter,
+  OperationError,
+  RunAsap,
+  StrandUpdateSource,
+  SynchronizationUnitNotFoundError,
   Trigger,
-} from "#drive-document-model/gen/types";
-import type { IReadModeDriveServer } from "#read-mode/types";
-import type { IDefaultDrivesManager } from "#utils/default-drives-manager";
-import type { DriveInfo } from "#utils/graphql";
-import type { RunAsap } from "#utils/run-asap";
+} from "document-drive";
 import type {
   Action,
   ActionContext,
@@ -20,30 +25,16 @@ import type {
   PHDocumentHeader,
   PHDocumentMeta,
   ReducerOptions,
+  SignalResult,
 } from "document-model";
 import type { Unsubscribe } from "nanoevents";
-import type { SignalResult } from "../../../document-model/src/document/signal.js";
-import type { BaseDocumentDriveServer } from "./base-server.js";
-import type {
-  OperationError,
-  SynchronizationUnitNotFoundError,
-} from "./error.js";
-import type {
-  ITransmitter,
-  StrandUpdateSource,
-} from "./listener/transmitter/types.js";
-import type { ISyncUnitMap } from "./sync-unit-map.js";
+export * from "./listener/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
 // Mixin type that returns a type extending both the base class and the interface
 export type Mixin<T extends Constructor, I> = T &
   Constructor<InstanceType<T> & I>;
-
-export type DocumentDriveServerMixin<I> = Mixin<
-  typeof BaseDocumentDriveServer,
-  I
->;
 
 export type DriveInput = {
   global: {
@@ -90,7 +81,6 @@ export type CreateDocumentInputWithDocumentType = {
 };
 
 export type CreateDocumentInput<TDocument extends PHDocument> =
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   | LegacyCreateDocumentInput
   | CreateDocumentInputWithDocument<TDocument>
   | CreateDocumentInputWithHeader
@@ -123,7 +113,7 @@ export type SynchronizationUnitQuery = Omit<
   "revision" | "lastUpdated"
 >;
 
-export type Listener = {
+export type ServerListener = {
   driveId: string;
   listenerId: string;
   label?: string;
@@ -143,7 +133,7 @@ export type CreateListenerInput = {
   callInfo?: ListenerCallInfo;
 };
 
-export enum TransmitterType {
+export enum ServerTransmitterType {
   Internal,
   SwitchboardPush,
   PullResponder,
@@ -345,7 +335,7 @@ export type DocumentDriveServerOptions = {
    * If set to null then it will queued as micro task.
    * Defaults to the most appropriate method according to the system
    */
-  taskQueueMethod?: RunAsap.RunAsap<unknown> | null;
+  taskQueueMethod?: RunAsap<unknown> | null;
   listenerManager?: ListenerManagerOptions;
   jwtHandler?: (
     driveUrl: string,
@@ -362,10 +352,6 @@ export type GetStrandsOptions = {
 
 export type ListenerManagerOptions = {
   sequentialUpdates?: boolean;
-};
-
-export const DefaultListenerManagerOptions = {
-  sequentialUpdates: true,
 };
 
 type PublicKeys<T> = {
@@ -407,7 +393,6 @@ export interface IBaseDocumentDriveServer {
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
   addDocument<TDocument extends PHDocument>(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     documentType: string,
     meta?: PHDocumentMeta,
   ): Promise<TDocument>;
@@ -621,7 +606,7 @@ export interface IBaseDocumentDriveServer {
    */
   addDriveAction(
     driveId: string,
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
+
     action: DocumentDriveAction,
     options?: AddOperationOptions,
   ): Promise<DriveOperationResult>;
@@ -667,7 +652,7 @@ export interface IListenerManager {
   removeDrive(driveId: DocumentDriveDocument["header"]["id"]): Promise<void>;
   driveHasListeners(driveId: string): boolean;
 
-  setListener(driveId: string, listener: Listener): Promise<void>;
+  setListener(driveId: string, listener: ServerListener): Promise<void>;
   removeListener(driveId: string, listenerId: string): Promise<boolean>;
   getListenerState(driveId: string, listenerId: string): ListenerState;
 
@@ -679,7 +664,7 @@ export interface IListenerManager {
   updateSynchronizationRevisions(
     syncUnits: SynchronizationUnit[],
     source: StrandUpdateSource,
-    willUpdate?: (listeners: Listener[]) => void,
+    willUpdate?: (listeners: ServerListener[]) => void,
     onError?: (error: Error, driveId: string, listener: ListenerState) => void,
     forceSync?: boolean,
   ): Promise<ListenerUpdate[]>;
@@ -713,7 +698,7 @@ export interface ListenerState {
   driveId: string;
   block: boolean;
   pendingTimeout: string;
-  listener: Listener;
+  listener: ServerListener;
   syncUnits: SynchronizationUnitMap;
   listenerStatus: ListenerStatus;
 }
@@ -726,7 +711,7 @@ export interface SyncronizationUnitState {
 export interface ITransmitterFactory {
   instance(
     transmitterType: string,
-    listener: Listener,
+    listener: ServerListener,
     driveServer: IBaseDocumentDriveServer,
   ): ITransmitter;
 }
@@ -800,3 +785,43 @@ export interface ISynchronizationManager {
 }
 
 export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
+
+export type DocumentDriveServerConstructor =
+  Constructor<BaseDocumentDriveServer>;
+
+export type DocumentDriveServerMixin<I> = Mixin<
+  typeof BaseDocumentDriveServer,
+  I
+>;
+
+/**
+ * Interface for a specialized Map implementation that manages synchronization units.
+ * Each unit is identified by a SynchronizationUnitId which consists of documentId, scope, and branch.
+ */
+export interface ISyncUnitMap<Value> {
+  set(id: SynchronizationUnitId, state: Value): this;
+  get(id: SynchronizationUnitId): Value | undefined;
+  has(id: SynchronizationUnitId): boolean;
+  delete(id: SynchronizationUnitId): boolean;
+  clear(): void;
+  get size(): number;
+  keys(): IterableIterator<SynchronizationUnitId>;
+  values(): IterableIterator<Value>;
+  entries(): IterableIterator<[SynchronizationUnitId, Value]>;
+  [Symbol.iterator](): IterableIterator<[SynchronizationUnitId, Value]>;
+  forEach(
+    callbackfn: (
+      value: Value,
+      key: SynchronizationUnitId,
+      map: ISyncUnitMap<Value>,
+    ) => void,
+    thisArg?: any,
+  ): void;
+  deleteByDocumentId(documentId: string): void;
+  deleteByDocumentIdAndScope(documentId: string, scope: string): void;
+  getAllByDocumentId(documentId: string): [SynchronizationUnitId, Value][];
+  getAllByDocumentIdAndScope(
+    documentId: string,
+    scope: string,
+  ): [SynchronizationUnitId, Value][];
+}

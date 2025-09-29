@@ -1,8 +1,11 @@
-import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
-import { startConnectStudio } from "@powerhousedao/builder-tools/connect-studio";
-import { getConfig } from "@powerhousedao/config/utils";
-import packageJson from "../../package.json" with { type: "json" };
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import { startConnectStudio } from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config/node";
+import { readFileSync } from "fs";
 
+const packageJson = JSON.parse(readFileSync("./package.json", "utf8")) as {
+  version: string;
+};
 const version = packageJson.version;
 export type ConnectOptions = ConnectStudioOptions;
 

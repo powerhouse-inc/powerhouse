@@ -1,19 +1,23 @@
+import type {
+  TextFieldProps,
+  ValidatorHandler,
+} from "@powerhousedao/design-system";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormMessageList,
+  Input,
+  renderWithForm,
+} from "@powerhousedao/design-system";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import React from "react";
+import { createRef, forwardRef } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithForm } from "../../lib/testing.js";
-import type { ValidatorHandler } from "../../types.js";
-import { FormGroup } from "../form-group/index.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/index.js";
-import { Form } from "../form/index.js";
-import { Input } from "../input/index.js";
-import type { TextFieldProps } from "../text-field/index.js";
 import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped
-const TextFieldTesting = React.forwardRef<
+const TextFieldTesting = forwardRef<
   HTMLInputElement,
   Omit<TextFieldProps, "autoComplete">
 >(
@@ -245,7 +249,7 @@ describe("withFieldValidation", () => {
   });
 
   it("should forward refs to the wrapped component", () => {
-    const inputRef = React.createRef<HTMLInputElement>();
+    const inputRef = createRef<HTMLInputElement>();
 
     renderWithForm(<WrappedComponent name="test" ref={inputRef} />);
 

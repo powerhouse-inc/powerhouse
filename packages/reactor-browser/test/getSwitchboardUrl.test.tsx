@@ -18,7 +18,7 @@ interface QueryHeaders {
 }
 
 // Mock the generateDocumentStateQueryFields function
-vi.mock("document-drive/utils/graphql", () => ({
+vi.mock("document-drive", () => ({
   generateDocumentStateQueryFields: vi.fn(() => "stateField1\nstateField2"),
 }));
 

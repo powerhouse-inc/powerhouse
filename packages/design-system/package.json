@@ -1,9 +1,10 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "4.1.0-dev.55",
+  "version": "4.1.0-dev.59",
   "description": "",
   "files": [
-    "/dist"
+    "dist",
+    "assets"
   ],
   "type": "module",
   "repository": {
@@ -16,41 +17,29 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     },
-    "./ui": {
-      "types": "./dist/src/ui/index.d.ts",
-      "import": "./dist/src/ui/index.js"
-    },
+    "./assets/*.mp4": "./assets/*.mp4",
+    "./assets/*.png": "./assets/*.png",
+    "./assets/*.svg": "./assets/*.svg",
+    "./assets/*.jpg": "./assets/*.jpg",
+    "./assets/*.jpeg": "./assets/*.jpeg",
+    "./assets/*.gif": "./assets/*.gif",
+    "./assets/*.webp": "./assets/*.webp",
+    "./assets/*.avif": "./assets/*.avif",
     "./style.css": "./dist/style.css"
   },
-  "imports": {
-    "#assets": "./dist/src/assets/index.js",
-    "#assets/*": "./dist/src/assets/*",
-    "#connect": "./dist/src/connect/index.js",
-    "#powerhouse": "./dist/src/powerhouse/index.js",
-    "#rwa": "./dist/src/rwa/index.js",
-    "#ui": "./dist/src/ui/index.js",
-    "#services": "./dist/src/services/index.js"
-  },
   "scripts": {
-    "build:tsc": "tsc --build",
-    "lint": "eslint .",
-    "lint:nx": "eslint . --fix --quiet",
+    "tsc": "tsc",
+    "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "npx @tailwindcss/cli -i style.css -o dist/style.css && mkdir -p dist/src/assets && cp -r src/assets dist/src && tsc --build",
-    "build:watch": "build --watch",
-    "prebuild": "npm run clean && npm run create-icon-components",
+    "build:css": "npx @tailwindcss/cli -i style.css -o dist/style.css",
     "storybook": "storybook dev -p 6006",
-    "prestorybook": "npm run build",
     "build-storybook": "storybook build",
-    "prebuild-storybook": "npm run build",
     "test": "vitest run --exclude \"src/scalars/**\"",
     "test:watch": "vitest watch",
-    "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861",
-    "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861"
   },
   "author": {
     "name": "https://www.powerhouse.inc/"
@@ -64,7 +53,6 @@
     "@hookform/devtools": "^4.3.1",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "document-drive": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",
@@ -94,6 +82,7 @@
     "autoprefixer": "^10.4.20",
     "camelcase": "^8.0.0",
     "cross-env": "^7.0.3",
+    "document-drive": "workspace:*",
     "fast-xml-parser": "^4.3.4",
     "happy-dom": "^17.4.3",
     "jsdom": "^24.0.0",
@@ -105,8 +94,8 @@
     "storybook-addon-pseudo-states": "^4.0.4",
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "^4.0.9",
-    "vite": "^6.3.3",
-    "vitest": "^3.1.2"
+    "vite": "^7.1.3",
+    "vitest": "^3.2.4"
   },
   "peerDependencies": {
     "react": "^18.3.1",

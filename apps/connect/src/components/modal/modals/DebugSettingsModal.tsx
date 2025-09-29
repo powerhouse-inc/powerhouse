@@ -1,12 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import connectConfig from "#connect-config";
-import { serviceWorkerManager } from "#utils";
+import { serviceWorkerManager } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
-  Button,
   Combobox,
   FormInput,
   Icon,
   Modal,
+  PowerhouseButton,
 } from "@powerhousedao/design-system";
 import {
   addTrigger,
@@ -14,8 +13,9 @@ import {
   removeTrigger,
   useDrives,
 } from "@powerhousedao/reactor-browser";
+import { generateUUIDBrowser } from "document-model/core";
 import { useEffect, useState } from "react";
-import { v4 as uuid } from "uuid";
+
 export interface DebugSettingsModalProps {
   open: boolean;
   onClose: () => void;
@@ -87,12 +87,14 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
       return;
     }
 
+    const triggerId = generateUUIDBrowser();
+
     await addTrigger(selectedDrive, {
-      id: `invalid-trigger-${uuid()}`,
+      id: `invalid-trigger-${triggerId}`,
       type: "PullResponder",
       data: {
         interval: "3000",
-        listenerId: `ivalid-listener-${uuid()}`,
+        listenerId: `invalid-listener-${triggerId}`,
         url: driveUrl,
       },
     });
@@ -198,14 +200,14 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div>
-            <Button
+            <PowerhouseButton
               onClick={removeTriggerHandler}
               color={!selectedDriveTrigger ? "light" : "red"}
               disabled={!selectedDriveTrigger}
               size="small"
             >
               Remove Trigger
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
 
@@ -226,7 +228,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div className="mb-1 flex items-center justify-center">
-            <Button
+            <PowerhouseButton
               className="mr-2"
               color={disableUrlButtons ? "light" : "blue"}
               size="small"
@@ -234,15 +236,15 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
               onClick={() => addTriggerHandler()}
             >
               Add Trigger
-            </Button>
-            <Button
+            </PowerhouseButton>
+            <PowerhouseButton
               color={disableUrlButtons ? "light" : "red"}
               size="small"
               disabled={disableUrlButtons}
               onClick={() => addTriggerHandler(true)}
             >
               Add Invalid Trigger
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
 
@@ -289,7 +291,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
             />
           </div>
           <div className="mb-1 flex items-center justify-center">
-            <Button
+            <PowerhouseButton
               color={appVersion === "" ? "light" : "red"}
               size="small"
               disabled={appVersion === ""}
@@ -303,7 +305,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
               }}
             >
               Add Invalid App Version
-            </Button>
+            </PowerhouseButton>
           </div>
         </div>
       </div>

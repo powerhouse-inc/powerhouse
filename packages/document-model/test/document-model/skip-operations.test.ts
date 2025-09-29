@@ -1,35 +1,44 @@
-import { DocumentModelDocument } from "../../index.js";
+import type { DocumentModelPHState } from "document-model";
 import {
+  documentModelCreateDocument,
+  documentModelReducer,
+  documentModelStateReducer,
   setAuthorName,
   setAuthorWebsite,
   setModelDescription,
   setModelExtension,
   setModelId,
   setModelName,
-} from "../../src/document-model/gen/creators.js";
-import type { DocumentModelPHState } from "../../src/document-model/gen/ph-factories.js";
-import { reducer, stateReducer } from "../../src/document-model/gen/reducer.js";
-import { createDocument } from "../../src/document-model/gen/utils.js";
-import { replayOperations } from "../../src/document/utils/base.js";
-import { garbageCollectDocumentOperations } from "../../src/document/utils/document-helpers.js";
+} from "document-model";
+import {
+  garbageCollectDocumentOperations,
+  replayOperations,
+} from "document-model/core";
+import { expect } from "vitest";
 
 describe("Document Operations", () => {
   describe("Skip header operations", () => {
     it("should include skip param in base operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
@@ -41,37 +50,42 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in base operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
         { skip: 5, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
         undefined,
@@ -87,16 +101,22 @@ describe("Document Operations", () => {
 
   describe("Skip module operations", () => {
     it("should include skip param in module operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
@@ -108,31 +128,36 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in module operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
@@ -148,24 +173,30 @@ describe("Document Operations", () => {
 
   describe("Skip operation-error operations", () => {
     it("should include skip param in operation-error operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
-      document = reducer(document, setModelId({ id: "<id2>" }));
+      document = documentModelReducer(document, setModelId({ id: "<id2>" }));
 
       expect(document.header.revision.global).toBe(7);
       document.operations.global.forEach((op) => {
@@ -174,46 +205,56 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation-error operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
         { skip: 5, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
         undefined,
         { skip: 6, ignoreSkipOperations: true },
       );
-      document = reducer(document, setModelId({ id: "<id2>" }), undefined, {
-        skip: 7,
-        ignoreSkipOperations: true,
-      });
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id2>" }),
+        undefined,
+        {
+          skip: 7,
+          ignoreSkipOperations: true,
+        },
+      );
 
       expect(document.header.revision.global).toBe(7);
       document.operations.global.forEach((op, index) => {
@@ -224,16 +265,22 @@ describe("Document Operations", () => {
 
   describe("Skip operation-example operations", () => {
     it("should include skip param in operation-example operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
@@ -245,31 +292,36 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation-example operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
@@ -285,20 +337,26 @@ describe("Document Operations", () => {
 
   describe("Skip operation operations", () => {
     it("should include skip param in operation operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
@@ -310,37 +368,42 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in operation operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
         { skip: 5, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
         undefined,
@@ -356,20 +419,26 @@ describe("Document Operations", () => {
 
   describe("Skip object operations", () => {
     it("should include skip param in object operations with default value to 0 if not provided", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }));
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelExtension({ extension: "phdm" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelExtension({ extension: "phdm" }),
+      );
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
       );
@@ -381,37 +450,42 @@ describe("Document Operations", () => {
     });
 
     it("should include skip param in object operations with provided value", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(document, setModelId({ id: "<id>" }), undefined, {
-        skip: 1,
-        ignoreSkipOperations: true,
-      });
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelId({ id: "<id>" }),
+        undefined,
+        {
+          skip: 1,
+          ignoreSkipOperations: true,
+        },
+      );
+      document = documentModelReducer(
         document,
         setModelName({ name: "<name>" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
         undefined,
         { skip: 3, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 4, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
         undefined,
         { skip: 5, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
         undefined,
@@ -427,35 +501,38 @@ describe("Document Operations", () => {
 
   describe("state replayOperations", () => {
     it("skipped operations should be ignored when re-calculate document state", () => {
-      let document = createDocument();
+      let document = documentModelCreateDocument();
 
-      document = reducer(
+      document = documentModelReducer(
         document,
         setModelDescription({ description: "<description>" }),
       );
-      document = reducer(document, setModelName({ name: "<name>" }));
-      document = reducer(
+      document = documentModelReducer(
+        document,
+        setModelName({ name: "<name>" }),
+      );
+      document = documentModelReducer(
         document,
         setModelExtension({ extension: "phdm" }),
         undefined,
         { skip: 2, ignoreSkipOperations: true },
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorName({ authorName: "<authorName>" }),
       );
-      document = reducer(
+      document = documentModelReducer(
         document,
         setAuthorWebsite({ authorWebsite: "<authorWebsite>" }),
         undefined,
         { skip: 1, ignoreSkipOperations: true },
       );
-      document = reducer(document, setModelId({ id: "<id>" }));
+      document = documentModelReducer(document, setModelId({ id: "<id>" }));
 
       const replayedDoc = replayOperations<DocumentModelPHState>(
         document.initialState,
         garbageCollectDocumentOperations(document.operations),
-        stateReducer,
+        documentModelStateReducer,
       );
 
       expect(replayedDoc.header.revision.global).toBe(6);

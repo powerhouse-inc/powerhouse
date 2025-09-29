@@ -113,4 +113,4 @@ Check below screenshot for the complete implementation:
 ### Up next: reducers
 
 Up next, you'll learn how to implement the runtime logic and components that will use the `ToDoList` document model specification you've just created and exported.
-````
+

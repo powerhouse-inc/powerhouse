@@ -3,9 +3,6 @@ import type {
   AnalyticsQueryEngine,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-
-export type * from "@powerhousedao/analytics-engine-core";
-
 export type IAnalyticsStoreOptions = BrowserAnalyticsStoreOptions;
 
 export type IPowerhouseAnalytics = {

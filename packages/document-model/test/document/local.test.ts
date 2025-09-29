@@ -1,9 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { baseCreateDocument } from "../../index.js";
-import { prune, redo, undo } from "../../src/document/actions/creators.js";
-import type { CountPHState, TestPHState } from "../helpers.js";
+import { baseCreateDocument, prune, redo, undo } from "document-model/core";
+import type { CountPHState, TestPHState } from "document-model/test";
 import {
-  CountDocument,
   countReducer,
   createCountDocumentState,
   createCountState,
@@ -11,7 +8,8 @@ import {
   fakeAction,
   setLocalName,
   wrappedEmptyReducer,
-} from "../helpers.js";
+} from "document-model/test";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("Local reducer", () => {
   beforeAll(() => {

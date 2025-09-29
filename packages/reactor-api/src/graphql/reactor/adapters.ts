@@ -2,10 +2,14 @@ import type {
   JobInfo as ClientJobInfo,
   PagedResults,
 } from "@powerhousedao/reactor";
-import type { DocumentModelState, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  DocumentModelPHState,
+  PHDocument,
+} from "document-model";
 import type {
   DocumentModelResultPage,
-  DocumentModelState as GqlDocumentModelState,
+  DocumentModelGlobalState as GqlDocumentModelGlobalState,
   JobInfo as GqlJobInfo,
   PhDocument,
   PhDocumentResultPage,
@@ -15,37 +19,39 @@ import type {
  * Converts a PagedResults from ReactorClient to the GraphQL DocumentModelResultPage format
  */
 export function toDocumentModelResultPage(
-  result: PagedResults<DocumentModelState>,
+  result: PagedResults<DocumentModelModule>,
 ): DocumentModelResultPage {
+  const models = result.results.map((module) => module.documentModel);
   return {
     cursor: result.options.cursor || null,
     hasNextPage: false,
     hasPreviousPage: false,
-    items: result.results.map(toGqlDocumentModelState),
+    items: models.map(toGqlDocumentModelState),
     totalCount: result.results.length,
   };
 }
 
 /**
- * Gets the namespace from a DocumentModelState
+ * Gets the namespace from a DocumentModelGlobalState
  */
-function getNamespace(model: DocumentModelState): string {
-  return model.name.split("/")[0];
+function getNamespace(model: DocumentModelPHState): string {
+  return model.global.name.split("/")[0];
 }
 
 /**
- * Converts a DocumentModelState from ReactorClient to GraphQL format
+ * Converts a DocumentModelGlobalState from ReactorClient to GraphQL format
  */
 function toGqlDocumentModelState(
-  model: DocumentModelState,
-): GqlDocumentModelState {
+  model: DocumentModelPHState,
+): GqlDocumentModelGlobalState {
+  const global = model.global;
   const specification =
-    model.specifications.length > 0 ? model.specifications[0] : null;
+    global.specifications.length > 0 ? global.specifications[0] : null;
   const namespace = getNamespace(model);
 
   return {
-    id: model.id,
-    name: model.name,
+    id: global.id,
+    name: global.name,
     namespace,
     specification,
     version: null,

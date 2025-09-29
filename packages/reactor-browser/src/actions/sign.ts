@@ -1,6 +1,6 @@
 import { logger } from "document-drive";
 import type { Action, ActionSigner, PHDocument } from "document-model";
-import { buildSignedAction } from "document-model";
+import { buildSignedAction } from "document-model/core";
 
 export async function signAction(action: Action, document: PHDocument) {
   const reactor = window.reactor;
@@ -8,7 +8,7 @@ export async function signAction(action: Action, document: PHDocument) {
 
   const documentModelModules = reactor.getDocumentModelModules();
   const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.id === document.header.documentType,
+    (module) => module.documentModel.global.id === document.header.documentType,
   );
   if (!documentModelModule) {
     logger.error(`Document model '${document.header.documentType}' not found`);

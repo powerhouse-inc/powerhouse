@@ -1,25 +1,21 @@
-import { Command } from "commander";
-import * as fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectInfo } from "../../utils/index.js";
-import {
-  getPackageManagerFromLockfile,
-  getProjectInfo,
-} from "../../utils/index.js";
-import { useCommand } from "../use.js";
 
-// Mock dependencies
-vi.mock("node:fs");
+vi.mock("node:fs", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual: typeof import("node:fs") = await vi.importActual("node:fs");
+  return {
+    ...actual,
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+    readdirSync: vi.fn(),
+  };
+});
 
-// Import installDependency after mocking
-import {
-  installDependency,
-  updateDependencyVersionString,
-} from "../../utils/index.js";
-
-vi.mock("../../utils/index.js", async (importOriginal) => {
-  const actual: any = await importOriginal();
+vi.mock("../../utils/package-manager.js", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual: typeof import("../../utils/package-manager.js") =
+    await vi.importActual("../../utils/package-manager.js");
   return {
     ...actual,
     packageManagers: {
@@ -33,28 +29,60 @@ vi.mock("../../utils/index.js", async (importOriginal) => {
     },
     getPackageManagerFromLockfile: vi.fn(),
     getProjectInfo: vi.fn(),
+  };
+});
+
+vi.mock("../../utils/dependencies.js", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual: typeof import("../../utils/dependencies.js") =
+    await vi.importActual("../../utils/dependencies.js");
+  return {
+    ...actual,
     installDependency: vi.fn(),
     updateDependencyVersionString: vi.fn(),
-  } as unknown;
+  };
 });
+
+vi.mock("../use.js", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const actual: typeof import("../use.js") = await vi.importActual("../use.js");
+  return {
+    ...actual,
+    useCommand: vi.fn(actual.useCommand),
+  };
+});
+
+import { Command } from "commander";
+import * as fs from "node:fs";
+import type { ProjectInfo } from "ph-cmd";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/dependencies.js";
+import {
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+} from "../../utils/package-manager.js";
+import { useCommand } from "../use.js";
 
 describe("useCommand", () => {
   let program: Command;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.restoreAllMocks();
     program = new Command();
     useCommand(program);
 
-    // Mock utils functions
-    vi.mocked(getPackageManagerFromLockfile).mockReturnValue("pnpm");
-    vi.mocked(getProjectInfo).mockResolvedValue({
-      path: "/test/project",
-    } as ProjectInfo);
+    const mpkg = vi.mocked(getPackageManagerFromLockfile);
+    const mproj = vi.mocked(getProjectInfo);
+    const mexists = vi.mocked(fs.existsSync);
+    const mread = vi.mocked(fs.readFileSync);
+    const minstall = vi.mocked(installDependency);
 
-    // Mock fs.existsSync to return true for test paths and monorepo structure
-    vi.spyOn(fs, "existsSync").mockImplementation((p) => {
+    mpkg.mockReturnValue("pnpm");
+    mproj.mockResolvedValue({ path: "/test/project" } as ProjectInfo);
+
+    mexists.mockImplementation((p: fs.PathLike) => {
       const pathStr = p as string;
       const validPaths = [
         "/test/project",
@@ -62,19 +90,15 @@ describe("useCommand", () => {
         path.join("/test/project", "package.json"),
         path.join("/test/project", "pnpm-lock.yaml"),
       ];
-
-      // Mock monorepo structure for local path tests
       const isPackagePath = pathStr.includes("/path/to/local/packages/");
       const isAppPath = pathStr.includes("/path/to/local/apps/");
       const isCliPath = pathStr.includes("/path/to/local/clis/");
-
       return (
         validPaths.includes(pathStr) || isPackagePath || isAppPath || isCliPath
       );
     });
 
-    // Mock fs.readFileSync to return a test package.json
-    vi.spyOn(fs, "readFileSync").mockImplementation((p) => {
+    mread.mockImplementation((p: fs.PathOrFileDescriptor) => {
       if (p === path.join("/test/project", "package.json")) {
         return JSON.stringify({
           dependencies: {
@@ -94,8 +118,7 @@ describe("useCommand", () => {
       return "";
     });
 
-    // Mock installDependency
-    vi.mocked(installDependency).mockImplementation(() => {});
+    minstall.mockImplementation(() => {});
   });
 
   it("should register the use command with correct options", () => {
@@ -111,7 +134,6 @@ describe("useCommand", () => {
     const cmd = program.commands.find((c) => c.name() === "use");
     await cmd?.parseAsync(["node", "test", "dev"]);
 
-    // With dynamic detection, verify it updates the packages found in mock package.json
     expect(updateDependencyVersionString).toHaveBeenCalledWith(
       "pnpm",
       expect.arrayContaining([

@@ -1,15 +1,16 @@
-import { Combobox } from "#connect";
-import { Pagination, usePagination } from "#powerhouse";
 import {
   allGroupTransactionTypes,
+  Combobox,
   groupTransactionTypeLabels,
   ItemDetails,
   makeFixedIncomeOptionLabel,
+  Pagination,
   Table,
   tableNames,
   useEditorContext,
+  usePagination,
   useTableData,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function GroupTransactionsTable() {

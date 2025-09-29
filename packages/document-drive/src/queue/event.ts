@@ -1,19 +1,23 @@
-import type { IOperationResult } from "#server/types";
-import { childLogger, logger } from "#utils/logger";
-import { generateId } from "document-model";
-import type { Unsubscribe } from "nanoevents";
-import { createNanoEvents } from "nanoevents";
-import { MemoryQueue } from "./base.js";
 import type {
   IJob,
   IJobQueue,
+  IOperationResult,
   IQueueManager,
   IServerDelegate,
   Job,
   JobId,
   QueueEvents,
-} from "./types.js";
-import { isDocumentJob, isOperationJob } from "./types.js";
+} from "document-drive";
+import {
+  childLogger,
+  isDocumentJob,
+  isOperationJob,
+  logger,
+  MemoryQueue,
+} from "document-drive";
+import { generateId } from "document-model/core";
+import type { Unsubscribe } from "nanoevents";
+import { createNanoEvents } from "nanoevents";
 
 type DocId = string;
 
@@ -55,7 +59,6 @@ export class EventQueueManager implements IQueueManager {
     ): T {
       return (async (...args: any) => {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           await method(...args);
         } catch (error) {
           throw error instanceof Error

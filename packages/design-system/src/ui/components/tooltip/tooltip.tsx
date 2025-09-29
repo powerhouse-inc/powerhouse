@@ -1,6 +1,4 @@
-"use client";
-
-import { cn } from "#powerhouse";
+import { cn } from "@powerhousedao/design-system";
 import type {
   TooltipContentProps,
   TooltipProps as TooltipPrimitiveProps,
@@ -12,7 +10,7 @@ import {
   Root,
   Trigger,
 } from "@radix-ui/react-tooltip";
-import * as React from "react";
+import { forwardRef } from "react";
 
 interface TooltipProps
   extends TooltipPrimitiveProps,
@@ -22,7 +20,7 @@ interface TooltipProps
   triggerAsChild?: boolean;
 }
 
-const TooltipContent = React.forwardRef<
+const TooltipContent = forwardRef<
   React.ElementRef<typeof Content>,
   TooltipContentProps
 >(({ children, className, ...props }, ref) => {

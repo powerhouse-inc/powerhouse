@@ -1,10 +1,10 @@
-import type { Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import type {
   GraphQLResolverMap,
   GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
+import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentNode } from "graphql";
@@ -43,9 +43,11 @@ export const getDocumentModelTypeDefs = (
   const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+    const dmSchemaName = pascalCase(
+      documentModel.global.name.replaceAll("/", " "),
+    );
     let tmpDmSchema = `
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.global.schema
                 .replaceAll("scalar DateTime", "")
@@ -53,7 +55,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
   
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.local.schema
                 .replaceAll("scalar DateTime", "")
@@ -117,7 +119,8 @@ export const getDocumentModelTypeDefs = (
               operations(skip: Int, first: Int): [Operation!]!
               revision: Int!
               created: DateTime!
-              lastModified: DateTime!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIso: DateTime!
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               stateJSON: JSONObject

@@ -1,4 +1,4 @@
-import { ModalManager, RWATabs } from "#rwa";
+import { ModalManager, RWATabs } from "@powerhousedao/design-system";
 
 export function RWAEditor() {
   return (
