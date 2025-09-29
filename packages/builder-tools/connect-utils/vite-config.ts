@@ -120,14 +120,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
 
-  const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
-    version: string;
-  };
+  let pkg;
+  try {
+    pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
+      version: string;
+    };
+  } catch (error) {
+    console.error("Failed to read package.json:", error);
+  }
 
   const APP_VERSION = (
     process.env.APP_VERSION ||
     env.APP_VERSION ||
-    pkg.version
+    pkg?.version ||
+    "unknown"
   ).toString();
 
   const authToken = process.env.SENTRY_AUTH_TOKEN ?? env.SENTRY_AUTH_TOKEN;
