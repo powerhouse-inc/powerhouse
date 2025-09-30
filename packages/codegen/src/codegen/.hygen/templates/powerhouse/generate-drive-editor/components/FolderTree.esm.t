@@ -11,6 +11,8 @@ import type { Node } from "document-drive";
 import { useMemo } from "react";
 
 interface FolderTreeProps {
+  driveId: string;
+  driveName: string;
   nodes: Node[];
   selectedNodeId?: string;
   onSelectNode: (nodeId: string | undefined) => void;
@@ -49,11 +51,14 @@ function buildSidebarNodes(
     });
 }
 
-function transformNodesToSidebarNodes(nodes: Node[]): SidebarNode[] {
+function transformNodesToSidebarNodes(
+  nodes: Node[],
+  driveName: string,
+): SidebarNode[] {
   return [
     {
       id: "root",
-      title: "Root",
+      title: driveName,
       icon: "Drive" as const,
       children: buildSidebarNodes(nodes, null),
     },
@@ -65,14 +70,16 @@ function transformNodesToSidebarNodes(nodes: Node[]): SidebarNode[] {
  * Displays folders and files in a tree structure with expand/collapse functionality, search, and resize support.
  */
 export function FolderTree({
+  driveId,
+  driveName,
   nodes,
   selectedNodeId,
   onSelectNode,
 }: FolderTreeProps) {
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
-    () => transformNodesToSidebarNodes(nodes),
-    [nodes],
+    () => transformNodesToSidebarNodes(nodes, driveName),
+    [nodes, driveName],
   );
 
   const handleActiveNodeChange = (node: SidebarNode) => {
@@ -83,13 +90,14 @@ export function FolderTree({
       onSelectNode(node.id);
     }
   };
-
   // Map selectedNodeId to activeNodeId (use "root" when undefined)
-  const activeNodeId = selectedNodeId || "root";
+  const activeNodeId =
+    !selectedNodeId || selectedNodeId === driveId ? "root" : selectedNodeId;
 
   return (
     <SidebarProvider nodes={sidebarNodes}>
       <Sidebar
+        className="pt-1"
         nodes={sidebarNodes}
         activeNodeId={activeNodeId}
         onActiveNodeChange={handleActiveNodeChange}
@@ -99,7 +107,7 @@ export function FolderTree({
         allowPinning={false}
         showStatusFilter={false}
         initialWidth={256}
-        defaultLevel={1}
+        defaultLevel={2}
       />
     </SidebarProvider>
   );

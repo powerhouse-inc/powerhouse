@@ -19,7 +19,7 @@ import {
   sortNodesByName,
 } from "../utils/nodes.js";
 import { makeNodeSlug } from "../utils/url.js";
-import { useSelectedDocument } from "./documents.js";
+import { useSelectedDocument, useSelectedDocumentId } from "./documents.js";
 import { useDrives, useSelectedDrive } from "./drives.js";
 
 /** Returns the nodes for a drive. */
@@ -117,8 +117,8 @@ export function useSelectedFolder(): FolderNode | undefined {
 /** Returns the path to the selected node. */
 export function useSelectedNodePath() {
   const selectedFolder = useSelectedFolder();
-  const [selectedDocument] = useSelectedDocument();
-  const selectedNodeId = selectedDocument?.header.id ?? selectedFolder?.id;
+  const selectedDocumentId = useSelectedDocumentId();
+  const selectedNodeId = selectedDocumentId ?? selectedFolder?.id;
   return useNodePath(selectedNodeId);
 }
 

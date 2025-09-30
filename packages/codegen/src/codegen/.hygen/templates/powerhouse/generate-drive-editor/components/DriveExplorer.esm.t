@@ -4,6 +4,7 @@ unless_exists: true
 ---
 import {
   Breadcrumbs,
+  Button,
   FileItem,
   FolderItem,
   useBreadcrumbs,
@@ -101,6 +102,8 @@ export function DriveExplorer(props: DriveEditorProps) {
       {/* === LEFT SIDEBAR: Folder and File Navigation === */}
       {/* Sidebar component manages its own width, styling, and overflow */}
       <FolderTree
+        driveId={selectedDrive.header.id}
+        driveName={selectedDrive.state.global.name}
         nodes={allNodes}
         selectedNodeId={selectedNodeId}
         onSelectNode={setSelectedNode}
@@ -114,7 +117,7 @@ export function DriveExplorer(props: DriveEditorProps) {
           children
         ) : (
           /* Folder contents view */
-          <div className="space-y-6">
+          <div className="space-y-6 px-6">
             {/* === HEADER SECTION === */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -126,36 +129,30 @@ export function DriveExplorer(props: DriveEditorProps) {
                 </h2>
                 {/* Customize: Add more action buttons here */}
                 {isAllowedToCreateDocuments && (
-                  <button
-                    onClick={() => handleCreateFolder()}
-                    className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
-                  >
-                    + New Folder
-                  </button>
+                  <Button onClick={() => handleCreateFolder()}>
+                    New Folder
+                  </Button>
                 )}
               </div>
 
               {/* Navigation breadcrumbs */}
-              {breadcrumbs.length > 1 && (
-                <div className="border-b border-gray-200 pb-3">
-                  <Breadcrumbs
-                    breadcrumbs={breadcrumbs}
-                    createEnabled={isAllowedToCreateDocuments}
-                    onCreate={handleCreateFolder}
-                    onBreadcrumbSelected={onBreadcrumbSelected}
-                  />
-                </div>
-              )}
+              <div className="border-b border-gray-200 pb-3">
+                <Breadcrumbs
+                  breadcrumbs={breadcrumbs}
+                  createEnabled={isAllowedToCreateDocuments}
+                  onCreate={handleCreateFolder}
+                  onBreadcrumbSelected={onBreadcrumbSelected}
+                />
+              </div>
             </div>
 
             {/* === FOLDERS SECTION === */}
-            {/* Customize grid layout by changing grid-cols-1 */}
             {folderChildren.length > 0 && (
               <div>
-                <h3 className="mb-2 text-sm font-medium text-gray-500">
-                  📁 Folders
+                <h3 className="mb-2 text-sm font-bold text-gray-600">
+                  Folders
                 </h3>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-wrap gap-4">
                   {folderChildren.map((folderNode) => (
                     <FolderItem
                       key={folderNode.id}
@@ -181,13 +178,12 @@ export function DriveExplorer(props: DriveEditorProps) {
             )}
 
             {/* === FILES/DOCUMENTS SECTION === */}
-            {/* Customize grid layout by changing grid-cols-1 */}
             {fileChildren.length > 0 && (
               <div>
-                <h3 className="mb-2 text-sm font-medium text-gray-500">
-                  📄 Documents
+                <h3 className="mb-2 text-sm font-semibold text-gray-600">
+                  Documents
                 </h3>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-wrap gap-4">
                   {fileChildren.map((fileNode) => (
                     <FileItem
                       key={fileNode.id}
@@ -216,7 +212,7 @@ export function DriveExplorer(props: DriveEditorProps) {
             {/* Customize empty state message and styling here */}
             {folderChildren.length === 0 && fileChildren.length === 0 && (
               <div className="py-12 text-center text-gray-500">
-                <p className="text-lg">📁 This folder is empty</p>
+                <p className="text-lg">This folder is empty</p>
                 <p className="mt-2 text-sm">
                   Create your first document or folder below
                 </p>
