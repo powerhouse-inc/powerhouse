@@ -2,102 +2,105 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/FolderTree.tsx"
 unless_exists: true
 ---
-import type { FolderNode } from "document-drive";
-import { useState } from "react";
+import {
+  Sidebar,
+  SidebarProvider,
+  type SidebarNode,
+} from "@powerhousedao/document-engineering";
+import type { Node } from "document-drive";
+import { useMemo } from "react";
 
 interface FolderTreeProps {
-  folders: FolderNode[];
+  nodes: Node[];
   selectedNodeId?: string;
   onSelectNode: (nodeId: string | undefined) => void;
 }
 
+function isFolder(node: Node): boolean {
+  return node.kind === "folder";
+}
+
+function buildSidebarNodes(
+  nodes: Node[],
+  parentId: string | null | undefined,
+): SidebarNode[] {
+  return nodes
+    .filter((n) => {
+      if (parentId == null) {
+        return n.parentFolder == null;
+      }
+      return n.parentFolder === parentId;
+    })
+    .map((node): SidebarNode => {
+      if (isFolder(node)) {
+        return {
+          id: node.id,
+          title: node.name,
+          icon: "FolderClose" as const,
+          expandedIcon: "FolderOpen" as const,
+          children: buildSidebarNodes(nodes, node.id),
+        };
+      }
+      return {
+        id: node.id,
+        title: node.name,
+        icon: "File" as const,
+      };
+    });
+}
+
+function transformNodesToSidebarNodes(nodes: Node[]): SidebarNode[] {
+  return [
+    {
+      id: "root",
+      title: "Root",
+      icon: "Drive" as const,
+      children: buildSidebarNodes(nodes, null),
+    },
+  ];
+}
+
 /**
- * Hierarchical folder tree navigation component.
- * Displays folders in a tree structure with expand/collapse functionality.
+ * Hierarchical folder tree navigation component using Sidebar from document-engineering.
+ * Displays folders and files in a tree structure with expand/collapse functionality, search, and resize support.
  */
 export function FolderTree({
-  folders,
+  nodes,
   selectedNodeId,
   onSelectNode,
 }: FolderTreeProps) {
-  // Track which folders are expanded
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(),
+  // Transform Node[] to hierarchical SidebarNode structure
+  const sidebarNodes = useMemo(
+    () => transformNodesToSidebarNodes(nodes),
+    [nodes],
   );
 
-  // Toggle folder expansion state
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-      return next;
-    });
+  const handleActiveNodeChange = (node: SidebarNode) => {
+    // If root node is selected, pass undefined to match existing behavior
+    if (node.id === "root") {
+      onSelectNode(undefined);
+    } else {
+      onSelectNode(node.id);
+    }
   };
 
-  // Recursive function to render folder tree structure
-  const renderFolder = (folder: FolderNode, level = 0) => {
-    const hasChildren = folders.some((f) => f.parentFolder === folder.id);
-    const isExpanded = expandedFolders.has(folder.id);
-    const isSelected = selectedNodeId === folder.id;
-
-    return (
-      <div key={folder.id}>
-        <div
-          className={`flex cursor-pointer items-center rounded px-2 py-1 text-sm hover:bg-gray-100 ${
-            isSelected ? "bg-blue-100 text-blue-800" : ""
-          }`}
-          style={{ paddingLeft: `${level * 16 + 8}px` }} // Customize indentation here
-          onClick={() => onSelectNode(folder.id)}
-        >
-          {/* Expand/collapse button for folders with children */}
-          {hasChildren && (
-            <button
-              className="mr-1 flex h-4 w-4 items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFolder(folder.id);
-              }}
-            >
-              {isExpanded ? "▼" : "▶"} {/* Customize expand icons here */}
-            </button>
-          )}
-          {!hasChildren && <div className="mr-1 w-5" />}
-          {/* Customize folder icon and styling here */}
-          <span>📁 {folder.name}</span>
-        </div>
-        {/* Recursively render child folders when expanded */}
-        {isExpanded && hasChildren && (
-          <div>
-            {folders
-              .filter((f) => f.parentFolder === folder.id)
-              .map((child) => renderFolder(child, level + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Map selectedNodeId to activeNodeId (use "root" when undefined)
+  const activeNodeId = selectedNodeId || "root";
 
   return (
-    <div className="space-y-1">
-      {/* Root Directory Option */}
-      {/* Customize root folder appearance here */}
-      <div
-        className={`flex cursor-pointer items-center rounded px-2 py-1 text-sm hover:bg-gray-100 ${
-          !selectedNodeId ? "bg-blue-100 text-blue-800" : ""
-        }`}
-        onClick={() => onSelectNode(undefined)}
-      >
-        <span>🏠 Root</span>
-      </div>
-
-      {/* Render top-level folders (no parent) */}
-      {folders
-        .filter((folder) => !folder.parentFolder)
-        .map((folder) => renderFolder(folder))}
-    </div>
+    <SidebarProvider nodes={sidebarNodes}>
+      <Sidebar
+        nodes={sidebarNodes}
+        activeNodeId={activeNodeId}
+        onActiveNodeChange={handleActiveNodeChange}
+        sidebarTitle="Drive Explorer"
+        showSearchBar={true}
+        resizable={true}
+        allowPinning={false}
+        showStatusFilter={false}
+        initialWidth={256}
+        defaultLevel={1}
+      />
+    </SidebarProvider>
   );
 }
