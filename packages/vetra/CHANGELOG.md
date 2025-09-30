@@ -1,3 +1,13 @@
+## 5.0.0-staging.21 (2025-09-30)
+
+### 🩹 Fixes
+
+- **vetra:** get vetra package docId from selectedDrive ([4c031f5cb](https://github.com/powerhouse-inc/powerhouse/commit/4c031f5cb))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.0.0-staging.20 (2025-09-30)
 
 ### 🚀 Features
