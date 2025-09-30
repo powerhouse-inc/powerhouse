@@ -91,6 +91,25 @@ export interface PagedResults<T> {
   hasMore: boolean;
 }
 
+export interface DocumentSnapshot {
+  id: string;
+  documentId: string;
+  slug: string | null;
+  name: string | null;
+  scope: string;
+  branch: string;
+  content: string;
+  documentType: string;
+  lastOperationIndex: number;
+  lastOperationHash: string;
+  lastUpdatedAt: Date;
+  snapshotVersion: number;
+  identifiers: string | null;
+  metadata: string | null;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+}
+
 export interface IDocumentView {
   /**
    * Initializes the view.
@@ -109,4 +128,20 @@ export interface IDocumentView {
    * @param signal - Optional abort signal to cancel the request
    */
   exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
+
+  /**
+   * Retrieves multiple document snapshots by their IDs.
+   *
+   * @param documentIds - The list of document ids to retrieve.
+   * @param scope - The scope to filter by (default: "global")
+   * @param branch - The branch to filter by (default: "main")
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Array of document snapshots in the same order as input IDs (null for non-existent docs)
+   */
+  getMany(
+    documentIds: string[],
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<(DocumentSnapshot | null)[]>;
 }

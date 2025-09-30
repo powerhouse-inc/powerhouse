@@ -316,4 +316,206 @@ describe("KyselyDocumentView", () => {
       ).rejects.toThrow("Operation aborted");
     });
   });
+
+  describe("getMany", () => {
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    it("should retrieve multiple documents by ID", async () => {
+      const doc1Id = generateId();
+      const doc2Id = generateId();
+      const doc3Id = generateId();
+
+      // Create snapshots for doc1 and doc2
+      const operations = [
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: {
+            ...addFile({
+              id: generateId(),
+              name: "doc1.txt",
+              documentType: "text/plain",
+              parentFolder: null,
+            }),
+            documentId: doc1Id,
+          } as any,
+        },
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-1",
+          skip: 0,
+          id: generateId(),
+          action: {
+            ...addFile({
+              id: generateId(),
+              name: "doc2.txt",
+              documentType: "text/plain",
+              parentFolder: null,
+            }),
+            documentId: doc2Id,
+          } as any,
+        },
+      ];
+
+      await view.indexOperations(operations);
+
+      // Get all three documents (doc3 doesn't exist)
+      const results = await view.getMany([doc1Id, doc2Id, doc3Id]);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).not.toBeNull();
+      expect(results[0]?.documentId).toBe(doc1Id);
+      expect(results[1]).not.toBeNull();
+      expect(results[1]?.documentId).toBe(doc2Id);
+      expect(results[2]).toBeNull();
+    });
+
+    it("should return empty array for empty input", async () => {
+      const results = await view.getMany([]);
+      expect(results).toEqual([]);
+    });
+
+    it("should filter by scope and branch", async () => {
+      const docId = generateId();
+
+      // Create a snapshot in a different scope
+      const operation: Operation = {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash-0",
+        skip: 0,
+        id: generateId(),
+        action: {
+          ...addFile({
+            id: generateId(),
+            name: "scoped.txt",
+            documentType: "text/plain",
+            parentFolder: null,
+          }),
+          documentId: docId,
+          scope: "custom-scope",
+        } as any,
+      };
+
+      await view.indexOperations([operation]);
+
+      // Should not find in default scope
+      const defaultResults = await view.getMany([docId]);
+      expect(defaultResults[0]).toBeNull();
+
+      // Should find in custom scope
+      const customResults = await view.getMany([docId], "custom-scope", "main");
+      expect(customResults[0]).not.toBeNull();
+      expect(customResults[0]?.documentId).toBe(docId);
+    });
+
+    it("should not return deleted documents", async () => {
+      const docId = generateId();
+
+      // Create a snapshot
+      const operation: Operation = {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash-0",
+        skip: 0,
+        id: generateId(),
+        action: {
+          ...addFile({
+            id: generateId(),
+            name: "deleted.txt",
+            documentType: "text/plain",
+            parentFolder: null,
+          }),
+          documentId: docId,
+        } as any,
+      };
+
+      await view.indexOperations([operation]);
+
+      // Verify it exists
+      let results = await view.getMany([docId]);
+      expect(results[0]).not.toBeNull();
+
+      // Mark as deleted
+      await db
+        .updateTable("DocumentSnapshot")
+        .set({
+          isDeleted: true,
+          deletedAt: new Date(),
+        })
+        .where("documentId", "=", docId)
+        .execute();
+
+      // Should not be returned
+      results = await view.getMany([docId]);
+      expect(results[0]).toBeNull();
+    });
+
+    it("should abort when signal is aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        view.getMany([generateId()], "global", "main", controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should maintain order of requested IDs", async () => {
+      const doc1Id = generateId();
+      const doc2Id = generateId();
+      const doc3Id = generateId();
+
+      // Create snapshots in different order
+      const operations = [
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-2",
+          skip: 0,
+          id: generateId(),
+          action: {
+            ...addFile({
+              id: generateId(),
+              name: "doc3.txt",
+              documentType: "text/plain",
+              parentFolder: null,
+            }),
+            documentId: doc3Id,
+          } as any,
+        },
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: {
+            ...addFile({
+              id: generateId(),
+              name: "doc1.txt",
+              documentType: "text/plain",
+              parentFolder: null,
+            }),
+            documentId: doc1Id,
+          } as any,
+        },
+      ];
+
+      await view.indexOperations(operations);
+
+      // Request in specific order
+      const results = await view.getMany([doc2Id, doc3Id, doc1Id]);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toBeNull(); // doc2 doesn't exist
+      expect(results[1]?.documentId).toBe(doc3Id);
+      expect(results[2]?.documentId).toBe(doc1Id);
+    });
+  });
 });

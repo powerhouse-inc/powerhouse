@@ -1,7 +1,11 @@
 import type { Operation } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
-import type { IDocumentView, IOperationStore } from "../storage/interfaces.js";
+import type {
+  DocumentSnapshot,
+  IDocumentView,
+  IOperationStore,
+} from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type {
   DocumentViewDatabase,
@@ -215,6 +219,37 @@ export class KyselyDocumentView implements IDocumentView {
 
     // Return a boolean array in the same order as the input
     return documentIds.map((id) => existingIds.has(id));
+  }
+
+  async getMany(
+    documentIds: string[],
+    scope: string = "global",
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<(DocumentSnapshot | null)[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    if (documentIds.length === 0) {
+      return [];
+    }
+
+    // Query for all documents at once
+    const snapshots = await this.db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "in", documentIds)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .execute();
+
+    // Create a Map of document ID to snapshot for fast lookup
+    const snapshotMap = new Map(snapshots.map((s) => [s.documentId, s]));
+
+    // Return an array in the same order as the input, with null for missing documents
+    return documentIds.map((id) => snapshotMap.get(id) || null);
   }
 
   private async createTablesIfNotExist(): Promise<void> {
