@@ -6,7 +6,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorClientBuilder } from "../../src/core/builder.js";
 import { Reactor } from "../../src/core/reactor.js";
@@ -32,6 +32,9 @@ describe("ReactorClient Passthrough Functions", () => {
   ] as DocumentModelModule<any>[];
 
   beforeEach(async () => {
+    // Mock time to ensure consistent timestamps
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2024-01-01T00:00:00.000Z"));
     // Create shared storage
     storage = new MemoryStorage();
 
@@ -65,6 +68,11 @@ describe("ReactorClient Passthrough Functions", () => {
     for (const doc of docs) {
       await reactor.create(doc);
     }
+  });
+
+  afterEach(() => {
+    // Restore real timers after each test
+    vi.useRealTimers();
   });
 
   describe("getDocumentModels", () => {
@@ -240,7 +248,7 @@ describe("ReactorClient Passthrough Functions", () => {
           {
             id: "action-1",
             type: "SET_NAME",
-            timestampUtcMs: new Date().toISOString(),
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "Modified Name" },
             scope: "global",
           },
