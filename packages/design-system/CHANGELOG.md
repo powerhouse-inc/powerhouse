@@ -1,3 +1,15 @@
+## 5.0.0-staging.20 (2025-09-30)
+
+### 🚀 Features
+
+- drive boilerplate update ([aca241a83](https://github.com/powerhouse-inc/powerhouse/commit/aca241a83))
+- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 5.0.0-staging.19 (2025-09-29)
 
 ### 🚀 Features
