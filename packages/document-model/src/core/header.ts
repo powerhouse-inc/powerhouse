@@ -1,5 +1,6 @@
 import { generateUUIDBrowser } from "./crypto.js";
-import type { ISigner, PHDocumentHeader, SigningParameters } from "./types.js";
+import type { PHDocumentHeader } from "./ph-types.js";
+import type { ISigner, SigningParameters } from "./types.js";
 
 /**
  * Generates a deterministic payload from signing parameters

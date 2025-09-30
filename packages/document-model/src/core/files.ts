@@ -7,13 +7,11 @@ import {
 import { FileSystemError } from "./errors.js";
 import type {
   DocumentOperations,
-  FileInput,
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
-  Reducer,
-  ReplayDocumentOptions,
-} from "./types.js";
+} from "./ph-types.js";
+import type { FileInput, Reducer, ReplayDocumentOptions } from "./types.js";
 import { validateOperations } from "./validation.js";
 
 export function writeFileBrowser(

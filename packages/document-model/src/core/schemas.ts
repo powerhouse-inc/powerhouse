@@ -1,9 +1,9 @@
 import { z } from "zod";
+import type { Operation } from "./ph-types.js";
 import type {
   DocumentFile,
   LoadStateActionInput,
   LoadStateActionStateInput,
-  Operation,
   PruneActionInput,
   SchemaLoadStateAction,
   SchemaPruneAction,

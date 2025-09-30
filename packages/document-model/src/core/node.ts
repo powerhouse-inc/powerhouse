@@ -4,13 +4,12 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-import type { Reducer } from "./types.js";
 import { baseLoadFromInput, createZip } from "./files.js";
+import type { PHBaseState, PHDocument } from "./ph-types.js";
 import type {
   Attachment,
   AttachmentInput,
-  PHBaseState,
-  PHDocument,
+  Reducer,
   ReplayDocumentOptions,
 } from "./types.js";
 

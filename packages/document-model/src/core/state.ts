@@ -1,4 +1,8 @@
-import type { PHAuthState, PHBaseState, PHDocumentState } from "./types.js";
+import type {
+  PHAuthState,
+  PHBaseState,
+  PHDocumentState,
+} from "./ph-types.js";
 
 /**
  * Creates a default PHAuthState

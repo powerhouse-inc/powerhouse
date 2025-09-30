@@ -3,17 +3,19 @@ import { generateId, hashBrowser } from "./crypto.js";
 import { createPresignedHeader } from "./header.js";
 import type {
   Action,
-  CreateState,
-  DocumentAction,
   DocumentOperations,
-  DocumentOperationsIgnoreMap,
-  MappedOperation,
   Operation,
-  OperationIndex,
-  OperationsByScope,
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
+} from "./ph-types.js";
+import type {
+  CreateState,
+  DocumentAction,
+  DocumentOperationsIgnoreMap,
+  MappedOperation,
+  OperationIndex,
+  OperationsByScope,
   Reducer,
   ReplayDocumentOptions,
   SignalDispatch,

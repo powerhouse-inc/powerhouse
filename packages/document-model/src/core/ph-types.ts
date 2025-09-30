@@ -6,6 +6,8 @@
 // docs/planning folder in the reactor/ package.
 ///////////////////////////////////////////////////////////////////////////////
 
+import type { AttachmentInput } from "./types.js";
+
 /**
  * Information to verify the document creator.
  */
@@ -194,8 +196,12 @@ export type Action = {
   /** The scope of the action */
   scope: string;
 
-  /** The attachments included in the action. */
-  attachments?: AttachmentRef[];
+  /**
+   * The attachments included in the action.
+   *
+   * This will be refactored in a future release.
+   */
+  attachments?: AttachmentInput[];
 
   /** The context of the action. */
   context?: ActionContext;

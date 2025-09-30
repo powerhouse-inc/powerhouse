@@ -2,12 +2,8 @@ import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import { noop } from "./actions.js";
 import { nextSkipNumber, sortOperations } from "./documents.js";
-import type {
-  Action,
-  LoadStateActionInput,
-  PHBaseState,
-  PHDocument,
-} from "./types.js";
+import type { Action, PHBaseState, PHDocument } from "./ph-types.js";
+import type { LoadStateActionInput } from "./types.js";
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(

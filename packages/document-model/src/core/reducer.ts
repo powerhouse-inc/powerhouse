@@ -25,7 +25,6 @@ import {
   setNameOperation,
   undoOperation,
 } from "./operations.js";
-import { DocumentActionSchema } from "./schemas.js";
 import type {
   Action,
   DocumentOperations,
@@ -33,6 +32,9 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
+} from "./ph-types.js";
+import { DocumentActionSchema } from "./schemas.js";
+import type {
   PruneActionInput,
   Reducer,
   ReducerOptions,
