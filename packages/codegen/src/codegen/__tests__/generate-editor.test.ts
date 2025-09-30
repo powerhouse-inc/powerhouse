@@ -1,9 +1,9 @@
 import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
-import { exec } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { generateEditor } from "../index.js";
+import { compile } from "./fixtures/typecheck.js";
 import {
   EXPECTED_EDITOR_CONTENT,
   EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES,
@@ -30,7 +30,7 @@ describe("generateEditor", () => {
   };
 
   beforeEach(() => {
-    testDir = path.join(__dirname, "temp");
+    testDir = path.join(__dirname, "temp", "document-editor");
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -43,35 +43,6 @@ describe("generateEditor", () => {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
   });
-
-  const compile = () =>
-    new Promise((resolve, reject) => {
-      const output: { stdout: string[]; stderr: string[] } = {
-        stdout: [],
-        stderr: [],
-      };
-      const child = exec(
-        "npx tsc --project tsconfig.document-editor.test.json",
-        { cwd: process.cwd() },
-      );
-      child.stdout?.on("data", (data) => {
-        output.stdout.push(data);
-      });
-      child.stderr?.on("data", (data) => {
-        output.stderr.push(data);
-      });
-      child.on("close", (code) => {
-        if (code === 0) {
-          resolve(true);
-        } else {
-          reject(
-            new Error(
-              `tsc failed with code ${code}:\n${output.stdout.join("")}\n${output.stderr.join("")}`,
-            ),
-          );
-        }
-      });
-    });
 
   it("should generate a generic document editor", async () => {
     const name = "GenericDocumentEditor";
@@ -104,7 +75,7 @@ describe("generateEditor", () => {
       EXPECTED_MAIN_INDEX_CONTENT_NO_DOCUMENT_TYPES,
     );
 
-    await compile();
+    await compile("tsconfig.document-editor.test.json");
   });
 
   it("should generate a Document Model editor", async () => {
@@ -145,6 +116,6 @@ describe("generateEditor", () => {
       .replace(/\s+$/, "");
     expect(mainIndexContent).toStrictEqual(EXPECTED_MAIN_INDEX_CONTENT);
 
-    await compile();
+    await compile("tsconfig.document-editor.test.json");
   });
 });

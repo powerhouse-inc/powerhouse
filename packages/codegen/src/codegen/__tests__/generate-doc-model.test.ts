@@ -1,4 +1,3 @@
-import { exec } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -6,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { generateSchemas } from "../graphql.js";
 import { generateDocumentModel, generateProcessor } from "../hygen.js";
 import { loadDocumentModel } from "../utils.js";
+import { compile } from "./fixtures/typecheck.js";
 
 describe("document model", () => {
   const srcPath = path.join(
@@ -57,35 +57,6 @@ describe("document model", () => {
     );
   };
 
-  const compile = () =>
-    new Promise((resolve, reject) => {
-      const output: { stdout: string[]; stderr: string[] } = {
-        stdout: [],
-        stderr: [],
-      };
-      const child = exec(
-        "npx tsc --project tsconfig.document-model.test.json",
-        { cwd: process.cwd() },
-      );
-      child.stdout?.on("data", (data) => {
-        output.stdout.push(data);
-      });
-      child.stderr?.on("data", (data) => {
-        output.stderr.push(data);
-      });
-      child.on("close", (code) => {
-        if (code === 0) {
-          resolve(true);
-        } else {
-          reject(
-            new Error(
-              `tsc failed with code ${code}:\n${output.stdout.join("")}\n${output.stderr.join("")}`,
-            ),
-          );
-        }
-      });
-    });
-
   it(
     "should generate a document model",
     {
@@ -93,7 +64,7 @@ describe("document model", () => {
     },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -122,7 +93,7 @@ describe("document model", () => {
         },
       );
 
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -185,7 +156,7 @@ describe("document model", () => {
         },
       );
 
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -196,7 +167,7 @@ describe("document model", () => {
     },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       const indexPath = path.join(outPath, "document-model", "index.ts");
       const indexContent = readFileSync(indexPath, "utf-8");
@@ -216,7 +187,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       const testDocDocumentModelV2 = await loadDocumentModel(
         path.join(
@@ -270,7 +241,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       // Check general module errors
       const generalErrorPath = path.join(
@@ -328,7 +299,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       // Check that the general module reducer imports InvalidStatusTransition
       const generalReducerPath = path.join(
@@ -386,7 +357,11 @@ describe("document model", () => {
       });
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
-        path.join(srcPath, "test-empty-error-codes", "test-empty-error-codes.json"),
+        path.join(
+          srcPath,
+          "test-empty-error-codes",
+          "test-empty-error-codes.json",
+        ),
       );
 
       await generateDocumentModel(
@@ -404,13 +379,16 @@ describe("document model", () => {
         "test-operations",
         "error.ts",
       );
-      const testOperationsErrorContent = readFileSync(testOperationsErrorPath, "utf-8");
+      const testOperationsErrorContent = readFileSync(
+        testOperationsErrorPath,
+        "utf-8",
+      );
 
       // Check that error codes are generated from names in PascalCase when empty
       expect(testOperationsErrorContent).toContain("export type ErrorCode =");
       expect(testOperationsErrorContent).toContain("'InvalidValue'");
       expect(testOperationsErrorContent).toContain("'EmptyValue'");
-      
+
       // Check that error classes are generated
       expect(testOperationsErrorContent).toContain(
         "export class InvalidValue extends Error implements ReducerError",
@@ -418,7 +396,7 @@ describe("document model", () => {
       expect(testOperationsErrorContent).toContain(
         "export class EmptyValue extends Error implements ReducerError",
       );
-      
+
       // Verify error code constants are set properly in PascalCase
       expect(testOperationsErrorContent).toContain(
         "errorCode = 'InvalidValue' as ErrorCode",
