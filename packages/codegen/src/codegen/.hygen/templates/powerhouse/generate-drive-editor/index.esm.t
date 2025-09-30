@@ -3,7 +3,7 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 force: true
 ---
 import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
-import Editor from "./editor.js";
+import { Editor } from "./editor.js";
 
 export const module: DriveEditorModule = {
   Component: Editor,
@@ -19,5 +19,3 @@ export const module: DriveEditorModule = {
     },<%_ } _%>
   },
 };
-
-export default module;

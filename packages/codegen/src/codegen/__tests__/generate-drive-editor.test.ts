@@ -47,11 +47,12 @@ describe("generateDriveEditor", () => {
     const name = "AtlasDriveExplorer";
     await generateDriveEditor(name, config, "AtlasDriveExplorer");
 
+    await compile("tsconfig.document-editor.test.json");
+
     const editorDir = path.join(testDir, "atlas-drive-explorer");
     expect(fs.existsSync(editorDir)).toBe(true);
 
     expect(fs.existsSync(path.join(editorDir, "components"))).toBe(true);
-    expect(fs.existsSync(path.join(editorDir, "types"))).toBe(true);
 
     expect(
       fs.existsSync(path.join(editorDir, "components/DriveExplorer.tsx")),
@@ -60,13 +61,8 @@ describe("generateDriveEditor", () => {
       fs.existsSync(path.join(editorDir, "components/FolderTree.tsx")),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(editorDir, "components/EditorContainer.tsx")),
-    ).toBe(true);
-    expect(
       fs.existsSync(path.join(editorDir, "components/CreateDocument.tsx")),
     ).toBe(true);
-
-    expect(fs.existsSync(path.join(editorDir, "types/css.d.ts"))).toBe(true);
 
     const indexPath = path.join(editorDir, "index.ts");
     const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
@@ -81,8 +77,6 @@ describe("generateDriveEditor", () => {
       .readFileSync(mainIndexPath, "utf-8")
       .replace(/\s+$/, "");
     expect(mainIndexContent).toBe(EXPECTED_MAIN_INDEX_CONTENT);
-
-    await compile("tsconfig.document-editor.test.json");
   });
 
   it("should generate a drive editor with default id when no appId is provided", async () => {

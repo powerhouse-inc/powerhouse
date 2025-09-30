@@ -4,33 +4,27 @@ unless_exists: true
 ---
 import {
   Breadcrumbs,
-  CreateDocumentModal,
   FileItem,
   FolderItem,
   useBreadcrumbs,
 } from "@powerhousedao/design-system";
 import {
-  addDocument,
   type DriveEditorProps,
   getSyncStatusSync,
   setSelectedNode,
+  showDeleteNodeModal,
   useAllFolderNodes,
-  useDocumentModelModules,
   useDriveSharingType,
-  useEditorModules,
   useFileChildNodesForId,
   useFolderChildNodesForId,
-  useSelectedDrive,
+  useNodeActions,
+  useSelectedDriveDocument,
   useSelectedFolder,
   useSelectedNodePath,
   useUserPermissions,
-  useNodeActions,
-  showDeleteNodeModal,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { CreateDocument } from "./CreateDocument.js";
-import { EditorContainer } from "./EditorContainer.js";
 import { FolderTree } from "./FolderTree.js";
 
 /**
@@ -38,14 +32,8 @@ import { FolderTree } from "./FolderTree.js";
  * Layout: Left sidebar (folder tree) + Right content area (files/folders + document editor)
  */
 export function DriveExplorer(props: DriveEditorProps) {
-  // === DOCUMENT EDITOR STATE ===
-  // Customize document opening/closing behavior here
-  const [activeDocumentId, setActiveDocumentId] = useState<
-    string | undefined
-  >();
-  const [openModal, setOpenModal] = useState(false);
-  const selectedDocumentModel = useRef<DocumentModelModule | null>(null);
-  const editorModules = useEditorModules();
+  const { children, editorConfig } = props;
+
   // === DRIVE CONTEXT HOOKS ===
   // Core drive operations and document models
   const {
@@ -60,7 +48,7 @@ export function DriveExplorer(props: DriveEditorProps) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // === STATE MANAGEMENT HOOKS ===
   // Core state hooks for drive navigation
-  const [selectedDrive] = useSelectedDrive(); // Currently selected drive
+  const [selectedDrive] = useSelectedDriveDocument(); // Currently selected drive
   const selectedFolder = useSelectedFolder(); // Currently selected folder
   const selectedNodePath = useSelectedNodePath();
   const sharingType = useDriveSharingType(selectedDrive?.header.id);
@@ -72,7 +60,7 @@ export function DriveExplorer(props: DriveEditorProps) {
     setSelectedNode,
   });
 
-  const selectedNodeId = selectedFolder?.id || props.document.header.id;
+  const selectedNodeId = selectedFolder?.id || selectedDrive.header.id;
 
   const folderChildren = useFolderChildNodesForId(selectedNodeId);
   const fileChildren = useFileChildNodesForId(selectedNodeId);
@@ -104,55 +92,8 @@ export function DriveExplorer(props: DriveEditorProps) {
     [onAddFolder, selectedFolder],
   );
 
-  // Handle document creation from modal
-  const onCreateDocument = useCallback(
-    async (fileName: string) => {
-      setOpenModal(false);
-
-      const documentModel = selectedDocumentModel.current;
-      if (!documentModel || !selectedDrive?.header.id) return;
-
-      try {
-        const node = await addDocument(
-          selectedDrive.header.id,
-          fileName,
-          documentModel.documentModel.id,
-          selectedFolder?.id,
-        );
-
-        selectedDocumentModel.current = null;
-
-        if (node) {
-          // Customize: Auto-open created document by uncommenting below
-          // setActiveDocumentId(node.id);
-        }
-      } catch (error) {
-        console.error("Failed to create document:", error);
-      }
-    },
-    [addDocument, editorModules, selectedDrive?.header.id, selectedFolder?.id],
-  );
-
-  // === DOCUMENT EDITOR DATA ===
-  // Filter available document types here if needed
-  const documentModelModules = useDocumentModelModules();
-
-  // Get active document and its editor components
-  const activeDocument = activeDocumentId
-    ? fileChildren.find((file) => file.id === activeDocumentId)
-    : undefined;
-
-  const documentModelModule = activeDocument
-    ? documentModelModules?.find(
-        (m) => m.documentModel.id === activeDocument.documentType,
-      )
-    : null;
-
-  const editorModule = activeDocument
-    ? editorModules?.find((e) =>
-        e.documentTypes.includes(activeDocument.documentType),
-      )
-    : null;
+  // if a document is selected then it's editor will be passed as children
+  const showDocumentEditor = !!children;
 
   // === RENDER ===
   return (
@@ -174,9 +115,9 @@ export function DriveExplorer(props: DriveEditorProps) {
       {/* === RIGHT CONTENT AREA: Files/Folders or Document Editor === */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* Conditional rendering: Document editor or folder contents */}
-        {activeDocument && documentModelModule && editorModule ? (
+        {showDocumentEditor ? (
           // Document editor view
-          <EditorContainer handleClose={() => setActiveDocumentId(undefined)} />
+          children
         ) : (
           /* Folder contents view */
           <div className="space-y-6">
@@ -236,7 +177,9 @@ export function DriveExplorer(props: DriveEditorProps) {
                       onDuplicateNode={onDuplicateNode}
                       onAddFolder={onAddFolder}
                       onAddAndSelectNewFolder={handleCreateFolder}
-                      showDeleteNodeModal={showDeleteNodeModal}
+                      showDeleteNodeModal={(node) =>
+                        showDeleteNodeModal(node.id)
+                      }
                     />
                   ))}
                 </div>
@@ -259,7 +202,9 @@ export function DriveExplorer(props: DriveEditorProps) {
                       sharingType={sharingType || "LOCAL"}
                       getSyncStatusSync={getSyncStatusSync}
                       setSelectedNode={setSelectedNode}
-                      showDeleteNodeModal={showDeleteNodeModal}
+                      showDeleteNodeModal={(node) =>
+                        showDeleteNodeModal(node.id)
+                      }
                       onRenameNode={onRenameNode}
                       onDuplicateNode={onDuplicateNode}
                       onAddFile={onAddFile}
@@ -286,18 +231,10 @@ export function DriveExplorer(props: DriveEditorProps) {
 
             {/* === DOCUMENT CREATION SECTION === */}
             {/* Component for creating new documents */}
-            <CreateDocument documentTypes={props.editorConfig?.documentTypes} />
+            <CreateDocument documentTypes={editorConfig?.documentTypes} />
           </div>
         )}
       </div>
-
-      {/* === DOCUMENT CREATION MODAL === */}
-      {/* Modal for entering document name after selecting type */}
-      <CreateDocumentModal
-        onContinue={onCreateDocument}
-        onOpenChange={(open) => setOpenModal(open)}
-        open={openModal}
-      />
     </div>
   );
 }
