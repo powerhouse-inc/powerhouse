@@ -13,11 +13,11 @@ import {
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
-  useAllFolderNodes,
   useDriveSharingType,
   useFileChildNodesForId,
   useFolderChildNodesForId,
   useNodeActions,
+  useNodes,
   useSelectedDriveDocument,
   useSelectedFolder,
   useSelectedNodePath,
@@ -51,7 +51,7 @@ export function DriveExplorer(props: DriveEditorProps) {
   const [selectedDrive] = useSelectedDriveDocument(); // Currently selected drive
   const selectedFolder = useSelectedFolder(); // Currently selected folder
   const selectedNodePath = useSelectedNodePath();
-  const sharingType = useDriveSharingType(selectedDrive?.header.id);
+  const sharingType = useDriveSharingType(selectedDrive.header.id);
 
   // === NAVIGATION SETUP ===
   // Breadcrumbs for folder navigation
@@ -65,8 +65,8 @@ export function DriveExplorer(props: DriveEditorProps) {
   const folderChildren = useFolderChildNodesForId(selectedNodeId);
   const fileChildren = useFileChildNodesForId(selectedNodeId);
 
-  // All folders for the sidebar tree view
-  const allFolders = useAllFolderNodes();
+  // All nodes (folders and files) for the sidebar tree view
+  const allNodes = useNodes() || [];
 
   // === EVENT HANDLERS ===
 
@@ -98,19 +98,13 @@ export function DriveExplorer(props: DriveEditorProps) {
   // === RENDER ===
   return (
     <div className="flex h-full">
-      {/* === LEFT SIDEBAR: Folder Navigation === */}
-      {/* Customize sidebar width by changing w-64 */}
-      <div className="w-64 overflow-y-auto border-r border-gray-200 bg-white">
-        <div className="p-4">
-          {/* Customize sidebar title here */}
-          <h2 className="mb-4 text-lg font-semibold text-gray-700">
-            Drive Explorer
-          </h2>
-
-          {/* Folder tree navigation component */}
-          <FolderTree folders={allFolders} onSelectNode={setSelectedNode} />
-        </div>
-      </div>
+      {/* === LEFT SIDEBAR: Folder and File Navigation === */}
+      {/* Sidebar component manages its own width, styling, and overflow */}
+      <FolderTree
+        nodes={allNodes}
+        selectedNodeId={selectedNodeId}
+        onSelectNode={setSelectedNode}
+      />
 
       {/* === RIGHT CONTENT AREA: Files/Folders or Document Editor === */}
       <div className="flex-1 overflow-y-auto p-4">

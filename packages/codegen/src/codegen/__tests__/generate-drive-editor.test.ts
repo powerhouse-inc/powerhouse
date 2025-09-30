@@ -101,6 +101,28 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
     const mainIndexPath = path.join(testDir, "index.ts");
     fs.writeFileSync(mainIndexPath, existingContent);
 
+    // Create the existing-editor directory and minimal files to satisfy TypeScript
+    const existingEditorDir = path.join(testDir, "existing-editor");
+    fs.mkdirSync(existingEditorDir, { recursive: true });
+
+    // Create a minimal index.ts for the existing editor
+    const existingEditorIndexPath = path.join(existingEditorDir, "index.ts");
+    fs.writeFileSync(
+      existingEditorIndexPath,
+      `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+
+export const module: DriveEditorModule = {
+  Component: () => null,
+  documentTypes: ["powerhouse/document-drive"],
+  config: {
+    id: "ExistingEditor",
+    disableExternalControls: true,
+    documentToolbarEnabled: true,
+    showSwitchboardLink: true,
+  },
+};`
+    );
+
     await generateDriveEditor(name, config);
 
     const mainIndexContent = fs
