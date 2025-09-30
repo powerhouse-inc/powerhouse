@@ -10,33 +10,33 @@ import {
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
+import type {
+  Action,
+  ActionContext,
+  ActionSigner,
+  AppActionSigner,
+  Operation,
+  PHBaseState,
+  PHDocument,
+  Signature,
+  UserActionSigner,
+} from "./ph-types.js";
 import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,
   RedoActionInputSchema,
-  SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "./schemas.js";
 import type {
-  Action,
-  ActionContext,
   ActionSignatureContext,
-  ActionSigner,
   ActionSigningHandler,
   ActionVerificationHandler,
-  AppActionSigner,
   LoadStateAction,
   NOOPAction,
-  Operation,
-  PHBaseState,
-  PHDocument,
   RedoAction,
   Reducer,
   SchemaPruneAction,
-  SetNameAction,
-  Signature,
   UndoAction,
-  UserActionSigner,
 } from "./types.js";
 
 /**
