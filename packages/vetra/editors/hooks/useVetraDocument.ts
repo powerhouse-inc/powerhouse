@@ -1,7 +1,9 @@
 import {
   useDocumentOfType,
   useSelectedDocumentId,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
+import { isFileNode } from "document-drive";
 import type {
   AppModuleAction,
   AppModuleDocument,
@@ -23,6 +25,11 @@ import type {
   VetraPackageDocument,
 } from "../../document-models/vetra-package/index.js";
 
+const VETRA_PACKAGE_DOCUMENT_TYPE = "powerhouse/package";
+const DOCUMENT_EDITOR_DOCUMENT_TYPE = "powerhouse/document-editor";
+const SUBGRAPH_MODULE_DOCUMENT_TYPE = "powerhouse/subgraph";
+const PROCESSOR_MODULE_DOCUMENT_TYPE = "powerhouse/processor";
+
 export function useAppModuleDocument(documentId: string | undefined | null) {
   return useDocumentOfType<AppModuleDocument, AppModuleAction>(
     documentId,
@@ -40,7 +47,7 @@ export function useDocumentEditorDocument(
 ) {
   return useDocumentOfType<DocumentEditorDocument, DocumentEditorAction>(
     documentId,
-    "powerhouse/document-editor",
+    DOCUMENT_EDITOR_DOCUMENT_TYPE,
   );
 }
 
@@ -54,7 +61,7 @@ export function useProcessorModuleDocument(
 ) {
   return useDocumentOfType<ProcessorModuleDocument, ProcessorModuleAction>(
     documentId,
-    "powerhouse/processor",
+    PROCESSOR_MODULE_DOCUMENT_TYPE,
   );
 }
 
@@ -68,7 +75,7 @@ export function useSubgraphModuleDocument(
 ) {
   return useDocumentOfType<SubgraphModuleDocument, SubgraphModuleAction>(
     documentId,
-    "powerhouse/subgraph",
+    SUBGRAPH_MODULE_DOCUMENT_TYPE,
   );
 }
 
@@ -80,11 +87,16 @@ export function useSelectedSubgraphModuleDocument() {
 export function useVetraPackageDocument(documentId: string | undefined | null) {
   return useDocumentOfType<VetraPackageDocument, VetraPackageAction>(
     documentId,
-    "powerhouse/package",
+    VETRA_PACKAGE_DOCUMENT_TYPE,
   );
 }
 
 export function useSelectedVetraPackageDocument() {
-  const documentId = useSelectedDocumentId();
+  const [selectedDrive] = useSelectedDrive();
+  const documentId = selectedDrive?.state.global.nodes.find(
+    (node) =>
+      isFileNode(node) && node.documentType === VETRA_PACKAGE_DOCUMENT_TYPE,
+  )?.id;
+
   return useVetraPackageDocument(documentId);
 }
