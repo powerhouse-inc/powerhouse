@@ -1,8 +1,4 @@
-import type {
-  Operation,
-  PHDocumentHeader,
-  PHDocumentMeta,
-} from "document-model";
+import type { Operation, PHDocumentHeader } from "document-model";
 
 export class DuplicateOperationError extends Error {
   constructor(opId: string) {
@@ -27,9 +23,6 @@ export class RevisionMismatchError extends Error {
 
 export interface AtomicTxn {
   addOperations(...operations: Operation[]): void;
-  setSlug(slug: string): void;
-  setName(name: string): void;
-  setMeta(meta: PHDocumentMeta): void;
 }
 
 export interface IOperationStore {

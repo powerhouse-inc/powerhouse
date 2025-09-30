@@ -1,7 +1,6 @@
 import { type Operation, type PHDocumentHeader } from "document-model";
 import { createPresignedHeader } from "document-model/core";
-import type { Kysely, Transaction } from "kysely";
-import { v4 as uuidv4 } from "uuid";
+import type { Kysely } from "kysely";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
@@ -9,7 +8,7 @@ import {
   type IOperationStore,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
-import type { Database, InsertableOperation, OperationRow } from "./types.js";
+import type { Database, OperationRow } from "./types.js";
 
 export class KyselyOperationStore implements IOperationStore {
   constructor(private db: Kysely<Database>) {}
@@ -56,7 +55,6 @@ export class KyselyOperationStore implements IOperationStore {
 
       // Get operations and header updates
       const operations = atomicTxn.getOperations();
-      const headerUpdates = atomicTxn.getHeaderUpdates();
 
       // Insert operations
       if (operations.length > 0) {
@@ -82,11 +80,6 @@ export class KyselyOperationStore implements IOperationStore {
 
           throw error;
         }
-      }
-
-      // Update header if needed
-      if (Object.keys(headerUpdates).length > 0) {
-        await this.updateHeader(trx, documentId, branch, headerUpdates);
       }
     });
   }
@@ -147,46 +140,6 @@ export class KyselyOperationStore implements IOperationStore {
     }
 
     return this.rowToOperation(row);
-  }
-
-  private async updateHeader(
-    trx: Transaction<Database>,
-    documentId: string,
-    branch: string,
-    updates: Partial<PHDocumentHeader>,
-  ): Promise<void> {
-    // Get the latest header revision
-    const latestHeader = await trx
-      .selectFrom("Operation")
-      .select(["index"])
-      .where("documentId", "=", documentId)
-      .where("scope", "=", "header")
-      .where("branch", "=", branch)
-      .orderBy("index", "desc")
-      .limit(1)
-      .executeTakeFirst();
-
-    const nextIndex = (latestHeader?.index ?? -1) + 1;
-
-    // Create a header update operation
-    const headerOp: InsertableOperation = {
-      jobId: uuidv4(),
-      opId: uuidv4(),
-      prevOpId: "", // Will be set if there's a previous header op
-      documentId,
-      scope: "header",
-      branch,
-      timestampUtcMs: new Date(),
-      index: nextIndex,
-      action: JSON.stringify({
-        type: "UPDATE_HEADER",
-        input: updates,
-      }),
-      skip: 0,
-      hash: "", // Header updates don't need hash
-    };
-
-    await trx.insertInto("Operation").values(headerOp).execute();
   }
 
   // TODO: This is a hack for testing purposes -- these actions do not exist

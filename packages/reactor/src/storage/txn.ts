@@ -1,15 +1,10 @@
-import type {
-  Operation,
-  PHDocumentHeader,
-  PHDocumentMeta,
-} from "document-model";
+import type { Operation } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import { type AtomicTxn } from "./interfaces.js";
+import { type AtomicTxn as IAtomicTxn } from "./interfaces.js";
 import type { InsertableOperation } from "./kysely/types.js";
 
-export class AtomicTransaction implements AtomicTxn {
+export class AtomicTransaction implements IAtomicTxn {
   private operations: InsertableOperation[] = [];
-  private headerUpdates: Partial<PHDocumentHeader> = {};
 
   constructor(
     private documentId: string,
@@ -40,23 +35,7 @@ export class AtomicTransaction implements AtomicTxn {
     }
   }
 
-  setSlug(slug: string): void {
-    this.headerUpdates.slug = slug;
-  }
-
-  setName(name: string): void {
-    this.headerUpdates.name = name;
-  }
-
-  setMeta(meta: PHDocumentMeta): void {
-    this.headerUpdates.meta = meta;
-  }
-
   getOperations(): InsertableOperation[] {
     return this.operations;
-  }
-
-  getHeaderUpdates(): Partial<PHDocumentHeader> {
-    return this.headerUpdates;
   }
 }

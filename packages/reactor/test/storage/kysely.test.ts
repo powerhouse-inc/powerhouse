@@ -4,7 +4,6 @@ import {
   deleteNode,
   driveDocumentModelModule,
   setDriveName,
-  updateFile,
 } from "document-drive";
 import type { Operation, PHDocumentHeader } from "document-model";
 import { generateId } from "document-model/core";
@@ -173,62 +172,6 @@ describe("KyselyOperationStore", () => {
           txn.addOperations({ ...op, index: 0 });
         }),
       ).rejects.toThrow(DuplicateOperationError);
-    });
-
-    it("should store header updates in 'header' scope", async () => {
-      const documentId = generateId();
-      const branch = "main";
-
-      // Create initial header using document-drive document
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
-
-      // This is not how headers will work, but for now, test that we can store them per scope
-      await store.apply(documentId, "header", branch, 0, (txn) => {
-        const headerOp: Operation = {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "",
-          skip: 0,
-          action: {
-            id: generateId(),
-            type: "CREATE_HEADER",
-            timestampUtcMs: new Date().toISOString(),
-            input: {
-              ...driveDoc.header,
-              id: documentId,
-              slug: "test-slug",
-              name: "Test Document",
-              branch: branch,
-              revision: { global: 0 },
-            } as PHDocumentHeader,
-            scope: "header",
-          },
-        };
-        txn.addOperations(headerOp);
-      });
-
-      // Update header with real document-drive action
-      const updateAction = updateFile({
-        id: generateId(),
-        name: "Updated Document",
-      });
-
-      await store.apply(documentId, "global", branch, 0, (txn) => {
-        txn.setName("Updated Name");
-        txn.setSlug("updated-slug");
-        txn.addOperations({
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-1",
-          skip: 0,
-          action: updateAction,
-        });
-      });
-
-      // Verify header was updated
-      const header = await store.getHeader(documentId, branch, 1);
-      expect(header.name).toBe("Updated Name");
-      expect(header.slug).toBe("updated-slug");
     });
   });
 
