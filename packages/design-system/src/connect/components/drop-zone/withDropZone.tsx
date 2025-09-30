@@ -1,20 +1,21 @@
----
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/utils/withDropZone.tsx"
-unless_exists: true
----
 import { DropZone } from "@powerhousedao/design-system";
 import type {
-  ConflictResolution,
-  DriveEditorProps,
-  FileUploadProgressCallback,
+    ConflictResolution,
+    DriveEditorProps,
+    FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
-import { setSelectedNode, useOnDropFile } from "@powerhousedao/reactor-browser";
+import {
+    setSelectedNode,
+    useOnDropFile,
+    useSelectedDriveId,
+} from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
 
 export function withDropZone<T extends DriveEditorProps>(
   WrappedComponent: ComponentType<T>,
 ): ComponentType<T> {
   const WithDropZoneComponent = (props: T) => {
+    const driveId = useSelectedDriveId();
     const onDropFile = useOnDropFile(props.editorConfig?.documentTypes);
 
     const onAddFile = async (
@@ -29,9 +30,9 @@ export function withDropZone<T extends DriveEditorProps>(
     if (props.editorConfig?.dragAndDrop?.enabled) {
       return (
         <DropZone
+          driveId={driveId}
           onAddFile={onAddFile}
           setSelectedNode={setSelectedNode}
-          driveId={props.document.header.id}
           useLocalStorage={true}
           style={{ height: "100%" }}
         >

@@ -30,8 +30,6 @@ export const DebugSettingsModal: React.FC = () => {
   const autoRegisterPullResponder =
     localStorage.getItem("AUTO_REGISTER_PULL_RESPONDER") !== "false";
 
-  console.log("autoRegisterPullResponder", autoRegisterPullResponder);
-
   const [appVersion, setAppVersion] = useState(connectConfig.appVersion);
   const [serviceWorkerDebugMode, setServiceWorkerDebugMode] = useState({
     label: serviceWorkerManager.debug ? "Enabled" : "Disabled",
@@ -50,9 +48,6 @@ export const DebugSettingsModal: React.FC = () => {
   useEffect(() => {
     serviceWorkerManager.setDebug(serviceWorkerDebugMode.value);
   }, [serviceWorkerDebugMode]);
-
-  console.log("drives", drives);
-  console.log("selectedDrive", selectedDrive);
 
   const driveTriggers =
     drives?.find((drive) => drive.header.id === selectedDrive)?.state.local

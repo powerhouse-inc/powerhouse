@@ -4,12 +4,11 @@ unless_exists: true
 ---
 import { Button } from "@powerhousedao/design-system";
 import {
-  addDocument,
+  isDocumentTypeSupported,
+  showPHModal,
   useDocumentModelModules,
   useSelectedDriveId,
-  useSelectedFolder,
-  isDocumentTypeSupported,
-  type VetraDocumentModelModule,
+  type VetraDocumentModelModule
 } from "@powerhousedao/reactor-browser";
 
 interface CreateDocumentProps {
@@ -24,7 +23,6 @@ export const CreateDocument = (props: CreateDocumentProps) => {
   const { documentTypes = [] } = props;
 
   const selectedDriveId = useSelectedDriveId();
-  const selectedFolder = useSelectedFolder();
   const documentModelModules = useDocumentModelModules();
 
   const filteredDocumentModelModules = documentModelModules?.filter((module) =>
@@ -35,12 +33,9 @@ export const CreateDocument = (props: CreateDocumentProps) => {
     if (!selectedDriveId) {
       return;
     }
-    await addDocument(
-      selectedDriveId,
-      `New ${module.documentModel.name} document`,
-      module.documentModel.id,
-      selectedFolder?.id,
-    );
+    
+    // Display the Create Document modal on the host app
+    showPHModal({ type:"createDocument", documentType: module.documentModel.id });
   }
 
   return (
