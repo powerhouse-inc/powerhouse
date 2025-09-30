@@ -7,6 +7,7 @@ import {
   RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
+  showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useEditorModuleById,
@@ -17,10 +18,8 @@ import { redo, undo } from "document-model";
 import { Suspense, useEffect, useState } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 import { toast } from "../services/toast.js";
 import { EditorLoader } from "./editor-loader.js";
-import { useModal } from "./modal/index.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -96,9 +95,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     };
   }, []);
 
-  const navigate = useNavigate();
-  const { showModal } = useModal();
-
   const [editorError, setEditorError] = useState<
     | {
         error: any;
@@ -146,9 +142,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 type="button"
                 className="cursor-pointer underline"
                 onClick={() => {
-                  showModal("settingsModal", {
-                    onRefresh: () => navigate(0),
-                  });
+                  showPHModal({ type: "settings" });
                 }}
               >
                 package manager
@@ -173,9 +167,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 type="button"
                 className="cursor-pointer underline"
                 onClick={() => {
-                  showModal("settingsModal", {
-                    onRefresh: () => navigate(0),
-                  });
+                  showPHModal({ type: "settings" });
                 }}
               >
                 package manager

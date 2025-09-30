@@ -5,11 +5,10 @@ import {
   FooterLink,
   Icon,
 } from "@powerhousedao/design-system";
+import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans } from "react-i18next";
-import { useModal } from "./modal/index.js";
 
 export const Footer = () => {
-  const { showModal } = useModal();
   const [, setShowCookieBanner] = useCookieBanner();
 
   return (
@@ -21,7 +20,7 @@ export const Footer = () => {
       >
         <Trans i18nKey="footer.cookiePolicy" />
       </FooterLink>
-      <FooterLink onClick={() => showModal("disclaimerModal", {})}>
+      <FooterLink onClick={() => showPHModal({ type: "disclaimer" })}>
         <Trans i18nKey="footer.disclaimer" />
       </FooterLink>
       <FooterLink

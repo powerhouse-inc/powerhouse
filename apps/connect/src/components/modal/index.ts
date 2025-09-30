@@ -1,1 +1,1 @@
-export * from "./modal.js";
+export * from "./modals-container.js";

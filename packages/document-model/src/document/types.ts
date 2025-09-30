@@ -372,9 +372,6 @@ export type ActionErrorCallback = (error: unknown) => void;
 export type EditorDispatch = (actionOrActions: Action[] | Action) => void;
 
 export type EditorProps = {
-  /**
-   * @deprecated Use useDriveContext instead
-   */
   context?: EditorContext;
 };
 

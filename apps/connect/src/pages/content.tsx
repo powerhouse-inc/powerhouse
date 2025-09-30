@@ -1,5 +1,4 @@
 import connectConfig from "#connect-config";
-import { useShowAddDriveModal } from "#hooks";
 import {
   HomeScreen,
   HomeScreenAddDriveItem,
@@ -55,7 +54,6 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
 
 function HomeScreenContainer() {
   const drives = useDrives();
-  const showAddDriveModal = useShowAddDriveModal();
   const config = connectConfig;
 
   return (
@@ -63,9 +61,7 @@ function HomeScreenContainer() {
       {drives?.map((drive) => {
         return <DriveItem key={drive.header.id} drive={drive} />;
       })}
-      {config.drives.addDriveEnabled && (
-        <HomeScreenAddDriveItem onClick={showAddDriveModal} />
-      )}
+      {config.drives.addDriveEnabled && <HomeScreenAddDriveItem />}
     </HomeScreen>
   );
 }

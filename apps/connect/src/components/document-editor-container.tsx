@@ -2,6 +2,7 @@ import { openUrl } from "#utils";
 import {
   exportFile,
   setSelectedNode,
+  showPHModal,
   useConnectCrypto,
   useDriveIsRemote,
   useDriveRemoteUrl,
@@ -13,14 +14,10 @@ import {
 import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser/utils/switchboard";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { useModal } from "../components/modal/index.js";
 import { validateDocument } from "../utils/validate-document.js";
 import { DocumentEditor } from "./editors.js";
 
 export function DocumentEditorContainer() {
-  const { t } = useTranslation();
-  const { showModal } = useModal();
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
   const parentFolder = useParentFolder(selectedDocument?.header.id);
@@ -33,27 +30,9 @@ export function DocumentEditorContainer() {
     const validationErrors = validateDocument(document);
 
     if (validationErrors.length) {
-      showModal("confirmationModal", {
-        title: t("modals.exportDocumentWithErrors.title"),
-        body: (
-          <div>
-            <p>{t("modals.exportDocumentWithErrors.body")}</p>
-            <ul className="mt-4 flex list-disc flex-col items-start px-4 text-xs">
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error.message}</li>
-              ))}
-            </ul>
-          </div>
-        ),
-        cancelLabel: t("common.cancel"),
-        continueLabel: t("common.export"),
-        onCancel(closeModal) {
-          closeModal();
-        },
-        onContinue(closeModal) {
-          closeModal();
-          return exportFile(document);
-        },
+      showPHModal({
+        type: "exportDocumentWithErrors",
+        documentId: document.header.id,
       });
     } else {
       return exportFile(document);

@@ -1,8 +1,8 @@
+import { Icon } from "#powerhouse";
 import type { Meta, StoryObj } from "@storybook/react";
-import { HomeScreen } from "./home-screen.js";
 import { HomeScreenAddDriveItem } from "./home-screen-add-drive-item/index.js";
 import { HomeScreenItem } from "./home-screen-item/index.js";
-import { Icon } from "#powerhouse";
+import { HomeScreen } from "./home-screen.js";
 
 const meta = {
   title: "Connect/Components/Home Screen",
@@ -42,11 +42,7 @@ const Template: Story = {
           description="POH Admin App"
           icon={<Icon name="PowerhouseLogoSmall" width={32} height={32} />}
         />
-        <HomeScreenAddDriveItem
-          onClick={() => {
-            alert("clicked");
-          }}
-        />
+        <HomeScreenAddDriveItem />
       </HomeScreen>
     </div>
   ),

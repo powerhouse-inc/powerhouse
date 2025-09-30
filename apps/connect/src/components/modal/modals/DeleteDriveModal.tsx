@@ -1,16 +1,36 @@
-import { ConnectDeleteDriveModal } from "@powerhousedao/design-system";
-import type { DocumentDriveDocument } from "document-drive";
+import { ConnectDeleteDriveModal, toast } from "@powerhousedao/design-system";
+import {
+  closePHModal,
+  deleteDrive,
+  setSelectedDrive,
+  useDriveById,
+  useDrives,
+  usePHModal,
+} from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
 
-export interface DeleteDriveModalProps {
-  drive: DocumentDriveDocument;
-  open: boolean;
-  onClose: () => void;
-  onDelete: (closeModal: () => void) => void;
-}
+export const DeleteDriveModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "deleteDrive";
+  const driveId = open ? phModal.driveId : undefined;
+  const [drive] = useDriveById(driveId);
+  const drives = useDrives();
+  if (!drive) {
+    return null;
+  }
+  async function onDeleteDrive() {
+    if (!driveId) {
+      return;
+    }
+    await deleteDrive(driveId);
 
-export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = (props) => {
-  const { open, onClose, drive, onDelete } = props;
+    setSelectedDrive(drives?.[0]);
+    closePHModal();
+
+    toast(t("notifications.deleteDriveSuccess"), {
+      type: "connect-deleted",
+    });
+  }
 
   const { t } = useTranslation();
 
@@ -18,15 +38,15 @@ export const DeleteDriveModal: React.FC<DeleteDriveModalProps> = (props) => {
     <ConnectDeleteDriveModal
       open={open}
       driveName={drive.header.name}
-      onCancel={onClose}
+      onCancel={closePHModal}
       header={t("modals.deleteDrive.title", { label: drive.header.name })}
       body={t("modals.deleteDrive.body")}
       inputPlaceholder={t("modals.deleteDrive.inputPlaceholder")}
       cancelLabel={t("common.cancel")}
       continueLabel={t("common.delete")}
-      onContinue={() => onDelete(onClose)}
+      onContinue={() => onDeleteDrive()}
       onOpenChange={(status: boolean) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
     />
   );

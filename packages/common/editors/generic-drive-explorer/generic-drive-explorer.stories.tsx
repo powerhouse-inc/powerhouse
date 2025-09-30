@@ -1,7 +1,7 @@
 import type { DocumentStory } from "@powerhousedao/builder-tools/editor-utils";
 import type { Meta } from "@storybook/react";
 import { createDriveStory } from "../utils/storybook.js";
-import Editor from "./editor.js";
+import { Editor } from "./editor.js";
 
 const { meta: _meta, CreateDocumentStory } = createDriveStory(Editor);
 

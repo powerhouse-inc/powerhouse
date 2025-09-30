@@ -3,6 +3,7 @@ import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { DID, IConnectCrypto } from "../crypto/index.js";
 import type { AppConfig, LoginStatus } from "../types/global.js";
+import type { PHModal } from "../types/modals.js";
 import type { Reactor } from "../types/reactor.js";
 import type { VetraPackage } from "../types/vetra.js";
 
@@ -69,3 +70,8 @@ export type SetAppConfigEvent = CustomEvent<{
   appConfig: AppConfig | undefined;
 }>;
 export type AppConfigUpdatedEvent = CustomEvent;
+
+export type SetModalEvent = CustomEvent<{
+  modal: PHModal | undefined;
+}>;
+export type ModalUpdatedEvent = CustomEvent;
