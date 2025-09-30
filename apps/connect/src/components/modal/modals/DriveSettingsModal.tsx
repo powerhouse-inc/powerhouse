@@ -1,38 +1,46 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system";
 import {
+  closePHModal,
+  renameDrive,
+  setDriveAvailableOffline,
+  setDriveSharingType,
+  showPHModal,
   useDriveAvailableOffline,
+  useDriveById,
   useDriveSharingType,
+  usePHModal,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 
-type Props = {
-  drive: DocumentDriveDocument;
-  open: boolean;
-  onRenameDrive: (drive: DocumentDriveDocument, newName: string) => void;
-  onDeleteDrive: (drive: DocumentDriveDocument) => void;
-  onChangeSharingType: (
+export function DriveSettingsModal() {
+  const phModal = usePHModal();
+  const open = phModal?.type === "driveSettings";
+  const driveId = open ? phModal.driveId : undefined;
+  const [drive] = useDriveById(driveId);
+  const sharingType = useDriveSharingType(driveId);
+  const availableOffline = useDriveAvailableOffline(driveId);
+
+  if (!driveId || !drive) {
+    return null;
+  }
+
+  async function onRenameDrive(drive: DocumentDriveDocument, newName: string) {
+    await renameDrive(drive.header.id, newName);
+  }
+
+  async function onChangeSharingType(
     drive: DocumentDriveDocument,
     newSharingType: SharingType,
-  ) => void;
-  onChangeAvailableOffline: (
+  ) {
+    await setDriveSharingType(drive.header.id, newSharingType);
+  }
+
+  async function onChangeAvailableOffline(
     drive: DocumentDriveDocument,
     newAvailableOffline: boolean,
-  ) => void;
-  onClose: () => void;
-};
-
-export function DriveSettingsModal(props: Props) {
-  const {
-    drive,
-    open,
-    onRenameDrive,
-    onDeleteDrive,
-    onChangeAvailableOffline,
-    onChangeSharingType,
-    onClose,
-  } = props;
-  const sharingType = useDriveSharingType(drive.header.id);
-  const availableOffline = useDriveAvailableOffline(drive.header.id);
+  ) {
+    await setDriveAvailableOffline(drive.header.id, newAvailableOffline);
+  }
 
   return (
     <ConnectDriveSettingsModal
@@ -41,11 +49,11 @@ export function DriveSettingsModal(props: Props) {
       availableOffline={availableOffline}
       open={open}
       onRenameDrive={onRenameDrive}
-      onDeleteDrive={onDeleteDrive}
+      onDeleteDrive={() => showPHModal({ type: "deleteDrive", driveId })}
       onChangeAvailableOffline={onChangeAvailableOffline}
       onChangeSharingType={onChangeSharingType}
       onOpenChange={(status) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
     />
   );

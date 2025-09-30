@@ -16,7 +16,6 @@ import {
   setSelectedNode,
   useAllFolderNodes,
   useDocumentModelModules,
-  useDriveContext,
   useDriveSharingType,
   useEditorModules,
   useFileChildNodesForId,
@@ -25,6 +24,8 @@ import {
   useSelectedFolder,
   useSelectedNodePath,
   useUserPermissions,
+  useNodeActions,
+  showDeleteNodeModal,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelModule } from "document-model";
 import { useCallback, useRef, useState } from "react";
@@ -54,8 +55,7 @@ export function DriveExplorer(props: DriveEditorProps) {
     onDuplicateNode,
     onMoveNode,
     onRenameNode,
-    showDeleteNodeModal,
-  } = useDriveContext();
+  } = useNodeActions();
 
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // === STATE MANAGEMENT HOOKS ===

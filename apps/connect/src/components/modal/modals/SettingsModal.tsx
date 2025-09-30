@@ -2,22 +2,21 @@ import {
   Icon,
   SettingsModal as SettingsModalV2,
 } from "@powerhousedao/design-system";
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { About } from "./settings/about.js";
 import { DangerZone } from "./settings/danger-zone.js";
 import { DefaultEditor } from "./settings/default-editor.js";
 import { PackageManager } from "./settings/package-manager.js";
 
-export interface SettingsModalProps {
-  open: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
-}
-
-export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
-  const { open, onClose, onRefresh } = props;
+export const SettingsModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "settings";
+  function onRefresh() {
+    window.location.reload();
+  }
 
   const tabs = useMemo(
     () => [
@@ -49,18 +48,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     [onRefresh],
   );
 
-  const handleOpenChange = useCallback(
-    (status: boolean) => {
-      if (!status) return onClose();
-    },
-    [onClose],
-  );
-
   return (
     <SettingsModalV2
       open={open}
       title={t("modals.connectSettings.title")}
-      onOpenChange={handleOpenChange}
+      onOpenChange={(status: boolean) => {
+        if (!status) return closePHModal();
+      }}
       tabs={tabs}
     />
   );

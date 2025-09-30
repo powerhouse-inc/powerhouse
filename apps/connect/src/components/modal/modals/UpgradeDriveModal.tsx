@@ -1,22 +1,19 @@
 import { ConnectUpgradeDriveModal } from "@powerhousedao/design-system";
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 
-export interface UpgradeDriveModalProps {
-  open: boolean;
-  onClose: () => void;
-  driveId: string;
-}
-
-export const UpgradeDriveModal: React.FC<UpgradeDriveModalProps> = (props) => {
-  const { open, onClose, driveId } = props;
+export const UpgradeDriveModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "upgradeDrive";
+  const driveId = open ? phModal.driveId : undefined;
 
   const { t } = useTranslation();
 
   const onContinue = () => {
     // TODO: Implement upgrade drive
     console.log("Upgrade drive: ", driveId);
-    onClose();
+    closePHModal();
   };
 
   return (
@@ -28,7 +25,7 @@ export const UpgradeDriveModal: React.FC<UpgradeDriveModalProps> = (props) => {
       cancelLabel={t("common.cancel")}
       continueLabel={t("common.continue")}
       onOpenChange={(status: boolean) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
     />
   );

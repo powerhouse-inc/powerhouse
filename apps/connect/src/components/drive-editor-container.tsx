@@ -1,4 +1,3 @@
-import { useNodeActions, useShowDeleteNodeModal } from "#hooks";
 import { GenericDriveExplorer } from "@powerhousedao/common";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
@@ -7,13 +6,10 @@ import {
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
 import type { ComponentType } from "react";
-import { useCallback } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { DocumentEditorContainer } from "./document-editor-container.js";
-import { useModal } from "./modal/index.js";
 
 function DriveEditorError({ error }: FallbackProps) {
   return (
@@ -28,17 +24,6 @@ function DriveEditorError({ error }: FallbackProps) {
 export function DriveEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
-  const nodeActions = useNodeActions();
-  const { showModal } = useModal();
-  const showCreateDocumentModal = useCallback(
-    (documentModel: DocumentModelModule) => {
-      showModal("createDocument", {
-        documentModel,
-      });
-    },
-    [showModal],
-  );
-  const showDeleteNodeModal = useShowDeleteNodeModal();
 
   const driveEditor = useDriveEditorModuleById(
     selectedDrive?.header.meta?.preferredEditor,
@@ -62,14 +47,7 @@ export function DriveEditorContainer() {
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DriveEditorComponent
-        context={{
-          ...nodeActions,
-          showCreateDocumentModal,
-          showDeleteNodeModal,
-        }}
-        editorConfig={editorConfig}
-      >
+      <DriveEditorComponent editorConfig={editorConfig}>
         {selectedDocument ? <DocumentEditorContainer /> : null}
       </DriveEditorComponent>
     </ErrorBoundary>

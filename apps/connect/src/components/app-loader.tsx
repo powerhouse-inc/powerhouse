@@ -6,7 +6,7 @@ import "../i18n";
 import { AppSkeleton } from "./app-skeleton.js";
 import App from "./app.js";
 import { CookieBanner } from "./cookie-banner.js";
-import { ModalManager } from "./modal/index.js";
+import { ModalsContainer } from "./modal/modals-container.js";
 
 export const Load = lazy(async () => {
   await createReactor();
@@ -28,9 +28,8 @@ export const AppLoader = () => (
       </Load>
     </Suspense>
     <Suspense name="CookieBanner">
-      <ModalManager>
-        <CookieBanner />
-      </ModalManager>
+      <CookieBanner />
     </Suspense>
+    <ModalsContainer />
   </StrictMode>
 );

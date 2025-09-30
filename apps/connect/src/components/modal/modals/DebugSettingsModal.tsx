@@ -10,26 +10,23 @@ import {
 } from "@powerhousedao/design-system";
 import {
   addTrigger,
+  closePHModal,
   registerNewPullResponderTrigger,
   removeTrigger,
   useDrives,
+  usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
-export interface DebugSettingsModalProps {
-  open: boolean;
-  onClose: () => void;
-}
 
 type ComboboxOption = {
   label: string;
   value: string;
 };
 
-export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
-  props,
-) => {
-  const { open, onClose } = props;
+export const DebugSettingsModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "debugSettings";
   const autoRegisterPullResponder =
     localStorage.getItem("AUTO_REGISTER_PULL_RESPONDER") !== "false";
 
@@ -110,7 +107,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
     <Modal
       open={open}
       onOpenChange={(status) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
       contentProps={{
         className: "rounded-2xl",
@@ -119,7 +116,7 @@ export const DebugSettingsModal: React.FC<DebugSettingsModalProps> = (
       <div className="w-[700px] rounded-2xl p-6">
         <div className="mb-6 flex justify-between">
           <div className="text-xl font-bold">Debug Tools</div>
-          <button id="close-modal" onClick={() => onClose()}>
+          <button id="close-modal" onClick={() => closePHModal()}>
             <Icon name="Xmark" size={28} />
           </button>
         </div>

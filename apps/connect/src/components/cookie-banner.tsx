@@ -1,10 +1,10 @@
 import type { CookieInput } from "@powerhousedao/design-system";
 import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system";
+import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans, useTranslation } from "react-i18next";
 import { useAcceptedCookies } from "../hooks/useAcceptedCookies.js";
 import { useCookieBanner } from "../hooks/useCookiebanner.js";
 import i18n from "../i18n";
-import { useModal } from "./modal/index.js";
 
 const isCookieAccepted = (cookies: CookieInput[], id: string) => {
   return cookies.some((cookie) => cookie.id === id && cookie.value);
@@ -15,7 +15,6 @@ export const CookieBanner = () => {
     useSuspense: true,
     i18n,
   });
-  const { showModal } = useModal();
   const [showBanner, setShowBanner] = useCookieBanner();
   const [, setAcceptedCookies] = useAcceptedCookies();
 
@@ -70,7 +69,7 @@ export const CookieBanner = () => {
               components={{
                 a: (
                   <a
-                    onClick={() => showModal("cookiesPolicy", {})}
+                    onClick={() => showPHModal({ type: "cookiesPolicy" })}
                     key={"cookieBanner.message-link"}
                     className="cursor-pointer text-gray-900 hover:underline"
                   />

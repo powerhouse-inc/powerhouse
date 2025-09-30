@@ -1,11 +1,11 @@
-import { ModalManager } from "#components";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
+import { ModalsContainer } from "./modal/modals-container.js";
 import Sidebar from "./sidebar.js";
 
 export default function Root() {
   return (
-    <ModalManager>
+    <>
       <div className="h-screen">
         <div
           className={`flex h-screen items-stretch overflow-auto`}
@@ -20,6 +20,7 @@ export default function Root() {
           </Suspense>
         </div>
       </div>
-    </ModalManager>
+      <ModalsContainer />
+    </>
   );
 }

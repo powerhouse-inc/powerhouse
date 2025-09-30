@@ -5,12 +5,13 @@ import {
 } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
-  DriveContextProvider,
   getSyncStatusSync,
   makeFolderNodeFromDrive,
   setSelectedNode,
+  showCreateDocumentModal,
+  showDeleteNodeModal,
   useDocumentModelModules,
-  useDriveContext,
+  useNodeActions,
   useSelectedDriveDocument,
   useSelectedFolder,
   useSelectedNodePath,
@@ -28,19 +29,17 @@ import { SearchBar } from "./components/search-bar.js";
 export type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
-export function BaseEditor(props: GenericDriveExplorerEditorProps) {
+export function Editor(props: GenericDriveExplorerEditorProps) {
   const { className, children } = props;
   const [selectedDrive] = useSelectedDriveDocument();
   const {
-    showCreateDocumentModal,
     onRenameNode,
     onDuplicateNode,
     onAddFolder,
     onAddFile,
     onCopyNode,
     onMoveNode,
-    showDeleteNodeModal,
-  } = useDriveContext();
+  } = useNodeActions();
   const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();
@@ -48,7 +47,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const showSearchBar = useShowSearchBar();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
-    showCreateDocumentModal(documentModel);
+    showCreateDocumentModal(documentModel.documentModel.id);
   };
   const { isDropTarget, dropProps } = useDrop({
     node: selectedDriveAsFolderNode,
@@ -102,7 +101,7 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
             onCopyNode={onCopyNode}
             onMoveNode={onMoveNode}
             onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-            showDeleteNodeModal={showDeleteNodeModal}
+            showDeleteNodeModal={(node) => showDeleteNodeModal(node.id)}
             isAllowedToCreateDocuments={isAllowedToCreateDocuments}
           />
         </DriveLayout.Content>
@@ -121,15 +120,5 @@ export function BaseEditor(props: GenericDriveExplorerEditorProps) {
         </DriveLayout.Footer>
       )}
     </DriveLayout>
-  );
-}
-
-export default function Editor(props: GenericDriveExplorerEditorProps) {
-  return (
-    // TODO: Replace with useDriveContext
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    <DriveContextProvider value={props.context!}>
-      <BaseEditor {...props} />
-    </DriveContextProvider>
   );
 }
