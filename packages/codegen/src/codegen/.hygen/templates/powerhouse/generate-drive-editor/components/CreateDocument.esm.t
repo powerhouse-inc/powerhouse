@@ -25,8 +25,8 @@ export const CreateDocument = (props: CreateDocumentProps) => {
   const selectedDriveId = useSelectedDriveId();
   const documentModelModules = useDocumentModelModules();
 
-  const filteredDocumentModelModules = documentModelModules.filter((module) =>
-    isDocumentTypeSupported(module.documentModel.id, documentTypes),
+  const filteredDocumentModelModules = documentModelModules?.filter((module) =>
+    isDocumentTypeSupported(module.documentModel.global.id, documentTypes),
   );
 
   function handleAddDocument(module: VetraDocumentModelModule) {
@@ -37,7 +37,7 @@ export const CreateDocument = (props: CreateDocumentProps) => {
     // Display the Create Document modal on the host app
     showPHModal({
       type: "createDocument",
-      documentType: module.documentModel.id,
+      documentType: module.documentModel.global.id,
     });
   }
 
@@ -49,20 +49,19 @@ export const CreateDocument = (props: CreateDocumentProps) => {
       </h3>
       {/* Customize layout by changing flex-wrap, gap, or grid layout */}
       <div className="flex w-full flex-wrap gap-4">
-        {filteredDocumentModelModules.map((documentModelModule) => {
+        {filteredDocumentModelModules?.map((documentModelModule) => {
           return (
             <Button
-              key={documentModelModule.documentModel.id}
+              key={documentModelModule.documentModel.global.id}
               color="light" // Customize button appearance
-              size="small"
               className="cursor-pointer"
-              title={documentModelModule.documentModel.name}
-              aria-description={documentModelModule.documentModel.description}
+              title={documentModelModule.documentModel.global.name}
+              aria-description={documentModelModule.documentModel.global.description}
               onClick={() => handleAddDocument(documentModelModule)}
             >
               {/* Customize document type display format */}
               <span className="text-sm">
-                {documentModelModule.documentModel.name}
+                {documentModelModule.documentModel.global.name}
               </span>
             </Button>
           );
