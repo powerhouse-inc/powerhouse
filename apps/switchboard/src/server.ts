@@ -11,7 +11,7 @@ import {
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import type { BaseDocumentDriveServer } from "document-drive";
+import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import {
   DocumentAlreadyExistsError,
   InMemoryCache,
@@ -21,7 +21,6 @@ import {
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
-import type { IDocumentStorage } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
@@ -29,7 +28,11 @@ import express from "express";
 import path from "path";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
-import { initFeatureFlags, isReactorv2Enabled } from "./feature-flags.js";
+import {
+  initFeatureFlags,
+  isDualActionCreateEnabled,
+  isReactorv2Enabled,
+} from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive } from "./utils.js";
@@ -85,6 +88,12 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   ] as unknown as DocumentModelModule[])
     .withStorage(storage)
     .withCache(cache)
+    .withOptions({
+      featureFlags: {
+        enableDualActionCreate:
+          options.reactorOptions?.enableDualActionCreate ?? false,
+      },
+    })
     .build();
 
   // init drive server
@@ -193,6 +202,11 @@ export const startSwitchboard = async (
   const enabled = await isReactorv2Enabled();
   options.subgraphs = {
     isReactorv2Enabled: enabled,
+  };
+
+  const dualActionCreateEnabled = await isDualActionCreateEnabled();
+  options.reactorOptions = {
+    enableDualActionCreate: dualActionCreateEnabled,
   };
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
