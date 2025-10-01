@@ -1143,69 +1143,82 @@ export class BaseDocumentDriveServer
     // Get initial state from input or model's defaultState
     const initialState = state ?? document.state;
 
-    const timestampUtcMs = new Date().toISOString();
+    // Check if the input document already has operations
+    const existingOperations = Object.values(
+      document.operations,
+    ).flat() as Operation[];
+    const shouldCreateOperations = existingOperations.length === 0;
 
-    // Determine if this is a signed document
-    const signing = isSigned
-      ? {
-          signature: header.id, // The document ID is the signature
-          publicKey: header.sig.publicKey,
-          nonce: header.sig.nonce,
-          createdAtUtcIso: header.createdAtUtcIso,
-          documentType: header.documentType,
-        }
-      : undefined;
+    let operations: Operation[] = [];
 
-    // Create actions for CREATE_DOCUMENT and UPGRADE_DOCUMENT
-    const createDocumentAction: Action = {
-      id: `${header.id}-create`,
-      type: "CREATE_DOCUMENT",
-      timestampUtcMs,
-      input: {
-        model: documentType,
-        version: "0.0.0" as const,
-        documentId: header.id,
-        signing,
-      },
-      scope: "global",
-    };
+    if (shouldCreateOperations) {
+      const timestampUtcMs = new Date().toISOString();
 
-    const upgradeDocumentAction: Action = {
-      id: `${header.id}-upgrade`,
-      type: "UPGRADE_DOCUMENT",
-      timestampUtcMs,
-      input: {
-        model: documentType,
-        fromVersion: "0.0.0",
-        toVersion: currentVersion,
-        documentId: header.id,
-        initialState,
-      },
-      scope: "global",
-    };
+      // Determine if this is a signed document
+      const signing = isSigned
+        ? {
+            signature: header.id, // The document ID is the signature
+            publicKey: header.sig.publicKey,
+            nonce: header.sig.nonce,
+            createdAtUtcIso: header.createdAtUtcIso,
+            documentType: header.documentType,
+          }
+        : undefined;
 
-    // Create operations from actions
-    const operations: Operation[] = [
-      {
-        index: 0,
-        skip: 0,
-        hash: "", // will be set by storage
+      // Create actions for CREATE_DOCUMENT and UPGRADE_DOCUMENT
+      const createDocumentAction: Action = {
+        id: `${header.id}-create`,
+        type: "CREATE_DOCUMENT",
         timestampUtcMs,
-        action: createDocumentAction,
-      },
-      {
-        index: 1,
-        skip: 0,
-        hash: "", // will be set by storage
-        timestampUtcMs,
-        action: upgradeDocumentAction,
-      },
-    ];
+        input: {
+          model: documentType,
+          version: "0.0.0" as const,
+          documentId: header.id,
+          signing,
+        },
+        scope: "global",
+      };
 
-    // stores document information
+      const upgradeDocumentAction: Action = {
+        id: `${header.id}-upgrade`,
+        type: "UPGRADE_DOCUMENT",
+        timestampUtcMs,
+        input: {
+          model: documentType,
+          fromVersion: "0.0.0",
+          toVersion: currentVersion,
+          documentId: header.id,
+          initialState,
+        },
+        scope: "global",
+      };
+
+      // Create operations from actions
+      operations = [
+        {
+          index: 0,
+          skip: 0,
+          hash: "", // will be set by storage
+          timestampUtcMs,
+          action: createDocumentAction,
+        },
+        {
+          index: 1,
+          skip: 0,
+          hash: "", // will be set by storage
+          timestampUtcMs,
+          action: upgradeDocumentAction,
+        },
+      ];
+    } else {
+      // Use existing operations from the input document
+      operations = existingOperations;
+    }
+
+    // stores document information with empty operations initially
     const documentToStore: PHDocument = {
       header,
-      operations: { global: operations, local: [] },
+      operations: { global: [], local: [] },
       initialState: document.initialState,
       clipboard: [],
       state: initialState,
@@ -1213,19 +1226,21 @@ export class BaseDocumentDriveServer
 
     await this.documentStorage.create(documentToStore);
 
-    // Store operations
-    if (isDocumentDrive(documentToStore)) {
-      await this.legacyStorage.addDriveOperations(
-        header.id,
-        operations,
-        documentToStore,
-      );
-    } else {
-      await this.legacyStorage.addDocumentOperations(
-        header.id,
-        operations,
-        documentToStore,
-      );
+    // Store operations separately (if any)
+    if (operations.length > 0) {
+      if (isDocumentDrive(documentToStore)) {
+        await this.legacyStorage.addDriveOperations(
+          header.id,
+          operations,
+          documentToStore,
+        );
+      } else {
+        await this.legacyStorage.addDocumentOperations(
+          header.id,
+          operations,
+          documentToStore,
+        );
+      }
     }
 
     return await this.getDocument<TDocument>(documentToStore.header.id);
