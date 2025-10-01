@@ -149,14 +149,7 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   if (!reactor) {
     return;
   }
-  const documentModelModules = reactor.getDocumentModelModules();
-  const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.id === document.header.documentType,
-  );
-  const extension = documentModelModule?.documentModel.extension;
-  const name = `${suggestedName || document.header.name || "Untitled"}.${
-    extension ? `${extension}.` : ""
-  }zip`;
+  const name = `${suggestedName || document.header.name || "Untitled"}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {

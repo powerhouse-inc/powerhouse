@@ -34,14 +34,14 @@ describe("DocumentModel", () => {
       setModelId({ id: "powerhouse/test" }),
     );
     await saveToFile(documentModel, tempDir, "test");
-    expect(fs.existsSync(`${tempDir}/test.phdm.zip`)).toBe(true);
+    expect(fs.existsSync(`${tempDir}/test.phd`)).toBe(true);
 
     // keeps operation timestamp to check when loading
     timestamp = documentModel.operations.global[0].timestampUtcMs;
   });
 
   it("should load from zip", async () => {
-    const documentModel = await loadFromFile(`${tempDir}/test.phdm.zip`);
+    const documentModel = await loadFromFile(`${tempDir}/test.phd`);
     expect(documentModel.state.global.id).toBe("powerhouse/test");
     expect(documentModel.operations.global).toMatchObject([
       {
@@ -86,7 +86,7 @@ describe("DocumentModel", () => {
     await saveToFile(documentModel, tempDir, "test-document-resulting-state");
 
     const loadedDocumentModel = await loadFromFile(
-      `${tempDir}/test-document-resulting-state.phdm.zip`,
+      `${tempDir}/test-document-resulting-state.phd`,
     );
 
     expect(loadedDocumentModel.operations.global).toHaveLength(3);
@@ -106,7 +106,7 @@ describe("DocumentModel", () => {
 
     await saveToFile(documentModel, tempDir, "test2");
 
-    const loadedDocumentModel = await loadFromFile(`${tempDir}/test2.phdm.zip`);
+    const loadedDocumentModel = await loadFromFile(`${tempDir}/test2.phd`);
     expect(loadedDocumentModel.state.global.id).toBe("");
     expect(loadedDocumentModel.operations.global).toMatchObject([
       {
