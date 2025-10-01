@@ -208,10 +208,10 @@ export type NOOPAction = Action & {
 };
 
 export type CreateDocumentAction = {
-  type: 'CREATE_DOCUMENT';
-  model: string;       // e.g., 'ph/todo'
-  version: '0.0.0';
-  documentId: string;  // equals signature when signed; UUID when unsigned
+  type: "CREATE_DOCUMENT";
+  model: string; // e.g., 'ph/todo'
+  version: "0.0.0";
+  documentId: string; // equals signature when signed; UUID when unsigned
   signing?: {
     signature: string;
     publicKey: JsonWebKey;
@@ -222,10 +222,10 @@ export type CreateDocumentAction = {
 };
 
 export type UpgradeDocumentAction = {
-  type: 'UPGRADE_DOCUMENT';
+  type: "UPGRADE_DOCUMENT";
   model: string;
   fromVersion: string; // '0.0.0' for first upgrade
-  toVersion: string;   // current model version
+  toVersion: string; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
 };
