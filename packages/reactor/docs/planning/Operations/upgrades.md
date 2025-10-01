@@ -1,5 +1,7 @@
 # Upgrades
 
+> **Implementation**: See [create-upgrade-actions-migration.md](./create-upgrade-actions-migration.md) for step-by-step plan on adding CREATE_DOCUMENT and UPGRADE_DOCUMENT actions to the legacy base-server.
+
 ### Summary
 
 Document Model upgrades provide a systematic approach to versioning and backward compatibility.
