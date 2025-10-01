@@ -6,12 +6,8 @@ import {
   useDrives,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
-import { useTranslation } from "react-i18next";
 
-export const DangerZone: React.FC<{ onRefresh: () => void }> = ({
-  onRefresh,
-}) => {
-  const { t } = useTranslation();
+export const DangerZone: React.FC = () => {
   const drives = useDrives();
 
   const handleDeleteDrive = async (drive: DocumentDriveDocument) => {

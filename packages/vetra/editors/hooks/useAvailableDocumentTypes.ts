@@ -20,7 +20,9 @@ export function useAvailableDocumentTypes(
       // Get from reactor document model modules (if not onlyVetraDocuments)
       if (!onlyVetraDocuments) {
         const docModels = reactor?.getDocumentModelModules() ?? [];
-        moduleDocIds.push(...docModels.map((model) => model.documentModel.id));
+        moduleDocIds.push(
+          ...docModels.map((model) => model.documentModel.global.id),
+        );
       }
 
       // Get from vetra drive

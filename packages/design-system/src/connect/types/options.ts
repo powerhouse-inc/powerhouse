@@ -1,11 +1,8 @@
 import type {
   debugNodeOptions,
-  DRIVE,
-  FILE,
-  FOLDER,
   nodeOptions,
   normalNodeOptions,
-} from "#connect";
+} from "@powerhousedao/design-system";
 import type { Node, SharingType } from "document-drive";
 import type { ReactNode } from "react";
 
@@ -25,9 +22,9 @@ export type NodeOption = NodeOptions[number];
 export type TNodeOptions = Record<
   SharingType,
   {
-    [DRIVE]: NodeOption[];
-    [FOLDER]: NodeOption[];
-    [FILE]: NodeOption[];
+    DRIVE: NodeOption[];
+    FOLDER: NodeOption[];
+    FILE: NodeOption[];
   }
 >;
 

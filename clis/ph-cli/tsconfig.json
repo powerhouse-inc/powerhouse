@@ -1,16 +1,31 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "composite": true,
-    "types": ["node"]
+    "types": ["node", "vitest/globals"],
+    "outDir": "./dist"
   },
-  "files": [],
+  "include": ["**/*"],
   "references": [
     {
-      "path": "tsconfig.lib.json"
+      "path": "../../packages/codegen"
     },
     {
-      "path": "tsconfig.test.json"
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../apps/switchboard"
     }
   ]
 }

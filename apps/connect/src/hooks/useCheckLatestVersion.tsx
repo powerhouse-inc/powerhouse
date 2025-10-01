@@ -1,9 +1,11 @@
-import { ReloadConnectToast } from "#components";
-import connectConfig from "#connect-config";
+import {
+  isLatestVersion,
+  ReloadConnectToast,
+  toast,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import { logger } from "document-drive";
 import { useEffect } from "react";
-import { toast } from "../services/toast.js";
-import { isLatestVersion } from "./utils.js";
 
 export const useCheckLatestVersion = () => {
   async function checkLatestVersion() {

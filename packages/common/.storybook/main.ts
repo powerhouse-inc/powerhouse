@@ -17,8 +17,19 @@ const config: StorybookConfig = {
   viteFinal: async (config) => {
     const { mergeConfig } = await import("vite");
     const { default: tailwindcss } = await import("@tailwindcss/vite");
+    const { nodePolyfills } = await import("vite-plugin-node-polyfills");
     return mergeConfig(config, {
-      plugins: [tailwindcss()],
+      plugins: [
+        nodePolyfills({
+          include: ["events"],
+          globals: {
+            Buffer: false,
+            global: false,
+            process: true,
+          },
+        }),
+        tailwindcss(),
+      ],
     });
   },
 };

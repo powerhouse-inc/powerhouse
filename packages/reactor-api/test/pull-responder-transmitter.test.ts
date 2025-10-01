@@ -1,22 +1,20 @@
 import {
-  addFile,
-  addFolder,
+  createDriveHandlers,
+  expectUUID,
+  getDocumentScopeIndexes,
+  testSetupReactor,
+} from "@powerhousedao/reactor-api";
+import type {
   DocumentDriveDocument,
-  driveDocumentModelModule,
   IDocumentDriveServer,
-  PullResponderTransmitter,
-  ReactorBuilder,
+  Listener,
 } from "document-drive";
-import {
-  DocumentModelDocument,
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-  generateId,
-} from "document-model";
+import { PullResponderTransmitter, addFile, addFolder } from "document-drive";
+import type { DocumentModelDocument } from "document-model";
+import { documentModelCreateDocument, setAuthorName } from "document-model";
+import { generateId } from "document-model/core";
 import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDriveHandlers } from "./drive-handlers.js";
-import { expectUUID, getDocumentScopeIndexes } from "./utils.js";
 
 const remoteUrl = "http://test.com/d/test";
 
@@ -42,18 +40,8 @@ describe("Pull Responder Transmitter", () => {
     pullInterval: 50,
   };
 
-  async function setupReactor() {
-    const builder = new ReactorBuilder([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    ] as unknown as DocumentModelModule[]);
-    const reactor = await builder.build();
-    await reactor.initialize();
-    return { reactor, listenerManager: builder.listenerManager! };
-  }
-
   async function setupTrigger() {
-    const { reactor, listenerManager } = await setupReactor();
+    const { listenerManager } = await testSetupReactor();
     return PullResponderTransmitter.createPullResponderTrigger(
       driveId,
       remoteUrl,
@@ -63,7 +51,7 @@ describe("Pull Responder Transmitter", () => {
   }
 
   beforeEach(async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const drive = await reactor.addDrive(remoteDrive);
     remoteReactor = reactor;
 
@@ -105,7 +93,7 @@ describe("Pull Responder Transmitter", () => {
   });
 
   it("should pull drive operation from remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -121,22 +109,27 @@ describe("Pull Responder Transmitter", () => {
       addFolder({ id: generateId(), name: "test" }),
     );
 
-    await vi.waitFor(async () => {
-      const drive = await reactor.getDrive(driveId);
-      expect(getDocumentScopeIndexes(drive)).toStrictEqual({
-        global: 0,
-        local: -1,
-      });
+    await vi.waitFor(
+      async () => {
+        const drive = await reactor.getDrive(driveId);
+        expect(getDocumentScopeIndexes(drive)).toStrictEqual({
+          global: 0,
+          local: -1,
+        });
 
-      const resultDrive = result.document as DocumentDriveDocument;
-      expect(drive.state.global).toStrictEqual(resultDrive.state.global);
-    });
+        const resultDrive = result.document as DocumentDriveDocument;
+        expect(drive.state.global).toStrictEqual(resultDrive.state.global);
+      },
+      {
+        timeout: 1000,
+      },
+    );
 
     await reactor.deleteDrive(driveId);
   });
 
   it("should push new document to remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -146,7 +139,7 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
 
@@ -187,7 +180,7 @@ describe("Pull Responder Transmitter", () => {
   });
 
   it("should push new document with operations to remote reactor", async () => {
-    const { reactor } = await setupReactor();
+    const { reactor } = await testSetupReactor();
     const trigger = await setupTrigger();
     await reactor.addDrive({
       id: driveId,
@@ -197,12 +190,12 @@ describe("Pull Responder Transmitter", () => {
         triggers: [trigger],
       },
     });
-    const newDocument = documentModelDocumentModelModule.utils.createDocument();
+    const newDocument = documentModelCreateDocument();
     const documentId = newDocument.header.id;
     const document = await remoteReactor.addDocument(newDocument);
     const result = await remoteReactor.queueAction(
       documentId,
-      documentModelDocumentModelModule.actions.setAuthorName({
+      setAuthorName({
         authorName: "test",
       }),
     );
@@ -229,5 +222,76 @@ describe("Pull Responder Transmitter", () => {
     });
 
     await reactor.deleteDrive(driveId);
+  });
+
+  it("should persist triggers in drive storage and retrieve them correctly", async () => {
+    const { reactor } = await testSetupReactor();
+    const trigger = await setupTrigger();
+
+    // Create a drive with triggers and listeners
+    const testListeners = [
+      {
+        listenerId: "test-listener-1",
+        label: "Test Listener",
+        version: "1.0.0",
+        url: "https://example.com/listener",
+        system: false,
+        status: "CONNECTING" as const,
+        block: false,
+        callInfo: {
+          data: "",
+          name: "Test Listener",
+          transmitterType: "PullResponder",
+        },
+        filter: {
+          documentType: ["*"],
+          documentId: ["*"],
+          scope: ["global"],
+          branch: ["main"],
+        },
+      },
+    ];
+
+    const createdDrive = await reactor.addDrive({
+      id: generateId(),
+      global: {
+        name: "Test Drive with Triggers",
+        icon: null,
+      },
+      local: {
+        availableOffline: true,
+        triggers: [trigger],
+        listeners: testListeners as Listener[],
+        sharingType: "private",
+      },
+    });
+
+    const createdDriveId = createdDrive.header.id;
+
+    // Verify initial state has triggers and listeners
+    expect(createdDrive.state.local.triggers).toHaveLength(1);
+    expect(createdDrive.state.local.triggers[0].id).toBe(trigger.id);
+    expect(createdDrive.state.local.listeners).toHaveLength(1);
+    expect(createdDrive.state.local.listeners[0].listenerId).toBe(
+      testListeners[0].listenerId,
+    );
+
+    // Now retrieve the drive from storage (simulating a restart)
+    const retrievedDrive = await reactor.getDrive(createdDriveId);
+
+    // Verify that triggers and listeners are preserved after retrieval
+    expect(retrievedDrive.state.local.triggers).toHaveLength(1);
+    expect(retrievedDrive.state.local.triggers[0]).toStrictEqual(trigger);
+    expect(retrievedDrive.state.local.listeners).toHaveLength(1);
+    expect(retrievedDrive.state.local.listeners[0]).toStrictEqual(
+      testListeners[0],
+    );
+
+    // Verify other local state is also preserved
+    expect(retrievedDrive.state.local.availableOffline).toBe(true);
+    expect(retrievedDrive.state.local.sharingType).toBe("private");
+
+    // Clean up
+    await reactor.deleteDrive(createdDriveId);
   });
 });

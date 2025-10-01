@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-import { defaultBaseState } from "../src/document/ph-factories.js";
 import type {
   Action,
   CreateState,
@@ -7,14 +6,13 @@ import type {
   PHBaseState,
   PHDocument,
   StateReducer,
-} from "../src/document/types.js";
-import { createAction, createReducer } from "../src/document/utils/base.js";
-
-// Test state type that extends PHBaseState with global and local fields
-export type TestPHState = PHBaseState & {
-  global: any;
-  local: any;
-};
+} from "document-model";
+import {
+  createAction,
+  createReducer,
+  defaultBaseState,
+} from "document-model/core";
+import type { TestPHState } from "./types.js";
 
 /**
  * Default createState function for test documents
@@ -40,7 +38,6 @@ export const fakeAction = (
   }) as Action;
 
 // Empty reducer that supports base actions
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const emptyReducer: StateReducer<TestPHState> = (state, _action) => {
   return state;
 };
@@ -52,7 +49,7 @@ export const wrappedEmptyReducer = createReducer(emptyReducer);
  * @param global - The global state (defaults to empty object)
  * @param local - The local state (defaults to empty object)
  */
-export function createTestState<TGlobal, TLocal>(
+export function testCreateBaseState<TGlobal, TLocal>(
   global: TGlobal,
   local: TLocal,
 ): PHBaseState & { global: TGlobal; local: TLocal } {
@@ -72,8 +69,11 @@ export type CountPHState = PHBaseState & {
 /**
  * Creates a default count base state for testing
  */
-export function createCountState(count = 0, name = ""): CountPHState {
-  return createTestState({ count }, { name });
+export function createCountState(
+  count = 0,
+  name = "",
+): PHBaseState & { global: CountState; local: CountLocalState } {
+  return testCreateBaseState({ count }, { name });
 }
 
 /**

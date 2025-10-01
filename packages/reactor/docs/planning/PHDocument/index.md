@@ -2,43 +2,33 @@
 
 ### Summary
 
-`PHDocument` is the core object that represents a document's data in the Reactor system.
+`PHDocument` is the core object that represents a document in the Reactor system. It is a generic type that is parameterized by the state of the document.
 
-We break PHDocument into two objects:
+```ts
+// All document models have a PHBaseState.
+export type PHBaseState = {
+  /** Carries authentication information. */
+  auth: PHAuthState;
 
-```tsx
-class PHDocument {
+  /** Carries information about the document. */
+  document: PHDocumentState;
+};
+
+// BaseDocument is a generic type that is parameterized by the state of the document.
+export type BaseDocument<TState extends PHBaseState = PHBaseState> = {
+  /** The header of the document. */
   header: PHDocumentHeader;
-  state: PHDocumentState;
 
-  constructor(header: PHDocumentHeader, state: PHDocumentState) {
-    this.header = header;
-    this.state = state;
-  }
-}
-```
+  /** The document model specific state. */
+  state: TState;
 
-We also define a `PHDocumentController` object that is used to wrap and interact with the document.
+  /** The initial state of the document, enabling replaying operations. */
+  initialState: TState;
+};
 
-```tsx
-class PHDocumentController {
-  document: PHDocument;
-
-  mutations: PHDocumentMutations;
-  history: PHDocumentHistory;
-
-  constructor(document: PHDocument) {
-    this.document = document;
-
-    ...
-  }
-
-  get header(): PHDocumentHeader {
-    return this.document.header;
-  }
-
-  // elided
-}
+// PHDocument is a generic type that is parameterized by the state of the document.
+export type PHDocument<TState extends PHBaseState = PHBaseState> =
+  BaseDocument<TState>;
 ```
 
 ### Header
@@ -137,34 +127,25 @@ The state object is a plain, serializable object that has keys for each populate
 The `auth` scope is always present, but populated only with state that is available to that user. The `document` scope is a "special case" scope that is always present and is a default scope used for upgrades and initial scope, but is not necessarily populated.
 
 ```tsx
-type PHDocumentState = {
-  auth: AuthScopeState;
-  document: DocumentScopeState;
+type PHBaseState = {
+  auth: PHAuthState;
+  document: PHDocumentState;
 };
 
 //
-
-const state = { ...prevState, myScope: { ...prevState.myScope, foo: 4 } };
+const state = createState(
+  prevState,
+  { myScope: { foo: 4 } },
+);
 ```
 
-Custom document types extend the `PHDocument` class:
+Custom document types extend the `PHDocument` type:
 
 ```tsx
 // simple type intersection for state
-type MyDocModelState = PHDocumentState & {
+type MyDocModelState = PHBaseState & {
   myScope: MyScopeState;
 };
-
-// subclass of PHDocument, overriding the state
-class MyDocument extends PHDocument {
-  state: MyDocModelState;
-
-  constructor(header: PHDocumentHeader, state: MyDocModelState) {
-    super(header, state);
-  }
-
-  // elided
-}
 ```
 
 This means that references to `state` are dependent on the reference to the `PHDocument` type.
@@ -181,41 +162,102 @@ const superClass: PHDocument = myDocument;
 const superClassField = superClass.state.myScope.foo;
 ```
 
-We can provide factory methods to correctly create the derived documents with specific mutations:
+We can provide factory methods to correctly create the derived documents with specific mutations. Here are examples for the Drive document model:
 
 ```tsx
-class MyDocument extends PHDocument {
-  constructor(header: PHDocumentHeader, state: MyDocModelState) {
-    super(header, state);
-  }
+export function defaultGlobalState(): DocumentDriveGlobalState {
+  return {
+    icon: null,
+    name: "",
+    nodes: [],
+  };
+}
 
-  ...
+export function defaultLocalState(): DocumentDriveLocalState {
+  return {
+    availableOffline: false,
+    listeners: [],
+    sharingType: null,
+    triggers: [],
+  };
+}
 
-  static fromRevisions(document: PHDocument, scope: string, revision: number): MyDocument {
-    return new MyDocument({
-      ...document.header,
-      revision: {
-        ...document.header.revision,
-        [scope]: revision,
-      },
-    }, state);
-  }
+export function defaultPHState(): DocumentDrivePHState {
+  return {
+    ...defaultBaseState(),
+    global: defaultGlobalState(),
+    local: defaultLocalState(),
+  };
+}
+
+export function createGlobalState(
+  state?: Partial<DocumentDriveGlobalState>,
+): DocumentDriveGlobalState {
+  return {
+    ...defaultGlobalState(),
+    ...(state || {}),
+  } as DocumentDriveGlobalState;
+}
+
+export function createLocalState(
+  state?: Partial<DocumentDriveLocalState>,
+): DocumentDriveLocalState {
+  return {
+    ...defaultLocalState(),
+    ...(state || {}),
+  } as DocumentDriveLocalState;
+}
+
+export function createState(
+  baseState?: Partial<PHBaseState>,
+  globalState?: Partial<DocumentDriveGlobalState>,
+  localState?: Partial<DocumentDriveLocalState>,
+): DocumentDrivePHState {
+  return {
+    ...createBaseState(baseState?.auth, baseState?.document),
+    global: createGlobalState(globalState),
+    local: createLocalState(localState),
+  };
 }
 ```
 
-### Mutations
+### PHDocumentController
+
+We also define a `PHDocumentController` object that is used to wrap and interact with the document.
+
+```tsx
+class PHDocumentController {
+  document: PHDocument;
+  mutations: PHDocumentMutationController;
+  history: PHDocumentHistoryController;
+
+  constructor(document: PHDocument) {
+    this.document = document;
+
+    ...
+  }
+
+  get header(): PHDocumentHeader {
+    return this.document.header;
+  }
+
+  // elided
+}
+```
+
+#### `PHDocumentMutationController`
 
 The mutations object is a typed API for creating and/or executing operations. It has operation-specific methods that pertain to the specific scope.
 
 ```tsx
 // base class
-class PHDocumentMutations {
-  auth: AuthMutations;
-  document: DocumentMutations;
+class PHDocumentMutationController {
+  auth: PHAuthMutationController;
+  document: PHDocumentMutationController;
 }
 
 // derived class
-class DriveGlobalMutations extends PHDocumentMutations {
+class DriveGlobalMutationController extends PHDocumentMutationController {
   setDriveIcon(icon: string): ActionExecutor {
     // elided
   }
@@ -287,18 +329,26 @@ await client.mutate(drive.id, [
 ]);
 ```
 
-#### History
+#### `PHDocumentHistoryController`
 
 The history object is an API for fetching document history, per scope.
 
 ```tsx
-const operations = await drive.history.fetchOperations("myScope");
+class PHDocumentHistoryController {
+  fetch(scope: string, options?: PagingOptions): Promise<Operation[]>;
+  fetchOperationAtRevision(scope: string, revision: number): Promise<Operation>;
+  fetchDocumentAtRevision(scope: string, revision: number): Promise<PHDocument>;
+}
+
+// ...
+
+const operations = await drive.history.fetch("myScope");
 
 console.log(`Drive history: ${operations.length} operations`);
 
 // this is paged:
 for await (const page of paginate(() =>
-  drive.history.fetchOperations("myScope", { limit: 1000 }),
+  drive.history.fetch("myScope", { limit: 1000 }),
 )) {
   for (const operation of page.results) {
     console.log(operation.id);
@@ -306,7 +356,5 @@ for await (const page of paginate(() =>
 }
 
 // or, we can fetch a specific revision of the document
-const document = await drive.history.fetch({
-  revision: 10,
-});
+const document = await drive.history.fetchDocumentAtRevision("myScope", 10);
 ```

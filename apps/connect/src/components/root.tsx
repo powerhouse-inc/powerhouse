@@ -1,9 +1,8 @@
+import { ModalsContainer, Sidebar } from "@powerhousedao/connect";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
-import { ModalsContainer } from "./modal/modals-container.js";
-import Sidebar from "./sidebar.js";
 
-export default function Root() {
+export function Root() {
   return (
     <>
       <div className="h-screen">

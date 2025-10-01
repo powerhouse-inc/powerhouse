@@ -1,7 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { camelCase } from "change-case";
-import type { Action, DocumentModelModule } from "document-model";
-import type { Operation } from "document-model/document-model/gen/schema/types";
+import type { Action, DocumentModelModule, Operation } from "document-model";
 import type { z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
@@ -69,29 +68,26 @@ export function validateDocumentModelAction(
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  const documentModelState = documentModelModule.documentModel;
+  const globalState = documentModelModule.documentModel.global;
 
   // Get the latest specification
-  if (
-    !documentModelState.specifications ||
-    documentModelState.specifications.length === 0
-  ) {
+  if (!globalState.specifications || globalState.specifications.length === 0) {
     errors.push("Document model has no specifications");
     return { isValid: false, errors };
   }
 
   const latestSpec =
-    documentModelState.specifications[
-      documentModelState.specifications.length - 1
-    ];
+    globalState.specifications[globalState.specifications.length - 1];
 
   // Search through modules to find the operation that matches the action type (in SCREAMING_SNAKE_CASE)
-  let operation: Operation | null = null;
+  let operation: (Operation & { scope: string }) | null = null;
 
   for (const module of latestSpec.modules) {
-    const foundOp = module.operations.find((op) => op.name === action.type);
-    if (foundOp) {
-      operation = foundOp;
+    const unsafeOperationOrActionOrSomething = module.operations.find(
+      (op) => op.name === action.type,
+    ) as unknown as Operation & { scope: string };
+    if (unsafeOperationOrActionOrSomething) {
+      operation = unsafeOperationOrActionOrSomething;
       break;
     }
   }

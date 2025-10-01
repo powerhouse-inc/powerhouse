@@ -1,7 +1,7 @@
+import type { ConnectSearchBarProps } from "@powerhousedao/design-system";
+import { ConnectSearchBar } from "@powerhousedao/design-system";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { it, vi } from "vitest";
-import type { ConnectSearchBarProps } from "./search-bar.js";
-import { ConnectSearchBar } from "./search-bar.js";
 
 const filterItems: ConnectSearchBarProps["filterItems"] = [
   {

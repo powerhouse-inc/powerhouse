@@ -1,22 +1,20 @@
+import { createRemoveOldRemoteDrivesConfig } from "@powerhousedao/connect";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
-  IDocumentDriveServer,
-} from "document-drive";
-import {
-  BaseQueueManager,
-  InMemoryCache,
-  ReactorBuilder,
-} from "document-drive";
-import { BrowserStorage } from "document-drive/storage/browser";
-import type {
   IDocumentAdminStorage,
+  IDocumentDriveServer,
   IDocumentOperationStorage,
   IDocumentStorage,
   IDriveOperationStorage,
-} from "document-drive/storage/types";
+} from "document-drive";
+import {
+  BrowserStorage,
+  EventQueueManager,
+  InMemoryCache,
+  ReactorBuilder,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -84,7 +82,7 @@ export function createBrowserDocumentDriveServer(
   return new ReactorBuilder(documentModels)
     .withStorage(storage)
     .withCache(new InMemoryCache())
-    .withQueueManager(new BaseQueueManager())
+    .withQueueManager(new EventQueueManager())
     .withOptions({ ...getReactorDefaultDrivesConfig() })
     .build();
 }

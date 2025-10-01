@@ -1,4 +1,3 @@
-import { LOCAL } from "#connect";
 import { useArgs } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
 import { AddRemoteDriveModal } from "./add-remote-drive-modal.js";
@@ -17,7 +16,7 @@ export const Default: Story = {
     open: true,
     onSubmit() {},
     onOpenChange() {},
-    sharingType: LOCAL,
+    sharingType: "LOCAL",
     requestPublicDrive(url) {
       return Promise.resolve({
         id: "1",

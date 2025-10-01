@@ -1,15 +1,11 @@
 import type {
   AnalyticsSeriesInput,
   IAnalyticsStore,
-} from "@powerhousedao/reactor-browser/analytics";
-import {
-  AnalyticsPath,
-  DateTime,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/analytics-engine-core";
+import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
+import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 import { childLogger } from "document-drive";
-import type { IProcessor } from "document-drive/processors/types";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-
+import { DateTime } from "luxon";
 export type NodeTarget = "DRIVE" | "NODE";
 
 export class DocumentAnalyticsProcessor implements IProcessor {

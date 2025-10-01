@@ -1,8 +1,6 @@
+import type { InputBaseProps } from "@powerhousedao/design-system";
+import { cn, FormLabel, FormMessageList } from "@powerhousedao/design-system";
 import React, { useId } from "react";
-import { cn } from "../../lib/index.js";
-import type { InputBaseProps } from "../../types.js";
-import { FormLabel } from "../form-label/index.js";
-import { FormMessageList } from "../form-message/index.js";
 import type { CheckboxValue } from "./checkbox-base.js";
 import { CheckboxBase } from "./checkbox-base.js";
 

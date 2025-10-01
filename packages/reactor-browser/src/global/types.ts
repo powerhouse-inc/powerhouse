@@ -1,5 +1,5 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
-import type { IPowerhouseAnalytics } from "../analytics/types.js";
+import type { IPowerhouseAnalytics } from "@powerhousedao/reactor-browser";
 
 export interface PGliteState {
   db: PGliteWithLive | null;

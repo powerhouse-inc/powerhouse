@@ -1,4 +1,54 @@
-## 5.0.0-staging.21 (2025-09-30)
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+
+### 🩹 Fixes
+
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.57 (2025-09-17)
+
+### 🚀 Features
+
+- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
+- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
+- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
+
+### 🩹 Fixes
+
+- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
+- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
+- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.56 (2025-09-17)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
 
@@ -56,18 +106,8 @@ This was a version bump only for @powerhousedao/academy to align it with other p
 ### ❤️ Thank You
 
 - acaldas @acaldas
-- Benjamin Jordan (@thegoldenmule)
-- Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.12 (2025-09-17)
-
-This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.11 (2025-09-17)
-
-This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.10 (2025-09-11)
+## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
 

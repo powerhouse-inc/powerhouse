@@ -1,22 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { LogLevel } from "@powerhousedao/config";
 import { isLogLevel, LogLevels } from "@powerhousedao/config";
-
-export { isLogLevel, LogLevels };
-export type { LogLevel };
-
-export type ILogger = Pick<
-  Console,
-  "log" | "info" | "warn" | "error" | "debug"
-> & {
-  level: LogLevel | "env";
-  errorHandler: LoggerErrorHandler | undefined;
-
-  verbose: (message?: any, ...optionalParams: any[]) => void;
-};
-
-export type LoggerErrorHandler = (...data: any[]) => void;
+import type { ILogger, LoggerErrorHandler } from "document-drive";
 
 export class ConsoleLogger implements ILogger {
   #tags: string[];
@@ -59,8 +43,10 @@ export class ConsoleLogger implements ILogger {
   get #levelValue(): number {
     if (this.#levelString === "env") {
       const envLevel =
-        typeof process !== "undefined" && "env" in process
-          ? process.env.LOG_LEVEL
+        typeof globalThis !== "undefined" &&
+        globalThis.process &&
+        "env" in globalThis.process
+          ? globalThis.process.env.LOG_LEVEL
           : undefined;
       if (!envLevel) {
         return LogLevels.info;

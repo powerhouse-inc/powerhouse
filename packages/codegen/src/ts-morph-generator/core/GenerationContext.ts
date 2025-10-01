@@ -1,27 +1,34 @@
 import type {
-  DocumentModelState,
-  Operation as ModuleOperation,
-} from "document-model/document-model/gen/schema/types";
+  DocumentModelGlobalState,
+  ModuleSpecification,
+  OperationErrorSpecification,
+} from "document-model";
 import type { Project } from "ts-morph";
 
-// Use the actual module type from document model specs
-export type ModuleSpec = DocumentModelState["specifications"][0]["modules"][0];
-export type OperationError = ModuleOperation["errors"][number];
-
-export type Operation = ModuleOperation & {
+export type CodegenOperation = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  examples: {
+    id: string;
+    value: string;
+  }[];
+  reducer: string | null;
+  schema: string | null;
+  template: string | null;
   hasInput: boolean;
   hasAttachment: boolean | undefined;
   scope: string;
   state: string;
-  errors?: OperationError[];
+  errors?: OperationErrorSpecification[];
 };
 
 export interface GenerationContext {
   rootDir: string;
-  docModel: DocumentModelState;
-  module: ModuleSpec;
+  docModel: DocumentModelGlobalState;
+  module: ModuleSpecification;
   project: Project;
-  operations: Operation[];
+  operations: CodegenOperation[];
   forceUpdate: boolean;
 }
 

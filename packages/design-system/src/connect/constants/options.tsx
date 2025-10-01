@@ -3,31 +3,28 @@ import type {
   NodeOption,
   NormalNodeOption,
   OptionMetadata,
-} from "#connect";
-import { Icon } from "#powerhouse";
+} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 
-export const NEW = "NEW";
-export const DUPLICATE = "DUPLICATE";
-export const NEW_FOLDER = "NEW_FOLDER";
-export const RENAME = "RENAME";
-export const DELETE = "DELETE";
-export const SETTINGS = "SETTINGS";
-export const REMOVE_TRIGGER = "REMOVE_TRIGGER";
-export const ADD_TRIGGER = "ADD_TRIGGER";
-export const ADD_INVALID_TRIGGER = "ADD_INVALID_TRIGGER";
+export const defaultDriveOptions = [
+  "NEW_FOLDER",
+  "RENAME",
+  "SETTINGS",
+] as const;
 
-export const defaultDriveOptions = [NEW_FOLDER, RENAME, SETTINGS] as const;
+export const defaultNodeOptions = ["RENAME", "DELETE", "DUPLICATE"] as const;
 
-export const defaultFileOptions = [RENAME, DELETE, DUPLICATE] as const;
-
-export const defaultFolderOptions = [RENAME, DELETE, DUPLICATE] as const;
-
-export const normalNodeOptions = [DUPLICATE, RENAME, DELETE, SETTINGS] as const;
+export const normalNodeOptions = [
+  "DUPLICATE",
+  "RENAME",
+  "DELETE",
+  "SETTINGS",
+] as const;
 
 export const debugNodeOptions = [
-  ADD_TRIGGER,
-  REMOVE_TRIGGER,
-  ADD_INVALID_TRIGGER,
+  "ADD_TRIGGER",
+  "REMOVE_TRIGGER",
+  "ADD_INVALID_TRIGGER",
 ] as const;
 
 export const nodeOptions = [...normalNodeOptions, ...debugNodeOptions] as const;
@@ -70,35 +67,35 @@ export const locationInfoByLocation = {
 } as const;
 
 export const debugNodeOptionsMap: Record<DebugNodeOption, OptionMetadata> = {
-  [ADD_TRIGGER]: {
+  ["ADD_TRIGGER"]: {
     label: "Add Trigger",
     icon: <Icon className="text-orange-900" name="Plus" />,
   },
-  [REMOVE_TRIGGER]: {
+  ["REMOVE_TRIGGER"]: {
     label: "Remove Trigger",
     icon: <Icon className="text-orange-900" name="Xmark" />,
   },
-  [ADD_INVALID_TRIGGER]: {
+  ["ADD_INVALID_TRIGGER"]: {
     label: "Add Trigger",
     icon: <Icon className="text-orange-900" name="Exclamation" />,
   },
 } as const;
 
 export const normalNodeOptionsMap: Record<NormalNodeOption, OptionMetadata> = {
-  [DUPLICATE]: {
+  DUPLICATE: {
     label: "Duplicate",
     icon: <Icon name="FilesEarmark" />,
   },
-  [RENAME]: {
+  RENAME: {
     label: "Rename",
     icon: <Icon name="Pencil" />,
   },
-  [DELETE]: {
+  DELETE: {
     label: "Delete",
     icon: <Icon name="Trash" />,
     className: "text-red-900",
   },
-  [SETTINGS]: {
+  SETTINGS: {
     label: "Settings",
     icon: <Icon name="Gear" />,
   },

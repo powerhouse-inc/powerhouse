@@ -1,20 +1,23 @@
-import { driveDocumentModelModule } from "#drive-document-model/module";
-import { generateAddNodeAction } from "#drive-document-model/src/utils";
+import {
+  buildOperation,
+  buildOperations,
+  DocumentDriveAction,
+  driveDocumentModelModule,
+  generateAddNodeAction,
+  ReactorBuilder,
+  reducer,
+} from "document-drive";
 import {
   BaseAction,
   DocumentModelAction,
-  DocumentModelDocument,
   documentModelDocumentModelModule,
+  DocumentModelGlobalState,
   DocumentModelModule,
   Operation,
   setModelName,
   setStateSchema,
 } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveAction } from "../../src/drive-document-model/gen/actions.js";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { ReactorBuilder } from "../../src/server/builder.js";
-import { buildOperation, buildOperations } from "../utils.js";
 
 describe("Document operations", () => {
   const documentModels = [
@@ -55,7 +58,7 @@ describe("Document operations", () => {
 
     await server.addDriveOperation("1", operation);
 
-    return server.getDocument("1", "1") as Promise<DocumentModelDocument>;
+    return server.getDocument("1", "1") as Promise<DocumentModelGlobalState>;
   }
 
   describe("Operations", () => {
@@ -73,7 +76,10 @@ describe("Document operations", () => {
       );
       expect(result.status).toBe("SUCCESS");
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
       expect(document.state.global.name).toBe("test");
     });
 
@@ -153,7 +159,10 @@ describe("Document operations", () => {
       );
       expect(result.operations.length).toBe(3);
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
       expect(document.state.global).toEqual(
         expect.objectContaining({
           name: "test",
@@ -182,13 +191,16 @@ describe("Document operations", () => {
         document = (await server.getDocument(
           "1",
           "1",
-        )) as DocumentModelDocument;
+        )) as DocumentModelGlobalState;
 
         const op = buildOperation(reducer, document, action);
         await server.addOperation("1", "1", op);
       }
 
-      document = (await server.getDocument("1", "1")) as DocumentModelDocument;
+      document = (await server.getDocument(
+        "1",
+        "1",
+      )) as DocumentModelGlobalState;
 
       return document;
     }

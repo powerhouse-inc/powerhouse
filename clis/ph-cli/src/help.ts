@@ -2,7 +2,7 @@ import {
   DEFAULT_ASSETS_DIR_NAME,
   DEFAULT_EXTERNAL_PACKAGES_FILE_NAME,
   DEFAULT_STYLES_FILE_NAME,
-} from "@powerhousedao/builder-tools/connect-build";
+} from "@powerhousedao/builder-tools";
 
 /**
  * Help text for the connect studio command

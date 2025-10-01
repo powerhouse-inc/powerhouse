@@ -1,5 +1,10 @@
-import connectConfig from "#connect-config";
-import { createBrowserDocumentDriveServer, createBrowserStorage } from "#utils";
+import {
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+  loadCommonPackage,
+  loadExternalPackages,
+} from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
   dispatchSetAppConfigEvent,
@@ -23,12 +28,10 @@ import {
   refreshReactorData,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
-import { logger } from "document-drive";
-import { ProcessorManager } from "document-drive/processors/processor-manager";
-import type { IDocumentAdminStorage } from "document-drive/storage/types";
-import { generateId } from "document-model";
-import { loadCommonPackage } from "./document-model.js";
-import { loadExternalPackages } from "./external-packages.js";
+import type { IDocumentAdminStorage } from "document-drive";
+import { ProcessorManager, logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -83,7 +86,7 @@ export async function createReactor() {
 
   // create the reactor
   const reactor = createBrowserDocumentDriveServer(
-    documentModelModules,
+    documentModelModules as unknown as DocumentModelModule[],
     storage,
   );
   // initialize the reactor
@@ -212,29 +215,13 @@ export async function createReactor() {
 }
 
 function getAppConfig() {
-  const allowList = getAllowList();
   const analyticsDatabaseName = connectConfig.analytics.databaseName;
   const showSearchBar = connectConfig.content.showSearchBar;
   return {
-    allowList,
+    allowList: undefined,
     analyticsDatabaseName,
     showSearchBar,
   };
-}
-
-function getAllowList() {
-  const arbitrumAllowList = import.meta.env.PH_CONNECT_ARBITRUM_ALLOW_LIST;
-  const rwaAllowList = import.meta.env.PH_CONNECT_RWA_ALLOW_LIST;
-  if (!arbitrumAllowList.length && !rwaAllowList.length) {
-    return undefined;
-  }
-  if (arbitrumAllowList.length) {
-    return arbitrumAllowList.split(",").filter(Boolean);
-  }
-  if (rwaAllowList.length) {
-    return rwaAllowList.split(",").filter(Boolean);
-  }
-  return undefined;
 }
 
 function getDidFromUrl() {

@@ -1,17 +1,11 @@
-import type { IRenown, User } from "@renown/sdk";
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-  ProcessorManager,
-} from "document-drive";
-import type { PHDocument } from "document-model";
-import type { DID, IConnectCrypto } from "../crypto/index.js";
 import type {
   AppConfigUpdatedEvent,
   ConnectCryptoUpdatedEvent,
+  DID,
   DidUpdatedEvent,
   DocumentsUpdatedEvent,
   DrivesUpdatedEvent,
+  IConnectCrypto,
   LoginStatusUpdatedEvent,
   ModalUpdatedEvent,
   ProcessorManagerUpdatedEvent,
@@ -35,7 +29,14 @@ import type {
   SetVetraPackagesEvent,
   UserUpdatedEvent,
   VetraPackagesUpdatedEvent,
-} from "../events/types.js";
+} from "@powerhousedao/reactor-browser";
+import type { IRenown, User } from "@renown/sdk";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  ProcessorManager,
+} from "document-drive";
+import type { PHDocument } from "document-model";
 import type { PHModal } from "./modals.js";
 import type { VetraPackage } from "./vetra.js";
 

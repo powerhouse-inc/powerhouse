@@ -1,15 +1,13 @@
 {
-  "extends": "./tsconfig.base.json",
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "lib": ["DOM", "ESNext"],
+    "outDir": "./dist"
+  },
+  "include": ["**/*"],
   "references": [
     {
-      "path": "./tsconfig.common.json"
-    },
-    {
-      "path": "./tsconfig.browser.json"
-    },
-    {
-      "path": "./tsconfig.node.json"
+      "path": "../document-model"
     }
-  ],
-  "include": ["src/index.ts"]
+  ]
 }

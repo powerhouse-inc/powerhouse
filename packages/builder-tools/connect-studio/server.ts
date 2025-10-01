@@ -1,24 +1,34 @@
-import {
-  backupIndexHtml,
-  copyConnect,
-  ensureNodeVersion,
-  resolveConnect,
-  runShellScriptPlugin,
-  viteConnectDevStudioPlugin,
-  viteDocumentModelsHMR,
-  viteEditorsHMR,
-  viteLoadExternalPackages,
-} from "#connect-utils";
+import { getConfig } from "@powerhousedao/config/node";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import viteReact from "@vitejs/plugin-react";
 import fs from "node:fs";
-import { dirname, join, parse, resolve } from "node:path";
+import path, { dirname, join, parse, resolve } from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import type { InlineConfig } from "vite";
-import { createLogger, createServer, searchForWorkspaceRoot } from "vite";
+import {
+  createLogger,
+  createServer,
+  loadConfigFromFile,
+  searchForWorkspaceRoot,
+} from "vite";
 import { viteEnvs } from "vite-envs";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import {
+  backupIndexHtml,
+  copyConnect,
+  ensureNodeVersion,
+  resolveConnectBundle,
+  resolvePackage,
+  runShellScriptPlugin,
+} from "../connect-utils/helpers.js";
+import {
+  viteConnectDevStudioPlugin,
+  viteDocumentModelsHMR,
+  viteEditorsHMR,
+  viteLoadExternalPackages,
+} from "../connect-utils/index.js";
 import type { StartServerOptions } from "./types.js";
 
 // silences dynamic import warnings
@@ -43,6 +53,25 @@ logger.warn = (msg, options) => {
   loggerWarn(msg, options);
 };
 
+function getConnectPaths() {
+  try {
+    const connectIndexPath = resolvePackage(
+      "@powerhousedao/connect/index.html",
+    );
+    const connectViteConfigPath = resolvePackage(
+      "@powerhousedao/connect/vite.config.ts",
+    );
+    return { connectIndexPath, connectViteConfigPath };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Cannot find module")
+    ) {
+      throw new Error('Please install "@powerhousedao/connect"');
+    }
+    throw error;
+  }
+}
 /**
  * Finds the vite-plugin-node-polyfills folder by traversing up the directory tree
  * @param {string} startPath - The starting path to begin the search
@@ -70,7 +99,6 @@ function findVitePluginNodePolyfills(startPath: string) {
 
   return null;
 }
-
 export async function startServer(
   options: StartServerOptions = {
     logLevel: "info",
@@ -82,7 +110,7 @@ export async function startServer(
   // exits if node version is not compatible
   ensureNodeVersion();
 
-  const connectPath = options.connectPath ?? resolveConnect();
+  const connectPath = options.connectPath ?? resolveConnectBundle();
   const projectRoot = process.cwd();
   const studioPath = join(projectRoot, ".ph", "connect-studio");
 
@@ -99,15 +127,38 @@ export async function startServer(
       ? process.env.OPEN_BROWSER === "true"
       : false;
 
-  // needed for viteEnvs
-  if (!fs.existsSync(join(studioPath, "src"))) {
-    fs.mkdirSync(join(studioPath, "src"));
-  }
-
   process.env.PH_CONNECT_STUDIO_MODE = "true";
   process.env.PH_CONNECT_CLI_VERSION = options.phCliVersion;
+
   const computedEnv = { LOG_LEVEL: options.logLevel };
 
+  const phConfig = getConfig(options.configFile);
+  const phPackages = phConfig.packages?.map((p) => p.packageName) ?? [];
+
+  // infers the project path from the config file path if provided,
+  // otherwise fallbacks to the current working directory
+  const localPackage = options.configFile
+    ? path.dirname(path.resolve(options.configFile))
+    : process.cwd();
+  const hasLocalPackage = fs.existsSync(path.join(localPackage, "index.ts"));
+  if (hasLocalPackage) {
+    phPackages.push(localPackage);
+  }
+  process.env.PH_PACKAGES = phPackages.join(",");
+
+  // TODO: should we move the document model editor to common or vetra
+  // and make Connect a peerDependency of builder-tools?
+  const { connectIndexPath, connectViteConfigPath } = getConnectPaths();
+
+  const connectViteConfig = await loadConfigFromFile(
+    { command: "serve", mode: "development" },
+    connectViteConfigPath,
+  );
+  if (!connectViteConfig) {
+    throw new Error(
+      `Failed to load Connect vite config from ${connectViteConfigPath}`,
+    );
+  }
   const currentFilePath = fileURLToPath(import.meta.url);
   const vitePluginNodePolyfillsPath =
     findVitePluginNodePolyfills(currentFilePath);

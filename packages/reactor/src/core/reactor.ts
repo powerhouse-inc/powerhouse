@@ -1,9 +1,8 @@
-import type { BaseDocumentDriveServer } from "document-drive";
-import type { IDocumentStorage } from "document-drive/storage/types";
-import { AbortError } from "document-drive/utils/errors";
+import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
+import { AbortError } from "document-drive";
 import type {
   Action,
-  DocumentModelState,
+  DocumentModelModule,
   Operation,
   PHBaseState,
   PHDocument,
@@ -83,30 +82,13 @@ export class Reactor implements IReactor {
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>> {
-    // Get document model modules from the drive server
-    // Note: BaseDocumentDriveServer provides modules, not model states
-    // This is an adaptation layer that converts modules to states
+  ): Promise<PagedResults<DocumentModelModule>> {
+    // Get document model modules from the drive server + filter
     const modules = this.driveServer.getDocumentModelModules();
-
-    // Convert modules to DocumentModelState format
-    // TODO: Proper conversion when DocumentModelState structure is finalized
-    const filteredModels = modules
-      .filter(
-        (module) =>
-          !namespace || module.documentModel.name.startsWith(namespace),
-      )
-      .map(
-        (module) =>
-          ({
-            id: module.documentModel.id,
-            name: module.documentModel.name,
-            extension: module.documentModel.extension,
-            author: module.documentModel.author,
-            description: module.documentModel.description || "",
-            specifications: module.documentModel.specifications,
-          }) as DocumentModelState,
-      );
+    const filteredModels = modules.filter(
+      (module) =>
+        !namespace || module.documentModel.global.name.startsWith(namespace),
+    );
 
     // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
@@ -164,7 +146,6 @@ export class Reactor implements IReactor {
     // to the underlying store, but is here now for the interface.
     for (const scope in document.state) {
       if (!matchesScope(view, scope)) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete document.state[scope as keyof PHBaseState];
       }
     }
@@ -588,7 +569,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -659,7 +639,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -734,7 +713,6 @@ export class Reactor implements IReactor {
       // to the underlying store, but is here now for the interface.
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }
@@ -811,7 +789,6 @@ export class Reactor implements IReactor {
       // Apply view filter
       for (const scope in document.state) {
         if (!matchesScope(view, scope)) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
           delete document.state[scope as keyof PHBaseState];
         }
       }

@@ -1,27 +1,26 @@
-import {
-  documentModelDocumentModelModule,
-  DocumentModelModule,
-  generateId,
-  Operation,
-} from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
-import { DocumentDriveAction } from "../src/drive-document-model/gen/actions.js";
+import type {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+} from "document-drive";
 import {
   addFolder,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+  MemoryStorage,
+  ReactorBuilder,
   setAvailableOffline,
-} from "../src/drive-document-model/gen/creators.js";
-import { reducer as documentDriveReducer } from "../src/drive-document-model/gen/reducer.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import { ReactorBuilder } from "../src/server/builder.js";
-import { MemoryStorage } from "../src/storage/memory.js";
+} from "document-drive";
+import type { DocumentModelModule, Operation } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
+import { beforeEach, describe, expect, it } from "vitest";
 
 function buildOperation(
   document: DocumentDriveDocument,
   action: DocumentDriveAction,
   index?: number,
 ): Operation {
-  const newDocument = documentDriveReducer(document, action);
+  const newDocument = driveDocumentReducer(document, action);
   const operation = newDocument.operations[action.scope].slice().pop()!;
   return { ...operation, index: index ?? operation.index };
 }
@@ -32,7 +31,7 @@ function buildOperations(
 ): Operation[] {
   const operations: Operation[] = [];
   for (const action of actions) {
-    document = documentDriveReducer(document, action);
+    document = driveDocumentReducer(document, action);
     const operation = document.operations[action.scope].slice().pop()!;
     operations.push(operation);
   }
@@ -178,7 +177,7 @@ describe("Drive operations", () => {
         triggers: [],
       },
     });
-    let drive = await server.getDrive(id);
+    const drive = await server.getDrive(id);
     await expect(
       server.addOperations(
         id,

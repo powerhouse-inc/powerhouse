@@ -1,4 +1,4 @@
-import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { type PowerhouseConfig } from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";

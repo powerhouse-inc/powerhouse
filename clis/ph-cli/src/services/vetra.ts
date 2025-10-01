@@ -1,11 +1,9 @@
-import type { ConnectStudioOptions } from "@powerhousedao/builder-tools/connect-studio";
-import {
-  VETRA_PROCESSOR_CONFIG_KEY,
-  type VetraProcessorConfigType,
-} from "@powerhousedao/config/powerhouse";
-import { getConfig } from "@powerhousedao/config/utils";
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import type { VetraProcessorConfigType } from "@powerhousedao/config";
+import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import { blue, green, red } from "colorette";
-import { setLogLevel } from "document-drive/utils/logger";
+import { setLogLevel } from "document-drive";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { fork } from "node:child_process";
 import path, { dirname } from "node:path";
@@ -212,6 +210,7 @@ export async function startVetra({
     // Use vetraUrl from config if no explicit remoteDrive is provided
     const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
+    const resolvedVetraId = baseConfig.vetra?.driveId ?? VETRA_DRIVE_ID;
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");

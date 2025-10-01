@@ -1,30 +1,25 @@
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   baseCreateDocument,
   createReducer,
+  generateUUIDBrowser,
+  hashBrowser,
   replayDocument,
-} from "../../src/document/utils/base.js";
-import {
-  generateUUID as generateUUIDBrowser,
-  hash as hashBrowser,
-} from "../../src/document/utils/browser.js";
-import { getLocalFile } from "../../src/document/utils/file.js";
-import {
-  generateUUID as generateUUIDNode,
-  hash as hashNode,
-} from "../../src/document/utils/node.js";
-import { validateOperations } from "../../src/document/utils/validation.js";
-import type { CountPHState } from "../helpers.js";
+  validateOperations,
+} from "document-model/core";
+import { generateUUIDNode, getLocalFile, hashNode } from "document-model/node";
+
+import type { CountPHState } from "document-model/test";
 import {
   countReducer,
-  createTestState,
   createCountDocumentState,
   fakeAction,
   increment,
   mutableCountReducer,
   setLocalName,
-} from "../helpers.js";
+  testCreateBaseState,
+} from "document-model/test";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("Base utils", () => {
   const tempDir = "./test/document/temp/utils/";
@@ -180,7 +175,7 @@ describe("Base utils", () => {
   it("should replay document and keep lastModified timestamp", async () => {
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createTestState({ count: 0 }, { name: "" }),
+      testCreateBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = countReducer(document, setLocalName("test"));
 
@@ -206,7 +201,7 @@ describe("Base utils", () => {
     const reducer = createReducer<CountPHState>(mutableCountReducer);
     const document = baseCreateDocument<CountPHState>(
       createCountDocumentState,
-      createTestState({ count: 0 }, { name: "" }),
+      testCreateBaseState({ count: 0 }, { name: "" }),
     );
     const newDocument = reducer(document, increment());
     expect(newDocument.state.global.count).toBe(1);

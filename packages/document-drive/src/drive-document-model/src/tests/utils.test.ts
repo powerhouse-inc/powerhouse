@@ -1,13 +1,13 @@
+import type { CopyNodeInput, DocumentDriveGlobalState } from "document-drive";
 import { beforeEach, describe, expect, it } from "vitest";
-import { CopyNodeInput, DocumentDriveState } from "../../gen/types.js";
 
 import {
   generateNodesCopy,
   getNextCopyNumber,
   handleTargetNameCollisions,
-} from "../utils.js";
+} from "document-drive";
 
-const baseNodes: DocumentDriveState["nodes"] = [
+const baseNodes: DocumentDriveGlobalState["nodes"] = [
   {
     id: "1",
     name: "Folder 1",
@@ -43,7 +43,7 @@ const baseNodes: DocumentDriveState["nodes"] = [
 const generateId = (id: string) => `${id}-copy`;
 
 describe("DocumentDrive Utils", () => {
-  let nodes: DocumentDriveState["nodes"];
+  let nodes: DocumentDriveGlobalState["nodes"];
 
   beforeEach(() => {
     nodes = [...baseNodes];

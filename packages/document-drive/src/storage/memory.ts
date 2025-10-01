@@ -1,27 +1,26 @@
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import {
-  DocumentAlreadyExistsError,
-  DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
-  DocumentNotFoundError,
-  DocumentSlugValidationError,
-} from "#server/error";
-import type { SynchronizationUnitQuery } from "#server/types";
-import { AbortError } from "#utils/errors";
-import { mergeOperations, operationsToRevision } from "#utils/misc";
-import type { Operation, PHDocument } from "document-model";
 import type {
+  DocumentDriveDocument,
   IDocumentAdminStorage,
   IDocumentStorage,
   IDriveOperationStorage,
   IStorageUnit,
   IStorageUnitFilter,
-} from "./types.js";
+  SynchronizationUnitQuery,
+} from "document-drive";
 import {
+  AbortError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
   isValidDocumentId,
   isValidSlug,
+  mergeOperations,
+  operationsToRevision,
   resolveStorageUnitsFilter,
-} from "./utils.js";
+} from "document-drive";
+import type { Operation, PHDocument } from "document-model";
 
 type DriveManifest = {
   documentIds: Set<string>;
@@ -438,7 +437,7 @@ export class MemoryStorage
     for (const documentId of documents) {
       const document = this.documents[documentId];
       // might be a child that has not been synced yet
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+
       if (!document) continue;
 
       // apply document type filter

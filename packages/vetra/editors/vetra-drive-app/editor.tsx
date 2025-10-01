@@ -2,17 +2,17 @@ import { WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
+  AnalyticsProvider,
   setSelectedNode,
   showCreateDocumentModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useSelectedDriveDocument,
 } from "@powerhousedao/reactor-browser";
-import { AnalyticsProvider } from "@powerhousedao/reactor-browser/analytics/context";
-import type { FileNode } from "document-drive";
+import type { DocumentDriveDocument, FileNode } from "document-drive";
 import { useCallback } from "react";
-import { DriveExplorer } from "./DriveExplorer.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
+import { DriveExplorer } from "./DriveExplorer.js";
 import { withDropZone } from "./utils/withDropZone.js";
 
 export type IProps = DriveEditorProps;
@@ -50,11 +50,11 @@ export function BaseEditor(props: IProps) {
   const onCreateDocument = useCallback(
     (documentType: string) => {
       const documentModel = documentModels?.find(
-        (model) => model.documentModel.id === documentType,
+        (model) => model.documentModel.global.id === documentType,
       );
 
       if (documentModel) {
-        showCreateDocumentModal(documentModel.documentModel.id);
+        showCreateDocumentModal(documentModel.documentModel.global.id);
       }
     },
     [showCreateDocumentModal, documentModels?.length],

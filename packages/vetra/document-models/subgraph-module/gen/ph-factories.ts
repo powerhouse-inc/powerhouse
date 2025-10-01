@@ -1,27 +1,17 @@
 /**
  * Factory methods for creating SubgraphModuleDocument instances
  */
-
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   SubgraphModuleDocument,
   SubgraphModuleLocalState,
-  SubgraphModuleState,
+  SubgraphModuleGlobalState,
+  SubgraphModulePHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type SubgraphModulePHState = PHBaseState & {
-  global: SubgraphModuleState;
-  local: SubgraphModuleLocalState;
-};
-
-export function defaultGlobalState(): SubgraphModuleState {
+export function defaultGlobalState(): SubgraphModuleGlobalState {
   return {
     name: "",
     status: "DRAFT",
@@ -41,12 +31,12 @@ export function defaultPHState(): SubgraphModulePHState {
 }
 
 export function createGlobalState(
-  state?: Partial<SubgraphModuleState>,
-): SubgraphModuleState {
+  state?: Partial<SubgraphModuleGlobalState>,
+): SubgraphModuleGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as SubgraphModuleState;
+  } as SubgraphModuleGlobalState;
 }
 
 export function createLocalState(
@@ -60,7 +50,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<SubgraphModuleState>,
+  globalState?: Partial<SubgraphModuleGlobalState>,
   localState?: Partial<SubgraphModuleLocalState>,
 ): SubgraphModulePHState {
   return {
@@ -79,7 +69,7 @@ export function createSubgraphModuleDocument(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<SubgraphModuleState>;
+    global?: Partial<SubgraphModuleGlobalState>;
     local?: Partial<SubgraphModuleLocalState>;
   }>,
 ): SubgraphModuleDocument {

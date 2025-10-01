@@ -1,5 +1,4 @@
-import { parseArgs, promptDirectories } from "#utils/cli";
-import { getPackageManager } from "#utils/package-manager";
+import { parseArgs, promptDirectories } from "@powerhousedao/codegen";
 import type arg from "arg";
 import { execSync } from "child_process";
 import enquirer from "enquirer";
@@ -8,6 +7,27 @@ import path from "path";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
+
+const packageManagers = ["npm", "yarn", "pnpm", "bun"] as const;
+const defaultPackageManager = "npm";
+
+type PackageManager = (typeof packageManagers)[number];
+
+function getPackageManager(userAgent?: string): PackageManager {
+  if (!userAgent) {
+    return defaultPackageManager;
+  }
+
+  const pkgSpec = userAgent.split(" ")[0];
+  const pkgSpecArr = pkgSpec.split("/");
+  const name = pkgSpecArr[0];
+
+  if (packageManagers.includes(name as PackageManager)) {
+    return name as PackageManager;
+  } else {
+    return defaultPackageManager;
+  }
+}
 
 const envPackageManager = getPackageManager(process.env.npm_config_user_agent);
 

@@ -1,8 +1,12 @@
-import type { Action, BaseAction, PHDocument } from "document-model";
+import {
+  useDispatch,
+  useDocumentModelModuleById,
+  useFileNodes,
+  useNodeKind,
+  useSelectedNodeId,
+} from "@powerhousedao/reactor-browser";
+import type { Action, DocumentAction, PHDocument } from "document-model";
 import { useSyncExternalStore } from "react";
-import { useDispatch } from "./dispatch.js";
-import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
-import { useDocumentModelModuleById } from "./vetra-packages.js";
 
 function getDocumentsSnapshot() {
   const documents = window.phDocuments;
@@ -17,13 +21,13 @@ function subscribeToDocuments(onStoreChange: () => void) {
 export function useAllDocuments(): PHDocument[] | undefined {
   const documents = useSyncExternalStore(
     subscribeToDocuments,
-    getDocumentsSnapshot,
+    () => window.phDocuments,
   );
   return documents;
 }
 
 /** Returns the documents for the selected drive. */
-export function useSelectedDriveDocuments() {
+export function useSelectedDriveDocuments(): PHDocument[] | undefined {
   const documents = useAllDocuments();
   const fileNodes = useFileNodes();
   const fileNodeIds = fileNodes?.map((node) => node.id);
@@ -86,7 +90,12 @@ export class DocumentTypeMismatchError extends Error {
 }
 
 export type DocumentDispatch<TAction extends Action> = (
-  actionOrActions: TAction | TAction[] | BaseAction | BaseAction[] | undefined,
+  actionOrActions:
+    | TAction
+    | TAction[]
+    | DocumentAction
+    | DocumentAction[]
+    | undefined,
 ) => void;
 
 /** Returns a document of a specific type, throws an error if the found document has a different type */

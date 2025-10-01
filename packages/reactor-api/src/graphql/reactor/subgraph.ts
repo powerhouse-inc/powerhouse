@@ -1,14 +1,14 @@
-import { Subgraph } from "#graphql/base/index.js";
-import { type SubgraphArgs } from "#graphql/types.js";
 import { childLogger } from "document-drive";
 import fs from "fs";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import path from "path";
-import { type Resolvers } from "./gen/graphql.js";
+import { BaseSubgraph } from "../base-subgraph.js";
+import type { SubgraphArgs } from "../types.js";
+import type { Resolvers } from "./gen/graphql.js";
 import * as resolvers from "./resolvers.js";
 
-export class ReactorSubgraph extends Subgraph {
+export class ReactorSubgraph extends BaseSubgraph {
   private logger = childLogger([
     "ReactorSubgraph",
     Math.floor(Math.random() * 999).toString(),

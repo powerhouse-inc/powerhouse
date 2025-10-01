@@ -7,10 +7,10 @@ export const compile = (tsconfig: string) =>
       stderr: [],
     };
     const child = exec(`npx tsc --project ${tsconfig}`, { cwd: process.cwd() });
-    child.stdout?.on("data", (data) => {
+    child.stdout?.on("data", (data: string) => {
       output.stdout.push(data);
     });
-    child.stderr?.on("data", (data) => {
+    child.stderr?.on("data", (data: string) => {
       output.stderr.push(data);
     });
     child.on("close", (code) => {

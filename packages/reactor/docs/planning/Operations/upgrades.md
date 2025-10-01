@@ -53,20 +53,19 @@ For documents that already exist, we provide a specific upgrade flow. This requi
 
 #### Upgrade Reducer
 
-Upgrade reducers are a special type of reducer that are used to upgrade a document from one version to another.
+Upgrade reducers are a special type of reducer that are used to upgrade a document from one version to another. They are unique in that they require two versions of the document model to be passed in.
 
 ```tsx
-export type UpgradeReducer<TDocument extends PHDocument> = <
-  TAction extends UpgradeActionFromDocument<TDocument>,
->(
-  document: VersionedDocument<TDocument>,
-  action: TAction,
+import { type MyDoc as DocV1 } from "my-doc/v1";
+import { type MyDoc as DocV2 } from "my-doc/v2";
+
+export type UpgradeReducer = (
+  document: DocV1,
+  action: Action,
   dispatch?: SignalDispatch,
   options?: ReducerOptions,
-) => TDocument;
+) => DocV2;
 ```
-
-These accept a `VersionedDocument` instead of a `PHDocument`, which contain side-by-side versions of the same document.
 
 ### Document Model Package
 

@@ -1,7 +1,6 @@
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
+import type { DocumentDriveDocument } from "document-drive";
 import type { PHDocument } from "document-model";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IDocumentCache {}
 
 export interface ICache {
@@ -33,4 +32,28 @@ export interface ICache {
 
   deleteDrive(driveId: string): Promise<boolean>;
   deleteDriveBySlug(slug: string): Promise<boolean>;
+}
+
+/**
+ * Options for configuring an LRU (Least Recently Used) cache storage.
+ *
+ * @property maxSize - The maximum size of the cache in bytes. This defines the upper limit
+ * on the total size of objects that can be stored in the cache.
+ * @property sizeCalculation - An optional function to calculate the size of an object in bytes.
+ * If not provided, a default method will be used to determine the size.
+ */
+export interface LRUCacheStorageOptions {
+  maxSize: number;
+  sizeCalculation?: (object: unknown) => number;
+}
+
+export interface ICacheStorage<Value = unknown> {
+  get(key: string): Value | undefined;
+  set(key: string, value: Value): this;
+  delete(key: string): boolean;
+  clear(): void;
+}
+
+export interface ICacheStorageManager {
+  createStorage<Value extends {}>(): ICacheStorage<Value>;
 }

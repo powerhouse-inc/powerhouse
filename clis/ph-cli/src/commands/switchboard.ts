@@ -33,7 +33,7 @@ async function startLocalSwitchboard(options: SwitchboardOptions) {
   });
 }
 
-export const switchboard: CommandActionType<
+export const runStartLocalSwitchboard: CommandActionType<
   [ReactorOptions],
   Promise<SwitchboardReactor>
 > = async (options) => {
@@ -65,7 +65,7 @@ export function switchboardCommand(program: Command) {
     )
     .option("--mcp", "enable Mcp route at /mcp. Default: true")
     .action(async (...args: [ReactorOptions]) => {
-      const { defaultDriveUrl } = await switchboard(...args);
+      const { defaultDriveUrl } = await runStartLocalSwitchboard(...args);
       console.log("   ➜  Switchboard:", defaultDriveUrl);
     });
 

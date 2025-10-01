@@ -2,7 +2,7 @@ import {
   useSelectedDocument,
   type DriveEditorProps,
 } from "@powerhousedao/reactor-browser";
-import { useArgs, useChannel, useEffect } from "@storybook/preview-api";
+import { useArgs, useChannel } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
   Action,
@@ -11,8 +11,8 @@ import type {
   PHBaseState,
   PHDocument,
 } from "document-model";
-import { baseCreateDocument } from "document-model";
-import type React from "react";
+import { baseCreateDocument } from "document-model/core";
+import React, { useEffect } from "react";
 import { useInterval } from "usehooks-ts";
 
 export type EditorStoryArgs = Partial<{
@@ -56,9 +56,9 @@ export type DocumentStory = StoryObj<EditorStoryComponent>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
-export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
+export function createDocumentStory(
   Editor: EditorStoryComponent,
-  initialState: TState,
+  initialState: any,
   additionalStoryArgs?: EditorStoryArgs,
   decorators?: Decorator[],
 ): {
@@ -152,15 +152,15 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
   } satisfies Meta<typeof Editor>;
 
   // Default createState function for PHDocument
-  const defaultPHDocumentCreateState: CreateState = (state) => {
-    return state as TState;
+  const defaultPHDocumentCreateState = (state: unknown) => {
+    return state;
   };
 
   const CreateDocumentStory: DocumentStory = {
     name: "New document",
     args: {
       document: baseCreateDocument(
-        defaultPHDocumentCreateState,
+        defaultPHDocumentCreateState as CreateState<PHBaseState>,
         initialState as Partial<PHBaseState>,
       ),
       user: {
@@ -177,7 +177,7 @@ export function createDocumentStory<TState extends PHBaseState = PHBaseState>(
     },
   };
 
-  return { meta, CreateDocumentStory } as const;
+  return { meta, CreateDocumentStory };
 }
 
 // export function createDriveDocumentStory<TDocument extends PHDocument>(

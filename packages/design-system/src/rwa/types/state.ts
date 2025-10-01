@@ -1,4 +1,7 @@
-import type { allGroupTransactionTypes, assetGroupTransactions } from "#rwa";
+import type {
+  allGroupTransactionTypes,
+  assetGroupTransactions,
+} from "@powerhousedao/design-system";
 import type { Maybe, Scalars } from "document-model";
 
 export type RealWorldAssetsState = {

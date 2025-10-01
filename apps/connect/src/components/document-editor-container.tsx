@@ -1,5 +1,10 @@
-import { openUrl } from "#utils";
 import {
+  DocumentEditor,
+  openUrl,
+  validateDocument,
+} from "@powerhousedao/connect";
+import {
+  buildDocumentSubgraphUrl,
   exportFile,
   setSelectedNode,
   showPHModal,
@@ -11,11 +16,8 @@ import {
   useSelectedDrive,
   useUser,
 } from "@powerhousedao/reactor-browser";
-import { buildDocumentSubgraphUrl } from "@powerhousedao/reactor-browser/utils/switchboard";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
-import { validateDocument } from "../utils/validate-document.js";
-import { DocumentEditor } from "./editors.js";
 
 export function DocumentEditorContainer() {
   const [selectedDrive] = useSelectedDrive();

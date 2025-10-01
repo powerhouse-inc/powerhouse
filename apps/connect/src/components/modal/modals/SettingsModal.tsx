@@ -1,15 +1,16 @@
 import {
+  About,
+  DangerZone,
+  DefaultEditor,
+  PackageManager,
+} from "@powerhousedao/connect";
+import {
   Icon,
   SettingsModal as SettingsModalV2,
 } from "@powerhousedao/design-system";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
-import type React from "react";
-import { useMemo } from "react";
-import { About } from "./settings/about.js";
-import { DangerZone } from "./settings/danger-zone.js";
-import { DefaultEditor } from "./settings/default-editor.js";
-import { PackageManager } from "./settings/package-manager.js";
+import React, { useMemo } from "react";
 
 export const SettingsModal: React.FC = () => {
   const phModal = usePHModal();
@@ -36,7 +37,7 @@ export const SettingsModal: React.FC = () => {
         id: "danger-zone",
         icon: <Icon name="Danger" size={12} className="text-red-900" />,
         label: <span className="text-red-900">Danger Zone</span>,
-        content: () => <DangerZone onRefresh={onRefresh} />,
+        content: () => <DangerZone />,
       },
       {
         id: "about",

@@ -1,13 +1,13 @@
-import type { BaseDocumentDriveServer } from "document-drive";
+import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
   driveDocumentModelModule,
 } from "document-drive";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive/storage/types";
 import type {
   Action,
   DocumentModelModule,

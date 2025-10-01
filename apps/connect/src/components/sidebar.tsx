@@ -1,4 +1,5 @@
-import connectConfig from "#connect-config";
+import { DriveIcon } from "@powerhousedao/connect";
+import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
   Icon,
@@ -16,9 +17,8 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
 import { ErrorBoundary } from "react-error-boundary";
-import { DriveIcon } from "./drive-icon.js";
 
-export default function Sidebar() {
+export function Sidebar() {
   const user = useUser();
   const drives = useDrives();
   const [selectedDrive] = useSelectedDrive();

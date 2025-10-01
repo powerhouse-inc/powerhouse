@@ -1,8 +1,6 @@
-import { DocumentModelDocument, DocumentModelModule } from "document-model";
+import { MemoryStorage, ReactorBuilder, reducer } from "document-drive";
+import { DocumentModelGlobalState, DocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { reducer } from "../../src/drive-document-model/gen/reducer.js";
-import { ReactorBuilder } from "../../src/server/base.js";
-import { MemoryStorage } from "../../src/storage/memory.js";
 
 const SWITCHBOARD_URL = process.env.SWITCHBOARD_URL ?? "http://localhost:3000/";
 
@@ -96,7 +94,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
       let document = (await server.getDocument(
         "1",
         "1.1",
-      )) as DocumentModelDocument;
+      )) as DocumentModelGlobalState;
       document = DocumentModelLib.reducer(
         document,
         DocumentModelActions.setAuthorName({ authorName: "test" }),
@@ -166,7 +164,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
         const document = (await server.getDocument(
           "1",
           "1.1",
-        )) as DocumentModelDocument;
+        )) as DocumentModelGlobalState;
         expect(document.operations.global.length).toBeTruthy();
         return document;
       },

@@ -2,51 +2,33 @@ import type {
   GetStrandsOptions,
   IListenerManager,
   IOperationResult,
-  Listener,
   ListenerRevision,
   ListenerRevisionWithError,
-  OperationUpdate,
   RemoteDriveOptions,
+  ServerListener,
   StrandUpdate,
-} from "#server/types";
+} from "document-drive";
 
-import type { ListenerFilter, Trigger } from "#drive-document-model/gen/types";
-import { PULL_DRIVE_INTERVAL } from "#server/constants";
-import { OperationError } from "#server/error";
-import type { GraphQLResult } from "#utils/graphql";
-import { requestGraphql } from "#utils/graphql";
-import type { ILogger } from "#utils/logger";
-import { childLogger } from "#utils/logger";
-import { operationsToRevision } from "#utils/misc";
-import { generateId } from "document-model";
-import { gql } from "graphql-request";
 import type {
-  ITransmitter,
+  CancelPullLoop,
+  GraphQLResult,
+  ILogger,
+  IPullResponderTransmitter,
+  ListenerFilter,
   PullResponderTrigger,
+  PullStrandsGraphQL,
   StrandUpdateSource,
-} from "./types.js";
-
-export type OperationUpdateGraphQL = Omit<OperationUpdate, "input"> & {
-  input: string;
-};
-
-export type PullStrandsGraphQL = {
-  system: {
-    sync: {
-      strands: StrandUpdateGraphQL[];
-    };
-  };
-};
-
-export type CancelPullLoop = () => void;
-
-export type StrandUpdateGraphQL = Omit<StrandUpdate, "operations"> & {
-  operations: OperationUpdateGraphQL[];
-};
-
-export interface IPullResponderTransmitter extends ITransmitter {
-  getStrands(options?: GetStrandsOptions): Promise<StrandUpdate[]>;
-}
+  Trigger,
+} from "document-drive";
+import {
+  childLogger,
+  OperationError,
+  operationsToRevision,
+  PULL_DRIVE_INTERVAL,
+  requestGraphql,
+} from "document-drive";
+import { generateId } from "document-model/core";
+import { gql } from "graphql-request";
 
 const MAX_REVISIONS_PER_ACK = 100;
 const MAX_PULLS = 50;
@@ -76,10 +58,10 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     Math.floor(Math.random() * 999).toString(),
   ]);
 
-  private listener: Listener;
+  private listener: ServerListener;
   private manager: IListenerManager;
 
-  constructor(listener: Listener, manager: IListenerManager) {
+  constructor(listener: ServerListener, manager: IListenerManager) {
     this.listener = listener;
     this.manager = manager;
     this.logger.verbose(`constructor(listener: ${listener.listenerId})`);
@@ -199,13 +181,13 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
     filter: ListenerFilter,
     listenerId?: string,
     manager?: IListenerManager,
-  ): Promise<Listener["listenerId"]> {
+  ): Promise<ServerListener["listenerId"]> {
     staticLogger().verbose(`registerPullResponder(url: ${url})`, filter);
 
     const headers = await this.getAuthHeaders(url, manager);
     const result = await requestGraphql<{
       registerPullResponderListener: {
-        listenerId: Listener["listenerId"];
+        listenerId: ServerListener["listenerId"];
       };
     }>(
       url,
@@ -233,7 +215,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
         const freshHeaders = await this.getAuthHeaders(url, manager);
         const retryResult = await requestGraphql<{
           registerPullResponderListener: {
-            listenerId: Listener["listenerId"];
+            listenerId: ServerListener["listenerId"];
           };
         }>(
           url,

@@ -1,4 +1,4 @@
-import { clearReactorStorage } from "#store";
+import { clearReactorStorage } from "@powerhousedao/connect";
 import { ConnectConfirmationModal } from "@powerhousedao/design-system";
 import {
   closePHModal,

@@ -1,5 +1,3 @@
-import { updateTimeout } from "#document-model-editor/constants/documents";
-import { safeParseSdl } from "#document-model-editor/context/schema-context";
 import {
   autocompletion,
   closeBrackets,
@@ -41,6 +39,8 @@ import type { GraphQLSchema } from "graphql";
 import { GraphQLError, locatedError } from "graphql";
 import { validateSDL } from "graphql/validation/validate.js";
 import { useEffect, useRef } from "react";
+import { updateTimeout } from "../../constants/documents.js";
+import { safeParseSdl } from "../../context/schema-context.js";
 
 /* Converts a GraphQLError to a Diagnostic
    GraphQLError uses a zero-indexed line and column, but the editor uses a one-indexed line and column

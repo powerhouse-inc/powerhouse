@@ -1,29 +1,28 @@
-import type { DocumentDriveDocument } from "#drive-document-model/gen/types";
-import {
-  DocumentAlreadyExistsError,
-  DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
-  DocumentNotFoundError,
-  DocumentSlugValidationError,
-} from "#server/error";
-import type { SynchronizationUnitQuery } from "#server/types";
-import { AbortError } from "#utils/errors";
-import { migrateDocumentOperationSignatures } from "#utils/migrations";
-import { mergeOperations, operationsToRevision } from "#utils/misc";
-import type { Operation, PHDocument } from "document-model";
-import LocalForage from "localforage";
 import type {
+  DocumentDriveDocument,
   IDocumentAdminStorage,
   IDocumentStorage,
   IDriveOperationStorage,
   IStorageUnit,
   IStorageUnitFilter,
-} from "./types.js";
+  SynchronizationUnitQuery,
+} from "document-drive";
 import {
+  AbortError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentIdValidationError,
+  DocumentNotFoundError,
+  DocumentSlugValidationError,
   isValidDocumentId,
   isValidSlug,
+  mergeOperations,
+  migrateDocumentOperationSignatures,
+  operationsToRevision,
   resolveStorageUnitsFilter,
-} from "./utils.js";
+} from "document-drive";
+import type { Operation, PHDocument } from "document-model";
+import LocalForage from "localforage";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {

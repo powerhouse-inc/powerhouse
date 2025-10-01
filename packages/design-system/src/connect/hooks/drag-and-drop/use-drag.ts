@@ -1,7 +1,6 @@
-import { UI_NODE } from "#connect";
+import type { Node } from "document-drive";
 import type { DragEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
-import type { Node } from "document-drive";
 
 type Props = {
   node: Node;
@@ -12,7 +11,7 @@ export function useDrag(props: Props) {
 
   const onDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      event.dataTransfer.setData(UI_NODE, JSON.stringify(node));
+      event.dataTransfer.setData("UI_NODE", JSON.stringify(node));
     },
     [node],
   );

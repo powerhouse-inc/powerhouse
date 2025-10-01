@@ -1,14 +1,77 @@
-## 5.0.0-staging.21 (2025-09-30)
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+- **ph-cmd:** fix wrong mocking that breaks tests ([7a5a19fb9](https://github.com/powerhouse-inc/powerhouse/commit/7a5a19fb9))
+- **reactor:** fix lint error ([53777e154](https://github.com/powerhouse-inc/powerhouse/commit/53777e154))
 
 ### 🩹 Fixes
 
-- **vetra:** get vetra package docId from selectedDrive ([4c031f5cb](https://github.com/powerhouse-inc/powerhouse/commit/4c031f5cb))
+- codegen broke, fixing for reactor gql types ([86fe61c84](https://github.com/powerhouse-inc/powerhouse/commit/86fe61c84))
+- reverting bad merge changes and getting reactor to build again ([eb687de4c](https://github.com/powerhouse-inc/powerhouse/commit/eb687de4c))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+- part 2 of build fixes for module changes ([3000a13c3](https://github.com/powerhouse-inc/powerhouse/commit/3000a13c3))
+- more type fixes ([16c562ae1](https://github.com/powerhouse-inc/powerhouse/commit/16c562ae1))
+- hand-edit document-model generated stuff so as not to have a circular reference ([e9ec89590](https://github.com/powerhouse-inc/powerhouse/commit/e9ec89590))
+- generating prisma client ([0a101b476](https://github.com/powerhouse-inc/powerhouse/commit/0a101b476))
+- fix remaining tests ([60bf7b767](https://github.com/powerhouse-inc/powerhouse/commit/60bf7b767))
+- updating codegen ([5585bd012](https://github.com/powerhouse-inc/powerhouse/commit/5585bd012))
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- **document-drive:** changed default log level from 'debug' to 'info' ([dffeb1d81](https://github.com/powerhouse-inc/powerhouse/commit/dffeb1d81))
 
 ### ❤️ Thank You
 
-- Guillermo Puente @gpuente
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
 
-## 5.0.0-staging.20 (2025-09-30)
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- fixing the utc times ([15b06d2e2](https://github.com/powerhouse-inc/powerhouse/commit/15b06d2e2))
+- build fixes ([fe2cd6699](https://github.com/powerhouse-inc/powerhouse/commit/fe2cd6699))
+- fixing issue where icon was breaking ([cd7d0e6ec](https://github.com/powerhouse-inc/powerhouse/commit/cd7d0e6ec))
+- fixing issue with local state not being persisted ([fc6735e6c](https://github.com/powerhouse-inc/powerhouse/commit/fc6735e6c))
+- document type was wrong ([ae3ffb9ee](https://github.com/powerhouse-inc/powerhouse/commit/ae3ffb9ee))
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+- codegen package needs to copy before testing ([9115c7968](https://github.com/powerhouse-inc/powerhouse/commit/9115c7968))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.57 (2025-09-17)
+
+### 🚀 Features
+
+- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
+- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
+- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
+- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
+
+### 🩹 Fixes
+
+- **config:** set back config field to vetraUrl to avoid breaking change ([487b996a6](https://github.com/powerhouse-inc/powerhouse/commit/487b996a6))
+- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
+- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
+- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
+- **reactor-api:** moved delete drive to mutations resolvers ([888f37a3e](https://github.com/powerhouse-inc/powerhouse/commit/888f37a3e))
+- **vetra:** activate codegen processor on either driveId or drive slug ([024304ed0](https://github.com/powerhouse-inc/powerhouse/commit/024304ed0))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.56 (2025-09-17)
 
 ### 🚀 Features
 
@@ -190,7 +253,7 @@
 - Frank
 - Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.10 (2025-09-11)
+## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
 

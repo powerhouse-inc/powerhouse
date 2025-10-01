@@ -1,27 +1,25 @@
-import type { DocumentModelModule } from "document-model";
-import { actions as BaseActions } from "document-model";
-import { documentModel } from "./gen/document-model.js";
-import type { DocumentDrivePHState } from "./gen/index.js";
-import { actions as DocumentDriveActions } from "./gen/index.js";
-import { reducer } from "./gen/reducer.js";
-import type { DocumentDriveUtils } from "./gen/utils.js";
-import genUtils from "./gen/utils.js";
-import * as customUtils from "./src/utils.js";
-
-const utils = { ...genUtils, ...customUtils } satisfies DocumentDriveUtils;
-
-const actions = { ...BaseActions, ...DocumentDriveActions };
-
-export const module: DocumentModelModule<DocumentDrivePHState> = {
-  reducer,
+import { createState } from "document-model";
+import { defaultBaseState } from "document-model/core";
+import { driveDocumentFileExtension } from "./constants.js";
+import * as actions from "./gen/creators.js";
+import { driveDocumentModel } from "./gen/document-model.js";
+import { driveDocumentReducer } from "./gen/reducer.js";
+import {
+  driveCreateDocument,
+  driveCreateState,
+  driveLoadFromInput,
+  driveSaveToFileHandle,
+} from "./gen/utils.js";
+import type { DriveDocumentModelModule } from "./types.js";
+export const driveDocumentModelModule: DriveDocumentModelModule = {
   actions,
-  utils,
-  documentModel,
+  reducer: driveDocumentReducer,
+  documentModel: createState(defaultBaseState(), driveDocumentModel),
+  utils: {
+    fileExtension: driveDocumentFileExtension,
+    createState: driveCreateState,
+    createDocument: driveCreateDocument,
+    loadFromInput: driveLoadFromInput,
+    saveToFileHandle: driveSaveToFileHandle,
+  },
 };
-
-export const driveDocumentModelModule = module;
-
-export { actions, documentModel, reducer };
-
-export * from "./gen/types.js";
-export * from "./src/utils.js";

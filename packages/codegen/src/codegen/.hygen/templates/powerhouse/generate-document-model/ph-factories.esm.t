@@ -5,27 +5,24 @@ force: true
 /**
  * Factory methods for creating <%= h.changeCase.pascal(documentType) %>Document instances
  */
-
+import type {
+  PHAuthState,
+  PHDocumentState,
+  PHBaseState,
+} from "document-model";
 import {
   createBaseState,
   defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+} from "document-model/core";
 import type {
   <%= h.changeCase.pascal(documentType) %>Document,
   <%= h.changeCase.pascal(documentType) %>LocalState,
-  <%= h.changeCase.pascal(documentType) %>State,
+  <%= h.changeCase.pascal(documentType) %>GlobalState,
+  <%= h.changeCase.pascal(documentType) %>PHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type <%= h.changeCase.pascal(documentType) %>PHState = PHBaseState & {
-  global: <%= h.changeCase.pascal(documentType) %>State;
-  local: <%= h.changeCase.pascal(documentType) %>LocalState;
-};
-
-export function defaultGlobalState(): <%= h.changeCase.pascal(documentType) %>State {
+export function defaultGlobalState(): <%= h.changeCase.pascal(documentType) %>GlobalState {
   return <%- initialGlobalState %>;
 }
 
@@ -42,12 +39,12 @@ export function defaultPHState(): <%= h.changeCase.pascal(documentType) %>PHStat
 }
 
 export function createGlobalState(
-  state?: Partial<<%= h.changeCase.pascal(documentType) %>State>,
-): <%= h.changeCase.pascal(documentType) %>State {
+  state?: Partial<<%= h.changeCase.pascal(documentType) %>GlobalState>,
+): <%= h.changeCase.pascal(documentType) %>GlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as <%= h.changeCase.pascal(documentType) %>State;
+  } as <%= h.changeCase.pascal(documentType) %>GlobalState;
 }
 
 export function createLocalState(
@@ -61,7 +58,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<<%= h.changeCase.pascal(documentType) %>State>,
+  globalState?: Partial<<%= h.changeCase.pascal(documentType) %>GlobalState>,
   localState?: Partial<<%= h.changeCase.pascal(documentType) %>LocalState>,
 ): <%= h.changeCase.pascal(documentType) %>PHState {
   return {
@@ -80,7 +77,7 @@ export function create<%= h.changeCase.pascal(documentType) %>Document(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<<%= h.changeCase.pascal(documentType) %>State>;
+    global?: Partial<<%= h.changeCase.pascal(documentType) %>GlobalState>;
     local?: Partial<<%= h.changeCase.pascal(documentType) %>LocalState>;
   }>,
 ): <%= h.changeCase.pascal(documentType) %>Document {

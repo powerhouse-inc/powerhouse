@@ -1,8 +1,8 @@
-import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import { generateDriveEditor } from "@powerhousedao/codegen";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { generateDriveEditor } from "../index.js";
 import { compile } from "./fixtures/typecheck.js";
 import {
   EXPECTED_DRIVE_EXPLORER_EXPORT,
@@ -120,7 +120,7 @@ export const module: DriveEditorModule = {
     documentToolbarEnabled: true,
     showSwitchboardLink: true,
   },
-};`
+};`,
     );
 
     await generateDriveEditor(name, config);

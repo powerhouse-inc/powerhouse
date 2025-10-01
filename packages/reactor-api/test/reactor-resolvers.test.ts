@@ -1,5 +1,13 @@
-import { JobStatus, type IReactorClient } from "@powerhousedao/reactor";
-import type { PHDocument } from "document-model";
+import {
+  JobStatus,
+  type IReactorClient,
+  type PagedResults,
+} from "@powerhousedao/reactor";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+  type PHDocument,
+} from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
 
@@ -34,42 +42,9 @@ describe("ReactorSubgraph Query Resolvers", () => {
 
   describe("documentModels", () => {
     it("should transform document models to GraphQL format", async () => {
-      const mockDocumentModels = {
+      const mockDocumentModels: PagedResults<DocumentModelModule> = {
         results: [
-          {
-            id: "model-1",
-            name: "powerhouse/document-model",
-            author: { name: "Test Author", website: "https://test.com" },
-            description: "Test description",
-            extension: "phdm",
-            specifications: [
-              {
-                version: 1,
-                changeLog: ["Initial version"],
-                modules: [],
-                state: {
-                  global: {
-                    schema: "{}",
-                    initialValue: "{}",
-                    examples: [],
-                  },
-                  local: {
-                    schema: "{}",
-                    initialValue: "{}",
-                    examples: [],
-                  },
-                },
-              },
-            ],
-          },
-          {
-            id: "model-2",
-            name: "example/test-model",
-            author: { name: "Example Author", website: null },
-            description: "Example model",
-            extension: "test",
-            specifications: [],
-          },
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
         ],
         options: {
           cursor: "test-cursor",
@@ -92,21 +67,16 @@ describe("ReactorSubgraph Query Resolvers", () => {
         hasPreviousPage: false,
         items: [
           {
-            id: "model-1",
-            name: "powerhouse/document-model",
-            namespace: "powerhouse",
-            specification: mockDocumentModels.results[0].specifications[0],
-            version: null,
-          },
-          {
-            id: "model-2",
-            name: "example/test-model",
-            namespace: "example",
-            specification: null,
+            id: "powerhouse/document-model",
+            name: "DocumentModel",
+            namespace: "DocumentModel",
+            specification:
+              mockDocumentModels.results[0].documentModel.global
+                .specifications[0],
             version: null,
           },
         ],
-        totalCount: 2,
+        totalCount: 1,
       });
     });
 
@@ -114,19 +84,24 @@ describe("ReactorSubgraph Query Resolvers", () => {
       const mockDocumentModels = {
         results: [
           {
-            id: "model-1",
-            name: "custom-namespace/my-model",
-            author: { name: "Author", website: null },
-            description: "Description",
-            extension: "ext",
-            specifications: [],
+            documentModel: {
+              global: {
+                id: "model-1",
+                name: "custom-namespace/my-model",
+                author: { name: "Author", website: null },
+                description: "Description",
+                extension: "ext",
+                specifications: [],
+              },
+              local: {},
+            },
           },
         ],
         options: { cursor: "", limit: 10 },
       };
 
       vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue(
-        mockDocumentModels,
+        mockDocumentModels as unknown as PagedResults<DocumentModelModule>,
       );
 
       const result = await resolvers.documentModels(mockReactorClient, {});

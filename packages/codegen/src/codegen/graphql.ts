@@ -1,12 +1,12 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 import { generate } from "@graphql-codegen/cli";
 import type { TypeScriptPluginConfig } from "@graphql-codegen/typescript";
+import { formatWithPrettierBeforeWrite } from "@powerhousedao/codegen";
 import {
   generatorTypeDefs,
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
 import { readdirSync } from "node:fs";
-import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })

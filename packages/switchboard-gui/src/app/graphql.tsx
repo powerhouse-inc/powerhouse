@@ -1,5 +1,5 @@
-import GraphQLIframe from "../components/graphql/iframe";
-import { Suspense } from "react";
+import GraphQLIframe from "../components/graphql/iframe.js";
+import { Suspense } from "preact/compat";
 
 export default function GraphQL() {
   return (

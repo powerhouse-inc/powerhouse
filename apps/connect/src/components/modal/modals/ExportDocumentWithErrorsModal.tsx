@@ -1,4 +1,3 @@
-import { validateDocument } from "#utils";
 import { ConnectConfirmationModal } from "@powerhousedao/design-system";
 import {
   closePHModal,
@@ -7,6 +6,7 @@ import {
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
+import { validateDocument } from "@powerhousedao/connect";
 export function ExportDocumentWithErrorsModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "exportDocumentWithErrors";

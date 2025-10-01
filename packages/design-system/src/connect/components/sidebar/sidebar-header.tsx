@@ -1,5 +1,5 @@
-import type { SidebarHeaderProps } from "#powerhouse";
-import { Icon, SidebarHeader } from "#powerhouse";
+import type { SidebarHeaderProps } from "@powerhousedao/design-system";
+import { Icon, SidebarHeader } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 
 export interface ConnectSidebarHeaderProps extends SidebarHeaderProps {

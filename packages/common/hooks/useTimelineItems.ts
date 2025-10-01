@@ -1,13 +1,11 @@
-import type {
-  GroupedPeriodResults,
-  UseAnalyticsQueryResult,
-} from "@powerhousedao/reactor-browser/analytics";
+import type { GroupedPeriodResults } from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
-  DateTime,
-  useAnalyticsQuery,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/analytics-engine-core";
+import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser";
+import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
+import { DateTime } from "luxon";
 
 const getBarSize = (value: number) => {
   if (value <= 0) return 0;
@@ -78,7 +76,6 @@ function addItemsDividers(items: BarItem[]): TimelineItem[] {
 }
 
 function metricsToItems(metrics: GroupedPeriodResults): TimelineItem[] {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!metrics) return [];
 
   const items = metrics

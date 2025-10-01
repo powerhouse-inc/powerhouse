@@ -1,17 +1,33 @@
-import { actions as BaseActions } from "../document/actions/creators.js";
-import * as customUtils from "./custom/utils.js";
-import * as DocumentModelActions from "./gen/creators.js";
-import { documentModelState } from "./gen/document-model.js";
-import { reducer } from "./gen/reducer.js";
-import * as documentModelUtils from "./gen/utils.js";
+import { defaultBaseState } from "document-model/core";
+import { documentModelActions } from "./actions.js";
+import {
+  documentModelFileExtension,
+  documentModelGlobalState,
+} from "./constants.js";
+import {
+  documentModelLoadFromInput,
+  documentModelSaveToFileHandle,
+} from "./files.js";
+import { documentModelReducer } from "./reducers.js";
+import {
+  createState,
+  documentModelCreateDocument,
+  documentModelCreateState,
+} from "./state.js";
 import type { DocumentModelDocumentModelModule } from "./types.js";
 
-const actions = { ...BaseActions, ...DocumentModelActions };
-export { actions, reducer };
-
-export const documentModelDocumentModelModule: DocumentModelDocumentModelModule = {
-  reducer,
-  documentModel: documentModelState,
-  actions,
-  utils: { ...documentModelUtils, ...customUtils },
+const utils = {
+  fileExtension: documentModelFileExtension,
+  createState: documentModelCreateState,
+  createDocument: documentModelCreateDocument,
+  loadFromInput: documentModelLoadFromInput,
+  saveToFileHandle: documentModelSaveToFileHandle,
 };
+
+export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
+  {
+    reducer: documentModelReducer,
+    documentModel: createState(defaultBaseState(), documentModelGlobalState),
+    actions: documentModelActions,
+    utils,
+  };

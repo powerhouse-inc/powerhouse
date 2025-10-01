@@ -1,7 +1,3 @@
-import {
-  buildSubgraphSchemaModule,
-  createSchema,
-} from "#utils/create-schema.js";
 import type {
   GraphQLDataSourceProcessOptions,
   ServiceDefinition,
@@ -19,21 +15,24 @@ import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import bodyParser from "body-parser";
 import cors from "cors";
-import type { IDocumentDriveServer } from "document-drive";
-import { childLogger } from "document-drive";
-import type { IRelationalDb } from "document-drive/processors/types";
-import { debounce } from "document-drive/server/listener/util";
+import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import { childLogger, debounce } from "document-drive";
 import type express from "express";
 import type { IRouter } from "express";
 import { Router } from "express";
 import type { GraphQLSchema } from "graphql";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { AnalyticsSubgraph } from "./analytics/index.js";
-import { DriveSubgraph } from "./drive/index.js";
-import type { Subgraph, SubgraphClass } from "./index.js";
+
+import {
+  buildSubgraphSchemaModule,
+  createSchema,
+} from "../utils/create-schema.js";
+import { AnalyticsSubgraph } from "./analytics-subgraph.js";
+import { DriveSubgraph } from "./drive-subgraph.js";
 import { SystemSubgraph } from "./system/index.js";
-import type { Context } from "./types.js";
+import type { Context, SubgraphClass } from "./types.js";
+import type { BaseSubgraph } from "./base-subgraph.js";
 
 export const DefaultCoreSubgraphs = [
   SystemSubgraph,
@@ -54,7 +53,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
 
 export class GraphQLManager {
   private coreRouter: IRouter = Router();
-  private coreSubgraphsMap = new Map<string, Subgraph[]>();
+  private coreSubgraphsMap = new Map<string, BaseSubgraph[]>();
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
@@ -66,7 +65,7 @@ export class GraphQLManager {
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
-    private readonly subgraphs: Map<string, Subgraph[]> = new Map(),
+    private readonly subgraphs: Map<string, BaseSubgraph[]> = new Map(),
     private readonly coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice(),
   ) {}
 
@@ -76,7 +75,7 @@ export class GraphQLManager {
     // check if Document Drive model is available
     const models = this.reactor.getDocumentModelModules();
     const driveModel = models.find(
-      (it) => it.documentModel.name === "DocumentDrive",
+      (it) => it.documentModel.global.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");
@@ -219,7 +218,7 @@ export class GraphQLManager {
     this.contextFields = { ...this.contextFields, ...fields };
   }
 
-  setSupergraph(supergraph: string, subgraphs: Subgraph[]) {
+  setSupergraph(supergraph: string, subgraphs: BaseSubgraph[]) {
     this.subgraphs.set(supergraph, subgraphs);
     const globalSubgraphs = this.subgraphs.get("graphql");
     if (globalSubgraphs) {
@@ -252,12 +251,12 @@ export class GraphQLManager {
     });
   }
 
-  #getSubgraphPath(subgraph: Subgraph, supergraph: string) {
+  #getSubgraphPath(subgraph: BaseSubgraph, supergraph: string) {
     return path.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
   async #setupSubgraphs(
-    subgraphsMap: Map<string, Subgraph[]>,
+    subgraphsMap: Map<string, BaseSubgraph[]>,
     router: IRouter,
   ) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
@@ -293,7 +292,7 @@ export class GraphQLManager {
   }
 
   #getAllSubgraphs() {
-    const subgraphsMap = new Map<string, Subgraph>();
+    const subgraphsMap = new Map<string, BaseSubgraph>();
     for (const [supergraph, subgraphs] of [
       ...this.coreSubgraphsMap.entries(),
       ...this.subgraphs.entries(),
@@ -310,7 +309,7 @@ export class GraphQLManager {
     return subgraphsMap;
   }
 
-  #buildSubgraphSchemaModule(subgraph: Subgraph) {
+  #buildSubgraphSchemaModule(subgraph: BaseSubgraph) {
     return buildSubgraphSchemaModule(
       this.reactor,
       subgraph.resolvers,
@@ -393,8 +392,8 @@ export class GraphQLManager {
 
   #getLocalSubgraphConfig(
     subgraphName: string,
-    subgraphsMap: Map<string, Subgraph[]>,
-  ): Subgraph | undefined {
+    subgraphsMap: Map<string, BaseSubgraph[]>,
+  ): BaseSubgraph | undefined {
     for (const [_, subgraphs] of subgraphsMap) {
       const entry = subgraphs.find((it) => it.name === subgraphName);
       if (entry) return entry;

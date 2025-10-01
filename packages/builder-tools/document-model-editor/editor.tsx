@@ -1,4 +1,6 @@
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
+import type { DocumentModelDocument, EditorProps } from "document-model";
 import {
   addModule,
   addOperation,
@@ -6,7 +8,6 @@ import {
   deleteModule,
   deleteOperation,
   deleteOperationError,
-  generateId,
   setAuthorName,
   setAuthorWebsite,
   setInitialState,
@@ -21,6 +22,7 @@ import {
   setOperationSchema,
   setStateSchema,
 } from "document-model";
+import { generateId } from "document-model/core";
 import { useEffect, useRef } from "react";
 import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";

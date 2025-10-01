@@ -1,12 +1,15 @@
-import type { AddLocalDriveInput, AddRemoteDriveInput } from "#connect";
+import type {
+  AddLocalDriveInput,
+  AddRemoteDriveInput,
+  DivProps,
+} from "@powerhousedao/design-system";
 import {
   AddLocalDriveForm,
   AddRemoteDriveForm,
+  Modal,
   TabContent,
   Tabs,
-} from "#connect";
-import type { DivProps } from "#powerhouse";
-import { Modal } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import type { App } from "document-model";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

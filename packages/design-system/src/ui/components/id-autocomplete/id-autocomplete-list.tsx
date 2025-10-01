@@ -1,13 +1,12 @@
-import { useCommandState } from "cmdk";
-import type React from "react";
-import { useEffect } from "react";
-import { cn } from "../../lib/index.js";
 import {
+  cn,
   CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
-} from "../command/index.js";
+} from "@powerhousedao/design-system";
+import { useCommandState } from "cmdk";
+import React, { useEffect } from "react";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 

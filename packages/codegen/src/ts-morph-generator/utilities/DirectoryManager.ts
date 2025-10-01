@@ -2,7 +2,7 @@ import { paramCase, pascalCase } from "change-case";
 import fs from "fs/promises";
 import path from "path";
 import type { Project, SourceFile } from "ts-morph";
-import type { PHProjectDirectories } from "../core/GenerationContext.js";
+import type { PHProjectDirectories } from "@powerhousedao/codegen";
 
 export class DirectoryManager {
   private directories: Required<PHProjectDirectories> = {

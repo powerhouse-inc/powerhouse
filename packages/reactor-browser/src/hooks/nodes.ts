@@ -1,26 +1,23 @@
-import type { FileNode, FolderNode, Node } from "document-drive";
-import { useSyncExternalStore } from "react";
+import type { NodeKind } from "@powerhousedao/reactor-browser";
 import {
   addFile,
   addFolder,
   copyNode,
-  moveNode,
-  renameNode,
-} from "../actions/document.js";
-import {
   dispatchSetSelectedNodeIdEvent,
-  subscribeToSelectedNodeId,
-} from "../events/nodes.js";
-import type { NodeKind } from "../types/reactor.js";
-import { makeFolderNodeFromDrive } from "../utils/drives.js";
-import {
   isFileNodeKind,
   isFolderNodeKind,
+  makeFolderNodeFromDrive,
+  makeNodeSlug,
+  moveNode,
+  renameNode,
   sortNodesByName,
-} from "../utils/nodes.js";
-import { makeNodeSlug } from "../utils/url.js";
-import { useSelectedDocument, useSelectedDocumentId } from "./documents.js";
-import { useDrives, useSelectedDrive } from "./drives.js";
+  subscribeToSelectedNodeId,
+  useDrives,
+  useSelectedDocument,
+  useSelectedDrive,
+} from "@powerhousedao/reactor-browser";
+import { type FileNode, type FolderNode, type Node } from "document-drive";
+import { useSyncExternalStore } from "react";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
@@ -117,7 +114,8 @@ export function useSelectedFolder(): FolderNode | undefined {
 /** Returns the path to the selected node. */
 export function useSelectedNodePath() {
   const selectedFolder = useSelectedFolder();
-  const selectedDocumentId = useSelectedDocumentId();
+  const [selectedDocument] = useSelectedDocument();
+  const selectedDocumentId = selectedDocument?.header.id;
   const selectedNodeId = selectedDocumentId ?? selectedFolder?.id;
   return useNodePath(selectedNodeId);
 }

@@ -1,7 +1,7 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
+import type { AppModuleGlobalState } from "@powerhousedao/vetra/document-models/app-module/gen/types.js";
 import { kebabCase } from "change-case";
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import type { AppModuleState } from "../../../../document-models/app-module/index.js";
+import type { InternalTransmitterUpdate } from "document-drive";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 
@@ -20,7 +20,7 @@ export class AppGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as AppModuleState;
+    const state = strand.state as AppModuleGlobalState;
     if (!state) {
       logger.debug(`>>> No state found for app: ${strand.documentId}`);
       return false;
@@ -43,7 +43,7 @@ export class AppGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as AppModuleState;
+    const state = strand.state as AppModuleGlobalState;
 
     // Check if we have a valid app name and it's confirmed
     if (state.name && state.status === "CONFIRMED") {

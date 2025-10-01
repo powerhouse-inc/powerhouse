@@ -1,4 +1,10 @@
 import {
+  CreateDocument,
+  DriveLayout,
+  FolderView,
+  SearchBar,
+} from "@powerhousedao/common";
+import {
   Breadcrumbs,
   useBreadcrumbs,
   useDrop,
@@ -18,15 +24,11 @@ import {
   useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { getDriveSharingType } from "document-drive/server/utils";
+import { getDriveSharingType } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import type React from "react";
-import { CreateDocument } from "./components/create-document.js";
-import FolderView from "./components/folder-view.js";
-import { DriveLayout } from "./components/layout.js";
-import { SearchBar } from "./components/search-bar.js";
+import React from "react";
 
-export type GenericDriveExplorerEditorProps = DriveEditorProps &
+type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
 export function Editor(props: GenericDriveExplorerEditorProps) {
@@ -47,7 +49,7 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const showSearchBar = useShowSearchBar();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
-    showCreateDocumentModal(documentModel.documentModel.id);
+    showCreateDocumentModal(documentModel.documentModel.global.id);
   };
   const { isDropTarget, dropProps } = useDrop({
     node: selectedDriveAsFolderNode,
@@ -110,10 +112,13 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
         <DriveLayout.Footer>
           {isAllowedToCreateDocuments && (
             <CreateDocument
-              documentModels={documentModels?.filter(
-                (module) =>
-                  module.documentModel.id !== "powerhouse/document-drive",
-              )}
+              documentModels={
+                documentModels?.filter(
+                  (module) =>
+                    module.documentModel.global.id !==
+                    "powerhouse/document-drive",
+                ) as unknown as DocumentModelModule[]
+              }
               createDocument={onCreateDocument}
             />
           )}

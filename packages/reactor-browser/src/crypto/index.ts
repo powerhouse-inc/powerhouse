@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-private-class-members */
-
 import type { CreateBearerTokenOptions } from "@renown/sdk";
 import { createAuthBearerToken } from "@renown/sdk";
 import { bytesToBase64url } from "did-jwt";
@@ -11,8 +9,11 @@ import {
 } from "did-key-creator";
 import { fromString } from "uint8arrays";
 
+import {
+  RENOWN_CHAIN_ID,
+  RENOWN_NETWORK_ID,
+} from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-drive";
-import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID } from "../renown/constants.js";
 
 const logger = childLogger(["connect", "crypto"]);
 export type JwkKeyPair = {
@@ -75,20 +76,8 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   #initCrypto() {
-    return new Promise<SubtleCrypto>((resolve, reject) => {
-      if (typeof window === "undefined") {
-        import("node:crypto")
-          .then((module) => {
-            resolve(module.webcrypto.subtle as SubtleCrypto);
-          })
-          .catch(reject);
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!window.crypto?.subtle) {
-          reject(new Error("Crypto module not available"));
-        }
-        resolve(window.crypto.subtle);
-      }
+    return new Promise<SubtleCrypto>((resolve) => {
+      resolve(window.crypto.subtle);
     });
   }
 
@@ -196,19 +185,6 @@ export class ConnectCrypto implements IConnectCrypto {
       ),
     };
   }
-
-  #sign = async (
-    ...args: Parameters<SubtleCrypto["sign"]>
-  ): Promise<ArrayBuffer> => {
-    return (await this.#subtleCrypto).sign(...args);
-  };
-
-  #verify = async (
-    ...args: Parameters<SubtleCrypto["verify"]>
-  ): Promise<boolean> => {
-    return (await this.#subtleCrypto).verify(...args);
-  };
-
   #stringToBytes(s: string): Uint8Array {
     return fromString(s, "utf-8");
   }

@@ -1,17 +1,35 @@
+import type {
+  DocumentDriveDocument,
+  DocumentDriveGlobalState,
+  DocumentModelNotFoundError,
+  ReadDriveContext,
+} from "document-drive";
 import {
+  ReadDocumentNotFoundError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+  ReadModeService,
+  addFile,
+  createBaseState,
+  driveCreateDocument,
+  driveDocumentModelModule,
+  driveDocumentReducer,
   responseForDocument,
   responseForDrive,
-} from "#utils/gql-transformations";
-import {
-  createDocument as createDocumentModelDocument,
-  createState as createDocumentModelState,
+  updateNode,
+} from "document-drive";
+import type {
   DocumentModelDocument,
-  documentModelDocumentModelModule,
+  DocumentModelGlobalState,
   DocumentModelModule,
-  DocumentModelState,
-  generateId,
   PHDocument,
 } from "document-model";
+import {
+  documentModelCreateDocument,
+  documentModelCreateState,
+  documentModelDocumentModelModule,
+} from "document-model";
+import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import {
   afterAll,
@@ -23,29 +41,6 @@ import {
   vitest,
 } from "vitest";
 import createFetchMock from "vitest-fetch-mock";
-import { createBaseState } from "./utils.js";
-import {
-  addFile,
-  updateNode,
-} from "../src/drive-document-model/gen/creators.js";
-import { reducer } from "../src/drive-document-model/gen/reducer.js";
-import {
-  DocumentDriveDocument,
-  DocumentDriveState,
-} from "../src/drive-document-model/gen/types.js";
-import {
-  createDocument,
-  createState,
-} from "../src/drive-document-model/gen/utils.js";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
-import {
-  ReadDocumentNotFoundError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
-} from "../src/read-mode/errors.js";
-import { ReadModeService } from "../src/read-mode/service.js";
-import { ReadDriveContext } from "../src/read-mode/types.js";
-import { DocumentModelNotFoundError } from "../src/server/error.js";
 
 const fetchMocker = createFetchMock(vi);
 fetchMocker.enableMocks();
@@ -56,7 +51,9 @@ const documentModels = [
 ] as DocumentModelModule<any>[];
 
 function getDocumentModelModule(id: string): DocumentModelModule<any> {
-  const documentModel = documentModels.find((d) => d.documentModel.id === id);
+  const documentModel = documentModels.find(
+    (d) => d.documentModel.global.id === id,
+  );
   if (!documentModel) {
     throw new Error(`Document model not found for id: ${id}`);
   }
@@ -65,18 +62,11 @@ function getDocumentModelModule(id: string): DocumentModelModule<any> {
 
 function buildDriveDocument(
   { id, slug }: { id: string; slug: string },
-  state: Partial<DocumentDriveState>,
+  state: Partial<DocumentDriveGlobalState>,
 ): DocumentDriveDocument {
-  const doc = createDocument(
-    createState({
-      global: {
-        name: "",
-        icon: null,
-        nodes: [],
-        ...state,
-      },
-    }),
-  );
+  const doc = driveCreateDocument({
+    global: state as DocumentDriveGlobalState,
+  });
   doc.header.id = id;
   doc.header.slug = slug;
 
@@ -84,20 +74,11 @@ function buildDriveDocument(
 }
 
 function buildModelDocument(
-  state: Partial<DocumentModelState>,
+  state: Partial<DocumentModelGlobalState>,
 ): DocumentModelDocument {
-  return createDocumentModelDocument(
-    createDocumentModelState({
-      global: {
-        name: "",
-        id: "",
-        version: 0,
-        modules: [],
-        examples: [],
-        author: "",
-        description: "",
-        ...state,
-      } as DocumentModelState,
+  return documentModelCreateDocument(
+    documentModelCreateState({
+      global: state as DocumentModelGlobalState,
     }),
   );
 }
@@ -360,34 +341,34 @@ describe.skip("Read mode methods", () => {
     const readDriveId = generateId();
     const documentId = generateId();
 
-    let drive = createDocument(
-      createState({
-        global: {
+    let drive = driveCreateDocument(
+      createBaseState(
+        {
           name: "Read drive",
           nodes: [],
           icon: null,
         },
-        local: {
+        {
           availableOffline: false,
           listeners: [],
-          sharingType: "PUBLIC",
+          sharingType: "LOCAL",
           triggers: [],
         },
-      }) as any,
+      ),
     );
 
     drive.header.id = readDriveId;
     drive.header.slug = "read-drive";
 
-    let document = createDocument();
+    let document = driveCreateDocument();
     const addNodeAction = addFile({
       name: "Document 1",
-      documentType: documentModelDocumentModelModule.documentModel.id,
+      documentType: documentModelDocumentModelModule.documentModel.global.id,
       id: documentId,
     });
 
-    drive = reducer(drive, addNodeAction);
-    document = reducer(
+    drive = driveDocumentReducer(drive, addNodeAction);
+    document = driveDocumentReducer(
       document,
       updateNode({
         name: "bar",
@@ -433,7 +414,7 @@ describe.skip("Read mode methods", () => {
     const readDocument = await readModeService.fetchDocument(
       readDriveId,
       documentId,
-      driveDocumentModelModule.documentModel.id,
+      driveDocumentModelModule.documentModel.global.id,
     );
 
     expect(readDocument).toMatchObject(document);

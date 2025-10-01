@@ -1,4 +1,4 @@
-import type { Action, DocumentModelState, PHDocument } from "document-model";
+import type { Action, DocumentModelModule, PHDocument } from "document-model";
 
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
@@ -43,13 +43,13 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Retrieves a list of document model specifications
+   * Retrieves a list of document model modules.
    */
   async getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<DocumentModelState>> {
+  ): Promise<PagedResults<DocumentModelModule>> {
     return this.reactor.getDocumentModels(namespace, paging, signal);
   }
 

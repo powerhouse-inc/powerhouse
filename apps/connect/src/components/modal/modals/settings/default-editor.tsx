@@ -1,12 +1,5 @@
 import { DefaultEditor as BaseDefaultEditor } from "@powerhousedao/design-system";
-import type { DocumentModelModule } from "document-model";
 import { useCallback, useState } from "react";
-
-const mapDocumentModelsToOptions = (documentModels: DocumentModelModule[]) =>
-  documentModels.map((document) => ({
-    label: document.documentModel.name,
-    value: document.documentModel.id,
-  }));
 
 const documentModelEditorOptions = [
   { label: "V1", value: "document-model-editor" },

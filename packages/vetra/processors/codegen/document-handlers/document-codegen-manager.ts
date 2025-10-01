@@ -1,4 +1,4 @@
-import type { InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
+import type { InternalTransmitterUpdate } from "document-drive";
 import type { QueuedStrand } from "../interactive-manager.js";
 import { InteractiveManager } from "../interactive-manager.js";
 import { logger } from "../logger.js";
@@ -38,7 +38,7 @@ export class DocumentCodegenManager {
     }
 
     this.generators.set(documentType, new generatorClass(this.config));
-    logger.info(`✅ Registered generator for document type: ${documentType}`);
+    logger.debug(`✅ Registered generator for document type: ${documentType}`);
   }
 
   /**
@@ -102,7 +102,7 @@ export class DocumentCodegenManager {
 
     if (!generator) {
       logger.warn(`⚠️ No generator found for document type: ${documentType}`);
-      logger.info(
+      logger.warn(
         `ℹ️ Supported document types: ${this.getRegisteredDocumentTypes().join(", ")}`,
       );
       throw new Error(`Unsupported document type: ${documentType}`);
@@ -162,35 +162,27 @@ export class DocumentCodegenManager {
       }
 
       // Set up new debounced generation (no interactive confirmation)
-      const debounceTimer = setTimeout(() => {
-        // Queue this operation to run after previous ones complete
-        this.processingQueue = this.processingQueue
-          .then(async () => {
-            try {
-              logger.info(
-                `🔄 Routing document type "${documentType}" to generator (debounced)`,
-              );
+      const debounceTimer = setTimeout(async () => {
+        try {
+          logger.debug(
+            `🔄 Routing document type "${documentType}" to generator (debounced)`,
+          );
 
-              // Direct generation, no interactive confirmation
-              await generator.generate(strand);
-              logger.info(
-                `✅ Successfully generated code for document type: ${documentType}`,
-              );
-            } catch (error) {
-              logger.error(
-                `❌ Error generating code for document type "${documentType}":`,
-                error,
-              );
-              // Don't throw - let codegen continue with other documents
-            } finally {
-              // Clean up the timer reference
-              this.debounceTimers.delete(timerKey);
-            }
-          })
-          .catch((error) => {
-            // Ensure queue continues even if previous operation failed
-            logger.error(`❌ Queue processing error:`, error);
-          });
+          // Direct generation, no interactive confirmation
+          await generator.generate(strand);
+          logger.info(
+            `✅ Successfully generated code for document type: ${documentType}`,
+          );
+        } catch (error) {
+          logger.error(
+            `❌ Error generating code for document type "${documentType}":`,
+            error,
+          );
+          // Don't throw - let codegen continue with other documents
+        } finally {
+          // Clean up the timer reference
+          this.debounceTimers.delete(documentType);
+        }
       }, DEFAULT_DEBOUNCE_TIME);
 
       // Store the timer reference
@@ -204,7 +196,7 @@ export class DocumentCodegenManager {
   private async processQueuedStrands(
     queuedStrands: QueuedStrand[],
   ): Promise<void> {
-    logger.info(`🔄 Processing ${queuedStrands.length} queued strand(s)`);
+    logger.debug(`🔄 Processing ${queuedStrands.length} queued strand(s)`);
 
     // Sort by priority (document-model first to ensure dependencies exist)
     const documentModelStrands = queuedStrands.filter(
@@ -226,7 +218,7 @@ export class DocumentCodegenManager {
       await this.processStrand(queuedStrand.strand);
     }
 
-    logger.info(
+    logger.debug(
       `✅ Successfully processed all ${queuedStrands.length} queued strand(s)`,
     );
   }
@@ -246,7 +238,7 @@ export class DocumentCodegenManager {
     }
 
     try {
-      logger.info(`🔄 Generating code for document type: ${documentType}`);
+      logger.debug(`🔄 Generating code for document type: ${documentType}`);
       await generator.generate(strand);
       logger.info(
         `✅ Successfully generated code for document type: ${documentType}`,
@@ -265,7 +257,7 @@ export class DocumentCodegenManager {
    */
   clearGenerators(): void {
     this.generators.clear();
-    logger.info("🧹 Cleared all registered generators");
+    logger.debug("🧹 Cleared all registered generators");
   }
 
   /**

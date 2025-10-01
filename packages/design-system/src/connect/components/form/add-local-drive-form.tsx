@@ -3,10 +3,9 @@ import {
   AvailableOfflineToggle,
   FormInput,
   Label,
-  LOCAL,
+  PowerhouseButton,
   SharingTypeFormInput,
-} from "#connect";
-import { Button } from "#powerhouse";
+} from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { App } from "document-model";
 import type { SubmitHandler } from "react-hook-form";
@@ -36,7 +35,7 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
   } = useForm<AddLocalDriveInput>({
     defaultValues: {
       name: "",
-      sharingType: LOCAL,
+      sharingType: "LOCAL",
       availableOffline: false,
       appId: props.appOptions[0].id,
     },
@@ -84,9 +83,9 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
         <div>
           <AvailableOfflineToggle {...register("availableOffline")} />
         </div>
-        <Button className="mt-2 w-full" type="submit">
+        <PowerhouseButton className="mt-2 w-full" type="submit">
           Create new drive
-        </Button>
+        </PowerhouseButton>
       </div>
     </form>
   );

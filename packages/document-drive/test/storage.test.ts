@@ -1,25 +1,24 @@
-import {
+import type {
   DocumentAlreadyExistsError,
+  DocumentDriveDocument,
   DocumentNotFoundError,
-} from "#server/error";
+  IDocumentStorage,
+} from "document-drive";
+import {
+  BrowserStorage,
+  driveCreateDocument,
+  InMemoryCache,
+  MemoryStorage,
+} from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
+import type { DocumentModelDocument } from "document-model";
+import { documentModelCreateDocument } from "document-model";
+import { generateId } from "document-model/core";
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { describe, it } from "vitest";
-import {
-  createDocument,
-  DocumentModelDocument,
-  generateId,
-} from "../../document-model/index.js";
-import InMemoryCache from "../src/cache/memory.js";
-import { DocumentDriveDocument } from "../src/drive-document-model/gen/types.js";
-import { createDocument as createDriveDocument } from "../src/drive-document-model/gen/utils.js";
-import { BrowserStorage } from "../src/storage/browser.js";
-import { FilesystemStorage } from "../src/storage/filesystem.js";
-import { MemoryStorage } from "../src/storage/memory.js";
-import { PrismaClient } from "../src/storage/prisma/client/index.js";
-import { PrismaStorage } from "../src/storage/prisma/prisma.js";
-import { IDocumentStorage } from "../src/storage/types.js";
-
 const storageImplementations: [string, () => Promise<IDocumentStorage>][] = [
   ["Memory Storage", () => Promise.resolve(new MemoryStorage())],
   [
@@ -77,7 +76,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow creating a document", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const id = document.header.id;
     await storage.create(document);
 
@@ -90,7 +89,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     document.header.id = "test!\\";
 
     await expect(async () => await storage.create(document)).rejects.toThrow();
@@ -101,7 +100,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const id = document.header.id;
     document.initialState.global.id = "FOOOP";
     await storage.create(document);
@@ -115,7 +114,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const id = document.header.id;
     await storage.create(document);
 
@@ -133,13 +132,13 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const a = createDriveDocument();
+    const a = driveCreateDocument();
     a.header.slug = "test";
     const idA = a.header.id;
     await storage.create(a);
 
     // different id, but same slug
-    const b = createDriveDocument();
+    const b = driveCreateDocument();
     b.header.slug = "test";
     const idB = b.header.id;
     try {
@@ -154,7 +153,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow getting a document", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const id = document.header.id;
     await storage.create(document);
 
@@ -219,7 +218,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow deleting a document", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const id = document.header.id;
     await storage.create(document);
 
@@ -238,16 +237,16 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
-    const driveA = createDriveDocument();
+    const driveA = driveCreateDocument();
     const driveAId = driveA.header.id;
     await storage.create(driveA);
     await storage.addChild(driveAId, documentId);
 
-    const driveB = createDriveDocument();
+    const driveB = driveCreateDocument();
     const driveBId = driveB.header.id;
     await storage.create(driveB);
     await storage.addChild(driveBId, documentId);
@@ -265,18 +264,18 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow getting all parents of a document", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const childId = document.header.id;
     await storage.create(document);
 
     let parents = await storage.getParents(childId);
     expect(parents).toEqual([]);
 
-    const driveA = createDriveDocument();
+    const driveA = driveCreateDocument();
     const driveAId = driveA.header.id;
     await storage.create(driveA);
 
-    const driveB = createDriveDocument();
+    const driveB = driveCreateDocument();
     const driveBId = driveB.header.id;
     await storage.create(driveB);
 
@@ -294,15 +293,15 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const childId = document.header.id;
     await storage.create(document);
 
-    const driveA = createDriveDocument();
+    const driveA = driveCreateDocument();
     const driveAId = driveA.header.id;
     await storage.create(driveA);
 
-    const driveB = createDriveDocument();
+    const driveB = driveCreateDocument();
     const driveBId = driveB.header.id;
     await storage.create(driveB);
 
@@ -321,11 +320,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const child = createDocument();
+    const child = documentModelCreateDocument();
     const childId = child.header.id;
     await storage.create(child);
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
     await storage.addChild(driveId, childId);
@@ -342,7 +341,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     const slug = `test-slug-${generateId()}`;
-    const document = createDriveDocument();
+    const document = driveCreateDocument();
     const id = document.header.id;
     document.header.slug = slug;
     await storage.create(document);
@@ -356,7 +355,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDriveDocument();
+    const document = driveCreateDocument();
     const id = document.header.id;
     document.header.slug = "";
     await storage.create(document);
@@ -402,7 +401,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     ];
 
     for (const invalidSlug of invalidSlugs) {
-      const document = createDriveDocument();
+      const document = driveCreateDocument();
       document.header.slug = invalidSlug;
       await expect(
         async () => await storage.create(document),
@@ -421,7 +420,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     ];
 
     for (const validSlug of validSlugs) {
-      const validDocument = createDriveDocument();
+      const validDocument = driveCreateDocument();
       validDocument.header.slug = validSlug;
       await storage.create(validDocument);
 
@@ -436,7 +435,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
 
     const slug = (document.header.slug = "test-slug");
     const id = document.header.id;
@@ -445,7 +444,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     await storage.delete(id);
 
-    const newDocument = createDocument();
+    const newDocument = documentModelCreateDocument();
     newDocument.header.slug = slug;
     newDocument.header.id = id;
     await storage.create(newDocument);
@@ -460,9 +459,9 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     // create docs of different types
-    const document1 = createDocument();
-    const document2 = createDriveDocument();
-    const document3 = createDocument();
+    const document1 = documentModelCreateDocument();
+    const document2 = driveCreateDocument();
+    const document3 = documentModelCreateDocument();
     const id1 = document1.header.id;
     const id2 = document2.header.id;
     const id3 = document3.header.id;
@@ -487,7 +486,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     // create 10 documents of the same type with generated IDs
     const documentIds: string[] = [];
     for (let i = 0; i < 10; i++) {
-      const document = createDocument();
+      const document = documentModelCreateDocument();
       const id = document.header.id;
       documentIds.push(id);
       await storage.create(document);
@@ -529,11 +528,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     const storage = await buildStorage();
 
     // for now, we only allow documents to be associated with drives
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -546,7 +545,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should not allow self associations", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -556,11 +555,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should not allow circular associations", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -572,11 +571,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow removing a child from a drive", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -594,7 +593,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -611,7 +610,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const documentId = generateId();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
@@ -636,11 +635,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -657,11 +656,11 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     const driveId = drive.header.id;
     await storage.create(drive);
 
-    const document = createDocument();
+    const document = documentModelCreateDocument();
     const documentId = document.header.id;
     await storage.create(document);
 
@@ -682,7 +681,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow resolving slugs from ids", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     drive.header.slug = "test-drive";
 
     const driveId = drive.header.id;
@@ -706,7 +705,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     drive.header.slug = "";
     const driveId = drive.header.id;
     await storage.create(drive);
@@ -717,7 +716,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
   it("should throw an error if aborted", async ({ expect }) => {
     const storage = await buildStorage();
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     drive.header.slug = "test-drive";
 
     const driveId = drive.header.id;
@@ -734,7 +733,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
   it("should allow resolving ids from slugs", async ({ expect }) => {
     const storage = await buildStorage();
 
-    const drive = createDriveDocument();
+    const drive = driveCreateDocument();
     drive.header.slug = "test-drive";
 
     const driveId = drive.header.id;

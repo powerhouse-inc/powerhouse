@@ -52,7 +52,7 @@ jspm_packages/
 # Vite
 .vite/
 dist/
-
+lib/
 # yalc
 yalc.lock
 .yalc/

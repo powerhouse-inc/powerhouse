@@ -1,21 +1,24 @@
-import { baseCreateDocument, replayOperations } from "#document/utils/base.js";
-import { garbageCollectDocumentOperations } from "#document/utils/document-helpers.js";
-import { beforeEach, describe, expect, it } from "vitest";
-import type { CountDocument, CountPHState } from "../helpers.js";
+import {
+  baseCreateDocument,
+  garbageCollectDocumentOperations,
+  replayOperations,
+} from "document-model/core";
+import type { CountDocument, CountPHState } from "document-model/test";
 import {
   baseCountReducer,
   countReducer,
-  createTestState,
   createCountDocumentState,
   increment,
-} from "../helpers.js";
+  testCreateBaseState,
+} from "document-model/test";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Document Operation ID", () => {
   let document: CountDocument;
   let initialState: CountPHState;
 
   beforeEach(() => {
-    initialState = createTestState({ count: 0 }, { name: "" });
+    initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
   });

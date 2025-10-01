@@ -1,10 +1,10 @@
-import type { Context } from "#graphql/types.js";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import type {
   GraphQLResolverMap,
   GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
+import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import { childLogger, type IDocumentDriveServer } from "document-drive";
 import type { DocumentNode } from "graphql";
@@ -47,7 +47,9 @@ export const getDocumentModelTypeDefs = (
 
   const addedDocumentModels = new Set<string>();
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(documentModel.name.replaceAll("/", " "));
+    const dmSchemaName = pascalCase(
+      documentModel.global.name.replaceAll("/", " "),
+    );
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.error(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -56,7 +58,7 @@ export const getDocumentModelTypeDefs = (
     }
     addedDocumentModels.add(dmSchemaName);
     let tmpDmSchema = `
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.global.schema
                 .replaceAll("scalar DateTime", "")
@@ -64,7 +66,7 @@ export const getDocumentModelTypeDefs = (
             )
             .join("\n")};
   
-          ${documentModel.specifications
+          ${documentModel.global.specifications
             .map((specification) =>
               specification.state.local.schema
                 .replaceAll("scalar DateTime", "")
@@ -128,7 +130,8 @@ export const getDocumentModelTypeDefs = (
               operations(skip: Int, first: Int): [Operation!]!
               revision: Int!
               createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIso: DateTime!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIsoAtUtcIso: DateTime!
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               stateJSON: JSONObject

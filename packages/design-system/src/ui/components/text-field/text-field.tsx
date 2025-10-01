@@ -1,12 +1,22 @@
-import type { FieldErrorHandling, WithDifference } from "../../types.js";
-import type { TextInputProps } from "../text-input/text-input.js";
-import { TextInput } from "../text-input/text-input.js";
-import { withFieldValidation } from "../with-field-validation/index.js";
+import type {
+  FieldErrorHandling,
+  TextInputProps,
+  WithDifference,
+} from "@powerhousedao/design-system";
+import { TextInput, withFieldValidation } from "@powerhousedao/design-system";
+import type { Ref } from "react";
+import { forwardRef } from "react";
 
 export type TextFieldProps = TextInputProps &
   FieldErrorHandling &
   WithDifference<string>;
 
-export const TextField = withFieldValidation<TextFieldProps>(TextInput);
+export const TextField = forwardRef(function TextField(
+  props: TextFieldProps,
+  ref: Ref<HTMLInputElement>,
+) {
+  const Component = withFieldValidation<TextFieldProps>(TextInput);
+  return <Component {...props} ref={ref} />;
+});
 
 TextField.displayName = "TextField";

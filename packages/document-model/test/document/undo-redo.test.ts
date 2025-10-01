@@ -1,21 +1,25 @@
-import type { Action, Operation } from "#document/types.js";
-import { beforeEach, describe, expect, it } from "vitest";
-import { noop, redo, undo } from "../../src/document/actions/creators.js";
-import { processUndoRedo } from "../../src/document/reducer.js";
-import { baseCreateDocument } from "../../src/document/utils/base.js";
-import type { CountAction, CountDocument } from "../helpers.js";
+import type { Action, Operation } from "document-model";
+import {
+  baseCreateDocument,
+  noop,
+  processUndoRedo,
+  redo,
+  undo,
+} from "document-model/core";
+import type { CountAction, CountDocument } from "document-model/test";
 import {
   countReducer,
-  createTestState,
   createCountDocumentState,
   increment,
-} from "../helpers.js";
+  testCreateBaseState,
+} from "document-model/test";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("UNDO/REDO", () => {
   let document: CountDocument;
 
   beforeEach(() => {
-    const initialState = createTestState({ count: 0 }, { name: "" });
+    const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
     document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -86,7 +90,7 @@ describe("UNDO/REDO", () => {
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 
@@ -102,7 +106,7 @@ describe("UNDO/REDO", () => {
 
   describe("processUndoRedo -> REDO", () => {
     it("should throw an error when there's no operation to redo in the clipboard", () => {
-      const initialState = createTestState({ count: 0 }, { name: "" });
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 
       document = baseCreateDocument(createCountDocumentState, initialState);
 

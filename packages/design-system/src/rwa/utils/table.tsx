@@ -7,7 +7,7 @@ import type {
   TableItemType,
   TableName,
   TransactionFeeInput,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import {
   assetTransactionSignByTransactionType,
   calculateCurrentValue,
@@ -20,7 +20,7 @@ import {
   groupTransactionTypeLabels,
   isAssetGroupTransactionType,
   isISODate,
-} from "#rwa";
+} from "@powerhousedao/design-system";
 import type { InputMaybe } from "document-model";
 
 export function handleDateInTable(

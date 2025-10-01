@@ -1,4 +1,4 @@
-import type { PowerhouseConfig } from "@powerhousedao/config/powerhouse";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { exec, execSync } from "node:child_process";
 import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
+
 export function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation
   const require = createRequire(root);
@@ -15,9 +16,13 @@ export function resolvePackage(packageName: string, root = process.cwd()) {
 /**
  * Finds the dist dir of Connect on the local machine
  */
-export function resolveConnect(root = process.cwd()) {
-  const connectHTMLPath = resolvePackage("@powerhousedao/connect", root);
-  return resolve(connectHTMLPath, "..");
+export function resolveConnectBundle(root = process.cwd()) {
+  const connectIndexPath = resolvePackage("@powerhousedao/connect", root);
+  const connectRootPath = connectIndexPath.substring(
+    0,
+    connectIndexPath.indexOf("connect") + "connect".length,
+  );
+  return join(connectRootPath, "dist/");
 }
 
 /**

@@ -1,6 +1,6 @@
 import { ReadRequiredModal } from "@powerhousedao/design-system";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
-import type React from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 
 export const DisclaimerModal: React.FC = () => {

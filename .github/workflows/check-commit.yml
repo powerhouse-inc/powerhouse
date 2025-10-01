@@ -8,78 +8,79 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
-    paths-ignore:
-      - "packages/document-drive/**"
-      - "apps/academy/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
-    paths-ignore:
-      - "packages/document-drive/**"
-      - "apps/academy/**"
-
-env:
-  NX_ISOLATE_PLUGINS: false
-  PNPM_VERSION: 10
-  NODE_VERSION: 22
-  EXCLUDE: document-drive,academy
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  lint:
-    uses: ./.github/workflows/run-nx-target.yml
-    with:
-      target: lint:nx
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
 
-  test:
-    uses: ./.github/workflows/run-nx-target.yml
-    with:
-      target: test
-      exclude: document-drive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  build:
-    uses: ./.github/workflows/run-nx-target.yml
-    with:
-      target: build
-      exclude: academy
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-  storybook:
-    uses: ./.github/workflows/run-nx-target.yml
-    with:
-      target: build-storybook
+      - name: Setup pnpm with cache
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Cache ESLint
+        uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.js') }}
+          restore-keys: |
+            eslint-${{ runner.os }}-
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install:ci
+
+      - name: Build typescript project
+        run: pnpm tsc:build
+
+      - name: Run eslint
+        run: pnpm lint
+
+      - name: Run misc build scripts
+        run: pnpm build:misc
+
+      - name: Run install again after generating binaries
+        run: pnpm install
+
+      - name: Run css build scripts
+        run: pnpm build:css
+
+      - name: Run vite build scripts
+        run: pnpm build:vite
+
+      - name: Run storybook build scripts
+        run: pnpm build:storybook
+
+      - name: Run CI tests (excludes document-drive)
+        run: pnpm test:ci
 
   notify-discord:
-    if: always() && github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
-    needs: [lint, test, build, storybook]
+    if: failure() && github.event_name != 'pull_request'
+    needs: [check]
+    runs-on: ubuntu-latest
     steps:
-      - name: Collect failed jobs from needs
-        id: collect-failures
-        run: |
-          FAILED_TARGETS=""
-          for job in $(jq -r 'keys[]' <<< '${{ toJson(needs) }}'); do
-            result=$(jq -r --arg job "$job" '.[$job].result' <<< '${{ toJson(needs) }}')
-            if [[ "$result" == "failure" ]]; then
-              FAILED_TARGETS+="$job, "
-            fi
-          done
-          FAILED_TARGETS="${FAILED_TARGETS%, }"
-          echo "failed=$FAILED_TARGETS" >> $GITHUB_OUTPUT
-
-      - name: Prepare and send Discord notification
+      - name: Send Discord notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
         run: |
-          FAILED_TARGETS="${{ steps.collect-failures.outputs.failed }}"
-          if [ -z "$FAILED_TARGETS" ]; then
-            echo "No failed targets, skipping notification."
-            exit 0
-          fi
-
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
           MENTION_STRING=""
           if [ ! -z "$DISCORD_USER" ]; then
@@ -88,8 +89,8 @@ jobs:
 
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
-              "title": "⚠️ Job Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed targets:** [`'"$FAILED_TARGETS"'`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "title": "⚠️ Commit Check Failed",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`check`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'

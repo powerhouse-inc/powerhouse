@@ -110,7 +110,7 @@ export function AddDriveModal() {
     closePHModal();
   }
 
-  const ready = driveEditorModules.length > 0;
+  const ready = !!driveEditorModules?.length;
 
   return (
     <ConnectAddLocalDriveModal

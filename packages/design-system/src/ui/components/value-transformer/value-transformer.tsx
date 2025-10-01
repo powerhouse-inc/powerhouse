@@ -1,6 +1,6 @@
+import { deepEqual } from "@powerhousedao/design-system";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-import { deepEqual } from "../../lib/index.js";
 
 export type ValueTransformer = (value?: any) => any;
 
@@ -36,10 +36,8 @@ interface ValueTransformerProps {
 // following react core team recommendation
 // https://github.com/facebook/react/issues/10135
 function setNativeValue(element: HTMLInputElement, value: any) {
-  // eslint-disable-next-line @typescript-eslint/unbound-method
   const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
   const prototype = Object.getPrototypeOf(element) as HTMLInputElement;
-  // eslint-disable-next-line @typescript-eslint/unbound-method
   const prototypeValueSetter = Object.getOwnPropertyDescriptor(
     prototype,
     "value",
@@ -116,7 +114,10 @@ function _applyTransformers(
  *   <Input />
  * </ValueTransformer>
  */
-function ValueTransformer({ transformers, children }: ValueTransformerProps) {
+export function ValueTransformer({
+  transformers,
+  children,
+}: ValueTransformerProps) {
   const formContext = useFormContext();
   const setValue = formContext?.setValue;
 
@@ -139,7 +140,6 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
     }
   }, [transformers, setValue]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return React.cloneElement(children, {
     ...children.props,
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,5 +207,3 @@ function ValueTransformer({ transformers, children }: ValueTransformerProps) {
     },
   });
 }
-
-export default ValueTransformer;

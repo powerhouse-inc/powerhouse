@@ -9,7 +9,7 @@ import {
   useSelectedDriveId,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
-import type React from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 
 export const DeleteItemModal: React.FC = () => {

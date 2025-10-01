@@ -1,32 +1,41 @@
-import { createAction } from "document-model";
+import type {
+  AddListenerAction,
+  AddTriggerAction,
+  RemoveListenerAction,
+  RemoveTriggerAction,
+  SetAvailableOfflineAction,
+  SetDriveIconAction,
+  SetDriveNameAction,
+  SetSharingTypeAction,
+} from "document-drive";
+import type {
+  AddListenerInput,
+  AddTriggerInput,
+  RemoveListenerInput,
+  RemoveTriggerInput,
+  SetAvailableOfflineInput,
+  SetDriveIconInput,
+  SetDriveNameInput,
+  SetSharingTypeInput,
+} from "document-drive";
 import {
-  z,
-  type SetDriveNameInput,
-  type SetDriveIconInput,
-  type SetSharingTypeInput,
-  type SetAvailableOfflineInput,
-  type AddListenerInput,
-  type RemoveListenerInput,
-  type AddTriggerInput,
-  type RemoveTriggerInput,
-} from "../types.js";
-import {
-  type SetDriveNameAction,
-  type SetDriveIconAction,
-  type SetSharingTypeAction,
-  type SetAvailableOfflineAction,
-  type AddListenerAction,
-  type RemoveListenerAction,
-  type AddTriggerAction,
-  type RemoveTriggerAction,
-} from "./actions.js";
+  AddListenerInputSchema,
+  AddTriggerInputSchema,
+  RemoveListenerInputSchema,
+  RemoveTriggerInputSchema,
+  SetAvailableOfflineInputSchema,
+  SetDriveIconInputSchema,
+  SetDriveNameInputSchema,
+  SetSharingTypeInputSchema,
+} from "document-drive";
+import { createAction } from "document-model/core";
 
 export const setDriveName = (input: SetDriveNameInput) =>
   createAction<SetDriveNameAction>(
     "SET_DRIVE_NAME",
     { ...input },
     undefined,
-    z.SetDriveNameInputSchema,
+    SetDriveNameInputSchema,
     "global",
   );
 
@@ -35,7 +44,7 @@ export const setDriveIcon = (input: SetDriveIconInput) =>
     "SET_DRIVE_ICON",
     { ...input },
     undefined,
-    z.SetDriveIconInputSchema,
+    SetDriveIconInputSchema,
     "global",
   );
 
@@ -44,7 +53,7 @@ export const setSharingType = (input: SetSharingTypeInput) =>
     "SET_SHARING_TYPE",
     { ...input },
     undefined,
-    z.SetSharingTypeInputSchema,
+    SetSharingTypeInputSchema,
     "local",
   );
 
@@ -53,7 +62,7 @@ export const setAvailableOffline = (input: SetAvailableOfflineInput) =>
     "SET_AVAILABLE_OFFLINE",
     { ...input },
     undefined,
-    z.SetAvailableOfflineInputSchema,
+    SetAvailableOfflineInputSchema,
     "local",
   );
 
@@ -62,7 +71,7 @@ export const addListener = (input: AddListenerInput) =>
     "ADD_LISTENER",
     { ...input },
     undefined,
-    z.AddListenerInputSchema,
+    AddListenerInputSchema,
     "local",
   );
 
@@ -71,7 +80,7 @@ export const removeListener = (input: RemoveListenerInput) =>
     "REMOVE_LISTENER",
     { ...input },
     undefined,
-    z.RemoveListenerInputSchema,
+    RemoveListenerInputSchema,
     "local",
   );
 
@@ -80,7 +89,7 @@ export const addTrigger = (input: AddTriggerInput) =>
     "ADD_TRIGGER",
     { ...input },
     undefined,
-    z.AddTriggerInputSchema,
+    AddTriggerInputSchema,
     "local",
   );
 
@@ -89,6 +98,6 @@ export const removeTrigger = (input: RemoveTriggerInput) =>
     "REMOVE_TRIGGER",
     { ...input },
     undefined,
-    z.RemoveTriggerInputSchema,
+    RemoveTriggerInputSchema,
     "local",
   );

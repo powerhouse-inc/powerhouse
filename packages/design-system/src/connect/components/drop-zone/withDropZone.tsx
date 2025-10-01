@@ -1,13 +1,13 @@
 import { DropZone } from "@powerhousedao/design-system";
 import type {
-    ConflictResolution,
-    DriveEditorProps,
-    FileUploadProgressCallback,
+  ConflictResolution,
+  DriveEditorProps,
+  FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import {
-    setSelectedNode,
-    useOnDropFile,
-    useSelectedDriveId,
+  setSelectedNode,
+  useOnDropFile,
+  useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
 

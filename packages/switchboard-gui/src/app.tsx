@@ -1,9 +1,9 @@
 import { Route, Router } from "preact-router";
-import Home from "./app/home";
-import User from "./app/user";
-import GraphQL from "./app/graphql";
-import GraphQLDrive from "./app/graphql/drive";
-import Header from "./components/header/header";
+import Home from "./app/home.js";
+import User from "./app/user.js";
+import GraphQL from "./app/graphql.js";
+import GraphQLDrive from "./app/graphql/drive.js";
+import Header from "./components/header/header.js";
 
 export function App() {
   return (

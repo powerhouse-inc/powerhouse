@@ -1,8 +1,9 @@
 import { type Meta, type StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
-
-import { type UploadFileItemProps } from "../upload-file-item/upload-file-item.js";
-import { UploadFileList } from "./upload-file-list.js";
+import {
+  UploadFileList,
+  type UploadFileItemProps,
+} from "@powerhousedao/design-system";
 
 const sampleItems: ReadonlyArray<UploadFileItemProps> = [
   {

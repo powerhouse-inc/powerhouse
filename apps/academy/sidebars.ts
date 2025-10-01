@@ -24,7 +24,8 @@ const sidebars = {
         "academy/GetStarted/DefineToDoListDocumentModel",
         "academy/GetStarted/ImplementOperationReducers",
         "academy/GetStarted/BuildToDoListEditor",
-        "academy/GetStarted/SpecDrivenAI",
+        "academy/GetStarted/VetraStudio",
+        "academy/GetStarted/ReactorMCP",
       ],
     },
     {

@@ -1,6 +1,5 @@
-import { Icon } from "#powerhouse";
 import { showPHModal } from "@powerhousedao/reactor-browser";
-import { HomeScreenItem } from "../home-screen-item/index.js";
+import { HomeScreenItem, Icon } from "@powerhousedao/design-system";
 
 type HomeScreenAddDriveItemProps = {
   readonly containerClassName?: string;

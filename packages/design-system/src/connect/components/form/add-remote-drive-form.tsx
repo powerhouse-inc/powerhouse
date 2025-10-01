@@ -5,10 +5,8 @@ import {
   DriveName,
   FormInput,
   LocationInfo,
-  PUBLIC,
-  SWITCHBOARD,
-} from "#connect";
-import { Button } from "#powerhouse";
+  PowerhouseButton,
+} from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,7 +16,7 @@ type RemoteDriveDetails = {
   id: string;
   name: string;
   sharingType: SharingType;
-  location: typeof SWITCHBOARD;
+  location: "SWITCHBOARD";
   availableOffline: boolean;
 };
 
@@ -38,7 +36,7 @@ export type AddPublicDriveFormProps = {
 };
 
 export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
-  const { sharingType = PUBLIC, requestPublicDrive } = props;
+  const { sharingType = "PUBLIC", requestPublicDrive } = props;
   const [remoteDriveDetails, setPublicDriveDetails] =
     useState<RemoteDriveDetails>();
   const [showLocationSettings, setShowLocationSettings] = useState(false);
@@ -71,7 +69,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
           id,
           name,
           sharingType,
-          location: SWITCHBOARD,
+          location: "SWITCHBOARD",
           availableOffline: true,
         });
         setValue("availableOffline", true);
@@ -105,12 +103,12 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             onOpenChange={() => setShowLocationSettings(!showLocationSettings)}
             title="Location"
           >
-            <LocationInfo location={SWITCHBOARD} />
+            <LocationInfo location="SWITCHBOARD" />
             <AvailableOfflineToggle {...register("availableOffline")} />
           </Disclosure>
-          <Button className="mt-4 w-full" color="dark" type="submit">
+          <PowerhouseButton className="mt-4 w-full" color="dark" type="submit">
             Add new drive
-          </Button>
+          </PowerhouseButton>
         </>
       ) : (
         <>
@@ -122,7 +120,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             type="url"
             value={url}
           />
-          <Button
+          <PowerhouseButton
             className="mt-4 w-full py-2 text-base"
             color="dark"
             size="small"
@@ -134,7 +132,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             type="button"
           >
             Add drive
-          </Button>
+          </PowerhouseButton>
         </>
       )}
     </form>

@@ -1,7 +1,7 @@
-/* eslint-disable no-undef */
 import { build } from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
+import { exit } from "node:process";
 import { fileURLToPath } from "node:url";
 
 const dirname =
@@ -35,4 +35,4 @@ await build({
     copyFileToOutdir("cli.js");
     copyFileToOutdir("../.env");
   })
-  .catch(() => process.exit(1));
+  .catch(() => exit(1));

@@ -1,27 +1,17 @@
 /**
  * Factory methods for creating DocumentEditorDocument instances
  */
-
-import {
-  createBaseState,
-  defaultBaseState,
-  type PHAuthState,
-  type PHDocumentState,
-  type PHBaseState,
-} from "document-model";
+import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model/core";
 import type {
   DocumentEditorDocument,
   DocumentEditorLocalState,
-  DocumentEditorState,
+  DocumentEditorGlobalState,
+  DocumentEditorPHState,
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export type DocumentEditorPHState = PHBaseState & {
-  global: DocumentEditorState;
-  local: DocumentEditorLocalState;
-};
-
-export function defaultGlobalState(): DocumentEditorState {
+export function defaultGlobalState(): DocumentEditorGlobalState {
   return {
     name: "",
     documentTypes: [],
@@ -42,12 +32,12 @@ export function defaultPHState(): DocumentEditorPHState {
 }
 
 export function createGlobalState(
-  state?: Partial<DocumentEditorState>,
-): DocumentEditorState {
+  state?: Partial<DocumentEditorGlobalState>,
+): DocumentEditorGlobalState {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as DocumentEditorState;
+  } as DocumentEditorGlobalState;
 }
 
 export function createLocalState(
@@ -61,7 +51,7 @@ export function createLocalState(
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<DocumentEditorState>,
+  globalState?: Partial<DocumentEditorGlobalState>,
   localState?: Partial<DocumentEditorLocalState>,
 ): DocumentEditorPHState {
   return {
@@ -80,7 +70,7 @@ export function createDocumentEditorDocument(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<DocumentEditorState>;
+    global?: Partial<DocumentEditorGlobalState>;
     local?: Partial<DocumentEditorLocalState>;
   }>,
 ): DocumentEditorDocument {

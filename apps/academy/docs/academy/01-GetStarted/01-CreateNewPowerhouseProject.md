@@ -3,8 +3,10 @@
 ## Overview
 
 This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
-A Powerhouse project primarily consists of a document model and its editor.  
-For this purpose, you'll be using Connect, our use-centric collaboration tool, locally, known as Connect in 'Studio mode'.
+A Powerhouse project primarily consists of a document model and its editor. 
+As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+
+For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of their project. 
 
 ## Prerequisites
 
@@ -42,24 +44,28 @@ ph init
     ? What is the project name? ‣ getting-started
     ```
 
-    Once the project is created, you will see the following output:
+
+Once the project is created, you will see the following output:
     ```bash
     Initialized empty Git repository in /Users/you/ph-projects/getting-started/.git/
     The installation is done!
     ```
 
-    Navigate to the newly created project directory:
+Navigate to the newly created project directory:
     ```bash
     cd getting-started
     ```
-    Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
-    Run the following command to start the Connect application:
+
+## Develop a single document model in Connect
+
+Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
+Run the following command to start the Connect application:
 
     ```bash
     ph connect
     ```
 
-    The Connect application will start and you will see the following output:
+The Connect application will start and you will see the following output:
 
     ```bash
       ➜  Local:   http://localhost:3000/
@@ -67,18 +73,20 @@ ph init
       ➜  press h + enter to show help
     ```
 
-    A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
+A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
 
-    You will see your local drive and a button to create a new drive.
-    If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
-    Clear the storage of your localhost application as it might has an old session cached.
-
-   ````
+You will see your local drive and a button to create a new drive.
+If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
+Clear the storage of your localhost application as it might has an old session cached.
 
 4. Move into your local drive.  
    Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page.
 
 If you've followed the steps correctly, you'll have an empty document where you can define the **'Document Specifications'**.
+
+## Develop a package in Vetra Studio
+
+
 
 ## Up next
 

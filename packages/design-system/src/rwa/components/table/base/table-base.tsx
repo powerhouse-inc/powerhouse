@@ -1,5 +1,8 @@
-import { Icon } from "#powerhouse";
-import type { SortDirection, TableBaseProps } from "#rwa";
+import type {
+  SortDirection,
+  TableBaseProps,
+} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { Order } from "natural-orderby";
 
 import { forwardRef, useState } from "react";
