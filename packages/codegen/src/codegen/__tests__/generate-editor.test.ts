@@ -2,7 +2,10 @@ import { type PowerhouseConfig } from "@powerhousedao/config/powerhouse";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { generateSchemas } from "../graphql.js";
+import { generateDocumentModel } from "../hygen.js";
 import { generateEditor } from "../index.js";
+import { loadDocumentModel } from "../utils.js";
 import { compile } from "./fixtures/typecheck.js";
 import {
   EXPECTED_EDITOR_CONTENT,
@@ -16,6 +19,17 @@ import {
 
 // Set this to false to keep the generated files for inspection
 const CLEANUP_AFTER_TESTS = true;
+
+const BillingStatementSrcPath = path.join(
+  process.cwd(),
+  "src",
+  "codegen",
+  "__tests__",
+  "data",
+  "document-models",
+  "billing-statement",
+  "billing-statement.json",
+);
 
 describe("generateEditor", () => {
   let testDir: string;
@@ -34,8 +48,11 @@ describe("generateEditor", () => {
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
-    fs.mkdirSync(testDir, { recursive: true });
-    config.editorsDir = testDir;
+    config.editorsDir = path.join(testDir, "editors");
+    config.documentModelsDir = path.join(testDir, "document-models");
+
+    fs.mkdirSync(config.editorsDir, { recursive: true });
+    fs.mkdirSync(config.documentModelsDir, { recursive: true });
   });
 
   afterAll(() => {
@@ -48,7 +65,9 @@ describe("generateEditor", () => {
     const name = "GenericDocumentEditor";
     await generateEditor(name, [], config, "test-generic-document-editor");
 
-    const editorDir = path.join(testDir, "generic-document-editor");
+    await compile("tsconfig.document-editor.test.json");
+
+    const editorDir = path.join(config.editorsDir, "generic-document-editor");
     expect(fs.existsSync(editorDir)).toBe(true);
 
     const indexPath = path.join(editorDir, "index.ts");
@@ -67,36 +86,68 @@ describe("generateEditor", () => {
       EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES.trim(),
     );
 
-    const mainIndexPath = path.join(testDir, "index.ts");
+    const mainIndexPath = path.join(config.editorsDir, "index.ts");
     const mainIndexContent = fs
       .readFileSync(mainIndexPath, "utf-8")
       .replace(/\s+$/, "");
     expect(mainIndexContent).toStrictEqual(
       EXPECTED_MAIN_INDEX_CONTENT_NO_DOCUMENT_TYPES,
     );
-
-    await compile("tsconfig.document-editor.test.json");
   });
 
   it("should generate a Document Model editor", async () => {
-    const name = "DocumentModelEditor";
-    await generateEditor(
-      name,
-      ["powerhouse/document-model"],
-      config,
-      "test-document-model-editor",
+    console.log(path.join(BillingStatementSrcPath, "../.."));
+    await generateSchemas(path.join(BillingStatementSrcPath, "../../"), {
+      skipFormat: true,
+      outDir: config.documentModelsDir,
+    });
+
+    const billingStatementDocumentModel = await loadDocumentModel(
+      BillingStatementSrcPath,
     );
 
-    const editorDir = path.join(testDir, "document-model-editor");
-    expect(fs.existsSync(editorDir)).toBe(true);
+    await generateDocumentModel(
+      billingStatementDocumentModel,
+      config.documentModelsDir,
+      { skipFormat: true },
+    );
 
+    fs.copyFileSync(
+      BillingStatementSrcPath,
+      path.join(
+        config.documentModelsDir,
+        "billing-statement",
+        "billing-statement.json",
+      ),
+    );
+    fs.copyFileSync(
+      path.join(BillingStatementSrcPath, "..", "schema.graphql"),
+      path.join(
+        config.documentModelsDir,
+        "billing-statement",
+        "schema.graphql",
+      ),
+    );
+    const editorDir = path.join(config.editorsDir, "billing-statement-editor");
     const indexPath = path.join(editorDir, "index.ts");
     const editorPath = path.join(editorDir, "editor.tsx");
     const hookPath = path.join(
       editorDir,
-      "../hooks/useDocumentModelDocument.ts",
+      "../hooks/useBillingStatementDocument.ts",
     );
 
+    const name = "BillingStatementEditor";
+    await generateEditor(
+      name,
+      ["powerhouse/billing-statement"],
+      config,
+      "billing-statement-editor",
+      "",
+    );
+
+    await compile("tsconfig.document-editor.test.json");
+
+    expect(fs.existsSync(editorDir)).toBe(true);
     expect(fs.existsSync(editorPath)).toBe(true);
     expect(fs.existsSync(indexPath)).toBe(true);
     expect(fs.existsSync(hookPath)).toBe(true);
@@ -105,17 +156,15 @@ describe("generateEditor", () => {
     expect(indexContent).toBe(EXPECTED_INDEX_CONTENT.trim());
 
     const editorContent = fs.readFileSync(editorPath, "utf-8").trim();
-    expect(editorContent).toBe(EXPECTED_EDITOR_CONTENT.trim());
+    expect(editorContent).toBe(EXPECTED_EDITOR_CONTENT(testDir).trim());
 
     const hookContent = fs.readFileSync(hookPath, "utf-8").trim();
-    expect(hookContent).toBe(EXPECTED_HOOK_CONTENT.trim());
+    expect(hookContent).toBe(EXPECTED_HOOK_CONTENT(testDir).trim());
 
-    const mainIndexPath = path.join(testDir, "index.ts");
+    const mainIndexPath = path.join(config.editorsDir, "index.ts");
     const mainIndexContent = fs
       .readFileSync(mainIndexPath, "utf-8")
       .replace(/\s+$/, "");
     expect(mainIndexContent).toStrictEqual(EXPECTED_MAIN_INDEX_CONTENT);
-
-    await compile("tsconfig.document-editor.test.json");
   });
 });

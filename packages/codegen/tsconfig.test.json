@@ -13,7 +13,8 @@
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/**/*.spec.ts",
-    "src/**/__tests__/**/*"
+    "src/**/__tests__/**/*",
+    "src/**/__tests__/**/*.json"
   ],
   "exclude": [
     "src/**/__tests__/temp/**",

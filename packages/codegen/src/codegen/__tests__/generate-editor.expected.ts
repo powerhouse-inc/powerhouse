@@ -3,9 +3,9 @@ import { Editor } from './editor.js';
 
 export const module: EditorModule = {
     Component: Editor,
-    documentTypes: ["powerhouse/document-model", ],
+    documentTypes: ["powerhouse/billing-statement", ],
     config: {
-        id: 'test-document-model-editor',
+        id: 'billing-statement-editor',
         disableExternalControls: true,
         documentToolbarEnabled: true,
         showSwitchboardLink: true,
@@ -85,18 +85,28 @@ const EXPECTED_EDITOR_METHOD = `function handleSetName(values: { name: string })
   );
 }`;
 
-export const EXPECTED_EDITOR_CONTENT = `import {
+export const EXPECTED_EDITOR_CONTENT = (documentsDir: string) => `import {
   Button,
   Form,
   FormLabel,
   StringField,
 } from "@powerhousedao/document-engineering";
-import { useSelectedDocumentModelDocument } from "../hooks/useDocumentModelDocument.js";
+import { useSelectedBillingStatementDocument } from "../hooks/useBillingStatementDocument.js";
 import { setName } from "document-model";
-import { actions } from "document-model";
+import {
+  // general
+  editBillingStatement,
+  editContributor,
+  editStatus,
+  // line_items
+  addLineItem,
+  editLineItem,
+  // tags
+  editLineItemTag,
+} from "${documentsDir}/document-models/billing-statement/gen/creators.js";
 
 export function Editor() {
-  const [document, dispatch] = useSelectedDocumentModelDocument();
+  const [document, dispatch] = useSelectedBillingStatementDocument();
 
   ${EXPECTED_EDITOR_METHOD}`;
 
@@ -105,18 +115,20 @@ export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 * Delete the file and run the code generator again to have it reset
 */
 
-export { module as DocumentModelEditor } from './document-model-editor/index.js';`;
+export { module as BillingStatementEditor } from './billing-statement-editor/index.js';`;
 
-export const EXPECTED_HOOK_CONTENT = `import { useDocumentOfType, useSelectedDocumentId } from "@powerhousedao/reactor-browser";
-import type { DocumentModelAction, DocumentModelDocument } from "document-model";
+export const EXPECTED_HOOK_CONTENT = (
+  documentsDir: string,
+) => `import { useDocumentOfType, useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+import type { BillingStatementAction, BillingStatementDocument } from "${documentsDir}/document-models/billing-statement/index.js";
 
-export function useDocumentModelDocument(documentId: string | null | undefined) {
-  return useDocumentOfType<DocumentModelDocument, DocumentModelAction>(documentId, "powerhouse/document-model");
+export function useBillingStatementDocument(documentId: string | null | undefined) {
+  return useDocumentOfType<BillingStatementDocument, BillingStatementAction>(documentId, "powerhouse/billing-statement");
 }
 
-export function useSelectedDocumentModelDocument() {
+export function useSelectedBillingStatementDocument() {
   const selectedDocumentId = useSelectedDocumentId();
-  return useDocumentModelDocument(selectedDocumentId);
+  return useBillingStatementDocument(selectedDocumentId);
 }`;
 
 export const EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES = `import type { EditorModule } from 'document-model';
