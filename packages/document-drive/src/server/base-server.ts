@@ -203,6 +203,7 @@ export class BaseDocumentDriveServer
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
+  protected enableDualActionCreate: boolean;
 
   constructor(
     documentModelModules: DocumentModelModule[],
@@ -241,7 +242,13 @@ export class BaseDocumentDriveServer
         options?.taskQueueMethod === undefined
           ? runAsap
           : options.taskQueueMethod,
+      featureFlags: {
+        ...options?.featureFlags,
+      },
     };
+
+    this.enableDualActionCreate =
+      options?.featureFlags?.enableDualActionCreate ?? false;
 
     // todo: move to external dependencies
     this.defaultDrivesManager = new DefaultDrivesManager(
