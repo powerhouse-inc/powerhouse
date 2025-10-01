@@ -207,6 +207,29 @@ export type NOOPAction = Action & {
   input: SchemaNOOPAction["input"];
 };
 
+export type CreateDocumentAction = {
+  type: 'CREATE_DOCUMENT';
+  model: string;       // e.g., 'ph/todo'
+  version: '0.0.0';
+  documentId: string;  // equals signature when signed; UUID when unsigned
+  signing?: {
+    signature: string;
+    publicKey: JsonWebKey;
+    nonce: string;
+    createdAtUtcIso: string;
+    documentType: string;
+  };
+};
+
+export type UpgradeDocumentAction = {
+  type: 'UPGRADE_DOCUMENT';
+  model: string;
+  fromVersion: string; // '0.0.0' for first upgrade
+  toVersion: string;   // current model version
+  documentId: string;
+  initialState?: object; // optional; defaults to model.defaultState()
+};
+
 export type DocumentAction =
   | LoadStateAction
   | PruneAction
