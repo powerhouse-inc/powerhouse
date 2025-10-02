@@ -1,8 +1,16 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { driveDocumentModelModule, ReactorBuilder } from "document-drive";
+import {
+  driveDocumentModelModule,
+  ReactorBuilder,
+  type DocumentDriveServerOptions,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
+import {
+  initFeatureFlags,
+  isDualActionCreateEnabled,
+} from "../feature-flags.js";
 import { logger } from "../logger.js";
 import { createServer } from "../server.js";
 import { VitePackageLoader } from "./loader.js";
@@ -18,9 +26,13 @@ const baseDocumentModels = [
   driveDocumentModelModule,
 ] as unknown as DocumentModelModule[];
 
-async function createReactor(documentModels: DocumentModelModule[] = []) {
-  const builder = new ReactorBuilder(baseDocumentModels.concat(documentModels));
-  const reactor = builder.build();
+async function createReactor(
+  documentModels: DocumentModelModule[],
+  documentDriveServerOptions: DocumentDriveServerOptions,
+) {
+  const reactor = new ReactorBuilder(baseDocumentModels.concat(documentModels))
+    .withOptions(documentDriveServerOptions)
+    .build();
   await reactor.initialize();
 
   return reactor;
@@ -32,6 +44,9 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
     root,
     documentModelsDir = "./document-models",
   } = options ?? {};
+
+  // initialize feature flags
+  await initFeatureFlags();
 
   // if root of project is passed then loads local document models
   let documentModelsLoader: VitePackageLoader | undefined;
@@ -52,7 +67,12 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
   }
 
   // initializes reactor with loaded document models
-  const reactor = await createReactor(documentModels);
+  const dualActionCreateEnabled = await isDualActionCreateEnabled();
+  const reactor = await createReactor(documentModels, {
+    featureFlags: {
+      enableDualActionCreate: dualActionCreateEnabled,
+    },
+  });
 
   // listens for changes in the local document models to update the reactor
   if (documentModelsLoader) {

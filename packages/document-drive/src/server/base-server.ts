@@ -203,6 +203,7 @@ export class BaseDocumentDriveServer
     Map<Trigger["id"], CancelPullLoop>
   >();
   private initializePromise: Promise<Error[] | null>;
+  protected enableDualActionCreate: boolean;
 
   constructor(
     documentModelModules: DocumentModelModule[],
@@ -241,7 +242,13 @@ export class BaseDocumentDriveServer
         options?.taskQueueMethod === undefined
           ? runAsap
           : options.taskQueueMethod,
+      featureFlags: {
+        ...options?.featureFlags,
+      },
     };
+
+    this.enableDualActionCreate =
+      options?.featureFlags?.enableDualActionCreate ?? false;
 
     // todo: move to external dependencies
     this.defaultDrivesManager = new DefaultDrivesManager(
@@ -904,6 +911,18 @@ export class BaseDocumentDriveServer
     source: StrandUpdateSource,
     meta?: PHDocumentMeta,
   ): Promise<TDocument> {
+    if (this.enableDualActionCreate) {
+      return this.createDocumentDualAction(input, source, meta);
+    } else {
+      return this.createDocumentLegacy(input, source, meta);
+    }
+  }
+
+  private async createDocumentLegacy<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    source: StrandUpdateSource,
+    meta?: PHDocumentMeta,
+  ): Promise<TDocument> {
     const { documentType, document: inputDocument } =
       resolveCreateDocumentInput(input);
 
@@ -1031,6 +1050,200 @@ export class BaseDocumentDriveServer
     }
 
     return await this.getDocument<TDocument>(documentStorage.header.id);
+  }
+
+  private async createDocumentDualAction<TDocument extends PHDocument>(
+    input: CreateDocumentInput<TDocument>,
+    source: StrandUpdateSource,
+    meta?: PHDocumentMeta,
+  ): Promise<TDocument> {
+    const { documentType, document: inputDocument } =
+      resolveCreateDocumentInput(input);
+
+    // if a document was provided then checks if it's valid
+    let state = undefined;
+    if (inputDocument) {
+      if (
+        "documentType" in input &&
+        documentType !== inputDocument.header.documentType
+      ) {
+        throw new Error(`Provided document is not ${documentType}`);
+      }
+
+      const doc = this._buildDocument(inputDocument);
+      state = doc.state;
+    }
+
+    // if no document was provided then create a new one
+    const document =
+      inputDocument ??
+      this.getDocumentModelModule(documentType).utils.createDocument(state);
+
+    // get the header
+    let header: PHDocumentHeader;
+
+    // handle the legacy case where an id is provided
+    let isSigned = false;
+    if ("id" in input && input.id) {
+      if (inputDocument) {
+        header = document.header;
+
+        document.header.id = input.id;
+
+        this.logger.warn(
+          "Assigning an id to a document is deprecated. Use the header field instead.",
+        );
+      } else {
+        this.logger.warn(
+          "Creating a document with an id is deprecated. Use the header field instead.",
+        );
+
+        header = createPresignedHeader(input.id, documentType);
+      }
+    } else if ("header" in input) {
+      // validate the header passed in
+      await validateHeader(input.header);
+      isSigned = true;
+
+      header = input.header;
+    } else if (inputDocument?.header) {
+      if (!inputDocument.header.id) {
+        throw new Error("Document header id is required");
+      }
+      if (!inputDocument.header.documentType) {
+        throw new Error("Document header documentType is required");
+      }
+      if (!inputDocument.header.createdAtUtcIso) {
+        throw new Error("Document header createdAtUtcIso is required");
+      }
+
+      if (!inputDocument.header.sig.nonce) {
+        this.logger.warn(
+          "Creating a document with an unsigned id is deprecated. Use createSignedHeaderForSigner.",
+        );
+        // throw new Error("Document header sig nonce is required"); TODO: uncomment when ready to enforce signed documents
+      } else {
+        await validateHeader(inputDocument.header);
+        isSigned = true;
+      }
+
+      header = inputDocument.header;
+    } else {
+      // otherwise, generate a header
+      header = createPresignedHeader(undefined, documentType);
+      isSigned = false;
+    }
+
+    if (meta) {
+      header.meta = { ...header.meta, ...meta };
+    }
+
+    const currentVersion = "0.1.0";
+
+    // Get initial state from input or model's defaultState
+    const initialState = state ?? document.state;
+
+    // Check if the input document already has operations
+    const existingOperations = Object.values(
+      document.operations,
+    ).flat() as Operation[];
+    const shouldCreateOperations = existingOperations.length === 0;
+
+    let operations: Operation[] = [];
+
+    if (shouldCreateOperations) {
+      const timestampUtcMs = new Date().toISOString();
+
+      // Determine if this is a signed document
+      const signing = isSigned
+        ? {
+            signature: header.id, // The document ID is the signature
+            publicKey: header.sig.publicKey,
+            nonce: header.sig.nonce,
+            createdAtUtcIso: header.createdAtUtcIso,
+            documentType: header.documentType,
+          }
+        : undefined;
+
+      // Create actions for CREATE_DOCUMENT and UPGRADE_DOCUMENT
+      const createDocumentAction: Action = {
+        id: `${header.id}-create`,
+        type: "CREATE_DOCUMENT",
+        timestampUtcMs,
+        input: {
+          model: documentType,
+          version: "0.0.0" as const,
+          documentId: header.id,
+          signing,
+        },
+        scope: "global",
+      };
+
+      const upgradeDocumentAction: Action = {
+        id: `${header.id}-upgrade`,
+        type: "UPGRADE_DOCUMENT",
+        timestampUtcMs,
+        input: {
+          model: documentType,
+          fromVersion: "0.0.0",
+          toVersion: currentVersion,
+          documentId: header.id,
+          initialState,
+        },
+        scope: "global",
+      };
+
+      // Create operations from actions
+      operations = [
+        {
+          index: 0,
+          skip: 0,
+          hash: "", // will be set by storage
+          timestampUtcMs,
+          action: createDocumentAction,
+        },
+        {
+          index: 1,
+          skip: 0,
+          hash: "", // will be set by storage
+          timestampUtcMs,
+          action: upgradeDocumentAction,
+        },
+      ];
+    } else {
+      // Use existing operations from the input document
+      operations = existingOperations;
+    }
+
+    // stores document information with empty operations initially
+    const documentToStore: PHDocument = {
+      header,
+      operations: { global: [], local: [] },
+      initialState: document.initialState,
+      clipboard: [],
+      state: initialState,
+    };
+
+    await this.documentStorage.create(documentToStore);
+
+    // Store operations separately (if any)
+    if (operations.length > 0) {
+      if (isDocumentDrive(documentToStore)) {
+        await this.legacyStorage.addDriveOperations(
+          header.id,
+          operations,
+          documentToStore,
+        );
+      } else {
+        await this.legacyStorage.addDocumentOperations(
+          header.id,
+          operations,
+          documentToStore,
+        );
+      }
+    }
+
+    return await this.getDocument<TDocument>(documentToStore.header.id);
   }
 
   async deleteDocument(documentId: string) {

@@ -235,6 +235,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.2.17
         version: 0.2.17
+      '@openfeature/web-sdk':
+        specifier: ^1.6.2
+        version: 1.6.2(@openfeature/core@1.9.0)
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.5.0
         version: 0.5.0
@@ -1761,6 +1764,12 @@ importers:
       '@libsql/client':
         specifier: ^0.14.0
         version: 0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@openfeature/env-var-provider':
+        specifier: ^0.3.1
+        version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.0))
+      '@openfeature/server-sdk':
+        specifier: ^1.19.0
+        version: 1.19.0(@openfeature/core@1.9.0)
       '@powerhousedao/common':
         specifier: workspace:*
         version: link:../common
@@ -1837,6 +1846,12 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.17.0
         version: 1.18.2
+      '@openfeature/env-var-provider':
+        specifier: ^0.3.1
+        version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.0))
+      '@openfeature/server-sdk':
+        specifier: ^1.19.0
+        version: 1.19.0(@openfeature/core@1.9.0)
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../codegen
@@ -6138,6 +6153,11 @@ packages:
   '@openfeature/server-sdk@1.19.0':
     resolution: {integrity: sha512-sxmYKkBCpWWkKX2xJt6bFK15dorfR2lH27lkeKduTFPXRMV+pO7eORUelI9gctXhxvfXbDGK94ybq5fiso3/vg==}
     engines: {node: '>=20'}
+    peerDependencies:
+      '@openfeature/core': ^1.9.0
+
+  '@openfeature/web-sdk@1.6.2':
+    resolution: {integrity: sha512-Dcj4o4sBNT8QSAFTBWpj8nJhRm2lhJRoGSel6eiiV0gIZSQ4sCc8pi+2jey4Ffkw6S/cMvfbxjEj2CZiCgzZaA==}
     peerDependencies:
       '@openfeature/core': ^1.9.0
 
@@ -26267,6 +26287,10 @@ snapshots:
   '@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1)':
     dependencies:
       '@openfeature/core': 1.9.1
+
+  '@openfeature/web-sdk@1.6.2(@openfeature/core@1.9.0)':
+    dependencies:
+      '@openfeature/core': 1.9.0
 
   '@opentelemetry/api-logs@0.57.2':
     dependencies:

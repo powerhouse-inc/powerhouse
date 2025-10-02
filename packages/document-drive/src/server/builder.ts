@@ -138,7 +138,13 @@ export class ReactorBuilder {
       this.eventEmitter,
       this.synchronizationManager,
       this.listenerManager,
-      this.options,
+      {
+        ...this.options,
+        featureFlags: {
+          enableDualActionCreate: false, // default to false for safety
+          ...this.options?.featureFlags,
+        },
+      },
     );
   }
 }

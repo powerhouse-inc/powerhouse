@@ -1,7 +1,31 @@
-import { createBrowserDocumentDriveServer } from "@powerhousedao/reactor-browser";
+import type { IDocumentDriveServer } from "document-drive";
+import {
+  BrowserStorage,
+  EventQueueManager,
+  InMemoryCache,
+  ReactorBuilder,
+  type DocumentDriveServerOptions,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
+
+function createBrowserDocumentDriveServer(
+  documentModelModules: DocumentModelModule[],
+  routerBasename: string,
+  documentDriveServerOptions?: DocumentDriveServerOptions,
+): IDocumentDriveServer {
+  const builder = new ReactorBuilder(documentModelModules)
+    .withStorage(new BrowserStorage(routerBasename))
+    .withCache(new InMemoryCache())
+    .withQueueManager(new EventQueueManager());
+
+  if (documentDriveServerOptions) {
+    builder.withOptions(documentDriveServerOptions);
+  }
+
+  return builder.build();
+}
 
 describe("reactor", () => {
   it("should create a reactor instance with minimal config", async () => {

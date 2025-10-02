@@ -33,6 +33,9 @@ export type StartServerOptions = {
   subgraphs?: {
     isReactorv2Enabled?: boolean;
   };
+  reactorOptions?: {
+    enableDualActionCreate?: boolean;
+  };
 };
 
 export type SwitchboardReactor = {

@@ -342,6 +342,9 @@ export type DocumentDriveServerOptions = {
     address: string | undefined,
     refresh?: boolean,
   ) => Promise<string>;
+  featureFlags?: {
+    enableDualActionCreate?: boolean;
+  };
 };
 
 export type GetStrandsOptions = {

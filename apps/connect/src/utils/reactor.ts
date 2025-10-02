@@ -78,11 +78,12 @@ export function createBrowserStorage(
 export function createBrowserDocumentDriveServer(
   documentModels: DocumentModelModule[],
   storage: IDriveOperationStorage,
+  options: DocumentDriveServerOptions,
 ): IDocumentDriveServer {
   return new ReactorBuilder(documentModels)
     .withStorage(storage)
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
-    .withOptions({ ...getReactorDefaultDrivesConfig() })
+    .withOptions(options)
     .build();
 }

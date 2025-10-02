@@ -22,6 +22,7 @@ import {
   extractNodeSlugFromPath,
   getDocuments,
   getDrives,
+  getReactorDefaultDrivesConfig,
   initConnectCrypto,
   initReactor,
   login,
@@ -32,6 +33,10 @@ import type { IDocumentAdminStorage } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
+import {
+  initFeatureFlags,
+  isDualActionCreateEnabled,
+} from "../../feature-flags.js";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -57,6 +62,9 @@ export async function createReactor() {
 
   // add window event handlers for updates
   addPHEventHandlers();
+
+  // initialize feature flags
+  await initFeatureFlags();
 
   // initialize app config
   const appConfig = getAppConfig();
@@ -85,9 +93,17 @@ export async function createReactor() {
     .filter((module) => module !== undefined);
 
   // create the reactor
+  const dualActionCreateEnabled = await isDualActionCreateEnabled();
+  const defaultConfig = getReactorDefaultDrivesConfig();
   const reactor = createBrowserDocumentDriveServer(
     documentModelModules as unknown as DocumentModelModule[],
     storage,
+    {
+      ...defaultConfig,
+      featureFlags: {
+        enableDualActionCreate: dualActionCreateEnabled,
+      },
+    },
   );
   // initialize the reactor
   await initReactor(reactor, renown, connectCrypto);
