@@ -249,6 +249,9 @@ export class BaseDocumentDriveServer
 
     this.enableDualActionCreate =
       options?.featureFlags?.enableDualActionCreate ?? false;
+    if (this.enableDualActionCreate) {
+      this.logger.warn("Dual action create is enabled.");
+    }
 
     // todo: move to external dependencies
     this.defaultDrivesManager = new DefaultDrivesManager(
