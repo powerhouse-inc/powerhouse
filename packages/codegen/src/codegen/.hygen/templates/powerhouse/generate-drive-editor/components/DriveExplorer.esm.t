@@ -19,7 +19,7 @@ import {
   useFolderChildNodesForId,
   useNodeActions,
   useNodes,
-  useSelectedDriveDocument,
+  useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
   useUserPermissions,
@@ -49,7 +49,7 @@ export function DriveExplorer(props: DriveEditorProps) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // === STATE MANAGEMENT HOOKS ===
   // Core state hooks for drive navigation
-  const [selectedDrive] = useSelectedDriveDocument(); // Currently selected drive
+  const [selectedDrive] = useSelectedDrive(); // Currently selected drive
   const selectedFolder = useSelectedFolder(); // Currently selected folder
   const selectedNodePath = useSelectedNodePath();
   const sharingType = useDriveSharingType(selectedDrive.header.id);

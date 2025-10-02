@@ -18,7 +18,7 @@ import {
   showDeleteNodeModal,
   useDocumentModelModules,
   useNodeActions,
-  useSelectedDriveDocument,
+  useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
   useShowSearchBar,
@@ -33,7 +33,7 @@ type GenericDriveExplorerEditorProps = DriveEditorProps &
 
 export function Editor(props: GenericDriveExplorerEditorProps) {
   const { className, children } = props;
-  const [selectedDrive] = useSelectedDriveDocument();
+  const [selectedDrive] = useSelectedDrive();
   const {
     onRenameNode,
     onDuplicateNode,

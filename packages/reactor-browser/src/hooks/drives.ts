@@ -12,7 +12,6 @@ import type {
   SharingType,
   Trigger,
 } from "document-drive";
-import type { Action } from "document-model";
 import { useSyncExternalStore } from "react";
 import type { DocumentDispatch } from "./documents.js";
 
@@ -22,27 +21,19 @@ export function useDrives(): DocumentDriveDocument[] | undefined {
   return drives;
 }
 
-export function useDriveById(driveId: string | undefined | null) {
+export function useDriveById(
+  driveId: string | undefined | null,
+): [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>] {
   const drives = useDrives();
-  const drive = drives?.find((drive) => drive.header.id === driveId);
-  const [document, dispatch] = useDispatch(drive);
-  return [document, dispatch] as [
-    DocumentDriveDocument | undefined,
-    (actionOrActions: Action | Action[] | undefined) => void,
-  ];
-}
-
-export function useDriveDocument(driveId: string | undefined | null) {
-  const [drive, dispatch] = useDriveById(driveId);
-  if (!drive) {
+  const foundDrive = drives?.find((drive) => drive.header.id === driveId);
+  const [drive, dispatch] = useDispatch(foundDrive);
+  if (!foundDrive) {
     throw new Error(`Drive with id ${driveId} not found`);
   }
-  return [drive, dispatch as DocumentDispatch<DocumentDriveAction>] as const;
-}
-
-export function useSelectedDriveDocument() {
-  const selectedDriveId = useSelectedDriveId();
-  return useDriveDocument(selectedDriveId);
+  return [drive, dispatch] as [
+    DocumentDriveDocument,
+    DocumentDispatch<DocumentDriveAction>,
+  ];
 }
 
 export function useSelectedDriveId() {
@@ -60,9 +51,15 @@ export function useSelectedDrive() {
   const selectedDrive = drives?.find(
     (drive) => drive.header.id === selectedDriveId,
   );
-  const [document, dispatch] = useDispatch(selectedDrive);
-  const unsafeDrive = document as DocumentDriveDocument | undefined;
-  return [unsafeDrive, dispatch] as const;
+
+  const [drive, dispatch] = useDispatch(selectedDrive);
+  if (!selectedDrive) {
+    throw new Error(`Selected drive with id ${selectedDriveId} not found`);
+  }
+  return [drive, dispatch] as [
+    DocumentDriveDocument,
+    DocumentDispatch<DocumentDriveAction>,
+  ];
 }
 
 export function setSelectedDrive(

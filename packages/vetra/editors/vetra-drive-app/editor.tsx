@@ -7,7 +7,7 @@ import {
   showCreateDocumentModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
-  useSelectedDriveDocument,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, FileNode } from "document-drive";
 import { useCallback } from "react";
@@ -20,7 +20,7 @@ export type IProps = DriveEditorProps;
 export function BaseEditor(props: IProps) {
   const { children } = props;
 
-  const [document] = useSelectedDriveDocument();
+  const [document] = useSelectedDrive();
 
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
