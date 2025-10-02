@@ -33,6 +33,7 @@ export type DropZoneProps = ComponentPropsWithoutRef<"div"> & {
   ) => void;
   readonly useLocalStorage?: boolean;
   readonly driveId?: string;
+  readonly acceptedFileExtensions?: string[];
 };
 
 export function DropZone(props: DropZoneProps) {
@@ -48,6 +49,7 @@ export function DropZone(props: DropZoneProps) {
     setSelectedNode,
     useLocalStorage = false,
     driveId,
+    acceptedFileExtensions = [".zip", ".phd", ".phdm"],
     className,
     ...delegatedProps
   } = props;
@@ -108,6 +110,7 @@ export function DropZone(props: DropZoneProps) {
     onMoveNode: onMoveNode ?? (async () => {}),
     onCopyNode: onCopyNode ?? (async () => {}),
     trackNestedDrag: true,
+    acceptedFileExtensions,
   });
 
   return (

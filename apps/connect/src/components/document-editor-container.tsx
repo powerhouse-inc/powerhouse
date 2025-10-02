@@ -86,7 +86,10 @@ export function DocumentEditorContainer() {
   if (!selectedDocument) return null;
 
   return (
-    <div className="flex-1 rounded-2xl bg-gray-50 p-4">
+    <div
+      id="document-editor-container"
+      className="flex-1 rounded-2xl bg-gray-50 p-4"
+    >
       <DocumentEditor
         document={selectedDocument}
         onClose={() => setSelectedNode(parentFolder)}
