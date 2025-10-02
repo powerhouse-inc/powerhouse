@@ -47,7 +47,7 @@ export function useSelectedDriveId() {
 /** Returns the selected drive */
 export function useSelectedDrive() {
   const drive = useSelectedDriveSafe();
-  if (!drive.at(0)) {
+  if (!drive[0]) {
     throw new Error(
       "There is no drive selected. Did you mean to call 'useSelectedDriveSafe'?",
     );

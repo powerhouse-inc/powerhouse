@@ -1,8 +1,3 @@
-import type {
-  ConnectBuildOptions,
-  ConnectPreviewOptions,
-} from "@powerhousedao/builder-tools";
-import { buildConnect, previewConnect } from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,
@@ -33,8 +28,8 @@ const studioCommand = new Command("studio")
   .option("--https", "Enable HTTPS")
   .option("--open", "Open the browser")
   .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
-  .action(async (...args: [ConnectOptions]) => {
-    await connect(...args);
+  .action(async (...args: []) => {
+    throw new Error("Not Implemented");
   });
 setCustomHelp(studioCommand, connectStudioHelp);
 
@@ -53,8 +48,8 @@ const buildCommand = new Command("build")
   )
   .option("--styles-file-name <name>", "The name of the styles file")
   .option("--connect-path <path>", "The path to the Connect dist directory")
-  .action(async (...args: [ConnectBuildOptions]) => {
-    await buildConnect(...args);
+  .action(async (...args: []) => {
+    throw new Error("Not Implemented");
   });
 setCustomHelp(buildCommand, connectBuildHelp);
 
@@ -64,8 +59,8 @@ const previewCommand = new Command("preview")
   .option("--project-root <path>", "The root directory of the project")
   .option("-p, --port <port>", "The port to run the server on", "4173")
   .option("--open", "Open the browser")
-  .action(async (...args: [ConnectPreviewOptions]) => {
-    await previewConnect(...args);
+  .action(async (...args: []) => {
+    throw Error("Not Implemented");
   });
 setCustomHelp(previewCommand, connectPreviewHelp);
 
