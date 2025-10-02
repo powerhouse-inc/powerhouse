@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/resolvers.ts"
-force: true
+unless_exists: true
 ---
 import { type Subgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
