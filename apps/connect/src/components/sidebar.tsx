@@ -12,7 +12,7 @@ import {
   setSelectedDrive,
   showPHModal,
   useDrives,
-  useSelectedDrive,
+  useSelectedDriveSafe,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
@@ -21,7 +21,7 @@ import { ErrorBoundary } from "react-error-boundary";
 export function Sidebar() {
   const user = useUser();
   const drives = useDrives();
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
   const onClickSettings = () => {
