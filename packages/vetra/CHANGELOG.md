@@ -1,114 +1,106 @@
-## 5.0.0-staging.21 (2025-09-30)
+## 4.1.0-dev.59 (2025-09-24)
+
+### 🚀 Features
+
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
 
 ### 🩹 Fixes
 
-- **vetra:** get vetra package docId from selectedDrive ([4c031f5cb](https://github.com/powerhouse-inc/powerhouse/commit/4c031f5cb))
-
-### ❤️ Thank You
-
-- Guillermo Puente @gpuente
-
-## 5.0.0-staging.20 (2025-09-30)
-
-### 🚀 Features
-
-- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
-
-### ❤️ Thank You
-
-- ryanwolhuter @ryanwolhuter
-
-## 5.0.0-staging.19 (2025-09-29)
-
-### 🚀 Features
-
-- removed props from document editor and updated boilerplate to use hook ([7f49e9070](https://github.com/powerhouse-inc/powerhouse/commit/7f49e9070))
-- **common,vetra,connect:** render document editor as child of drive ([#1882](https://github.com/powerhouse-inc/powerhouse/pull/1882))
-- useDocumentOfType hook ([d71661167](https://github.com/powerhouse-inc/powerhouse/commit/d71661167))
-- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([c47d1d5dd](https://github.com/powerhouse-inc/powerhouse/commit/c47d1d5dd))
-- pass documentId to editor component and useDocumentOfModule for type safe retrieval ([7f0781ea0](https://github.com/powerhouse-inc/powerhouse/commit/7f0781ea0))
-- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
-- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([553d38fef](https://github.com/powerhouse-inc/powerhouse/commit/553d38fef))
-
-### 🩹 Fixes
-
-- **vetra:** make default css styles specific to vetra ([30d598c3e](https://github.com/powerhouse-inc/powerhouse/commit/30d598c3e))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-- Ryan Wolhuter @ryanwolhuter
-
-## 5.0.0-staging.18 (2025-09-29)
-
-This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.17 (2025-09-25)
-
-This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.16 (2025-09-25)
-
-### 🚀 Features
-
-- refactor drag and drop to use withDropZone HOC ([1737fd4fd](https://github.com/powerhouse-inc/powerhouse/commit/1737fd4fd))
-- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
-- handle replace and duplicate documents in drag and drop ([#1876](https://github.com/powerhouse-inc/powerhouse/pull/1876))
-
-### ❤️ Thank You
-
-- Guillermo Puente @gpuente
-- Guillermo Puente Sandoval @gpuente
-
-## 5.0.0-staging.15 (2025-09-24)
-
-This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.14 (2025-09-23)
-
-This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.13 (2025-09-23)
-
-### 🚀 Features
-
-- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
-- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
-- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
-- update app module state to support root documentTypes ([173127a5d](https://github.com/powerhouse-inc/powerhouse/commit/173127a5d))
-- app module drag and drop files ([#1834](https://github.com/powerhouse-inc/powerhouse/pull/1834))
-
-### 🩹 Fixes
-
-- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- part 2 of build fixes for module changes ([3000a13c3](https://github.com/powerhouse-inc/powerhouse/commit/3000a13c3))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
-- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
 
-## 5.0.0-staging.12 (2025-09-17)
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
 
 ### 🩹 Fixes
 
-- **vetra:** activate codegen processor on either driveId or drive slug ([f4600228a](https://github.com/powerhouse-inc/powerhouse/commit/f4600228a))
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.57 (2025-09-17)
+
+### 🚀 Features
+
+- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
+- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
+- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
+- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
+
+### 🩹 Fixes
+
+- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
+- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
+- **vetra:** activate codegen processor on either driveId or drive slug ([024304ed0](https://github.com/powerhouse-inc/powerhouse/commit/024304ed0))
+- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
 
 ### ❤️ Thank You
 
 - Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
 
-## 5.0.0-staging.11 (2025-09-17)
+## 4.1.0-dev.56 (2025-09-17)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features
 
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
 - add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
 
 ### ❤️ Thank You
 
 - Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.10 (2025-09-11)
+## 4.1.0-dev.54 (2025-09-16)
+
+### 🚀 Features
+
+- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
+- update app module state to support root documentTypes ([173127a5d](https://github.com/powerhouse-inc/powerhouse/commit/173127a5d))
+- app module drag and drop files ([#1834](https://github.com/powerhouse-inc/powerhouse/pull/1834))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.53 (2025-09-13)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🚀 Features
+
+- **vetra:** add basic support to drop documents on vetra drive ([ce10ca3ee](https://github.com/powerhouse-inc/powerhouse/commit/ce10ca3ee))
+
+### 🩹 Fixes
+
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
 

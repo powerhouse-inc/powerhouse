@@ -75,115 +75,44 @@
 
 ### 🚀 Features
 
-- drive boilerplate update ([aca241a83](https://github.com/powerhouse-inc/powerhouse/commit/aca241a83))
-- refactor DriveExplorer and FolderTree components to use unified node structure and Sidebar component ([64c69ce59](https://github.com/powerhouse-inc/powerhouse/commit/64c69ce59))
-- **codegen,reactor-browser:** drive boilerplate tweaks ([870180495](https://github.com/powerhouse-inc/powerhouse/commit/870180495))
-- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
+- first pass implementing some of the query resolvers with client ([aa76a8fea](https://github.com/powerhouse-inc/powerhouse/commit/aa76a8fea))
+- making the reactor subgraph much more descriptive in failure ([190b27e82](https://github.com/powerhouse-inc/powerhouse/commit/190b27e82))
+- resolvers and full tests ([134dce888](https://github.com/powerhouse-inc/powerhouse/commit/134dce888))
+- **codegen:** enable localStorage by default in withDropZone hoc ([9b105aae7](https://github.com/powerhouse-inc/powerhouse/commit/9b105aae7))
+
+### 🩹 Fixes
+
+- updating jobinfo type with created, complete, and result ([ebb139d1a](https://github.com/powerhouse-inc/powerhouse/commit/ebb139d1a))
+- switching back to checks ([9dacd70fe](https://github.com/powerhouse-inc/powerhouse/commit/9dacd70fe))
+- auto-lint fixes ([960719d58](https://github.com/powerhouse-inc/powerhouse/commit/960719d58))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.55 (2025-09-16)
+
+### 🚀 Features
+
+- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### 🩹 Fixes
+
+- add default, passthrough signer ([d9e2c4f1d](https://github.com/powerhouse-inc/powerhouse/commit/d9e2c4f1d))
+- **connect:** ignore drive node drag when moving it to it's current position ([4aa387814](https://github.com/powerhouse-inc/powerhouse/commit/4aa387814))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
-- Guillermo Puente @gpuente
-- ryanwolhuter @ryanwolhuter
-
-## 5.0.0-staging.19 (2025-09-29)
-
-### 🚀 Features
-
-- make EditorProps generic and added codegen tests ([ff5664adc](https://github.com/powerhouse-inc/powerhouse/commit/ff5664adc))
-- pass documentId to editor component and useDocumentOfModule for type safe retrieval ([7f0781ea0](https://github.com/powerhouse-inc/powerhouse/commit/7f0781ea0))
-- document editor update ([ee24e7823](https://github.com/powerhouse-inc/powerhouse/commit/ee24e7823))
-- useDocumentOfType hook ([d71661167](https://github.com/powerhouse-inc/powerhouse/commit/d71661167))
-- removed props from document editor and updated boilerplate to use hook ([7f49e9070](https://github.com/powerhouse-inc/powerhouse/commit/7f49e9070))
-- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
-- **codegen:** updated document editor boilerplate ([75cc0b9ff](https://github.com/powerhouse-inc/powerhouse/commit/75cc0b9ff))
-- **common,vetra,connect:** render document editor as child of drive ([#1882](https://github.com/powerhouse-inc/powerhouse/pull/1882))
-- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([553d38fef](https://github.com/powerhouse-inc/powerhouse/commit/553d38fef))
-- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([c47d1d5dd](https://github.com/powerhouse-inc/powerhouse/commit/c47d1d5dd))
-- **design-system:** moved default ph styles to the design system stylesheet ([5860f6cc3](https://github.com/powerhouse-inc/powerhouse/commit/5860f6cc3))
-
-### 🩹 Fixes
-
-- **builder-tools:** hide @import warning ([4a507ac75](https://github.com/powerhouse-inc/powerhouse/commit/4a507ac75))
-- **vetra:** make default css styles specific to vetra ([30d598c3e](https://github.com/powerhouse-inc/powerhouse/commit/30d598c3e))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-- Ryan Wolhuter @ryanwolhuter
-
-## 5.0.0-staging.18 (2025-09-29)
-
-### 🚀 Features
-
-- add document state copy button with toast notification ([#1880](https://github.com/powerhouse-inc/powerhouse/pull/1880))
-- enhance upload tracking with unsupported document type handling ([bcf784dfc](https://github.com/powerhouse-inc/powerhouse/commit/bcf784dfc))
-
-### 🩹 Fixes
-
-- **reactor-browser:** document switchboard query ([e0929df25](https://github.com/powerhouse-inc/powerhouse/commit/e0929df25))
-
-### ❤️ Thank You
-
-- Frank
-- Guillermo Puente @gpuente
+- Benjamin Jordan (@thegoldenmule)
 - Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.17 (2025-09-25)
-
-### 🩹 Fixes
-
-- **connect:** added switchboard push listener ([39e8660f5](https://github.com/powerhouse-inc/powerhouse/commit/39e8660f5))
-
-### ❤️ Thank You
-
-- Frank
-
-## 5.0.0-staging.16 (2025-09-25)
+## 4.1.0-dev.54 (2025-09-16)
 
 ### 🚀 Features
 
-- handle replace and duplicate documents in drag and drop ([#1876](https://github.com/powerhouse-inc/powerhouse/pull/1876))
-- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
-- refactor drag and drop to use withDropZone HOC ([1737fd4fd](https://github.com/powerhouse-inc/powerhouse/commit/1737fd4fd))
-- **connect:** open remote drive ([e0a1c43a6](https://github.com/powerhouse-inc/powerhouse/commit/e0a1c43a6))
-
-### ❤️ Thank You
-
-- Frank
-- Guillermo Puente @gpuente
-- Guillermo Puente Sandoval @gpuente
-
-## 5.0.0-staging.15 (2025-09-24)
-
-### 🚀 Features
-
-- added watch-packages option to vetra command and disabled dynamic package loading by default ([#1875](https://github.com/powerhouse-inc/powerhouse/pull/1875))
-
-### ❤️ Thank You
-
-- Guillermo Puente Sandoval @gpuente
-
-## 5.0.0-staging.14 (2025-09-23)
-
-### 🩹 Fixes
-
-- **reactor-api:** rename timestamp fields to follow ISO format ([86813d154](https://github.com/powerhouse-inc/powerhouse/commit/86813d154))
-- **reactor-api:** catch subgraph setup errors to avoid breaking the server ([2237ff6b4](https://github.com/powerhouse-inc/powerhouse/commit/2237ff6b4))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-- Guillermo Puente @gpuente
-
-## 5.0.0-staging.13 (2025-09-23)
-
-### 🚀 Features
-
-- add a bunch of failing tests for the reactor-client ([8276565a8](https://github.com/powerhouse-inc/powerhouse/commit/8276565a8))
-- implemented the easy, passthrough functions ([ceb692cd1](https://github.com/powerhouse-inc/powerhouse/commit/ceb692cd1))
-- pulled job awaiter out of reactor client ([bd4c206a9](https://github.com/powerhouse-inc/powerhouse/commit/bd4c206a9))
-- more test fixes ([12a0acd1d](https://github.com/powerhouse-inc/powerhouse/commit/12a0acd1d))
 - app module drag and drop files ([#1834](https://github.com/powerhouse-inc/powerhouse/pull/1834))
 - reactor client builder ([d93875bcd](https://github.com/powerhouse-inc/powerhouse/commit/d93875bcd))
 - naive implementation of subscriptions ([5ae6dd83c](https://github.com/powerhouse-inc/powerhouse/commit/5ae6dd83c))
@@ -192,66 +121,49 @@
 - updating docs with error handler ([4e28b0573](https://github.com/powerhouse-inc/powerhouse/commit/4e28b0573))
 - adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
 - add dynamic document type icons to upload progress ([#1857](https://github.com/powerhouse-inc/powerhouse/pull/1857))
-- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
-- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
-- first pass implementing some of the query resolvers with client ([aa76a8fea](https://github.com/powerhouse-inc/powerhouse/commit/aa76a8fea))
-- making the reactor subgraph much more descriptive in failure ([190b27e82](https://github.com/powerhouse-inc/powerhouse/commit/190b27e82))
-- resolvers and full tests ([134dce888](https://github.com/powerhouse-inc/powerhouse/commit/134dce888))
-- **codegen:** enable localStorage by default in withDropZone hoc ([9b105aae7](https://github.com/powerhouse-inc/powerhouse/commit/9b105aae7))
-- **connect,reactor-browser:** reenabled loading screen during initial loading ([ab7cfa580](https://github.com/powerhouse-inc/powerhouse/commit/ab7cfa580))
+
+### 🩹 Fixes
+
+- linter feedback ([5219f6322](https://github.com/powerhouse-inc/powerhouse/commit/5219f6322))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.53 (2025-09-13)
+
+### 🩹 Fixes
+
+- **connect:** disable search bar by default ([bd05e44aa](https://github.com/powerhouse-inc/powerhouse/commit/bd05e44aa))
+- **connect-e2e:** make folder selection more specific ([7800b4696](https://github.com/powerhouse-inc/powerhouse/commit/7800b4696))
+- **connect-e2e:** fix flaky tests in CI ([d970bd4d3](https://github.com/powerhouse-inc/powerhouse/commit/d970bd4d3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🚀 Features
+
+- add a bunch of failing tests for the reactor-client ([8276565a8](https://github.com/powerhouse-inc/powerhouse/commit/8276565a8))
+- implemented the easy, passthrough functions ([ceb692cd1](https://github.com/powerhouse-inc/powerhouse/commit/ceb692cd1))
+- pulled job awaiter out of reactor client ([bd4c206a9](https://github.com/powerhouse-inc/powerhouse/commit/bd4c206a9))
+- more test fixes ([12a0acd1d](https://github.com/powerhouse-inc/powerhouse/commit/12a0acd1d))
+- **vetra:** add basic support to drop documents on vetra drive ([ce10ca3ee](https://github.com/powerhouse-inc/powerhouse/commit/ce10ca3ee))
 
 ### 🩹 Fixes
 
 - linting issues ([ba85245b4](https://github.com/powerhouse-inc/powerhouse/commit/ba85245b4))
 - fixes before merge ([b6bfba102](https://github.com/powerhouse-inc/powerhouse/commit/b6bfba102))
-- linter feedback ([5219f6322](https://github.com/powerhouse-inc/powerhouse/commit/5219f6322))
-- add default, passthrough signer ([d9e2c4f1d](https://github.com/powerhouse-inc/powerhouse/commit/d9e2c4f1d))
-- updating jobinfo type with created, complete, and result ([ebb139d1a](https://github.com/powerhouse-inc/powerhouse/commit/ebb139d1a))
-- switching back to checks ([9dacd70fe](https://github.com/powerhouse-inc/powerhouse/commit/9dacd70fe))
-- auto-lint fixes ([960719d58](https://github.com/powerhouse-inc/powerhouse/commit/960719d58))
-- **codegen:** support document-model on typemap ([43be2d482](https://github.com/powerhouse-inc/powerhouse/commit/43be2d482))
-- **connect:** disable search bar by default ([bd05e44aa](https://github.com/powerhouse-inc/powerhouse/commit/bd05e44aa))
-- **connect:** ignore drive node drag when moving it to it's current position ([4aa387814](https://github.com/powerhouse-inc/powerhouse/commit/4aa387814))
+- **connect,common,reactor-browser,vetra:** resolve app name for each drive editor ([05f3a8893](https://github.com/powerhouse-inc/powerhouse/commit/05f3a8893))
 - **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
-- **connect-e2e:** make folder selection more specific ([7800b4696](https://github.com/powerhouse-inc/powerhouse/commit/7800b4696))
-- **connect-e2e:** fix flaky tests in CI ([d970bd4d3](https://github.com/powerhouse-inc/powerhouse/commit/d970bd4d3))
-- **document-drive:** reduce log verbosity ([29cc6ec9a](https://github.com/powerhouse-inc/powerhouse/commit/29cc6ec9a))
-- **ph-cmd:** ignore scalars package on ph commands ([ea2a28432](https://github.com/powerhouse-inc/powerhouse/commit/ea2a28432))
-- **reactor-api:** do not use multiple loaders ([93ca742ae](https://github.com/powerhouse-inc/powerhouse/commit/93ca742ae))
-- **reactor-api:** catch errors when loading packages to avoid breaking the process ([87adac5f2](https://github.com/powerhouse-inc/powerhouse/commit/87adac5f2))
-- **reactor-api:** skip document model with duplicated name instead of breaking ([d0bc1ff58](https://github.com/powerhouse-inc/powerhouse/commit/d0bc1ff58))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
-- Guillermo Puente @gpuente
-- Guillermo Puente Sandoval @gpuente
-
-## 5.0.0-staging.12 (2025-09-17)
-
-### 🩹 Fixes
-
-- **vetra:** activate codegen processor on either driveId or drive slug ([f4600228a](https://github.com/powerhouse-inc/powerhouse/commit/f4600228a))
-
-### ❤️ Thank You
-
-- Frank
-
-## 5.0.0-staging.11 (2025-09-17)
-
-### 🚀 Features
-
-- add processor configuration support to switchboard and Vetra integration ([#1859](https://github.com/powerhouse-inc/powerhouse/pull/1859))
-
-### 🩹 Fixes
-
-- **config:** set back config field to vetraUrl to avoid breaking change ([487b996a6](https://github.com/powerhouse-inc/powerhouse/commit/487b996a6))
-
-### ❤️ Thank You
-
-- Frank
-- Guillermo Puente Sandoval @gpuente
 
 ## 4.1.0-dev.51 (2025-09-11)
 

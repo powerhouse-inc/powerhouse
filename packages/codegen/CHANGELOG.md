@@ -1,93 +1,104 @@
-## 5.0.0-staging.21 (2025-09-30)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.20 (2025-09-30)
+## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features
 
-- **codegen,reactor-browser:** drive boilerplate tweaks ([870180495](https://github.com/powerhouse-inc/powerhouse/commit/870180495))
-- refactor DriveExplorer and FolderTree components to use unified node structure and Sidebar component ([64c69ce59](https://github.com/powerhouse-inc/powerhouse/commit/64c69ce59))
-- drive boilerplate update ([aca241a83](https://github.com/powerhouse-inc/powerhouse/commit/aca241a83))
-- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-- Guillermo Puente @gpuente
-- ryanwolhuter @ryanwolhuter
-
-## 5.0.0-staging.19 (2025-09-29)
-
-### 🚀 Features
-
-- removed props from document editor and updated boilerplate to use hook ([7f49e9070](https://github.com/powerhouse-inc/powerhouse/commit/7f49e9070))
-- pass documentId to editor component and useDocumentOfModule for type safe retrieval ([7f0781ea0](https://github.com/powerhouse-inc/powerhouse/commit/7f0781ea0))
-- **codegen:** updated document editor boilerplate ([75cc0b9ff](https://github.com/powerhouse-inc/powerhouse/commit/75cc0b9ff))
-- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
-- make EditorProps generic and added codegen tests ([ff5664adc](https://github.com/powerhouse-inc/powerhouse/commit/ff5664adc))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-
-## 5.0.0-staging.18 (2025-09-29)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.17 (2025-09-25)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.16 (2025-09-25)
-
-### 🚀 Features
-
-- handle replace and duplicate documents in drag and drop ([#1876](https://github.com/powerhouse-inc/powerhouse/pull/1876))
-
-### ❤️ Thank You
-
-- Guillermo Puente Sandoval @gpuente
-
-## 5.0.0-staging.15 (2025-09-24)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.14 (2025-09-23)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.13 (2025-09-23)
-
-### 🚀 Features
-
-- **codegen:** enable localStorage by default in withDropZone hoc ([9b105aae7](https://github.com/powerhouse-inc/powerhouse/commit/9b105aae7))
-- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
-- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
-- update app module state to support root documentTypes ([173127a5d](https://github.com/powerhouse-inc/powerhouse/commit/173127a5d))
-- app module drag and drop files ([#1834](https://github.com/powerhouse-inc/powerhouse/pull/1834))
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
 
 ### 🩹 Fixes
 
-- **codegen:** support document-model on typemap ([43be2d482](https://github.com/powerhouse-inc/powerhouse/commit/43be2d482))
-- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- updating codegen ([5585bd012](https://github.com/powerhouse-inc/powerhouse/commit/5585bd012))
+- part 2 of build fixes for module changes ([3000a13c3](https://github.com/powerhouse-inc/powerhouse/commit/3000a13c3))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.58 (2025-09-18)
+
+### 🚀 Features
+
+- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
+
+### 🩹 Fixes
+
+- codegen package needs to copy before testing ([9115c7968](https://github.com/powerhouse-inc/powerhouse/commit/9115c7968))
+- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.57 (2025-09-17)
+
+### 🚀 Features
+
+- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
+- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
+- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
+
+### 🩹 Fixes
+
+- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
+- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
+- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.56 (2025-09-17)
+
+### 🚀 Features
+
+- **codegen:** enable localStorage by default in withDropZone hoc ([9b105aae7](https://github.com/powerhouse-inc/powerhouse/commit/9b105aae7))
+
+### ❤️ Thank You
+
 - Guillermo Puente @gpuente
+
+## 4.1.0-dev.55 (2025-09-16)
+
+### 🚀 Features
+
+- enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### ❤️ Thank You
+
 - Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.12 (2025-09-17)
+## 4.1.0-dev.54 (2025-09-16)
+
+### 🚀 Features
+
+- adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
+- update app module state to support root documentTypes ([173127a5d](https://github.com/powerhouse-inc/powerhouse/commit/173127a5d))
+- app module drag and drop files ([#1834](https://github.com/powerhouse-inc/powerhouse/pull/1834))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.53 (2025-09-13)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
 
-## 5.0.0-staging.11 (2025-09-17)
+## 4.1.0-dev.52 (2025-09-12)
 
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+### 🩹 Fixes
 
-## 5.0.0-staging.10 (2025-09-11)
+- **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
 

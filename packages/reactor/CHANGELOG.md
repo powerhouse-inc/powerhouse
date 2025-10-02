@@ -1,51 +1,64 @@
-## 5.0.0-staging.21 (2025-09-30)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.20 (2025-09-30)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.19 (2025-09-29)
+## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features
 
-- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+- **reactor:** fix lint error ([53777e154](https://github.com/powerhouse-inc/powerhouse/commit/53777e154))
+- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
+
+### 🩹 Fixes
+
+- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
+- more type fixes ([16c562ae1](https://github.com/powerhouse-inc/powerhouse/commit/16c562ae1))
+- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
+- reverting bad merge changes and getting reactor to build again ([eb687de4c](https://github.com/powerhouse-inc/powerhouse/commit/eb687de4c))
 
 ### ❤️ Thank You
 
 - acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
 
-## 5.0.0-staging.18 (2025-09-29)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.17 (2025-09-25)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.16 (2025-09-25)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.15 (2025-09-24)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.14 (2025-09-23)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.13 (2025-09-23)
+## 4.1.0-dev.55 (2025-09-16)
 
 ### 🚀 Features
 
 - enable supported document types for drag and drop feature ([#1860](https://github.com/powerhouse-inc/powerhouse/pull/1860))
+
+### 🩹 Fixes
+
+- add default, passthrough signer ([d9e2c4f1d](https://github.com/powerhouse-inc/powerhouse/commit/d9e2c4f1d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.54 (2025-09-16)
+
+### 🚀 Features
+
 - adding reactor client to subgraph args ([d0a8011e6](https://github.com/powerhouse-inc/powerhouse/commit/d0a8011e6))
 - updating docs with error handler ([4e28b0573](https://github.com/powerhouse-inc/powerhouse/commit/4e28b0573))
 - subscriptions now have guaranteed delivery and output errors through a centralized error handler ([d9b0c4326](https://github.com/powerhouse-inc/powerhouse/commit/d9b0c4326))
 - naive implementation of subscriptions ([5ae6dd83c](https://github.com/powerhouse-inc/powerhouse/commit/5ae6dd83c))
 - reactor client builder ([d93875bcd](https://github.com/powerhouse-inc/powerhouse/commit/d93875bcd))
+
+### 🩹 Fixes
+
+- linter feedback ([5219f6322](https://github.com/powerhouse-inc/powerhouse/commit/5219f6322))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.53 (2025-09-13)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.52 (2025-09-12)
+
+### 🚀 Features
+
 - more test fixes ([12a0acd1d](https://github.com/powerhouse-inc/powerhouse/commit/12a0acd1d))
 - pulled job awaiter out of reactor client ([bd4c206a9](https://github.com/powerhouse-inc/powerhouse/commit/bd4c206a9))
 - implemented the easy, passthrough functions ([ceb692cd1](https://github.com/powerhouse-inc/powerhouse/commit/ceb692cd1))
@@ -53,9 +66,6 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 
 ### 🩹 Fixes
 
-- updating jobinfo type with created, complete, and result ([ebb139d1a](https://github.com/powerhouse-inc/powerhouse/commit/ebb139d1a))
-- add default, passthrough signer ([d9e2c4f1d](https://github.com/powerhouse-inc/powerhouse/commit/d9e2c4f1d))
-- linter feedback ([5219f6322](https://github.com/powerhouse-inc/powerhouse/commit/5219f6322))
 - linting issues ([ba85245b4](https://github.com/powerhouse-inc/powerhouse/commit/ba85245b4))
 - **connect-e2e:** fix failing tests ([88c3bea94](https://github.com/powerhouse-inc/powerhouse/commit/88c3bea94))
 
@@ -63,17 +73,8 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 
 - acaldas @acaldas
 - Benjamin Jordan (@thegoldenmule)
-- Guillermo Puente Sandoval @gpuente
 
-## 5.0.0-staging.12 (2025-09-17)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.11 (2025-09-17)
-
-This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
-
-## 5.0.0-staging.10 (2025-09-11)
+## 4.1.0-dev.51 (2025-09-11)
 
 ### 🚀 Features
 
