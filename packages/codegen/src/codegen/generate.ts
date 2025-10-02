@@ -72,10 +72,7 @@ export async function generateEditor(
   const pathOrigin = "../../";
 
   const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = await getDocumentTypesMap(
-    documentModelsDir,
-    pathOrigin,
-  );
+  const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),
@@ -129,7 +126,7 @@ export async function generateProcessor(
   config: PowerhouseConfig,
 ) {
   const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = await getDocumentTypesMap(documentModelsDir);
+  const documentTypesMap = getDocumentTypesMap(documentModelsDir);
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),

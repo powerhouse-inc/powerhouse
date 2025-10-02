@@ -1,5 +1,4 @@
 import type {
-  Action,
   AddChangeLogItemAction,
   AddChangeLogItemInput,
   AddModuleAction,
@@ -562,6 +561,7 @@ export const baseActions = {
   loadState,
   noop,
 };
+
 export const documentModelActions = {
   setModelName,
   setModelId,
@@ -603,3 +603,5 @@ export const documentModelActions = {
   reorderChangeLogItems,
   releaseNewVersion,
 };
+
+export const actions = { ...baseActions, ...documentModelActions };

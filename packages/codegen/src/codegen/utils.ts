@@ -1,9 +1,8 @@
 import type { DocumentTypesMap } from "@powerhousedao/codegen";
-import { paramCase, pascalCase } from "change-case";
+import { pascalCase } from "change-case";
 import type {
   DocumentModelDocument,
   DocumentModelGlobalState,
-  DocumentModelModule,
 } from "document-model";
 import { documentModelReducer } from "document-model";
 import { baseLoadFromFile } from "document-model/node";
@@ -51,11 +50,16 @@ export async function formatWithPrettierBeforeWrite(
 }
 
 /** returns map of document model id to document model name in pascal case and import path */
-export async function getDocumentTypesMap(
+export function getDocumentTypesMap(
   dir: string,
   pathOrigin = "../../",
-): Promise<DocumentTypesMap> {
-  const documentTypesMap: DocumentTypesMap = {};
+): DocumentTypesMap {
+  const documentTypesMap: DocumentTypesMap = {
+    "powerhouse/document-model": {
+      name: "DocumentModel",
+      importPath: `document-model`,
+    },
+  };
 
   // add document types from provided dir
   if (fs.existsSync(dir)) {
@@ -81,25 +85,6 @@ export async function getDocumentTypesMap(
           console.error(`Failed to parse ${specPath}`);
         }
       });
-  }
-
-  // add documents from document-model-libs if lib is installed
-  try {
-    /* eslint-disable */
-    // @ts-ignore-error TS2307 this import is expected to fail if document-model-libs is not available
-    const documentModels = await import("document-model-libs/document-models");
-    Object.keys(documentModels).forEach((name) => {
-      const documentModel = documentModels[
-        name as keyof typeof documentModels
-      ] as DocumentModelModule;
-      documentTypesMap[documentModel.documentModel.global.id] = {
-        name,
-        importPath: `document-model-libs/${paramCase(name)}`,
-      };
-    });
-    /* eslint-enable */
-  } catch {
-    /* document-model-libs is not available */
   }
 
   return documentTypesMap;
