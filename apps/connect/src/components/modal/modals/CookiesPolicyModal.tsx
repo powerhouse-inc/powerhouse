@@ -1,16 +1,10 @@
 import { ReadRequiredModal } from "@powerhousedao/design-system";
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { Trans, useTranslation } from "react-i18next";
 
-export interface CookiesPolicyModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export const CookiesPolicyModal: React.FC<CookiesPolicyModalProps> = (
-  props,
-) => {
-  const { open, onClose } = props;
-
+export const CookiesPolicyModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "cookiesPolicy";
   const { t } = useTranslation();
 
   return (
@@ -30,7 +24,7 @@ export const CookiesPolicyModal: React.FC<CookiesPolicyModalProps> = (
       }
       bodyProps={{ className: "text-left" }}
       closeLabel="Close"
-      onContinue={() => onClose()}
+      onContinue={() => closePHModal()}
       overlayProps={{ style: { zIndex: 10000 } }}
     />
   );

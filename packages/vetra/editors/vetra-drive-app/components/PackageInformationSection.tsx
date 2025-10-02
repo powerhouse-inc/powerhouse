@@ -1,5 +1,4 @@
 import type {
-  IDriveContext,
   VetraDocumentModelModule,
   VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
@@ -10,7 +9,6 @@ import { SectionAccordion } from "./SectionAccordion.js";
 
 interface PackageInformationSectionProps {
   className?: string;
-  context: IDriveContext;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
   documentModelModule?: VetraDocumentModelModule;
@@ -22,7 +20,6 @@ export const PackageInformationSection: React.FC<
   PackageInformationSectionProps
 > = ({
   className,
-  context,
   packageDocumentId,
   onAddPackageDocument,
   documentModelModule,
@@ -47,7 +44,6 @@ export const PackageInformationSection: React.FC<
       <div className="">
         {packageDocumentId && documentModelModule && editorModule ? (
           <EditorContainer
-            context={context}
             documentId={packageDocumentId}
             driveId={driveId}
             documentModelModule={documentModelModule}

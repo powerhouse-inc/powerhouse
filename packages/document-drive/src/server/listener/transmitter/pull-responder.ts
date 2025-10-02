@@ -514,7 +514,7 @@ export class PullResponderTransmitter implements IPullResponderTransmitter {
       trigger,
     );
 
-    staticLogger().debug(
+    staticLogger().verbose(
       `[SYNC DEBUG] PullResponderTransmitter.executePull starting for drive: ${driveId}, listenerId: ${trigger.data.listenerId}`,
     );
 

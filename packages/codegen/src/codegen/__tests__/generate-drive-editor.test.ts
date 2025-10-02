@@ -3,6 +3,7 @@ import type { PowerhouseConfig } from "@powerhousedao/config";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { compile } from "./fixtures/typecheck.js";
 import {
   EXPECTED_DRIVE_EXPLORER_EXPORT,
   EXPECTED_EDITOR_CONTENT,
@@ -13,7 +14,7 @@ import {
 } from "./generate-drive-editor.expected.js";
 
 // Set this to false to keep the generated files for inspection
-const CLEANUP_AFTER_TESTS = true;
+const CLEANUP_AFTER_TESTS = false;
 
 describe("generateDriveEditor", () => {
   let testDir: string;
@@ -28,7 +29,7 @@ describe("generateDriveEditor", () => {
   };
 
   beforeEach(() => {
-    testDir = path.join(__dirname, "temp");
+    testDir = path.join(__dirname, "temp", "drive-editor");
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -46,11 +47,12 @@ describe("generateDriveEditor", () => {
     const name = "AtlasDriveExplorer";
     await generateDriveEditor(name, config, "AtlasDriveExplorer");
 
+    await compile("tsconfig.document-editor.test.json");
+
     const editorDir = path.join(testDir, "atlas-drive-explorer");
     expect(fs.existsSync(editorDir)).toBe(true);
 
     expect(fs.existsSync(path.join(editorDir, "components"))).toBe(true);
-    expect(fs.existsSync(path.join(editorDir, "types"))).toBe(true);
 
     expect(
       fs.existsSync(path.join(editorDir, "components/DriveExplorer.tsx")),
@@ -59,13 +61,8 @@ describe("generateDriveEditor", () => {
       fs.existsSync(path.join(editorDir, "components/FolderTree.tsx")),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(editorDir, "components/EditorContainer.tsx")),
-    ).toBe(true);
-    expect(
       fs.existsSync(path.join(editorDir, "components/CreateDocument.tsx")),
     ).toBe(true);
-
-    expect(fs.existsSync(path.join(editorDir, "types/css.d.ts"))).toBe(true);
 
     const indexPath = path.join(editorDir, "index.ts");
     const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
@@ -91,6 +88,8 @@ describe("generateDriveEditor", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
 
     expect(indexContent).toContain('id: "drive-editor-id"');
+
+    await compile("tsconfig.document-editor.test.json");
   });
 
   it("should append new exports to existing index.ts file", async () => {
@@ -101,6 +100,28 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
 
     const mainIndexPath = path.join(testDir, "index.ts");
     fs.writeFileSync(mainIndexPath, existingContent);
+
+    // Create the existing-editor directory and minimal files to satisfy TypeScript
+    const existingEditorDir = path.join(testDir, "existing-editor");
+    fs.mkdirSync(existingEditorDir, { recursive: true });
+
+    // Create a minimal index.ts for the existing editor
+    const existingEditorIndexPath = path.join(existingEditorDir, "index.ts");
+    fs.writeFileSync(
+      existingEditorIndexPath,
+      `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+
+export const module: DriveEditorModule = {
+  Component: () => null,
+  documentTypes: ["powerhouse/document-drive"],
+  config: {
+    id: "ExistingEditor",
+    disableExternalControls: true,
+    documentToolbarEnabled: true,
+    showSwitchboardLink: true,
+  },
+};`,
+    );
 
     await generateDriveEditor(name, config);
 
@@ -114,5 +135,7 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
     // Verify both exports are present
     expect(mainIndexContent).toContain(EXPECTED_EXISTING_EDITOR_EXPORT);
     expect(mainIndexContent).toContain(EXPECTED_DRIVE_EXPLORER_EXPORT);
+
+    await compile("tsconfig.document-editor.test.json");
   });
 });

@@ -163,7 +163,7 @@ export function makeImportScriptFromPackages(args: {
   return fileContent;
 }
 
-export function ensureNodeVersion(minVersion = "20") {
+export function ensureNodeVersion(minVersion = "22") {
   const version = process.versions.node;
   if (!version) {
     return;

@@ -6,10 +6,12 @@ import type {
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
-import type { IDocumentDriveServer } from "document-drive";
+import { childLogger, type IDocumentDriveServer } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
+
+const logger = childLogger(["reactor-api", "create-schema"]);
 
 export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,
@@ -42,10 +44,19 @@ export const getDocumentModelTypeDefs = (
 ) => {
   const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
+
+  const addedDocumentModels = new Set<string>();
   documentModels.forEach(({ documentModel }) => {
     const dmSchemaName = pascalCase(
       documentModel.global.name.replaceAll("/", " "),
     );
+    if (addedDocumentModels.has(dmSchemaName)) {
+      logger.error(
+        `Skipping document model with duplicate name: ${dmSchemaName}`,
+      );
+      return;
+    }
+    addedDocumentModels.add(dmSchemaName);
     let tmpDmSchema = `
           ${documentModel.global.specifications
             .map((specification) =>
@@ -118,9 +129,9 @@ export const getDocumentModelTypeDefs = (
               documentType: String!
               operations(skip: Int, first: Int): [Operation!]!
               revision: Int!
-              created: DateTime!
               createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIso: DateTime!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIsoAtUtcIso: DateTime!
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               stateJSON: JSONObject

@@ -25,6 +25,7 @@ export const SPECIAL_PACKAGES = [
 // Packages to exclude from dynamic detection (external dependencies)
 export const EXCLUDED_PACKAGES = [
   "@powerhousedao/document-engineering",
+  "@powerhousedao/scalars",
   "@powerhousedao/diff-analyzer",
   "@powerhousedao/analytics-engine-core",
   "@powerhousedao/analytics-engine-graphql",

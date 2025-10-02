@@ -2,29 +2,37 @@ import {
   App,
   AppSkeleton,
   CookieBanner,
-  ModalManager,
-  useLoadData,
-  useLoadInitialData,
+  ModalsContainer,
+  useCheckLatestVersion,
+  useSubscribeToVetraPackages,
+  useSetSentryUser,
+  createReactor,
 } from "@powerhousedao/connect";
-import { StrictMode, Suspense } from "react";
 import "../i18n/index.js";
+import { lazy, StrictMode, Suspense, type ReactNode } from "react";
 
-function Load() {
-  useLoadInitialData();
-  useLoadData();
-  return null;
-}
+export const Load = lazy(async () => {
+  await createReactor();
+  return {
+    default: ({ children }: { children?: ReactNode }) => {
+      useSubscribeToVetraPackages();
+      useSetSentryUser();
+      useCheckLatestVersion();
+      return children;
+    },
+  };
+});
 
 export const AppLoader = () => (
   <StrictMode>
     <Suspense fallback={<AppSkeleton />} name="AppLoader">
-      <Load />
-      <App />
+      <Load>
+        <App />
+      </Load>
     </Suspense>
     <Suspense name="CookieBanner">
-      <ModalManager>
-        <CookieBanner />
-      </ModalManager>
+      <CookieBanner />
     </Suspense>
+    <ModalsContainer />
   </StrictMode>
 );

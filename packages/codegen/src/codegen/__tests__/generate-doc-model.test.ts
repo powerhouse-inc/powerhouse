@@ -11,6 +11,7 @@ import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const testDir = import.meta.dirname;
+import { compile } from "./fixtures/typecheck.js";
 
 describe("document model", () => {
   const srcPath = path.join(testDir, "data", "document-models");
@@ -49,36 +50,6 @@ describe("document model", () => {
     );
   };
 
-  const compile = () =>
-    new Promise((resolve, reject) => {
-      const output: { stdout: string[]; stderr: string[] } = {
-        stdout: [],
-        stderr: [],
-      };
-      const rootDir = path.join(testDir, "../../..");
-      const child = exec(
-        "npx tsc --project tsconfig.document-model.test.json",
-        { cwd: rootDir },
-      );
-      child.stdout?.on("data", (data) => {
-        output.stdout.push(data);
-      });
-      child.stderr?.on("data", (data) => {
-        output.stderr.push(data);
-      });
-      child.on("close", (code) => {
-        if (code === 0) {
-          resolve(true);
-        } else {
-          reject(
-            new Error(
-              `tsc failed with code ${code}:\n${output.stdout.join("")}\n${output.stderr.join("")}`,
-            ),
-          );
-        }
-      });
-    });
-
   it(
     "should generate a document model",
     {
@@ -86,7 +57,7 @@ describe("document model", () => {
     },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -115,7 +86,7 @@ describe("document model", () => {
         },
       );
 
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -178,7 +149,7 @@ describe("document model", () => {
         },
       );
 
-      await compile();
+      await compile("tsconfig.document-model.test.json");
     },
   );
 
@@ -189,7 +160,7 @@ describe("document model", () => {
     },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       const indexPath = path.join(outPath, "document-model", "index.ts");
       const indexContent = readFileSync(indexPath, "utf-8");
@@ -209,7 +180,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       const testDocDocumentModelV2 = await loadDocumentModel(
         path.join(
@@ -263,7 +234,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       // Check general module errors
       const generalErrorPath = path.join(
@@ -321,7 +292,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile();
+      await compile("tsconfig.document-model.test.json");
 
       // Check that the general module reducer imports InvalidStatusTransition
       const generalReducerPath = path.join(

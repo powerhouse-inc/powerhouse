@@ -42,11 +42,7 @@ const Template: Story = {
           description="POH Admin App"
           icon={<Icon name="PowerhouseLogoSmall" width={32} height={32} />}
         />
-        <HomeScreenAddDriveItem
-          onClick={() => {
-            alert("clicked");
-          }}
-        />
+        <HomeScreenAddDriveItem />
       </HomeScreen>
     </div>
   ),

@@ -8,12 +8,7 @@ import type {
   FolderNode,
   RemoteDriveAccessLevel,
 } from "document-drive";
-import type {
-  Operation,
-  PHBaseState,
-  PHDocument,
-  PHDocumentHeader,
-} from "document-model";
+import type { Operation, PHBaseState, PHDocument } from "document-model";
 import type { GraphQLError } from "graphql";
 
 export type DriveState = DriveInfo &
@@ -54,20 +49,6 @@ export type DriveInfo = {
   meta?: {
     preferredEditor?: string;
   };
-};
-
-export type PHDocumentGQL = Omit<PHDocumentHeader, "revision"> & {
-  id: string;
-  revision: number;
-  // @deprecated
-  createdAt: string;
-  // @deprecated
-  lastModified: string;
-  __typename: string;
-  state: unknown;
-  initialState: unknown;
-  stateJSON: unknown;
-  operations: Operation[];
 };
 
 export interface IServerDelegateDrivesManager {

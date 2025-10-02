@@ -1,30 +1,27 @@
 import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhousedao/design-system";
 import {
   addDocument,
+  closePHModal,
   setSelectedNode,
+  useDocumentModelModuleById,
+  usePHModal,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
 
-export interface CreateDocumentModalProps {
-  open: boolean;
-  documentModel: DocumentModelModule;
-  onClose: () => void;
-}
-
-export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = (
-  props,
-) => {
-  const { open, documentModel, onClose } = props;
+export const CreateDocumentModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "createDocument";
+  const documentType = open ? phModal.documentType : undefined;
+  const documentModel = useDocumentModelModuleById(documentType);
   const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const parentFolder = useSelectedParentFolder();
 
   const onCreateDocument = async (documentName: string) => {
-    onClose();
-    if (!selectedDrive) return;
+    closePHModal();
+    if (!selectedDrive || !documentModel) return;
 
     const node = await addDocument(
       selectedDrive.header.id,
@@ -40,7 +37,7 @@ export const CreateDocumentModal: React.FC<CreateDocumentModalProps> = (
       open={open}
       onContinue={onCreateDocument}
       onOpenChange={(status: boolean) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
     />
   );

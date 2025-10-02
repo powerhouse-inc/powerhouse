@@ -1,16 +1,11 @@
-import { useDocumentById } from "@powerhousedao/reactor-browser";
-import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import type { ProcessorModuleDocument } from "../../document-models/processor-module/index.js";
 import { actions } from "../../document-models/processor-module/index.js";
+import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 
-export type IProps = EditorProps;
+export function Editor() {
+  const [document, dispatch] = useSelectedProcessorModuleDocument();
 
-export default function Editor(props: IProps) {
-  const { document: initialDocument } = props;
-  const [document, dispatch] = useDocumentById(initialDocument.header.id);
-  const unsafeCastOfDocument = document as ProcessorModuleDocument;
   const onConfirm = useCallback(() => {
     // Dispatch all actions at once
     dispatch([actions.setProcessorStatus({ status: "CONFIRMED" })]);
@@ -18,18 +13,18 @@ export default function Editor(props: IProps) {
 
   const onNameChange = useCallback(
     (name: string) => {
-      if (name === unsafeCastOfDocument.state.global.name) return;
+      if (name === document.state.global.name) return;
       dispatch(actions.setProcessorName({ name }));
     },
-    [unsafeCastOfDocument.state.global.name, dispatch],
+    [document.state.global.name, dispatch],
   );
 
   const onTypeChange = useCallback(
     (type: string) => {
-      if (type === unsafeCastOfDocument.state.global.type) return;
+      if (type === document.state.global.type) return;
       dispatch(actions.setProcessorType({ type }));
     },
-    [unsafeCastOfDocument.state.global.type, dispatch],
+    [document.state.global.type, dispatch],
   );
 
   const onAddDocumentType = useCallback(
@@ -53,10 +48,10 @@ export default function Editor(props: IProps) {
         onTypeChange={onTypeChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}
-        status={unsafeCastOfDocument.state.global.status}
-        processorName={unsafeCastOfDocument.state.global.name ?? ""}
-        processorType={unsafeCastOfDocument.state.global.type ?? ""}
-        documentTypes={unsafeCastOfDocument.state.global.documentTypes ?? []}
+        status={document.state.global.status}
+        processorName={document.state.global.name ?? ""}
+        processorType={document.state.global.type ?? ""}
+        documentTypes={document.state.global.documentTypes ?? []}
         onConfirm={onConfirm}
       />
     </div>

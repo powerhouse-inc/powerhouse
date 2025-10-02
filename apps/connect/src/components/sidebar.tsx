@@ -1,8 +1,4 @@
-import {
-  DriveIcon,
-  useModal,
-  useShowAddDriveModal,
-} from "@powerhousedao/connect";
+import { DriveIcon } from "@powerhousedao/connect";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
@@ -14,29 +10,26 @@ import {
   logout,
   openRenown,
   setSelectedDrive,
+  showPHModal,
   useDrives,
   useSelectedDrive,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 
 export function Sidebar() {
-  const { showModal } = useModal();
-  const navigate = useNavigate();
   const user = useUser();
   const drives = useDrives();
   const [selectedDrive] = useSelectedDrive();
-  const showAddDriveModal = useShowAddDriveModal();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
   const onClickSettings = () => {
-    showModal("settingsModal", { onRefresh: () => navigate(0) });
+    showPHModal({ type: "settings" });
   };
 
   const onAddDriveClick = () => {
-    showAddDriveModal();
+    showPHModal({ type: "addDrive" });
   };
 
   const headerContent = (
@@ -51,7 +44,7 @@ export function Sidebar() {
           aria-label="Home"
           id="connect-debug-button"
           className="ml-6"
-          onClick={() => showModal("debugSettingsModal", {})}
+          onClick={() => showPHModal({ type: "debugSettings" })}
         >
           <img src="settings.png" className="h-5 text-gray-600" />
         </button>

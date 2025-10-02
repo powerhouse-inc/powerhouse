@@ -11,7 +11,7 @@ const meta: Meta<typeof UploadFileItem> = {
   argTypes: {
     status: {
       control: "select",
-      options: ["success", "failed", "pending", "uploading"],
+      options: ["success", "failed", "pending", "uploading", "conflict"],
     },
     documentType: {
       control: "select",
@@ -94,6 +94,16 @@ export const PendingResolution: Story = {
     fileName: "subgraph.phdm",
     fileSize: "2.76 MB",
     status: "pending",
+    onFindResolution: fn(),
+  },
+};
+
+export const ConflictResolution: Story = {
+  ...Template,
+  args: {
+    fileName: "duplicate-document.phdm",
+    fileSize: "2.76 MB",
+    status: "conflict",
     onFindResolution: fn(),
   },
 };

@@ -1,6 +1,5 @@
 import { DefaultEditorLoader } from "@powerhousedao/design-system";
 import type {
-  IDriveContext,
   VetraDocumentModelModule,
   VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
@@ -11,14 +10,13 @@ export interface EditorContainerProps {
   driveId: string;
   documentId: string;
   documentType: string;
-  context: IDriveContext;
   documentModelModule: VetraDocumentModelModule;
   editorModule: VetraEditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-  const { context, editorModule, documentId } = props;
-  const [document] = useDocumentById(documentId);
+  const { editorModule, documentId } = props;
+  const [document, dispatch] = useDocumentById(documentId);
 
   const loadingContent = (
     <div className="flex h-full flex-1 items-center justify-center">
@@ -32,11 +30,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   return (
     <Suspense fallback={loadingContent}>
-      <EditorComponent
-        context={context}
-        document={document}
-        error={console.error}
-      />
+      <EditorComponent documentId={documentId} />
     </Suspense>
   );
 };

@@ -49,7 +49,7 @@ export type VetraDocumentModelModule = VetraMeta & {
 };
 export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];
-  Component: (props: any) => any;
+  Component: React.ComponentType<any>;
   config: {
     id: string;
     disableExternalControls?: boolean;

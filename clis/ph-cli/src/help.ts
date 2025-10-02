@@ -348,6 +348,10 @@ Options:
                             will prompt for user confirmation before generating code. This is useful
                             for development when you want control over when code regeneration happens.
 
+  --watch-packages           Enable dynamic loading for document-models and editors in connect-studio
+                            and switchboard. When enabled, the system will watch for changes in these
+                            directories and reload them dynamically. Default is disabled for better performance.
+
 Examples:
   $ ph vetra                                              # Start Vetra environment with defaults
   $ ph vetra --switchboard-port 5000 --connect-port 3001 # Use custom ports
@@ -357,6 +361,7 @@ Examples:
   $ ph vetra --remote-drive http://localhost:4001/d/docs  # Connect to remote drive
   $ ph vetra --disable-connect                            # Start only backend services
   $ ph vetra --interactive                                # Enable interactive code generation mode
+  $ ph vetra --watch-packages                             # Enable dynamic loading for development
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 `;
 

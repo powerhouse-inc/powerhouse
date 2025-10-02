@@ -1,4 +1,5 @@
 import type {
+  ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
@@ -10,17 +11,28 @@ export type UploadTracker = {
   id: string;
   fileName: string;
   fileSize: string;
-  status: "pending" | "uploading" | "success" | "failed";
+  status:
+    | "pending"
+    | "uploading"
+    | "success"
+    | "failed"
+    | "conflict"
+    | "unsupported-document-type";
   progress: number;
   errorDetails?: string;
   fileNode?: Node;
   documentType?: DocumentTypeIcon;
+  // Store upload context for re-processing conflicts
+  file?: File;
+  parentNode?: Node;
+  duplicateType?: "id" | "name";
 };
 
 export type OnAddFileWithProgress = (
   file: File,
   parent: Node | undefined,
   onProgress?: (progress: FileUploadProgress) => void,
+  resolveConflict?: ConflictResolution,
 ) => Promise<Node | undefined> | Node | undefined;
 
 // Utility functions
@@ -49,6 +61,10 @@ export function mapProgressStageToStatus(
       return "success";
     case "failed":
       return "failed";
+    case "conflict":
+      return "conflict";
+    case "unsupported-document-type":
+      return "unsupported-document-type";
     default:
       return "pending";
   }
@@ -58,6 +74,7 @@ export function mapUploadsToFileItems(
   uploadsArray: (UploadTracker | undefined)[],
   removeUpload: (uploadId: string) => void,
   setSelectedNodeFn?: (nodeOrNodeSlug: Node | string | undefined) => void,
+  onConflictResolution?: (uploadId: string) => void,
 ): UploadFileItemProps[] {
   return uploadsArray
     .filter(
@@ -92,6 +109,14 @@ export function mapUploadsToFileItems(
           ? () => {
               console.log("Finding resolution for upload:", upload.id);
             }
-          : undefined,
+          : upload.status === "conflict"
+            ? () => {
+                console.log(
+                  "Finding conflict resolution for upload:",
+                  upload.id,
+                );
+                onConflictResolution?.(upload.id);
+              }
+            : undefined,
     }));
 }

@@ -1,19 +1,13 @@
-import type {
-  DocumentStory,
-  EditorStoryArgs,
-  EditorStoryProps,
+import type { DocumentStory } from "@powerhousedao/builder-tools";
+import {
+  type EditorStoryArgs,
+  type EditorStoryProps,
+  createDocumentStory,
 } from "@powerhousedao/builder-tools";
-import { createDocumentStory } from "@powerhousedao/builder-tools";
-import { Editor } from "@powerhousedao/common";
-import { DriveContextProvider } from "@powerhousedao/reactor-browser";
 import type { Decorator, Meta } from "@storybook/react";
-import type {
-  DocumentDriveGlobalState,
-  DocumentDriveLocalState,
-} from "document-drive";
 import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { defaultBaseState } from "document-model/core";
+import { Editor } from "./editor.js";
 
 function createDriveStory<T extends (props: any) => React.JSX.Element>(
   Editor: T,
@@ -26,37 +20,18 @@ function createDriveStory<T extends (props: any) => React.JSX.Element>(
 } {
   const story = createDocumentStory(
     Editor,
-    driveDocumentModelModule.reducer,
     initialState ??
       driveDocumentModelModule.utils.createState({
         ...defaultBaseState(),
-        global: { name: "Powerhouse" } as DocumentDriveGlobalState,
-        local: {} as DocumentDriveLocalState,
+        global: { name: "Powerhouse", icon: "POWERHOUSE", nodes: [] },
+        local: {
+          availableOffline: false,
+          listeners: [],
+          sharingType: "PUBLIC",
+          triggers: [],
+        },
       }),
     additionalStoryArgs,
-    [
-      (Story, context) => (
-        <DriveContextProvider
-          value={{
-            onAddFile: () => Promise.resolve(),
-            onAddFolder: () => Promise.resolve(undefined),
-            onRenameNode: () => Promise.resolve(undefined),
-            onCopyNode: () => Promise.resolve(),
-            onMoveNode: () => Promise.resolve(),
-            onDuplicateNode: () => Promise.resolve(),
-            showDeleteNodeModal: () => {},
-            showCreateDocumentModal(documentModel: DocumentModelModule) {
-              return Promise.resolve({
-                name: `New ${documentModel.documentModel.global.name}`,
-              });
-            },
-          }}
-        >
-          <Story />
-        </DriveContextProvider>
-      ),
-      ...(decorators ?? []),
-    ],
   );
   return story as {
     meta: Meta<T>;

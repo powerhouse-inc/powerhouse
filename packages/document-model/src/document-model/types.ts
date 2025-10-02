@@ -18,7 +18,7 @@ import type {
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
   reducer: Reducer<TState>;
-  actions: Record<string, (input: any) => Action>;
+  actions: Record<string, (...args: any[]) => Action>;
   utils: DocumentModelUtils<TState>;
   documentModel: DocumentModelPHState;
 };

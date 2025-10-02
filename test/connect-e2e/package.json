@@ -26,7 +26,7 @@
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@types/jszip": "^3.4.1",
-    "@types/node": "^22.15.17",
+    "@types/node": "^24.6.1",
     "change-case": "^5.4.4",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",

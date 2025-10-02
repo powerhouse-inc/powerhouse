@@ -1,5 +1,8 @@
+import type {
+  ConflictResolution,
+  FileUploadProgress,
+} from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
-import type { FileUploadProgress } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useReducer } from "react";
 import {
   type OnAddFileWithProgress,
@@ -53,6 +56,17 @@ type UploadAction =
     }
   | {
       type: "CLEAR_ALL_UPLOADS";
+    }
+  | {
+      type: "SET_CONFLICT_DATA";
+      payload: {
+        id: string;
+        file: File;
+        parentNode?: Node;
+      };
+    }
+  | {
+      type: "CLEAR_CONFLICTED_UPLOADS";
     };
 
 // Reducer function
@@ -89,6 +103,10 @@ function uploadsReducer(
           ...(action.payload.progress.documentType && {
             documentType: action.payload.progress.documentType,
           }),
+          // Update duplicateType if provided (for conflicts)
+          ...(action.payload.progress.duplicateType && {
+            duplicateType: action.payload.progress.duplicateType,
+          }),
         },
       };
     }
@@ -114,7 +132,7 @@ function uploadsReducer(
         ...state,
         [action.payload.id]: {
           ...failedUpload,
-          status: "failed",
+          status: failedUpload.status || "failed",
           errorDetails: action.payload.error,
         },
       };
@@ -128,6 +146,31 @@ function uploadsReducer(
 
     case "CLEAR_ALL_UPLOADS": {
       return {};
+    }
+
+    case "SET_CONFLICT_DATA": {
+      const conflictUpload = state[action.payload.id];
+      if (!conflictUpload) return state;
+
+      return {
+        ...state,
+        [action.payload.id]: {
+          ...conflictUpload,
+          file: action.payload.file,
+          parentNode: action.payload.parentNode,
+        },
+      };
+    }
+
+    case "CLEAR_CONFLICTED_UPLOADS": {
+      // Filter out all uploads with status "conflict"
+      const filteredUploads: UploadsState = {};
+      for (const [id, upload] of Object.entries(state)) {
+        if (upload && upload.status !== "conflict") {
+          filteredUploads[id] = upload;
+        }
+      }
+      return filteredUploads;
     }
 
     default:
@@ -199,6 +242,18 @@ export function useUploadTracker(useLocalStorage = false, driveId?: string) {
               progress,
             },
           });
+
+          // Store file and parent data when conflict is detected
+          if (progress.stage === "conflict") {
+            dispatch({
+              type: "SET_CONFLICT_DATA",
+              payload: {
+                id: fileId,
+                file,
+                parentNode: parent,
+              },
+            });
+          }
         };
 
         try {
@@ -242,6 +297,12 @@ export function useUploadTracker(useLocalStorage = false, driveId?: string) {
     });
   }, []);
 
+  const clearConflictedUploads = useCallback(() => {
+    dispatch({
+      type: "CLEAR_CONFLICTED_UPLOADS",
+    });
+  }, []);
+
   const getUploadsArray = useCallback(() => {
     return Object.values(uploads);
   }, [uploads]);
@@ -250,6 +311,64 @@ export function useUploadTracker(useLocalStorage = false, driveId?: string) {
     return Object.keys(uploads).length;
   }, [uploads]);
 
+  const resolveConflict = useCallback(
+    (
+      uploadId: string,
+      resolution: ConflictResolution,
+      onAddFile?: OnAddFileWithProgress,
+    ) => {
+      const upload = uploads[uploadId];
+      if (!upload?.file || !onAddFile) {
+        console.error(
+          "Cannot resolve conflict: missing upload data or onAddFile function",
+        );
+        return;
+      }
+
+      // Re-call onAddFile with the conflict resolution
+      const progressCallback = (progress: FileUploadProgress) => {
+        dispatch({
+          type: "UPDATE_PROGRESS",
+          payload: {
+            id: uploadId,
+            progress,
+          },
+        });
+      };
+
+      const result = onAddFile(
+        upload.file,
+        upload.parentNode,
+        progressCallback,
+        resolution,
+      );
+
+      // Handle both Promise and direct return values
+      Promise.resolve(result)
+        .then((fileNode: Node | undefined) => {
+          if (fileNode) {
+            dispatch({
+              type: "SET_FILE_NODE",
+              payload: {
+                id: uploadId,
+                fileNode,
+              },
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          dispatch({
+            type: "SET_ERROR",
+            payload: {
+              id: uploadId,
+              error: error instanceof Error ? error.message : "Unknown error",
+            },
+          });
+        });
+    },
+    [uploads],
+  );
+
   return {
     uploads,
     uploadsArray: getUploadsArray(),
@@ -257,5 +376,7 @@ export function useUploadTracker(useLocalStorage = false, driveId?: string) {
     createUploadHandler,
     removeUpload,
     clearAllUploads,
+    clearConflictedUploads,
+    resolveConflict,
   };
 }

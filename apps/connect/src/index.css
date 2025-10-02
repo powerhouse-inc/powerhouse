@@ -1,4 +1,4 @@
-@import "@powerhousedao/design-system/style.css";
 @import "tailwindcss";
+@import "@powerhousedao/design-system/style.css";
 
 @custom-variant dark (&:where(.dark, .dark *));

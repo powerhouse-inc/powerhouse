@@ -10,9 +10,13 @@
   "references": [{ "path": "./tsconfig.lib.json" }],
   "include": [
     "vitest.config.ts",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/__tests__/**/*"
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/__tests__/**/*"
+  ],
+  "exclude": [
+    "src/**/__tests__/temp/**",
+    "**/dist"
   ]
 }

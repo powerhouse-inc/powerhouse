@@ -11,6 +11,7 @@ export type ConnectStudioOptions = {
   phCliVersion?: string;
   logLevel?: LogLevel;
   enableDocumentsHMR?: boolean;
+  disableDynamicLoading?: boolean;
 };
 
 export type StartServerOptions = {
@@ -22,4 +23,5 @@ export type StartServerOptions = {
   phCliVersion?: string;
   logLevel?: LogLevel;
   enableDocumentsHMR?: boolean;
+  disableDynamicLoading?: boolean;
 };

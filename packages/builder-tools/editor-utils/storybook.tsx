@@ -1,21 +1,22 @@
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
+import {
+  useSelectedDocument,
+  type DriveEditorProps,
+} from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
   Action,
   ActionContext,
   CreateState,
-  EditorProps,
   PHBaseState,
   PHDocument,
-  Reducer,
 } from "document-model";
 import { baseCreateDocument } from "document-model/core";
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { useInterval } from "usehooks-ts";
-import { useDocumentReducer } from "./reducer.js";
 
 export type EditorStoryArgs = Partial<{
+  document: PHDocument;
   user: {
     address: string;
     networkId: string;
@@ -39,7 +40,7 @@ export type EditorStoryArgs = Partial<{
   };
 }>;
 
-export type EditorStoryProps = EditorProps & EditorStoryArgs;
+export type EditorStoryProps = EditorStoryArgs;
 
 export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
 
@@ -55,22 +56,17 @@ export type DocumentStory = StoryObj<EditorStoryComponent>;
 
 export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
 
-// Default createState function for PHDocument
-const defaultPHDocumentCreateState: CreateState = (state) => {
-  return state as PHBaseState;
-};
-
 export function createDocumentStory(
   Editor: EditorStoryComponent,
-  reducer: Reducer<any>,
-  initialState: unknown,
+  initialState: any,
   additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps>[],
+  decorators?: Decorator[],
 ): {
   meta: Meta<typeof Editor>;
   CreateDocumentStory: DocumentStory;
 } {
   const meta = {
+    includeStories: ["All"],
     component: Editor,
     decorators: [
       (Story, { args }) => {
@@ -100,17 +96,10 @@ export function createDocumentStory(
       ...(decorators ?? []),
     ],
     render: function Render(args) {
-      const [error, setError] = useState<unknown>();
       const emit = useChannel({});
 
-      const [document, _dispatch] = useDocumentReducer(
-        reducer,
-        args.document,
-        (error) => {
-          console.error(error);
-          setError(error);
-        },
-      );
+      // TODO: make args.document the selected document
+      const [document, _dispatch] = useSelectedDocument();
       function dispatch(action: Action) {
         const context: ActionContext = {};
         if (args.user) {
@@ -133,48 +122,45 @@ export function createDocumentStory(
         });
       }
 
-      //  resets the budget state in the reducer when the prop changes
-      React.useEffect(() => {
+      // TODO: allow changing document on storybook
+      useEffect(() => {
         if (document) {
           emit("DOCUMENT", document);
         }
-        setError(undefined);
       }, [document, emit]);
 
       useInterval(() => {
         if (args.simulateBackgroundUpdates) {
           const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
-            dispatch(createAction(document));
+            dispatch(createAction(document!));
           });
         }
       }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
-      return <Editor {...args} document={document} />;
+      return <Editor {...args} />;
     },
     argTypes: {
       document: {
         control: "object",
       },
-      context: {
-        theme: {
-          name: "Theme",
-          options: ["light", "dark"],
-          defaultValue: "light",
-          control: "inline-radio",
-        },
-        user: {
-          control: "object",
-        },
+      // documentId: "string", TODO allow setting document
+      user: {
+        control: "object",
       },
     },
   } satisfies Meta<typeof Editor>;
+
+  // Default createState function for PHDocument
+  const defaultPHDocumentCreateState = (state: unknown) => {
+    return state;
+  };
 
   const CreateDocumentStory: DocumentStory = {
     name: "New document",
     args: {
       document: baseCreateDocument(
-        defaultPHDocumentCreateState,
+        defaultPHDocumentCreateState as CreateState<PHBaseState>,
         initialState as Partial<PHBaseState>,
       ),
       user: {
@@ -191,7 +177,7 @@ export function createDocumentStory(
     },
   };
 
-  return { meta, CreateDocumentStory } as const;
+  return { meta, CreateDocumentStory };
 }
 
 // export function createDriveDocumentStory<TDocument extends PHDocument>(

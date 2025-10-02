@@ -54,7 +54,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+          - 5444:5432
 
       redis:
         # same image as in root docker-compose.yml

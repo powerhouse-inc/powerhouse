@@ -113,9 +113,20 @@ export class PackageManager implements IPackageManager {
       const allDocumentModels: DocumentModelModule[] = [];
 
       for (const loader of this.loaders) {
-        const documentModels = await loader.loadDocumentModels(pkg);
+        try {
+          const documentModels = await loader.loadDocumentModels(pkg);
 
-        allDocumentModels.push(...documentModels);
+          allDocumentModels.push(...documentModels);
+          this.logger.debug(
+            `Loaded document models from package ${pkg}`,
+            documentModels.map((dm) => dm.documentModel.global.id),
+          );
+        } catch (error) {
+          this.logger.debug(
+            `Failed to load document models from package ${pkg}`,
+            error,
+          );
+        }
       }
 
       documentModelModuleMap.set(pkg, allDocumentModels);
@@ -137,9 +148,16 @@ export class PackageManager implements IPackageManager {
       const allSubgraphs: SubgraphClass[] = [];
 
       for (const loader of this.loaders) {
-        const subgraphs = await loader.loadSubgraphs(pkg);
+        try {
+          const subgraphs = await loader.loadSubgraphs(pkg);
 
-        allSubgraphs.push(...subgraphs);
+          allSubgraphs.push(...subgraphs);
+        } catch (error) {
+          this.logger.debug(
+            `Failed to load subgraphs from package ${pkg}`,
+            error,
+          );
+        }
       }
 
       subgraphsMap.set(pkg, allSubgraphs);
@@ -168,10 +186,17 @@ export class PackageManager implements IPackageManager {
       ) => ProcessorFactory)[] = [];
 
       for (const loader of this.loaders) {
-        const processors = await loader.loadProcessors(pkg);
+        try {
+          const processors = await loader.loadProcessors(pkg);
 
-        if (processors) {
-          allProcessors.push(processors);
+          if (processors) {
+            allProcessors.push(processors);
+          }
+        } catch (error) {
+          this.logger.debug(
+            `Failed to load processors from package ${pkg}`,
+            error,
+          );
         }
       }
 

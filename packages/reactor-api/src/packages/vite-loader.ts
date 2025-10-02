@@ -4,7 +4,6 @@ import { isSubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { access } from "node:fs/promises";
 import path from "node:path";
 import type { ViteDevServer } from "vite";
 import { createServer } from "vite";
@@ -45,8 +44,6 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     this.logger.verbose("Loading document models from", fullPath);
 
     try {
-      await access(fullPath);
-
       const localDMs = (await this.vite.ssrLoadModule(fullPath)) as Record<
         string,
         DocumentModelModule
@@ -68,7 +65,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
       return documentModels;
     } catch (e) {
-      this.logger.verbose(`  ➜  No Document Models found for: ${identifier}`);
+      this.logger.debug(`  ➜  No Document Models found for: ${identifier}`, e);
     }
 
     return [];
@@ -81,12 +78,9 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
     let localSubgraphs: Record<string, Record<string, SubgraphClass>> = {};
     try {
-      await access(fullPath);
-
       localSubgraphs = await this.vite.ssrLoadModule(fullPath);
     } catch (e) {
-      this.logger.verbose(`  ➜  No Subgraphs found for: ${identifier}`);
-
+      this.logger.debug(`  ➜  No Subgraphs found for: ${identifier}`, e);
       return [];
     }
 
@@ -98,7 +92,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       }
     }
 
-    this.logger.verbose(
+    this.logger.debug(
       `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,
     );
 
@@ -113,8 +107,6 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     this.logger.verbose("Loading processors from", fullPath);
 
     try {
-      await access(fullPath);
-
       const module = await this.vite.ssrLoadModule(fullPath);
 
       if (
@@ -130,7 +122,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         ) => ProcessorFactory;
       }
     } catch (e) {
-      //
+      this.logger.debug(
+        `  ➜  No Processor Factory found for: ${identifier}`,
+        e,
+      );
     }
 
     this.logger.verbose(`  ➜  No Processor Factory found for: ${identifier}`);

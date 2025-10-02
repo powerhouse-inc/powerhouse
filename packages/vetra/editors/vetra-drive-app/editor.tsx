@@ -1,28 +1,30 @@
-import { useDrop, WagmiContext } from "@powerhousedao/design-system";
+import { WagmiContext } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
   AnalyticsProvider,
-  DriveContextProvider,
   setSelectedNode,
+  showCreateDocumentModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
-  useDriveContext,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, FileNode } from "document-drive";
 import { useCallback } from "react";
 import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
+import { withDropZone } from "./utils/withDropZone.js";
 
 export type IProps = DriveEditorProps;
 
 export function BaseEditor(props: IProps) {
-  const { context, document } = props;
-  const unsafeCastOfDocument = document as DocumentDriveDocument;
-  const { showCreateDocumentModal, onAddFile } = useDriveContext();
-  const driveId = unsafeCastOfDocument.header.id;
+  const { children } = props;
+
+  const [document] = useSelectedDrive();
+
+  const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
-  const fileNodes = unsafeCastOfDocument.state.global.nodes.filter(
+  const fileNodes = document.state.global.nodes.filter(
     (node) => node.kind === "file",
   ) as Array<FileNode>;
   const packageDocumentId = fileNodes.find(
@@ -52,7 +54,7 @@ export function BaseEditor(props: IProps) {
       );
 
       if (documentModel) {
-        showCreateDocumentModal(documentModel);
+        showCreateDocumentModal(documentModel.documentModel.global.id);
       }
     },
     [showCreateDocumentModal, documentModels?.length],
@@ -64,18 +66,14 @@ export function BaseEditor(props: IProps) {
     );
   }, [driveId]);
 
-  const { isDropTarget, dropProps } = useDrop({
-    node: undefined,
-    onAddFile,
-    onCopyNode: () => console.warn("Copy node not allowed"),
-    onMoveNode: () => console.warn("Move node not allowed"),
-  });
+  const showDocumentEditor = !!children;
 
-  return (
+  return showDocumentEditor ? (
+    children
+  ) : (
     <div
-      {...dropProps}
       style={{ height: "100%" }}
-      className={`bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-[''] ${isDropTarget ? "hover:after:opacity-30" : ""}`}
+      className="bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
     >
       <DriveExplorer
         documentModels={docModelsNodes}
@@ -94,7 +92,6 @@ export function BaseEditor(props: IProps) {
           onCreateDocument(DOCUMENT_TYPES.documentProcessor)
         }
         onAddCodegenProcessor={() => console.log("add codegen processor")}
-        context={context}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
         driveId={document.header.id}
@@ -104,15 +101,15 @@ export function BaseEditor(props: IProps) {
   );
 }
 
-export default function Editor(props: IProps) {
+const BaseEditorWithDropZone = withDropZone(BaseEditor);
+
+export function Editor(props: IProps) {
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
-    <DriveContextProvider value={props.context}>
-      <WagmiContext>
-        <AnalyticsProvider databaseName={analyticsDatabaseName}>
-          <BaseEditor {...props} />
-        </AnalyticsProvider>
-      </WagmiContext>
-    </DriveContextProvider>
+    <WagmiContext>
+      <AnalyticsProvider databaseName={analyticsDatabaseName}>
+        <BaseEditorWithDropZone {...props} />
+      </AnalyticsProvider>
+    </WagmiContext>
   );
 }

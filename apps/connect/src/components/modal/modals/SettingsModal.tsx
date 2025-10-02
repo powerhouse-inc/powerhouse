@@ -8,17 +8,16 @@ import {
   Icon,
   SettingsModal as SettingsModalV2,
 } from "@powerhousedao/design-system";
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
-import React, { useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 
-export interface SettingsModalProps {
-  open: boolean;
-  onClose: () => void;
-  onRefresh: () => void;
-}
-
-export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
-  const { open, onClose, onRefresh } = props;
+export const SettingsModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "settings";
+  function onRefresh() {
+    window.location.reload();
+  }
 
   const tabs = useMemo(
     () => [
@@ -38,7 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         id: "danger-zone",
         icon: <Icon name="Danger" size={12} className="text-red-900" />,
         label: <span className="text-red-900">Danger Zone</span>,
-        content: () => <DangerZone onRefresh={onRefresh} />,
+        content: () => <DangerZone />,
       },
       {
         id: "about",
@@ -50,18 +49,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     [onRefresh],
   );
 
-  const handleOpenChange = useCallback(
-    (status: boolean) => {
-      if (!status) return onClose();
-    },
-    [onClose],
-  );
-
   return (
     <SettingsModalV2
       open={open}
       title={t("modals.connectSettings.title")}
-      onOpenChange={handleOpenChange}
+      onOpenChange={(status: boolean) => {
+        if (!status) return closePHModal();
+      }}
       tabs={tabs}
     />
   );

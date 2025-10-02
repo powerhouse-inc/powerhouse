@@ -5,6 +5,7 @@ import {
   addDrivesEventHandler,
   addSelectedDriveIdEventHandler,
 } from "./drives.js";
+import { addModalEventHandler } from "./modals.js";
 import { addSelectedNodeIdEventHandler } from "./nodes.js";
 import { addProcessorManagerEventHandler } from "./processors.js";
 import { addReactorEventHandler } from "./reactor.js";
@@ -14,6 +15,7 @@ import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 
 export function addPHEventHandlers() {
   addReactorEventHandler();
+  addModalEventHandler();
   addConnectCryptoEventHandler();
   addDidEventHandler();
   addRenownEventHandler();

@@ -3,10 +3,9 @@ import { default as eslint } from "@eslint/js";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
-import { globalIgnores } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
 
 /** These files are typically ignored by eslint by default, so there is no need to investigate why they are ignored. */
 const normalIgnoredFiles = [
@@ -29,6 +28,8 @@ const normalIgnoredFiles = [
   "**/.out/",
   "**/flaky/",
   "apps/connect/lib/",
+  "packages/codegen/src/codegen/__tests__/temp",
+  "packages/codegen/src/codegen/__tests__/.test-project",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.

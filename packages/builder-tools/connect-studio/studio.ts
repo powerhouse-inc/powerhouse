@@ -74,6 +74,10 @@ export function startConnectStudio(options: ConnectStudioOptions) {
     serverOptions.enableDocumentsHMR = options.enableDocumentsHMR;
   }
 
+  if (options.disableDynamicLoading !== undefined) {
+    serverOptions.disableDynamicLoading = options.disableDynamicLoading;
+  }
+
   return startServer(serverOptions).catch((error) => {
     throw error;
   });

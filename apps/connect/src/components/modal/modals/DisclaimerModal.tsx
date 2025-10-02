@@ -1,14 +1,11 @@
 import { ReadRequiredModal } from "@powerhousedao/design-system";
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-export interface DisclaimerModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export const DisclaimerModal: React.FC<DisclaimerModalProps> = (props) => {
-  const { open, onClose } = props;
+export const DisclaimerModal: React.FC = () => {
+  const phModal = usePHModal();
+  const open = phModal?.type === "disclaimer";
 
   const { t } = useTranslation();
 
@@ -18,7 +15,7 @@ export const DisclaimerModal: React.FC<DisclaimerModalProps> = (props) => {
       header={t("modals.disclaimer.title")}
       body={t("modals.disclaimer.body")}
       closeLabel="Close"
-      onContinue={() => onClose()}
+      onContinue={() => closePHModal()}
     />
   );
 };

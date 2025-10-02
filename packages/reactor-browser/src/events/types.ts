@@ -9,6 +9,7 @@ import type {
 import type { IRenown, User } from "@renown/sdk";
 import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
+import type { PHModal } from "../types/modals.js";
 
 export type SetReactorEvent = CustomEvent<{
   reactor: Reactor | undefined;
@@ -73,3 +74,8 @@ export type SetAppConfigEvent = CustomEvent<{
   appConfig: AppConfig | undefined;
 }>;
 export type AppConfigUpdatedEvent = CustomEvent;
+
+export type SetModalEvent = CustomEvent<{
+  modal: PHModal | undefined;
+}>;
+export type ModalUpdatedEvent = CustomEvent;

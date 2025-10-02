@@ -2,34 +2,112 @@ import type {
   AddLocalDriveInput,
   AddRemoteDriveInput,
 } from "@powerhousedao/design-system";
-import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system";
 import {
+  AddDriveModal as ConnectAddLocalDriveModal,
+  toast,
+} from "@powerhousedao/design-system";
+import {
+  addDrive,
+  addRemoteDrive,
+  closePHModal,
+  setSelectedDrive,
   useConnectCrypto,
   useDriveEditorModules,
+  usePHModal,
   useUser,
 } from "@powerhousedao/reactor-browser";
 import { requestPublicDrive } from "document-drive";
-type Props = {
-  open: boolean;
-  onAddLocalDrive: (data: AddLocalDriveInput) => Promise<void>;
-  onAddRemoteDrive: (data: AddRemoteDriveInput) => Promise<void>;
-  onClose: () => void;
-};
+import { t } from "i18next";
 
-export function AddDriveModal(props: Props) {
-  const { open, onAddLocalDrive, onAddRemoteDrive, onClose } = props;
+export function AddDriveModal() {
+  const phModal = usePHModal();
+  const open = phModal?.type === "addDrive";
   const user = useUser();
-  const driveEditorModules = useDriveEditorModules();
   const connectCrypto = useConnectCrypto();
+  const driveEditorModules = useDriveEditorModules();
+  const onAddLocalDrive = async (data: AddLocalDriveInput) => {
+    try {
+      const app = driveEditorModules?.find((a) => a.id === data.appId);
+      const newDrive = await addDrive(
+        {
+          id: "",
+          slug: "",
+          global: {
+            name: data.name,
+            icon: null,
+          },
+          local: {
+            availableOffline: data.availableOffline,
+            sharingType: data.sharingType.toLowerCase(),
+            listeners: [],
+            triggers: [],
+          },
+        },
+        app?.id,
+      );
 
+      toast(t("notifications.addDriveSuccess"), {
+        type: "connect-success",
+      });
+
+      if (!newDrive) {
+        return;
+      }
+
+      setSelectedDrive(newDrive);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
+    try {
+      const newDrive = await addRemoteDrive(data.url, {
+        sharingType: data.sharingType,
+        availableOffline: data.availableOffline,
+        listeners: [
+          {
+            block: true,
+            callInfo: {
+              data: data.url,
+              name: "switchboard-push",
+              transmitterType: "SwitchboardPush",
+            },
+            filter: {
+              branch: ["main"],
+              documentId: ["*"],
+              documentType: ["*"],
+              scope: ["global"],
+            },
+            label: "Switchboard Sync",
+            listenerId: "1",
+            system: true,
+          },
+        ],
+        triggers: [],
+      });
+
+      toast(t("notifications.addDriveSuccess"), {
+        type: "connect-success",
+      });
+
+      if (!newDrive) {
+        return;
+      }
+
+      setSelectedDrive(newDrive);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
     await onAddLocalDrive(data);
-    onClose();
+    closePHModal();
   }
 
   async function onAddRemoteDriveSubmit(data: AddRemoteDriveInput) {
     await onAddRemoteDrive(data);
-    onClose();
+    closePHModal();
   }
 
   const ready = !!driveEditorModules?.length;
@@ -64,7 +142,7 @@ export function AddDriveModal(props: Props) {
         }
       }}
       onOpenChange={(status) => {
-        if (!status) return onClose();
+        if (!status) return closePHModal();
       }}
       appOptions={
         driveEditorModules?.map((pkg) => ({

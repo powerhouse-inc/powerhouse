@@ -11,19 +11,19 @@ import {
 } from "@powerhousedao/design-system";
 import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
-  DriveContextProvider,
   getSyncStatusSync,
   makeFolderNodeFromDrive,
   setSelectedNode,
+  showCreateDocumentModal,
+  showDeleteNodeModal,
   useDocumentModelModules,
-  useDriveContext,
+  useNodeActions,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
   useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
 import { getDriveSharingType } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import React from "react";
@@ -31,21 +31,17 @@ import React from "react";
 type GenericDriveExplorerEditorProps = DriveEditorProps &
   React.HTMLProps<HTMLDivElement>;
 
-function BaseEditor(props: GenericDriveExplorerEditorProps) {
-  const { document, className, children } = props;
-  const unsafeCastOfDocument = document as DocumentDriveDocument;
-
+export function Editor(props: GenericDriveExplorerEditorProps) {
+  const { className, children } = props;
+  const [selectedDrive] = useSelectedDrive();
   const {
-    showCreateDocumentModal,
     onRenameNode,
     onDuplicateNode,
     onAddFolder,
     onAddFile,
     onCopyNode,
     onMoveNode,
-    showDeleteNodeModal,
-  } = useDriveContext();
-  const [selectedDrive] = useSelectedDrive();
+  } = useNodeActions();
   const selectedFolder = useSelectedFolder();
   const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
   const documentModels = useDocumentModelModules();
@@ -53,7 +49,7 @@ function BaseEditor(props: GenericDriveExplorerEditorProps) {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const showSearchBar = useShowSearchBar();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
-    showCreateDocumentModal(documentModel);
+    showCreateDocumentModal(documentModel.documentModel.global.id);
   };
   const { isDropTarget, dropProps } = useDrop({
     node: selectedDriveAsFolderNode,
@@ -66,71 +62,68 @@ function BaseEditor(props: GenericDriveExplorerEditorProps) {
     selectedNodePath,
     setSelectedNode,
   });
-  const sharingType = getDriveSharingType(unsafeCastOfDocument);
-
-  if (!selectedDrive) {
-    return <div>Drive not found</div>;
-  }
+  const sharingType = getDriveSharingType(selectedDrive);
 
   async function onAddAndSelectNewFolder(name: string) {
     await onAddFolder(name, selectedFolder);
     setSelectedNode(selectedFolder);
   }
 
+  const showDocumentEditor = !!children;
+
   return (
     <DriveLayout className={className}>
-      {children}
-      <DriveLayout.Header>
-        <Breadcrumbs
-          breadcrumbs={breadcrumbs}
-          createEnabled={isAllowedToCreateDocuments}
-          onCreate={onAddAndSelectNewFolder}
-          onBreadcrumbSelected={onBreadcrumbSelected}
-        />
-        {showSearchBar && <SearchBar />}
-      </DriveLayout.Header>
-      <DriveLayout.Content
-        {...dropProps}
-        className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
-      >
-        <FolderView
-          node={selectedFolder ?? selectedDriveAsFolderNode}
-          sharingType={sharingType}
-          getSyncStatusSync={getSyncStatusSync}
-          setSelectedNode={setSelectedNode}
-          onRenameNode={onRenameNode}
-          onDuplicateNode={onDuplicateNode}
-          onAddFolder={onAddFolder}
-          onAddFile={onAddFile}
-          onCopyNode={onCopyNode}
-          onMoveNode={onMoveNode}
-          onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-          showDeleteNodeModal={showDeleteNodeModal}
-          isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-        />
-      </DriveLayout.Content>
-      <DriveLayout.Footer>
-        {isAllowedToCreateDocuments && (
-          <CreateDocument
-            documentModels={
-              documentModels?.filter(
-                (module) =>
-                  module.documentModel.global.id !==
-                  "powerhouse/document-drive",
-              ) as unknown as DocumentModelModule[]
-            }
-            createDocument={onCreateDocument}
+      {!showDocumentEditor && (
+        <DriveLayout.Header>
+          <Breadcrumbs
+            breadcrumbs={breadcrumbs}
+            createEnabled={isAllowedToCreateDocuments}
+            onCreate={onAddAndSelectNewFolder}
+            onBreadcrumbSelected={onBreadcrumbSelected}
           />
-        )}
-      </DriveLayout.Footer>
+          {showSearchBar && <SearchBar />}
+        </DriveLayout.Header>
+      )}
+      {showDocumentEditor ? (
+        children
+      ) : (
+        <DriveLayout.Content
+          {...dropProps}
+          className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
+        >
+          <FolderView
+            node={selectedFolder ?? selectedDriveAsFolderNode}
+            sharingType={sharingType}
+            getSyncStatusSync={getSyncStatusSync}
+            setSelectedNode={setSelectedNode}
+            onRenameNode={onRenameNode}
+            onDuplicateNode={onDuplicateNode}
+            onAddFolder={onAddFolder}
+            onAddFile={onAddFile}
+            onCopyNode={onCopyNode}
+            onMoveNode={onMoveNode}
+            onAddAndSelectNewFolder={onAddAndSelectNewFolder}
+            showDeleteNodeModal={(node) => showDeleteNodeModal(node.id)}
+            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
+          />
+        </DriveLayout.Content>
+      )}
+      {!showDocumentEditor && (
+        <DriveLayout.Footer>
+          {isAllowedToCreateDocuments && (
+            <CreateDocument
+              documentModels={
+                documentModels?.filter(
+                  (module) =>
+                    module.documentModel.global.id !==
+                    "powerhouse/document-drive",
+                ) as unknown as DocumentModelModule[]
+              }
+              createDocument={onCreateDocument}
+            />
+          )}
+        </DriveLayout.Footer>
+      )}
     </DriveLayout>
-  );
-}
-
-export function Editor(props: GenericDriveExplorerEditorProps) {
-  return (
-    <DriveContextProvider value={props.context}>
-      <BaseEditor {...props} />
-    </DriveContextProvider>
   );
 }

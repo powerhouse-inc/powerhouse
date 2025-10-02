@@ -1,8 +1,8 @@
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import {
   EditorLoader,
-  useModal,
   useUndoRedoShortcuts,
+  toast,
 } from "@powerhousedao/connect";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
@@ -11,18 +11,17 @@ import {
   RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
+  showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
-  useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
 import { Suspense, useEffect, useState } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
-import { useNavigate } from "react-router-dom";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -71,11 +70,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
-
-  const userPermissions = useUserPermissions();
-
   const timelineItems = useTimelineItems(documentId, createdAt);
 
+  const isLoadingDocument = !document;
   const isLoadingEditor =
     editorModule === undefined ||
     (editorModule &&
@@ -99,9 +96,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       window.documentEditorDebugTools?.clear();
     };
   }, []);
-
-  const navigate = useNavigate();
-  const { showModal } = useModal();
 
   const [editorError, setEditorError] = useState<
     | {
@@ -131,6 +125,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     return <EditorLoader message="Loading editor" />;
   }
 
+  if (isLoadingDocument) {
+    return <EditorLoader message="Loading document" />;
+  }
+
   if (!documentModelModule) {
     return (
       <EditorError
@@ -146,9 +144,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 type="button"
                 className="cursor-pointer underline"
                 onClick={() => {
-                  showModal("settingsModal", {
-                    onRefresh: () => navigate(0),
-                  });
+                  showPHModal({ type: "settings" });
                 }}
               >
                 package manager
@@ -173,9 +169,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                 type="button"
                 className="cursor-pointer underline"
                 onClick={() => {
-                  showModal("settingsModal", {
-                    onRefresh: () => navigate(0),
-                  });
+                  showPHModal({ type: "settings" });
                 }}
               >
                 package manager
@@ -238,6 +232,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           globalOperations={globalOperations}
           localOperations={localOperations}
           onClose={() => setRevisionHistoryVisible(false)}
+          documentState={document.state}
+          onCopyState={() => {
+            toast("Copied document state to clipboard", { type: "success" });
+          }}
         />
       ) : (
         <Suspense fallback={<EditorLoader />} name="EditorLoader">
@@ -257,20 +255,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
                     globalOperations,
                   ),
                 }}
-                document={document}
-                documentNodeName={documentName ?? ""}
-                onClose={onClose}
-                onExport={onExport}
-                canUndo={canUndo}
-                canRedo={canRedo}
-                onSwitchboardLinkClick={handleSwitchboardLinkClick}
-                onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
-                isAllowedToCreateDocuments={
-                  userPermissions?.isAllowedToCreateDocuments ?? false
-                }
-                isAllowedToEditDocuments={
-                  userPermissions?.isAllowedToEditDocuments ?? false
-                }
+                documentId={document.header.id}
               />
             )}
           </ErrorBoundary>

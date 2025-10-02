@@ -7,6 +7,7 @@ import type {
   DrivesUpdatedEvent,
   IConnectCrypto,
   LoginStatusUpdatedEvent,
+  ModalUpdatedEvent,
   ProcessorManagerUpdatedEvent,
   ReactorUpdatedEvent,
   RenownUpdatedEvent,
@@ -18,6 +19,7 @@ import type {
   SetDocumentsEvent,
   SetDrivesEvent,
   SetLoginStatusEvent,
+  SetModalEvent,
   SetProcessorManagerEvent,
   SetReactorEvent,
   SetRenownEvent,
@@ -35,6 +37,7 @@ import type {
   ProcessorManager,
 } from "document-drive";
 import type { PHDocument } from "document-model";
+import type { PHModal } from "./modals.js";
 import type { VetraPackage } from "./vetra.js";
 
 export type UserPermissions = {
@@ -56,6 +59,7 @@ export type AppConfig = {
 
 declare global {
   interface Window {
+    loading?: boolean | undefined;
     reactor?: IDocumentDriveServer | undefined;
     connectCrypto?: IConnectCrypto | undefined;
     did?: DID | undefined;
@@ -69,6 +73,7 @@ declare global {
     phSelectedDriveId?: string | undefined;
     phSelectedNodeId?: string | undefined;
     phAppConfig?: AppConfig | undefined;
+    phModal?: PHModal | undefined;
   }
 
   interface WindowEventMap {
@@ -98,5 +103,7 @@ declare global {
     "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
     "ph:setAppConfig": SetAppConfigEvent;
     "ph:appConfigUpdated": AppConfigUpdatedEvent;
+    "ph:setModal": SetModalEvent;
+    "ph:modalUpdated": ModalUpdatedEvent;
   }
 }

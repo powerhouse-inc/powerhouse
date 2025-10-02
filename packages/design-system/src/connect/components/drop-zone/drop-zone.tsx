@@ -1,8 +1,14 @@
 import { Icon } from "@powerhousedao/design-system";
 import type { Node } from "document-drive";
-import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 import { twMerge } from "tailwind-merge";
 import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
+import { ConnectReplaceDuplicateModal } from "../modal/replace-duplicate-modal.js";
 import { UploadFileListContainer } from "./upload-file-list-container.js";
 import { useUploadTracker } from "./use-upload-tracker.js";
 import { type OnAddFileWithProgress } from "./utils.js";
@@ -46,17 +52,55 @@ export function DropZone(props: DropZoneProps) {
     ...delegatedProps
   } = props;
 
+  // Modal state for conflict resolution
+  const [modalOpen, setModalOpen] = useState(false);
+  const [conflictUploadId, setConflictUploadId] = useState<string | null>(null);
+
   // Upload tracking with the new hook
   const {
     uploadsArray,
     uploadsCount,
     createUploadHandler,
     clearAllUploads,
+    clearConflictedUploads,
     removeUpload,
+    resolveConflict,
   } = useUploadTracker(useLocalStorage, driveId);
+
+  // Clear conflicted uploads on mount
+  useEffect(() => {
+    clearConflictedUploads();
+  }, []);
 
   // Create the upload handler from the hook
   const handleAddFile = createUploadHandler(onAddFile) ?? (async () => {});
+
+  // Handle conflict resolution modal
+  const handleConflictResolution = (uploadId: string) => {
+    setConflictUploadId(uploadId);
+    setModalOpen(true);
+  };
+
+  const handleReplace = () => {
+    if (conflictUploadId && onAddFile) {
+      resolveConflict(conflictUploadId, "replace", onAddFile);
+    }
+    setModalOpen(false);
+    setConflictUploadId(null);
+  };
+
+  const handleDuplicate = () => {
+    if (conflictUploadId && onAddFile) {
+      resolveConflict(conflictUploadId, "duplicate", onAddFile);
+    }
+    setModalOpen(false);
+    setConflictUploadId(null);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setConflictUploadId(null);
+  };
 
   const { isDropTarget, dropProps } = useDrop({
     node,
@@ -100,6 +144,20 @@ export function DropZone(props: DropZoneProps) {
         removeUpload={removeUpload}
         clearAllUploads={clearAllUploads}
         setSelectedNode={setSelectedNode}
+        onConflictResolution={handleConflictResolution}
+      />
+
+      {/* Conflict Resolution Modal */}
+      <ConnectReplaceDuplicateModal
+        open={modalOpen}
+        onOpenChange={handleModalClose}
+        fileName={
+          conflictUploadId
+            ? uploadsArray.find((u) => u?.id === conflictUploadId)?.fileName
+            : undefined
+        }
+        onReplace={handleReplace}
+        onDuplicate={handleDuplicate}
       />
     </div>
   );

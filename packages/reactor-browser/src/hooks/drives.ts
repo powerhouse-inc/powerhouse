@@ -7,12 +7,13 @@ import {
   useDispatch,
 } from "@powerhousedao/reactor-browser";
 import type {
+  DocumentDriveAction,
   DocumentDriveDocument,
   SharingType,
   Trigger,
 } from "document-drive";
-import type { Action } from "document-model";
 import { useSyncExternalStore } from "react";
+import type { DocumentDispatch } from "./documents.js";
 
 /** Returns the drives for a reactor. */
 export function useDrives(): DocumentDriveDocument[] | undefined {
@@ -20,13 +21,18 @@ export function useDrives(): DocumentDriveDocument[] | undefined {
   return drives;
 }
 
-export function useDriveById(driveId: string | undefined | null) {
+export function useDriveById(
+  driveId: string | undefined | null,
+): [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>] {
   const drives = useDrives();
-  const drive = drives?.find((drive) => drive.header.id === driveId);
-  const [document, dispatch] = useDispatch(drive);
-  return [document, dispatch] as [
-    DocumentDriveDocument | undefined,
-    (actionOrActions: Action | Action[] | undefined) => void,
+  const foundDrive = drives?.find((drive) => drive.header.id === driveId);
+  const [drive, dispatch] = useDispatch(foundDrive);
+  if (!foundDrive) {
+    throw new Error(`Drive with id ${driveId} not found`);
+  }
+  return [drive, dispatch] as [
+    DocumentDriveDocument,
+    DocumentDispatch<DocumentDriveAction>,
   ];
 }
 
@@ -45,9 +51,15 @@ export function useSelectedDrive() {
   const selectedDrive = drives?.find(
     (drive) => drive.header.id === selectedDriveId,
   );
-  const [document, dispatch] = useDispatch(selectedDrive);
-  const unsafeDrive = document as DocumentDriveDocument | undefined;
-  return [unsafeDrive, dispatch] as const;
+
+  const [drive, dispatch] = useDispatch(selectedDrive);
+  if (!selectedDrive) {
+    throw new Error(`Selected drive with id ${selectedDriveId} not found`);
+  }
+  return [drive, dispatch] as [
+    DocumentDriveDocument,
+    DocumentDispatch<DocumentDriveAction>,
+  ];
 }
 
 export function setSelectedDrive(

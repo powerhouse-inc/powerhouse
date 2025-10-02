@@ -1,9 +1,4 @@
-import {
-  DocumentEditorContainer,
-  DriveEditorContainer,
-  DriveIcon,
-  useShowAddDriveModal,
-} from "@powerhousedao/connect";
+import { DriveEditorContainer, DriveIcon } from "@powerhousedao/connect";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   HomeScreen,
@@ -24,13 +19,10 @@ export function Content() {
   const [selectedDrive] = useSelectedDrive();
   const selectedFolder = useSelectedFolder();
   const [selectedDocument] = useSelectedDocument();
+  const showHomeScreen = !selectedDocument && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
-      {selectedDocument && <DocumentEditorContainer />}
-      {(!!selectedDrive || !!selectedFolder) && !selectedDocument && (
-        <DriveEditorContainer />
-      )}
-      {!selectedDocument && !selectedDrive && <HomeScreenContainer />}
+      {showHomeScreen ? <HomeScreenContainer /> : <DriveEditorContainer />}
     </ContentContainer>
   );
 }
@@ -61,7 +53,6 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
 
 function HomeScreenContainer() {
   const drives = useDrives();
-  const showAddDriveModal = useShowAddDriveModal();
   const config = connectConfig;
 
   return (
@@ -69,9 +60,7 @@ function HomeScreenContainer() {
       {drives?.map((drive) => {
         return <DriveItem key={drive.header.id} drive={drive} />;
       })}
-      {config.drives.addDriveEnabled && (
-        <HomeScreenAddDriveItem onClick={showAddDriveModal} />
-      )}
+      {config.drives.addDriveEnabled && <HomeScreenAddDriveItem />}
     </HomeScreen>
   );
 }

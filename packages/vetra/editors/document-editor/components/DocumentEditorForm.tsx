@@ -1,5 +1,3 @@
-import { useReactor } from "@powerhousedao/reactor-browser";
-import type { DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 import type {
   AddDocumentTypeInput,
@@ -7,7 +5,7 @@ import type {
   RemoveDocumentTypeInput,
 } from "../../../document-models/document-editor/index.js";
 import { StatusPill } from "../../components/index.js";
-import { useDebounce } from "../../hooks/index.js";
+import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
 
 export interface DocumentEditorFormProps {
   editorName?: string;
@@ -33,36 +31,9 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
     useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
-    string[]
-  >([]);
 
-  // Get available document types from reactor
-  const reactor = useReactor();
-
-  useEffect(() => {
-    async function loadData() {
-      const driveDocs = await reactor?.getDocuments("vetra");
-      if (!driveDocs) {
-        return;
-      }
-
-      const docTypes = (
-        await Promise.all(
-          driveDocs.map(async (docId) => {
-            const document = await reactor?.getDocument(docId);
-            if (document?.header.documentType === "powerhouse/document-model") {
-              const documentModel = document as DocumentModelDocument;
-              return documentModel.state.global.id;
-            }
-            return null;
-          }),
-        )
-      ).filter((e) => e !== null);
-      setAvailableDocumentTypes(docTypes);
-    }
-    void loadData();
-  }, [reactor]);
+  // Get available document types from the hook (vetra drive only for document editor)
+  const availableDocumentTypes = useAvailableDocumentTypes(true);
 
   // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);

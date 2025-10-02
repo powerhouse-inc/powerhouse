@@ -7,7 +7,7 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import { logger } from "document-drive";
 import { useEffect } from "react";
 
-export const useLoadInitialData = () => {
+export const useCheckLatestVersion = () => {
   async function checkLatestVersion() {
     const result = await isLatestVersion();
     if (result === null) return;

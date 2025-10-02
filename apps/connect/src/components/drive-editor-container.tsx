@@ -1,18 +1,15 @@
 import { GenericDriveExplorer } from "@powerhousedao/common";
-import {
-  useModal,
-  useNodeActions,
-  useShowDeleteNodeModal,
-} from "@powerhousedao/connect";
+import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
+  useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
-import { useCallback } from "react";
+import type { ComponentType } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
+import { DocumentEditorContainer } from "./document-editor-container.js";
 
 function DriveEditorError({ error }: FallbackProps) {
   return (
@@ -26,27 +23,16 @@ function DriveEditorError({ error }: FallbackProps) {
 
 export function DriveEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
-  const nodeActions = useNodeActions();
-  const { showModal } = useModal();
-  const showCreateDocumentModal = useCallback(
-    (documentModel: DocumentModelModule) => {
-      showModal("createDocument", {
-        documentModel,
-      });
-    },
-    [showModal],
-  );
-  const showDeleteNodeModal = useShowDeleteNodeModal();
+  const [selectedDocument] = useSelectedDocument();
 
   const driveEditor = useDriveEditorModuleById(
     selectedDrive?.header.meta?.preferredEditor,
   );
   const defaultDriveEditor = useDefaultDriveEditorModule();
 
-  const DriveEditorComponent =
-    driveEditor?.Component ??
+  const DriveEditorComponent = (driveEditor?.Component ??
     defaultDriveEditor?.Component ??
-    GenericDriveExplorer.Component;
+    GenericDriveExplorer.Component) as ComponentType<DriveEditorProps>;
 
   const editorConfig = driveEditor?.Component
     ? driveEditor.config
@@ -61,15 +47,9 @@ export function DriveEditorContainer() {
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DriveEditorComponent
-        context={{
-          ...nodeActions,
-          showCreateDocumentModal,
-          showDeleteNodeModal,
-        }}
-        document={selectedDrive}
-        editorConfig={editorConfig}
-      />
+      <DriveEditorComponent editorConfig={editorConfig}>
+        {selectedDocument ? <DocumentEditorContainer /> : null}
+      </DriveEditorComponent>
     </ErrorBoundary>
   );
 }

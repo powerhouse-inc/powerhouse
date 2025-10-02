@@ -1,10 +1,10 @@
-import { ModalManager, Sidebar } from "@powerhousedao/connect";
+import { ModalsContainer, Sidebar } from "@powerhousedao/connect";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 export function Root() {
   return (
-    <ModalManager>
+    <>
       <div className="h-screen">
         <div
           className={`flex h-screen items-stretch overflow-auto`}
@@ -19,6 +19,7 @@ export function Root() {
           </Suspense>
         </div>
       </div>
-    </ModalManager>
+      <ModalsContainer />
+    </>
   );
 }

@@ -1,17 +1,17 @@
-import type { IDriveContext } from "@powerhousedao/reactor-browser";
 import {
   useDocumentModelModuleById,
   useFallbackEditorModule,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "document-drive";
-import React from "react";
+import type { EditorContext } from "document-model";
+import type React from "react";
 import { DriveHeader } from "./components/DriveHeader.js";
 import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";
 import { PackageInformationSection } from "./components/PackageInformationSection.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
 
 interface DriveExplorerProps {
-  context: IDriveContext;
+  context?: EditorContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];
@@ -65,7 +65,6 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
       <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection
           className="mb-6"
-          context={context}
           packageDocumentId={packageDocumentId}
           onAddPackageDocument={onAddPackageDocument}
           documentModelModule={vetraPackageModule}

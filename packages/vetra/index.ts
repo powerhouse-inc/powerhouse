@@ -23,3 +23,5 @@ export const documentModels: (
 )[] = Object.values(documentModelsExports);
 export const editors: (EditorModule | DriveEditorModule)[] =
   Object.values(editorsExports);
+
+export * from "./editors/hooks/useVetraDocument.js";

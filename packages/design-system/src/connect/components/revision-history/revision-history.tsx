@@ -16,6 +16,8 @@ type Props = {
   readonly localOperations: Operation[];
   readonly onClose: () => void;
   readonly itemsPerPage?: number;
+  readonly documentState?: object;
+  readonly onCopyState?: () => void;
 };
 
 export function RevisionHistory(props: Props) {
@@ -26,6 +28,8 @@ export function RevisionHistory(props: Props) {
     localOperations,
     onClose,
     itemsPerPage = 100,
+    documentState,
+    onCopyState,
   } = props;
 
   const [scope, setScope] = useState<string>("global");
@@ -89,6 +93,8 @@ export function RevisionHistory(props: Props) {
         onClose={onClose}
         scope={scope}
         title={documentTitle}
+        documentState={documentState}
+        onCopyState={onCopyState}
       />
       {PaginationComponent}
       <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
