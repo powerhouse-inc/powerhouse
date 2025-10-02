@@ -78,7 +78,7 @@ export async function baseSaveToFile(
     streamFiles: true,
   });
   const fileName = name ?? document.header.name;
-  const fileExtension = `.${extension}.zip`;
+  const fileExtension = `.phd`;
 
   return writeFile(
     path,
