@@ -45,7 +45,6 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onAddSubgraph,
   onAddProcessor,
   onAddCodegenProcessor,
-  context,
   packageDocumentId,
   onAddPackageDocument,
   driveId,

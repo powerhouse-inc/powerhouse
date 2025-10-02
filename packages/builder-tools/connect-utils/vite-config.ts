@@ -20,6 +20,7 @@ export type IConnectOptions = {
   env: ReturnType<typeof loadEnv>;
   powerhouseConfig?: PowerhouseConfig;
   localPackage?: string | false; // path to local package to be loaded.
+  packageJsonPath?: string;
 };
 
 export const connectClientConfig = {
@@ -96,7 +97,8 @@ export const connectClientConfig = {
 
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const env = options.env;
-  const packageJsonPath = path.resolve(options.dirname, "./package.json");
+  const packageJsonPath =
+    options.packageJsonPath ?? path.resolve(options.dirname, "./package.json");
   // load packages from env variable
   const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
   const envPhPackages = phPackagesStr.split(",");
