@@ -192,7 +192,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/ry/work/powerhouse/packages/document-drive/src/storage/prisma/client",
+      "value": "/Users/benjaminjordan/projects/powerhouse/powerhouse/packages/document-drive/src/storage/prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -210,11 +210,12 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/ry/work/powerhouse/packages/document-drive/prisma/schema.prisma",
+    "sourceFilePath": "/Users/benjaminjordan/projects/powerhouse/powerhouse/packages/document-drive/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null
+    "rootEnvPath": null,
+    "schemaEnvPath": "../../../../.env"
   },
   "relativePath": "../../../../prisma",
   "clientVersion": "5.17.0",
