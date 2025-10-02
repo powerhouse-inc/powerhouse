@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/schema.ts"
-force: true
+unless_exists: true
 ---
 import { gql } from "graphql-tag";
 import type { DocumentNode } from "graphql";

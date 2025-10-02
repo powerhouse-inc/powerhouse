@@ -1,6 +1,6 @@
 ---
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
-force: true
+unless_exists: true
 ---
 import { Subgraph } from "@powerhousedao/reactor-api";
 import type { DocumentNode } from "graphql";
