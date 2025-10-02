@@ -1,5 +1,5 @@
 import { defaultBaseState } from "document-model/core";
-import { documentModelActions } from "./actions.js";
+import { actions } from "./actions.js";
 import {
   documentModelFileExtension,
   documentModelGlobalState,
@@ -28,6 +28,6 @@ export const documentModelDocumentModelModule: DocumentModelDocumentModelModule 
   {
     reducer: documentModelReducer,
     documentModel: createState(defaultBaseState(), documentModelGlobalState),
-    actions: documentModelActions,
+    actions,
     utils,
   };
