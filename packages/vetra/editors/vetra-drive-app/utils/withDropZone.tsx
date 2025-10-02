@@ -27,7 +27,7 @@ export function withDropZone<T extends DriveEditorProps>(
       return await onDropFile(file, onProgress, resolveConflict);
     };
 
-    if (props.editorConfig?.dragAndDrop?.enabled) {
+    if (props.editorConfig?.dragAndDrop?.enabled && driveId) {
       return (
         <DropZone
           onAddFile={onAddFile}

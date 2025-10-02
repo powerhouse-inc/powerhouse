@@ -105,8 +105,9 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
                 const selectedValue = e.target.value;
                 if (selectedValue) {
                   // Remove existing document type if any
-                  if (documentTypes.length > 0) {
-                    const existingType = documentTypes[0];
+
+                  const existingType = documentTypes.at(0);
+                  if (existingType) {
                     onRemoveDocumentType?.({ id: existingType.id });
                   }
 
