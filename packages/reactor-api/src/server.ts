@@ -140,7 +140,7 @@ async function setupGraphQLManager(
     analyticsStore,
   );
 
-  await graphqlManager.init();
+  await graphqlManager.init(subgraphs.core);
 
   for (const [, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
@@ -328,9 +328,10 @@ export async function startAPI(
   const module: IProcessorHostModule = { relationalDb, analyticsStore };
 
   // Initialize package manager
-  const loaders: IPackageLoader[] = [
-    options.packageLoader ?? new ImportPackageLoader(),
-  ];
+  const loaders: IPackageLoader[] = [new ImportPackageLoader()];
+  if (options.packageLoader) {
+    loaders.push(options.packageLoader);
+  }
 
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
