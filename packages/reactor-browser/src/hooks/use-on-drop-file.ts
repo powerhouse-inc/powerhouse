@@ -5,7 +5,7 @@ import type {
   ConflictResolution,
   FileUploadProgressCallback,
 } from "../types/upload.js";
-import { useSelectedDrive } from "./drives.js";
+import { useSelectedDriveSafe } from "./drives.js";
 import { useSelectedFolder } from "./nodes.js";
 
 type UseOnDropFile = (
@@ -17,7 +17,7 @@ type UseOnDropFile = (
 ) => Promise<FileNode | undefined>;
 
 export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const selectedDriveId = selectedDrive?.header.id;
   const selectedFolder = useSelectedFolder();
 

@@ -10,13 +10,13 @@ import {
   useDriveEditorModuleById,
   useDrives,
   useSelectedDocument,
-  useSelectedDrive,
+  useSelectedDriveSafe,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
 
 export function Content() {
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const [selectedDocument] = useSelectedDocument();
   const showHomeScreen = !selectedDocument && !selectedDrive && !selectedFolder;

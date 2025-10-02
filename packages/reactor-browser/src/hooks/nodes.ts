@@ -14,14 +14,14 @@ import {
   subscribeToSelectedNodeId,
   useDrives,
   useSelectedDocument,
-  useSelectedDrive,
+  useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { type FileNode, type FolderNode, type Node } from "document-drive";
 import { useSyncExternalStore } from "react";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   return selectedDrive?.state.global.nodes;
 }
 
@@ -84,7 +84,7 @@ export function useSelectedParentFolder() {
 /** Returns the path to a node. */
 export function useNodePath(id: string | null | undefined): Node[] {
   const nodes = useNodes();
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   if (!nodes || !selectedDrive) return [];
   const driveFolderNode = makeFolderNodeFromDrive(selectedDrive);
 
@@ -204,7 +204,7 @@ function resolveNode(driveId: string, node: Node | undefined) {
 }
 
 export function useNodeActions() {
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const selectedParentFolder = useSelectedParentFolder();
   const selectedDriveId = selectedDrive?.header.id;

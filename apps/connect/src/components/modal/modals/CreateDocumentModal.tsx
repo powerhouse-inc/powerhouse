@@ -5,7 +5,7 @@ import {
   setSelectedNode,
   useDocumentModelModuleById,
   usePHModal,
-  useSelectedDrive,
+  useSelectedDriveSafe,
   useSelectedFolder,
   useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
@@ -15,7 +15,7 @@ export const CreateDocumentModal: React.FC = () => {
   const open = phModal?.type === "createDocument";
   const documentType = open ? phModal.documentType : undefined;
   const documentModel = useDocumentModelModuleById(documentType);
-  const [selectedDrive] = useSelectedDrive();
+  const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const parentFolder = useSelectedParentFolder();
 

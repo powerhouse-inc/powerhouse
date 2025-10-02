@@ -46,6 +46,18 @@ export function useSelectedDriveId() {
 
 /** Returns the selected drive */
 export function useSelectedDrive() {
+  const drive = useSelectedDriveSafe();
+  if (!drive.at(0)) {
+    throw new Error(
+      "There is no drive selected. Did you mean to call 'useSelectedDriveSafe'?",
+    );
+  }
+
+  return drive;
+}
+
+/** Returns the selected drive, or undefined if no drive is selected */
+export function useSelectedDriveSafe() {
   const selectedDriveId = useSelectedDriveId();
   const drives = useDrives();
   const selectedDrive = drives?.find(
@@ -54,7 +66,7 @@ export function useSelectedDrive() {
 
   const [drive, dispatch] = useDispatch(selectedDrive);
   if (!selectedDrive) {
-    throw new Error(`Selected drive with id ${selectedDriveId} not found`);
+    return [undefined, undefined] as const;
   }
   return [drive, dispatch] as [
     DocumentDriveDocument,
@@ -125,7 +137,7 @@ export function useDriveSharingType(
 
 /** Returns the sharing type for the selected drive. */
 export function useSelectedDriveSharingType(): SharingType | undefined {
-  const [drive] = useSelectedDrive();
+  const [drive] = useSelectedDriveSafe();
   if (!drive) return undefined;
   return getDriveSharingType(drive);
 }
