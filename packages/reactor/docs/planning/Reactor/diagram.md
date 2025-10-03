@@ -6,7 +6,6 @@ graph TD
     subgraph "IReactor"
         AQueue["IQueue"] --> AJobs["IJobExecutor"]
         AJobs -->|"Write Commands"| AOS["IOperationStore"]
-        AJobs -->|"Write Events"| AES["IEventStore"]
         AJobs -->|"Validate"| ISigner
         AES --> APub
 

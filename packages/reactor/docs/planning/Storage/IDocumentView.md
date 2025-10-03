@@ -46,7 +46,6 @@ this.indexOperations(operations);
 
 ### Dependencies
 
-- [IEventStore](../Storage/IEventStore.md)
 - [IDocumentIndexer](../Storage/IDocumentIndexer.md)
 
 ### Interface

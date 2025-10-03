@@ -13,7 +13,7 @@ Various storage interfaces for Reactor components.
 - [IDocumentView](IDocumentView.md)
 - [IDocumentIndexer](IDocumentIndexer.md)
 - [IOperationStore](IOperationStore.md)
-- [IEventStore](IEventStore.md)
+- [IWriteCache](IWriteCache.md)
 - [ISyncStore](ISyncStore.md)
 
 ### Plans
