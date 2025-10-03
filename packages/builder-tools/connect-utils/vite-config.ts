@@ -178,6 +178,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     plugins,
     build: {
+      emptyOutDir: false,
       minify: false,
       sourcemap: true,
     },

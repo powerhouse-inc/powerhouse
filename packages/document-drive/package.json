@@ -49,7 +49,8 @@
     "bench": "vitest bench",
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
-    "prisma-generate": "prisma generate --no-hints && npm run copy-prisma"
+    "prisma-generate": "prisma generate --no-hints && npm run copy-prisma",
+    "build": "npm run copy-prisma"
   },
   "optionalDependencies": {
     "@prisma/client": "5.17.0",

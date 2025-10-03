@@ -16,14 +16,16 @@
     "scripts",
     "assets",
     "public",
-    ".env",
-    "./src/index.css"
+    ".env"
   ],
   "exports": {
-    ".": "./lib/src/index.js",
+    ".": {
+      "development": "./src/index.ts",
+      "import": "./lib/src/index.js"
+    },
     "./config": "./lib/src/connect.config.js",
     "./custom.d.ts": "./lib/custom.d.ts",
-    "./styles.css": "./src/index.css",
+    "./styles.css": "./dist/styles.css",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
@@ -50,6 +52,7 @@
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
     "build:vite": "vite build",
+    "build:css": "tailwindcss -i ./src/index.css -o ./dist/styles.css",
     "preview": "vite preview",
     "cy:open": "cypress open",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
@@ -94,6 +97,7 @@
     "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.4",
     "@types/cypress": "^1.1.6",
     "cypress": "^14.5.4"
   }
