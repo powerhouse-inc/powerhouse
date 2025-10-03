@@ -1,6 +1,7 @@
 import {
   useDocumentOfType,
   useSelectedDocumentId,
+  useSelectedDocumentOfType,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import { isFileNode } from "document-drive";
@@ -92,8 +93,14 @@ export function useVetraPackageDocument(documentId: string | undefined | null) {
 }
 
 export function useSelectedVetraPackageDocument() {
+  return useSelectedDocumentOfType<VetraPackageDocument, VetraPackageAction>(
+    VETRA_PACKAGE_DOCUMENT_TYPE,
+  );
+}
+
+export function useSelectedDriveVetraPackage() {
   const [selectedDrive] = useSelectedDrive();
-  const documentId = selectedDrive?.state.global.nodes.find(
+  const documentId = selectedDrive.state.global.nodes.find(
     (node) =>
       isFileNode(node) && node.documentType === VETRA_PACKAGE_DOCUMENT_TYPE,
   )?.id;

@@ -107,7 +107,7 @@ export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 
 export { module as DocumentModelEditor } from './document-model-editor/index.js';`;
 
-export const EXPECTED_HOOK_CONTENT = `import { useDocumentOfType, useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+export const EXPECTED_HOOK_CONTENT = `import { useDocumentOfType, useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
 import type { DocumentModelAction, DocumentModelDocument } from "document-model";
 
 export function useDocumentModelDocument(documentId: string | null | undefined) {
@@ -115,8 +115,7 @@ export function useDocumentModelDocument(documentId: string | null | undefined) 
 }
 
 export function useSelectedDocumentModelDocument() {
-  const selectedDocumentId = useSelectedDocumentId();
-  return useDocumentModelDocument(selectedDocumentId);
+  return useSelectedDocumentOfType<DocumentModelDocument, DocumentModelAction>("powerhouse/document-model");
 }`;
 
 export const EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES = `import type { EditorModule } from 'document-model';

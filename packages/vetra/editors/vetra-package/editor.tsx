@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { actions } from "../../document-models/vetra-package/index.js";
-import { useSelectedVetraPackageDocument } from "../hooks/useVetraDocument.js";
+import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 
 export function Editor() {
-  const [document, dispatch] = useSelectedVetraPackageDocument();
+  const [document, dispatch] = useSelectedDriveVetraPackage();
 
   const onNameChange = useCallback(
     (name: string) => {
