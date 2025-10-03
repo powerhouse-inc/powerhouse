@@ -129,10 +129,28 @@ export function useDocumentOfType<
   return [document, dispatch] as [TDocument, DocumentDispatch<TAction>];
 }
 
+export function useSelectedDocumentOfType(
+  documentType: null | undefined,
+): never[];
 export function useSelectedDocumentOfType<
   TDocument extends PHDocument,
   TAction extends Action,
->(documentType: string | null | undefined) {
+>(documentType: string): [TDocument, DocumentDispatch<TAction>];
+export function useSelectedDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(
+  documentType: string | null | undefined,
+): never[] | [TDocument, DocumentDispatch<TAction>] {
   const documentId = useSelectedDocumentId();
+
+  if (!documentType) {
+    return [];
+  }
+  if (!documentId) {
+    throw new Error(
+      "There is no selected document. Call 'setSelectedNode' to select a document.",
+    );
+  }
   return useDocumentOfType<TDocument, TAction>(documentId, documentType);
 }

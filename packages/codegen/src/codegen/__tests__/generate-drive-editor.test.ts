@@ -14,7 +14,7 @@ import {
 } from "./generate-drive-editor.expected.js";
 
 // Set this to false to keep the generated files for inspection
-const CLEANUP_AFTER_TESTS = false;
+const CLEANUP_AFTER_TESTS = true;
 
 describe("generateDriveEditor", () => {
   let testDir: string;

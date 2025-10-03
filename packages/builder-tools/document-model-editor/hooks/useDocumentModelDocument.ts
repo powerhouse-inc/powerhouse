@@ -1,6 +1,6 @@
 import {
   useDocumentOfType,
-  useSelectedDocumentId,
+  useSelectedDocumentOfType,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentModelAction,
@@ -17,9 +17,7 @@ export function useDocumentModelDocument(
 }
 
 export function useSelectedDocumentModelDocument() {
-  const documentId = useSelectedDocumentId();
-  return useDocumentOfType<DocumentModelDocument, DocumentModelAction>(
-    documentId,
+  return useSelectedDocumentOfType<DocumentModelDocument, DocumentModelAction>(
     "powerhouse/document-model",
   );
 }
