@@ -53,6 +53,7 @@ export type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
 export type ProjectInfo = {
   isGlobal: boolean;
   path: string;
+  packageManager: PackageManager;
 };
 
 export function defaultPathValidation() {
@@ -97,12 +98,14 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
     return {
       isGlobal: true,
       path: POWERHOUSE_GLOBAL_DIR,
+      packageManager: getPackageManagerFromLockfile(POWERHOUSE_GLOBAL_DIR),
     };
   }
 
   return {
     isGlobal: false,
     path: projectPath,
+    packageManager: getPackageManagerFromLockfile(projectPath),
   };
 }
 
@@ -113,20 +116,6 @@ export function getPackageManagerFromLockfile(dir: string): PackageManager {
     return "yarn";
   } else if (fs.existsSync(path.join(dir, packageManagers.bun.lockfile))) {
     return "bun";
-  }
-
-  return "npm";
-}
-
-export function getPackageManagerFromPath(dir: string): PackageManager {
-  const lowerCasePath = dir.toLowerCase();
-
-  if (packageManagers.bun.globalPathRegexp.test(lowerCasePath)) {
-    return "bun";
-  } else if (packageManagers.pnpm.globalPathRegexp.test(lowerCasePath)) {
-    return "pnpm";
-  } else if (packageManagers.yarn.globalPathRegexp.test(lowerCasePath)) {
-    return "yarn";
   }
 
   return "npm";
