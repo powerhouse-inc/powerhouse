@@ -130,8 +130,7 @@ export const getDocumentModelTypeDefs = (
               operations(skip: Int, first: Int): [Operation!]!
               revision: Int!
               createdAtUtcIso: DateTime!
-              createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIsoAtUtcIso: DateTime!
+              lastModifiedAtUtcIso: DateTime!
               ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
               stateJSON: JSONObject
