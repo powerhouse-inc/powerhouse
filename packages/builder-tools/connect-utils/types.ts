@@ -1,0 +1,63 @@
+import type { PowerhouseConfig } from "@powerhousedao/config";
+
+export type IConnectOptions = {
+  mode: string;
+  dirname: string;
+  envDir?: string;
+  powerhouseConfig?: PowerhouseConfig;
+  localPackage?: string | false; // path to local package to be loaded.
+};
+
+export type ConnectBuildEnv = {
+  PH_CONFIG_PATH?: string;
+  PH_PACKAGES?: string;
+  PH_LOCAL_PACKAGE?: string;
+  PH_SENTRY_AUTH_TOKEN?: string;
+  PH_SENTRY_ORG?: string;
+  PH_SENTRY_PROJECT?: string;
+};
+
+export type ConnectRuntimeEnv = {
+  PH_CONNECT_VERSION: string;
+  PH_CONNECT_LOG_LEVEL?: string;
+  PH_CONNECT_SENTRY_RELEASE?: string;
+  PH_CONNECT_REQUIRES_HARD_REFRESH: string;
+  PH_CONNECT_DISABLE_ADD_DRIVE: string;
+  PH_CONNECT_WARN_OUTDATED_APP: string;
+  PH_CONNECT_STUDIO_MODE: string;
+  PH_CONNECT_ROUTER_BASENAME: string;
+  PH_CONNECT_DEFAULT_DRIVES_URL: string;
+  PH_CONNECT_DRIVES_PRESERVE_STRATEGY: string;
+  PH_CONNECT_ENABLED_EDITORS: string;
+  PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES: string;
+  PH_CONNECT_SEARCH_BAR_ENABLED: string;
+  PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES: string;
+  PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES: string;
+  PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES: string;
+  PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES: string;
+  PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES: string;
+  PH_CONNECT_PUBLIC_DRIVES_ENABLED: string;
+  PH_CONNECT_CLOUD_DRIVES_ENABLED: string;
+  PH_CONNECT_LOCAL_DRIVES_ENABLED: string;
+  PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS: string;
+  PH_CONNECT_RENOWN_URL: string;
+  PH_CONNECT_RENOWN_NETWORK_ID: string;
+  PH_CONNECT_RENOWN_CHAIN_ID: string;
+  PH_CONNECT_DISABLED_EDITORS: string;
+  PH_CONNECT_ANALYTICS_DATABASE_NAME: string;
+  PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED: string;
+  PH_CONNECT_DIFF_ANALYTICS_ENABLED: string;
+  PH_CONNECT_DRIVE_ANALYTICS_ENABLED: string;
+  PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED: string;
+  PH_CONNECT_EXTERNAL_PACKAGES_DISABLED: string;
+  PH_CONNECT_SENTRY_DSN: string;
+  PH_CONNECT_SENTRY_PROJECT: string;
+  PH_CONNECT_SENTRY_ENV: string;
+  PH_CONNECT_SENTRY_TRACING_ENABLED: string;
+  PH_CONNECT_GA_TRACKING_ID: string;
+  PH_CONNECT_VERSION_CHECK_INTERVAL: string;
+  PH_CONNECT_CLI_VERSION: string;
+  PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE: string;
+};
+
+export type ConnectEnv = ConnectBuildEnv & ConnectRuntimeEnv;

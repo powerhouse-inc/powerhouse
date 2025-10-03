@@ -38,16 +38,19 @@ function makeImportScriptFromPackages(packages: string[]) {
 }
 
 export function phExternalPackagesPlugin(phPackages: string[]) {
+  const virtualModuleId = "virtual:ph:external-packages";
+  const resolvedVirtualModuleId = "\0" + virtualModuleId;
+
   const plugin: PluginOption = {
     name: "ph-external-packages",
     enforce: "pre",
     resolveId(id) {
-      if (id === "ph:external-packages") {
-        return "ph:external-packages";
+      if (id === virtualModuleId) {
+        return resolvedVirtualModuleId;
       }
     },
     load(id) {
-      if (id === "ph:external-packages") {
+      if (id === resolvedVirtualModuleId) {
         return makeImportScriptFromPackages(phPackages);
       }
     },

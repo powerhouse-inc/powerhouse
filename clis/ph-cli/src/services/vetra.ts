@@ -252,8 +252,7 @@ export async function startVetra({
           configFile,
           verbose,
           connectPort,
-          enableDocumentsHMR: true,
-          disableDynamicLoading: !watchPackages,
+          disableLocalPackage: !watchPackages,
         },
         driveUrl,
       );

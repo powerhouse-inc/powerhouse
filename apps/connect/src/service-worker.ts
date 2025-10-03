@@ -21,8 +21,9 @@ type ServiceWorkerMessage = ServiceWorkerEvent<ServiceWorkerMessageData>;
 
 const _self = self as unknown as ServiceWorkerGlobalScope;
 
-const APP_VERSION = __APP_VERSION__;
-const REQUIRES_HARD_REFRESH = __REQUIRES_HARD_REFRESH__;
+const APP_VERSION = import.meta.env.PH_CONNECT_VERSION;
+const REQUIRES_HARD_REFRESH =
+  import.meta.env.PH_CONNECT_REQUIRES_HARD_REFRESH === "true";
 
 const VERSION_CACHE = "version-cache";
 const VERSION_KEY = "app-version";

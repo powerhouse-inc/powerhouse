@@ -1,4 +1,4 @@
-const currentVersion = __APP_VERSION__;
+import { connectConfig } from "../connect.config.js";
 
 export const isMac = window.navigator.appVersion.includes("Mac");
 
@@ -37,6 +37,7 @@ const fetchLatestVersion = async () => {
 };
 
 export const isLatestVersion = async () => {
+  const currentVersion = connectConfig.appVersion;
   const deployed = await fetchLatestVersion();
 
   if (deployed) {

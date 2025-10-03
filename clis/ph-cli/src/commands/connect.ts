@@ -8,29 +8,28 @@ import type { ConnectOptions } from "../services/connect.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
-async function startConnect(options: ConnectOptions) {
+async function startConnect(options?: ConnectOptions) {
   const Connect = await import("../services/connect.js");
   const { startConnect } = Connect;
   return startConnect(options);
 }
 
-export const connect: CommandActionType<
-  [ConnectOptions],
-  Promise<void>
-> = async (options) => {
+export const connect: CommandActionType<[ConnectOptions], void> = (options) => {
   return startConnect(options);
 };
 
 const studioCommand = new Command("studio")
   .description("Starts Connect Studio (default)")
-  .option("-p, --port <port>", "Port to run the server on", "3000")
-  .option("-h, --host", "Expose the server to the network")
-  .option("--https", "Enable HTTPS")
-  .option("--open", "Open the browser")
+  // Vite dev config: https://github.com/vitejs/vite/blob/1ef57bc7700375bf4bca0edbf0a9e4517c5dd35b/packages/vite/src/node/cli.ts#L184
+  .option("--port <port>", "Port to run the server on", "3000")
+  .option("--host", "Expose the server to the network")
+  .option("--open", "Open browser on startup")
   .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
-  .action(async (...args: []) => {
-    throw new Error("Not Implemented");
-  });
+  .option("--cors", `Enable CORS`)
+  .option("--strictPort", `Exit if specified port is already in use`)
+  .option("--force", `Force the optimizer to ignore the cache and re-bundle`)
+  .action(connect);
+
 setCustomHelp(studioCommand, connectStudioHelp);
 
 const buildCommand = new Command("build")
@@ -65,9 +64,10 @@ const previewCommand = new Command("preview")
 setCustomHelp(previewCommand, connectPreviewHelp);
 
 export function connectCommand(program: Command) {
-  const cmd = program
+  return program
     .command("connect")
     .description("Powerhouse Connect commands")
+    .allowUnknownOption(true)
     .addCommand(studioCommand, { isDefault: true })
     .addCommand(buildCommand)
     .addCommand(previewCommand);
