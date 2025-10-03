@@ -9,8 +9,13 @@ import {
   StringField,
 } from "@powerhousedao/document-engineering";
 <% if(!documentType){ %>import { useSelectedDocument } from "@powerhousedao/reactor-browser";<% } else { %>import { useSelected<%= documentType.name %>Document %>} from "../hooks/use<%= documentType.name %>Document%>.js";<% } %>
-import { setName } from "document-model";<% if(documentType) { %>
-import { actions } from "<%= documentType.importPath %>";<% } %>
+import { setName } from "document-model";<% if(documentType?.modules.length) { %>
+import {
+<% documentType.modules.filter(module => module.actions.length).forEach(module => { _%>
+  // <%= module.name || module.id %>
+<% module.actions.forEach(action => { _%>
+  <%= h.changeCase.camel(action.name) %>,
+<% });%><% });%>} from "<%= documentType.importPath %>/gen/creators.js";<% } %>
 
 export function Editor() {
   const [document, dispatch] = <% if(documentType) { %>useSelected<%= documentType.name %>Document()<% } else { %>useSelectedDocument()<% } %>;

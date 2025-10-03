@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { generateSchemas } from "../graphql.js";
 import { generateDocumentModel, generateProcessor } from "../hygen.js";
 import { loadDocumentModel } from "../utils.js";
+import BillingStatementDocumentModel from "./data/document-models/billing-statement/billing-statement.json" with { type: "json" };
 import { compile } from "./fixtures/typecheck.js";
 
 describe("document model", () => {
@@ -24,6 +25,14 @@ describe("document model", () => {
     "__tests__",
     ".out",
   );
+
+  const documentTypesMap = {
+    "billing-statement": {
+      name: "BillingStatement",
+      importPath: "../../document-model/billing-statement",
+      documentModel: BillingStatementDocumentModel,
+    },
+  };
 
   beforeEach(async () => {
     // make sure to remove the outPath directory
@@ -79,12 +88,7 @@ describe("document model", () => {
       await generateProcessor(
         "test-analytics-processor",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
-          },
-        },
+        documentTypesMap,
         path.join(outPath, "processors"),
         path.join(outPath, "document-model"),
         "analytics",
@@ -108,12 +112,7 @@ describe("document model", () => {
       await generateProcessor(
         "test1",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
-          },
-        },
+        documentTypesMap,
         path.join(outPath, "processors"),
         path.join(outPath, "document-model"),
         "analytics",
@@ -125,12 +124,7 @@ describe("document model", () => {
       await generateProcessor(
         "test2",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
-          },
-        },
+        documentTypesMap,
         path.join(outPath, "processors"),
         path.join(outPath, "document-model"),
         "analytics",
@@ -142,12 +136,7 @@ describe("document model", () => {
       await generateProcessor(
         "test3",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
-          },
-        },
+        documentTypesMap,
         path.join(outPath, "processors"),
         path.join(outPath, "document-model"),
         "analytics",

@@ -5,7 +5,10 @@ import type {
 } from "@powerhousedao/config/powerhouse";
 import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase, pascalCase } from "change-case";
-import type { DocumentModelState } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelState,
+} from "document-model";
 import fs from "node:fs";
 import { join, resolve } from "path";
 import { generateSchema, generateSchemas } from "./graphql.js";
@@ -63,6 +66,7 @@ function getDocumentTypesMap(
     "powerhouse/document-model": {
       name: "DocumentModel",
       importPath: `document-model`,
+      documentModel: documentModelDocumentModelModule.documentModel,
     },
   };
 
@@ -83,7 +87,8 @@ function getDocumentTypesMap(
           if (spec.id) {
             documentTypesMap[spec.id] = {
               name: pascalCase(name),
-              importPath: join(pathOrigin, dir, name, "index.js"),
+              importPath: join(pathOrigin, dir, name),
+              documentModel: spec,
             };
           }
         } catch {
@@ -201,9 +206,8 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
   editorId?: string,
+  pathOrigin = "../../",
 ) {
-  const pathOrigin = "../../";
-
   const { documentModelsDir, skipFormat } = config;
   const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
 
@@ -215,6 +219,7 @@ export async function generateEditor(
       `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
     );
   }
+
   return _generateEditor(
     name,
     documentTypes,
@@ -283,7 +288,7 @@ export async function generateProcessor(
 
 export type DocumentTypesMap = Record<
   string,
-  { name: string; importPath: string }
+  { name: string; importPath: string; documentModel: DocumentModelState }
 >;
 
 export async function generateDriveEditor(
