@@ -84,6 +84,9 @@ export function createBrowserDocumentDriveServer(
     .withStorage(storage)
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
-    .withOptions(options)
+    .withOptions({
+      ...options,
+      ...getReactorDefaultDrivesConfig(),
+    })
     .build();
 }
