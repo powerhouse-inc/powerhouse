@@ -166,6 +166,36 @@ describe("Dual Action Create", () => {
       expect(initialState.global.name).toBe("Custom Document Name");
     });
 
+    it("should have hashes on CREATE and UPGRADE operations", async () => {
+      const storage = new MemoryStorage();
+      const server = new ReactorBuilder(baseDocumentModels)
+        .withStorage(storage)
+        .withOptions({ featureFlags: { enableDualActionCreate: true } })
+        .build();
+
+      await server.initialize();
+
+      const docId = generateId();
+      const doc = {
+        ...documentModelCreateDocument(),
+        header: createPresignedHeader(
+          docId,
+          documentModelDocumentModelModule.documentModel.global.id,
+        ),
+      };
+
+      const created = await server.addDocument(doc);
+
+      expect(created.operations.global.length).toBe(2);
+      expect(created.operations.global[0].action.type).toBe("CREATE_DOCUMENT");
+      expect(created.operations.global[0].hash).toBeDefined();
+      expect(created.operations.global[0].hash.length).toBeGreaterThan(0);
+
+      expect(created.operations.global[1].action.type).toBe("UPGRADE_DOCUMENT");
+      expect(created.operations.global[1].hash).toBeDefined();
+      expect(created.operations.global[1].hash.length).toBeGreaterThan(0);
+    });
+
     it("operations are persisted in storage", async () => {
       const server = new ReactorBuilder(documentModels)
         .withCache(cache)

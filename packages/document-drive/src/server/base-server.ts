@@ -66,6 +66,7 @@ import {
   documentModelCreateDocument,
   type Action,
   type DocumentModelModule,
+  type DocumentOperations,
   type Operation,
   type PHDocument,
   type PHDocumentHeader,
@@ -76,9 +77,11 @@ import {
 import {
   attachBranch,
   createPresignedHeader,
+  defaultBaseState,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
+  hashDocumentStateForScope,
   merge,
   precedes,
   removeExistingOperations,
@@ -1196,19 +1199,38 @@ export class BaseDocumentDriveServer
         scope: "global",
       };
 
-      // Create operations from actions
+      // we need to create hashes for later verification
+      const baseState = defaultBaseState();
+      const createStateForHash = {
+        state: baseState,
+      };
+      const createHash = hashDocumentStateForScope(
+        createStateForHash,
+        "document",
+      );
+
+      const upgradeStateForHash = {
+        state: initialState,
+      };
+      const upgradeHash = hashDocumentStateForScope(
+        upgradeStateForHash,
+        // this is bad! there may not be a global scope
+        "global",
+      );
+
+      // Create operations from actions with computed hashes
       operations = [
         {
           index: 0,
           skip: 0,
-          hash: "", // will be set by storage
+          hash: createHash,
           timestampUtcMs,
           action: createDocumentAction,
         },
         {
           index: 1,
           skip: 0,
-          hash: "", // will be set by storage
+          hash: upgradeHash,
           timestampUtcMs,
           action: upgradeDocumentAction,
         },
@@ -1441,9 +1463,28 @@ export class BaseDocumentDriveServer
         : documentStorage.operations;
     const operations = garbageCollectDocumentOperations(revisionOperations);
 
-    return replayDocument(
+    // for backward compatibility, we need to add global and local
+    const headerOperations: DocumentOperations = { global: [], local: [] };
+    const operationsToReplay: DocumentOperations = { global: [], local: [] };
+
+    // Filter out CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
+    // (these don't currently have reducers and should not be replayed)
+    for (const [scope, scopeOps] of Object.entries(operations)) {
+      for (const op of scopeOps) {
+        if (
+          op.action.type === "CREATE_DOCUMENT" ||
+          op.action.type === "UPGRADE_DOCUMENT"
+        ) {
+          headerOperations[scope as keyof DocumentOperations].push(op);
+        } else {
+          operationsToReplay[scope as keyof DocumentOperations].push(op);
+        }
+      }
+    }
+
+    const replayed = replayDocument(
       documentStorage.initialState,
-      operations,
+      operationsToReplay,
       documentModelModule.reducer,
       undefined,
       documentStorage.header,
@@ -1454,6 +1495,25 @@ export class BaseDocumentDriveServer
         reuseOperationResultingState: options?.checkHashes ?? true,
       },
     ) as TDocument;
+
+    // merge header operations back into the result
+    const allScopes = new Set([
+      ...Object.keys(headerOperations),
+      ...Object.keys(replayed.operations),
+    ]);
+
+    const finalOperations: DocumentOperations = {};
+    for (const scope of allScopes) {
+      finalOperations[scope] = [
+        ...headerOperations[scope],
+        ...replayed.operations[scope],
+      ];
+    }
+
+    return {
+      ...replayed,
+      operations: finalOperations,
+    };
   }
 
   private async _performOperation(
