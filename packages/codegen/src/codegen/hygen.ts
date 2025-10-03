@@ -44,7 +44,7 @@ export async function run(
     actions
       .filter((action) => ["added", "inject"].includes(action.status))
       .forEach((action) => {
-        execa.$`prettier --ignore-path --write ${action.subject.replace(
+        execa.$`npx prettier --ignore-path --write ${action.subject.replace(
           ".",
           process.cwd(),
         )}`.catch((err: unknown) => {
