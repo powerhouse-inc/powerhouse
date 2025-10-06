@@ -122,7 +122,7 @@ const startLocalConnect = (options: VetraConnectOptions) => {
   process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = "preserve-all";
 
   if (options.disableLocalPackages) {
-    process.env.PH_DISABLE_LOCAL_PACKAGES = "true";
+    process.env.DISABLE_LOCAL_PACKAGES = "true";
   }
 
   return startConnect({ port: options.port });
