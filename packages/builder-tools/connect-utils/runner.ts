@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { cwd } from "node:process";
 import type { CommonServerOptions, InlineConfig, ResolvedConfig } from "vite";
 
 type ViteDevOptions = Pick<
@@ -50,8 +52,16 @@ export async function startConnectStudio(options?: ConnectStudioOptions) {
   };
   const vite = await loadVite();
 
+  // TODO: support options field instead of using 'cwd()'
+  const userViteConfig = viteConfig
+    ? viteConfig
+    : await vite.loadConfigFromFile(
+        { command: "serve", mode: "dev" },
+        join(cwd(), "vite.config.ts"),
+      );
+
   const devServerConfig = devServerOptionsToConfig(devServerOptions);
-  const mergedConfig = vite.mergeConfig(viteConfig ?? {}, devServerConfig);
+  const mergedConfig = vite.mergeConfig(userViteConfig ?? {}, devServerConfig);
   const server = await vite.createServer(mergedConfig);
 
   await server.listen();

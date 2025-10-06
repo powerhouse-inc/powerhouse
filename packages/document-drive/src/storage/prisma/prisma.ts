@@ -34,7 +34,7 @@ import type {
 import { actionContext } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
-import { Prisma, PrismaClient } from "./client/index.js";
+import type { Prisma, PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
 
