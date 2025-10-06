@@ -54,7 +54,7 @@ This phase proceeds as before: building the new asynchronous pipeline for handli
 1.  **Implement `IEventBus`**, **`IQueue`**, and **`IJobExecutorManager`**:
     - Within `packages/reactor`, define and implement these core components as planned.
 
-## Phase 3.5 (⚠️ In Progress): Introduce CREATE/UPDATE Action Flow
+## Phase 3.5 (✅ Completed): Introduce CREATE/UPDATE Action Flow
 
 To enable proper command-sourced document creation, introduce a standardized action-based flow for document lifecycle operations.
 
@@ -67,19 +67,23 @@ To enable proper command-sourced document creation, introduce a standardized act
 3.  **Update Document Model Reducers** (✅ Completed):
     - Ensure document model reducers properly handle both `CREATE` and `UPDATE` actions.
     - `CREATE` actions should generate proper operations that can be stored and replayed.
-4.  **Remove Legacy Creation Hacks** (⚠️ In Progress):
+4.  **Remove Legacy Creation Hacks** (✅ Complete):
     - ✅ Updated `KyselyOperationStore.reconstructHeader()` to handle ONLY `CREATE_DOCUMENT` and `UPGRADE_DOCUMENT` actions (store.ts:145-191)
     - ✅ Header information is now extracted from `CREATE_DOCUMENT` action's signing parameters (signature, publicKey, nonce, documentType, createdAtUtcIso)
     - ✅ Removed all legacy "CREATE_HEADER" and "UPDATE_HEADER" action type handling
-    - ❌ **TODO**: Update `getHeader()` to query operations from both "header" and "document" scopes (store.ts:87-113)
-        - Currently only queries "header" scope operations
-        - Must also include "document" scope operations to reconstruct version information
-        - Version tracking comes from `UPGRADE_DOCUMENT` actions in the document scope
-    - ❌ **TODO**: Update `reconstructHeader()` to process operations from both scopes (store.ts:145-191)
-        - Process "header" scope operations for `CREATE_DOCUMENT` actions (initial header metadata)
-        - Process "document" scope operations for `UPGRADE_DOCUMENT` actions (version transitions)
-        - Maintain proper ordering when processing operations from multiple scopes (order by timestampUtcMs or global sequence)
-    - Document headers should be fully reconstructed from real CREATE_DOCUMENT and UPGRADE_DOCUMENT operations across both header and document scopes
+    - Document headers are now fully reconstructed from real CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
+
+5.  **Architectural Fix: Move `getHeader()` from `IOperationStore` to `IDocumentView`** (❌ TODO):
+    - **Problem Identified**: Headers contain cross-scope metadata (`revision` tracking for all scopes, `lastModifiedAtUtcIso` for latest change across all scopes)
+    - **Current Issue**: `IOperationStore.getHeader()` is scope-specific and cannot properly reconstruct headers that aggregate information from multiple scopes
+    - **Solution**:
+        - ❌ Remove `getHeader()` from `IOperationStore` interface and implementations
+        - ❌ Add `getHeader()` to `IDocumentView` interface and implementations
+        - ❌ Update `IDocumentView.getHeader()` to query operations from all relevant scopes ("header", "document", "global", "local", etc.)
+        - ❌ Reconstruct header by processing operations in chronological order across all scopes
+        - ❌ Update all callsites to use `IDocumentView.getHeader()` instead of `IOperationStore.getHeader()`
+    - **Rationale**: Headers are read model concerns that require cross-scope aggregation, which is precisely what `IDocumentView` is designed for
+    - **Spec Changes**: Updated [IOperationStore.md](./Storage/IOperationStore.md) and [IDocumentView.md](./Storage/IDocumentView.md) to reflect this architectural change
 
 **Outcome**: Document creation now flows through the same action-based pipeline as mutations, enabling full event sourcing and eliminating the need for special-case document creation logic.
 
