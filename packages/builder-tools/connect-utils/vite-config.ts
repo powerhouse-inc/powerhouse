@@ -181,6 +181,17 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       emptyOutDir: false,
       minify: false,
       sourcemap: true,
+      rollupOptions: {
+        output: {
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.names[0]?.endsWith(".css")) {
+              return "styles.css";
+            }
+
+            return "assets/[name]-[hash][extname]";
+          },
+        },
+      },
     },
     server: {
       fs: {
