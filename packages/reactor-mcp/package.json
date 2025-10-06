@@ -42,7 +42,7 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "express": "^4.21.1",
-    "vite": "^6.3.5",
+    "vite": "^7.1.9",
     "zod": "^3.24.3"
   },
   "devDependencies": {

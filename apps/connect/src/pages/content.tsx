@@ -54,7 +54,6 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
 function HomeScreenContainer() {
   const drives = useDrives();
   const config = connectConfig;
-
   return (
     <HomeScreen>
       {drives?.map((drive) => {
