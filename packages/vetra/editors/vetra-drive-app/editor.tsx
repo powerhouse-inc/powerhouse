@@ -9,7 +9,7 @@ import {
   useDocumentModelModules,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument, FileNode } from "document-drive";
+import type { FileNode } from "document-drive";
 import { useCallback } from "react";
 import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
@@ -94,7 +94,6 @@ export function BaseEditor(props: IProps) {
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
-        driveId={document.header.id}
         onOpenDocument={(node) => setSelectedNode(node)}
       />
     </div>

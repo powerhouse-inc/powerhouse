@@ -1,8 +1,5 @@
-@import "tailwindcss" source("./");
+@import "tailwindcss";
 @import "@powerhousedao/design-system/style.css";
-
-/* Uses .dark class for dark mode */
-@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* You can customize the theme by overriding the theme variables here */

@@ -1,0 +1,3 @@
+@import "tailwindcss";
+@import "@powerhousedao/design-system/style.css";
+@source "./node_modules/@powerhousedao/connect"

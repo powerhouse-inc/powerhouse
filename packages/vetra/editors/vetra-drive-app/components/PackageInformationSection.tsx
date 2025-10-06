@@ -1,9 +1,4 @@
-import type {
-  VetraDocumentModelModule,
-  VetraEditorModule,
-} from "@powerhousedao/reactor-browser";
 import React from "react";
-import { DOCUMENT_TYPES } from "../document-types.js";
 import { EditorContainer } from "./EditorContainer.js";
 import { SectionAccordion } from "./SectionAccordion.js";
 
@@ -11,21 +6,11 @@ interface PackageInformationSectionProps {
   className?: string;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
-  documentModelModule?: VetraDocumentModelModule;
-  editorModule?: VetraEditorModule;
-  driveId: string;
 }
 
 export const PackageInformationSection: React.FC<
   PackageInformationSectionProps
-> = ({
-  className,
-  packageDocumentId,
-  onAddPackageDocument,
-  documentModelModule,
-  editorModule,
-  driveId,
-}) => {
+> = ({ className, packageDocumentId, onAddPackageDocument }) => {
   const createpackageContent = (
     <button
       className="my-2 h-[200px] w-full rounded-md border border-dashed border-zinc-200 bg-zinc-50"
@@ -42,14 +27,8 @@ export const PackageInformationSection: React.FC<
       className={className}
     >
       <div className="">
-        {packageDocumentId && documentModelModule && editorModule ? (
-          <EditorContainer
-            documentId={packageDocumentId}
-            driveId={driveId}
-            documentModelModule={documentModelModule}
-            editorModule={editorModule}
-            documentType={DOCUMENT_TYPES.documentPackage}
-          />
+        {packageDocumentId ? (
+          <EditorContainer documentId={packageDocumentId} />
         ) : (
           createpackageContent
         )}
