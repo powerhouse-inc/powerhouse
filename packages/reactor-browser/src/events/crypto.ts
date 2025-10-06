@@ -1,4 +1,4 @@
-import type { DID, IConnectCrypto } from "@powerhousedao/reactor-browser";
+import type { DID, IConnectCrypto } from "@renown/sdk";
 import type { SetConnectCryptoEvent, SetDidEvent } from "./types.js";
 
 export function dispatchSetConnectCryptoEvent(

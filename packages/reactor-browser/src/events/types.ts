@@ -1,12 +1,10 @@
 import type {
   AppConfig,
-  DID,
-  IConnectCrypto,
   LoginStatus,
   Reactor,
   VetraPackage,
 } from "@powerhousedao/reactor-browser";
-import type { IRenown, User } from "@renown/sdk";
+import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { PHModal } from "../types/modals.js";

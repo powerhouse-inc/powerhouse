@@ -1,11 +1,9 @@
 import type {
   AppConfigUpdatedEvent,
   ConnectCryptoUpdatedEvent,
-  DID,
   DidUpdatedEvent,
   DocumentsUpdatedEvent,
   DrivesUpdatedEvent,
-  IConnectCrypto,
   LoginStatusUpdatedEvent,
   ModalUpdatedEvent,
   ProcessorManagerUpdatedEvent,
@@ -30,7 +28,8 @@ import type {
   UserUpdatedEvent,
   VetraPackagesUpdatedEvent,
 } from "@powerhousedao/reactor-browser";
-import type { IRenown, User } from "@renown/sdk";
+import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
+
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
