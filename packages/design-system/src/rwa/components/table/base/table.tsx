@@ -77,6 +77,7 @@ export function Table(props: TableProps) {
       return (
         <RWATableRow
           key={tableItem.id}
+          /* @ts-expect-error - Ref is not typed */
           ref={(el) => (rowRefs.current[index] = el)}
         >
           {columns.map((column) => (

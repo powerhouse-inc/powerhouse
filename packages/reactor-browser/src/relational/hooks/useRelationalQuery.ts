@@ -51,7 +51,7 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | undefined>(undefined);
   const retryCount = useRef(0);
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryTimeoutRef = useRef<NodeJS.Timeout>(null);
 
   const relationalDb = useRelationalDb<any>();
 

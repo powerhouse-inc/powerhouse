@@ -9,8 +9,8 @@ exports[`Command Component > should match snapshot 1`] = `
   >
     <label
       cmdk-label=""
-      for="radix-:r2:"
-      id="radix-:r1:"
+      for="radix-_r_2_"
+      id="radix-_r_1_"
       style="position: absolute; width: 1px; height: 1px; padding: 0px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0px;"
     />
   </div>

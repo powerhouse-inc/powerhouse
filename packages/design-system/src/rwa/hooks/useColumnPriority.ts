@@ -2,12 +2,18 @@ import type {
   ColumnCountByTableWidth,
   TableColumn,
 } from "@powerhousedao/design-system";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type RefObject,
+} from "react";
 
 type Props<TColumn extends TableColumn> = {
   columns: TColumn[] | undefined;
   columnCountByTableWidth: ColumnCountByTableWidth;
-  tableContainerRef: React.RefObject<HTMLDivElement>;
+  tableContainerRef: RefObject<HTMLDivElement | null>;
   hasItemNumberColumn?: boolean;
   hasMoreDetailsColumn?: boolean;
 };

@@ -12,7 +12,7 @@ import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";
 
 interface IdAutocompleteListProps {
   variant: IdAutocompleteProps["variant"];
-  commandListRef?: React.RefObject<HTMLDivElement>;
+  commandListRef?: React.RefObject<HTMLDivElement | null>;
   selectedValue?: string;
   options?: IdAutocompleteOption[];
   toggleOption?: (value: string) => void;

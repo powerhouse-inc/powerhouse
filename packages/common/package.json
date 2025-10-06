@@ -21,8 +21,8 @@
     "storybook": "storybook dev -p 6006"
   },
   "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "^0.5.0",
@@ -55,15 +55,15 @@
     "@tailwindcss/cli": "^4.1.4",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^24.6.1",
-    "@types/react": "^18.3.18",
+    "@types/react": "^19.2.0",
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "document-model": "workspace:*",
     "package-manager-detector": "^0.2.8",
     "postcss": "^8.5.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "storybook": "^8.6.14",
     "storybook-addon-pseudo-states": "^4.0.4",
     "storybook-mock-date-decorator": "^2.0.6",

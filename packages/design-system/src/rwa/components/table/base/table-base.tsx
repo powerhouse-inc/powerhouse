@@ -5,7 +5,7 @@ import type {
 import { Icon } from "@powerhousedao/design-system";
 import type { Order } from "natural-orderby";
 
-import { forwardRef, useState } from "react";
+import { useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
 
 /**
@@ -22,12 +22,10 @@ import { twJoin, twMerge } from "tailwind-merge";
  * @param hasExpandedRow - Whether the table has an expanded row
  * @param specialFirstRow - Function to render a special first row (like the cash asset for instance), must return a React element
  */
-export const TableBase = forwardRef(function TableBase(
-  props: TableBaseProps,
-  ref: React.ForwardedRef<HTMLDivElement>,
-) {
+export function TableBase(props: TableBaseProps) {
   const {
     children,
+    ref,
     tableData,
     columns,
     footer,
@@ -116,4 +114,4 @@ export const TableBase = forwardRef(function TableBase(
       {footer}
     </>
   );
-});
+}

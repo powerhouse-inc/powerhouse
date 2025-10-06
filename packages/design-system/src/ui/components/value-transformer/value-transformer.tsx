@@ -141,6 +141,7 @@ export function ValueTransformer({
   }, [transformers, setValue]);
 
   return React.cloneElement(children, {
+    // @ts-expect-error - React.HTMLAttributes is not typed
     ...children.props,
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
       // apply transformers on change
