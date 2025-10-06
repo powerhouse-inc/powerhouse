@@ -1,11 +1,10 @@
-import type { IRenown } from "@renown/sdk";
+import type { IConnectCrypto, IRenown } from "@renown/sdk";
+import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import type { IConnectCrypto } from "./crypto/index.js";
-import { BrowserKeyStorage, ConnectCrypto } from "./crypto/index.js";
 import { dispatchSetDocumentsEvent } from "./events/documents.js";
 import { dispatchSetDrivesEvent } from "./events/drives.js";
 import type { Reactor } from "./types/reactor.js";

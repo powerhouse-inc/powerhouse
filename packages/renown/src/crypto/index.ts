@@ -13,6 +13,9 @@ import {
   type CreateBearerTokenOptions,
 } from "../utils.js";
 
+// Export the proper BrowserKeyStorage implementation
+export { BrowserKeyStorage } from "./browser-key-storage.js";
+
 const RENOWN_NETWORK_ID = "eip155";
 const RENOWN_CHAIN_ID = 1;
 
@@ -250,5 +253,3 @@ export class ConnectCrypto implements IConnectCrypto {
     };
   }
 }
-export * from "./browser.js";
-export * from "./node.js";
